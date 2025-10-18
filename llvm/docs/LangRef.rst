@@ -1489,6 +1489,8 @@ Currently, only the following parameter attributes are defined:
     function, returning a pointer to allocated storage disjoint from the
     storage for any other object accessible to the caller.
 
+.. _captures_attr:
+
 ``captures(...)``
     This attribute restricts the ways in which the callee may capture the
     pointer. This is not a valid attribute for return values. This attribute
@@ -2527,6 +2529,9 @@ For example:
     if the attributed function is called during invocation of a function
     attributed with ``sanitize_realtime``.
     This attribute is incompatible with the ``sanitize_realtime`` attribute.
+``sanitize_alloc_token``
+    This attribute indicates that implicit allocation token instrumentation
+    is enabled for this function.
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
@@ -7512,12 +7517,12 @@ sections that the user does not want removed after linking.
 '``unpredictable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-``unpredictable`` metadata may be attached to any branch or switch
-instruction. It can be used to express the unpredictability of control
-flow. Similar to the ``llvm.expect`` intrinsic, it may be used to alter
-optimizations related to compare and branch instructions. The metadata
-is treated as a boolean value; if it exists, it signals that the branch
-or switch that it is attached to is completely unpredictable.
+``unpredictable`` metadata may be attached to any branch, select, or switch
+instruction. It can be used to express the unpredictability of control flow.
+Similar to the ``llvm.expect`` intrinsic, it may be used to alter optimizations
+related to compare and branch instructions. The metadata is treated as a
+boolean value; if it exists, it signals that the branch, select, or switch that
+it is attached to is completely unpredictable.
 
 .. _md_dereferenceable:
 
@@ -7542,6 +7547,33 @@ dereferenceable or null, otherwise the behavior is undefined.
 The number of bytes known to be dereferenceable is specified by the integer
 value in the metadata node. This is analogous to the ''dereferenceable_or_null''
 attribute on parameters and return values.
+
+'``captures``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!captures`` metadata can only be applied to ``store`` instructions with
+a pointer-typed value operand. It restricts the capturing behavior of the store
+value operand in the same way the ``captures(...)`` attribute would do on a
+call. See the :ref:`pointer capture section <pointercapture>` for a detailed
+discussion of capture semantics.
+
+The ``!captures`` metadata accepts a non-empty list of strings from the same
+set as the :ref:`captures attribute <captures_attr>`:
+``!"address"``, ``!"address_is_null"``, ``!"provenance"`` and
+``!"read_provenance"``. ``!"none"`` is not supported.
+
+For example ``store ptr %x, ptr %y, !captures !{!"address"}`` indicates that
+the copy of pointer ``%x`` stored to location ``%y`` will only be used to
+inspect its integral address value, and not dereferenced. Dereferencing the
+pointer would result in undefined behavior.
+
+Similarly ``store ptr %x, ptr %y, !captures !{!"address", !"read_provenance"}``
+indicates that while reads through the stored pointer are allowed, writes would
+result in undefined behavior.
+
+The ``!captures`` attribute makes no statement about other uses of ``%x``, or
+uses of the stored-to memory location after it has been overwritten with a
+different value.
 
 .. _llvm.loop:
 
@@ -8548,6 +8580,22 @@ Example:
 The ``nofree`` metadata indicates the memory pointed by the pointer will not be
 freed after the attached instruction.
 
+'``alloc_token``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``alloc_token`` metadata may be attached to calls to memory allocation
+functions, and contains richer semantic information about the type of the
+allocation. This information is consumed by the ``alloc-token`` pass to
+instrument such calls with allocation token IDs.
+
+The metadata contains: string with the type of an allocation, and a boolean
+denoting if the type contains a pointer.
+
+.. code-block:: none
+
+  call ptr @malloc(i64 64), !alloc_token !0
+
+  !0 = !{!"<type-name>", i1 <contains-pointer>}
 
 Module Flags Metadata
 =====================
@@ -8875,7 +8923,7 @@ that may set ``errno``, allowing optimizations such as store-to-load forwarding
 across such routines.
 
 For example, the following is a valid metadata specifying the TBAA information
-for an integer access:
+for an integer access::
 
     !llvm.errno.tbaa = !{!0}
     !0 = !{!1, !1, i64 0}
@@ -21014,33 +21062,36 @@ integer element type.
 
 Syntax:
 """""""
-This is an overloaded intrinsic.
+This is an overloaded intrinsic. You can use ``llvm.matrix.column.major.load``
+to load any vector type with a stride of any bitwidth up to 64.
 
 ::
 
-      declare vectorty @llvm.matrix.column.major.load.*(
+      declare <4 x i32> @llvm.matrix.column.major.load.v4i32.i64(
           ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
+      declare <9 x double> @llvm.matrix.column.major.load.v9f64.i32(
+          ptrty %Ptr, i32 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
 The '``llvm.matrix.column.major.load.*``' intrinsics load a ``<Rows> x <Cols>``
 matrix using a stride of ``%Stride`` to compute the start address of the
-different columns.  The offset is computed using ``%Stride``'s bitwidth. This
-allows for convenient loading of sub matrixes. If ``<IsVolatile>`` is true, the
-intrinsic is considered a :ref:`volatile memory access <volatile>`. The result
-matrix is returned in the result vector. If the ``%Ptr`` argument is known to
-be aligned to some boundary, this can be specified as an attribute on the
-argument.
+different columns.  This allows for convenient loading of sub matrixes.
+Independent of ``%Stride``'s bitwidth, the offset is computed using the target
+daya layout's pointer index type. If ``<IsVolatile>`` is true, the intrinsic is
+considered a :ref:`volatile memory access <volatile>`.  The result matrix is
+returned in the result vector. If the ``%Ptr`` argument is known to be aligned
+to some boundary, this can be specified as an attribute on the argument.
 
 Arguments:
 """"""""""
 
 The first argument ``%Ptr`` is a pointer type to the returned vector type, and
 corresponds to the start address to load from. The second argument ``%Stride``
-is a positive, constant integer with ``%Stride >= <Rows>``. ``%Stride`` is used
-to compute the column memory addresses. I.e., for a column ``C``, its start
-memory addresses is calculated with ``%Ptr + C * %Stride``. The third Argument
+is a positive integer for which ``%Stride >= <Rows>``. ``%Stride`` is used to
+compute the column memory addresses. I.e., for a column ``C``, its start memory
+addresses is calculated with ``%Ptr + C * %Stride``. The third Argument
 ``<IsVolatile>`` is a boolean value.  The fourth and fifth arguments,
 ``<Rows>`` and ``<Cols>``, correspond to the number of rows and columns,
 respectively, and must be positive, constant integers. The returned vector must
@@ -21055,20 +21106,26 @@ The :ref:`align <attr_align>` parameter attribute can be provided for the
 
 Syntax:
 """""""
+This is an overloaded intrinsic. ``llvm.matrix.column.major.store`` to store
+any vector type with a stride of any bitwidth up to 64.
 
 ::
 
-      declare void @llvm.matrix.column.major.store.*(
-          vectorty %In, ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>, i32 <Cols>)
+      declare void @llvm.matrix.column.major.store.v4i32.i64(
+          <4 x i32> %In, ptrty %Ptr, i64 %Stride, i1 <IsVolatile>, i32 <Rows>,
+          i32 <Cols>)
+      declare void @llvm.matrix.column.major.store.v9f64.i32(
+          <9 x double> %In, ptrty %Ptr, i32 %Stride, i1 <IsVolatile>, i32
+          <Rows>, i32 <Cols>)
 
 Overview:
 """""""""
 
 The '``llvm.matrix.column.major.store.*``' intrinsics store the ``<Rows> x
 <Cols>`` matrix in ``%In`` to memory using a stride of ``%Stride`` between
-columns. The offset is computed using ``%Stride``'s bitwidth. If
-``<IsVolatile>`` is true, the intrinsic is considered a
-:ref:`volatile memory access <volatile>`.
+columns.  Independent of ``%Stride``'s bitwidth, the offset is computed using
+the target daya layout's pointer index type.  If ``<IsVolatile>`` is true, the
+intrinsic is considered a :ref:`volatile memory access <volatile>`.
 
 If the ``%Ptr`` argument is known to be aligned to some boundary, this can be
 specified as an attribute on the argument.
@@ -21079,7 +21136,7 @@ Arguments:
 The first argument ``%In`` is a vector that corresponds to a ``<Rows> x
 <Cols>`` matrix to be stored to memory. The second argument ``%Ptr`` is a
 pointer to the vector type of ``%In``, and is the start address of the matrix
-in memory. The third argument ``%Stride`` is a positive, constant integer with
+in memory. The third argument ``%Stride`` is a positive integer for which
 ``%Stride >= <Rows>``.  ``%Stride`` is used to compute the column memory
 addresses. I.e., for a column ``C``, its start memory addresses is calculated
 with ``%Ptr + C * %Stride``.  The fourth argument ``<IsVolatile>`` is a boolean
@@ -24586,7 +24643,7 @@ Overview:
 
 The '``llvm.vp.load.ff.*``' intrinsic is similar to
 '``llvm.vp.load.*``', but will not trap if there are not ``evl`` readable
-lanes at the pointer. '``ff``' stands for fault-first or fault-only-first.
+lanes at the pointer. '``ff``' stands for first-fault or fault-only-first.
 
 Arguments:
 """"""""""
