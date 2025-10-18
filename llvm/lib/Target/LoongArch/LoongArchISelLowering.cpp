@@ -1948,6 +1948,91 @@ static SDValue lowerVECTOR_SHUFFLE_VPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+/// Lower VECTOR_SHUFFLE into VEXTRINS (if possible).
+///
+/// VEXTRINS copies one element of a vector into any place of the result
+/// vector and makes no change to the rest elements of the result vector.
+///
+/// It is possible to lower into VEXTRINS when the mask takes the form:
+///   <0, 1, 2, ..., n+i, ..., n-1>  or  <n, n+1, n+2, ..., i, ..., 2n-1> or
+///   <0, 1, 2, ..., i, ..., n-1>  or  <n, n+1, n+2, ..., n+i, ..., 2n-1>
+/// where n is the number of elements in the vector and i is in [0, n).
+/// For example:
+///   <0, 1, 2, 3, 4, 5, 6, 8> , <2, 9, 10, 11, 12, 13, 14, 15> ,
+///   <0, 1, 2, 6, 4, 5, 6, 7> , <8, 9, 10, 11, 12, 9, 14, 15>
+///
+/// When undef's appear in the mask they are treated as if they were whatever
+/// value is necessary in order to fit the above forms.
+static SDValue
+lowerVECTOR_SHUFFLE_VEXTRINS(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                             SDValue V1, SDValue V2, SelectionDAG &DAG,
+                             const LoongArchSubtarget &Subtarget) {
+  unsigned NumElts = VT.getVectorNumElements();
+  MVT EltVT = VT.getVectorElementType();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  if (Mask.size() != NumElts)
+    return SDValue();
+
+  auto tryLowerToExtrAndIns = [&](unsigned Base) -> SDValue {
+    int DiffCount = 0;
+    int DiffPos = -1;
+    for (unsigned i = 0; i < NumElts; ++i) {
+      if (Mask[i] == -1)
+        continue;
+      if (Mask[i] != int(Base + i)) {
+        ++DiffCount;
+        DiffPos = int(i);
+        if (DiffCount > 1)
+          return SDValue();
+      }
+    }
+
+    // Need exactly one differing element to lower into VEXTRINS.
+    if (DiffCount != 1)
+      return SDValue();
+
+    // DiffMask must be in [0, 2N).
+    int DiffMask = Mask[DiffPos];
+    if (DiffMask < 0 || DiffMask >= int(2 * NumElts))
+      return SDValue();
+
+    // Determine source vector and source index.
+    SDValue SrcVec;
+    unsigned SrcIdx;
+    if (unsigned(DiffMask) < NumElts) {
+      SrcVec = V1;
+      SrcIdx = unsigned(DiffMask);
+    } else {
+      SrcVec = V2;
+      SrcIdx = unsigned(DiffMask) - NumElts;
+    }
+
+    // Replace with EXTRACT_VECTOR_ELT + INSERT_VECTOR_ELT, it will match the
+    // patterns of VEXTRINS in tablegen.
+    bool IsEltFP = EltVT.isFloatingPoint();
+    SDValue Extracted =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, IsEltFP ? EltVT : GRLenVT,
+                    SrcVec, DAG.getConstant(SrcIdx, DL, GRLenVT));
+
+    SDValue InsertVal = Extracted;
+    if (!IsEltFP && EltVT != GRLenVT)
+      InsertVal = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT,
+                              DAG.getNode(ISD::TRUNCATE, DL, EltVT, Extracted));
+
+    SDValue Result =
+        DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, (Base == 0) ? V1 : V2,
+                    InsertVal, DAG.getConstant(DiffPos, DL, GRLenVT));
+
+    return Result;
+  };
+
+  // Try [0, n-1) insertion then [n, 2n-1) insertion.
+  if (SDValue Result = tryLowerToExtrAndIns(0))
+    return Result;
+  return tryLowerToExtrAndIns(NumElts);
+}
+
 /// Lower VECTOR_SHUFFLE into VSHUF.
 ///
 /// This mostly consists of converting the shuffle mask into a BUILD_VECTOR and
@@ -2027,6 +2112,9 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((VT.SimpleTy == MVT::v2i64 || VT.SimpleTy == MVT::v2f64) &&
       (Result =
            lowerVECTOR_SHUFFLE_VSHUF4I(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_VEXTRINS(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsZeroOrAnyExtend(DL, Mask, VT, V1, V2, DAG,
                                                      Zeroable)))
