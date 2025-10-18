@@ -288,7 +288,7 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
   std::size_t Intersection = 0;
 
   // Find the intersection between the two sets.
-  for (const auto &[Key, Value] : ParamBigrams)
+  for (const auto &[Key, _] : ParamBigrams)
     Intersection += ArgBigrams.count(Key);
 
   // Calculate Dice coefficient.
