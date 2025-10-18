@@ -291,47 +291,61 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return arith::DivUIOp::create(builder, loc, sum, divisor);
 }
 
-/// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
-/// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
-/// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
-/// unrolled iteration using annotateFn.
-static void generateUnrolledLoop(
-    Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
+void mlir::generateUnrolledLoop(
+    Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
-    ValueRange iterArgs, ValueRange yieldedValues) {
+    ValueRange iterArgs, ValueRange yieldedValues,
+    IRMapping *clonedToSrcOpsMap) {
+
+  // check if the op was cloned from another source op, and return it if found
+  // (or the same op if not found)
+  auto findOriginalSrcOp =
+      [](Operation *op, const IRMapping &clonedToSrcOpsMap) -> Operation * {
+    Operation *srcOp = op;
+    // if the source op derives from another op: traverse the chain to find the
+    // original source op
+    while (srcOp && clonedToSrcOpsMap.contains(srcOp))
+      srcOp = clonedToSrcOpsMap.lookup(srcOp);
+    return srcOp;
+  };
+
   // Builder to insert unrolled bodies just before the terminator of the body of
-  // 'forOp'.
+  // the loop.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
-  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
+  static const auto noopAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = defaultAnnotateFn;
+    annotateFn = noopAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
   Block::iterator srcBlockEnd = std::prev(loopBodyBlock->end(), 2);
 
-  // Unroll the contents of 'forOp' (append unrollFactor - 1 additional copies).
+  // Unroll the contents of the loop body (append unrollFactor - 1 additional
+  // copies).
   SmallVector<Value, 4> lastYielded(yieldedValues);
 
   for (unsigned i = 1; i < unrollFactor; i++) {
-    IRMapping operandMap;
-
     // Prepare operand map.
+    IRMapping operandMap;
     operandMap.map(iterArgs, lastYielded);
 
     // If the induction variable is used, create a remapping to the value for
     // this unrolled instance.
-    if (!forOpIV.use_empty()) {
-      Value ivUnroll = ivRemapFn(i, forOpIV, builder);
-      operandMap.map(forOpIV, ivUnroll);
+    if (!iv.use_empty()) {
+      Value ivUnroll = ivRemapFn(i, iv, builder);
+      operandMap.map(iv, ivUnroll);
     }
 
     // Clone the original body of 'forOp'.
     for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++) {
-      Operation *clonedOp = builder.clone(*it, operandMap);
+      Operation *srcOp = &(*it);
+      Operation *clonedOp = builder.clone(*srcOp, operandMap);
       annotateFn(i, clonedOp, builder);
+      if (clonedToSrcOpsMap)
+        clonedToSrcOpsMap->map(clonedOp,
+                               findOriginalSrcOp(srcOp, *clonedToSrcOpsMap));
     }
 
     // Update yielded values.
