@@ -9,11 +9,11 @@ permissions:
 
 jobs:
   build-windows-release:
-    runs-on: depot-windows-2022-64
+    runs-on: depot-windows-2022-16
     if: github.repository_owner == 'llvm'
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
       - run: |
           subst S: ${{ github.workspace }}
       - run: |
-          S:\llvm\utils\release\build_llvm_release.bat --x64 --version 20.1.8 --skip-checkout --local-python
+          S:\llvm\utils\release\build_llvm_release.bat --x64 --version 21.1.3 --local-python
