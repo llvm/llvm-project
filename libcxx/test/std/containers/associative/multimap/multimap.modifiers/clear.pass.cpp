@@ -64,7 +64,7 @@ bool test() {
   return true;
 }
 int main(int, char**) {
-  assert(test());
+  test();
 
 #if TEST_STD_VER >= 26
   static_assert(test());
