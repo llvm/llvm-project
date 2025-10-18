@@ -2142,8 +2142,9 @@ public:
   }
 
   /// Detects whether \p Address is inside a data region in this function
-  /// (constant islands).
-  bool isInConstantIsland(uint64_t Address) const {
+  /// (constant islands), and optionally return the island size starting
+  /// from the given \p Address.
+  bool isInConstantIsland(uint64_t Address, uint64_t *Size = nullptr) const {
     if (!Islands)
       return false;
 
@@ -2161,10 +2162,15 @@ public:
     DataIter = std::prev(DataIter);
 
     auto CodeIter = Islands->CodeOffsets.upper_bound(Offset);
-    if (CodeIter == Islands->CodeOffsets.begin())
+    if (CodeIter == Islands->CodeOffsets.begin() ||
+        *std::prev(CodeIter) <= *DataIter) {
+      if (Size)
+        *Size = (CodeIter == Islands->CodeOffsets.end() ? getMaxSize()
+                                                        : *CodeIter) -
+                Offset;
       return true;
-
-    return *std::prev(CodeIter) <= *DataIter;
+    }
+    return false;
   }
 
   uint16_t getConstantIslandAlignment() const;
