@@ -1660,6 +1660,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
 
   // sext(A < B) + zext(A > B) => ucmp/scmp(A, B)
+  // sext(A <= B) + zext(A >= B) => ucmp/scmp(A, B)
   CmpPredicate LTPred, GTPred;
   if (match(&I,
             m_c_Add(m_SExt(m_c_ICmp(LTPred, m_Value(A), m_Value(B))),
@@ -1670,13 +1671,22 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       std::swap(A, B);
     }
 
-    if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred) &&
-        ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred))
-      return replaceInstUsesWith(
-          I, Builder.CreateIntrinsic(
-                 Ty,
-                 ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp,
-                 {A, B}));
+    if (ICmpInst::isSigned(LTPred) == ICmpInst::isSigned(GTPred)) {
+      Intrinsic::ID IID =
+          ICmpInst::isSigned(LTPred) ? Intrinsic::scmp : Intrinsic::ucmp;
+
+      // Handle strict inequalities: sext(A < B) + zext(A > B) => scmp/ucmp(A,
+      // B)
+      if (ICmpInst::isLT(LTPred) && ICmpInst::isGT(GTPred)) {
+        return replaceInstUsesWith(I, Builder.CreateIntrinsic(Ty, IID, {A, B}));
+      }
+
+      // Handle non-strict inequalities: sext(A <= B) + zext(A >= B) =>
+      // scmp/ucmp(A, B)
+      if (ICmpInst::isLE(LTPred) && ICmpInst::isGE(GTPred)) {
+        return replaceInstUsesWith(I, Builder.CreateIntrinsic(Ty, IID, {A, B}));
+      }
+    }
   }
 
   // A+B --> A|B iff A and B have no bits set in common.
