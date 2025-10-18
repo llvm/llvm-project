@@ -234,8 +234,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // before any outer or inner permutations have been applied.
   PackingMetadata packingMetadata = computePackingMetadata(
       packedTensorType.getRank(), packOp.getInnerDimsPos());
+  PackingMetadata packMetadata;
   SmallVector<int64_t> packedToStripMinedShapePerm =
-      getPackInverseDestPerm(packOp);
+      getPackInverseDestPerm(packOp, packMetadata);
 
   // 3. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
