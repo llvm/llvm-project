@@ -808,20 +808,39 @@ def s17imm64 : Operand<i64> {
   let DecoderMethod = "decodeSImmOperand<16>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
+def PPCS32ImmAsmOperand : AsmOperandClass {
+  let Name = "S32Imm";
+  let PredicateMethod = "isSImmExpr<32>";
+  let RenderMethod = "addImmOperands";
+}
+def s32imm : Operand<i64> {
+  let PrintMethod = "printSImmOperand<32>";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+def s32imm_pcrel : Operand<i64> {
+  let PrintMethod = "printSImmOperand<32>";
+  let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel32>";
+  let ParserMatchClass = PPCS32ImmAsmOperand;
+  let DecoderMethod = "decodeSImmOperand<32>";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 def PPCS34ImmAsmOperand : AsmOperandClass {
   let Name = "S34Imm";
-  let PredicateMethod = "isS34Imm";
+  let PredicateMethod = "isSImmExpr<34>";
   let RenderMethod = "addImmOperands";
 }
 def s34imm : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
+  let PrintMethod = "printSImmOperand<34>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_imm34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def s34imm_pcrel : Operand<i64> {
-  let PrintMethod = "printS34ImmOperand";
+  let PrintMethod = "printSImmOperand<34>";
   let EncoderMethod = "getImmEncoding<PPC::fixup_ppc_pcrel34>";
   let ParserMatchClass = PPCS34ImmAsmOperand;
   let DecoderMethod = "decodeSImmOperand<34>";
@@ -914,7 +933,8 @@ def ptr_rc_nor0 : RegisterOperand<ptr_rc_nor0_by_hwmode> {
 
 // New addressing modes with 34 bit immediates.
 def PPCDispRI34Operand : AsmOperandClass {
-  let Name = "DispRI34"; let PredicateMethod = "isS34Imm";
+  let Name = "DispRI34";
+  let PredicateMethod = "isSImmExpr<34>";
   let RenderMethod = "addImmOperands";
 }
 def dispRI34 : Operand<iPTR> {

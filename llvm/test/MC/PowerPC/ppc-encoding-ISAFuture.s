@@ -387,6 +387,14 @@
 #CHECK-BE: xvmulhuh 4, 5, 7              # encoding: [0xf0,0x85,0x3b,0xd0]
 #CHECK-LE: xvmulhuh 4, 5, 7              # encoding: [0xd0,0x3b,0x85,0xf0]
 
+           paddis 10, 12, 1000000000, 0
+#CHECK-BE: paddis 10, 12, 1000000000, 0   # encoding: [0x06,0x00,0x3b,0x9a,
+#CHECK-BE-SAME:                                        0x3d,0x4c,0xca,0x00]
+
+           paddis 10, 0, 1000000000, 1
+#CHECK-BE: paddis 10, 0, 1000000000, 1    # encoding: [0x06,0x10,0x3b,0x9a,
+#CHECK-BE-SAME:                                        0x3d,0x40,0xca,0x00]
+
            xxmulmul 8, 3, 4, 2
 #CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]
 #CHECK-LE: xxmulmul 8, 3, 4, 2          # encoding: [0x08,0x22,0x03,0xed]
