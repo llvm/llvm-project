@@ -409,7 +409,7 @@ start:
 * [eventually this will replace the BSD getopt]
 */
 #if defined(REPLACE_GETOPT)
-int getopt(int nargc, char *const *nargv, const char *options) {
+int getopt(int nargc, char *const *nargv, const char *options) throw() {
 
   /*
   * We don't pass FLAG_PERMUTE to getopt_internal() since

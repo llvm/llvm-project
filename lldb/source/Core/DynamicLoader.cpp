@@ -117,6 +117,16 @@ void DynamicLoader::UpdateLoadedSections(ModuleSP module, addr_t link_map_addr,
   UpdateLoadedSectionsCommon(module, base_addr, base_addr_is_offset);
 }
 
+void DynamicLoader::UpdateLoadedSectionsByType(lldb::ModuleSP module,
+                                    lldb::addr_t link_map_addr,
+                                    lldb::addr_t base_addr,
+                                    bool base_addr_is_offset,
+                                    int type_id) {
+  bool changed;
+  module->SetLoadAddressByType(m_process->GetTarget(), base_addr, base_addr_is_offset,
+                         changed, type_id);
+}
+
 void DynamicLoader::UpdateLoadedSectionsCommon(ModuleSP module,
                                                addr_t base_addr,
                                                bool base_addr_is_offset) {
