@@ -80,6 +80,36 @@ func.func @store_out_of_bounds(%vec: vector<8x16xf32>,
 
 // -----
 
+func.func @store_2D_layouts(%vec: vector<8x16xf32>,
+    %source: memref<8x16x32xf32>, %offset: index) {
+  vector.store %vec, %source[%offset, %offset, %offset] {layout_operand_0 = #xegpu.layout<sg_layout = [8, 16]>}
+    : memref<8x16x32xf32>, vector<8x16xf32>
+  return
+}
+
+// CHECK-LABEL: @store_2D_layouts(
+// CHECK:        %[[DESC:.+]] = xegpu.create_nd_tdesc {{[^:]*}} :
+// CHECK-SAME:     memref<8x16x32xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.layout<sg_layout = [8, 16]>>
+
+// -----
+
+func.func @store_2D_cache_hints(%vec: vector<8x16xf32>,
+    %source: memref<8x16x32xf32>, %offset: index) {
+  vector.store %vec, %source[%offset, %offset, %offset] {
+      l1_hint = #xegpu.cache_hint<cached>,
+      l2_hint = #xegpu.cache_hint<uncached>,
+      l3_hint = #xegpu.cache_hint<write_back>
+  }
+    : memref<8x16x32xf32>, vector<8x16xf32>
+  return
+}
+
+// CHECK-LABEL: @store_2D_cache_hints(
+// CHECK:        xegpu.store_nd {{[^<]*}}
+// CHECK-SAME:   <{l1_hint = #xegpu.cache_hint<cached>, l2_hint = #xegpu.cache_hint<uncached>, l3_hint = #xegpu.cache_hint<write_back>}>
+
+// -----
+
 func.func @no_store_high_dim_vector(%vec: vector<8x16x32xf32>,
     %source: memref<16x32x64xf32>, %offset: index) {
   vector.store %vec, %source[%offset, %offset, %offset]
