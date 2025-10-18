@@ -1,17 +1,16 @@
 ; RUN: llc < %s -mtriple=avr | FileCheck %s
 
-%Tstats = type <{ i8, i8 }>
 @ui1 = protected local_unnamed_addr global i64 zeroinitializer, align 8
 @ui2 = protected local_unnamed_addr global i64 zeroinitializer, align 8
 @failed = private unnamed_addr addrspace(1) constant [12 x i8] c"test failed\00"
-@stats = external protected global %Tstats, align 1
+@stats2 = external protected global i16, align 1
 
 ; CHECK-LABEL: main:
-define protected noundef i32 @main(i32 %0, ptr nocapture readnone %1) addrspace(1) #0 {
+define i32 @main() addrspace(1) {
 entry:
   store i64 94, ptr @ui1, align 8
   store i64 53, ptr @ui2, align 8
-  tail call addrspace(1) void @reportFailureWithDetails(i16 ptrtoint (ptr addrspace(1) @failed to i16), i16 11, i8 2, i16 32, ptr nocapture nonnull swiftself dereferenceable(2) @stats)
+  tail call addrspace(1) void @foo(i16 ptrtoint (ptr addrspace(1) @failed to i16), i16 11, i8 2, i16 32, ptr @stats2)
   %11 = load i64, ptr @ui1, align 8
   %12 = load i64, ptr @ui2, align 8
 
@@ -30,5 +29,4 @@ entry:
 }
 
 declare protected void @expect(i64, i64, i16, i16, i8, i16) local_unnamed_addr addrspace(1) #0
-declare protected void @reportFailureWithDetails(i16, i16, i8, i16, ptr nocapture swiftself dereferenceable(2)) local_unnamed_addr addrspace(1) #0
-attributes #0 = { nounwind "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+declare protected void @foo(i16, i16, i8, i16, i16) local_unnamed_addr addrspace(1) #0
