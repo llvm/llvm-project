@@ -23,6 +23,7 @@ on:
           - ubuntu-22.04-arm
           - macos-13
           - macos-14
+          - windows-2022
 
   workflow_call:
     inputs:
@@ -118,9 +119,15 @@ jobs:
         echo "ref=$ref" >> $GITHUB_OUTPUT
         echo "upload=$upload" >> $GITHUB_OUTPUT
 
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          release_binary_suffix="exe"
+        else
+          release_binary_suffix="tar.xz"
+        fi
+
         release_binary_basename="LLVM-$release_version-$RUNNER_OS-$RUNNER_ARCH"
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
-        echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        echo "release-binary-filename=$release_binary_basename.$release_binary_suffix" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
         # The hendrikmuhs/ccache-action action does not support installing sccache
@@ -152,14 +159,19 @@ jobs:
         build_flang="true"
 
         if [ "$RUNNER_OS" = "Windows" ]; then
-          # The build times out on Windows, so we need to disable LTO.
+          # LTO causes the WiX generator to crash so we need to disable it:
+          # light.exe : error LGHT0001 : Catastrophic failure (Exception from HRESULT: 0x8000FFFF (E_UNEXPECTED))
+          # Stack Trace:
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
+          # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
         echo "build-flang=$build_flang" >> $GITHUB_OUTPUT
         case "${{ inputs.runs-on }}" in
-          ubuntu-22.04*)
+          ubuntu-22.04*|windows-2022)
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
@@ -208,6 +220,13 @@ jobs:
       with:
         arch: amd64
 
+    # In order to avoid some errors with long paths names, we need to shorten
+    # the path names for the build.
+    - name: Shorten paths on Windows
+      if: startsWith(runner.os, 'Windows')
+      run: |
+        subst S: ${{ github.workspace }}
+
     - name: Set Build Prefix
       id: setup-stage
       shell: bash
@@ -216,8 +235,19 @@ jobs:
         if [ "${{ runner.os }}" = "Linux" ]; then
           sudo chown $USER:$USER /mnt/
           build_prefix=/mnt/
+        elif [ "${{ runner.os }}" = "Windows" ]; then
+          build_prefix=/s/
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
+
+    # We will use Wix to generate the installer on Windows, because this
+    # reportedly works better with larger installers, though, I haven't actually
+    # seen an installer > 2GB, which is the limit for default installer
+    # generator.
+    - name: Install Wix
+      if: runner.os == 'Windows'
+      run: |
+        dotnet tool install --global wix
 
     - name: Configure
       id: build
@@ -251,8 +281,15 @@ jobs:
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
       continue-on-error: true
+      shell: bash
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+
+    - name: Dump logs
+      if: failure() && runner.os == 'Windows'
+      run: |
+        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
+#        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
 
   upload-release-binaries:
     name: "Upload Release Binaries"

@@ -30,7 +30,22 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
+  set_instrument_and_final_stage_var(LLVM_TARGETS_TO_BUILD "AArch64;ARM;X86;BPF;WebAssembly;RISCV;NVPTX" STRING)
+  set_instrument_and_final_stage_var(Python3_FIND_REGISTRY "NEVER" STRING)
+  set_instrument_and_final_stage_var(LLDB_RELOCATABLE_PYTHON "1" STRING)
+  set_instrument_and_final_stage_var(LLDB_EMBED_PYTHON_HOME "OFF" BOOL)
+  set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "FORCE_ON" STRING)
+  set_instrument_and_final_stage_var(LLDB_ENABLE_LIBXML2 "OFF" BOOL)
+  set_instrument_and_final_stage_var(CLANG_ENABLE_LIBXML2 "OFF" BOOL)
+  set_instrument_and_final_stage_var(LLVM_ENABLE_RPMALLOC "ON" BOOL)
+  set_final_stage_var(BUILD_LLVM_C_DYLIB "ON" STRING)
+  set_final_stage_var(LLVM_INSTALL_TOOLCHAIN_ONLY "ON" BOOL)
+else()
+  set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+endif()
+
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
@@ -56,7 +71,7 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 set(STAGE1_PROJECTS "clang")
 
 # Build all runtimes so we can statically link them into the stage2 compiler.
-set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
+set(STAGE1_RUNTIMES ${DEFAULT_RUNTIMES})
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
@@ -135,12 +150,15 @@ set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FL
 set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
 
 # Final Stage Config (stage2)
-set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
-set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS}" STRING)
+set_final_stage_var(LLVM_ENABLE_RUNTIMES "" STRING)
+set_final_stage_var(LLVM_ENABLE_PROJECTS "${LLVM_RELEASE_ENABLE_PROJECTS};compiler-rt" STRING)
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set_final_stage_var(CLANG_BOLT "INSTRUMENT" STRING)
 endif()
-set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+# We want to generate an installer on Windows.
+if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+  set_final_stage_var(CPACK_GENERATOR "TXZ" STRING)
+endif()
 set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
