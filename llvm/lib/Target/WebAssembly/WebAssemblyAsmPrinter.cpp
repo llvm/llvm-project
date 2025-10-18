@@ -33,6 +33,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -41,6 +42,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -56,6 +58,17 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 extern cl::opt<bool> WasmKeepRegisters;
+// values are divided by 1<<31 to calculate the probability
+static cl::opt<float>
+    WasmHighBranchProb("wasm-branch-prob-high", cl::Hidden,
+                       cl::desc("lowest branch probability to not be annotated "
+                                "as likely taken (range [0.0-1.0])"),
+                       cl::init(0.5f));
+static cl::opt<float>
+    WasmLowBranchProb("wasm-branch-prob-low", cl::Hidden,
+                      cl::desc("highest branch probability to be annotated as "
+                               "unlikely taken (range [0.0-1.0])"),
+                      cl::init(0.5f));
 
 //===----------------------------------------------------------------------===//
 // Helpers.
@@ -433,6 +446,53 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   EmitProducerInfo(M);
   EmitTargetFeatures(M);
   EmitFunctionAttributes(M);
+
+  // Subtarget may be null if no functions have been defined in file
+  if (Subtarget && Subtarget->hasBranchHinting())
+    emitBranchHintSection();
+}
+
+void WebAssemblyAsmPrinter::emitBranchHintSection() const {
+  MCSectionWasm *BranchHintsSection = OutContext.getWasmSection(
+      ".custom_section.metadata.code.branch_hint", SectionKind::getMetadata());
+  const uint32_t NumFunctionHints = BranchHints.size();
+  if (NumFunctionHints == 0)
+    return;
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(BranchHintsSection);
+  OutStreamer->emitULEB128IntValue(NumFunctionHints);
+
+  auto EmitFunc = [this](const MCSymbol *Sym, const BranchHintRecord &Hints) {
+    assert(!Hints.empty());
+    // emit relocatable function index for the function symbol
+    OutStreamer->emitULEB128Value(
+        MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext));
+    // emit the number of hints for this function (is constant -> does not
+    // need handling by target streamer for reloc)
+    OutStreamer->emitULEB128IntValue(Hints.size());
+    for (const auto &[instrSym, hint] : Hints) {
+      // offset from function start
+      OutStreamer->emitULEB128Value(
+          MCSymbolRefExpr::create(instrSym, WebAssembly::S_None, OutContext));
+      OutStreamer->emitULEB128IntValue(1); // hint size
+      OutStreamer->emitULEB128IntValue(hint);
+    }
+  };
+
+  if (MCAssembler *AssemblerPtr = OutStreamer->getAssemblerPtr()) {
+    const auto &AssemblerSymbols = AssemblerPtr->getSymbols();
+    for (const auto &Sym : AssemblerSymbols) {
+      if (auto FuncEntry = BranchHints.find(Sym);
+          FuncEntry != BranchHints.end()) {
+        EmitFunc(Sym, FuncEntry->second);
+      }
+    }
+  } else {
+    for (const auto &FuncEntry : BranchHints) {
+      EmitFunc(FuncEntry.first, FuncEntry.second);
+    }
+  }
+  OutStreamer->popSection();
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -631,6 +691,98 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   AsmPrinter::emitFunctionBodyStart();
 }
 
+// Try to infer branch target for a BR_IF instruction after MBB targets were
+// stackified by `WebAssemblyCFGStackify` using simple heuristics to avoid
+// having to simulate block-stack.
+const MachineBasicBlock *inferBranchTarget(const MachineInstr *MI,
+                                           const MachineBasicBlock *MBB) {
+  // Since we need to guess branch targets based on MBB successor order,
+  // we need to make sure that the BR_IF is the last terminator to exclude
+  // complicated edge cases.
+  if (const auto Terminators = reverse(MBB->terminators());
+      Terminators.begin() == Terminators.end() || &*Terminators.begin() != MI)
+    return nullptr;
+
+  // Parent mbb might have more than the two successors (true / false) from
+  // br_if due to eh pads / unwinds. We skip those cases.
+  if (MBB->succ_size() != 2)
+    return nullptr;
+
+  const MachineBasicBlock *Succ0 = *MBB->succ_begin();
+  const MachineBasicBlock *Succ1 = *std::next(MBB->succ_begin());
+
+  // Find fallthrough block that is right after MBB and is the target of the
+  // false-edge of the br_if
+  assert(std::next(MBB->getIterator()) != MBB->getParent()->end() &&
+         "MBB with br_if must have a basic block after it");
+  const MachineBasicBlock *Fallthrough = &*std::next(MBB->getIterator());
+
+  // In some corner cases concerning exceptions, earlier optimizations
+  // (`WebAssemblyCFGStackify::removeUnnecessaryInstrs` in particular) obfuscate
+  // fallthrough control flow:
+  //
+  //  bb0:
+  //    ;; successor: if.true, cont
+  //    br_if $if.true
+  //    br $cont
+  //
+  //  ehpad: ...
+  //  cont: ...  <- Continuation BB
+  //
+  // `br $cont` may be optimized away, making the `ehpad` seem like the
+  // fallthrough block instead of `cont`. Give up on that case.
+  if (Fallthrough != Succ0 && Fallthrough != Succ1)
+    return nullptr;
+  // return the true-block (desired branch target) which is !Fallthrough
+  return Fallthrough == Succ0 ? Succ1 : Succ0;
+}
+
+void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
+  assert(MI->getOpcode() == WebAssembly::BR_IF);
+  const MachineBasicBlock *MBB = MI->getParent();
+  const MachineFunction *MF = MBB->getParent();
+
+  if (!MF->getSubtarget<WebAssemblySubtarget>().hasBranchHinting() ||
+      !MBB->hasSuccessorProbabilities()) {
+    return;
+  }
+  const MachineBranchProbabilityInfo *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  const MachineBasicBlock *TrueBlock = inferBranchTarget(MI, MBB);
+  if (TrueBlock == nullptr) {
+    LLVM_DEBUG(dbgs() << "Could not infer branch target for " << *MI << '\n');
+    return;
+  }
+  const BranchProbability Prob = MBPI->getEdgeProbability(MBB, TrueBlock);
+
+  const float ThresholdProbLow = WasmLowBranchProb.getValue();
+  const float ThresholdProbHigh = WasmHighBranchProb.getValue();
+  assert(ThresholdProbLow >= 0.0f && ThresholdProbLow <= 1.0f &&
+         ThresholdProbHigh >= 0.0f && ThresholdProbHigh <= 1.0f &&
+         "Branch probability thresholds must be in range [0.0-1.0]");
+
+  MCSymbol *BrIfSym = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(BrIfSym);
+  const uint32_t D = BranchProbability::getOne().getDenominator();
+  uint8_t HintValue;
+  if (Prob > BranchProbability::getRaw(ThresholdProbHigh * D))
+    HintValue = static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::LIKELY);
+  else if (Prob <= BranchProbability::getRaw(ThresholdProbLow * D))
+    HintValue =
+        static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::UNLIKELY);
+  else
+    return; // Don't emit branch hint between thresholds
+
+  // we know that we only emit branch hints for internal functions,
+  // therefore we can directly cast and don't need getMCSymbolForFunction
+  MCSymbol *FuncSym = getSymbol(&MF->getFunction());
+  auto FuncEntry = BranchHints.find(FuncSym);
+  if (FuncEntry == BranchHints.end()) {
+    FuncEntry = BranchHints.insert({FuncSym, {}}).first;
+  }
+  FuncEntry->second.emplace_back(BrIfSym, HintValue);
+}
+
 void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
   WebAssembly_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -690,6 +842,12 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
+    if (Subtarget->hasBranchHinting() &&
+        MI->getOpcode() == WebAssembly::BR_IF) {
+      // since we need to emit a label to later recover the instruction's
+      // offset, this has to called before the instruction is emitted
+      recordBranchHint(MI);
+    }
     EmitToStreamer(*OutStreamer, TmpInst);
     break;
   }
