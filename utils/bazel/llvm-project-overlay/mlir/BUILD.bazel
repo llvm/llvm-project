@@ -5512,12 +5512,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "GPUPipelines",
-    srcs = ["lib/Dialect/GPU/Pipelines/GPUToNVVMPipeline.cpp"],
+    srcs = glob(["lib/Dialect/GPU/Pipelines/*.cpp"]),
     hdrs = ["include/mlir/Dialect/GPU/Pipelines/Passes.h"],
     includes = ["include"],
     deps = [
         ":AffineToStandard",
         ":ArithToLLVM",
+        ":ConversionPasses",
         ":FuncDialect",
         ":FuncToLLVM",
         ":GPUDialect",
@@ -5526,8 +5527,10 @@ cc_library(
         ":GPUTransforms",
         ":IndexToLLVM",
         ":LLVMDialect",
+        ":LLVMIRTransforms",
         ":LinalgTransforms",
         ":MathToLLVM",
+        ":MathToXeVM",
         ":MemRefToLLVM",
         ":MemRefTransforms",
         ":NVGPUToNVVM",
@@ -5538,6 +5541,10 @@ cc_library(
         ":Transforms",
         ":VectorToLLVM",
         ":VectorToSCF",
+        ":XeGPUToXeVM",
+        ":XeGPUTransforms",
+        ":XeVMTarget",
+        ":XeVMToLLVM",
     ],
 )
 

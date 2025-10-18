@@ -330,7 +330,6 @@ def AffineForOp : Affine_Op<"for",
     Speculation::Speculatability getSpeculatability();
   }];
 
-  let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
   let hasRegionVerifier = 1;

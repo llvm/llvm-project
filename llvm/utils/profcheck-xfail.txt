@@ -107,6 +107,7 @@ Instrumentation/AddressSanitizer/asan-stack-safety.ll
 Instrumentation/AddressSanitizer/asan-struct-scalable.ll
 Instrumentation/AddressSanitizer/asan-vp-load-store.ll
 Instrumentation/AddressSanitizer/asan-vs-gvn.ll
+Instrumentation/AddressSanitizer/asan-win-dont-instrument-catchpad.ll
 Instrumentation/AddressSanitizer/basic.ll
 Instrumentation/AddressSanitizer/basic-msvc64.ll
 Instrumentation/AddressSanitizer/byref-args.ll

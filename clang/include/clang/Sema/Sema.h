@@ -3961,6 +3961,13 @@ public:
                                      bool &AddToScope,
                                      ArrayRef<BindingDecl *> Bindings = {});
 
+private:
+  // Perform a check on an AsmLabel to verify its consistency and emit
+  // diagnostics in case of an error.
+  void CheckAsmLabel(Scope *S, Expr *AsmLabelExpr, StorageClass SC,
+                     TypeSourceInfo *TInfo, VarDecl *);
+
+public:
   /// Perform semantic checking on a newly-created variable
   /// declaration.
   ///

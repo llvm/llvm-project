@@ -1464,7 +1464,8 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
     }
   else if (Info.ElementType->isBFloat16Type() &&
            !FeatureMap.lookup("zvfbfmin") &&
-           !FeatureMap.lookup("xandesvbfhcvt"))
+           !FeatureMap.lookup("xandesvbfhcvt") &&
+           !FeatureMap.lookup("experimental-zvfbfa"))
     if (DeclareAndesVectorBuiltins) {
       Diag(Loc, diag::err_riscv_type_requires_extension, D)
           << Ty << "zvfbfmin or xandesvbfhcvt";
