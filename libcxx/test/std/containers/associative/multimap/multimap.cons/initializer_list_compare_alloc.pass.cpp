@@ -109,8 +109,6 @@ bool test() {
     assert(m.get_allocator() == A{});
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

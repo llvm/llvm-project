@@ -1120,20 +1120,22 @@ public:
       return;
 
     if (__root() == nullptr) { // Make sure we always have a root node
-      __insert_node_at(
-          __end_node(), __end_node()->__left_, static_cast<__node_base_pointer>(__construct_node(*__first).release()));
+      __insert_node_at(__end_node(),
+                       __end_node()->__left_,
+                       std::__static_fancy_pointer_cast<__node_base_pointer>(__construct_node(*__first).release()));
       ++__first;
     }
 
-    auto __max_node = static_cast<__node_pointer>(std::__tree_max(static_cast<__node_base_pointer>(__root())));
+    auto __max_node = std::__static_fancy_pointer_cast<__node_pointer>(
+        std::__tree_max(std::__static_fancy_pointer_cast<__node_base_pointer>(__root())));
 
     for (; __first != __last; ++__first) {
       __node_holder __nd = __construct_node(*__first);
       // Always check the max node first. This optimizes for sorted ranges inserted at the end.
       if (!value_comp()(__nd->__get_value(), __max_node->__get_value())) { // __node >= __max_val
-        __insert_node_at(static_cast<__end_node_pointer>(__max_node),
+        __insert_node_at(std::__static_fancy_pointer_cast<__end_node_pointer>(__max_node),
                          __max_node->__right_,
-                         static_cast<__node_base_pointer>(__nd.get()));
+                         std::__static_fancy_pointer_cast<__node_base_pointer>(__nd.get()));
         __max_node = __nd.release();
       } else {
         __end_node_pointer __parent;
@@ -1841,7 +1843,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_high(__end_node_pointer& __parent
         }
       } else {
         if (__nd->__right_ != nullptr)
-          __nd = static_cast<__node_pointer>(__nd->__right_);
+          __nd = std::__static_fancy_pointer_cast<__node_pointer>(__nd->__right_);
         else {
           __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__nd);
           return __nd->__right_;
@@ -2003,8 +2005,8 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_multi(_Args&&... __args) {
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
   __node_base_pointer& __child = __find_leaf_high(__parent, __h->__get_value());
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
-  return iterator(static_cast<__node_pointer>(__h.release()));
+  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
+  return iterator(std::__static_fancy_pointer_cast<__node_pointer>(__h.release()));
 }
 
 template <class _Tp, class _Compare, class _Allocator>

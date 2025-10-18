@@ -44,8 +44,6 @@ bool test() {
   test_map_exception_safety_throwing_copy<std::multimap>();
   test_map_exception_safety_throwing_allocator<std::multimap, int, int>();
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

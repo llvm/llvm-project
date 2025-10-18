@@ -128,8 +128,6 @@ bool test() {
     assert(std::distance(mo.begin(), mo.end()) == 0);
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

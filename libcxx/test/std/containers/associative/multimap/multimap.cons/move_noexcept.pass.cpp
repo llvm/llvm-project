@@ -52,8 +52,6 @@ bool test() {
     static_assert(!std::is_nothrow_move_constructible<C>::value, "");
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

@@ -82,8 +82,6 @@ bool test() {
   }
 #endif
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

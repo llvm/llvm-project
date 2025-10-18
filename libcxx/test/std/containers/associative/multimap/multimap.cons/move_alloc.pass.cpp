@@ -151,8 +151,6 @@ bool test() {
     LIBCPP_ASSERT(m1.empty());
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

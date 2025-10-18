@@ -33,17 +33,20 @@ public:
   using value_type                             = T;
   using propagate_on_container_copy_assignment = std::true_type;
 
+  TEST_CONSTEXPR_CXX26
   tracking_allocator(std::vector<void*>& allocs) : allocs_(&allocs) {}
 
   template <class U>
-  tracking_allocator(const tracking_allocator<U>& other) : allocs_(other.allocs_) {}
+  TEST_CONSTEXPR_CXX26 tracking_allocator(const tracking_allocator<U>& other) : allocs_(other.allocs_) {}
 
+  TEST_CONSTEXPR_CXX26
   T* allocate(std::size_t n) {
     T* allocation = std::allocator<T>().allocate(n);
     allocs_->push_back(allocation);
     return allocation;
   }
 
+  TEST_CONSTEXPR_CXX26
   void deallocate(T* ptr, std::size_t n) TEST_NOEXCEPT {
     auto res = std::remove(allocs_->begin(), allocs_->end(), ptr);
     assert(res != allocs_->end() && "Trying to deallocate memory from different allocator?");
@@ -51,23 +54,27 @@ public:
     std::allocator<T>().deallocate(ptr, n);
   }
 
+  TEST_CONSTEXPR_CXX26
   friend bool operator==(const tracking_allocator& lhs, const tracking_allocator& rhs) {
     return lhs.allocs_ == rhs.allocs_;
   }
 
+  TEST_CONSTEXPR_CXX26
   friend bool operator!=(const tracking_allocator& lhs, const tracking_allocator& rhs) {
     return lhs.allocs_ != rhs.allocs_;
   }
 };
 
 struct NoOp {
+  TEST_CONSTEXPR_CXX26
   void operator()() {}
 };
 
 template <class Alloc, class AllocatorInvariant = NoOp>
-void test_alloc(const Alloc& lhs_alloc                   = Alloc(),
-                const Alloc& rhs_alloc                   = Alloc(),
-                AllocatorInvariant check_alloc_invariant = NoOp()) {
+TEST_CONSTEXPR_CXX26 void
+test_alloc(const Alloc& lhs_alloc                   = Alloc(),
+           const Alloc& rhs_alloc                   = Alloc(),
+           AllocatorInvariant check_alloc_invariant = NoOp()) {
   {   // Test empty/non-empty multimap combinations
     { // assign from a non-empty container into an empty one
       using V   = std::pair<const int, int>;
@@ -258,9 +265,11 @@ bool test() {
       std::vector<void*>* rhs_allocs_;
 
     public:
+      TEST_CONSTEXPR_CXX26
       AssertEmpty(std::vector<void*>& lhs_allocs, std::vector<void*>& rhs_allocs)
           : lhs_allocs_(&lhs_allocs), rhs_allocs_(&rhs_allocs) {}
 
+      TEST_CONSTEXPR_CXX26
       void operator()() {
         assert(lhs_allocs_->empty());
         assert(rhs_allocs_->empty());

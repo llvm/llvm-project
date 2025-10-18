@@ -215,8 +215,6 @@ bool test() {
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::multimap, std::multimap<int, long>>();
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

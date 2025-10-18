@@ -104,8 +104,6 @@ bool test() {
     assert(m.get_allocator().get_id() == 45);
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

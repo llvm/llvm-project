@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class Alloc>
-void test_alloc(const Alloc& new_alloc) {
+TEST_CONSTEXPR_CXX26 void test_alloc(const Alloc& new_alloc) {
   { // Simple check
     using V   = std::pair<const int, int>;
     using Map = std::multimap<int, int, std::less<int>, Alloc>;

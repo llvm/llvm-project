@@ -61,8 +61,6 @@ bool test() {
     assert(m.key_comp() == Cmp(4));
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {

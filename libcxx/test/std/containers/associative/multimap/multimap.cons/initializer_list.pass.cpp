@@ -57,8 +57,6 @@ bool test() {
     assert(*++i == V(3, 2));
   }
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {
