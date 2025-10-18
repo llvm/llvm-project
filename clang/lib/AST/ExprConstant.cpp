@@ -12237,6 +12237,37 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256: {
+    APValue ASource, BSource;
+    if (!EvaluateAsRValue(Info, E->getArg(0), ASource) ||
+        !EvaluateAsRValue(Info, E->getArg(1), BSource))
+      return false;
+    unsigned SourceLen = ASource.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemT = VT->getElementType();
+    unsigned ElemBitWidth = Info.Ctx.getTypeSize(ElemT);
+    QualType ResultElemT = E->getType()->castAs<VectorType>()->getElementType();
+    bool ResultElemUnsigned = ResultElemT->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 16> Result;
+    Result.reserve(SourceLen);
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APSInt &AElem = ASource.getVectorElt(I).getInt();
+      APSInt &BElem = BSource.getVectorElt(I).getInt();
+      APSInt ResultElem =
+          (BElem.isNegative() ? -AElem
+           : BElem.isZero()   ? APSInt(ElemBitWidth, ResultElemUnsigned)
+                              : AElem);
+      Result.emplace_back(ResultElem);
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
   case X86::BI__builtin_ia32_blendvps:
