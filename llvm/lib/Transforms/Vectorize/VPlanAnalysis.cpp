@@ -136,6 +136,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
     return Type::getVoidTy(Ctx);
+  case VPInstruction::PopCount:
+    return Type::getInt64Ty(Ctx);
   default:
     break;
   }
@@ -310,6 +312,9 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           })
           .Case<VPExpressionRecipe>([this](const auto *R) {
             return inferScalarType(R->getOperandOfResultType());
+          })
+          .Case<VPAliasLaneMaskRecipe>([this](const VPAliasLaneMaskRecipe *R) {
+            return Type::getInt1Ty(Ctx);
           });
 
   assert(ResultTy && "could not infer type for the given VPValue");
