@@ -140,7 +140,8 @@ class ExprPointeeResolve {
       // explicit cast will be checked in `findPointeeToNonConst`
       const CastKind kind = ICE->getCastKind();
       if (kind == CK_LValueToRValue || kind == CK_DerivedToBase ||
-          kind == CK_UncheckedDerivedToBase)
+          kind == CK_UncheckedDerivedToBase ||
+          (kind == CK_NoOp && (ICE->getType() == ICE->getSubExpr()->getType())))
         return resolveExpr(ICE->getSubExpr());
       return false;
     }
@@ -788,13 +789,16 @@ ExprMutationAnalyzer::Analyzer::findPointeeToNonConst(const Expr *Exp) {
   // FIXME: false positive if the pointee does not change in lambda
   const auto CaptureNoConst = lambdaExpr(hasCaptureInit(Exp));
 
-  const auto Matches =
-      match(stmt(anyOf(forEachDescendant(
-                           stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
-                                      CastToNonConst, CaptureNoConst))
-                               .bind("stmt")),
-                       forEachDescendant(InitToNonConst))),
-            Stm, Context);
+  const auto ReturnNoConst =
+      returnStmt(hasReturnValue(canResolveToExprPointee(Exp)));
+
+  const auto Matches = match(
+      stmt(anyOf(forEachDescendant(
+                     stmt(anyOf(AssignToNonConst, PassAsNonConstArg,
+                                CastToNonConst, CaptureNoConst, ReturnNoConst))
+                         .bind("stmt")),
+                 forEachDescendant(InitToNonConst))),
+      Stm, Context);
   return selectFirst<Stmt>("stmt", Matches);
 }
 
