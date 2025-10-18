@@ -41,6 +41,10 @@
 // OpenBSD has no indirect syscalls
 #  define _LIBCPP_FUTEX(...) futex(__VA_ARGS__)
 
+#elif defined(_WIN32)
+
+#  include <windows.h>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -99,6 +103,40 @@ __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __pt
 
 static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
   _umtx_op(const_cast<__cxx_atomic_contention_t*>(__ptr), UMTX_OP_WAKE, __notify_one ? 1 : INT_MAX, nullptr, nullptr);
+}
+
+#elif defined(_WIN32)
+
+static void
+__libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr, __cxx_contention_t __val) {
+  // WaitOnAddress was added in Windows 8 (build 9200)
+  static auto __pWaitOnAddress = reinterpret_cast<BOOL(WINAPI*)(volatile void*, PVOID, SIZE_T, DWORD)>(
+      GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WaitOnAddress"));
+  if (__pWaitOnAddress != nullptr) {
+    __pWaitOnAddress(const_cast<__cxx_atomic_contention_t*>(__ptr), &__val, sizeof(__val), INFINITE);
+  } else {
+    __libcpp_thread_poll_with_backoff(
+        [=]() -> bool { return !__cxx_nonatomic_compare_equal(__cxx_atomic_load(__ptr, memory_order_relaxed), __val); },
+        __libcpp_timed_backoff_policy());
+  }
+}
+
+static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const volatile* __ptr, bool __notify_one) {
+  if (__notify_one) {
+    // WakeByAddressSingle was added in Windows 8 (build 9200)
+    static auto __pWakeByAddressSingle = reinterpret_cast<void(WINAPI*)(PVOID)>(
+        GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WakeByAddressSingle"));
+    if (__pWakeByAddressSingle != nullptr) {
+      __pWakeByAddressSingle(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    }
+  } else {
+    // WakeByAddressAll was added in Windows 8 (build 9200)
+    static auto __pWakeByAddressAll = reinterpret_cast<void(WINAPI*)(PVOID)>(
+        GetProcAddress(GetModuleHandleW(L"api-ms-win-core-synch-l1-2-0.dll"), "WakeByAddressAll"));
+    if (__pWakeByAddressAll != nullptr) {
+      __pWakeByAddressAll(const_cast<__cxx_atomic_contention_t*>(__ptr));
+    }
+  }
 }
 
 #else // <- Add other operating systems here
