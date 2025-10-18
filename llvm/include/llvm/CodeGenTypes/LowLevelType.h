@@ -39,68 +39,143 @@ class raw_ostream;
 
 class LLT {
 public:
+  enum class FPVariant {
+    IEEE_FLOAT,
+    BF16,            // BF16
+    TENSOR_FLOAT32,  // TENSOR_FLOAT32
+    EXTENDED_FP80,   // FP80
+    PPC128_FLOAT,    // PPC128_FLOAT
+    VARIANT_FLOAT_5, // UNASSIGNED
+    VARIANT_FLOAT_6, // UNASSIGNED
+    VARIANT_FLOAT_7, // UNASSIGNED
+  };
+
+  enum class Kind : uint8_t {
+    INVALID,
+    ANY_SCALAR,
+    INTEGER,
+    FLOAT,
+    POINTER,
+    VECTOR_ANY,
+    VECTOR_INTEGER,
+    VECTOR_FLOAT,
+    VECTOR_POINTER,
+  };
+
+  constexpr static Kind toVector(Kind Ty) {
+    if (Ty == Kind::POINTER)
+      return Kind::VECTOR_POINTER;
+
+    if (Ty == Kind::INTEGER)
+      return Kind::VECTOR_INTEGER;
+
+    if (Ty == Kind::FLOAT)
+      return Kind::VECTOR_FLOAT;
+
+    return Kind::VECTOR_ANY;
+  }
+
+  constexpr static Kind toScalar(Kind Ty) {
+    if (Ty == Kind::VECTOR_POINTER)
+      return Kind::POINTER;
+
+    if (Ty == Kind::VECTOR_INTEGER)
+      return Kind::INTEGER;
+
+    if (Ty == Kind::VECTOR_FLOAT)
+      return Kind::FLOAT;
+
+    return Kind::ANY_SCALAR;
+  }
+
   /// Get a low-level scalar or aggregate "bag of bits".
   static constexpr LLT scalar(unsigned SizeInBits) {
-    return LLT{/*isPointer=*/false, /*isVector=*/false, /*isScalar=*/true,
-               ElementCount::getFixed(0), SizeInBits,
-               /*AddressSpace=*/0};
+    return LLT{Kind::ANY_SCALAR, ElementCount::getFixed(0), SizeInBits,
+               /*AddressSpace=*/0, static_cast<FPVariant>(0)};
+  }
+
+  static constexpr LLT integer(unsigned SizeInBits) {
+    return LLT{Kind::INTEGER, ElementCount::getFixed(0), SizeInBits,
+               /*AddressSpace=*/0, static_cast<FPVariant>(0)};
+  }
+
+  static constexpr LLT floatingPoint(unsigned SizeInBits, FPVariant FP) {
+    return LLT{Kind::FLOAT, ElementCount::getFixed(0), SizeInBits,
+               /*AddressSpace=*/0, FP};
   }
 
   /// Get a low-level token; just a scalar with zero bits (or no size).
   static constexpr LLT token() {
-    return LLT{/*isPointer=*/false, /*isVector=*/false,
-               /*isScalar=*/true,   ElementCount::getFixed(0),
+    return LLT{Kind::ANY_SCALAR, ElementCount::getFixed(0),
                /*SizeInBits=*/0,
-               /*AddressSpace=*/0};
+               /*AddressSpace=*/0, static_cast<FPVariant>(0)};
   }
 
   /// Get a low-level pointer in the given address space.
   static constexpr LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
-    return LLT{/*isPointer=*/true, /*isVector=*/false, /*isScalar=*/false,
-               ElementCount::getFixed(0), SizeInBits, AddressSpace};
+    return LLT{Kind::POINTER, ElementCount::getFixed(0), SizeInBits,
+               AddressSpace, static_cast<FPVariant>(0)};
   }
 
   /// Get a low-level vector of some number of elements and element width.
   static constexpr LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
     assert(!EC.isScalar() && "invalid number of vector elements");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, /*isScalar=*/false,
-               EC, ScalarSizeInBits, /*AddressSpace=*/0};
+    return LLT{Kind::VECTOR_ANY, EC, ScalarSizeInBits,
+               /*AddressSpace=*/0, static_cast<FPVariant>(0)};
   }
 
   /// Get a low-level vector of some number of elements and element type.
   static constexpr LLT vector(ElementCount EC, LLT ScalarTy) {
     assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(),
-               /*isVector=*/true,
-               /*isScalar=*/false,
-               EC,
-               ScalarTy.getSizeInBits().getFixedValue(),
-               ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
+
+    Kind Info = toVector(ScalarTy.Info);
+    return LLT{Info, EC, ScalarTy.getSizeInBits().getFixedValue(),
+               ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0,
+               ScalarTy.isFloat() ? ScalarTy.getFPVariant()
+                                  : static_cast<FPVariant>(0)};
   }
 
+  // Get a bfloat16 value.
+  static constexpr LLT bfloat16() { return floatingPoint(16, FPVariant::BF16); }
+
   /// Get a 16-bit IEEE half value.
-  /// TODO: Add IEEE semantics to type - This currently returns a simple `scalar(16)`.
   static constexpr LLT float16() {
-    return scalar(16);
+    return floatingPoint(16, FPVariant::IEEE_FLOAT);
   }
 
   /// Get a 32-bit IEEE float value.
   static constexpr LLT float32() {
-    return scalar(32);
+    return floatingPoint(32, FPVariant::IEEE_FLOAT);
   }
 
   /// Get a 64-bit IEEE double value.
   static constexpr LLT float64() {
-    return scalar(64);
+    return floatingPoint(64, FPVariant::IEEE_FLOAT);
+  }
+
+  /// Get a 80-bit X86 floating point value.
+  static constexpr LLT x86fp80() {
+    return floatingPoint(80, FPVariant::EXTENDED_FP80);
+  }
+
+  /// Get a 128-bit IEEE quad value.
+  static constexpr LLT float128() {
+    return floatingPoint(128, FPVariant::IEEE_FLOAT);
+  }
+
+  /// Get a 128-bit PowerPC double double value.
+  static constexpr LLT ppcf128() {
+    return floatingPoint(128, FPVariant::PPC128_FLOAT);
   }
 
   /// Get a low-level fixed-width vector of some number of elements and element
   /// width.
   static constexpr LLT fixed_vector(unsigned NumElements,
                                     unsigned ScalarSizeInBits) {
-    return vector(ElementCount::getFixed(NumElements), ScalarSizeInBits);
+    return vector(ElementCount::getFixed(NumElements),
+                  LLT::scalar(ScalarSizeInBits));
   }
 
   /// Get a low-level fixed-width vector of some number of elements and element
@@ -113,7 +188,8 @@ public:
   /// width.
   static constexpr LLT scalable_vector(unsigned MinNumElements,
                                        unsigned ScalarSizeInBits) {
-    return vector(ElementCount::getScalable(MinNumElements), ScalarSizeInBits);
+    return vector(ElementCount::getScalable(MinNumElements),
+                  LLT::scalar(ScalarSizeInBits));
   }
 
   /// Get a low-level scalable vector of some number of elements and element
@@ -132,27 +208,71 @@ public:
     return scalarOrVector(EC, LLT::scalar(static_cast<unsigned>(ScalarSize)));
   }
 
-  explicit constexpr LLT(bool isPointer, bool isVector, bool isScalar,
-                         ElementCount EC, uint64_t SizeInBits,
-                         unsigned AddressSpace)
+  explicit constexpr LLT(Kind Info, ElementCount EC, uint64_t SizeInBits,
+                         unsigned AddressSpace, FPVariant FP)
       : LLT() {
-    init(isPointer, isVector, isScalar, EC, SizeInBits, AddressSpace);
+    init(Info, EC, SizeInBits, AddressSpace, FP);
   }
-  explicit constexpr LLT()
-      : IsScalar(false), IsPointer(false), IsVector(false), RawData(0) {}
 
-  LLVM_ABI explicit LLT(MVT VT);
+  LLVM_ABI explicit LLT(MVT VT, bool AllowExtendedLLT = false);
+  explicit constexpr LLT() : RawData(0), Info(static_cast<Kind>(0)) {}
 
-  constexpr bool isValid() const { return IsScalar || RawData != 0; }
-  constexpr bool isScalar() const { return IsScalar; }
-  constexpr bool isToken() const { return IsScalar && RawData == 0; };
-  constexpr bool isVector() const { return isValid() && IsVector; }
-  constexpr bool isPointer() const {
-    return isValid() && IsPointer && !IsVector;
+  constexpr bool isValid() const { return isToken() || RawData != 0; }
+  constexpr bool isScalar() const {
+    return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||
+           Info == Kind::FLOAT;
   }
-  constexpr bool isPointerVector() const { return IsPointer && isVector(); }
+  constexpr bool isScalar(unsigned Size) const {
+    return isScalar() && getScalarSizeInBits() == Size;
+  }
+  constexpr bool isFloat() const { return Info == Kind::FLOAT; }
+  constexpr bool isFloat(unsigned Size) const {
+    return isFloat() && getScalarSizeInBits() == Size;
+  }
+  constexpr bool isVariantFloat() const {
+    return isFloat() && getFPVariant() != FPVariant::IEEE_FLOAT;
+  }
+  constexpr bool isVariantFloat(FPVariant Variant) const {
+    return isFloat() && getFPVariant() == Variant;
+  }
+  constexpr bool isVariantFloat(unsigned Size, FPVariant Variant) const {
+    return isVariantFloat(Variant) && getScalarSizeInBits() == Size;
+  }
+  constexpr bool isFloatVector() const { return Info == Kind::VECTOR_FLOAT; }
+  constexpr bool isIEEEFloat(unsigned Size) const {
+    return isVariantFloat(Size, FPVariant::IEEE_FLOAT);
+  }
+  constexpr bool isBFloat(unsigned Size) const {
+    return isVariantFloat(Size, FPVariant::BF16);
+  }
+  constexpr bool isX86FP80() const {
+    return isVariantFloat(80, FPVariant::EXTENDED_FP80);
+  }
+  constexpr bool isPPCF128() const {
+    return isVariantFloat(128, FPVariant::PPC128_FLOAT);
+  }
+  constexpr bool isToken() const {
+    return Info == Kind::ANY_SCALAR && RawData == 0;
+  }
+  constexpr bool isAnyScalar() const { return Info == Kind::ANY_SCALAR; }
+  constexpr bool isVectorAny() const { return Info == Kind::VECTOR_ANY; }
+  constexpr bool isInteger() const { return Info == Kind::INTEGER; }
+  constexpr bool isInteger(unsigned Size) const {
+    return isInteger() && getScalarSizeInBits() == Size;
+  }
+  constexpr bool isIntegerVector() const {
+    return Info == Kind::VECTOR_INTEGER;
+  }
+  constexpr bool isVector() const {
+    return Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER ||
+           Info == Kind::VECTOR_FLOAT || Info == Kind::VECTOR_POINTER;
+  }
+  constexpr bool isPointer() const { return Info == Kind::POINTER; }
+  constexpr bool isPointerVector() const {
+    return Info == Kind::VECTOR_POINTER;
+  }
   constexpr bool isPointerOrPointerVector() const {
-    return IsPointer && isValid();
+    return isPointer() || isPointerVector();
   }
 
   /// Returns the number of elements in a vector LLT. Must only be called on
@@ -177,12 +297,18 @@ public:
   /// if the LLT is not a vector type.
   constexpr bool isFixedVector() const { return isVector() && !isScalable(); }
 
+  constexpr bool isFixedVector(unsigned NumElements,
+                               unsigned ScalarSize) const {
+    return isFixedVector() && getNumElements() == NumElements &&
+           getScalarSizeInBits() == ScalarSize;
+  }
+
   /// Returns true if the LLT is a scalable vector. Returns false otherwise,
   /// even if the LLT is not a vector type.
   constexpr bool isScalableVector() const { return isVector() && isScalable(); }
 
   constexpr ElementCount getElementCount() const {
-    assert(IsVector && "cannot get number of elements on scalar/aggregate");
+    assert(isVector() && "cannot get number of elements on scalar/aggregate");
     return ElementCount::get(getFieldValue(VectorElementsFieldInfo),
                              isScalable());
   }
@@ -207,6 +333,15 @@ public:
     return isVector() ? getElementType() : *this;
   }
 
+  constexpr FPVariant getFPVariant() const {
+    assert((isFloat() || isFloatVector()) &&
+           "cannot get FP info for non float type");
+
+    return FPVariant(getFieldValue(FPFieldInfo));
+  }
+
+  constexpr Kind getKind() const { return Info; }
+
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element type. Otherwise, return the new element type.
   constexpr LLT changeElementType(LLT NewEltTy) const {
@@ -217,16 +352,24 @@ public:
   /// but the new element size. Otherwise, return the new element type. Invalid
   /// for pointer types. For pointer types, use changeElementType.
   constexpr LLT changeElementSize(unsigned NewEltSize) const {
-    assert(!isPointerOrPointerVector() &&
+    assert(!isPointerOrPointerVector() && !(isFloat() || isFloatVector()) &&
            "invalid to directly change element size for pointers");
-    return isVector() ? LLT::vector(getElementCount(), NewEltSize)
-                      : LLT::scalar(NewEltSize);
+    return isVector()
+               ? LLT::vector(getElementCount(), getElementType().isInteger()
+                                                    ? LLT::integer(NewEltSize)
+                                                    : LLT::scalar(NewEltSize))
+           : isInteger() ? LLT::integer(NewEltSize)
+                         : LLT::scalar(NewEltSize);
   }
 
   /// Return a vector or scalar with the same element type and the new element
   /// count.
   constexpr LLT changeElementCount(ElementCount EC) const {
     return LLT::scalarOrVector(EC, getScalarType());
+  }
+
+  constexpr LLT changeElementCount(unsigned NumElements) const {
+    return changeElementCount(ElementCount::getFixed(NumElements));
   }
 
   /// Return a type that is \p Factor times smaller. Reduces the number of
@@ -243,6 +386,9 @@ public:
     }
 
     assert(getScalarSizeInBits() % Factor == 0);
+    if (isInteger())
+      return integer(getScalarSizeInBits() / Factor);
+
     return scalar(getScalarSizeInBits() / Factor);
   }
 
@@ -277,10 +423,26 @@ public:
   /// Returns the vector's element type. Only valid for vector types.
   constexpr LLT getElementType() const {
     assert(isVector() && "cannot get element type of scalar/aggregate");
-    if (IsPointer)
+    if (isPointerVector())
       return pointer(getAddressSpace(), getScalarSizeInBits());
-    else
-      return scalar(getScalarSizeInBits());
+
+    if (isFloatVector())
+      return floatingPoint(getScalarSizeInBits(), getFPVariant());
+
+    if (isIntegerVector())
+      return integer(getScalarSizeInBits());
+
+    return scalar(getScalarSizeInBits());
+  }
+
+  constexpr LLT changeToInteger() const {
+    if (isPointer() || isPointerVector())
+      return *this;
+
+    if (isVector())
+      return vector(getElementCount(), LLT::integer(getScalarSizeInBits()));
+
+    return integer(getSizeInBits());
   }
 
   LLVM_ABI void print(raw_ostream &OS) const;
@@ -290,8 +452,14 @@ public:
 #endif
 
   constexpr bool operator==(const LLT &RHS) const {
-    return IsPointer == RHS.IsPointer && IsVector == RHS.IsVector &&
-           IsScalar == RHS.IsScalar && RHS.RawData == RawData;
+    if (isAnyScalar() || RHS.isAnyScalar())
+      return isScalar() == RHS.isScalar() && RawData == RHS.RawData;
+
+    if (isVector() && RHS.isVector())
+      return getElementType() == RHS.getElementType() &&
+             getElementCount() == RHS.getElementCount();
+
+    return Info == RHS.Info && RawData == RHS.RawData;
   }
 
   constexpr bool operator!=(const LLT &RHS) const { return !(*this == RHS); }
@@ -301,67 +469,79 @@ public:
 
 private:
   /// LLT is packed into 64 bits as follows:
-  /// isScalar : 1
-  /// isPointer : 1
-  /// isVector  : 1
-  /// with 61 bits remaining for Kind-specific data, packed in bitfields
-  /// as described below. As there isn't a simple portable way to pack bits
-  /// into bitfields, here the different fields in the packed structure is
+  /// RawData : 60
+  /// Info : 4
+  /// RawData remaining for Kind-specific data, packed in
+  /// bitfields as described below. As there isn't a simple portable way to pack
+  /// bits into bitfields, here the different fields in the packed structure is
   /// described in static const *Field variables. Each of these variables
   /// is a 2-element array, with the first element describing the bitfield size
   /// and the second element describing the bitfield offset.
   ///
-  /// +--------+---------+--------+----------+----------------------+
-  /// |isScalar|isPointer|isVector| RawData  |Notes                 |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   0    |    0     |Invalid               |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   1    |    0     |Tombstone Key         |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   0    |    0     |Empty Key             |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   1    |    0    |   0    |    0     |Token                 |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   1    |    0    |   0    | non-zero |Scalar                |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   0    | non-zero |Pointer               |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    0    |   1    | non-zero |Vector of non-pointer |
-  /// +--------+---------+--------+----------+----------------------+
-  /// |   0    |    1    |   1    | non-zero |Vector of pointer     |
-  /// +--------+---------+--------+----------+----------------------+
-  ///
-  /// Everything else is reserved.
-  typedef int BitFieldInfo[2];
-  ///
-  /// This is how the bitfields are packed per Kind:
-  /// * Invalid:
-  ///   gets encoded as RawData == 0, as that is an invalid encoding, since for
-  ///   valid encodings, SizeInBits/SizeOfElement must be larger than 0.
-  /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
-  ///   SizeInBits: 32;
-  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 29};
-  /// * Pointer (isPointer == 1 && isVector == 0):
-  ///   SizeInBits: 16;
-  ///   AddressSpace: 24;
-  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 45};
-  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 21};
-  /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
-  ///   NumElements: 16;
-  ///   SizeOfElement: 32;
-  ///   Scalable: 1;
-  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 5};
-  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
-  /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
-  ///   NumElements: 16;
-  ///   SizeOfElement: 16;
-  ///   AddressSpace: 24;
-  ///   Scalable: 1;
+  /*
+                                --- LLT ---
 
-  uint64_t IsScalar : 1;
-  uint64_t IsPointer : 1;
-  uint64_t IsVector : 1;
-  uint64_t RawData : 61;
+   63       56       47       39       31       23       15       7      0
+   |        |        |        |        |        |        |        |      |
+  |xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|xxxxxxxx|
+   %%%%                                                                     (1)
+       .... ........ ........ ........ ....                                 (2)
+       **** ******** ****                                                   (3)
+                         ~~~~ ~~~~~~~~ ~~~~~~~~ ~~~~                        (4)
+                                                 ###                        (5)
+                                                    ^^^^ ^^^^^^^^ ^^^^      (6)
+                                                                         @  (7)
+
+  (1) Kind:                [63:60]
+  (2) ScalarSize:          [59:28]
+  (3) PointerSize:         [59:44]
+  (4) PointerAddressSpace: [43:20]
+  (5) FPVariant:           [22:20]
+  (6) VectorElements:      [19:4]
+  (7) VectorScalable:      [0:0]
+
+  */
+
+  /// This is how the LLT are packed per Kind:
+  /// * Invalid:
+  ///   Info: [63:60] = 0
+  ///   RawData: [59:0] = 0;
+  ///
+  /// * Non-pointer scalar (isPointer == 0 && isVector == 0):
+  ///   Info: [63:60];
+  ///   SizeOfElement: [59:28];
+  ///   FPVariant: [22:20];
+  ///
+  /// * Pointer (isPointer == 1 && isVector == 0):
+  ///   Info: [63:60];
+  ///   SizeInBits: [59:44];
+  ///   AddressSpace: [43:20];
+  ///
+  /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
+  ///   Info: [63:60]
+  ///   SizeOfElement: [59:28];
+  ///   FPVariant: [22:20];
+  ///   VectorElements: [19:4];
+  ///   Scalable: [0:0];
+  ///
+  /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
+  ///   Info: [63:60];
+  ///   SizeInBits: [59:44];
+  ///   AddressSpace: [43:20];
+  ///   VectorElements: [19:4];
+  ///   Scalable: [0:0];
+
+  /// BitFieldInfo: {Size, Offset}
+  typedef int BitFieldInfo[2];
+  static const constexpr BitFieldInfo VectorScalableFieldInfo{1, 0};
+  static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 4};
+  static const constexpr BitFieldInfo FPFieldInfo{3, 20};
+  static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{24, 20};
+  static const constexpr BitFieldInfo ScalarSizeFieldInfo{32, 28};
+  static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 44};
+
+  uint64_t RawData : 60;
+  Kind Info : 4;
 
   static constexpr uint64_t getMask(const BitFieldInfo FieldInfo) {
     const int FieldSizeInBits = FieldInfo[0];
@@ -381,21 +561,21 @@ private:
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  constexpr void init(bool IsPointer, bool IsVector, bool IsScalar,
-                      ElementCount EC, uint64_t SizeInBits,
-                      unsigned AddressSpace) {
+  constexpr void init(Kind Info, ElementCount EC, uint64_t SizeInBits,
+                      unsigned AddressSpace, FPVariant FP) {
     assert(SizeInBits <= std::numeric_limits<unsigned>::max() &&
            "Not enough bits in LLT to represent size");
-    this->IsPointer = IsPointer;
-    this->IsVector = IsVector;
-    this->IsScalar = IsScalar;
-    if (IsPointer) {
+    this->Info = Info;
+    if (Info == Kind::POINTER || Info == Kind::VECTOR_POINTER) {
       RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                 maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
     } else {
-      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo);
+      RawData = maskAndShift(SizeInBits, ScalarSizeFieldInfo) |
+                maskAndShift((uint64_t)FP, FPFieldInfo);
     }
-    if (IsVector) {
+
+    if (Info == Kind::VECTOR_ANY || Info == Kind::VECTOR_INTEGER ||
+        Info == Kind::VECTOR_FLOAT || Info == Kind::VECTOR_POINTER) {
       RawData |= maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
                  maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
     }
@@ -403,8 +583,7 @@ private:
 
 public:
   constexpr uint64_t getUniqueRAWLLTData() const {
-    return ((uint64_t)RawData) << 3 | ((uint64_t)IsScalar) << 2 |
-           ((uint64_t)IsPointer) << 1 | ((uint64_t)IsVector);
+    return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
 };
 
@@ -413,15 +592,15 @@ inline raw_ostream& operator<<(raw_ostream &OS, const LLT &Ty) {
   return OS;
 }
 
-template<> struct DenseMapInfo<LLT> {
+template <> struct DenseMapInfo<LLT> {
   static inline LLT getEmptyKey() {
     LLT Invalid;
-    Invalid.IsPointer = true;
+    Invalid.Info = LLT::Kind::POINTER;
     return Invalid;
   }
   static inline LLT getTombstoneKey() {
     LLT Invalid;
-    Invalid.IsVector = true;
+    Invalid.Info = LLT::Kind::VECTOR_ANY;
     return Invalid;
   }
   static inline unsigned getHashValue(const LLT &Ty) {
@@ -433,6 +612,6 @@ template<> struct DenseMapInfo<LLT> {
   }
 };
 
-}
+} // namespace llvm
 
 #endif // LLVM_CODEGEN_LOWLEVELTYPE_H

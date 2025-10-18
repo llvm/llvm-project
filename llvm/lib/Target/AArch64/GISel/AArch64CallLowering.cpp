@@ -457,7 +457,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             ExtendOp = TargetOpcode::G_ZEXT;
 
           LLT NewLLT(NewVT);
-          LLT OldLLT = getLLTForType(*CurArgInfo.Ty, DL);
+          LLT OldLLT = TLI.getLLTForType(*CurArgInfo.Ty, DL);
           CurArgInfo.Ty = EVT(NewVT).getTypeForEVT(Ctx);
           // Instead of an extend, we might have a vector type which needs
           // padding with more elements, e.g. <2 x half> -> <4 x half>.
@@ -1397,7 +1397,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // is set.
     if (Info.Callee.isSymbol() && F.getParent()->getRtLibUseGOT()) {
       auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_GLOBAL_VALUE);
-      DstOp(getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
+      DstOp(TLI.getLLTForType(*F.getType(), DL)).addDefToMIB(MRI, MIB);
       MIB.addExternalSymbol(Info.Callee.getSymbolName(), AArch64II::MO_GOT);
       Info.Callee = MachineOperand::CreateReg(MIB.getReg(0), false);
     }
