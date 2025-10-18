@@ -43,11 +43,12 @@ public:
   static char ID;
 
 private:
-  bool EnableWaveTransformCF;
+  bool EnableLateWaveTransform;
 
 public:
-  AMDGPUGlobalISelDivergenceLowering(bool EnableWaveTransformCF = false)
-      : MachineFunctionPass(ID), EnableWaveTransformCF(EnableWaveTransformCF) {}
+  AMDGPUGlobalISelDivergenceLowering(bool EnableLateWaveTransform = false)
+      : MachineFunctionPass(ID),
+        EnableLateWaveTransform(EnableLateWaveTransform) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -312,9 +313,9 @@ char AMDGPUGlobalISelDivergenceLowering::ID = 0;
 char &llvm::AMDGPUGlobalISelDivergenceLoweringID =
     AMDGPUGlobalISelDivergenceLowering::ID;
 
-FunctionPass *
-llvm::createAMDGPUGlobalISelDivergenceLoweringPass(bool EnableWaveTransformCF) {
-  return new AMDGPUGlobalISelDivergenceLowering(EnableWaveTransformCF);
+FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass(
+    bool EnableLateWaveTransform) {
+  return new AMDGPUGlobalISelDivergenceLowering(EnableLateWaveTransform);
 }
 
 bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(

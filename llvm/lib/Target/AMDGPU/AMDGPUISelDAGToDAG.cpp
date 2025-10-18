@@ -155,16 +155,16 @@ FunctionPass *llvm::createAMDGPUISelDag(TargetMachine &TM,
 AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM,
                                        CodeGenOptLevel OptLevel)
     : SelectionDAGISel(TM, OptLevel) {
-  EnableWaveTransformCF = AMDGPUTargetMachine::EnableWaveTransformCF;
+  EnableLateWaveTransform = AMDGPUTargetMachine::EnableLateWaveTransform;
 }
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   Subtarget->checkSubtargetFeatures(MF.getFunction());
   Mode = SIModeRegisterDefaults(MF.getFunction(), *Subtarget);
-  // When enabling WaveTransform, we set the following state initially
-  // to false before ISel, then set it to true after WaveTransform.
-  if (EnableWaveTransformCF)
+  // When the late wave transform is enabled, set the following state initially
+  // to false before ISel, then set it to true after the wave transform is done.
+  if (EnableLateWaveTransform)
     MF.getInfo<SIMachineFunctionInfo>()->setWaveCFG(false);
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
@@ -2813,7 +2813,7 @@ static SDValue combineBallotPattern(SDValue VCMP, bool &Negate) {
 void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
   SDValue Cond = N->getOperand(1);
 
-  if (EnableWaveTransformCF) {
+  if (EnableLateWaveTransform) {
     auto Opc =
         Cond->isDivergent() ? AMDGPU::SI_BRCOND : AMDGPU::SI_BRCOND_UNIFORM;
     CurDAG->SelectNodeTo(N, Opc, MVT::Other,

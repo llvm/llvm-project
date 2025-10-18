@@ -238,11 +238,12 @@ static cl::opt<WWMRegisterRegAlloc::FunctionPassCtor, false,
                 cl::init(&useDefaultRegisterAllocator),
                 cl::desc("Register allocator to use for WWM registers"));
 
-// Option to enable wave transform control flow
-static cl::opt<bool, true> WaveTransformCF(
-    "amdgpu-wave-transform-cf",
+// Option to enable the late wave-transform Machine Function pass instead of the
+// early transform using the IR level structurizer pass.
+static cl::opt<bool, true> LateWaveTransform(
+    "amdgpu-late-wave-transform",
     cl::desc("Enable wave transform control flow implementation"),
-    cl::location(AMDGPUTargetMachine::EnableWaveTransformCF), cl::init(false),
+    cl::location(AMDGPUTargetMachine::EnableLateWaveTransform), cl::init(false),
     cl::Hidden);
 
 static void initializeDefaultSGPRRegisterAllocatorOnce() {
@@ -293,7 +294,7 @@ static FunctionPass *createGreedyVGPRRegisterAllocator() {
 }
 
 static FunctionPass *createFastVGPRRegisterAllocator() {
-  return createFastRegisterAllocator(onlyAllocateVGPRs, !WaveTransformCF);
+  return createFastRegisterAllocator(onlyAllocateVGPRs, !LateWaveTransform);
 }
 
 static FunctionPass *createBasicWWMRegisterAllocator() {
@@ -305,7 +306,7 @@ static FunctionPass *createGreedyWWMRegisterAllocator() {
 }
 
 static FunctionPass *createFastWWMRegisterAllocator() {
-  return createFastRegisterAllocator(onlyAllocateWWMRegs, WaveTransformCF);
+  return createFastRegisterAllocator(onlyAllocateWWMRegs, LateWaveTransform);
 }
 
 static SGPRRegisterRegAlloc basicRegAllocSGPR(
@@ -777,7 +778,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
 
 bool AMDGPUTargetMachine::EnableFunctionCalls = false;
 bool AMDGPUTargetMachine::EnableLowerModuleLDS = true;
-bool AMDGPUTargetMachine::EnableWaveTransformCF = false;
+bool AMDGPUTargetMachine::EnableLateWaveTransform = false;
 
 AMDGPUTargetMachine::~AMDGPUTargetMachine() = default;
 
@@ -1501,17 +1502,17 @@ bool GCNPassConfig::addPreISel() {
   // TODO: Unify should be intergrated into AMDGPUWaveTransform
   addPass(&AMDGPUUnifyDivergentExitNodesID);
 
-  // In WaveTransformCF mode, we still want to run the following two passes.
-  // That should help simplify the control-flow that WaveTransform has to
+  // In late wave-transform mode, we still want to run the following two passes.
+  // That should help simplify the control-flow that wave-transform has to
   // deal with.
   // TODO-WAVETRANSFORM: these two passes need to understand where we expect
   // the divergent control-flow to converge.
   addPass(createFixIrreduciblePass());
   addPass(createUnifyLoopExitsPass());
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
 
-  if (!WaveTransformCF) {
+  if (!LateWaveTransform) {
     addPass(createSIAnnotateControlFlowLegacyPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
@@ -1568,7 +1569,7 @@ bool GCNPassConfig::addILPOpts() {
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(&SIFixSGPRCopiesLegacyID);
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     addPass(createSILowerI1CopiesLegacyPass());
   else
     addPass(&AMDGPUFinalizeISelWaveTransformID);
@@ -1594,8 +1595,8 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 void GCNPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   addPass(createAMDGPUPostLegalizeCombiner(IsOptNone));
-  // The following pass behaves differently with WaveTransformCF.
-  addPass(createAMDGPUGlobalISelDivergenceLoweringPass(WaveTransformCF));
+  // This pass behaves differently with late wave-transform flow.
+  addPass(createAMDGPUGlobalISelDivergenceLoweringPass(LateWaveTransform));
 }
 
 bool GCNPassConfig::addRegBankSelect() {
@@ -1625,7 +1626,7 @@ void GCNPassConfig::addFastRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
@@ -1634,7 +1635,7 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 // void GCNPassConfig::addPreRegAlloc() {
-//   if (WaveTransformCF && getOptLevel() == CodeGenOptLevel::None)
+//   if (LateWaveTransform && getOptLevel() == CodeGenOptLevel::None)
 //     addPass(&AMDGPUPreWaveTransformID);
 // }
 
@@ -1657,7 +1658,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
   if (EnableRewritePartialRegUses)
@@ -1670,7 +1671,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // instructions that cause scheduling barriers.
   insertPass(&MachineSchedulerID, &SIWholeQuadModeID);
 
-  if (!WaveTransformCF && OptExecMaskPreRA)
+  if (!LateWaveTransform && OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
   // This is not an essential optimization and it has a noticeable impact on
@@ -1682,7 +1683,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // We need to do some preparation pass with MachineUniformityInfo analysis
   // right before PHIElimination in order to set up information we need
   // for WaveTransform.
-  // if (WaveTransformCF) {
+  // if (LateWaveTransform) {
   //   insertPass(&LiveVariablesID, &AMDGPUPreWaveTransformID);
   // }
 
@@ -1756,7 +1757,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   addPass(&GCNPreRALongBranchRegID);
 
-  if (WaveTransformCF) {
+  if (LateWaveTransform) {
     // To Allocate wwm registers used in whole quad mode operations (for
     // shaders). Scheduling it early before the AMDGPUPartitionVGPRs pass so
     // that this custom allocation will always have enough registers.
@@ -1791,7 +1792,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other wwm register operands.
@@ -1801,7 +1802,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating perlane VGPRs.
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     addPass(createVGPRAllocPass(false));
 
   // TODO-WAVETRANSFORM:
@@ -1821,7 +1822,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 
   addPass(&GCNPreRALongBranchRegID);
 
-  if (WaveTransformCF) {
+  if (LateWaveTransform) {
     // To Allocate wwm registers used in whole quad mode operations (for
     // shaders). Scheduling it early before the AMDGPUPartitionVGPRs pass so
     // that this custom allocation will always have enough registers.
@@ -1873,16 +1874,16 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(&SILowerSGPRSpillsLegacyID);
 
   // To Allocate wwm registers used in whole quad mode operations (for shaders).
-  if (!WaveTransformCF)
+  if (!LateWaveTransform)
     addPass(&SIPreAllocateWWMRegsLegacyID);
 
   // For allocating other whole wave mode registers.
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(createVirtRegRewriter(WaveTransformCF));
+  addPass(createVirtRegRewriter(LateWaveTransform));
   addPass(&AMDGPUReserveWWMRegsLegacyID);
 
-  if (!WaveTransformCF) {
+  if (!LateWaveTransform) {
     // Perlane VGPR allocation pipeline.
     addPass(createVGPRAllocPass(true));
 

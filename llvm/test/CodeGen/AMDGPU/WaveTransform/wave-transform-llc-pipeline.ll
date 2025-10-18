@@ -1,7 +1,7 @@
 ; UNSUPPORTED: expensive_checks
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform-cf=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O0 -mtriple=amdgcn--amdhsa -amdgpu-late-wave-transform=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -amdgpu-wave-transform-cf=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -O3 -mtriple=amdgcn--amdhsa -amdgpu-late-wave-transform=1 -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts

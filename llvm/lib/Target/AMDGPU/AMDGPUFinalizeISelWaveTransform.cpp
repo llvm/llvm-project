@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// This pass runs at the end of DAG-ISel in WaveTransformCF mode.
+/// This pass runs at the end of DAG-ISel in late wave-transform mode.
 ///
 //===----------------------------------------------------------------------===//
 
