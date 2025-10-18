@@ -46,9 +46,7 @@ define <vscale x 16 x i8> @nbsl_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
 ; CHECK-LABEL: nbsl_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z2.b, #127 // =0x7f
-; CHECK-NEXT:    and z1.b, z1.b, #0x80
-; CHECK-NEXT:    nbsl z2.d, z2.d, z0.d, z0.d
-; CHECK-NEXT:    bic z0.d, z2.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %1 = and <vscale x 16 x i8> %a, splat(i8 127)
   %2 = and <vscale x 16 x i8> %b, splat(i8 -128)
@@ -61,9 +59,7 @@ define <vscale x 8 x i16> @nbsl_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b
 ; CHECK-LABEL: nbsl_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
-; CHECK-NEXT:    and z1.h, z1.h, #0x8000
-; CHECK-NEXT:    nbsl z2.d, z2.d, z0.d, z0.d
-; CHECK-NEXT:    bic z0.d, z2.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %1 = and <vscale x 8 x i16> %a, splat(i16 32767)
   %2 = and <vscale x 8 x i16> %b, splat(i16 -32768)
@@ -76,9 +72,7 @@ define <vscale x 4 x i32> @nbsl_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 ; CHECK-LABEL: nbsl_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z2.s, #0x7fffffff
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
-; CHECK-NEXT:    nbsl z2.d, z2.d, z0.d, z0.d
-; CHECK-NEXT:    bic z0.d, z2.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %1 = and <vscale x 4 x i32> %a, splat(i32 2147483647)
   %2 = and <vscale x 4 x i32> %b, splat(i32 -2147483648)
@@ -91,9 +85,7 @@ define <vscale x 2 x i64> @nbsl_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b
 ; CHECK-LABEL: nbsl_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z2.d, #0x7fffffffffffffff
-; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
-; CHECK-NEXT:    nbsl z2.d, z2.d, z0.d, z0.d
-; CHECK-NEXT:    bic z0.d, z2.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %1 = and <vscale x 2 x i64> %a, splat(i64 9223372036854775807)
   %2 = and <vscale x 2 x i64> %b, splat(i64 -9223372036854775808)
@@ -123,9 +115,7 @@ define <vscale x 16 x i8> @codegen_bsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x 
 define <vscale x 16 x i8> @codegen_nbsl_i8(<vscale x 16 x i8> %0, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2) {
 ; CHECK-LABEL: codegen_nbsl_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    nbsl z0.d, z0.d, z2.d, z2.d
-; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 16 x i8> %2, %0
   %5 = xor <vscale x 16 x i8> %2, splat (i8 -1)
@@ -175,9 +165,7 @@ define <vscale x 8 x i16> @codegen_bsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x 
 define <vscale x 8 x i16> @codegen_nbsl_i16(<vscale x 8 x i16> %0, <vscale x 8 x i16> %1, <vscale x 8 x i16> %2) {
 ; CHECK-LABEL: codegen_nbsl_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    nbsl z0.d, z0.d, z2.d, z2.d
-; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 8 x i16> %2, %0
   %5 = xor <vscale x 8 x i16> %2, splat (i16 -1)
@@ -227,9 +215,7 @@ define <vscale x 4 x i32> @codegen_bsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x 
 define <vscale x 4 x i32> @codegen_nbsl_i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2) {
 ; CHECK-LABEL: codegen_nbsl_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    nbsl z0.d, z0.d, z2.d, z2.d
-; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 4 x i32> %2, %0
   %5 = xor <vscale x 4 x i32> %2, splat (i32 -1)
@@ -279,9 +265,7 @@ define <vscale x 2 x i64> @codegen_bsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x 
 define <vscale x 2 x i64> @codegen_nbsl_i64(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1, <vscale x 2 x i64> %2) {
 ; CHECK-LABEL: codegen_nbsl_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic z1.d, z1.d, z2.d
-; CHECK-NEXT:    nbsl z0.d, z0.d, z2.d, z2.d
-; CHECK-NEXT:    bic z0.d, z0.d, z1.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %4 = and <vscale x 2 x i64> %2, %0
   %5 = xor <vscale x 2 x i64> %2, splat (i64 -1)
@@ -357,9 +341,7 @@ define <vscale x 2 x i64> @nand(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0
 define <vscale x 2 x i64> @nor(<vscale x 2 x i64> %0, <vscale x 2 x i64> %1) #0 {
 ; CHECK-LABEL: nor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.d, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    eor z1.d, z1.d, z2.d
-; CHECK-NEXT:    bic z0.d, z1.d, z0.d
+; CHECK-NEXT:    nbsl z0.d, z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ret
   %3 = or <vscale x 2 x i64> %1, %0
   %4 = xor <vscale x 2 x i64> %3, splat (i64 -1)

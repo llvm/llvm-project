@@ -51,8 +51,7 @@ entry:
 define dso_local <16 x i8> @norA_andB_C(<16 x i8> %A, <16 x i8> %B, <16 x i8> %C) local_unnamed_addr #0 {
 ; CHECK-LABEL: norA_andB_C:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v2, v2
-; CHECK-NEXT:    xxeval v2, vs0, v3, v4, 14
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 224
 ; CHECK-NEXT:    blr
 entry:
   %and = and <16 x i8> %B, %C
@@ -104,8 +103,7 @@ entry:
 define dso_local <4 x i32> @norA_xorB_C(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C) local_unnamed_addr #0 {
 ; CHECK-LABEL: norA_xorB_C:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v2, v2
-; CHECK-NEXT:    xxeval v2, vs0, v3, v4, 9
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 144
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <4 x i32> %B, %C
@@ -171,9 +169,7 @@ entry:
 define dso_local <4 x i32> @orA_norB_C(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C) local_unnamed_addr #0 {
 ; CHECK-LABEL: orA_norB_C:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlnor vs0, v4, v4
-; CHECK-NEXT:    xxlnor vs1, v3, v3
-; CHECK-NEXT:    xxeval v2, v2, vs1, vs0, 31
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 143
 ; CHECK-NEXT:    blr
 entry:
   %or = or <4 x i32> %B, %C

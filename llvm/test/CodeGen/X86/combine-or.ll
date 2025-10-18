@@ -183,32 +183,14 @@ define i32 @or_and_multiuse_and_multiuse_i32(i32 %x, i32 %y) nounwind {
 }
 
 define i64 @or_build_pair_not(i32 %a0, i32 %a1) {
-; SSE-LABEL: or_build_pair_not:
-; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $esi killed $esi def $rsi
-; SSE-NEXT:    shlq $32, %rsi
-; SSE-NEXT:    movl %edi, %eax
-; SSE-NEXT:    orq %rsi, %rax
-; SSE-NEXT:    notq %rax
-; SSE-NEXT:    retq
-;
-; AVX1-LABEL: or_build_pair_not:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX1-NEXT:    shlq $32, %rsi
-; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    orq %rsi, %rax
-; AVX1-NEXT:    notq %rax
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: or_build_pair_not:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    # kill: def $esi killed $esi def $rsi
-; AVX2-NEXT:    shlq $32, %rsi
-; AVX2-NEXT:    notq %rsi
-; AVX2-NEXT:    movl %edi, %eax
-; AVX2-NEXT:    andnq %rsi, %rax, %rax
-; AVX2-NEXT:    retq
+; CHECK-LABEL: or_build_pair_not:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    shlq $32, %rsi
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orq %rsi, %rax
+; CHECK-NEXT:    notq %rax
+; CHECK-NEXT:    retq
   %n0 = xor i32 %a0, -1
   %n1 = xor i32 %a1, -1
   %x0 = zext i32 %n0 to i64
@@ -280,9 +262,10 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    shlq $32, %rcx
+; AVX2-NEXT:    orq %rax, %rcx
 ; AVX2-NEXT:    notq %rcx
-; AVX2-NEXT:    andnq %rcx, %rax, %rax
-; AVX2-NEXT:    tzcntq %rax, %rax
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    tzcntq %rcx, %rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
   %cmp = icmp ne <64 x i8> %a0, <i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95, i8 95>

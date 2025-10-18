@@ -28,7 +28,8 @@ define <4 x i32> @test_vnand(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <4 x i32> @test_vorc(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: test_vorc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vor 2, 3, 2
+; CHECK-NEXT:    vorc 3, 2, 3
+; CHECK-NEXT:    vorc 2, 2, 3
 ; CHECK-NEXT:    blr
        %tmp1 = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>
        %tmp2 = or <4 x i32> %x, %tmp1

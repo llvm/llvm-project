@@ -714,19 +714,18 @@ define <64 x i8> @tzmsk_v64i8(<64 x i8> %a0, <64 x i8> %a1) {
 ; AVX512F-NEXT:    vpmovmskb %ymm4, %ecx
 ; AVX512F-NEXT:    shlq $32, %rcx
 ; AVX512F-NEXT:    leaq (%rax,%rcx), %rdx
-; AVX512F-NEXT:    addq $-1, %rdx
-; AVX512F-NEXT:    notq %rcx
-; AVX512F-NEXT:    andnq %rcx, %rax, %rax
-; AVX512F-NEXT:    andq %rax, %rdx
-; AVX512F-NEXT:    movq %rdx, %rax
-; AVX512F-NEXT:    movl %edx, %ecx
-; AVX512F-NEXT:    kmovw %edx, %k1
-; AVX512F-NEXT:    shrq $32, %rdx
-; AVX512F-NEXT:    shrq $48, %rax
-; AVX512F-NEXT:    shrl $16, %ecx
-; AVX512F-NEXT:    kmovw %ecx, %k2
-; AVX512F-NEXT:    kmovw %eax, %k3
-; AVX512F-NEXT:    kmovw %edx, %k4
+; AVX512F-NEXT:    addq %rcx, %rax
+; AVX512F-NEXT:    addq $-1, %rax
+; AVX512F-NEXT:    andnq %rax, %rdx, %rax
+; AVX512F-NEXT:    movq %rax, %rcx
+; AVX512F-NEXT:    movl %eax, %edx
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    shrq $32, %rax
+; AVX512F-NEXT:    shrq $48, %rcx
+; AVX512F-NEXT:    shrl $16, %edx
+; AVX512F-NEXT:    kmovw %edx, %k2
+; AVX512F-NEXT:    kmovw %ecx, %k3
+; AVX512F-NEXT:    kmovw %eax, %k4
 ; AVX512F-NEXT:    vpaddb %ymm2, %ymm3, %ymm2
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm0, %ymm1
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1

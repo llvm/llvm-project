@@ -128,9 +128,9 @@ define <2 x i64> @test9(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 	%C = icmp sge <2 x i64> %A, %B
 	%D = sext <2 x i1> %C to <2 x i64>
@@ -150,9 +150,9 @@ define <2 x i64> @test10(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 	%C = icmp sle <2 x i64> %A, %B
 	%D = sext <2 x i1> %C to <2 x i64>
@@ -212,9 +212,9 @@ define <2 x i64> @test13(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 	%C = icmp uge <2 x i64> %A, %B
 	%D = sext <2 x i1> %C to <2 x i64>
@@ -234,9 +234,9 @@ define <2 x i64> @test14(<2 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retl
 	%C = icmp ule <2 x i64> %A, %B
 	%D = sext <2 x i1> %C to <2 x i64>

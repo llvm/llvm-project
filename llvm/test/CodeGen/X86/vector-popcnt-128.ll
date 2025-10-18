@@ -826,11 +826,11 @@ define <2 x i64> @ne_1_v2i64(<2 x i64> %0) {
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
 ; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    pand %xmm4, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
-; SSE-NEXT:    pxor %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE-NEXT:    pand %xmm4, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,3,3]
+; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: ne_1_v2i64:
