@@ -663,7 +663,7 @@ ObjectFile::GetDWARFSectionTypeFromName(llvm::StringRef name) {
       .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
       .Case("str", eSectionTypeDWARFDebugStr)
       .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
-      .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
+      .Cases("str_offsets", "str_offs", eSectionTypeDWARFDebugStrOffsets)
       .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
       .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
       .Case("types", eSectionTypeDWARFDebugTypes)

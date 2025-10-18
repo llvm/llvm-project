@@ -148,6 +148,8 @@ public:
     return Current != user_end();
   }
 
+  bool hasOneUse() const { return getNumUsers() == 1; }
+
   void replaceAllUsesWith(VPValue *New);
 
   /// Go through the uses list for this VPValue and make each use point to \p

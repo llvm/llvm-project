@@ -158,7 +158,7 @@ namespace decl {
   A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
   A F::*pm = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   A (*fp)() = 0; // expected-error {{cannot form function returning deduced class template specialization type}}
-  A [x, y] = 0; // expected-error {{cannot be declared with type 'A'}} expected-error {{type 'A<int>' decomposes into 0 elements, but 2 names were provided}}
+  A [x, y] = 0; // expected-error {{cannot be declared with type 'A'}} expected-error {{type 'A<int>' binds to 0 elements, but 2 names were provided}}
 }
 
 namespace typename_specifier {
@@ -185,7 +185,7 @@ namespace typename_specifier {
   typename ::A arr[3] = 0; // expected-error {{cannot form array of deduced class template specialization type}}
   typename ::A F::*pm = 0; // expected-error {{cannot form pointer to deduced class template specialization type}}
   typename ::A (*fp)() = 0; // expected-error {{cannot form function returning deduced class template specialization type}}
-  typename ::A [x, y] = 0; // expected-error {{cannot be declared with type 'typename ::A'}} expected-error {{type 'typename ::A<int>' (aka 'A<int>') decomposes into 0}}
+  typename ::A [x, y] = 0; // expected-error {{cannot be declared with type 'typename ::A'}} expected-error {{type 'typename ::A<int>' (aka 'A<int>') binds to 0}}
 
   struct X { template<typename T> struct A { A(T); }; }; // expected-note 8{{declared here}}
 
@@ -208,7 +208,7 @@ namespace typename_specifier {
     {typename T::A arr[3] = 0;} // expected-error {{refers to class template member}}
     {typename T::A F::*pm = 0;} // expected-error {{refers to class template member}}
     {typename T::A (*fp)() = 0;} // expected-error {{refers to class template member}}
-    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') decomposes into 0}}
+    {typename T::A [x, y] = 0;} // expected-error {{cannot be declared with type 'typename T::A'}} expected-error {{type 'typename typename_specifier::X::A<int>' (aka 'typename_specifier::X::A<int>') binds to 0}}
   }
   template void f<X>(); // expected-note {{instantiation of}}
 

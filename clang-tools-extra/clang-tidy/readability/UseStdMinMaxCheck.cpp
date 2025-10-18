@@ -1,4 +1,4 @@
-//===--- UseStdMinMaxCheck.cpp - clang-tidy -------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,7 +62,7 @@ static bool maxCondition(const BinaryOperator::Opcode Op, const Expr *CondLhs,
 static QualType getNonTemplateAlias(QualType QT) {
   while (true) {
     // cast to a TypedefType
-    if (const TypedefType *TT = dyn_cast<TypedefType>(QT)) {
+    if (const auto *TT = dyn_cast<TypedefType>(QT)) {
       // check if the typedef is a template and if it is dependent
       if (!TT->getDecl()->getDescribedTemplate() &&
           !TT->getDecl()->getDeclContext()->isDependentContext())

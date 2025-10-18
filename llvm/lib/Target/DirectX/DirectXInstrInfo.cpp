@@ -11,10 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXInstrInfo.h"
+#include "DirectXSubtarget.h"
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "DirectXGenInstrInfo.inc"
 
 using namespace llvm;
+
+DirectXInstrInfo::DirectXInstrInfo(const DirectXSubtarget &STI)
+    : DirectXGenInstrInfo(STI) {}
 
 DirectXInstrInfo::~DirectXInstrInfo() {}

@@ -51,22 +51,6 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let Uses = !if(has_m0_read, [M0, EXEC], [EXEC]);
 }
 
-class DstOperandIsAV<dag OperandList> {
-  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
-}
-
-class DstOperandIsAGPR<dag OperandList> {
-  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "vdst")>.ret;
-}
-
-class DataOperandIsAV<dag OperandList> {
-  bit ret = OperandIsAV<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
-}
-
-class DataOperandIsAGPR<dag OperandList> {
-  bit ret = OperandIsAGPR<!getdagarg<DAGOperand>(OperandList, "data0")>.ret;
-}
-
 class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands>,
   Enc64 {
@@ -115,13 +99,13 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   // register fields are only 8-bit, so data operands must all be AGPR
   // or VGPR.
   defvar DstOpIsAV = !if(ps.has_vdst,
-                         DstOperandIsAV<ps.OutOperandList>.ret, 0);
+                         VDstOperandIsAV<ps.OutOperandList>.ret, 0);
   defvar DstOpIsAGPR = !if(ps.has_vdst,
-                           DstOperandIsAGPR<ps.OutOperandList>.ret, 0);
+                           VDstOperandIsAGPR<ps.OutOperandList>.ret, 0);
   defvar DataOpIsAV = !if(!or(ps.has_data0, ps.has_gws_data0),
-                          DataOperandIsAV<ps.InOperandList>.ret, 0);
+                          Data0OperandIsAV<ps.InOperandList>.ret, 0);
   defvar DataOpIsAGPR = !if(!or(ps.has_data0, ps.has_gws_data0),
-                            DataOperandIsAGPR<ps.InOperandList>.ret, 0);
+                            Data0OperandIsAGPR<ps.InOperandList>.ret, 0);
 
   bits<1> acc = !if(ps.has_vdst,
                     !if(DstOpIsAV, vdst{9}, DstOpIsAGPR),
@@ -920,7 +904,7 @@ let SubtargetPredicate = isGFX1250Plus in {
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
-defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
 } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
@@ -950,7 +934,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", AVLdSt_64>;
   defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", AVLdSt_64>;
   defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", AVLdSt_64>;
-  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -965,6 +949,11 @@ def : GCNPat <
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, Offset:$offset, (i1 gds))
+>;
+
+class DSReadPat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $ptr, Offset:$offset, (i1 gds)), lo16)
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -984,14 +973,14 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
     def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+    def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -1066,10 +1055,9 @@ multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
     }
@@ -1499,6 +1487,12 @@ let AssemblerPredicate = isGFX12Plus in {
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
+
+// Additional aliases for ds load transpose instructions.
+def : MnemonicAlias<"ds_load_b64_tr_b8", "ds_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b128_tr_b16", "ds_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b64_tr_b4", "ds_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b96_tr_b6", "ds_load_tr6_b96">, Requires<[isGFX125xOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

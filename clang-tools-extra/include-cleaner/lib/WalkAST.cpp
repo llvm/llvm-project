@@ -321,6 +321,8 @@ public:
 
   // TypeLoc visitors.
   void reportType(SourceLocation RefLoc, NamedDecl *ND) {
+    if (!ND)
+      return;
     // Reporting explicit references to types nested inside classes can cause
     // issues, e.g. a type accessed through a derived class shouldn't require
     // inclusion of the base.
@@ -340,7 +342,7 @@ public:
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getOriginalDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 

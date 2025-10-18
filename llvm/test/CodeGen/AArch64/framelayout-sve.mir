@@ -1215,19 +1215,19 @@ body:             |
 # CHECK:        - { id: 2, name: '', type: default, offset: -112, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 3, name: '', type: default, offset: -114, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector,
+# CHECK-NEXT:       stack-id: scalable-predicate-vector,
 # CHECK:        - { id: 4, name: '', type: spill-slot, offset: -144, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector,
 # CHECK:        - { id: 5, name: '', type: spill-slot, offset: -146, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector,
+# CHECK-NEXT:       stack-id: scalable-predicate-vector,
 # CHECK:        - { id: 6, name: '', type: spill-slot, offset: -16, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z8',
 # CHECK:        - { id: 7, name: '', type: spill-slot, offset: -32, size: 16, alignment: 16,
 # CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$z23',
 # CHECK:        - { id: 8, name: '', type: spill-slot, offset: -34, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p4',
+# CHECK-NEXT:       stack-id: scalable-predicate-vector, callee-saved-register: '$p4',
 # CHECK:        - { id: 9, name: '', type: spill-slot, offset: -36, size: 2, alignment: 2,
-# CHECK-NEXT:       stack-id: scalable-vector, callee-saved-register: '$p15',
+# CHECK-NEXT:       stack-id: scalable-predicate-vector, callee-saved-register: '$p15',
 # CHECK:        - { id: 10, name: '', type: spill-slot, offset: -16, size: 8, alignment: 16,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '$fp',
 #
@@ -1295,9 +1295,9 @@ stack:
   - { id: 0, type: default,    size:  32, alignment: 16, stack-id: scalable-vector }
   - { id: 1, type: default,    size:   4, alignment:  2, stack-id: scalable-vector }
   - { id: 2, type: default,    size:  16, alignment: 16, stack-id: scalable-vector }
-  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: scalable-vector }
+  - { id: 3, type: default,    size:   2, alignment:  2, stack-id: scalable-predicate-vector }
   - { id: 4, type: spill-slot, size:  16, alignment: 16, stack-id: scalable-vector }
-  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: scalable-vector }
+  - { id: 5, type: spill-slot, size:   2, alignment:  2, stack-id: scalable-predicate-vector }
 body:             |
   bb.0.entry:
 

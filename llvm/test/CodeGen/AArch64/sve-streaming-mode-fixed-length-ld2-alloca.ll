@@ -115,9 +115,9 @@ define void @alloc_v32i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    ldr q0, [sp]
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    ldrb w8, [sp, #16]
 ; CHECK-NEXT:    tbl z0.b, { z0.b }, z1.b
-; CHECK-NEXT:    ldr q1, [sp, #16]
-; CHECK-NEXT:    stur b1, [x19, #8]
+; CHECK-NEXT:    strb w8, [x19, #8]
 ; CHECK-NEXT:    str d0, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48

@@ -39,6 +39,8 @@ add_header(float_t HDR float_t.h)
 add_header(gid_t HDR gid_t.h)
 add_header(uid_t HDR uid_t.h)
 add_header(imaxdiv_t HDR imaxdiv_t.h)
+add_header(in_addr_t HDR in_addr_t.h)
+add_header(in_addr HDR in_addr.h DEPENDS .in_addr_t)
 add_header(ino_t HDR ino_t.h)
 add_header(mbstate_t HDR mbstate_t.h)
 add_header(mode_t HDR mode_t.h)
@@ -150,9 +152,15 @@ add_header(
   HDR
     cfloat128.h
   DEPENDS
-    libc.include.llvm-libc-macros.float_macros
+    libc.include.llvm-libc-macros.cfloat128_macros
 )
-add_header(cfloat16 HDR cfloat16.h)
+add_header(
+  cfloat16
+  HDR
+    cfloat16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.cfloat16_macros
+)
 add_header(fsblkcnt_t HDR fsblkcnt_t.h)
 add_header(fsfilcnt_t HDR fsfilcnt_t.h)
 add_header(

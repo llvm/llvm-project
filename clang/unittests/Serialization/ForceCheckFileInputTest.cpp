@@ -91,10 +91,8 @@ export int aa = 43;
 
     Instance.getFrontendOpts().OutputFile = BMIPath;
 
-    if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
-            Instance.getInvocation(), Instance.getDiagnostics(), CIOpts.VFS))
-      CIOpts.VFS = VFSWithRemapping;
-    Instance.createFileManager(CIOpts.VFS);
+    Instance.createVirtualFileSystem(CIOpts.VFS);
+    Instance.createFileManager();
 
     Instance.getHeaderSearchOpts().ValidateASTInputFilesContent = true;
 
@@ -123,8 +121,9 @@ export int aa = 43;
     CompilerInstance Clang(std::move(Invocation));
 
     Clang.setDiagnostics(Diags);
-    FileManager *FM = Clang.createFileManager(CIOpts.VFS);
-    Clang.createSourceManager(*FM);
+    Clang.createVirtualFileSystem(CIOpts.VFS);
+    Clang.createFileManager();
+    Clang.createSourceManager();
 
     EXPECT_TRUE(Clang.createTarget());
     Clang.createPreprocessor(TU_Complete);

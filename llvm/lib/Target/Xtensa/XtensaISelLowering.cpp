@@ -232,12 +232,6 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SINT_TO_FP, MVT::i32, Legal);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Legal);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Legal);
-
-    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETUGE, MVT::f32, Expand);
-    setCondCodeAction(ISD::SETUGT, MVT::f32, Expand);
   } else {
     setOperationAction(ISD::BITCAST, MVT::i32, Expand);
     setOperationAction(ISD::BITCAST, MVT::f32, Expand);
@@ -887,6 +881,16 @@ static std::pair<unsigned, unsigned> getFPBranchKind(ISD::CondCode Cond) {
     return std::make_pair(Xtensa::BF, Xtensa::OLT_S);
   case ISD::SETGT:
     return std::make_pair(Xtensa::BF, Xtensa::OLE_S);
+  case ISD::SETOGT:
+    return std::make_pair(Xtensa::BF, Xtensa::ULE_S);
+  case ISD::SETOGE:
+    return std::make_pair(Xtensa::BF, Xtensa::ULT_S);
+  case ISD::SETONE:
+    return std::make_pair(Xtensa::BF, Xtensa::UEQ_S);
+  case ISD::SETUGT:
+    return std::make_pair(Xtensa::BF, Xtensa::OLE_S);
+  case ISD::SETUGE:
+    return std::make_pair(Xtensa::BF, Xtensa::OLT_S);
   default:
     llvm_unreachable("Invalid condition!");
   }

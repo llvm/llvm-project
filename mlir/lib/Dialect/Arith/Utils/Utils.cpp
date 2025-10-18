@@ -351,9 +351,9 @@ Value createProduct(OpBuilder &builder, Location loc, ArrayRef<Value> values,
   Value one = ConstantOp::create(builder, loc, resultType,
                                  builder.getOneAttr(resultType));
   ArithBuilder arithBuilder(builder, loc);
-  return std::accumulate(
-      values.begin(), values.end(), one,
-      [&arithBuilder](Value acc, Value v) { return arithBuilder.mul(acc, v); });
+  return llvm::accumulate(values, one, [&arithBuilder](Value acc, Value v) {
+    return arithBuilder.mul(acc, v);
+  });
 }
 
 /// Map strings to float types.
