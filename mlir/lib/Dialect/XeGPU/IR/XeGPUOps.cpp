@@ -121,6 +121,39 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   return success();
 }
 
+// Verify that number of offsets matches either the source rank or the tdesc
+// rank.
+static LogicalResult
+isValidNdOffset(TypedValue<TensorDescType> tDesc,
+                std::optional<llvm::ArrayRef<int64_t>> constOffsets,
+                int64_t offsetSize,
+                function_ref<InFlightDiagnostic()> emitError) {
+  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
+    // If CreateNdDescOp is available, we can further
+    // check the offsets rank against the source rank.
+    auto staticSource = createTDescOp.getConstShapeAttr();
+    int64_t sourceRank;
+    if (!staticSource || staticSource.empty()) {
+      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
+      sourceRank = sourceTy.getRank();
+    } else
+      sourceRank = staticSource.size();
+
+    int64_t constOffsetSize = constOffsets ? constOffsets->size() : 0;
+    auto tDescRank = tDesc.getType().getRank();
+    bool sourceRankMismatch =
+        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
+        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
+    bool tdescRankMismatch =
+        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
+        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
+    if (sourceRankMismatch && tdescRankMismatch)
+      return emitError() << "Offsets rank must match either the source or the "
+                            "TensorDesc rank.";
+  }
+  return success();
+}
+
 static LogicalResult
 isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
                                  VectorType valueTy, int64_t chunkSize,
@@ -258,8 +291,10 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
     auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
     // if shape and strides are from Memref, we don't need attributes for them
-    // to keep the IR print clean.
-    if (staticShape == memrefShape && staticStrides == memrefStrides) {
+    // to keep the IR print clean (only do so for full-static case, otherwise
+    // printer would fail trying to print empty array-attr).
+    if (staticShape == memrefShape && staticStrides == memrefStrides &&
+        dynamicShape.empty() && dynamicStrides.empty()) {
       staticShapeAttr = DenseI64ArrayAttr();
       staticStridesAttr = DenseI64ArrayAttr();
     }
@@ -320,8 +355,10 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
     auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
     // if shape and strides are from Memref, we don't need attributes for them
-    // to keep the IR print clean.
-    if (staticShape == memrefShape && staticStrides == memrefStrides) {
+    // to keep the IR print clean (only do so for full-static case, otherwise
+    // printer would fail trying to print empty array-attr).
+    if (staticShape == memrefShape && staticStrides == memrefStrides &&
+        dynamicShape.empty() && dynamicStrides.empty()) {
       staticShapeAttr = DenseI64ArrayAttr();
       staticStridesAttr = DenseI64ArrayAttr();
     }
@@ -471,16 +508,9 @@ LogicalResult PrefetchNdOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  int64_t tDescRank = tdescTy.getRank();
-  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-  int64_t constOffsetSize =
-      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
-      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
-    return emitOpError(
-        "Mismatched ranks between offsets and tensor descriptor");
-
-  return success();
+  auto tDesc = getTensorDesc();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -596,16 +626,9 @@ LogicalResult LoadNdOp::verify() {
                          << " is not consistent with tensor descriptor "
                          << tdescTy;
 
-  int64_t tDescRank = tdescTy.getRank();
-  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-  int64_t constOffsetSize =
-      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
-      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
-    return emitOpError(
-        "Mismatched ranks between offsets and tensor descriptor");
-
-  return success();
+  auto tDesc = getTensorDesc();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -690,16 +713,9 @@ LogicalResult StoreNdOp::verify() {
                          << " is not consistent with tensor descriptor "
                          << dstTy;
 
-  int64_t tDescRank = dstTy.getRank();
-  int64_t offsetSize = static_cast<int64_t>(getOffsets().size());
-  int64_t constOffsetSize =
-      getConstOffsetsAttr() ? getConstOffsetsAttr().size() : 0;
-  if (((offsetSize != 0) && (offsetSize != tDescRank)) ||
-      ((constOffsetSize != 0) && (constOffsetSize != tDescRank)))
-    return emitOpError(
-        "Mismatched ranks between offsets and tensor descriptor");
-
-  return success();
+  auto tDesc = getTensorDesc();
+  return isValidNdOffset(tDesc, getConstOffsets(), getMixedOffsets().size(),
+                         [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
