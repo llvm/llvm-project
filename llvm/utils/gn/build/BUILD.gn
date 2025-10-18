@@ -397,6 +397,13 @@ config("compiler_defaults") {
     ldflags += [ "-fsanitize=address" ]
   }
 
+  if (use_hwasan) {
+    assert(is_clang && current_os == "linux" && current_cpu == "arm64",
+           "hwasan only supported on Linux/arm64/Clang")
+    cflags += [ "-fsanitize=hwaddress" ]
+    ldflags += [ "-fsanitize=hwaddress" ]
+  }
+
   if (use_tsan) {
     assert(is_clang && current_os == "linux",
            "tsan only supported on Linux/Clang")
@@ -449,7 +456,7 @@ config("zdefs") {
   # -Wl,-z,defs doesn't work with sanitizers.
   # https://clang.llvm.org/docs/AddressSanitizer.html
   if (current_os != "ios" && current_os != "mac" && current_os != "win" &&
-      !(use_asan || use_tsan || use_ubsan)) {
+      !(use_asan || use_hwasan || use_tsan || use_ubsan)) {
     ldflags = [ "-Wl,-z,defs" ]
   }
 }
