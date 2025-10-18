@@ -22,6 +22,7 @@
 #include "../../from_range_associative_containers.h"
 #include "test_macros.h"
 
+TEST_CONSTEXPR_CXX26
 void test_duplicates() {
   using T          = std::pair<const int, char>;
   std::array input = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};

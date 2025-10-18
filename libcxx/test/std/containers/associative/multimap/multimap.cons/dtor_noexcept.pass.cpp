@@ -48,8 +48,6 @@ bool test() {
   }
 #endif // _LIBCPP_VERSION
 
-  return 0;
-
   return true;
 }
 int main(int, char**) {
