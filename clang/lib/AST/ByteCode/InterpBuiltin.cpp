@@ -3003,6 +3003,45 @@ static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_ia32_phminposuw(InterpState &S, CodePtr OpPC,
+                                            const CallExpr *Call) {
+  assert(Call->getNumArgs() == 1);
+
+  const Pointer &Source = S.Stk.pop<Pointer>();
+  const Pointer &Dest = S.Stk.peek<Pointer>();
+
+  unsigned SourceLen = Source.getNumElems();
+  QualType ElemQT = getElemType(Source);
+  OptPrimType ElemT = S.getContext().classify(ElemQT);
+  unsigned ElemBitWidth = S.getASTContext().getTypeSize(ElemQT);
+
+  bool DestUnsigned = Call->getCallReturnType(S.getASTContext())
+                          ->castAs<VectorType>()
+                          ->getElementType()
+                          ->isUnsignedIntegerOrEnumerationType();
+
+  INT_TYPE_SWITCH_NO_BOOL(*ElemT, {
+    APSInt MinIndex(ElemBitWidth, DestUnsigned);
+    APSInt MinVal = Source.elem<T>(0).toAPSInt();
+
+    for (unsigned I = 1; I != SourceLen; ++I) {
+      APSInt Val = Source.elem<T>(I).toAPSInt();
+      if (MinVal.ugt(Val)) {
+        MinVal = Val;
+        MinIndex = I;
+      }
+    }
+
+    Dest.elem<T>(0) = static_cast<T>(MinVal);
+    Dest.elem<T>(1) = static_cast<T>(MinIndex);
+    for (unsigned I = 2; I != SourceLen; ++I) {
+      Dest.elem<T>(I) = static_cast<T>(APSInt(ElemBitWidth, DestUnsigned));
+    }
+  });
+  Dest.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
                                           const CallExpr *Call, bool MaskZ) {
   assert(Call->getNumArgs() == 5);
@@ -4086,6 +4125,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
+
+  case X86::BI__builtin_ia32_phminposuw128:
+    return interp__builtin_ia32_phminposuw(S, OpPC, Call);
 
   case X86::BI__builtin_ia32_pternlogd128_mask:
   case X86::BI__builtin_ia32_pternlogd256_mask:
