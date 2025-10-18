@@ -57,7 +57,7 @@ Options
 
 .. option:: CheckedSwapFunctions
 
-   Comma separated list of swap function names which should not throw exceptions.
+   Comma-separated list of swap function names which should not throw exceptions.
    Default value is `swap,iter_swap,iter_move`.
 
 .. option:: FunctionsThatShouldNotThrow
