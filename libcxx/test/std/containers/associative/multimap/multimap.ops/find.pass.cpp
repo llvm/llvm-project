@@ -23,7 +23,7 @@
 #include "is_transparent.h"
 
 template <class Iter>
-bool iter_in_range(Iter first, Iter last, Iter to_find) {
+TEST_CONSTEXPR_CXX26 bool iter_in_range(Iter first, Iter last, Iter to_find) {
   for (; first != last; ++first) {
     if (first == to_find)
       return true;

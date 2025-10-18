@@ -2471,14 +2471,15 @@ __tree<_Tp, _Compare, _Allocator>::__equal_range_multi(const _Key& __k) const {
   while (__rt != nullptr) {
     auto __comp_res = __comp(__k, __rt->__get_value());
     if (__comp_res.__less()) {
-      __result = static_cast<__end_node_pointer>(__rt);
-      __rt     = static_cast<__node_pointer>(__rt->__left_);
+      __result = std::__static_fancy_pointer_cast<__end_node_pointer>(__rt);
+      __rt     = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_);
     } else if (__comp_res.__greater())
-      __rt = static_cast<__node_pointer>(__rt->__right_);
+      __rt = std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_);
     else
-      return _Pp(
-          __lower_bound_multi(__k, static_cast<__node_pointer>(__rt->__left_), static_cast<__end_node_pointer>(__rt)),
-          __upper_bound_multi(__k, static_cast<__node_pointer>(__rt->__right_), __result));
+      return _Pp(__lower_bound_multi(__k,
+                                     std::__static_fancy_pointer_cast<__node_pointer>(__rt->__left_),
+                                     std::__static_fancy_pointer_cast<__end_node_pointer>(__rt)),
+                 __upper_bound_multi(__k, std::__static_fancy_pointer_cast<__node_pointer>(__rt->__right_), __result));
   }
   return _Pp(const_iterator(__result), const_iterator(__result));
 }
