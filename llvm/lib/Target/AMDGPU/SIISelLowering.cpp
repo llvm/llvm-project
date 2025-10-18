@@ -9617,14 +9617,21 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
 }
 
 SDValue SITargetLowering::lowerWaveID(SelectionDAG &DAG, SDValue Op) const {
-  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
-  if (!Subtarget->hasArchitectedSGPRs())
-    return {};
   SDLoc SL(Op);
   MVT VT = MVT::i32;
-  SDValue TTMP8 = DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
-  return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
-                     DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
+  // With architected SGPRs, waveIDinGroup is in TTMP8[29:25].
+  if (Subtarget->hasArchitectedSGPRs()) {
+    SDValue TTMP8 =
+        DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP8, VT);
+    return DAG.getNode(AMDGPUISD::BFE_U32, SL, VT, TTMP8,
+                       DAG.getConstant(25, SL, VT), DAG.getConstant(5, SL, VT));
+  }
+
+  // GFX942/GFX950 has wave_id_in_workgroup in ttmp11.
+  if (Subtarget->hasGFX940Insts())
+    return DAG.getCopyFromReg(DAG.getEntryNode(), SL, AMDGPU::TTMP11, VT);
+
+  return {};
 }
 
 SDValue SITargetLowering::lowerConstHwRegRead(SelectionDAG &DAG, SDValue Op,
