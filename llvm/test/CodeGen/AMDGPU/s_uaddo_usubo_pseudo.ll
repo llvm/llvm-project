@@ -12,6 +12,8 @@ define amdgpu_ps i32 @s_uaddo_pseudo(i32 inreg %val0) {
 ; CHECK-LABEL: s_uaddo_pseudo:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s0, s0, 1
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_addc_u32 s0, 1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %val0, i32 1)
@@ -30,6 +32,8 @@ define amdgpu_ps i32 @s_usubo_pseudo(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: s_usubo_pseudo:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_sub_u32 s0, s0, 1
+; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; CHECK-NEXT:    s_cmp_lg_u64 s[2:3], 0
 ; CHECK-NEXT:    s_subb_u32 s0, s1, 0
 ; CHECK-NEXT:    ; return to shader part epilog
   %pair = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %val0, i32 1)

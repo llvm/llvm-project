@@ -709,30 +709,6 @@ public:
     }
   }
 
-  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
-    if (!MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
-      return false;
-    // Compares have no result
-    if (MI.isCompare())
-      return false;
-    switch (MI.getOpcode()) {
-    default:
-      return true;
-    case AMDGPU::S_ADD_I32:
-    case AMDGPU::S_ADD_U32:
-    case AMDGPU::S_ADDC_U32:
-    case AMDGPU::S_SUB_I32:
-    case AMDGPU::S_SUB_U32:
-    case AMDGPU::S_SUBB_U32:
-    case AMDGPU::S_MIN_I32:
-    case AMDGPU::S_MIN_U32:
-    case AMDGPU::S_MAX_I32:
-    case AMDGPU::S_MAX_U32:
-    case AMDGPU::S_ADDK_I32:
-      return false;
-    }
-  }
-
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
