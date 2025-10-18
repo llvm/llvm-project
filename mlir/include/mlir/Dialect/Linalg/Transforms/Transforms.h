@@ -25,7 +25,6 @@
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 namespace bufferization {
@@ -621,35 +620,43 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
-computePaddedShape(RewriterBase &rewriter, TypedValue<RankedTensorType> v,
+computePaddedShape(OpBuilder &, TypedValue<RankedTensorType> v,
                    AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
                    const PadTilingInterfaceOptions &options);
 
 using PadSizeComputationFunction =
     std::function<FailureOr<SmallVector<OpFoldResult>>(
-        RewriterBase &, OpOperand &, ArrayRef<Range>,
+        OpBuilder &, OpOperand &, ArrayRef<Range>,
         const PadTilingInterfaceOptions &)>;
 
 /// Specific helper for Linalg ops.
-FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
-    RewriterBase &rewriter, OpOperand &operandToPad,
-    ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
+FailureOr<SmallVector<OpFoldResult>>
+computeIndexingMapOpInterfacePaddedShape(OpBuilder &, OpOperand &operandToPad,
+                                         ArrayRef<Range> iterationDomain,
+                                         const PadTilingInterfaceOptions &);
 
-/// Pad the iterator dimensions `options.paddingDimensions` of `opToPad`.
-///
+/// Operations and values created in the process of padding a TilingInterface
+/// operation.
+struct PadTilingInterfaceResult {
+  /// The operands of the padded op.
+  SmallVector<tensor::PadOp> padOps;
+  /// The padded op, a clone of `toPad` with padded operands.
+  TilingInterface paddedOp;
+  /// Slices of the padded op's results, same types as `toPad`.
+  SmallVector<Value> replacements;
+};
+
+/// Pad the iterator dimensions of `toPad`.
 /// * "options.paddingSizes" indicates that each padding dimension should be
 ///   padded to the specified padding size.
 /// * "options.padToMultipleOf" indicates that the paddingSizes should be
 //    interpreted as the bounding box (dynamic) value to pad to.
 /// * Use "options.paddingValues" to set the padding value of the created
 //    tensor::PadOp.
-/// * The tensor::PadOp is returned on success.
-
-FailureOr<TilingInterface>
-rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
-                  const PadTilingInterfaceOptions &constOptions,
-                  SmallVector<tensor::PadOp> &padOps,
-                  const PadSizeComputationFunction &computePaddingSizeFun =
+FailureOr<PadTilingInterfaceResult>
+rewriteAsPaddedOp(OpBuilder &, TilingInterface toPad,
+                  PadTilingInterfaceOptions options,
+                  const PadSizeComputationFunction & =
                       &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
