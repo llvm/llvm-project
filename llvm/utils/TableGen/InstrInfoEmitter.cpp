@@ -1135,6 +1135,20 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "\n};\n} // end namespace llvm\n";
 
+  OS << "namespace llvm::" << Target.getInstNamespace() << " {\n";
+  for (const Record *R : Records.getAllDerivedDefinitions("Operand")) {
+    if (R->isAnonymous())
+      continue;
+    if (const DagInit *D = R->getValueAsDag("MIOperandInfo")) {
+      for (unsigned i = 0, e = D->getNumArgs(); i < e; ++i) {
+        if (const StringInit *Name = D->getArgName(i))
+          OS << "  constexpr unsigned SUBOP_" << R->getName() << "_"
+             << Name->getValue() << " = " << i << ";\n";
+      }
+    }
+  }
+  OS << "} // end namespace llvm::" << Target.getInstNamespace() << "\n";
+
   OS << "#endif // GET_INSTRINFO_HEADER\n\n";
 
   OS << "#ifdef GET_INSTRINFO_HELPER_DECLS\n";
