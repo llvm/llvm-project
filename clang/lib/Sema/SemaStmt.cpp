@@ -695,7 +695,6 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
   const Expr *E = cast<ReturnStmt>(St)->getRetValue();
   const auto *CE = dyn_cast_or_null<CallExpr>(IgnoreParenImplicitAsWritten(E));
-
   if (!CE) {
     Diag(St->getBeginLoc(), diag::err_musttail_needs_call) << &MTA;
     return false;
