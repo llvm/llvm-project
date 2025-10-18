@@ -21,8 +21,8 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %d.043 = phi i16 [ undef, %for.body.lr.ph ], [ %.sink28, %for.body ]
-  %c.042 = phi i16 [ undef, %for.body.lr.ph ], [ %c.0., %for.body ]
+  %d.043 = phi i16 [ 0, %for.body.lr.ph ], [ %.sink28, %for.body ]
+  %c.042 = phi i16 [ 0, %for.body.lr.ph ], [ %c.0., %for.body ]
   %arrayidx = getelementptr inbounds i16, ptr %1, i64 %indvars.iv
   %4 = load i16, ptr %arrayidx, align 2, !tbaa !7
   %cmp2 = icmp sgt i16 %c.042, %4
@@ -34,8 +34,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body, %entry
-  %c.0.lcssa = phi i16 [ undef, %entry ], [ %c.0., %for.body ]
-  %d.0.lcssa = phi i16 [ undef, %entry ], [ %.sink28, %for.body ]
+  %c.0.lcssa = phi i16 [ 0, %entry ], [ %c.0., %for.body ]
+  %d.0.lcssa = phi i16 [ 0, %entry ], [ %.sink28, %for.body ]
   %cmp26 = icmp sgt i16 %c.0.lcssa, %d.0.lcssa
   %conv27 = zext i1 %cmp26 to i32
   ret i32 %conv27

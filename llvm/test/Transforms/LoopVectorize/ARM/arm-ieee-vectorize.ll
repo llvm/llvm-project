@@ -92,7 +92,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi i32 [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %b, i32 %i.07
@@ -108,7 +108,7 @@ for.end.loopexit:                                 ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi i32 [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
+  %Red.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret i32 %Red.0.lcssa
 }
 
@@ -129,7 +129,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi float [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %b, i32 %i.07
@@ -145,7 +145,7 @@ for.end.loopexit:                                 ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
+  %Red.0.lcssa = phi float [ 0.0e+00, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret float %Red.0.lcssa
 }
 
@@ -252,7 +252,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi i32 [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %b, i32 %i.07
@@ -268,7 +268,7 @@ for.end.loopexit:                                 ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi i32 [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
+  %Red.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret i32 %Red.0.lcssa
 }
 
@@ -285,7 +285,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi float [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %b, i32 %i.07
@@ -301,7 +301,7 @@ for.end.loopexit:                                 ; preds = %for.body
   br label %for.end
 
 for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
+  %Red.0.lcssa = phi float [ 0.0e+00, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret float %Red.0.lcssa
 }
 
