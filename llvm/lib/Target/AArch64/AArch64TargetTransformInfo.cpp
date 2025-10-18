@@ -957,10 +957,24 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return TyL.first + ExtraCost;
   }
   case Intrinsic::get_active_lane_mask: {
-    auto *RetTy = dyn_cast<FixedVectorType>(ICA.getReturnType());
-    if (RetTy) {
-      EVT RetVT = getTLI()->getValueType(DL, RetTy);
-      EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    auto RetTy = cast<VectorType>(ICA.getReturnType());
+    EVT RetVT = getTLI()->getValueType(DL, RetTy);
+    EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
+    if (RetTy->isScalableTy()) {
+      // When SVE2p1 or SME2 is available, get_active_lane_mask will lower
+      // to the sve_whilelo_x2 intrinsic which returns a predicate pair.
+      // This means we can halve getTypeLegalizationCost, since the
+      // predicate pair intrinsic will split the result, e.g.
+      //   nxv32i1 = get_active_lane_mask(base, idx) ->
+      //    {nxv16i1, nxv16i1} = sve_whilelo_x2(base, idx)
+      if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) ||
+          (!ST->hasSVE2p1() && !ST->hasSME2()) ||
+          TLI->getTypeAction(RetTy->getContext(), RetVT) !=
+              TargetLowering::TypeSplitVector)
+        break;
+      auto LT = getTypeLegalizationCost(RetTy);
+      return LT.first / 2;
+    } else {
       if (!getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT) &&
           !getTLI()->isTypeLegal(RetVT)) {
         // We don't have enough context at this point to determine if the mask
@@ -972,7 +986,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         // NOTE: getScalarizationOverhead returns a cost that's far too
         // pessimistic for the actual generated codegen. In reality there are
         // two instructions generated per lane.
-        return RetTy->getNumElements() * 2;
+        return cast<FixedVectorType>(RetTy)->getNumElements() * 2;
       }
     }
     break;
