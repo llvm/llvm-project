@@ -10,8 +10,8 @@
 
 // class map
 
-//       iterator find(const key_type& k);
-// const_iterator find(const key_type& k) const;
+//       iterator find(const key_type& k); // constexpr since C++26
+// const_iterator find(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -21,7 +21,7 @@
 #include "private_constructor.h"
 #include "is_transparent.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::pair<const int, double> V;
     typedef std::map<int, double> M;
@@ -95,6 +95,7 @@ int main(int, char**) {
     {
       typedef M::iterator R;
       V ar[] = {V(5, 5), V(6, 6), V(7, 7), V(8, 8), V(9, 9), V(10, 10), V(11, 11), V(12, 12)};
+      (void)ar[0].second;
       M m(ar, ar + sizeof(ar) / sizeof(ar[0]));
       R r = m.find(5);
       assert(r == m.begin());
@@ -222,6 +223,13 @@ int main(int, char**) {
     assert(r == std::next(m.begin(), 8));
   }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
