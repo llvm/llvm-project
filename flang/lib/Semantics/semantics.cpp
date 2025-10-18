@@ -209,7 +209,8 @@ static bool PerformStatementSemantics(
   RewriteParseTree(context, program);
   ComputeOffsets(context, context.globalScope());
   CheckDeclarations(context);
-  StatementSemanticsPass1{context}.Walk(program);
+  StatementSemanticsPass1 pass1{context};
+  pass1.Walk(program);
   StatementSemanticsPass2 pass2{context};
   pass2.Walk(program);
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
@@ -217,6 +218,16 @@ static bool PerformStatementSemantics(
   }
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP)) {
     SemanticsVisitor<OmpStructureChecker>{context}.Walk(program);
+    if (!context.AnyFatalError()) {
+      // Once semantics have been checked, we can replace any Array Elements
+      // used in Reductions with temporary variables to ensure they are lowered
+      // correctly
+      if (RewriteReductionArrayElements(context, program)) {
+        // If any arrayElements have been rewritten to temp's, the TypedExpr's
+        // need recapturing so pass1 is run again
+        pass1.Walk(program);
+      }
+    }
   }
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
     SemanticsVisitor<CUDAChecker>{context}.Walk(program);

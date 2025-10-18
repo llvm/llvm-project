@@ -95,6 +95,86 @@ private:
   parser::Messages &messages_;
 };
 
+class ReplacementTemp {
+public:
+  ReplacementTemp() {}
+
+  void createTempSymbol(
+      SourceName &source, Scope &scope, SemanticsContext &context);
+  void setOriginalSubscriptInt(
+      std::list<parser::SectionSubscript> &sectionSubscript);
+  Symbol *getTempSymbol() { return replacementTempSymbol_; }
+  Symbol *getPrivateReductionSymbol() { return privateReductionSymbol_; }
+  parser::CharBlock getOriginalSource() { return originalSource_; }
+  parser::Name getOriginalName() { return originalName_; }
+  parser::CharBlock getOriginalSubscript() {
+    return originalSubscriptCharBlock_;
+  }
+  Scope *getTempScope() { return tempScope_; }
+  bool isArrayElementReassigned() { return arrayElementReassigned_; }
+  bool isSectionTriplet() { return isSectionTriplet_; }
+  void arrayElementReassigned() { arrayElementReassigned_ = true; }
+  void setOriginalName(parser::Name &name) {
+    originalName_ = common::Clone(name);
+  }
+  void setOriginalSource(parser::CharBlock &source) {
+    originalSource_ = source;
+  }
+  void setOriginalSubscriptInt(parser::CharBlock &subscript) {
+    originalSubscriptCharBlock_ = subscript;
+  }
+  void setTempScope(Scope &scope) { tempScope_ = &scope; };
+  void setTempSymbol(Symbol *symbol) { replacementTempSymbol_ = symbol; }
+
+private:
+  Symbol *replacementTempSymbol_{nullptr};
+  Symbol *privateReductionSymbol_{nullptr};
+  Scope *tempScope_{nullptr};
+  parser::CharBlock originalSource_;
+  parser::Name originalName_;
+  parser::CharBlock originalSubscriptCharBlock_;
+  bool arrayElementReassigned_{false};
+  bool isSectionTriplet_{false};
+};
+
+class RewriteOmpReductionArrayElements {
+public:
+  explicit RewriteOmpReductionArrayElements(SemanticsContext &context)
+      : context_(context) {}
+  // Default action for a parse tree node is to visit children.
+  template <typename T> bool Pre(T &) { return true; }
+  template <typename T> void Post(T &) {}
+
+  void Post(parser::Block &block);
+  void Post(parser::Variable &var);
+  void Post(parser::Expr &expr);
+  void Post(parser::AssignmentStmt &assignmentStmt);
+  void Post(parser::PointerAssignmentStmt &ptrAssignmentStmt);
+  void rewriteReductionArrayElementToTemp(parser::Block &block);
+  bool isArrayElementRewritten() { return arrayElementReassigned_; }
+
+private:
+  bool isMatchingArrayElement(parser::Designator &existingDesignator);
+  template <typename T>
+  void processFunctionReference(
+      T &node, parser::CharBlock source, parser::FunctionReference &funcRef);
+  parser::Designator makeTempDesignator(parser::CharBlock source);
+  bool rewriteArrayElementToTemp(parser::Block::iterator &it,
+      parser::OpenMPLoopConstruct &ompLoop, parser::Block &block,
+      ReplacementTemp &temp);
+  bool identifyArrayElementReduced(
+      parser::Designator &designator, ReplacementTemp &temp);
+  void reassignTempValueToArrayElement(parser::ArrayElement &arrayElement);
+  void setCurrentTemp(ReplacementTemp *temp) { currentTemp_ = temp; }
+  void resetCurrentTemp() { currentTemp_ = nullptr; }
+
+  SemanticsContext &context_;
+  bool arrayElementReassigned_{false};
+  parser::Block::iterator reassignmentInsertionPoint_;
+  parser::Block *block_{nullptr};
+  ReplacementTemp *currentTemp_{nullptr};
+};
+
 // Check that name has been resolved to a symbol
 void RewriteMutator::Post(parser::Name &name) {
   if (!name.symbol && errorOnUnresolvedName_) {
@@ -492,10 +572,454 @@ void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
 }
 
+void ReplacementTemp::createTempSymbol(
+    SourceName &source, Scope &scope, SemanticsContext &context) {
+  replacementTempSymbol_ =
+      const_cast<semantics::Scope &>(originalName_.symbol->owner())
+          .FindSymbol(source);
+  replacementTempSymbol_->set_scope(
+      &const_cast<semantics::Scope &>(originalName_.symbol->owner()));
+  DeclTypeSpec *tempType = originalName_.symbol->GetUltimate().GetType();
+  replacementTempSymbol_->get<ObjectEntityDetails>().set_type(*tempType);
+  replacementTempSymbol_->flags().set(Symbol::Flag::CompilerCreated);
+}
+
+void ReplacementTemp::setOriginalSubscriptInt(
+    std::list<parser::SectionSubscript> &sectionSubscript) {
+  bool setSubscript{false};
+  for (parser::SectionSubscript &subscript : sectionSubscript) {
+    std::visit(llvm::makeVisitor(
+                   [&](parser::IntExpr &intExpr) {
+                     parser::Expr &expr = intExpr.thing.value();
+                     std::visit(
+                         llvm::makeVisitor(
+                             [&](parser::LiteralConstant &literalContant) {
+                               std::visit(llvm::makeVisitor(
+                                              [&](parser::IntLiteralConstant
+                                                      &intLiteralConstant) {
+                                                originalSubscriptCharBlock_ =
+                                                    std::get<parser::CharBlock>(
+                                                        intLiteralConstant.t);
+                                                setSubscript = true;
+                                              },
+                                              [&](auto &) {}),
+                                   literalContant.u);
+                             },
+                             [&](auto &) {}),
+                         expr.u);
+                   },
+                   [&](parser::SubscriptTriplet &triplet) {
+                     isSectionTriplet_ = true;
+                     setSubscript = true;
+                   },
+                   [&](auto &) {}),
+        subscript.u);
+    if (setSubscript) {
+      break;
+    }
+  }
+}
+
+void RewriteOmpReductionArrayElements::rewriteReductionArrayElementToTemp(
+    parser::Block &block) {
+  if (block.empty()) {
+    return;
+  }
+
+  for (auto it{block.begin()}; it != block.end(); ++it) {
+    std::visit(
+        llvm::makeVisitor(
+            [&](parser::ExecutableConstruct &execConstruct) {
+              std::visit(
+                  llvm::makeVisitor(
+                      [&](common::Indirection<parser::OpenMPConstruct>
+                              &ompConstruct) {
+                        std::visit(
+                            llvm::makeVisitor(
+                                [&](parser::OpenMPLoopConstruct &ompLoop) {
+                                  ReplacementTemp temp;
+                                  if (!rewriteArrayElementToTemp(
+                                          it, ompLoop, block, temp)) {
+                                    return;
+                                  }
+                                  auto &NestedConstruct = std::get<
+                                      std::optional<parser::NestedConstruct>>(
+                                      ompLoop.t);
+                                  if (!NestedConstruct.has_value()) {
+                                    return;
+                                  }
+                                  if (parser::DoConstruct *
+                                      doConst{std::get_if<parser::DoConstruct>(
+                                          &NestedConstruct.value())}) {
+                                    block_ = &block;
+                                    parser::Block &doBlock{
+                                        std::get<parser::Block>(doConst->t)};
+                                    parser::Walk(doBlock, *this);
+                                    // Reset the current temp value so future
+                                    // iterations use their own version.
+                                    resetCurrentTemp();
+                                  }
+                                },
+                                [&](auto &) {}),
+                            ompConstruct.value().u);
+                      },
+                      [&](auto &) {}),
+                  execConstruct.u);
+            },
+            [&](auto &) {}),
+        it->u);
+  }
+}
+
+bool RewriteOmpReductionArrayElements::isMatchingArrayElement(
+    parser::Designator &existingDesignator) {
+  bool matchesArrayElement{false};
+  std::list<parser::SectionSubscript> *subscripts{nullptr};
+
+  std::visit(llvm::makeVisitor(
+                 [&](parser::DataRef &dataRef) {
+                   std::visit(
+                       llvm::makeVisitor(
+                           [&](common::Indirection<parser::ArrayElement>
+                                   &arrayElement) {
+                             subscripts = &arrayElement.value().subscripts;
+                             std::visit(
+                                 llvm::makeVisitor(
+                                     [&](parser::Name &name) {
+                                       if (name.symbol->GetUltimate() ==
+                                           currentTemp_->getOriginalName()
+                                               .symbol->GetUltimate()) {
+                                         matchesArrayElement = true;
+                                         if (!currentTemp_
+                                                 ->isArrayElementReassigned()) {
+                                           reassignTempValueToArrayElement(
+                                               arrayElement.value());
+                                         }
+                                       }
+                                     },
+                                     [](auto &) {}),
+                                 arrayElement.value().base.u);
+                           },
+                           [&](parser::Name &name) {
+                             if (name.symbol->GetUltimate() ==
+                                 currentTemp_->getOriginalName()
+                                     .symbol->GetUltimate()) {
+                               matchesArrayElement = true;
+                             }
+                           },
+                           [](auto &) {}),
+                       dataRef.u);
+                 },
+                 [&](auto &) {}),
+      existingDesignator.u);
+
+  if (subscripts) {
+    bool foundSubscript{false};
+    for (parser::SectionSubscript &subscript : *subscripts) {
+      matchesArrayElement = std::visit(
+          llvm::makeVisitor(
+              [&](parser::IntExpr &intExpr) -> bool {
+                parser::Expr &expr = intExpr.thing.value();
+                return std::visit(
+                    llvm::makeVisitor(
+                        [&](parser::LiteralConstant &literalContant) -> bool {
+                          return std::visit(
+                              llvm::makeVisitor(
+                                  [&](parser::IntLiteralConstant
+                                          &intLiteralConstant) -> bool {
+                                    foundSubscript = true;
+                                    assert(currentTemp_ != nullptr &&
+                                        "Value for ReplacementTemp should have "
+                                        "been found");
+                                    if (std::get<parser::CharBlock>(
+                                            intLiteralConstant.t) ==
+                                        currentTemp_->getOriginalSubscript()) {
+                                      return true;
+                                    }
+                                    return false;
+                                  },
+                                  [](auto &) -> bool { return false; }),
+                              literalContant.u);
+                        },
+                        [](auto &) -> bool { return false; }),
+                    expr.u);
+              },
+              [](auto &) -> bool { return false; }),
+          subscript.u);
+      if (foundSubscript) {
+        break;
+      }
+    }
+  }
+  return matchesArrayElement;
+}
+
+template <typename T>
+void RewriteOmpReductionArrayElements::processFunctionReference(
+    T &node, parser::CharBlock source, parser::FunctionReference &funcRef) {
+  auto &[procedureDesignator, ArgSpecList] = funcRef.v.t;
+  std::optional<parser::Designator> arrayElementDesignator =
+      std::visit(llvm::makeVisitor(
+                     [&](parser::Name &functionReferenceName)
+                         -> std::optional<parser::Designator> {
+                       if (currentTemp_->getOriginalName().symbol ==
+                           functionReferenceName.symbol) {
+                         return funcRef.ConvertToArrayElementRef();
+                       }
+                       return std::nullopt;
+                     },
+                     [&](auto &) -> std::optional<parser::Designator> {
+                       return std::nullopt;
+                     }),
+          procedureDesignator.u);
+
+  if (arrayElementDesignator.has_value()) {
+    if (this->isMatchingArrayElement(arrayElementDesignator.value())) {
+      node = T{
+          common::Indirection<parser::Designator>{makeTempDesignator(source)}};
+    }
+  }
+}
+
+parser::Designator RewriteOmpReductionArrayElements::makeTempDesignator(
+    parser::CharBlock source) {
+  parser::Name tempVariableName{currentTemp_->getTempSymbol()->name()};
+  tempVariableName.symbol = currentTemp_->getTempSymbol();
+  parser::Designator tempDesignator{
+      parser::DataRef{std::move(tempVariableName)}};
+  tempDesignator.source = source;
+  return tempDesignator;
+}
+
+bool RewriteOmpReductionArrayElements::rewriteArrayElementToTemp(
+    parser::Block::iterator &it, parser::OpenMPLoopConstruct &ompLoop,
+    parser::Block &block, ReplacementTemp &temp) {
+  parser::OmpBeginLoopDirective &ompBeginLoop{
+      std::get<parser::OmpBeginLoopDirective>(ompLoop.t)};
+  std::list<parser::OmpClause> &clauseList{
+      std::get<std::optional<parser::OmpClauseList>>(ompBeginLoop.t)->v};
+  bool rewrittenArrayElement{false};
+
+  for (auto iter{clauseList.begin()}; iter != clauseList.end(); ++iter) {
+    rewrittenArrayElement = std::visit(
+        llvm::makeVisitor(
+            [&](parser::OmpClause::Reduction &clause) -> bool {
+              std::list<parser::OmpObject> &objectList =
+                  std::get<parser::OmpObjectList>(clause.v.t).v;
+
+              bool rewritten{false};
+              for (auto object{objectList.begin()}; object != objectList.end();
+                  ++object) {
+                rewritten = std::visit(
+                    llvm::makeVisitor(
+                        [&](parser::Designator &designator) -> bool {
+                          if (!identifyArrayElementReduced(designator, temp)) {
+                            return false;
+                          }
+                          if (temp.isSectionTriplet()) {
+                            return false;
+                          }
+
+                          reassignmentInsertionPoint_ =
+                              it != block.end() ? it : block.end();
+                          std::string tempSourceString = "reduction_temp_" +
+                              temp.getOriginalSource().ToString() + "(" +
+                              temp.getOriginalSubscript().ToString() + ")";
+                          SourceName source = context_.SaveTempName(
+                              std::move(tempSourceString));
+                          Scope &scope = const_cast<Scope &>(
+                              temp.getOriginalName().symbol->owner());
+                          if (Symbol * symbol{scope.FindSymbol(source)}) {
+                            temp.setTempSymbol(symbol);
+                          } else {
+                            if (scope
+                                    .try_emplace(source, semantics::Attrs{},
+                                        semantics::ObjectEntityDetails{})
+                                    .second) {
+                              temp.createTempSymbol(source, scope, context_);
+                            } else {
+                              common::die("Failed to create temp symbol for %s",
+                                  source.ToString().c_str());
+                            }
+                          }
+                          setCurrentTemp(&temp);
+                          temp.setTempScope(scope);
+
+                          // Assign the value of the array element to the
+                          // temporary variable
+                          parser::Variable newVariable{
+                              makeTempDesignator(temp.getOriginalSource())};
+                          parser::Expr newExpr{
+                              common::Indirection<parser::Designator>{
+                                  std::move(designator)}};
+                          newExpr.source = temp.getOriginalSource();
+                          std::tuple<parser::Variable, parser::Expr> newT{
+                              std::move(newVariable), std::move(newExpr)};
+                          parser::AssignmentStmt assignment{std::move(newT)};
+                          parser::ExecutionPartConstruct
+                              tempVariablePartConstruct{
+                                  parser::ExecutionPartConstruct{
+                                      parser::ExecutableConstruct{
+                                          parser::Statement<parser::ActionStmt>{
+                                              std::optional<parser::Label>{},
+                                              std::move(assignment)}}}};
+                          block.insert(
+                              it, std::move(tempVariablePartConstruct));
+                          arrayElementReassigned_ = true;
+
+                          designator =
+                              makeTempDesignator(temp.getOriginalSource());
+                          return true;
+                        },
+                        [&](const auto &) -> bool { return false; }),
+                    object->u);
+              }
+              return rewritten;
+            },
+            [&](auto &) -> bool { return false; }),
+        iter->u);
+
+    if (rewrittenArrayElement) {
+      return rewrittenArrayElement;
+    }
+  }
+  return rewrittenArrayElement;
+}
+
+bool RewriteOmpReductionArrayElements::identifyArrayElementReduced(
+    parser::Designator &designator, ReplacementTemp &temp) {
+  return std::visit(
+      llvm::makeVisitor(
+          [&](parser::DataRef &dataRef) -> bool {
+            return std::visit(
+                llvm::makeVisitor(
+                    [&](common::Indirection<parser::ArrayElement>
+                            &arrayElement) {
+                      std::visit(llvm::makeVisitor(
+                                     [&](parser::Name &name) -> void {
+                                       temp.setOriginalName(name);
+                                       temp.setOriginalSource(name.source);
+                                     },
+                                     [&](auto &) -> void {}),
+                          arrayElement.value().base.u);
+                      temp.setOriginalSubscriptInt(
+                          arrayElement.value().subscripts);
+                      return !temp.isSectionTriplet() ? true : false;
+                    },
+                    [&](auto &) -> bool { return false; }),
+                dataRef.u);
+          },
+          [&](auto &) -> bool { return false; }),
+      designator.u);
+}
+
+void RewriteOmpReductionArrayElements::reassignTempValueToArrayElement(
+    parser::ArrayElement &arrayElement) {
+  assert(block_ && "Need iterator to reassign");
+  parser::CharBlock originalSource = currentTemp_->getOriginalSource();
+  parser::DataRef reassignmentDataRef{std::move(arrayElement)};
+  common::Indirection<parser::Designator> arrayElementDesignator{
+      std::move(reassignmentDataRef)};
+  arrayElementDesignator.value().source = originalSource;
+  parser::Variable exisitingVar{std::move(arrayElementDesignator)};
+  std::get<common::Indirection<parser::Designator>>(exisitingVar.u)
+      .value()
+      .source = originalSource;
+  parser::Expr reassignmentExpr{makeTempDesignator(originalSource)};
+  SourceName source{"reductionTemp"};
+  reassignmentExpr.source = source;
+  std::tuple<parser::Variable, parser::Expr> reassignment{
+      std::move(exisitingVar), std::move(reassignmentExpr)};
+  parser::AssignmentStmt reassignStmt{std::move(reassignment)};
+  parser::ExecutionPartConstruct tempVariableReassignment{
+      parser::ExecutionPartConstruct{
+          parser::ExecutableConstruct{parser::Statement<parser::ActionStmt>{
+              std::optional<parser::Label>{}, std::move(reassignStmt)}}}};
+  block_->insert(std::next(reassignmentInsertionPoint_),
+      std::move(tempVariableReassignment));
+  currentTemp_->arrayElementReassigned();
+}
+
+void RewriteOmpReductionArrayElements::Post(
+    parser::AssignmentStmt &assignmentStmt) {
+  if (arrayElementReassigned_) {
+    // The typed expression needs to be reset where we are reassigning array
+    // elements so the semantics can regenerate the expressions correctly.
+    assignmentStmt.typedAssignment.Reset();
+  }
+}
+void RewriteOmpReductionArrayElements::Post(
+    parser::PointerAssignmentStmt &ptrAssignmentStmt) {
+  if (arrayElementReassigned_) {
+    // The typed expression needs to be reset where we are reassigning array
+    // elements so the semantics can regenerate the expressions correctly.
+    ptrAssignmentStmt.typedAssignment.Reset();
+  }
+}
+void RewriteOmpReductionArrayElements::Post(parser::Variable &var) {
+  if (currentTemp_) {
+    std::visit(
+        llvm::makeVisitor(
+            [&](common::Indirection<parser::FunctionReference> &funcRef)
+                -> void {
+              this->processFunctionReference<parser::Variable>(
+                  var, var.GetSource(), funcRef.value());
+            },
+            [&](common::Indirection<parser::Designator> &designator) -> void {
+              if (isMatchingArrayElement(designator.value())) {
+                designator = makeTempDesignator(designator.value().source);
+                var = parser::Variable{std::move(designator)};
+              }
+            },
+            [&](auto &) -> void {}),
+        var.u);
+  }
+  if (arrayElementReassigned_) {
+    // The typed expression needs to be reset where we are reassigning array
+    // elements so the semantics can regenerate the expressions correctly.
+    var.typedExpr.Reset();
+  }
+}
+void RewriteOmpReductionArrayElements::Post(parser::Expr &expr) {
+  if (currentTemp_) {
+    std::visit(
+        llvm::makeVisitor(
+            [&](common::Indirection<parser::FunctionReference> &funcRef)
+                -> void {
+              this->processFunctionReference<parser::Expr>(
+                  expr, expr.source, funcRef.value());
+            },
+            [&](common::Indirection<parser::Designator> &designator) -> void {
+              if (isMatchingArrayElement(designator.value())) {
+                designator = makeTempDesignator(designator.value().source);
+                expr = parser::Expr{std::move(designator)};
+              }
+            },
+            [&](auto &) {}),
+        expr.u);
+  }
+  if (arrayElementReassigned_) {
+    // The typed expression needs to be reset where we are reassigning array
+    // elements so the semantics can regenerate the expressions correctly.
+    expr.typedExpr.Reset();
+  }
+}
+
+void RewriteOmpReductionArrayElements::Post(parser::Block &block) {
+  rewriteReductionArrayElementToTemp(block);
+}
+
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {
   RewriteMutator mutator{context};
   parser::Walk(program, mutator);
   return !context.AnyFatalError();
+}
+
+bool RewriteReductionArrayElements(
+    SemanticsContext &context, parser::Program &program) {
+  RewriteOmpReductionArrayElements mutator{context};
+  parser::Walk(program, mutator);
+  return mutator.isArrayElementRewritten();
 }
 
 } // namespace Fortran::semantics
