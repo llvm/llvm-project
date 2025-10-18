@@ -36,6 +36,10 @@ TEST_F(SBMutexTest, LockTest) {
   std::future<void> f;
   {
     lldb::SBMutex lock = target.GetAPIMutex();
+
+    ASSERT_TRUE(lock.try_lock());
+    lock.unlock();
+
     std::lock_guard<lldb::SBMutex> lock_guard(lock);
     ASSERT_FALSE(locked.exchange(true));
 
