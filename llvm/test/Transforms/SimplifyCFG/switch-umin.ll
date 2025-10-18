@@ -13,7 +13,7 @@ define void @switch_replace_default(i32 %x) {
 ; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
 ; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
 ; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
-; CHECK-NEXT:    ]
+; CHECK-NEXT:    ], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[COMMON_RET]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CASE0]]:
@@ -32,7 +32,7 @@ define void @switch_replace_default(i32 %x) {
   i32 1, label %case1
   i32 2, label %case2
   i32 3, label %case3
-  ]
+  ], !prof !0
 
 case0:
   call void @a()
@@ -52,6 +52,7 @@ case3:
 unreachable:
   unreachable
 }
+
 
 define void @do_not_switch_replace_default(i32 %x, i32 %y) {
 ; CHECK-LABEL: define void @do_not_switch_replace_default(
@@ -103,3 +104,8 @@ case3:
 unreachable:
   unreachable
 }
+
+!0 = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99, i32 5}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99}
+;.

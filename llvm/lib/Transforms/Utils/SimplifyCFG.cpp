@@ -7580,12 +7580,14 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   if (Case == SI->case_default())
     return false;
 
-  BasicBlock *Unreachable = SI->getDefaultDest();
-  SI->setDefaultDest(Case->getCaseSuccessor());
-  SI->removeCase(Case);
-  SI->setCondition(A);
+  SwitchInstProfUpdateWrapper SIW(*SI);
 
-  BasicBlock *BB = SI->getParent();
+  BasicBlock *Unreachable = SI->getDefaultDest();
+  SIW->setDefaultDest(Case->getCaseSuccessor());
+  SIW.removeCase(Case);
+  SIW->setCondition(A);
+
+  BasicBlock *BB = SIW->getParent();
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Delete, BB, Unreachable}});
 
