@@ -12,8 +12,6 @@
 // unordered containers changes when bounded unique_ptr is enabled.
 // UNSUPPORTED: libcpp-has-abi-bounded-unique_ptr
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 #include <cstdint>
 #include <unordered_map>
 
@@ -99,8 +97,7 @@ static_assert(TEST_ALIGNOF(unordered_map_alloc<char, final_small_iter_allocator<
 struct TEST_ALIGNAS(32) AlignedHash {};
 struct UnalignedEqualTo {};
 
-// This part of the ABI has been broken between LLVM 19 and LLVM 20.
-static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 64, "");
+static_assert(sizeof(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 96, "");
 static_assert(TEST_ALIGNOF(std::unordered_map<int, int, AlignedHash, UnalignedEqualTo>) == 32, "");
 
 #elif __SIZE_WIDTH__ == 32
