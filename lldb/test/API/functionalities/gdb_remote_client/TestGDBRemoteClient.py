@@ -36,7 +36,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         """Test connecting to a remote gdb server"""
         target = self.createTarget("a.yaml")
         process = self.connect(target)
-        self.assertPacketLogContains(["qProcessInfo", "qfThreadInfo"])
+        self.assertPacketLogReceived(["qProcessInfo", "qfThreadInfo"])
 
     def test_attach_fail(self):
         error_msg = "mock-error-msg"
@@ -142,15 +142,16 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         # But there certainly should be no p packets after the g packet.
 
         self.read_registers(process)
-        print(f"\nPACKET LOG:\n{self.server.responder.packetLog}\n")
+        received = self.server.responder.packetLog.get_received()
+        print(f"\nPACKET LOG:\n{received}\n")
         g_pos = 0
         try:
-            g_pos = self.server.responder.packetLog.index("g")
+            g_pos = received.index("g")
         except err:
             self.fail("'g' packet not found after fetching registers")
 
         try:
-            second_g = self.server.responder.packetLog.index("g", g_pos)
+            second_g = received.index("g", g_pos + 1)
             self.fail("Found more than one 'g' packet")
         except:
             pass
@@ -161,7 +162,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             len(
                 [
                     p
-                    for p in self.server.responder.packetLog[g_pos:]
+                    for p in received[g_pos:]
                     if p.startswith("p")
                 ]
             ),
@@ -177,9 +178,10 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.read_registers(process)
-        self.assertNotIn("g", self.server.responder.packetLog)
+        received = self.server.responder.packetLog.get_received()
+        self.assertNotIn("g", received)
         self.assertGreater(
-            len([p for p in self.server.responder.packetLog if p.startswith("p")]), 0
+            len([p for p in received if p.startswith("p")]), 0
         )
 
     def test_write_registers_using_P_packets(self):
@@ -189,11 +191,12 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
+        received = self.server.responder.packetLog.get_received()
         self.assertEqual(
-            0, len([p for p in self.server.responder.packetLog if p.startswith("G")])
+            0, len([p for p in received if p.startswith("G")])
         )
         self.assertGreater(
-            len([p for p in self.server.responder.packetLog if p.startswith("P")]), 0
+            len([p for p in received if p.startswith("P")]), 0
         )
 
     def test_write_registers_using_G_packets(self):
@@ -209,11 +212,12 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         process = self.connect(target)
 
         self.write_registers(process)
+        received = self.server.responder.packetLog.get_received()
         self.assertEqual(
-            0, len([p for p in self.server.responder.packetLog if p.startswith("P")])
+            0, len([p for p in received if p.startswith("P")])
         )
         self.assertGreater(
-            len([p for p in self.server.responder.packetLog if p.startswith("G")]), 0
+            len([p for p in received if p.startswith("G")]), 0
         )
 
     def read_registers(self, process):
@@ -291,7 +295,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
 
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             [
                 "A%d,0,%s,8,1,61726731,8,2,61726732,8,3,61726733"
                 % (len(exe_hex), exe_hex),
@@ -352,7 +356,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
 
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
         )
 
@@ -424,7 +428,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetProcessID(), 16)
 
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
         )
 
@@ -468,7 +472,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             lldb.SBError(),
         )  # error
 
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             [
                 "QEnvironment:EQUALS=foo=bar",
                 "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
@@ -522,7 +526,7 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             lldb.SBError(),
         )  # error
 
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             [
                 "QEnvironmentHexEncoded:455155414c533d666f6f3d626172",
                 "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
