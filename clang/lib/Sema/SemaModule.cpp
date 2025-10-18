@@ -342,7 +342,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     Diag(ModuleLoc, diag::err_module_decl_not_at_start);
     SourceLocation BeginLoc = PP.getMainFileFirstPPTokenLoc();
     Diag(BeginLoc, diag::note_global_module_introducer_missing)
-        << FixItHint::CreateInsertion(BeginLoc, "module;\n");
+        << FixItHint::CreateInsertion(BeginLoc, "module;");
   }
 
   // C++23 [module.unit]p1: ... The identifiers module and import shall not

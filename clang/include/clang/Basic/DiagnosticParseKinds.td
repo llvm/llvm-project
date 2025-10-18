@@ -1814,6 +1814,9 @@ def err_import_in_wrong_fragment : Error<
   "module%select{| partition}0 imports cannot be in the %select{global|private}1 module fragment">;
 
 def err_export_empty : Error<"export declaration cannot be empty">;
+def err_import_decl_not_in_module_fragment : Error<
+  "module import declaration can only appears in "
+  "global module fragment, module interface or module implementation">;
 }
 
 let CategoryName = "Generics Issue" in {
