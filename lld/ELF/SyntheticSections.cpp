@@ -4872,6 +4872,17 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
     add(*ctx.in.ppc64LongBranchTarget);
   }
 
+  if (ctx.arg.emachine == EM_RISCV && ctx.arg.relaxTbljal) {
+    ctx.in.riscvTableJumpSection = std::make_unique<TableJumpSection>(ctx);
+    add(*ctx.in.riscvTableJumpSection);
+
+    Symbol *s = ctx.symtab->addSymbol(Defined{
+        ctx,
+        /*file=*/nullptr, "__jvt_base$", STB_GLOBAL, STT_NOTYPE, STT_NOTYPE,
+        /*value=*/0, /*size=*/0, ctx.in.riscvTableJumpSection.get()});
+    s->isUsedInRegularObj = true;
+  }
+
   ctx.in.gotPlt = std::make_unique<GotPltSection>(ctx);
   add(*ctx.in.gotPlt);
   ctx.in.igotPlt = std::make_unique<IgotPltSection>(ctx);
