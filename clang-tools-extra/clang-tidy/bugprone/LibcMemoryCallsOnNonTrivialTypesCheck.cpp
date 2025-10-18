@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NonTrivialTypesLibcMemoryCallsCheck.h"
+#include "LibcMemoryCallsOnNonTrivialTypesCheck.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -17,7 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::cert {
+namespace clang::tidy::bugprone {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, isTriviallyDefaultConstructible) {
@@ -48,21 +48,21 @@ static constexpr llvm::StringRef ComparisonOperators[] = {
     "operator==", "operator!=", "operator<",
     "operator>",  "operator<=", "operator>="};
 
-NonTrivialTypesLibcMemoryCallsCheck::NonTrivialTypesLibcMemoryCallsCheck(
+LibcMemoryCallsOnNonTrivialTypesCheck::LibcMemoryCallsOnNonTrivialTypesCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       MemSetNames(Options.get("MemSetNames", "")),
       MemCpyNames(Options.get("MemCpyNames", "")),
       MemCmpNames(Options.get("MemCmpNames", "")) {}
 
-void NonTrivialTypesLibcMemoryCallsCheck::storeOptions(
+void LibcMemoryCallsOnNonTrivialTypesCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MemSetNames", MemSetNames);
   Options.store(Opts, "MemCpyNames", MemCpyNames);
   Options.store(Opts, "MemCmpNames", MemCmpNames);
 }
 
-void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
+void LibcMemoryCallsOnNonTrivialTypesCheck::registerMatchers(
     MatchFinder *Finder) {
   using namespace ast_matchers::internal;
   auto IsStructPointer = [](Matcher<CXXRecordDecl> Constraint = anything(),
@@ -103,7 +103,7 @@ void NonTrivialTypesLibcMemoryCallsCheck::registerMatchers(
       this);
 }
 
-void NonTrivialTypesLibcMemoryCallsCheck::check(
+void LibcMemoryCallsOnNonTrivialTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *Caller = Result.Nodes.getNodeAs<CallExpr>("lazyConstruct")) {
     diag(Caller->getBeginLoc(), "calling %0 on a non-trivially default "
@@ -122,4 +122,4 @@ void NonTrivialTypesLibcMemoryCallsCheck::check(
   }
 }
 
-} // namespace clang::tidy::cert
+} // namespace clang::tidy::bugprone
