@@ -119,25 +119,24 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, x@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, x@rel32@hi+12
-; CHECK-NEXT:    v_mov_b32_e32 v2, 1
-; CHECK-NEXT:    v_mov_b32_e32 v3, 2
-; CHECK-NEXT:    v_mov_b32_e32 v4, 3
-; CHECK-NEXT:    v_mov_b32_e32 v5, 4
+; CHECK-NEXT:    v_mov_b32_e32 v3, 1
+; CHECK-NEXT:    v_mov_b32_e32 v4, 2
+; CHECK-NEXT:    v_mov_b32_e32 v5, 3
+; CHECK-NEXT:    v_mov_b32_e32 v6, 4
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[0:3], s33
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:4
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:8
-; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:12
-; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:16
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s5
-; CHECK-NEXT:    flat_store_dword v[0:1], v2
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:4
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:8
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:12
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 offset:16
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s5
+; CHECK-NEXT:    flat_store_dword v[1:2], v3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], s33 offset:4
-; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:8
-; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:12
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:16
+; CHECK-NEXT:    buffer_store_dword v3, off, s[0:3], s33 offset:4
+; CHECK-NEXT:    buffer_store_dword v4, off, s[0:3], s33 offset:8
+; CHECK-NEXT:    buffer_store_dword v5, off, s[0:3], s33 offset:12
+; CHECK-NEXT:    buffer_store_dword v6, off, s[0:3], s33 offset:16
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s6
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

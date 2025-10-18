@@ -92,6 +92,7 @@ define double @callee_double_ret() nounwind {
 ; CHECK-LABEL: callee_double_ret:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vldi $vr0, -912
+; CHECK-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; CHECK-NEXT:    ret
   ret double 1.0
 }

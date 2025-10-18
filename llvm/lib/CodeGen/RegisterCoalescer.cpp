@@ -1326,6 +1326,69 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
 
+  // Skip rematerialization for physical registers used as return values within
+  // the same basic block to enable better coalescing.
+  if (DstReg.isPhysical()) {
+    MachineBasicBlock *MBB = CopyMI->getParent();
+    if (DefMI->getParent() == MBB) {
+      // Check if there's already an identical instruction before CopyMI
+      // If so, allow rematerialization to avoid redundant instructions
+      bool FoundCopy = false;
+      for (MachineInstr &MI : *MBB) {
+        if (&MI == CopyMI) {
+          FoundCopy = true;
+          continue;
+        }
+
+        // Before CopyMI: check for duplicate instructions
+        if (!FoundCopy && &MI != DefMI &&
+            MI.isIdenticalTo(*DefMI, MachineInstr::IgnoreDefs)) {
+          break; // Found duplicate, allow rematerialization
+        } else if (FoundCopy) {
+          // After CopyMI: check if used as return register
+          // If the register is redefined, it's not a return register
+          if (MI.modifiesRegister(DstReg, TRI))
+            break;
+          // If there's a return instruction that uses this register, skip remat
+          if (MI.isReturn() && MI.readsRegister(DstReg, TRI)) {
+            // Exception: if DefMI is moving a constant and SrcReg has no other
+            // uses (besides copies), rematerialization is beneficial to
+            // eliminate the def
+            if (DefMI->isMoveImmediate()) {
+              // Quick check: if there's only one use and it's this copy,
+              // definitely remat
+              if (MRI->hasOneNonDBGUse(SrcReg)) {
+                LLVM_DEBUG(dbgs()
+                           << "\tAllow remat: single use constant move\n");
+                break;
+              }
+
+              // Check all uses to see if they're all copies
+              bool OnlyUsedByCopies = true;
+              unsigned UseCount = 0;
+              for (const MachineOperand &MO : MRI->use_operands(SrcReg)) {
+                const MachineInstr *UseMI = MO.getParent();
+                if (!UseMI->isCopy() && !UseMI->isSubregToReg()) {
+                  OnlyUsedByCopies = false;
+                  break;
+                }
+                UseCount++;
+              }
+
+              if (OnlyUsedByCopies && UseCount > 0) {
+                break;
+              }
+            }
+
+            LLVM_DEBUG(dbgs() << "\tSkip remat for return register: "
+                              << printReg(DstReg, TRI) << '\n');
+            return false;
+          }
+        }
+      }
+    }
+  }
+
   if (!TII->isReMaterializable(*DefMI))
     return false;
 

@@ -5,10 +5,10 @@
 ; Function Attrs: nounwind uwtable
 define i32 @test() #0 {
   %key = alloca %struct.key_t, align 4
-; CHECK: r1 = 0
-; CHECK: *(u32 *)(r10 - 8) = r1
-; CHECK: *(u64 *)(r10 - 16) = r1
-; CHECK: *(u64 *)(r10 - 24) = r1
+; CHECK: r6 = 0
+; CHECK: *(u32 *)(r10 - 8) = r6
+; CHECK: *(u64 *)(r10 - 16) = r6
+; CHECK: *(u64 *)(r10 - 24) = r6
   call void @llvm.memset.p0.i64(ptr align 4 %key, i8 0, i64 20, i1 false)
 ; CHECK: r1 = r10
 ; CHECK: r1 += -20

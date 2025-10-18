@@ -6,9 +6,9 @@ start:
   ; for some reason the i16 is loaded to r24:r25
   ; and then moved to r23:r24
   ; CHECK: ldi r22, 64
-  ; CHECK-NEXT: r23,
-  ; CHECK-NEXT: r24,
-  ; CHECK-NEXT: r25, 11
+  ; CHECK-NEXT: ldi r18, 0
+  ; CHECK-NEXT: ldi r19, 4
+  ; CHECK-NEXT: ldi r25, 11
   %0 = insertvalue {i8, i16, i8} undef, i8 64, 0
   %1 = insertvalue {i8, i16, i8} %0, i16 1024, 1
   %2 = insertvalue {i8, i16, i8} %1, i8 11, 2

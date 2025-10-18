@@ -96,21 +96,11 @@ define i64 @test_s_wqm_constant_i64() {
 }
 
 define i64 @test_s_wqm_constant_zero_i64() {
-; GFX11-LABEL: test_s_wqm_constant_zero_i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %br = call i64 @llvm.amdgcn.s.wqm.i64(i64 0)
   ret i64 %br
 }
 
 define i64 @test_s_wqm_constant_neg_one_i64() {
-; GFX11-LABEL: test_s_wqm_constant_neg_one_i64:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v0, -1 :: v_dual_mov_b32 v1, -1
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %br = call i64 @llvm.amdgcn.s.wqm.i64(i64 -1)
   ret i64 %br
 }

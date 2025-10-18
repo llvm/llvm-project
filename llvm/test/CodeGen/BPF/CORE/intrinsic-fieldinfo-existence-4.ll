@@ -27,7 +27,12 @@ entry:
 }
 
 ; CHECK:             r0 = 1
-; CHECK-NEXT:        exit
+; CHECK-NEXT:                                                # kill: def $w0 killed $w0 killed $r0
+; CHECK-NEXT:      .Ltmp1:
+; CHECK-NEXT:        	.loc	1 6 3 prologue_end              # test.c:6:3
+; CHECK-NEXT:      .Ltmp2:
+; CHECK-NEXT:      .Ltmp3:
+; CHECK-NEXT:        exit                             
 
 ; CHECK:             .long   26                              # BTF_KIND_STRUCT(id = 4)
 ; CHECK-NEXT:        .long   67108865                        # 0x4000001

@@ -39,11 +39,11 @@ entry:
 ; CHECK: *(u32 *)(r1 + 20) = r2
 ; CHECK: r2 = 1
 ; CHECK: *(u32 *)(r1 + 16) = r2
-; CHECK: r2 = 0
-; CHECK: *(u32 *)(r1 + 28) = r2
-; CHECK: *(u32 *)(r1 + 8) = r2
-; CHECK: *(u32 *)(r1 + 4) = r2
-; CHECK: *(u32 *)(r1 + 0) = r2
+; CHECK: r0 = 0
+; CHECK: *(u32 *)(r1 + 28) = r0
+; CHECK: *(u32 *)(r1 + 8) = r0
+; CHECK: *(u32 *)(r1 + 4) = r0
+; CHECK: *(u32 *)(r1 + 0) = r0
       ret i32 0
 }
 ; CHECK: .section  .rodata.cst32,"aM",@progbits,32
