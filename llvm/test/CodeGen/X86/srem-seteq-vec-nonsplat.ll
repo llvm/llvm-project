@@ -2401,16 +2401,16 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX1-NEXT:    vpor %xmm5, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm4, %xmm3
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; CHECK-AVX1-NEXT:    vpxor %xmm3, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm4, %xmm4
+; CHECK-AVX1-NEXT:    vpxor %xmm3, %xmm4, %xmm3
 ; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; CHECK-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
 ; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm3, %xmm3
 ; CHECK-AVX1-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; CHECK-AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
-; CHECK-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
-; CHECK-AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; CHECK-AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
 ; CHECK-AVX1-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: pr51133:
@@ -2450,10 +2450,10 @@ define <32 x i1> @pr51133(<32 x i8> %x, <32 x i8> %y) {
 ; CHECK-AVX2-NEXT:    vpor %ymm3, %ymm4, %ymm3
 ; CHECK-AVX2-NEXT:    vpsubb %ymm3, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
+; CHECK-AVX2-NEXT:    vpxor %ymm3, %ymm0, %ymm0
 ; CHECK-AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm1
-; CHECK-AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; CHECK-AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; CHECK-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; CHECK-AVX2-NEXT:    vpandn %ymm0, %ymm1, %ymm0
 ; CHECK-AVX2-NEXT:    retq
 ;
 ; CHECK-AVX512VL-LABEL: pr51133:

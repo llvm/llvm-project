@@ -1490,9 +1490,9 @@ define <4 x i32> @vp_ctlz_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrld $16, %xmm1
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE-NEXT:    pxor %xmm1, %xmm2
+; SSE-NEXT:    pandn %xmm2, %xmm0
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrlw $1, %xmm1
 ; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1

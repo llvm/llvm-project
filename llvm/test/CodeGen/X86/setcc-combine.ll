@@ -1020,9 +1020,9 @@ define <2 x i64> @cmp_uge_not_with_vec2xi64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; CHECK-NEXT:    por %xmm0, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pxor %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %na = xor <2 x i64> %a, <i64 -1, i64 -1>
   %nb = xor <2 x i64> %b, <i64 -1, i64 -1>

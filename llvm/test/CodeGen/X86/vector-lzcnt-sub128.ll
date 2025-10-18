@@ -20,9 +20,9 @@ define <2 x i32> @illegal_ctlz(<2 x i32> %v1) {
 ; CHECK-NEXT:    por %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrld $16, %xmm1
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pxor %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-NEXT:    psrlw $1, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1

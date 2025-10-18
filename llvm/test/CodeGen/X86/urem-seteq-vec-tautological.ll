@@ -198,9 +198,9 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-SSE2-NEXT:    pand %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-SSE2-NEXT:    pxor %xmm0, %xmm1
+; CHECK-SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-SSE2-NEXT:    pxor %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pandn %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
 ; CHECK-SSE2-NEXT:    retq
 ;
@@ -223,9 +223,9 @@ define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ; CHECK-SSE41-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-SSE41-NEXT:    pand %xmm2, %xmm1
 ; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-SSE41-NEXT:    por %xmm1, %xmm0
-; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-SSE41-NEXT:    pxor %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-SSE41-NEXT:    pxor %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pandn %xmm2, %xmm1
 ; CHECK-SSE41-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
 ; CHECK-SSE41-NEXT:    retq
 ;

@@ -155,7 +155,7 @@ define <2 x i64> @ne_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX512-LABEL: ne_v2i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -194,7 +194,7 @@ define <4 x i32> @ne_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX512-LABEL: ne_v4i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -233,7 +233,7 @@ define <8 x i16> @ne_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; AVX512-LABEL: ne_v8i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -272,7 +272,7 @@ define <16 x i8> @ne_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; AVX512-LABEL: ne_v16i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -298,9 +298,9 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: ge_v2i64:
@@ -315,9 +315,9 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm1, %xmm2
+; SSE41-NEXT:    pandn %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: ge_v2i64:
@@ -535,7 +535,7 @@ define <2 x i64> @gt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vpminuq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -594,7 +594,7 @@ define <4 x i32> @gt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -653,7 +653,7 @@ define <8 x i16> @gt_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpminuw %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -696,7 +696,7 @@ define <16 x i8> @gt_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -722,9 +722,9 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pandn %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: le_v2i64:
@@ -739,9 +739,9 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm2
+; SSE41-NEXT:    pxor %xmm1, %xmm2
+; SSE41-NEXT:    pandn %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: le_v2i64:
@@ -960,7 +960,7 @@ define <2 x i64> @lt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512-NEXT:    vpmaxuq %zmm1, %zmm0, %zmm1
 ; AVX512-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1020,7 +1020,7 @@ define <4 x i32> @lt_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1080,7 +1080,7 @@ define <8 x i16> @lt_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1123,7 +1123,7 @@ define <16 x i8> @lt_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmaxub %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
