@@ -32,7 +32,10 @@ entry:
 define dso_local <8 x i16> @eqvA_B_C(<8 x i16> %A, <8 x i16> %B, <8 x i16> %C) local_unnamed_addr #0 {
 ; CHECK-LABEL: eqvA_B_C:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 150
+; CHECK-NEXT:    xxleqv vs1, vs1, vs1
+; CHECK-NEXT:    xxland vs0, v3, v4
+; CHECK-NEXT:    xxeval vs1, v3, v4, vs1, 96
+; CHECK-NEXT:    xxsel v2, vs1, vs0, v2
 ; CHECK-NEXT:    blr
 entry:
   %and = and <8 x i16> %B, %C
@@ -113,7 +116,9 @@ entry:
 define dso_local <4 x i32> @norA_B_C(<4 x i32> %A, <4 x i32> %B, <4 x i32> %C) local_unnamed_addr #0 {
 ; CHECK-LABEL: norA_B_C:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 128
+; CHECK-NEXT:    xxlnor vs0, v4, v4
+; CHECK-NEXT:    xxlnor vs1, v3, v3
+; CHECK-NEXT:    xxeval v2, v2, vs1, vs0, 16
 ; CHECK-NEXT:    blr
 entry:
   %or = or <4 x i32> %B, %C
