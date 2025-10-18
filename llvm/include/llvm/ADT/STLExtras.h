@@ -21,6 +21,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/abi-breaking.h"
@@ -2215,13 +2216,12 @@ inline void interleave(const Container &c, UnaryFunctor each_fn,
 template <typename Container, typename UnaryFunctor, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
 inline void interleave(const Container &c, StreamT &os, UnaryFunctor each_fn,
-                       const StringRef &separator) {
+                       StringRef separator) {
   interleave(adl_begin(c), adl_end(c), each_fn, [&] { os << separator; });
 }
 template <typename Container, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
-inline void interleave(const Container &c, StreamT &os,
-                       const StringRef &separator) {
+inline void interleave(const Container &c, StreamT &os, StringRef separator) {
   interleave(
       c, os, [&](const T &a) { os << a; }, separator);
 }
