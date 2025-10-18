@@ -13857,12 +13857,13 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
           Opcode == ISD::ANY_EXTEND) &&
          "Expected EXTEND dag node in input!");
 
-  if (!(N0->getOpcode() == ISD::SELECT || N0->getOpcode() == ISD::VSELECT) ||
-      !N0.hasOneUse())
+  SDValue Cond, Op1, Op2;
+  if (!sd_match(N0,
+                m_SelectLike(m_Value(Cond), m_Value(Op1), m_Value(Op2))) ||
+      !N0->hasOneUse()) {
     return SDValue();
+  }
 
-  SDValue Op1 = N0->getOperand(1);
-  SDValue Op2 = N0->getOperand(2);
   if (!isCompatibleLoad(Op1, Opcode) || !isCompatibleLoad(Op2, Opcode))
     return SDValue();
 
