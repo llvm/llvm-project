@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_BIT_H
 #define LLVM_ADT_BIT_H
 
+#include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef> // for std::size_t
 #include <cstdint>
@@ -26,32 +27,6 @@
 
 #if defined(_MSC_VER) && !defined(_DEBUG)
 #include <cstdlib>  // for _byteswap_{ushort,ulong,uint64}
-#endif
-
-#if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
-    defined(__Fuchsia__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) ||  \
-    defined(__OpenBSD__) || defined(__DragonFly__) || defined(__managarm__)
-#include <endian.h>
-#elif defined(_AIX)
-#include <sys/machine.h>
-#elif defined(__sun)
-/* Solaris provides _BIG_ENDIAN/_LITTLE_ENDIAN selector in sys/types.h */
-#include <sys/types.h>
-#define BIG_ENDIAN 4321
-#define LITTLE_ENDIAN 1234
-#if defined(_BIG_ENDIAN)
-#define BYTE_ORDER BIG_ENDIAN
-#else
-#define BYTE_ORDER LITTLE_ENDIAN
-#endif
-#elif defined(__MVS__)
-#define BIG_ENDIAN 4321
-#define LITTLE_ENDIAN 1234
-#define BYTE_ORDER BIG_ENDIAN
-#else
-#if !defined(BYTE_ORDER) && !defined(_WIN32)
-#include <machine/endian.h>
-#endif
 #endif
 
 #ifdef _MSC_VER
@@ -71,7 +46,7 @@ namespace llvm {
 enum class endianness {
   big,
   little,
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
+#if LLVM_HOST_IS_BIG_ENDIAN
   native = big
 #else
   native = little
