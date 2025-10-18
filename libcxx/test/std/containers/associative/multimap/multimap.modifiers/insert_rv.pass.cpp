@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 template <class Container>
-void do_insert_rv_test() {
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
   typedef std::multimap<int, MoveOnly> M;
   typedef typename M::iterator R;
   typedef typename M::value_type VT;

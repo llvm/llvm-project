@@ -30,7 +30,7 @@
 #include "Counter.h"
 
 template <class Map>
-bool map_equal(const Map& map, Map other) {
+TEST_CONSTEXPR_CXX26 bool map_equal(const Map& map, Map other) {
   return map == other;
 }
 
@@ -60,7 +60,7 @@ bool test() {
   }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     bool do_throw = false;
     typedef std::multimap<Counter<int>, int, throw_comparator> map_type;
     map_type src({{1, 0}, {3, 0}, {5, 0}}, throw_comparator(do_throw));
@@ -79,13 +79,14 @@ bool test() {
     assert(map_equal(dst, map_type({{2, 0}, {4, 0}, {5, 0}}, throw_comparator(do_throw))));
   }
 #endif
-  assert(Counter_base::gConstructed == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(Counter_base::gConstructed == 0);
   struct comparator {
     comparator() = default;
 
     bool operator()(const Counter<int>& lhs, const Counter<int>& rhs) const { return lhs < rhs; }
   };
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::multimap<Counter<int>, int, std::less<Counter<int>>> first_map_type;
     typedef std::multimap<Counter<int>, int, comparator> second_map_type;
     typedef std::map<Counter<int>, int, comparator> third_map_type;
@@ -125,7 +126,8 @@ bool test() {
     }
     assert(Counter_base::gConstructed == 0);
   }
-  assert(Counter_base::gConstructed == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(Counter_base::gConstructed == 0);
   {
     std::multimap<int, int> first;
     {

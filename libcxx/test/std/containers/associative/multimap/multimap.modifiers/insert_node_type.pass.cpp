@@ -20,19 +20,19 @@
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type
+TEST_CONSTEXPR_CXX26 std::pair<Container, typename Container::node_type>
 node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
-  static Container c;
+  Container c;
   auto it = c.insert({key, mapped});
-  return c.extract(it);
+  return {c, c.extract(it)};
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
   for (int i = 0; i != 10; ++i) {
-    typename Container::node_type node = nf(i, i + 1);
+    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ node] = nf(i, i + 1);
     assert(!node.empty());
     typename Container::iterator it = c.insert(std::move(node));
     assert(node.empty());
@@ -49,7 +49,7 @@ void test(Container& c) {
   }
 
   { // Insert duplicate node.
-    typename Container::node_type dupl = nf(0, 42);
+    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ dupl] = nf(0, 42);
     auto it                            = c.insert(std::move(dupl));
     assert(dupl.empty());
     assert(it != c.end());

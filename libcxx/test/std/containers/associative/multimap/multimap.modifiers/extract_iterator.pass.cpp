@@ -20,7 +20,7 @@
 #include "Counter.h"
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   std::size_t sz = c.size();
 
   auto some_key = c.cbegin()->first;
@@ -29,9 +29,13 @@ void test(Container& c) {
     auto key_value                  = first->first;
     typename Container::node_type t = c.extract(first++);
     --sz;
-    assert(t.key() == key_value);
-    t.key() = some_key;
-    assert(t.key() == some_key);
+
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      // FIXME: CWG1514: key() is not `constexpr`
+      assert(t.key() == key_value);
+      t.key() = some_key;
+      assert(t.key() == some_key);
+    }
     assert(t.get_allocator() == c.get_allocator());
     assert(sz == c.size());
   }
@@ -47,7 +51,8 @@ bool test() {
     test(m);
   }
 
-  {
+  // Counter_base::gConstructed is static
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::multimap<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     assert(Counter_base::gConstructed == 12);
     test(m);

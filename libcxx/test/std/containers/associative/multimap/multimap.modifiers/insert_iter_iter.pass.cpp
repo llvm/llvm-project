@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 template <class Iter, class Alloc>
-void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   {   // Check that an empty range works correctly
     { // Without elements in the container
       using Map = std::multimap<int, int, std::less<int>, Alloc>;

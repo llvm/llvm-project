@@ -20,9 +20,10 @@
 
 struct TemplateConstructor {
   template <typename T>
-  TemplateConstructor(const T&) {}
+  TEST_CONSTEXPR_CXX26 TemplateConstructor(const T&) {}
 };
 
+TEST_CONSTEXPR_CXX26
 bool operator<(const TemplateConstructor&, const TemplateConstructor&) { return false; }
 
 TEST_CONSTEXPR_CXX26

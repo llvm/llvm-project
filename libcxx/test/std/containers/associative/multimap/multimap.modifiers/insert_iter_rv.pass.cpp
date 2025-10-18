@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 template <class Container, class Pair>
-void do_insert_rv_test() {
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
   typedef Container M;
   typedef Pair P;
   typedef typename M::iterator R;

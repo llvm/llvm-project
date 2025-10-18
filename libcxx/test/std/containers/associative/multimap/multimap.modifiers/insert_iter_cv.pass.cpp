@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class Container>
-void do_insert_hint_test() {
+TEST_CONSTEXPR_CXX26 void do_insert_hint_test() {
   typedef Container M;
   typedef typename M::iterator R;
   typedef typename M::value_type VT;
