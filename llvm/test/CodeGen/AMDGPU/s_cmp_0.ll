@@ -10,7 +10,6 @@ define amdgpu_ps i32 @shl32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: shl32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshl_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -25,7 +24,6 @@ define amdgpu_ps i32 @shl64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: shl64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -40,7 +38,6 @@ define amdgpu_ps i32 @lshr32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: lshr32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -55,7 +52,6 @@ define amdgpu_ps i32 @lshr64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: lshr64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_lshr_b64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -70,7 +66,6 @@ define amdgpu_ps i32 @ashr32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: ashr32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -85,7 +80,6 @@ define amdgpu_ps i32 @ashr64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: ashr64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -100,7 +94,6 @@ define amdgpu_ps i32 @abs32(i32 inreg %val0) {
 ; CHECK-LABEL: abs32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_abs_i32 s0, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -121,7 +114,6 @@ define amdgpu_ps i32 @and32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: and32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -136,7 +128,6 @@ define amdgpu_ps i32 @and64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: and64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -151,7 +142,6 @@ define amdgpu_ps i32 @or32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: or32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_or_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -166,7 +156,6 @@ define amdgpu_ps i32 @or64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: or64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -181,7 +170,6 @@ define amdgpu_ps i32 @xor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: xor32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xor_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -196,7 +184,6 @@ define amdgpu_ps i32 @xor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: xor64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -211,7 +198,6 @@ define amdgpu_ps i32 @nand32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: nand32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nand_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -231,7 +217,6 @@ define amdgpu_ps i32 @nand64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: nand64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nand_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -251,7 +236,6 @@ define amdgpu_ps i32 @nor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: nor32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nor_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -271,7 +255,6 @@ define amdgpu_ps i32 @nor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: nor64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_nor_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -291,7 +274,6 @@ define amdgpu_ps i32 @xnor32(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: xnor32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xnor_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -311,7 +293,6 @@ define amdgpu_ps i32 @xnor64(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: xnor64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_xnor_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -331,7 +312,6 @@ define amdgpu_ps i32 @andn232(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: andn232:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_andn2_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -347,7 +327,6 @@ define amdgpu_ps i32 @nandn264(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: nandn264:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_andn2_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -363,7 +342,6 @@ define amdgpu_ps i32 @orn232(i32 inreg %val0, i32 inreg %val1) {
 ; CHECK-LABEL: orn232:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_orn2_b32 s0, s0, s1
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -379,7 +357,6 @@ define amdgpu_ps i32 @orn264(i64 inreg %val0, i64 inreg %val1) {
 ; CHECK-LABEL: orn264:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_orn2_b64 s[0:1], s[0:1], s[2:3]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -395,7 +372,6 @@ define amdgpu_ps i32 @bfe_i32(i32 inreg %val0) {
 ; CHECK-LABEL: bfe_i32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_i32 s0, s0, 0x80010
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -433,7 +409,6 @@ define amdgpu_ps i32 @bfe_u32(i32 inreg %val0) {
 ; CHECK-LABEL: bfe_u32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bfe_u32 s0, s0, 0x80010
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
@@ -513,7 +488,6 @@ define amdgpu_ps i32 @bcnt132(i32 inreg %val0) {
 ; CHECK-LABEL: bcnt132:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_bcnt1_i32_b32 s0, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -552,7 +526,6 @@ define amdgpu_ps i32 @quadmask32(i32 inreg %val0) {
 ; CHECK-LABEL: quadmask32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_quadmask_b32 s0, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -571,7 +544,6 @@ define amdgpu_ps i32 @quadmask64(i64 inreg %val0) {
 ; CHECK-LABEL: quadmask64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -590,7 +562,6 @@ define amdgpu_ps i32 @not32(i32 inreg %val0) {
 ; CHECK-LABEL: not32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_not_b32 s0, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s0
 ; CHECK-NEXT:    ;;#ASMEND
@@ -609,7 +580,6 @@ define amdgpu_ps i32 @not64(i64 inreg %val0) {
 ; CHECK-LABEL: not64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_not_b64 s[0:1], s[0:1]
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND

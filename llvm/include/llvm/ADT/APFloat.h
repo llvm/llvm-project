@@ -967,69 +967,11 @@ class APFloat : public APFloatBase {
       llvm_unreachable("Unexpected semantics");
     }
 
-    ~Storage() {
-      if (usesLayout<IEEEFloat>(*semantics)) {
-        IEEE.~IEEEFloat();
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*semantics)) {
-        Double.~DoubleAPFloat();
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(RHS.IEEE);
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(RHS.Double);
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*RHS.semantics)) {
-        new (this) IEEEFloat(std::move(RHS.IEEE));
-        return;
-      }
-      if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        new (this) DoubleAPFloat(std::move(RHS.Double));
-        return;
-      }
-      llvm_unreachable("Unexpected semantics");
-    }
-
-    Storage &operator=(const Storage &RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = RHS.IEEE;
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = RHS.Double;
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(RHS);
-      }
-      return *this;
-    }
-
-    Storage &operator=(Storage &&RHS) {
-      if (usesLayout<IEEEFloat>(*semantics) &&
-          usesLayout<IEEEFloat>(*RHS.semantics)) {
-        IEEE = std::move(RHS.IEEE);
-      } else if (usesLayout<DoubleAPFloat>(*semantics) &&
-                 usesLayout<DoubleAPFloat>(*RHS.semantics)) {
-        Double = std::move(RHS.Double);
-      } else if (this != &RHS) {
-        this->~Storage();
-        new (this) Storage(std::move(RHS));
-      }
-      return *this;
-    }
+    LLVM_ABI ~Storage();
+    LLVM_ABI Storage(const Storage &RHS);
+    LLVM_ABI Storage(Storage &&RHS);
+    LLVM_ABI Storage &operator=(const Storage &RHS);
+    LLVM_ABI Storage &operator=(Storage &&RHS);
   } U;
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
