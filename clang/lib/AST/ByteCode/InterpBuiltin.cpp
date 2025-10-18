@@ -3108,8 +3108,8 @@ static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
 
   APSInt Mask = popToAPSInt(S, Call->getArg(3));
   APSInt Opcode = popToAPSInt(S, Call->getArg(2));
-  const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
 
   assert(LHS.getNumElems() == RHS.getNumElems());
 

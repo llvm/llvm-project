@@ -645,6 +645,21 @@ __mmask16 test_mm_cmp_epi8_mask(__m128i __a, __m128i __b) {
   return (__mmask16)_mm_cmp_epi8_mask(__a, __b, 0);
 }
 
+TEST_CONSTEXPR(_mm_cmpeq_epi8_mask(
+  ((__m128i)(__v16qi){5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}),
+  ((__m128i)(__v16qi){3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3})
+) == (__mmask16)0x0000);
+
+TEST_CONSTEXPR(_mm_cmplt_epi8_mask(
+  ((__m128i)(__v16qi){5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5}),
+  ((__m128i)(__v16qi){3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3})
+) == (__mmask16)0x0u);
+
+TEST_CONSTEXPR(_mm_cmple_epi8_mask(
+  ((__m128i)(__v16qi){3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}),
+  ((__m128i)(__v16qi){3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3})
+) == (__mmask16)0xffff);
+
 __mmask16 test_mm_mask_cmp_epi8_mask(__mmask16 __u, __m128i __a, __m128i __b) {
   // CHECK-LABEL: test_mm_mask_cmp_epi8_mask
   // CHECK: icmp eq <16 x i8> %{{.*}}, %{{.*}}
