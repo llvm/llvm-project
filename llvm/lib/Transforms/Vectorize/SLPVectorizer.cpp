@@ -2242,8 +2242,49 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
   bool isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                     Align Alignment, const int64_t Diff, Value *Ptr0,
-                     Value *PtrN, StridedPtrInfo &SPtrInfo) const;
+                     Align Alignment, const int64_t Diff,
+                     const size_t Sz) const;
+
+  /// Return true if an array of scalar loads can be replaced with a strided
+  ///  load (with constant stride).
+  ///
+  ///  TODO:
+  ///  It is possible that the load gets "widened". Suppose that originally each
+  ///  load loads `k` bytes and `PointerOps` can be arranged as follows (`%s` is
+  ///  constant): %b + 0 * %s + 0 %b + 0 * %s + 1 %b + 0 * %s + 2
+  ///  ...
+  ///  %b + 0 * %s + (w - 1)
+  ///
+  ///  %b + 1 * %s + 0
+  ///  %b + 1 * %s + 1
+  ///  %b + 1 * %s + 2
+  ///  ...
+  ///  %b + 1 * %s + (w - 1)
+  ///  ...
+  ///
+  ///  %b + (n - 1) * %s + 0
+  ///  %b + (n - 1) * %s + 1
+  ///  %b + (n - 1) * %s + 2
+  ///  ...
+  ///  %b + (n - 1) * %s + (w - 1)
+  ///
+  /// In this case we will generate a strided load of type `<n x (k * w)>`.
+  ///
+  /// \param PointerOps list of pointer arguments of loads.
+  /// \param ElemTy original scalar type of loads.
+  /// \param Alignment alignment of the first load.
+  /// \param SortedIndices is the order of PointerOps as returned by
+  /// `sortPtrAccesses`
+  /// \param Diff Pointer difference between the lowest and the highes pointer
+  /// in `PointerOps` as returned by `getPointersDiff`.
+  /// \param Ptr0 first pointer in `PointersOps`.
+  /// \param PtrN last pointer in `PointersOps`.
+  /// \param SPtrInfo If the function return `true`, it also sets all the fields
+  /// of `SPtrInfo` necessary to generate the strided load later.
+  bool analyzeConstantStrideCandidate(
+      const ArrayRef<Value *> PointerOps, Type *ElemTy, Align Alignment,
+      const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
+      Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const;
 
   /// Return true if an array of scalar loads can be replaced with a strided
   /// load (with run-time stride).
@@ -6849,9 +6890,8 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 /// current graph (for masked gathers extra extractelement instructions
 /// might be required).
 bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
-                            Align Alignment, const int64_t Diff, Value *Ptr0,
-                            Value *PtrN, StridedPtrInfo &SPtrInfo) const {
-  const size_t Sz = PointerOps.size();
+                            Align Alignment, const int64_t Diff,
+                            const size_t Sz) const {
   if (Diff % (Sz - 1) != 0)
     return false;
 
@@ -6875,27 +6915,40 @@ bool BoUpSLP::isStridedLoad(ArrayRef<Value *> PointerOps, Type *ScalarTy,
       return false;
     if (!TTI->isLegalStridedLoadStore(VecTy, Alignment))
       return false;
+    return true;
+  }
+  return false;
+}
 
-    // Iterate through all pointers and check if all distances are
-    // unique multiple of Dist.
-    SmallSet<int64_t, 4> Dists;
-    for (Value *Ptr : PointerOps) {
-      int64_t Dist = 0;
-      if (Ptr == PtrN)
-        Dist = Diff;
-      else if (Ptr != Ptr0)
-        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
-      // If the strides are not the same or repeated, we can't
-      // vectorize.
-      if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
-        break;
-    }
-    if (Dists.size() == Sz) {
-      Type *StrideTy = DL->getIndexType(Ptr0->getType());
-      SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
-      SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
-      return true;
-    }
+bool BoUpSLP::analyzeConstantStrideCandidate(
+    const ArrayRef<Value *> PointerOps, Type *ScalarTy, Align Alignment,
+    const SmallVectorImpl<unsigned> &SortedIndices, const int64_t Diff,
+    Value *Ptr0, Value *PtrN, StridedPtrInfo &SPtrInfo) const {
+  const size_t Sz = PointerOps.size();
+  if (!isStridedLoad(PointerOps, ScalarTy, Alignment, Diff, Sz))
+    return false;
+
+  int64_t Stride = Diff / static_cast<int64_t>(Sz - 1);
+
+  // Iterate through all pointers and check if all distances are
+  // unique multiple of Dist.
+  SmallSet<int64_t, 4> Dists;
+  for (Value *Ptr : PointerOps) {
+    int64_t Dist = 0;
+    if (Ptr == PtrN)
+      Dist = Diff;
+    else if (Ptr != Ptr0)
+      Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
+    // If the strides are not the same or repeated, we can't
+    // vectorize.
+    if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
+      break;
+  }
+  if (Dists.size() == Sz) {
+    Type *StrideTy = DL->getIndexType(Ptr0->getType());
+    SPtrInfo.StrideVal = ConstantInt::get(StrideTy, Stride);
+    SPtrInfo.Ty = getWidenedType(ScalarTy, Sz);
+    return true;
   }
   return false;
 }
@@ -6995,8 +7048,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     Align Alignment =
         cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
             ->getAlign();
-    if (isStridedLoad(PointerOps, ScalarTy, Alignment, *Diff, Ptr0, PtrN,
-                      SPtrInfo))
+    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, Alignment, Order,
+                                       *Diff, Ptr0, PtrN, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
