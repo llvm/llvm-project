@@ -19,6 +19,7 @@
 #ifndef LLVM_C_TARGET_H
 #define LLVM_C_TARGET_H
 
+#include "llvm-c/Deprecated.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 #include "llvm-c/Visibility.h"
@@ -229,12 +230,18 @@ LLVM_C_ABI unsigned LLVMPointerSizeForAS(LLVMTargetDataRef TD, unsigned AS);
 
 /** Returns the integer type that is the same size as a pointer on a target.
     See the method llvm::DataLayout::getIntPtrType. */
-LLVM_C_ABI LLVMTypeRef LLVMIntPtrType(LLVMTargetDataRef TD);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMTypeRef LLVMIntPtrType(LLVMTargetDataRef TD),
+                            "Use of the global context is deprecated, use "
+                            "LLVMIntPtrTypeInContext instead");
 
 /** Returns the integer type that is the same size as a pointer on a target.
     This version allows the address space to be specified.
     See the method llvm::DataLayout::getIntPtrType. */
-LLVM_C_ABI LLVMTypeRef LLVMIntPtrTypeForAS(LLVMTargetDataRef TD, unsigned AS);
+LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMTypeRef LLVMIntPtrTypeForAS(LLVMTargetDataRef TD, unsigned AS),
+    "Use of the global context is deprecated, use LLVMIntPtrTypeForASInContext "
+    "instead");
 
 /** Returns the integer type that is the same size as a pointer on a target.
     See the method llvm::DataLayout::getIntPtrType. */
