@@ -58,7 +58,6 @@ jobs:
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
-      ccache: ${{ steps.vars.outputs.ccache }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
@@ -123,13 +122,6 @@ jobs:
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
-        # The hendrikmuhs/ccache-action action does not support installing sccache
-        # on arm64 Linux.
-        if [ "$target" = "Linux-ARM64" ]; then
-          echo ccache=ccache >> $GITHUB_OUTPUT
-        else
-          echo ccache=sccache >> $GITHUB_OUTPUT
-        fi
 
         # The macOS builds try to cross compile some libraries so we need to
         # add extra CMake args to disable them.
@@ -222,8 +214,6 @@ jobs:
     - name: Configure
       id: build
       shell: bash
-      env:
-        CCACHE_BIN: ${{ needs.prepare.outputs.ccache }}
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
