@@ -105,51 +105,46 @@ void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
   forwardSlice->insert(v.rbegin(), v.rend());
 }
 
-static LogicalResult getBackwardSliceImpl(Operation *op,
-                                          DenseSet<Operation *> &visited,
-                                          SetVector<Operation *> *backwardSlice,
-                                          const BackwardSliceOptions &options) {
+static void getBackwardSliceImpl(Operation *op, DenseSet<Operation *> &visited,
+                                 SetVector<Operation *> *backwardSlice,
+                                 const BackwardSliceOptions &options) {
   if (!op)
-    return success();
+    return;
 
   // Evaluate whether we should keep this def.
   // This is useful in particular to implement scoping; i.e. return the
   // transitive backwardSlice in the current scope.
   if (options.filter && !options.filter(op))
-    return success();
+    return;
 
   auto processValue = [&](Value value) {
     if (auto *definingOp = value.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0 &&
-          visited.insert(definingOp).second)
-        return getBackwardSliceImpl(definingOp, visited, backwardSlice,
-                                    options);
+          visited.insert(definingOp).second) {
+        getBackwardSliceImpl(definingOp, visited, backwardSlice, options);
+        return;
+      }
 
       visited.erase(definingOp);
-    } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
-      if (options.omitBlockArguments)
-        return success();
-
-      Block *block = blockArg.getOwner();
-      Operation *parentOp = block->getParentOp();
-      // TODO: determine whether we want to recurse backward into the other
-      // blocks of parentOp, which are not technically backward unless they flow
-      // into us. For now, just bail.
-      if (parentOp && backwardSlice->count(parentOp) == 0) {
-        if (!parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
-            parentOp->getNumRegions() == 1 &&
-            parentOp->getRegion(0).hasOneBlock()) {
-          return getBackwardSliceImpl(parentOp, visited, backwardSlice,
-                                      options);
-        }
-      }
-    } else {
-      return failure();
+      return;
     }
-    return success();
-  };
+    auto blockArg = cast<BlockArgument>(value);
+    if (options.omitBlockArguments)
+      return;
 
-  bool succeeded = true;
+    Block *block = blockArg.getOwner();
+    Operation *parentOp = block->getParentOp();
+    // TODO: determine whether we want to recurse backward into the other
+    // blocks of parentOp, which are not technically backward unless they flow
+    // into us. For now, just bail.
+    if (parentOp && backwardSlice->count(parentOp) == 0) {
+      if (!parentOp->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+          parentOp->getNumRegions() == 1 &&
+          parentOp->getRegion(0).hasOneBlock()) {
+        getBackwardSliceImpl(parentOp, visited, backwardSlice, options);
+      }
+    }
+  };
 
   if (!options.omitUsesFromAbove &&
       !op->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
@@ -162,44 +157,38 @@ static LogicalResult getBackwardSliceImpl(Operation *op,
       region.walk([&](Operation *op) {
         for (OpOperand &operand : op->getOpOperands()) {
           if (!descendents.contains(operand.get().getParentRegion()))
-            if (!processValue(operand.get()).succeeded()) {
-              return WalkResult::interrupt();
-            }
+            processValue(operand.get());
         }
-        return WalkResult::advance();
       });
     });
   }
   llvm::for_each(op->getOperands(), processValue);
 
   backwardSlice->insert(op);
-  return success(succeeded);
 }
 
-LogicalResult mlir::getBackwardSlice(Operation *op,
-                                     SetVector<Operation *> *backwardSlice,
-                                     const BackwardSliceOptions &options) {
+void mlir::getBackwardSlice(Operation *op,
+                            SetVector<Operation *> *backwardSlice,
+                            const BackwardSliceOptions &options) {
   DenseSet<Operation *> visited;
   visited.insert(op);
-  LogicalResult result =
-      getBackwardSliceImpl(op, visited, backwardSlice, options);
+  getBackwardSliceImpl(op, visited, backwardSlice, options);
 
   if (!options.inclusive) {
     // Don't insert the top level operation, we just queried on it and don't
     // want it in the results.
     backwardSlice->remove(op);
   }
-  return result;
 }
 
-LogicalResult mlir::getBackwardSlice(Value root,
-                                     SetVector<Operation *> *backwardSlice,
-                                     const BackwardSliceOptions &options) {
+void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
+                            const BackwardSliceOptions &options) {
   if (Operation *definingOp = root.getDefiningOp()) {
-    return getBackwardSlice(definingOp, backwardSlice, options);
+    getBackwardSlice(definingOp, backwardSlice, options);
+    return;
   }
-  Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
-  return getBackwardSlice(bbAargOwner, backwardSlice, options);
+  Operation *bbArgOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
+  getBackwardSlice(bbArgOwner, backwardSlice, options);
 }
 
 SetVector<Operation *>
@@ -215,10 +204,7 @@ mlir::getSlice(Operation *op, const BackwardSliceOptions &backwardSliceOptions,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    LogicalResult result =
-        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    assert(result.succeeded());
-    (void)result;
+    getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
     slice.insert_range(backwardSlice);
 
     // Compute and insert the forwardSlice starting from currentOp.
@@ -241,9 +227,7 @@ static bool dependsOnCarriedVals(Value value,
   sliceOptions.filter = [&](Operation *op) {
     return !ancestorOp->isAncestor(op);
   };
-  LogicalResult result = getBackwardSlice(value, &slice, sliceOptions);
-  assert(result.succeeded());
-  (void)result;
+  getBackwardSlice(value, &slice, sliceOptions);
 
   // Check that none of the operands of the operations in the backward slice are
   // loop iteration arguments, and neither is the value itself.
