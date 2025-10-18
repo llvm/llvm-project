@@ -388,8 +388,9 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr0, $vgpr0_vgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   S_BITCMP1_B32 killed [[COPY]], 0, implicit-def $scc
-  ; GCN-NEXT:   S_NOP 0, implicit $scc
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, killed [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   S_NOP 0, implicit killed $scc
+  ; GCN-NEXT:   S_CMP_EQ_U32 killed [[S_AND_B32_]], 1, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
@@ -406,80 +407,6 @@ body:             |
     %1:sreg_32 = S_AND_B32 1, killed %0, implicit-def $scc
     S_NOP 0, implicit killed $scc
     S_CMP_EQ_U32 killed %1:sreg_32, 1, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2(0x80000000)
-
-  bb.2:
-    S_ENDPGM 0
-
-...
----
-name:            xor_1_cmp_lg_0_killed_scc
-body:             |
-  ; GCN-LABEL: name: xor_1_cmp_lg_0_killed_scc
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0, $vgpr0_vgpr1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 1, killed [[COPY]], implicit-def $scc
-  ; GCN-NEXT:   S_NOP 0, implicit $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
-  bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0, $vgpr0_vgpr1
-
-    %0:sreg_32 = COPY $sgpr0
-    %1:sreg_32 = S_XOR_B32 1, killed %0, implicit-def $scc
-    S_NOP 0, implicit killed $scc
-    S_CMP_LG_U32 killed %1:sreg_32, 0, implicit-def $scc
-    S_CBRANCH_SCC0 %bb.2, implicit $scc
-    S_BRANCH %bb.1
-
-  bb.1:
-    successors: %bb.2(0x80000000)
-
-  bb.2:
-    S_ENDPGM 0
-
-...
----
-name:            absdiff_1_cmp_lg_0_killed_scc
-body:             |
-  ; GCN-LABEL: name: absdiff_1_cmp_lg_0_killed_scc
-  ; GCN: bb.0:
-  ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr0, $vgpr0_vgpr1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_ABSDIFF_I32_:%[0-9]+]]:sreg_32 = S_ABSDIFF_I32 1, killed [[COPY]], implicit-def $scc
-  ; GCN-NEXT:   S_NOP 0, implicit $scc
-  ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
-  ; GCN-NEXT:   S_BRANCH %bb.1
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   S_ENDPGM 0
-  bb.0:
-    successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $sgpr0, $vgpr0_vgpr1
-
-    %0:sreg_32 = COPY $sgpr0
-    %1:sreg_32 = S_ABSDIFF_I32 1, killed %0, implicit-def $scc
-    S_NOP 0, implicit killed $scc
-    S_CMP_LG_U32 killed %1:sreg_32, 0, implicit-def $scc
     S_CBRANCH_SCC0 %bb.2, implicit $scc
     S_BRANCH %bb.1
 
@@ -2143,7 +2070,8 @@ body:             |
   ; GCN-NEXT:   liveins: $sgpr0, $vgpr0_vgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 3, killed [[COPY]], implicit-def $scc
+  ; GCN-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 3, killed [[COPY]], implicit-def dead $scc
+  ; GCN-NEXT:   S_CMP_LG_U32 killed [[S_AND_B32_]], 0, implicit-def $scc
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit $scc
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
