@@ -801,7 +801,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
   // Calculate the final index.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
-  auto *CanonicalIVType = TypeInfo.inferScalarType(CanonicalIV);
+  Type *CanonicalIVType = LoopRegion->getCanonicalIVType();
   VPBuilder B(cast<VPBasicBlock>(PredVPBB));
 
   DebugLoc DL = cast<VPInstruction>(Op)->getDebugLoc();
@@ -1860,8 +1860,8 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
       return nullptr;
     VPRegionBlock *EnclosingLoopRegion =
         HoistCandidate->getParent()->getEnclosingLoopRegion();
-    assert((!HoistCandidate->getParent()->getParent() ||
-            HoistCandidate->getParent()->getParent() == EnclosingLoopRegion) &&
+    assert((!HoistCandidate->getRegion() ||
+            HoistCandidate->getRegion() == EnclosingLoopRegion) &&
            "CFG in VPlan should still be flat, without replicate regions");
     // Hoist candidate was already visited, no need to hoist.
     if (!Visited.insert(HoistCandidate).second)
@@ -2386,8 +2386,8 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
       "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
-  VPValue *ALMMultiplier =
-      Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo.Ty, 1));
+  VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
+      ConstantInt::get(TopRegion->getCanonicalIVType(), 1));
   auto *EntryALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                         {EntryIncrement, TC, ALMMultiplier}, DL,
                                         "active.lane.mask.entry");
@@ -2474,8 +2474,9 @@ void VPlanTransforms::addActiveLaneMask(
          "UseActiveLaneMaskForControlFlow");
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
-  auto *FoundWidenCanonicalIVUser = find_if(
-      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  auto *CanonicalIV = LoopRegion->getCanonicalIV();
+  auto *FoundWidenCanonicalIVUser =
+      find_if(CanonicalIV->users(), IsaPred<VPWidenCanonicalIVRecipe>);
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
   VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
@@ -2487,8 +2488,8 @@ void VPlanTransforms::addActiveLaneMask(
         Plan, DataAndControlFlowWithoutRuntimeCheck);
   } else {
     VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
-    VPValue *ALMMultiplier =
-        Plan.getOrAddLiveIn(ConstantInt::get(Plan.getCanonicalIVInfo().Ty, 1));
+    VPValue *ALMMultiplier = Plan.getOrAddLiveIn(
+        ConstantInt::get(LoopRegion->getCanonicalIVType(), 1));
     LaneMask =
         B.createNaryOp(VPInstruction::ActiveLaneMask,
                        {WideCanonicalIV, Plan.getTripCount(), ALMMultiplier},
@@ -2904,7 +2905,7 @@ void VPlanTransforms::replaceSymbolicStrides(
   // evolution.
   auto CanUseVersionedStride = [&Plan](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);
-    return R->getParent()->getParent() ||
+    return R->getRegion() ||
            R->getParent() == Plan.getVectorLoopRegion()->getSinglePredecessor();
   };
   ValueToSCEVMapTy RewriteMap;
@@ -3809,8 +3810,7 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
         continue;
       auto *DefR = cast<VPRecipeWithIRFlags>(&R);
       auto UsesVectorOrInsideReplicateRegion = [DefR, LoopRegion](VPUser *U) {
-        VPRegionBlock *ParentRegion =
-            cast<VPRecipeBase>(U)->getParent()->getParent();
+        VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
         return !U->usesScalars(DefR) || ParentRegion != LoopRegion;
       };
       if ((isa<VPReplicateRecipe>(DefR) &&
@@ -4205,11 +4205,11 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       VectorLoop->getExitingBasicBlock()->getTerminator()->getOperand(0));
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
-  VPValue *UF =
-      Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, 1 * Plan.getUF()));
+  VPValue *UF = Plan.getOrAddLiveIn(
+      ConstantInt::get(VectorLoop->getCanonicalIVType(), 1 * Plan.getUF()));
   if (VF.isScalable()) {
-    VPValue *VScale =
-        PHBuilder.createElementCount(CanIVTy, ElementCount::getScalable(1));
+    VPValue *VScale = PHBuilder.createElementCount(
+        VectorLoop->getCanonicalIVType(), ElementCount::getScalable(1));
     VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
     Inc->setOperand(1, VScaleUF);
     Plan.getVF().replaceAllUsesWith(VScale);

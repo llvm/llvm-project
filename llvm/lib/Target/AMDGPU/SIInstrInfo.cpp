@@ -9072,6 +9072,67 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   MachineOperand &Src1 = Inst.getOperand(2);
   const DebugLoc &DL = Inst.getDebugLoc();
 
+  if (ST.useRealTrue16Insts()) {
+    Register SrcReg0, SrcReg1;
+    if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
+      SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
+    } else {
+      SrcReg0 = Src0.getReg();
+    }
+
+    if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
+      SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
+    } else {
+      SrcReg1 = Src1.getReg();
+    }
+
+    bool isSrc0Reg16 = MRI.constrainRegClass(SrcReg0, &AMDGPU::VGPR_16RegClass);
+    bool isSrc1Reg16 = MRI.constrainRegClass(SrcReg1, &AMDGPU::VGPR_16RegClass);
+
+    auto NewMI = BuildMI(*MBB, Inst, DL, get(AMDGPU::REG_SEQUENCE), ResultReg);
+    switch (Inst.getOpcode()) {
+    case AMDGPU::S_PACK_LL_B32_B16:
+      NewMI
+          .addReg(SrcReg0, 0,
+                  isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0,
+                  isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_LH_B32_B16:
+      NewMI
+          .addReg(SrcReg0, 0,
+                  isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_HL_B32_B16:
+      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0,
+                  isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_HH_B32_B16:
+      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::hi16);
+      break;
+    default:
+      llvm_unreachable("unhandled s_pack_* instruction");
+    }
+
+    MachineOperand &Dest = Inst.getOperand(0);
+    MRI.replaceRegWith(Dest.getReg(), ResultReg);
+    addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+    return;
+  }
+
   switch (Inst.getOpcode()) {
   case AMDGPU::S_PACK_LL_B32_B16: {
     Register ImmReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -10565,6 +10626,59 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  this]() -> bool {
+    if (CmpValue != 0)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    bool CanOptimize = false;
+
+    // For S_OP that set SCC = DST!=0, do the transformation
+    //
+    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
+    if (setsSCCifResultIsNonZero(*Def))
+      CanOptimize = true;
+
+    // s_cmp_lg_* is redundant because the SCC input value for S_CSELECT* has
+    // the same value that will be calculated by s_cmp_lg_*
+    //
+    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
+    //   imm), 0)
+    if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+        Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+      bool Op1IsNonZeroImm =
+          Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+      bool Op2IsZeroImm =
+          Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+      if (Op1IsNonZeroImm && Op2IsZeroImm)
+        CanOptimize = true;
+    }
+
+    if (!CanOptimize)
+      return false;
+
+    MachineInstr *KillsSCC = nullptr;
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
+        return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
+    }
+
+    if (MachineOperand *SccDef =
+            Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+      SccDef->setIsDead(false);
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
+    CmpInstr.eraseFromParent();
+    return true;
+  };
+
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
                                      bool IsReversible, bool IsSigned) -> bool {
@@ -10639,16 +10753,20 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
+    MachineInstr *KillsSCC = nullptr;
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
         return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
     }
 
     MachineOperand *SccDef =
         Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
     SccDef->setIsDead(false);
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
     CmpInstr.eraseFromParent();
 
     if (!MRI->use_nodbg_empty(DefReg)) {
@@ -10692,7 +10810,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
-    return optimizeCmpAnd(0, 32, true, false);
+    return optimizeCmpAnd(0, 32, true, false) || optimizeCmpSelect();
   case AMDGPU::S_CMP_GT_U32:
   case AMDGPU::S_CMPK_GT_U32:
     return optimizeCmpAnd(0, 32, false, false);
@@ -10700,7 +10818,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false);
+    return optimizeCmpAnd(0, 64, true, false) || optimizeCmpSelect();
   }
 
   return false;

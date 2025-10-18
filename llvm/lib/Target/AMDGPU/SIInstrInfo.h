@@ -709,6 +709,30 @@ public:
     }
   }
 
+  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+    if (!MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+      return false;
+    // Compares have no result
+    if (MI.isCompare())
+      return false;
+    switch (MI.getOpcode()) {
+    default:
+      return true;
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_ADD_U32:
+    case AMDGPU::S_ADDC_U32:
+    case AMDGPU::S_SUB_I32:
+    case AMDGPU::S_SUB_U32:
+    case AMDGPU::S_SUBB_U32:
+    case AMDGPU::S_MIN_I32:
+    case AMDGPU::S_MIN_U32:
+    case AMDGPU::S_MAX_I32:
+    case AMDGPU::S_MAX_U32:
+    case AMDGPU::S_ADDK_I32:
+      return false;
+    }
+  }
+
   static bool isEXP(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::EXP;
   }
@@ -879,6 +903,11 @@ public:
            MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
+  bool isMFMA(uint16_t Opcode) const {
+    return isMAI(Opcode) && Opcode != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
+  }
+
   static bool isDOT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
   }
@@ -893,6 +922,10 @@ public:
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
+  }
+
+  bool isMFMAorWMMA(uint16_t Opcode) const {
+    return isMFMA(Opcode) || isWMMA(Opcode) || isSWMMAC(Opcode);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {

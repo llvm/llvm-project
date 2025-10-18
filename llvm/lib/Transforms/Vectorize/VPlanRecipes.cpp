@@ -2352,7 +2352,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
-         getScalarType() == getParent()->getParent()->getCanonicalIVType();
+         getScalarType() == getRegion()->getCanonicalIVType();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3074,7 +3074,7 @@ static void scalarizeInstruction(const Instruction *Instr,
     State.AC->registerAssumption(II);
 
   assert(
-      (RepRecipe->getParent()->getParent() ||
+      (RepRecipe->getRegion() ||
        !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
        all_of(RepRecipe->operands(),
               [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
@@ -3266,7 +3266,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                               to_vector(operands()), VF);
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
-    if (!getParent()->getParent()->isReplicator())
+    if (!getRegion()->isReplicator())
       return ScalarCost;
 
     // Account for the phi nodes that we will create.
@@ -3282,7 +3282,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Store: {
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
-    const VPRegionBlock *ParentRegion = getParent()->getParent();
+    const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator())
       break;
 

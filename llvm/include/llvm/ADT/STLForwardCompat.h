@@ -26,6 +26,54 @@ namespace llvm {
 //     Features from C++20
 //===----------------------------------------------------------------------===//
 
+namespace numbers {
+// clang-format off
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T e_v          = T(0x1.5bf0a8b145769P+1); // (2.7182818284590452354) https://oeis.org/A001113
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T egamma_v     = T(0x1.2788cfc6fb619P-1); // (.57721566490153286061) https://oeis.org/A001620
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T ln2_v        = T(0x1.62e42fefa39efP-1); // (.69314718055994530942) https://oeis.org/A002162
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T ln10_v       = T(0x1.26bb1bbb55516P+1); // (2.3025850929940456840) https://oeis.org/A002392
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T log2e_v      = T(0x1.71547652b82feP+0); // (1.4426950408889634074)
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T log10e_v     = T(0x1.bcb7b1526e50eP-2); // (.43429448190325182765)
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T pi_v         = T(0x1.921fb54442d18P+1); // (3.1415926535897932385) https://oeis.org/A000796
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T inv_pi_v     = T(0x1.45f306dc9c883P-2); // (.31830988618379067154) https://oeis.org/A049541
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T inv_sqrtpi_v = T(0x1.20dd750429b6dP-1); // (.56418958354775628695) https://oeis.org/A087197
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T sqrt2_v      = T(0x1.6a09e667f3bcdP+0); // (1.4142135623730950488) https://oeis.org/A00219
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T inv_sqrt2_v  = T(0x1.6a09e667f3bcdP-1); // (.70710678118654752440)
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T sqrt3_v      = T(0x1.bb67ae8584caaP+0); // (1.7320508075688772935) https://oeis.org/A002194
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T inv_sqrt3_v  = T(0x1.279a74590331cP-1); // (.57735026918962576451)
+template <typename T, typename = std::enable_if_t<std::is_floating_point_v<T>>>
+inline constexpr T phi_v        = T(0x1.9e3779b97f4a8P+0); // (1.6180339887498948482) https://oeis.org/A001622
+
+inline constexpr double e          = e_v<double>;
+inline constexpr double egamma     = egamma_v<double>;
+inline constexpr double ln2        = ln2_v<double>;
+inline constexpr double ln10       = ln10_v<double>;
+inline constexpr double log2e      = log2e_v<double>;
+inline constexpr double log10e     = log10e_v<double>;
+inline constexpr double pi         = pi_v<double>;
+inline constexpr double inv_pi     = inv_pi_v<double>;
+inline constexpr double inv_sqrtpi = inv_sqrtpi_v<double>;
+inline constexpr double sqrt2      = sqrt2_v<double>;
+inline constexpr double inv_sqrt2  = inv_sqrt2_v<double>;
+inline constexpr double sqrt3      = sqrt3_v<double>;
+inline constexpr double inv_sqrt3  = inv_sqrt3_v<double>;
+inline constexpr double phi        = phi_v<double>;
+// clang-format on
+} // namespace numbers
+
 template <typename T>
 struct remove_cvref // NOLINT(readability-identifier-naming)
 {
