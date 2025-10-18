@@ -17,7 +17,7 @@ namespace clang::tidy::readability {
 /// tries to refactor the code to one statement per declaration.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html
 class IsolateDeclarationCheck : public ClangTidyCheck {
 public:
   IsolateDeclarationCheck(StringRef Name, ClangTidyContext *Context)

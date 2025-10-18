@@ -244,7 +244,7 @@ public:
     return ST;
   }
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool isIgnorableUse(const MachineOperand &MO) const override;
 
@@ -417,6 +417,7 @@ public:
                                   const MachineInstr &MIb) const override;
 
   static bool isFoldableCopy(const MachineInstr &MI);
+  static unsigned getFoldableCopySrcIdx(const MachineInstr &MI);
 
   void removeModOperands(MachineInstr &MI) const;
 
@@ -688,6 +689,12 @@ public:
   /// to not hit scratch.
   bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 
+  /// \returns true for FLAT instructions that can access VMEM.
+  bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
+
+  /// \returns true for FLAT instructions that can access LDS.
+  bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -698,6 +705,30 @@ public:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SVS:
       return true;
     default:
+      return false;
+    }
+  }
+
+  static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
+    if (!MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+      return false;
+    // Compares have no result
+    if (MI.isCompare())
+      return false;
+    switch (MI.getOpcode()) {
+    default:
+      return true;
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_ADD_U32:
+    case AMDGPU::S_ADDC_U32:
+    case AMDGPU::S_SUB_I32:
+    case AMDGPU::S_SUB_U32:
+    case AMDGPU::S_SUBB_U32:
+    case AMDGPU::S_MIN_I32:
+    case AMDGPU::S_MIN_U32:
+    case AMDGPU::S_MAX_I32:
+    case AMDGPU::S_MAX_U32:
+    case AMDGPU::S_ADDK_I32:
       return false;
     }
   }
@@ -746,6 +777,18 @@ public:
 
   static bool mayWriteLDSThroughDMA(const MachineInstr &MI) {
     return isLDSDMA(MI) && MI.getOpcode() != AMDGPU::BUFFER_STORE_LDS_DWORD;
+  }
+
+  static bool isSBarrierSCCWrite(unsigned Opcode) {
+    return Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM ||
+           Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0;
+  }
+
+  static bool isCBranchVCCZRead(const MachineInstr &MI) {
+    unsigned Opc = MI.getOpcode();
+    return (Opc == AMDGPU::S_CBRANCH_VCCNZ || Opc == AMDGPU::S_CBRANCH_VCCZ) &&
+           !MI.getOperand(1).isUndef();
   }
 
   static bool isWQM(const MachineInstr &MI) {
@@ -860,6 +903,11 @@ public:
            MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
+  bool isMFMA(uint16_t Opcode) const {
+    return isMAI(Opcode) && Opcode != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
+  }
+
   static bool isDOT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::IsDOT;
   }
@@ -874,6 +922,10 @@ public:
 
   static bool isMFMAorWMMA(const MachineInstr &MI) {
     return isMFMA(MI) || isWMMA(MI) || isSWMMAC(MI);
+  }
+
+  bool isMFMAorWMMA(uint16_t Opcode) const {
+    return isMFMA(Opcode) || isWMMA(Opcode) || isSWMMAC(Opcode);
   }
 
   static bool isSWMMAC(const MachineInstr &MI) {
@@ -1006,9 +1058,13 @@ public:
            Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
            Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE ||
-           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
-           Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
+           Opcode == AMDGPU::S_BARRIER_LEAVE || Opcode == AMDGPU::DS_GWS_INIT ||
+           Opcode == AMDGPU::DS_GWS_BARRIER;
+  }
+
+  static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
+    return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
+           Opc == AMDGPU::GLOBAL_WBINV;
   }
 
   static bool isF16PseudoScalarTrans(unsigned Opcode) {
@@ -1203,6 +1259,8 @@ public:
     return isImmOperandLegal(MI.getDesc(), OpNo, MO);
   }
 
+  bool isNeverCoissue(MachineInstr &MI) const;
+
   /// Check if this immediate value can be used for AV_MOV_B64_IMM_PSEUDO.
   bool isLegalAV64PseudoImm(uint64_t Imm) const;
 
@@ -1273,7 +1331,7 @@ public:
       return 4;
     }
 
-    return RI.getRegSizeInBits(*RI.getRegClass(OpInfo.RegClass)) / 8;
+    return RI.getRegSizeInBits(*RI.getRegClass(getOpRegClassID(OpInfo))) / 8;
   }
 
   /// This form should usually be preferred since it handles operands

@@ -3416,7 +3416,7 @@ void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
   SDValue Input2 = N->getOperand(2);
 
   SDValue AccLo, AccHi;
-  std::tie(AccLo, AccHi) = DAG.SplitVector(Acc, DL);
+  GetSplitVector(Acc, AccLo, AccHi);
   unsigned Opcode = N->getOpcode();
 
   // If the input types don't need splitting, just accumulate into the
@@ -3429,8 +3429,8 @@ void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
 
   SDValue Input1Lo, Input1Hi;
   SDValue Input2Lo, Input2Hi;
-  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(Input1, DL);
-  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(Input2, DL);
+  GetSplitVector(Input1, Input1Lo, Input1Hi);
+  GetSplitVector(Input2, Input2Lo, Input2Hi);
   EVT ResultVT = AccLo.getValueType();
 
   Lo = DAG.getNode(Opcode, DL, ResultVT, AccLo, Input1Lo, Input2Lo);
@@ -4761,8 +4761,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
 
   SDLoc DL(N);
   SDValue Input1Lo, Input1Hi, Input2Lo, Input2Hi;
-  std::tie(Input1Lo, Input1Hi) = DAG.SplitVector(N->getOperand(1), DL);
-  std::tie(Input2Lo, Input2Hi) = DAG.SplitVector(N->getOperand(2), DL);
+  GetSplitVector(N->getOperand(1), Input1Lo, Input1Hi);
+  GetSplitVector(N->getOperand(2), Input2Lo, Input2Hi);
   unsigned Opcode = N->getOpcode();
   EVT ResultVT = Acc.getValueType();
 
@@ -6256,17 +6256,17 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
   // FIXME: Not all targets may support EVL in VP_LOAD. These will have been
   // removed from the IR by the ExpandVectorPredication pass but we're
   // reintroducing them here.
-  EVT LdVT = LD->getMemoryVT();
-  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), LdVT);
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                    WideVT.getVectorElementCount());
+  EVT VT = LD->getValueType(0);
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  EVT WideMaskVT = getSetCCResultType(WideVT);
+
   if (ExtType == ISD::NON_EXTLOAD &&
       TLI.isOperationLegalOrCustom(ISD::VP_LOAD, WideVT) &&
       TLI.isTypeLegal(WideMaskVT)) {
     SDLoc DL(N);
     SDValue Mask = DAG.getAllOnesConstant(DL, WideMaskVT);
     SDValue EVL = DAG.getElementCount(DL, TLI.getVPExplicitVectorLengthTy(),
-                                      LdVT.getVectorElementCount());
+                                      VT.getVectorElementCount());
     SDValue NewLoad =
         DAG.getLoadVP(LD->getAddressingMode(), ISD::NON_EXTLOAD, WideVT, DL,
                       LD->getChain(), LD->getBasePtr(), LD->getOffset(), Mask,
@@ -6301,6 +6301,24 @@ SDValue DAGTypeLegalizer::WidenVecRes_LOAD(SDNode *N) {
     ReplaceValueWith(SDValue(N, 1), NewChain);
 
     return Result;
+  }
+
+  if (VT.isVector()) {
+    // If all else fails replace the load with a wide masked load.
+    SDLoc DL(N);
+    EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+
+    SDValue Len = DAG.getElementCount(DL, IdxVT, VT.getVectorElementCount());
+    SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, WideMaskVT,
+                               DAG.getConstant(0, DL, IdxVT), Len);
+
+    SDValue NewLoad = DAG.getMaskedLoad(
+        WideVT, DL, LD->getChain(), LD->getBasePtr(), LD->getOffset(), Mask,
+        DAG.getPOISON(WideVT), LD->getMemoryVT(), LD->getMemOperand(),
+        LD->getAddressingMode(), LD->getExtensionType());
+
+    ReplaceValueWith(SDValue(N, 1), NewLoad.getValue(1));
+    return NewLoad;
   }
 
   report_fatal_error("Unable to widen vector load");
@@ -7516,8 +7534,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
   SDValue StVal = ST->getValue();
   EVT StVT = StVal.getValueType();
   EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), StVT);
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                    WideVT.getVectorElementCount());
+  EVT WideMaskVT = getSetCCResultType(WideVT);
 
   if (TLI.isOperationLegalOrCustom(ISD::VP_STORE, WideVT) &&
       TLI.isTypeLegal(WideMaskVT)) {
@@ -7538,6 +7555,22 @@ SDValue DAGTypeLegalizer::WidenVecOp_STORE(SDNode *N) {
       return StChain[0];
 
     return DAG.getNode(ISD::TokenFactor, SDLoc(ST), MVT::Other, StChain);
+  }
+
+  if (StVT.isVector()) {
+    // If all else fails replace the store with a wide masked store.
+    SDLoc DL(N);
+    EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
+
+    SDValue WideStVal = GetWidenedVector(StVal);
+    SDValue Len = DAG.getElementCount(DL, IdxVT, StVT.getVectorElementCount());
+    SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, WideMaskVT,
+                               DAG.getConstant(0, DL, IdxVT), Len);
+
+    return DAG.getMaskedStore(ST->getChain(), DL, WideStVal, ST->getBasePtr(),
+                              ST->getOffset(), Mask, ST->getMemoryVT(),
+                              ST->getMemOperand(), ST->getAddressingMode(),
+                              ST->isTruncatingStore());
   }
 
   report_fatal_error("Unable to widen vector store");
@@ -8298,8 +8331,7 @@ DAGTypeLegalizer::GenWidenVectorExtLoads(SmallVectorImpl<SDValue> &LdChain,
   AAMDNodes AAInfo = LD->getAAInfo();
 
   if (LdVT.isScalableVector())
-    report_fatal_error("Generating widen scalable extending vector loads is "
-                       "not yet supported");
+    return SDValue();
 
   EVT EltVT = WidenVT.getVectorElementType();
   EVT LdEltVT = LdVT.getVectorElementType();

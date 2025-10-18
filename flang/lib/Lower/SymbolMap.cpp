@@ -45,6 +45,16 @@ Fortran::lower::SymMap::lookupSymbol(Fortran::semantics::SymbolRef symRef) {
   return SymbolBox::None{};
 }
 
+const Fortran::semantics::Symbol *
+Fortran::lower::SymMap::lookupSymbolByName(llvm::StringRef symName) {
+  for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
+       jmap != jend; ++jmap)
+    for (auto const &[sym, symBox] : *jmap)
+      if (sym->name().ToString() == symName)
+        return sym;
+  return nullptr;
+}
+
 Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
     Fortran::semantics::SymbolRef symRef) {
   auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
