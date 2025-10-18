@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -555,6 +556,7 @@ public:
     Argument(StringRef Key, bool B) : Key(Key), Val(B ? "true" : "false") {}
     LLVM_ABI Argument(StringRef Key, DebugLoc dl);
     LLVM_ABI Argument(StringRef Key, InstructionCost C);
+    LLVM_ABI Argument(StringRef Key, BranchProbability P);
   };
 
   /// \p PassName is the name of the pass emitting this diagnostic. \p

@@ -108,9 +108,6 @@ public:
     ///
     // \param flags cleanup kind.
     virtual void emit(CIRGenFunction &cgf) = 0;
-
-    // This is a placeholder until EHScope is implemented.
-    virtual size_t getSize() const = 0;
   };
 
 private:
