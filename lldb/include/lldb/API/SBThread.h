@@ -178,6 +178,8 @@ public:
 
   lldb::SBFrame GetFrameAtIndex(uint32_t idx);
 
+  lldb::SBFrameList GetFrames();
+
   lldb::SBFrame GetSelectedFrame();
 
   lldb::SBFrame SetSelectedFrame(uint32_t frame_idx);
@@ -228,6 +230,11 @@ public:
   bool SafeToCallFunctions();
 
   SBValue GetSiginfo();
+
+  SBError RegisterFrameProvider(const char *class_name,
+                                SBStructuredData &args_data);
+
+  void ClearScriptedFrameProvider();
 
 private:
   friend class SBBreakpoint;

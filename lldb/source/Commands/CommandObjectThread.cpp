@@ -35,6 +35,7 @@
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Target/Trace.h"
 #include "lldb/Target/TraceDumper.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/ValueObject/ValueObject.h"
 

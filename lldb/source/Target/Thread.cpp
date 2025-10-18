@@ -13,9 +13,13 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/Interpreter/ScriptedFrameProvider.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -45,6 +49,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -1439,11 +1444,75 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 StackFrameListSP Thread::GetStackFrameList() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  if (!m_curr_frames_sp)
-    m_curr_frames_sp =
+  if (!m_curr_frames_sp) {
+
+    StackFrameListSP real_frames_sp =
         std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
 
+    if (m_frame_provider_sp) {
+      auto scripted_list_or_err = GetScriptedFrameList(real_frames_sp);
+      if (!scripted_list_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Thread),
+                       scripted_list_or_err.takeError(),
+                       "Failed to get scripted frame list: {0}");
+        m_curr_frames_sp = real_frames_sp;
+        return m_curr_frames_sp;
+      }
+
+      m_curr_frames_sp = *scripted_list_or_err;
+      return m_curr_frames_sp;
+    }
+
+    m_curr_frames_sp = real_frames_sp;
+  }
+
   return m_curr_frames_sp;
+}
+
+llvm::Expected<StackFrameListSP>
+Thread::GetScriptedFrameList(StackFrameListSP real_frames_sp) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  if (!m_frame_provider_sp)
+    return llvm::createStringError("No scripted frame provider has been set");
+
+  // Pass the real unwound frames to the scripted frame provider.
+  // This ensures the provider can iterate, filter, and replace frames without
+  // causing infinite recursion (if the provider calls GetFrames() on the
+  // thread, it would re-enter GetStackFrameList() which would call us again).
+  return m_frame_provider_sp->GetStackFrames(real_frames_sp);
+}
+
+Status
+Thread::SetScriptedFrameProvider(const ScriptedMetadata &scripted_metadata) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  Status error;
+  m_frame_provider_sp = std::make_shared<ScriptedFrameProvider>(
+      shared_from_this(), scripted_metadata, error);
+
+  if (error.Fail()) {
+    m_frame_provider_sp.reset();
+    return error;
+  }
+
+  // Clear cached frames to ensure scripted frames are used
+  if (m_curr_frames_sp)
+    m_curr_frames_sp.reset();
+  if (m_prev_frames_sp)
+    m_prev_frames_sp.reset();
+
+  return {};
+}
+
+void Thread::ClearScriptedFrameProvider() {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+  if (m_frame_provider_sp)
+    m_frame_provider_sp.reset();
+  if (m_curr_frames_sp)
+    m_curr_frames_sp.reset();
+  if (m_prev_frames_sp)
+    m_prev_frames_sp.reset();
 }
 
 std::optional<addr_t> Thread::GetPreviousFrameZeroPC() {
