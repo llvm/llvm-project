@@ -3321,3 +3321,22 @@ func.func @omp_workdistribute() {
   }
   return
 }
+
+llvm.mlir.global internal @_QFgpEx() : i32
+
+func.func @omp_groupprivate() {
+  %0 = arith.constant 1 : i32
+  %1 = arith.constant 2 : i32
+  // CHECK: [[ARG0:%.*]] = llvm.mlir.addressof @_QFgpEx : !llvm.ptr
+  %global_addr = llvm.mlir.addressof @_QFgpEx : !llvm.ptr
+  omp.teams {
+    // CHECK: {{.*}} = omp.groupprivate [[ARG0]] : !llvm.ptr -> !llvm.ptr
+    %group_private_addr_in_teams = omp.groupprivate %global_addr : !llvm.ptr -> !llvm.ptr
+    llvm.store %0, %group_private_addr_in_teams : i32, !llvm.ptr
+    omp.terminator
+  }
+  // CHECK: {{.*}} = omp.groupprivate [[ARG0]] : !llvm.ptr -> !llvm.ptr
+  %group_private_addr_after_teams = omp.groupprivate %global_addr : !llvm.ptr -> !llvm.ptr
+  llvm.store %1, %group_private_addr_after_teams : i32, !llvm.ptr
+  return
+}

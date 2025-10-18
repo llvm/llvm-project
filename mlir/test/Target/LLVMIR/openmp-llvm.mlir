@@ -3449,3 +3449,39 @@ llvm.func @nested_task_with_deps() {
 
 // CHECK:         ret void
 // CHECK:       }
+
+// -----
+
+// CHECK: @_QFsubEx = internal global i32 undef
+
+// CHECK-LABEL: @omp_groupprivate
+llvm.func @omp_groupprivate() {
+// CHECK:  [[TMP1:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 1, ptr [[TMP1]], align 4
+
+// CHECK-LABEL: omp.teams.region{{.*}}
+// CHECK:  [[TMP2:%.*]] = call ptr @__kmpc_alloc_shared(i64 4)
+// CHECK:  store i32 2, ptr [[TMP2]], align 4
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(2 : i32) : i32
+  %2 = llvm.mlir.constant(3 : i32) : i32
+
+  %3 = llvm.mlir.addressof @_QFsubEx : !llvm.ptr
+  %4 = omp.groupprivate %3 : !llvm.ptr -> !llvm.ptr
+
+  llvm.store %0, %4 : i32, !llvm.ptr
+
+  omp.teams  {
+    %5 = omp.groupprivate %3 : !llvm.ptr -> !llvm.ptr
+    llvm.store %1, %5 : i32, !llvm.ptr
+    omp.terminator
+  }
+
+  llvm.store %2, %4 : i32, !llvm.ptr
+  llvm.return
+}
+
+llvm.mlir.global internal @_QFsubEx() : i32
+
+// -----

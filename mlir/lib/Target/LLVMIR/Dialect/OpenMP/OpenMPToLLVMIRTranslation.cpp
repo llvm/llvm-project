@@ -5989,7 +5989,7 @@ static bool isTargetDeviceOp(Operation *op) {
   // by taking it in as an operand, so we must always lower these in
   // some manner or result in an ICE (whether they end up in a no-op
   // or otherwise).
-  if (mlir::isa<omp::ThreadprivateOp>(op))
+  if (mlir::isa<omp::ThreadprivateOp, omp::GroupprivateOp>(op))
     return true;
 
   if (mlir::isa<omp::TargetAllocMemOp>(op) ||
@@ -6084,6 +6084,47 @@ convertTargetFreeMemOp(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::Value *intToPtr =
       builder.CreateIntToPtr(llvmHeapref, builder.getPtrTy(0));
   builder.CreateCall(ompTragetFreeFunc, {intToPtr, llvmDeviceNum});
+  return success();
+}
+
+/// Converts an OpenMP Groupprivate operation into LLVM IR.
+static LogicalResult
+convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
+                       LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  auto groupprivateOp = cast<omp::GroupprivateOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
+  Value symAddr = groupprivateOp.getSymAddr();
+  auto *symOp = symAddr.getDefiningOp();
+
+  if (auto asCast = dyn_cast<LLVM::AddrSpaceCastOp>(symOp))
+    symOp = asCast.getOperand().getDefiningOp();
+
+  if (!isa<LLVM::AddressOfOp>(symOp))
+    return opInst.emitError("Addressing symbol not found");
+  LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
+
+  LLVM::GlobalOp global =
+      addressOfOp.getGlobal(moduleTranslation.symbolTable());
+  llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+
+  // Get the size of the variable
+  llvm::Type *varType = globalValue->getValueType();
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  llvm::DataLayout DL = llvmModule->getDataLayout();
+  uint64_t typeSize = DL.getTypeAllocSize(varType);
+  // Call omp_alloc_shared to allocate memory for groupprivate variable.
+  llvm::FunctionCallee allocSharedFn = ompBuilder->getOrCreateRuntimeFunction(
+      *llvmModule, llvm::omp::OMPRTL___kmpc_alloc_shared);
+  // Call runtime to allocate shared memory for this group
+  llvm::Value *groupPrivatePtr =
+      builder.CreateCall(allocSharedFn, {builder.getInt64(typeSize)});
+  groupPrivatePtr =
+      builder.CreateBitCast(groupPrivatePtr, globalValue->getType());
+  moduleTranslation.mapValue(opInst.getResult(0), groupPrivatePtr);
   return success();
 }
 
@@ -6269,6 +6310,9 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
           })
           .Case([&](omp::TargetFreeMemOp) {
             return convertTargetFreeMemOp(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::GroupprivateOp) {
+            return convertOmpGroupprivate(*op, builder, moduleTranslation);
           })
           .Default([&](Operation *inst) {
             return inst->emitError()
