@@ -89,6 +89,9 @@ Changes to Vectorizers
 Changes to the AArch64 Backend
 ------------------------------
 
+* Assembler/disassembler support has been added for Armv9.7-A (2025)
+  architecture extensions.
+
 Changes to the AMDGPU Backend
 -----------------------------
 

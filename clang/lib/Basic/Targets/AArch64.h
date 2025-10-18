@@ -190,6 +190,8 @@ public:
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV96A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
+  void getTargetDefinesARMV97A(const LangOptions &Opts,
+                               MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
