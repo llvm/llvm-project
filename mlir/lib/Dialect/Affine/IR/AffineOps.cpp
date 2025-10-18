@@ -2616,6 +2616,8 @@ static OpFoldResult getConstantInductionVarForLastTrip(AffineForOp forOp) {
   std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
   if (!tripCount.has_value())
     return {};
+  if (tripCount.value() == 0)
+    return {};
   int64_t lb = forOp.getConstantLowerBound();
   int64_t step = forOp.getStepAsInt();
   int64_t lastTripIv = lb + (tripCount.value() - 1) * step;
