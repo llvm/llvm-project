@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_VFPRINTF_INTERNAL_H
 
-#include "hdr/errno_macros.h"
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/error_or.h"

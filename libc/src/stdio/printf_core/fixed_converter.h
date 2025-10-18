@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FIXED_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FIXED_CONVERTER_H
 
-#include "hdr/errno_macros.h"
 #include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/ctype_utils.h"

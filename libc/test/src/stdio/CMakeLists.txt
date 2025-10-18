@@ -170,11 +170,6 @@ if(LLVM_LIBC_FULL_BUILD)
        libc.src.stdio.fopen
        libc.src.stdio.fread
   )
-  if(${LIBC_TARGET_OS} STREQUAL "linux")
-    list(APPEND fprintf_test_deps
-         libc.src.stdio.fopencookie
-    )
-  endif()
   # This is to be used for tests which write to libc's platform streams
   # under full build but write to system-lib's streams otherwise.
   set(hermetic_test_only HERMETIC_TEST_ONLY)

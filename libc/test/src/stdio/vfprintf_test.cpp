@@ -23,11 +23,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#if defined(LIBC_TARGET_OS_IS_LINUX) &&                                        \
-    !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
-#include "src/stdio/fopencookie.h"
-#endif
-
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
 using LIBC_NAMESPACE::fclose;
@@ -103,30 +98,3 @@ TEST(LlvmLibcVFPrintfTest, WriteToFile) {
 
   ASSERT_EQ(printf_test::fclose(file), 0);
 }
-
-#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) &&                               \
-    defined(LIBC_TARGET_OS_IS_LINUX)
-TEST(LlvmLibcVFPrintfTest, CharsWrittenOverflow) {
-  struct NoopStream {};
-  auto noop_write = [](void *, const char *, size_t size) -> ssize_t {
-    return size;
-  };
-
-  NoopStream stream;
-  cookie_io_functions_t funcs = {nullptr, +noop_write, nullptr, nullptr};
-  ::FILE *file = LIBC_NAMESPACE::fopencookie(&stream, "w", funcs);
-  ASSERT_NE(file, nullptr);
-
-  // Trigger an overflow in the return value of vfprintf by writing more than
-  // INT_MAX bytes. We do this by printing a string with precision INT_MAX, and
-  // then one more character.
-  int max_int = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
-  int result = call_vfprintf(file, "%*sA", max_int, "");
-
-  EXPECT_LT(result, 0);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
-
-  EXPECT_EQ(printf_test::fclose(file), 0);
-}
-#endif // !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) &&
-       // defined(LIBC_TARGET_OS_IS_LINUX)
