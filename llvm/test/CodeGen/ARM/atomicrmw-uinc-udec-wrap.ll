@@ -147,11 +147,11 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:  .LBB6_1: @ %atomicrmw.start
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrex r12, [r0]
-; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    cmp r12, r1
-; CHECK-NEXT:    subls r3, r12, #1
-; CHECK-NEXT:    cmp r12, #0
-; CHECK-NEXT:    moveq r3, r1
+; CHECK-NEXT:    sub r3, r12, #1
+; CHECK-NEXT:    movhi r3, r1
+; CHECK-NEXT:    cmp r12, #1
+; CHECK-NEXT:    movlo r3, r1
 ; CHECK-NEXT:    strex r2, r3, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    bne .LBB6_1
