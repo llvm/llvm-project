@@ -572,7 +572,6 @@ checkForDuplicates(const MembersPerArchitectureMap &MembersPerArch) {
       }
     }
 
-    ErrorStream.flush();
     if (ErrorData.size() > 0)
       return createStringError(std::errc::invalid_argument, ErrorData.c_str());
   }

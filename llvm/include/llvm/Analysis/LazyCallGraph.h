@@ -513,7 +513,6 @@ public:
       std::string Name;
       raw_string_ostream OS(Name);
       OS << *this;
-      OS.flush();
       return Name;
     }
   };
@@ -654,7 +653,6 @@ public:
       std::string Name;
       raw_string_ostream OS(Name);
       OS << *this;
-      OS.flush();
       return Name;
     }
 

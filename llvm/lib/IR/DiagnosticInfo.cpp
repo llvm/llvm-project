@@ -417,7 +417,6 @@ void DiagnosticInfoUnsupported::print(DiagnosticPrinter &DP) const {
 
   OS << getLocationStr() << ": in function " << getFunction().getName() << ' '
      << *getFunction().getFunctionType() << ": " << Msg << '\n';
-  OS.flush();
   DP << Str;
 }
 
