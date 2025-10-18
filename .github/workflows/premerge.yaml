@@ -62,6 +62,7 @@ jobs:
         with:
           fetch-depth: 2
       - name: Build and Test
+        timeout-minutes: 120
         continue-on-error: ${{ runner.arch == 'ARM64' }}
         run: |
           git config --global --add safe.directory '*'
@@ -149,6 +150,7 @@ jobs:
           echo "windows-runtimes=${runtimes_to_build}" >> $GITHUB_OUTPUT
           echo "windows-runtimes-check-targets=${runtimes_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
+        timeout-minutes: 180
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
         run: |
