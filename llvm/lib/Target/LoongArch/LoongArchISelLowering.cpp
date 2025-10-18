@@ -386,6 +386,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
     }
+    setOperationAction(ISD::FP_ROUND, MVT::v2f32, Custom);
   }
 
   // Set operations for 'LASX' feature.
@@ -448,6 +449,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                         VT, Expand);
       setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Legal);
     }
+    setOperationAction(ISD::FP_ROUND, MVT::v4f32, Custom);
   }
 
   // Set DAG combine for LA32 and LA64.
@@ -466,8 +468,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Set DAG combine for 'LASX' feature.
 
-  if (Subtarget.hasExtLASX())
+  if (Subtarget.hasExtLASX()) {
     setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+    setTargetDAGCombine(ISD::CONCAT_VECTORS);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
@@ -592,7 +596,101 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::FP_ROUND:
+    return lowerFP_ROUND(Op, DAG);
   }
+  return SDValue();
+}
+
+// Combine two ISD::FP_ROUND / LoongArchISD::VFCVT nodes with same type to
+// LoongArchISD::VFCVT. For example:
+//   x1 = fp_round x, 0
+//   y1 = fp_round y, 0
+//   z = concat_vectors x1, y1
+// Or
+//   x1 = LoongArch::VFCVT undef, x
+//   y1 = LoongArch::VFCVT undef, y
+//   z = LoongArchISD::VPACKEV y1, x1
+// can be combined to:
+//   z = LoongArch::VFCVT y, x
+static SDValue combineFP_ROUND(SDValue N, const SDLoc &DL, SelectionDAG &DAG,
+                               const LoongArchSubtarget &Subtarget) {
+  assert(((N->getOpcode() == ISD::CONCAT_VECTORS && N->getNumOperands() == 2) ||
+          (N->getOpcode() == LoongArchISD::VPACKEV)) &&
+         "Invalid Node");
+
+  SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
+  SDValue Op1 = peekThroughBitcasts(N->getOperand(1));
+  unsigned Opcode0 = Op0.getOpcode();
+  unsigned Opcode1 = Op1.getOpcode();
+  if (Opcode0 != Opcode1)
+    return SDValue();
+
+  if (Opcode0 != ISD::FP_ROUND && Opcode0 != LoongArchISD::VFCVT)
+    return SDValue();
+
+  // Check if two nodes have only one use.
+  if (!Op0.hasOneUse() || !Op1.hasOneUse())
+    return SDValue();
+
+  EVT VT = N.getValueType();
+  EVT SVT0 = Op0.getValueType();
+  EVT SVT1 = Op1.getValueType();
+  // Check if two nodes have the same result type.
+  if (SVT0 != SVT1)
+    return SDValue();
+
+  // Check if two nodes have the same operand type.
+  EVT SSVT0 = Op0.getOperand(0).getValueType();
+  EVT SSVT1 = Op1.getOperand(0).getValueType();
+  if (SSVT0 != SSVT1)
+    return SDValue();
+
+  if (N->getOpcode() == ISD::CONCAT_VECTORS && Opcode0 == ISD::FP_ROUND) {
+    if (Subtarget.hasExtLASX() && VT.is256BitVector() && SVT0 == MVT::v4f32 &&
+        SSVT0 == MVT::v4f64) {
+      // A vector_shuffle is required in the final step, as xvfcvt instruction
+      // operates on each 128-bit segament as a lane.
+      SDValue Res = DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v8f32,
+                                Op1.getOperand(0), Op0.getOperand(0));
+      SDValue Undef = DAG.getUNDEF(VT);
+      SmallVector<int, 8> Mask = {0, 1, 4, 5, 2, 3, 6, 7};
+      Res = DAG.getVectorShuffle(VT, DL, Res, Undef, Mask);
+      return DAG.getBitcast(VT, Res);
+    }
+  }
+
+  if (N->getOpcode() == LoongArchISD::VPACKEV &&
+      Opcode0 == LoongArchISD::VFCVT) {
+    // For VPACKEV, check if the first operation of LoongArchISD::VFCVT is
+    // undef.
+    if (!Op0.getOperand(0).isUndef() || !Op1.getOperand(0).isUndef())
+      return SDValue();
+
+    if (Subtarget.hasExtLSX() && (VT == MVT::v2i64 || VT == MVT::v2f64) &&
+        SVT0 == MVT::v4f32 && SSVT0 == MVT::v2f64) {
+      SDValue Res = DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32,
+                                Op0.getOperand(1), Op1.getOperand(1));
+      return DAG.getBitcast(VT, Res);
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerFP_ROUND(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue In = Op.getOperand(0);
+  MVT VT = Op.getSimpleValueType();
+  MVT SVT = In.getSimpleValueType();
+
+  if (VT == MVT::v4f32 && SVT == MVT::v4f64) {
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = DAG.SplitVector(In, DL);
+    return DAG.getNode(LoongArchISD::VFCVT, DL, VT, Hi, Lo);
+  }
+
   return SDValue();
 }
 
@@ -4720,6 +4818,21 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Tmp1));
     break;
   }
+  case ISD::FP_ROUND: {
+    assert(VT == MVT::v2f32 && Subtarget.hasExtLSX() &&
+           "Unexpected custom legalisation");
+    // On LSX platforms, rounding from v2f64 to v4f32 (after legalization from
+    // v2f32) is scalarized. Add a customized v2f32 widening to convert it into
+    // a target-specific LoongArchISD::VFCVT to optimize it.
+    if (VT == MVT::v2f32) {
+      SDValue Src = N->getOperand(0);
+      SDValue Undef = DAG.getUNDEF(Src.getValueType());
+      SDValue Dst =
+          DAG.getNode(LoongArchISD::VFCVT, DL, MVT::v4f32, Undef, Src);
+      Results.push_back(Dst);
+    }
+    break;
+  }
   case ISD::BSWAP: {
     SDValue Src = N->getOperand(0);
     assert((VT == MVT::i16 || VT == MVT::i32) &&
@@ -6679,6 +6792,20 @@ performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue
+performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
+                             TargetLowering::DAGCombinerInfo &DCI,
+                             const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  if (VT.isVector() && N->getNumOperands() == 2)
+    if (SDValue R = combineFP_ROUND(SDValue(N, 0), DL, DAG, Subtarget))
+      return R;
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -6714,6 +6841,12 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case ISD::EXTRACT_VECTOR_ELT:
     return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
+  case ISD::CONCAT_VECTORS:
+    return performCONCAT_VECTORSCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::VPACKEV:
+    if (SDValue Result =
+            combineFP_ROUND(SDValue(N, 0), SDLoc(N), DAG, Subtarget))
+      return Result;
   }
   return SDValue();
 }
@@ -7512,6 +7645,7 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(VANY_NONZERO)
     NODE_NAME_CASE(FRECIPE)
     NODE_NAME_CASE(FRSQRTE)
+    NODE_NAME_CASE(VFCVT)
     NODE_NAME_CASE(VSLLI)
     NODE_NAME_CASE(VSRLI)
     NODE_NAME_CASE(VBSLL)
