@@ -2646,8 +2646,7 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
     // TODO: It should be possible to perform a replacement by computing the
     // last value of the IV based on the bounds and the step.
     if (val == forOp.getInductionVar()) {
-      OpFoldResult lastTripIv = getConstantInductionVarForLastTrip(forOp);
-      if (lastTripIv) {
+      if (OpFoldResult lastTripIv = getConstantInductionVarForLastTrip(forOp)) {
         replacements.push_back(lastTripIv);
         continue;
       } else {
