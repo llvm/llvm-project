@@ -14,6 +14,8 @@
 #include <cassert>
 #include <string>
 
+#include "test_macros.h"
+
 TEST_CONSTEXPR_CXX26
 bool test() {
   typedef std::multimap<int, std::string> map_type;
