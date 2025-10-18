@@ -96,9 +96,9 @@ ensurePayloadIsSeparateFromTransform(transform::TransformOpInterface transform,
 // AlternativesOp
 //===----------------------------------------------------------------------===//
 
-OperandRange
-transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  if (!point.isParent() && getOperation()->getNumOperands() == 1)
+OperandRange transform::AlternativesOp::getEntrySuccessorOperands(
+    RegionSuccessor successor) {
+  if (!successor.isParent() && getOperation()->getNumOperands() == 1)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
                       getOperation()->operand_end());
@@ -107,15 +107,18 @@ transform::AlternativesOp::getEntrySuccessorOperands(RegionBranchPoint point) {
 void transform::AlternativesOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   for (Region &alternative : llvm::drop_begin(
-           getAlternatives(),
-           point.isParent() ? 0
-                            : point.getRegionOrNull()->getRegionNumber() + 1)) {
+           getAlternatives(), point.isParent()
+                                  ? 0
+                                  : point.getTerminatorPredecessorOrNull()
+                                            ->getParentRegion()
+                                            ->getRegionNumber() +
+                                        1)) {
     regions.emplace_back(&alternative, !getOperands().empty()
                                            ? alternative.getArguments()
                                            : Block::BlockArgListType());
   }
   if (!point.isParent())
-    regions.emplace_back(getOperation()->getResults());
+    regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::AlternativesOp::getRegionInvocationBounds(
@@ -1740,16 +1743,18 @@ void transform::ForeachOp::getSuccessorRegions(
   }
 
   // Branch back to the region or the parent.
-  assert(point == getBody() && "unexpected region index");
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
   regions.emplace_back(bodyRegion, bodyRegion->getArguments());
-  regions.emplace_back();
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 OperandRange
-transform::ForeachOp::getEntrySuccessorOperands(RegionBranchPoint point) {
+transform::ForeachOp::getEntrySuccessorOperands(RegionSuccessor successor) {
   // Each block argument handle is mapped to a subset (one op to be precise)
   // of the payload of the corresponding `targets` operand of ForeachOp.
-  assert(point == getBody() && "unexpected region index");
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   return getOperation()->getOperands();
 }
 
@@ -2948,8 +2953,8 @@ void transform::SequenceOp::getEffects(
 }
 
 OperandRange
-transform::SequenceOp::getEntrySuccessorOperands(RegionBranchPoint point) {
-  assert(point == getBody() && "unexpected region index");
+transform::SequenceOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getBody() && "unexpected region index");
   if (getOperation()->getNumOperands() > 0)
     return getOperation()->getOperands();
   return OperandRange(getOperation()->operand_end(),
@@ -2966,8 +2971,10 @@ void transform::SequenceOp::getSuccessorRegions(
     return;
   }
 
-  assert(point == getBody() && "unexpected region index");
-  regions.emplace_back(getOperation()->getResults());
+  assert(point.getTerminatorPredecessorOrNull()->getParentRegion() ==
+             &getBody() &&
+         "unexpected region index");
+  regions.emplace_back(getOperation(), getOperation()->getResults());
 }
 
 void transform::SequenceOp::getRegionInvocationBounds(
