@@ -5725,6 +5725,64 @@ static bool checkImmutableBoundsAttributedObjects(
   return IsGroupSafe;
 }
 
+// Checks if the bounds-attributed group has missing or duplicated assignments.
+// Each assignable decl in the group must be assigned exactly once.
+//
+// For example:
+//   void foo(int *__counted_by(a + b) p, int a, int b) {
+//     p = ...;
+//     p = ...; // duplicated
+//     a = ...;
+//     // b missing
+//   }
+// Note that the group consists of a, b, and p.
+//
+// The function returns true iff each assignable decl in the group is assigned
+// exactly once.
+static bool checkMissingAndDuplicatedAssignments(
+    const BoundsAttributedAssignmentGroup &Group,
+    UnsafeBufferUsageHandler &Handler, ASTContext &Ctx) {
+  llvm::SmallDenseMap<const ValueDecl *, const BinaryOperator *, 4>
+      AssignedDecls;
+
+  DependentDeclSetTy RequiredDecls = Group.DeclClosure;
+  for (const ValueDecl *VD : Group.DeclClosure) {
+    if (VD->isDependentCountWithoutDeref() &&
+        VD->isDependentCountThatIsUsedInInoutPointer()) {
+      // This value is immutable, so it's not required to be assigned.
+      RequiredDecls.erase(VD);
+    }
+  }
+
+  DependentDeclSetTy MissingDecls = RequiredDecls;
+
+  bool IsGroupSafe = true;
+
+  for (size_t I = 0, N = Group.Assignments.size(); I < N; ++I) {
+    const BinaryOperator *Assign = Group.Assignments[I];
+    const ValueDecl *VD = Group.AssignedObjects[I].Decl;
+
+    const auto [It, Inserted] = AssignedDecls.insert({VD, Assign});
+    if (Inserted)
+      MissingDecls.erase(VD);
+    else {
+      const BinaryOperator *PrevAssign = It->second;
+      Handler.handleDuplicatedAssignment(Assign, PrevAssign, VD,
+                                         /*IsRelatedToDecl=*/false, Ctx);
+      IsGroupSafe = false;
+    }
+  }
+
+  if (!MissingDecls.empty()) {
+    const Expr *LastAssign = Group.Assignments.back();
+    Handler.handleMissingAssignments(LastAssign, RequiredDecls, MissingDecls,
+                                     /*IsRelatedToDecl=*/false, Ctx);
+    IsGroupSafe = false;
+  }
+
+  return IsGroupSafe;
+}
+
 // Checks if the bounds-attributed group is safe. This function returns false
 // iff the assignment group is unsafe and diagnostics have been emitted.
 static bool
@@ -5732,7 +5790,8 @@ checkBoundsAttributedGroup(const BoundsAttributedAssignmentGroup &Group,
                            UnsafeBufferUsageHandler &Handler, ASTContext &Ctx) {
   if (!checkImmutableBoundsAttributedObjects(Group, Handler, Ctx))
     return false;
-
+  if (!checkMissingAndDuplicatedAssignments(Group, Handler, Ctx))
+    return false;
   // TODO: Add more checks.
   return true;
 }

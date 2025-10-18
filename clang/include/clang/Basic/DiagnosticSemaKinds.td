@@ -14121,6 +14121,12 @@ def warn_cannot_assign_to_immutable_bounds_attributed_object : Warning<
   "its type depends on an inout dependent count|"
   "it's used as dependent count in an inout count-attributed pointer"
   "}2">, InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_missing_assignments_in_bounds_attributed_group : Warning<
+  "bounds-attributed group requires assigning '%0', assignments to '%1' missing">,
+  InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_duplicated_assignment_in_bounds_attributed_group : Warning<
+  "duplicated assignment to %select{variable|parameter|member}0 %1 in "
+  "bounds-attributed group">, InGroup<UnsafeBufferUsage>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

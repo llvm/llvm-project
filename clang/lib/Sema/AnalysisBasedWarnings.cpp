@@ -2633,6 +2633,48 @@ public:
            diag::warn_cannot_assign_to_immutable_bounds_attributed_object)
         << getBoundsAttributedObjectKind(VD) << VD << Kind;
   }
+
+  static llvm::SmallString<64>
+  DeclSetToStr(const llvm::SmallPtrSetImpl<const ValueDecl *> &Set) {
+    llvm::SmallVector<const ValueDecl *, 4> V(Set.begin(), Set.end());
+    llvm::sort(V.begin(), V.end(), [](const ValueDecl *A, const ValueDecl *B) {
+      return A->getName().compare(B->getName()) < 0;
+    });
+    llvm::SmallString<64> Str;
+    for (const ValueDecl *VD : V) {
+      if (!Str.empty())
+        Str += ", ";
+      Str += VD->getName();
+    }
+    return Str;
+  }
+
+  void handleMissingAssignments(
+      const Expr *LastAssignInGroup,
+      const llvm::SmallPtrSetImpl<const ValueDecl *> &Required,
+      const llvm::SmallPtrSetImpl<const ValueDecl *> &Missing,
+      bool IsRelatedToDecl, ASTContext &Ctx) override {
+
+    llvm::SmallString<64> RequiredAssignments = DeclSetToStr(Required);
+    llvm::SmallString<64> MissingAssignments = DeclSetToStr(Missing);
+    auto Loc =
+        CharSourceRange::getTokenRange(LastAssignInGroup->getSourceRange())
+            .getEnd();
+
+    S.Diag(Loc, diag::warn_missing_assignments_in_bounds_attributed_group)
+        << RequiredAssignments << MissingAssignments;
+  }
+
+  void handleDuplicatedAssignment(const BinaryOperator *Assign,
+                                  const BinaryOperator *PrevAssign,
+                                  const ValueDecl *VD, bool IsRelatedToDecl,
+                                  ASTContext &Ctx) override {
+    S.Diag(Assign->getOperatorLoc(),
+           diag::warn_duplicated_assignment_in_bounds_attributed_group)
+        << getBoundsAttributedObjectKind(VD) << VD;
+    S.Diag(PrevAssign->getOperatorLoc(),
+           diag::note_bounds_safety_previous_assignment);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,

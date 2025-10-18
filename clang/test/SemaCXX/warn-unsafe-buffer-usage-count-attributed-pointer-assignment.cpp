@@ -211,6 +211,134 @@ class immutable_class {
   }
 };
 
+// Missing assignments
+
+void missing_ptr(int *__counted_by(count) p, int count) {
+  count = 0; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+}
+
+void missing_count(int *__counted_by(count) p, int count) {
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+}
+
+void missing_structure(int *__counted_by(count) p, int count) {
+  {
+    p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  }
+  {
+    count = 0;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+}
+
+void missing_structure2(int *__counted_by(count) p, int count) {
+  p = nullptr;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  {
+    count = 0;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+}
+
+void missing_structure3(int *__counted_by(count) p, int count) {
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  if (count > 0) {
+    count = 0; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+  }
+}
+
+void missing_unrelated(int *__counted_by(count) p, int count, int *__counted_by(len) q, int len) {
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  len = 0;     // expected-warning{{bounds-attributed group requires assigning 'len, q', assignments to 'q' missing}}
+}
+
+void missing_complex_count1(int *__counted_by(a + b) p, int a, int b) {
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'a, b, p', assignments to 'a, b' missing}}
+}
+
+void missing_complex_count2(int *__counted_by(a + b) p, int a, int b) {
+  p = nullptr;
+  a = 0; // expected-warning{{bounds-attributed group requires assigning 'a, b, p', assignments to 'b' missing}}
+}
+
+void missing_complex_count3(int *__counted_by(a + b) p, int a, int b) {
+  b = 0;
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'a, b, p', assignments to 'a' missing}}
+}
+
+void missing_complex_count4(int *__counted_by(a + b) p, int a, int b) {
+  a = 0;
+  b = 0; // expected-warning{{bounds-attributed group requires assigning 'a, b, p', assignments to 'p' missing}}
+}
+
+void missing_complex_ptr1(int *__counted_by(count) p, int *__counted_by(count) q, int count) {
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p, q', assignments to 'count, q' missing}}
+}
+
+void missing_complex_ptr2(int *__counted_by(count) p, int *__counted_by(count) q, int count) {
+  p = nullptr;
+  q = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p, q', assignments to 'count' missing}}
+}
+
+void missing_complex_ptr3(int *__counted_by(count) p, int *__counted_by(count) q, int count) {
+  count = 0;
+  p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p, q', assignments to 'q' missing}}
+}
+
+void missing_complex_ptr4(int *__counted_by(count) p, int *__counted_by(count) q, int count) {
+  q = nullptr;
+  count = 0; // expected-warning{{bounds-attributed group requires assigning 'count, p, q', assignments to 'p' missing}}
+}
+
+// Missing assignments in struct
+
+void missing_struct_ptr(cb *c) {
+  c->count = 0; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+}
+
+void missing_struct_count(cb *c) {
+  c->p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+}
+
+void missing_struct_unrelated(cb *c, cb *d) {
+  c->p = nullptr; // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'count' missing}}
+  d->count = 0;   // expected-warning{{bounds-attributed group requires assigning 'count, p', assignments to 'p' missing}}
+}
+
+// Duplicated assignments
+
+void duplicated_ptr(int *__counted_by(count) p, int count) {
+  p = nullptr; // expected-note{{previously assigned here}}
+  p = nullptr; // expected-warning{{duplicated assignment to parameter 'p' in bounds-attributed group}}
+  count = 0;
+}
+
+void duplicated_ptr2(int *__counted_by(count) p, int count) {
+  p = nullptr; // expected-note{{previously assigned here}}
+  count = 0;
+  p = nullptr; // expected-warning{{duplicated assignment to parameter 'p' in bounds-attributed group}}
+}
+
+void duplicated_count(int *__counted_by(count) p, int count) {
+  p = nullptr;
+  count = 0; // expected-note{{previously assigned here}}
+  count = 0; // expected-warning{{duplicated assignment to parameter 'count' in bounds-attributed group}}
+}
+
+void duplicated_count2(int *__counted_by(count) p, int count) {
+  count = 0; // expected-note{{previously assigned here}}
+  p = nullptr;
+  count = 0; // expected-warning{{duplicated assignment to parameter 'count' in bounds-attributed group}}
+}
+
+void duplicated_complex(int *__counted_by(a + b) p,
+                        int *__counted_by(a + b + c) q,
+                        int a, int b, int c) {
+  p = nullptr;
+  q = nullptr; // expected-note{{previously assigned here}}
+  a = 0;
+  b = 0;
+  c = 0;
+  q = nullptr; // expected-warning{{duplicated assignment to parameter 'q' in bounds-attributed group}}
+}
+
 // Assigns to bounds-attributed that we consider too complex to analyze.
 
 void too_complex_assign_to_ptr(int *__counted_by(count) p, int count, int *q) {
