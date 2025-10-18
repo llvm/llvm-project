@@ -448,6 +448,20 @@ public:
     return nullptr;
   }
 
+  virtual llvm::Type *
+  getHLSLPadding(CodeGenModule &CGM, CharUnits NumBytes) const {
+    return llvm::ArrayType::get(llvm::Type::getInt8Ty(CGM.getLLVMContext()),
+                                NumBytes.getQuantity());
+  }
+
+  virtual bool isHLSLPadding(llvm::Type *Ty) const {
+    // TODO: Do we actually want to default these functions like this?
+    if (auto *AT = dyn_cast<llvm::ArrayType>(Ty))
+      if (AT->getElementType() == llvm::Type::getInt8Ty(Ty->getContext()))
+        return true;
+    return false;
+  }
+
   // Set the Branch Protection Attributes of the Function accordingly to the
   // BPI. Remove attributes that contradict with current BPI.
   static void

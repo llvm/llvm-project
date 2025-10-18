@@ -255,6 +255,12 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   if (!ContainedType)
     return;
 
+  SmallVector<uint64_t> ArrayDimensions;
+  while (ArrayType *AT = dyn_cast<ArrayType>(ContainedType)) {
+    ArrayDimensions.push_back(AT->getNumElements());
+    ContainedType = AT->getElementType();
+  }
+
   StringRef ElementName;
   ElementType ET = toDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
@@ -271,6 +277,8 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   DestStream << "<" << ElementName;
   if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
     DestStream << VTy->getNumElements();
+  for (uint64_t Dim : ArrayDimensions)
+    DestStream << "[" << Dim << "]";
   DestStream << ">";
 }
 
@@ -370,13 +378,6 @@ StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
     if (!CBufferName.empty()) {
       Name.append(".");
       Name.append(CBufferName);
-    }
-
-    // TODO: Remove this when we update the frontend to use explicit padding.
-    if (LayoutExtType *LayoutType =
-            dyn_cast<LayoutExtType>(RTy->getResourceType())) {
-      StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
-      return StructType::create(Ty->elements(), Name);
     }
 
     return getOrCreateElementStruct(
@@ -490,13 +491,7 @@ ResourceTypeInfo::UAVInfo ResourceTypeInfo::getUAV() const {
 
 uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
   assert(isCBuffer() && "Not a CBuffer");
-
   Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
-
-  // TODO: Remove this when we update the frontend to use explicit padding.
-  if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
-    return LayoutTy->getSize();
-
   return DL.getTypeAllocSize(ElTy);
 }
 
