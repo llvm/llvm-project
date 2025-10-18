@@ -104,6 +104,12 @@ void ParameterPack(Args... args) {
 }
 
 template <typename... Args>
+void ParameterPackConst(Args const... args) {
+  // CHECK-MESSAGES: [[@LINE-1]]:39: warning: the const qualified parameter 'args' of type 'const ExpensiveToCopyType'
+  // CHECK-FIXES: void ParameterPackConst(Args const&... args) {
+}
+
+template <typename... Args>
 void ParameterPackWithParams(const ExpensiveToCopyType E1, ExpensiveToCopyType E2, Args... args) {
   // CHECK-MESSAGES: [[@LINE-1]]:56: warning: the const qualified parameter 'E1'
   // CHECK-MESSAGES: [[@LINE-2]]:80: warning: the parameter 'E2'
@@ -117,6 +123,7 @@ void PackWithNonExpensive(int x, Args... args) {}
 void instantiatedParameterPack() {
   ExpensiveToCopyType E;
   ParameterPack(E);
+  ParameterPackConst(E);
   ParameterPackWithParams(E, E, E);
   PackWithNonExpensive(5, 5);
 }
