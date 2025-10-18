@@ -30968,6 +30968,76 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getNode(X86ISD::PACKUS, dl, VT, LoR, HiR);
   }
 
+  if (VT == MVT::v64i8 && Subtarget.canExtendTo512BW()) {
+    // On AVX512BW, we can use variable 16-bit shifts to implement variable
+    // 8-bit shifts. For this, we split the input into two vectors, RLo and RHi.
+    // The i-th lane of RLo contains the (2*i)-th lane of R, and the i-th lane
+    // of RHi contains the (2*i+1)-th lane of R. After shifting, these vectors
+    // can efficiently be merged together using a masked move.
+    MVT ExtVT = MVT::v32i16;
+
+    // When used in a vectorshuffle, selects even-index lanes from the first
+    // vector and odd index lanes from the second vector.
+    SmallVector<int, 64> InterleaveIndices;
+    for (unsigned i = 0; i < 64; ++i) {
+      unsigned offset = (i % 2 == 0) ? 0 : 64;
+      InterleaveIndices.push_back(i + offset);
+    }
+
+    SDValue zero = DAG.getConstant(0, dl, VT);
+    SDValue eight = DAG.getTargetConstant(8, dl, MVT::i8);
+    SDValue RLo, RHi;
+
+    // Isolate lower and upper lanes of Amt by shuffling zeros into AmtLo and
+    // right shifting AmtHi.
+    SDValue AmtLo = DAG.getBitcast(
+        ExtVT, DAG.getVectorShuffle(VT, dl, Amt, zero, InterleaveIndices));
+    SDValue AmtHi = DAG.getNode(X86ISD::VSRLI, dl, ExtVT,
+                                DAG.getBitcast(ExtVT, Amt), eight);
+    unsigned int ShiftOp;
+    switch (Opc) {
+    case ISD::SHL:
+      // Because we shift left, no bits from the high half can influence the low
+      // half, so we don't need to mask RLo. We do however need to mask RHi, to
+      // prevent high bits of an even lane overflowing into low bits of an odd
+      // lane.
+      RLo = DAG.getBitcast(ExtVT, R);
+      RHi = DAG.getBitcast(
+          ExtVT, DAG.getVectorShuffle(VT, dl, zero, R, InterleaveIndices));
+      ShiftOp = X86ISD::VSHLV;
+      break;
+    case ISD::SRL:
+      // Same idea as above, but this time we need to make sure no low bits of
+      // an odd lane can overflow into high bits of an even lane.
+      RLo = DAG.getBitcast(
+          ExtVT, DAG.getVectorShuffle(VT, dl, R, zero, InterleaveIndices));
+      RHi = DAG.getBitcast(ExtVT, R);
+      ShiftOp = X86ISD::VSRLV;
+      break;
+    case ISD::SRA:
+      // For arithmetic right shifts, we want to sign extend each even lane of R
+      // such that the upper half of the corresponding lane of RLo is 0 or -1
+      // depending on the sign bit of the original lane. We do this using 2
+      // immediate shifts.
+      RHi = DAG.getBitcast(ExtVT, R);
+      RLo = DAG.getNode(X86ISD::VSHLI, dl, ExtVT, RHi, eight);
+      RLo = DAG.getNode(X86ISD::VSRAI, dl, ExtVT, RLo, eight);
+      ShiftOp = X86ISD::VSRAV;
+      break;
+    default:
+      llvm_unreachable("Unexpected Shift Op");
+      return SDValue();
+    }
+
+    SDValue ShiftedLo =
+        DAG.getBitcast(VT, DAG.getNode(ShiftOp, dl, ExtVT, RLo, AmtLo));
+    SDValue ShiftedHi =
+        DAG.getBitcast(VT, DAG.getNode(ShiftOp, dl, ExtVT, RHi, AmtHi));
+
+    return DAG.getVectorShuffle(VT, dl, ShiftedLo, ShiftedHi,
+                                InterleaveIndices);
+  }
+
   if (VT == MVT::v16i8 ||
       (VT == MVT::v32i8 && Subtarget.hasInt256() && !Subtarget.hasXOP()) ||
       (VT == MVT::v64i8 && Subtarget.hasBWI())) {
