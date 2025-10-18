@@ -1452,6 +1452,66 @@ let WaveSizePredicate = isWave64 in {
 
 }
 
+// GFX11 RDNA3 WMMA patterns for bare intrinsic calls (no explicit modifiers)
+// Match intrinsics directly and provide zero modifiers to the instruction
+// High AddedComplexity ensures these beat the broken WMMARegularPat patterns
+
+// Wave32 patterns (RDNA3 native wave size)
+let SubtargetPredicate = isGFX11Only, WaveSizePredicate = isWave32 in {
+
+  // FP16 WMMA: <8 x float> = wmma(<16 x half>, <16 x half>, <8 x float>)
+  def : GCNPat <
+    (v8f32 (int_amdgcn_wmma_f32_16x16x16_f16 v16f16:$a, v16f16:$b, v8f32:$c)),
+    (v8f32 (V_WMMA_F32_16X16X16_F16_twoaddr_w32 (i32 0), v16f16:$a, (i32 0), v16f16:$b, (i32 0), v8f32:$c))
+  > {
+    let AddedComplexity = 10000;
+  }
+
+  // BF16 WMMA: <8 x float> = wmma(<16 x i16>, <16 x i16>, <8 x float>)
+  def : GCNPat <
+    (v8f32 (int_amdgcn_wmma_f32_16x16x16_bf16 v16i16:$a, v16i16:$b, v8f32:$c)),
+    (v8f32 (V_WMMA_F32_16X16X16_BF16_twoaddr_w32 (i32 0), v16i16:$a, (i32 0), v16i16:$b, (i32 0), v8f32:$c))
+  > {
+    let AddedComplexity = 10000;
+  }
+
+  // INT8 WMMA: <8 x i32> = wmma(i1, <4 x i32>, i1, <4 x i32>, <8 x i32>, i1)
+  def : GCNPat <
+    (v8i32 (int_amdgcn_wmma_i32_16x16x16_iu8 i1:$a_neg, v4i32:$a, i1:$b_neg, v4i32:$b, v8i32:$c, i1:$clamp)),
+    (v8i32 (V_WMMA_I32_16X16X16_IU8_twoaddr_w32 (VOP3PModsNeg $a_neg), v4i32:$a, (VOP3PModsNeg $b_neg), v4i32:$b, (i32 8), v8i32:$c, i1:$clamp))
+  > {
+    let AddedComplexity = 10000;
+  }
+
+  // INT4 WMMA: <8 x i32> = wmma(i1, <2 x i32>, i1, <2 x i32>, <8 x i32>, i1)
+  def : GCNPat <
+    (v8i32 (int_amdgcn_wmma_i32_16x16x16_iu4 i1:$a_neg, v2i32:$a, i1:$b_neg, v2i32:$b, v8i32:$c, i1:$clamp)),
+    (v8i32 (V_WMMA_I32_16X16X16_IU4_twoaddr_w32 (VOP3PModsNeg $a_neg), v2i32:$a, (VOP3PModsNeg $b_neg), v2i32:$b, (i32 8), v8i32:$c, i1:$clamp))
+  > {
+    let AddedComplexity = 10000;
+  }
+}
+
+// Wave64 patterns (compatibility mode)
+let SubtargetPredicate = isGFX11Only, WaveSizePredicate = isWave64 in {
+
+  // FP16 WMMA Wave64: <4 x float> = wmma(<16 x half>, <16 x half>, <4 x float>)
+  def : GCNPat <
+    (v4f32 (int_amdgcn_wmma_f32_16x16x16_f16 v16f16:$a, v16f16:$b, v4f32:$c)),
+    (v4f32 (V_WMMA_F32_16X16X16_F16_twoaddr_w64 (i32 0), v16f16:$a, (i32 0), v16f16:$b, (i32 0), v4f32:$c))
+  > {
+    let AddedComplexity = 10000;
+  }
+
+  // BF16 WMMA Wave64: <4 x float> = wmma(<16 x i16>, <16 x i16>, <4 x float>)
+  def : GCNPat <
+    (v4f32 (int_amdgcn_wmma_f32_16x16x16_bf16 v16i16:$a, v16i16:$b, v4f32:$c)),
+    (v4f32 (V_WMMA_F32_16X16X16_BF16_twoaddr_w64 (i32 0), v16i16:$a, (i32 0), v16i16:$b, (i32 0), v4f32:$c))
+  > {
+    let AddedComplexity = 10000;
+  }
+}
+
 class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                         bit _IsIU, bit _IsFP8BF8XF32, bit _Has_ImodOp = 0,
                         bit _HasMatrixFMT = 0, bit _HasMatrixScale = 0,
