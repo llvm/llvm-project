@@ -453,19 +453,6 @@ let Predicates = [HasStdExtZvfbfmin] in {
                                  fvti.Vector, fvti.Vector, fvti.Mask,
                                  fvti.Log2SEW, fvti.LMul, fvti.RegClass,
                                  fvti.RegClass, fvti.RegClass>;
-    defm : VPatBinaryCarryInTAIL<"int_riscv_vfmerge", "PseudoVFMERGE",
-                                 "V"#fvti.ScalarSuffix#"M",
-                                 fvti.Vector,
-                                 fvti.Vector, fvti.Scalar, fvti.Mask,
-                                 fvti.Log2SEW, fvti.LMul, fvti.RegClass,
-                                 fvti.RegClass, fvti.ScalarRegClass>;
-    defvar instr = !cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX);
-    def : Pat<(fvti.Vector (int_riscv_vfmerge (fvti.Vector fvti.RegClass:$passthru),
-                                              (fvti.Vector fvti.RegClass:$rs2),
-                                              (fvti.Scalar (fpimm0)),
-                                              (fvti.Mask VMV0:$vm), VLOpFrag)),
-              (instr fvti.RegClass:$passthru, fvti.RegClass:$rs2, 0,
-                     (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW)>;
 
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,
@@ -488,15 +475,6 @@ let Predicates = [HasStdExtZvfbfmin] in {
               (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
-                                    (SplatFPOp fvti.ScalarRegClass:$rs1),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2,
-                   (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                   (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
                                             fvti.RegClass:$rs1,
@@ -525,16 +503,6 @@ let Predicates = [HasStdExtZvfbfmin] in {
               (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    fvti.RegClass:$passthru, fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm),
                    GPR:$vl, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
-                                            (SplatFPOp fvti.ScalarRegClass:$rs1),
-                                            fvti.RegClass:$rs2,
-                                            fvti.RegClass:$passthru,
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
-                   fvti.RegClass:$passthru, fvti.RegClass:$rs2,
-                   (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                   (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW)>;
 
     def : Pat<(fvti.Vector
                (riscv_vrgather_vv_vl fvti.RegClass:$rs2,
