@@ -190,6 +190,9 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Implemented the ``defer`` Technical Specification (n3589); it is enabled
+  in C mode by passing ``-fdefer-ts``.
+
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - No longer triggering ``-Wstatic-in-inline`` in C2y mode; use of a static

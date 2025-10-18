@@ -114,6 +114,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
+  case Stmt::DeferStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
     llvm_unreachable("should have emitted these statements as simple");
@@ -538,6 +539,9 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
     break;
   case Stmt::CaseStmtClass:
     EmitCaseStmt(cast<CaseStmt>(*S), Attrs);
+    break;
+  case Stmt::DeferStmtClass:
+    EmitDeferStmt(cast<DeferStmt>(*S));
     break;
   case Stmt::SEHLeaveStmtClass:
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
@@ -2001,6 +2005,21 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
   EmitBlockWithFallThrough(DefaultBlock, &S);
 
   EmitStmt(S.getSubStmt());
+}
+
+namespace {
+struct EmitDeferredStatement final : EHScopeStack::Cleanup {
+  const DeferStmt &Stmt;
+  EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
+
+  void Emit(CodeGenFunction &CGF, Flags) override {
+    CGF.EmitStmt(Stmt.getBody());
+  }
+};
+} // namespace
+
+void CodeGenFunction::EmitDeferStmt(const DeferStmt &S) {
+  EHStack.pushCleanup<EmitDeferredStatement>(NormalAndEHCleanup, &S);
 }
 
 /// CollectStatementsForCase - Given the body of a 'switch' statement and a
