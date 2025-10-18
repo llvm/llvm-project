@@ -685,6 +685,13 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
+  if (Module *CurrentModule = PP.getCurrentModuleImplementation()) {
+    if (OptionalFileEntryRef CurrentModuleMap =
+            PP.getHeaderSearchInfo().getModuleMap().getModuleMapFileForUniquing(
+                CurrentModule))
+      MDC.addFileDep(CurrentModuleMap->getNameAsRequested());
+  }
+
   for (const Module *M :
        MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
     if (!MDC.isPrebuiltModule(M))
