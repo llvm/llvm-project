@@ -130,44 +130,46 @@ struct fltSemantics {
   bool hasSignBitInMSB = true;
 };
 
-static constexpr fltSemantics semIEEEhalf = {15, -14, 11, 16};
-static constexpr fltSemantics semBFloat = {127, -126, 8, 16};
-static constexpr fltSemantics semIEEEsingle = {127, -126, 24, 32};
-static constexpr fltSemantics semIEEEdouble = {1023, -1022, 53, 64};
-static constexpr fltSemantics semIEEEquad = {16383, -16382, 113, 128};
-static constexpr fltSemantics semFloat8E5M2 = {15, -14, 3, 8};
-static constexpr fltSemantics semFloat8E5M2FNUZ = {
+constexpr fltSemantics APFloatBase::semIEEEhalf = {15, -14, 11, 16};
+constexpr fltSemantics APFloatBase::semBFloat = {127, -126, 8, 16};
+constexpr fltSemantics APFloatBase::semIEEEsingle = {127, -126, 24, 32};
+constexpr fltSemantics APFloatBase::semIEEEdouble = {1023, -1022, 53, 64};
+constexpr fltSemantics APFloatBase::semIEEEquad = {16383, -16382, 113, 128};
+constexpr fltSemantics APFloatBase::semFloat8E5M2 = {15, -14, 3, 8};
+constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
     15, -15, 3, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
-static constexpr fltSemantics semFloat8E4M3 = {7, -6, 4, 8};
-static constexpr fltSemantics semFloat8E4M3FN = {
+constexpr fltSemantics APFloatBase::semFloat8E4M3 = {7, -6, 4, 8};
+constexpr fltSemantics APFloatBase::semFloat8E4M3FN = {
     8, -6, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::AllOnes};
-static constexpr fltSemantics semFloat8E4M3FNUZ = {
+constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
     7, -7, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
-static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
+constexpr fltSemantics APFloatBase::semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
-static constexpr fltSemantics semFloat8E3M4 = {3, -2, 5, 8};
-static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
-static constexpr fltSemantics semFloat8E8M0FNU = {127,
-                                                  -127,
-                                                  1,
-                                                  8,
-                                                  fltNonfiniteBehavior::NanOnly,
-                                                  fltNanEncoding::AllOnes,
-                                                  false,
-                                                  false,
-                                                  false};
+constexpr fltSemantics APFloatBase::semFloat8E3M4 = {3, -2, 5, 8};
+constexpr fltSemantics APFloatBase::semFloatTF32 = {127, -126, 11, 19};
+constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
+    127,
+    -127,
+    1,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    false,
+    false,
+    false};
 
-static constexpr fltSemantics semFloat6E3M2FN = {
+constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
     4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
-static constexpr fltSemantics semFloat6E2M3FN = {
+constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
     2, 0, 4, 6, fltNonfiniteBehavior::FiniteOnly};
-static constexpr fltSemantics semFloat4E2M1FN = {
+constexpr fltSemantics APFloatBase::semFloat4E2M1FN = {
     2, 0, 2, 4, fltNonfiniteBehavior::FiniteOnly};
-static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
-static constexpr fltSemantics semBogus = {0, 0, 0, 0};
-static constexpr fltSemantics semPPCDoubleDouble = {-1, 0, 0, 128};
-static constexpr fltSemantics semPPCDoubleDoubleLegacy = {1023, -1022 + 53,
-                                                          53 + 53, 128};
+constexpr fltSemantics APFloatBase::semX87DoubleExtended = {16383, -16382, 64,
+                                                            80};
+constexpr fltSemantics APFloatBase::semBogus = {0, 0, 0, 0};
+constexpr fltSemantics APFloatBase::semPPCDoubleDouble = {-1, 0, 0, 128};
+constexpr fltSemantics APFloatBase::semPPCDoubleDoubleLegacy = {
+    1023, -1022 + 53, 53 + 53, 128};
 
 const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
   switch (S) {
@@ -260,36 +262,6 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
   else
     llvm_unreachable("Unknown floating semantics");
 }
-
-const fltSemantics &APFloatBase::IEEEhalf() { return semIEEEhalf; }
-const fltSemantics &APFloatBase::BFloat() { return semBFloat; }
-const fltSemantics &APFloatBase::IEEEsingle() { return semIEEEsingle; }
-const fltSemantics &APFloatBase::IEEEdouble() { return semIEEEdouble; }
-const fltSemantics &APFloatBase::IEEEquad() { return semIEEEquad; }
-const fltSemantics &APFloatBase::PPCDoubleDouble() {
-  return semPPCDoubleDouble;
-}
-const fltSemantics &APFloatBase::PPCDoubleDoubleLegacy() {
-  return semPPCDoubleDoubleLegacy;
-}
-const fltSemantics &APFloatBase::Float8E5M2() { return semFloat8E5M2; }
-const fltSemantics &APFloatBase::Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
-const fltSemantics &APFloatBase::Float8E4M3() { return semFloat8E4M3; }
-const fltSemantics &APFloatBase::Float8E4M3FN() { return semFloat8E4M3FN; }
-const fltSemantics &APFloatBase::Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
-const fltSemantics &APFloatBase::Float8E4M3B11FNUZ() {
-  return semFloat8E4M3B11FNUZ;
-}
-const fltSemantics &APFloatBase::Float8E3M4() { return semFloat8E3M4; }
-const fltSemantics &APFloatBase::FloatTF32() { return semFloatTF32; }
-const fltSemantics &APFloatBase::Float8E8M0FNU() { return semFloat8E8M0FNU; }
-const fltSemantics &APFloatBase::Float6E3M2FN() { return semFloat6E3M2FN; }
-const fltSemantics &APFloatBase::Float6E2M3FN() { return semFloat6E2M3FN; }
-const fltSemantics &APFloatBase::Float4E2M1FN() { return semFloat4E2M1FN; }
-const fltSemantics &APFloatBase::x87DoubleExtended() {
-  return semX87DoubleExtended;
-}
-const fltSemantics &APFloatBase::Bogus() { return semBogus; }
 
 bool APFloatBase::isRepresentableBy(const fltSemantics &A,
                                     const fltSemantics &B) {
@@ -1029,7 +1001,7 @@ void IEEEFloat::makeNaN(bool SNaN, bool Negative, const APInt *fill) {
   // For x87 extended precision, we want to make a NaN, not a
   // pseudo-NaN.  Maybe we should expose the ability to make
   // pseudo-NaNs?
-  if (semantics == &semX87DoubleExtended)
+  if (semantics == &APFloatBase::semX87DoubleExtended)
     APInt::tcSetBit(significand, QNaNBit + 1);
 }
 
@@ -1054,7 +1026,7 @@ IEEEFloat &IEEEFloat::operator=(IEEEFloat &&rhs) {
   category = rhs.category;
   sign = rhs.sign;
 
-  rhs.semantics = &semBogus;
+  rhs.semantics = &APFloatBase::semBogus;
   return *this;
 }
 
@@ -1247,7 +1219,7 @@ IEEEFloat::IEEEFloat(const IEEEFloat &rhs) {
   assign(rhs);
 }
 
-IEEEFloat::IEEEFloat(IEEEFloat &&rhs) : semantics(&semBogus) {
+IEEEFloat::IEEEFloat(IEEEFloat &&rhs) : semantics(&APFloatBase::semBogus) {
   *this = std::move(rhs);
 }
 
@@ -2607,8 +2579,8 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
   shift = toSemantics.precision - fromSemantics.precision;
 
   bool X86SpecialNan = false;
-  if (&fromSemantics == &semX87DoubleExtended &&
-      &toSemantics != &semX87DoubleExtended && category == fcNaN &&
+  if (&fromSemantics == &APFloatBase::semX87DoubleExtended &&
+      &toSemantics != &APFloatBase::semX87DoubleExtended && category == fcNaN &&
       (!(*significandParts() & 0x8000000000000000ULL) ||
        !(*significandParts() & 0x4000000000000000ULL))) {
     // x86 has some unusual NaNs which cannot be represented in any other
@@ -2694,7 +2666,7 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
 
     // For x87 extended precision, we want to make a NaN, not a special NaN if
     // the input wasn't special either.
-    if (!X86SpecialNan && semantics == &semX87DoubleExtended)
+    if (!X86SpecialNan && semantics == &APFloatBase::semX87DoubleExtended)
       APInt::tcSetBit(significandParts(), semantics->precision - 1);
 
     // Convert of sNaN creates qNaN and raises an exception (invalid op).
@@ -3530,7 +3502,8 @@ hash_code hash_value(const IEEEFloat &Arg) {
 // the actual IEEE respresentations.  We compensate for that here.
 
 APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended);
+  assert(semantics ==
+         (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended);
   assert(partCount()==2);
 
   uint64_t myexponent, mysignificand;
@@ -3560,7 +3533,8 @@ APInt IEEEFloat::convertF80LongDoubleAPFloatToAPInt() const {
 }
 
 APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
-  assert(semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy);
+  assert(semantics ==
+         (const llvm::fltSemantics *)&APFloatBase::semPPCDoubleDoubleLegacy);
   assert(partCount()==2);
 
   uint64_t words[2];
@@ -3574,14 +3548,14 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
   // Declare fltSemantics before APFloat that uses it (and
   // saves pointer to it) to ensure correct destruction order.
   fltSemantics extendedSemantics = *semantics;
-  extendedSemantics.minExponent = semIEEEdouble.minExponent;
+  extendedSemantics.minExponent = APFloatBase::semIEEEdouble.minExponent;
   IEEEFloat extended(*this);
   fs = extended.convert(extendedSemantics, rmNearestTiesToEven, &losesInfo);
   assert(fs == opOK && !losesInfo);
   (void)fs;
 
   IEEEFloat u(extended);
-  fs = u.convert(semIEEEdouble, rmNearestTiesToEven, &losesInfo);
+  fs = u.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
   assert(fs == opOK || fs == opInexact);
   (void)fs;
   words[0] = *u.convertDoubleAPFloatToAPInt().getRawData();
@@ -3597,7 +3571,7 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
 
     IEEEFloat v(extended);
     v.subtract(u, rmNearestTiesToEven);
-    fs = v.convert(semIEEEdouble, rmNearestTiesToEven, &losesInfo);
+    fs = v.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &losesInfo);
     assert(fs == opOK && !losesInfo);
     (void)fs;
     words[1] = *v.convertDoubleAPFloatToAPInt().getRawData();
@@ -3611,8 +3585,9 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
 template <const fltSemantics &S>
 APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   assert(semantics == &S);
-  const int bias =
-      (semantics == &semFloat8E8M0FNU) ? -S.minExponent : -(S.minExponent - 1);
+  const int bias = (semantics == &APFloatBase::semFloat8E8M0FNU)
+                       ? -S.minExponent
+                       : -(S.minExponent - 1);
   constexpr unsigned int trailing_significand_bits = S.precision - 1;
   constexpr int integer_bit_part = trailing_significand_bits / integerPartWidth;
   constexpr integerPart integer_bit =
@@ -3677,87 +3652,87 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
 
 APInt IEEEFloat::convertQuadrupleAPFloatToAPInt() const {
   assert(partCount() == 2);
-  return convertIEEEFloatToAPInt<semIEEEquad>();
+  return convertIEEEFloatToAPInt<APFloatBase::semIEEEquad>();
 }
 
 APInt IEEEFloat::convertDoubleAPFloatToAPInt() const {
   assert(partCount()==1);
-  return convertIEEEFloatToAPInt<semIEEEdouble>();
+  return convertIEEEFloatToAPInt<APFloatBase::semIEEEdouble>();
 }
 
 APInt IEEEFloat::convertFloatAPFloatToAPInt() const {
   assert(partCount()==1);
-  return convertIEEEFloatToAPInt<semIEEEsingle>();
+  return convertIEEEFloatToAPInt<APFloatBase::semIEEEsingle>();
 }
 
 APInt IEEEFloat::convertBFloatAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semBFloat>();
+  return convertIEEEFloatToAPInt<APFloatBase::semBFloat>();
 }
 
 APInt IEEEFloat::convertHalfAPFloatToAPInt() const {
   assert(partCount()==1);
-  return convertIEEEFloatToAPInt<semIEEEhalf>();
+  return convertIEEEFloatToAPInt<APFloatBase::APFloatBase::semIEEEhalf>();
 }
 
 APInt IEEEFloat::convertFloat8E5M2APFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E5M2>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E5M2>();
 }
 
 APInt IEEEFloat::convertFloat8E5M2FNUZAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E5M2FNUZ>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E5M2FNUZ>();
 }
 
 APInt IEEEFloat::convertFloat8E4M3APFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E4M3>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E4M3>();
 }
 
 APInt IEEEFloat::convertFloat8E4M3FNAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E4M3FN>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E4M3FN>();
 }
 
 APInt IEEEFloat::convertFloat8E4M3FNUZAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E4M3FNUZ>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E4M3FNUZ>();
 }
 
 APInt IEEEFloat::convertFloat8E4M3B11FNUZAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E4M3B11FNUZ>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E4M3B11FNUZ>();
 }
 
 APInt IEEEFloat::convertFloat8E3M4APFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E3M4>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E3M4>();
 }
 
 APInt IEEEFloat::convertFloatTF32APFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloatTF32>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloatTF32>();
 }
 
 APInt IEEEFloat::convertFloat8E8M0FNUAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat8E8M0FNU>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E8M0FNU>();
 }
 
 APInt IEEEFloat::convertFloat6E3M2FNAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat6E3M2FN>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat6E3M2FN>();
 }
 
 APInt IEEEFloat::convertFloat6E2M3FNAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat6E2M3FN>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat6E2M3FN>();
 }
 
 APInt IEEEFloat::convertFloat4E2M1FNAPFloatToAPInt() const {
   assert(partCount() == 1);
-  return convertIEEEFloatToAPInt<semFloat4E2M1FN>();
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat4E2M1FN>();
 }
 
 // This function creates an APInt that is just a bit map of the floating
@@ -3765,74 +3740,77 @@ APInt IEEEFloat::convertFloat4E2M1FNAPFloatToAPInt() const {
 // and treating the result as a normal integer is unlikely to be useful.
 
 APInt IEEEFloat::bitcastToAPInt() const {
-  if (semantics == (const llvm::fltSemantics*)&semIEEEhalf)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEhalf)
     return convertHalfAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semBFloat)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semBFloat)
     return convertBFloatAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEsingle)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEsingle)
     return convertFloatAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEdouble)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEdouble)
     return convertDoubleAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics*)&semIEEEquad)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEquad)
     return convertQuadrupleAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semPPCDoubleDoubleLegacy)
+  if (semantics ==
+      (const llvm::fltSemantics *)&APFloatBase::semPPCDoubleDoubleLegacy)
     return convertPPCDoubleDoubleLegacyAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E5M2)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E5M2)
     return convertFloat8E5M2APFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E5M2FNUZ)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E5M2FNUZ)
     return convertFloat8E5M2FNUZAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E4M3)
     return convertFloat8E4M3APFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3FN)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E4M3FN)
     return convertFloat8E4M3FNAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3FNUZ)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E4M3FNUZ)
     return convertFloat8E4M3FNUZAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3B11FNUZ)
+  if (semantics ==
+      (const llvm::fltSemantics *)&APFloatBase::semFloat8E4M3B11FNUZ)
     return convertFloat8E4M3B11FNUZAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E3M4)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E3M4)
     return convertFloat8E3M4APFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloatTF32)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloatTF32)
     return convertFloatTF32APFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat8E8M0FNU)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E8M0FNU)
     return convertFloat8E8M0FNUAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat6E3M2FN)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat6E3M2FN)
     return convertFloat6E3M2FNAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat6E2M3FN)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat6E2M3FN)
     return convertFloat6E2M3FNAPFloatToAPInt();
 
-  if (semantics == (const llvm::fltSemantics *)&semFloat4E2M1FN)
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat4E2M1FN)
     return convertFloat4E2M1FNAPFloatToAPInt();
 
-  assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended &&
+  assert(semantics ==
+             (const llvm::fltSemantics *)&APFloatBase::semX87DoubleExtended &&
          "unknown format!");
   return convertF80LongDoubleAPFloatToAPInt();
 }
 
 float IEEEFloat::convertToFloat() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEsingle &&
+  assert(semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEsingle &&
          "Float semantics are not IEEEsingle");
   APInt api = bitcastToAPInt();
   return api.bitsToFloat();
 }
 
 double IEEEFloat::convertToDouble() const {
-  assert(semantics == (const llvm::fltSemantics*)&semIEEEdouble &&
+  assert(semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEdouble &&
          "Float semantics are not IEEEdouble");
   APInt api = bitcastToAPInt();
   return api.bitsToDouble();
@@ -3840,7 +3818,7 @@ double IEEEFloat::convertToDouble() const {
 
 #ifdef HAS_IEE754_FLOAT128
 float128 IEEEFloat::convertToQuad() const {
-  assert(semantics == (const llvm::fltSemantics *)&semIEEEquad &&
+  assert(semantics == (const llvm::fltSemantics *)&APFloatBase::semIEEEquad &&
          "Float semantics are not IEEEquads");
   APInt api = bitcastToAPInt();
   return api.bitsToQuad();
@@ -3861,7 +3839,7 @@ void IEEEFloat::initFromF80LongDoubleAPInt(const APInt &api) {
   uint64_t mysignificand = i1;
   uint8_t myintegerbit = mysignificand >> 63;
 
-  initialize(&semX87DoubleExtended);
+  initialize(&APFloatBase::semX87DoubleExtended);
   assert(partCount()==2);
 
   sign = static_cast<unsigned int>(i2>>15);
@@ -3893,14 +3871,16 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
 
   // Get the first double and convert to our format.
   initFromDoubleAPInt(APInt(64, i1));
-  fs = convert(semPPCDoubleDoubleLegacy, rmNearestTiesToEven, &losesInfo);
+  fs = convert(APFloatBase::semPPCDoubleDoubleLegacy, rmNearestTiesToEven,
+               &losesInfo);
   assert(fs == opOK && !losesInfo);
   (void)fs;
 
   // Unless we have a special case, add in second double.
   if (isFiniteNonZero()) {
-    IEEEFloat v(semIEEEdouble, APInt(64, i2));
-    fs = v.convert(semPPCDoubleDoubleLegacy, rmNearestTiesToEven, &losesInfo);
+    IEEEFloat v(APFloatBase::semIEEEdouble, APInt(64, i2));
+    fs = v.convert(APFloatBase::semPPCDoubleDoubleLegacy, rmNearestTiesToEven,
+                   &losesInfo);
     assert(fs == opOK && !losesInfo);
     (void)fs;
 
@@ -3918,7 +3898,7 @@ void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
   uint64_t val = api.getRawData()[0];
   uint64_t myexponent = (val & exponent_mask);
 
-  initialize(&semFloat8E8M0FNU);
+  initialize(&APFloatBase::semFloat8E8M0FNU);
   assert(partCount() == 1);
 
   // This format has unsigned representation only
@@ -4025,109 +4005,109 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
 }
 
 void IEEEFloat::initFromQuadrupleAPInt(const APInt &api) {
-  initFromIEEEAPInt<semIEEEquad>(api);
+  initFromIEEEAPInt<APFloatBase::semIEEEquad>(api);
 }
 
 void IEEEFloat::initFromDoubleAPInt(const APInt &api) {
-  initFromIEEEAPInt<semIEEEdouble>(api);
+  initFromIEEEAPInt<APFloatBase::semIEEEdouble>(api);
 }
 
 void IEEEFloat::initFromFloatAPInt(const APInt &api) {
-  initFromIEEEAPInt<semIEEEsingle>(api);
+  initFromIEEEAPInt<APFloatBase::semIEEEsingle>(api);
 }
 
 void IEEEFloat::initFromBFloatAPInt(const APInt &api) {
-  initFromIEEEAPInt<semBFloat>(api);
+  initFromIEEEAPInt<APFloatBase::semBFloat>(api);
 }
 
 void IEEEFloat::initFromHalfAPInt(const APInt &api) {
-  initFromIEEEAPInt<semIEEEhalf>(api);
+  initFromIEEEAPInt<APFloatBase::semIEEEhalf>(api);
 }
 
 void IEEEFloat::initFromFloat8E5M2APInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E5M2>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E5M2>(api);
 }
 
 void IEEEFloat::initFromFloat8E5M2FNUZAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E5M2FNUZ>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E5M2FNUZ>(api);
 }
 
 void IEEEFloat::initFromFloat8E4M3APInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E4M3>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E4M3>(api);
 }
 
 void IEEEFloat::initFromFloat8E4M3FNAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E4M3FN>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E4M3FN>(api);
 }
 
 void IEEEFloat::initFromFloat8E4M3FNUZAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E4M3FNUZ>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E4M3FNUZ>(api);
 }
 
 void IEEEFloat::initFromFloat8E4M3B11FNUZAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E4M3B11FNUZ>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E4M3B11FNUZ>(api);
 }
 
 void IEEEFloat::initFromFloat8E3M4APInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat8E3M4>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat8E3M4>(api);
 }
 
 void IEEEFloat::initFromFloatTF32APInt(const APInt &api) {
-  initFromIEEEAPInt<semFloatTF32>(api);
+  initFromIEEEAPInt<APFloatBase::semFloatTF32>(api);
 }
 
 void IEEEFloat::initFromFloat6E3M2FNAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat6E3M2FN>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat6E3M2FN>(api);
 }
 
 void IEEEFloat::initFromFloat6E2M3FNAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat6E2M3FN>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat6E2M3FN>(api);
 }
 
 void IEEEFloat::initFromFloat4E2M1FNAPInt(const APInt &api) {
-  initFromIEEEAPInt<semFloat4E2M1FN>(api);
+  initFromIEEEAPInt<APFloatBase::semFloat4E2M1FN>(api);
 }
 
 /// Treat api as containing the bits of a floating point number.
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   assert(api.getBitWidth() == Sem->sizeInBits);
-  if (Sem == &semIEEEhalf)
+  if (Sem == &APFloatBase::semIEEEhalf)
     return initFromHalfAPInt(api);
-  if (Sem == &semBFloat)
+  if (Sem == &APFloatBase::semBFloat)
     return initFromBFloatAPInt(api);
-  if (Sem == &semIEEEsingle)
+  if (Sem == &APFloatBase::semIEEEsingle)
     return initFromFloatAPInt(api);
-  if (Sem == &semIEEEdouble)
+  if (Sem == &APFloatBase::semIEEEdouble)
     return initFromDoubleAPInt(api);
-  if (Sem == &semX87DoubleExtended)
+  if (Sem == &APFloatBase::semX87DoubleExtended)
     return initFromF80LongDoubleAPInt(api);
-  if (Sem == &semIEEEquad)
+  if (Sem == &APFloatBase::semIEEEquad)
     return initFromQuadrupleAPInt(api);
-  if (Sem == &semPPCDoubleDoubleLegacy)
+  if (Sem == &APFloatBase::semPPCDoubleDoubleLegacy)
     return initFromPPCDoubleDoubleLegacyAPInt(api);
-  if (Sem == &semFloat8E5M2)
+  if (Sem == &APFloatBase::semFloat8E5M2)
     return initFromFloat8E5M2APInt(api);
-  if (Sem == &semFloat8E5M2FNUZ)
+  if (Sem == &APFloatBase::semFloat8E5M2FNUZ)
     return initFromFloat8E5M2FNUZAPInt(api);
-  if (Sem == &semFloat8E4M3)
+  if (Sem == &APFloatBase::semFloat8E4M3)
     return initFromFloat8E4M3APInt(api);
-  if (Sem == &semFloat8E4M3FN)
+  if (Sem == &APFloatBase::semFloat8E4M3FN)
     return initFromFloat8E4M3FNAPInt(api);
-  if (Sem == &semFloat8E4M3FNUZ)
+  if (Sem == &APFloatBase::semFloat8E4M3FNUZ)
     return initFromFloat8E4M3FNUZAPInt(api);
-  if (Sem == &semFloat8E4M3B11FNUZ)
+  if (Sem == &APFloatBase::semFloat8E4M3B11FNUZ)
     return initFromFloat8E4M3B11FNUZAPInt(api);
-  if (Sem == &semFloat8E3M4)
+  if (Sem == &APFloatBase::semFloat8E3M4)
     return initFromFloat8E3M4APInt(api);
-  if (Sem == &semFloatTF32)
+  if (Sem == &APFloatBase::semFloatTF32)
     return initFromFloatTF32APInt(api);
-  if (Sem == &semFloat8E8M0FNU)
+  if (Sem == &APFloatBase::semFloat8E8M0FNU)
     return initFromFloat8E8M0FNUAPInt(api);
-  if (Sem == &semFloat6E3M2FN)
+  if (Sem == &APFloatBase::semFloat6E3M2FN)
     return initFromFloat6E3M2FNAPInt(api);
-  if (Sem == &semFloat6E2M3FN)
+  if (Sem == &APFloatBase::semFloat6E2M3FN)
     return initFromFloat6E2M3FNAPInt(api);
-  if (Sem == &semFloat4E2M1FN)
+  if (Sem == &APFloatBase::semFloat4E2M1FN)
     return initFromFloat4E2M1FNAPInt(api);
 
   llvm_unreachable("unsupported semantics");
@@ -4202,11 +4182,11 @@ IEEEFloat::IEEEFloat(const fltSemantics &Sem, const APInt &API) {
 }
 
 IEEEFloat::IEEEFloat(float f) {
-  initFromAPInt(&semIEEEsingle, APInt::floatToBits(f));
+  initFromAPInt(&APFloatBase::semIEEEsingle, APInt::floatToBits(f));
 }
 
 IEEEFloat::IEEEFloat(double d) {
-  initFromAPInt(&semIEEEdouble, APInt::doubleToBits(d));
+  initFromAPInt(&APFloatBase::semIEEEdouble, APInt::doubleToBits(d));
 }
 
 namespace {
@@ -4815,38 +4795,40 @@ IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM) {
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S)
     : Semantics(&S),
-      Floats(new APFloat[2]{APFloat(semIEEEdouble), APFloat(semIEEEdouble)}) {
-  assert(Semantics == &semPPCDoubleDouble);
+      Floats(new APFloat[2]{APFloat(APFloatBase::semIEEEdouble),
+                            APFloat(APFloatBase::semIEEEdouble)}) {
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, uninitializedTag)
-    : Semantics(&S),
-      Floats(new APFloat[2]{APFloat(semIEEEdouble, uninitialized),
-                            APFloat(semIEEEdouble, uninitialized)}) {
-  assert(Semantics == &semPPCDoubleDouble);
+    : Semantics(&S), Floats(new APFloat[2]{
+                         APFloat(APFloatBase::semIEEEdouble, uninitialized),
+                         APFloat(APFloatBase::semIEEEdouble, uninitialized)}) {
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, integerPart I)
-    : Semantics(&S), Floats(new APFloat[2]{APFloat(semIEEEdouble, I),
-                                           APFloat(semIEEEdouble)}) {
-  assert(Semantics == &semPPCDoubleDouble);
+    : Semantics(&S),
+      Floats(new APFloat[2]{APFloat(APFloatBase::semIEEEdouble, I),
+                            APFloat(APFloatBase::semIEEEdouble)}) {
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, const APInt &I)
     : Semantics(&S),
       Floats(new APFloat[2]{
-          APFloat(semIEEEdouble, APInt(64, I.getRawData()[0])),
-          APFloat(semIEEEdouble, APInt(64, I.getRawData()[1]))}) {
-  assert(Semantics == &semPPCDoubleDouble);
+          APFloat(APFloatBase::semIEEEdouble, APInt(64, I.getRawData()[0])),
+          APFloat(APFloatBase::semIEEEdouble, APInt(64, I.getRawData()[1]))}) {
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(const fltSemantics &S, APFloat &&First,
                              APFloat &&Second)
     : Semantics(&S),
       Floats(new APFloat[2]{std::move(First), std::move(Second)}) {
-  assert(Semantics == &semPPCDoubleDouble);
-  assert(&Floats[0].getSemantics() == &semIEEEdouble);
-  assert(&Floats[1].getSemantics() == &semIEEEdouble);
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
+  assert(&Floats[0].getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&Floats[1].getSemantics() == &APFloatBase::semIEEEdouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
@@ -4854,14 +4836,14 @@ DoubleAPFloat::DoubleAPFloat(const DoubleAPFloat &RHS)
       Floats(RHS.Floats ? new APFloat[2]{APFloat(RHS.Floats[0]),
                                          APFloat(RHS.Floats[1])}
                         : nullptr) {
-  assert(Semantics == &semPPCDoubleDouble);
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat::DoubleAPFloat(DoubleAPFloat &&RHS)
     : Semantics(RHS.Semantics), Floats(RHS.Floats) {
-  RHS.Semantics = &semBogus;
+  RHS.Semantics = &APFloatBase::semBogus;
   RHS.Floats = nullptr;
-  assert(Semantics == &semPPCDoubleDouble);
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble);
 }
 
 DoubleAPFloat &DoubleAPFloat::operator=(const DoubleAPFloat &RHS) {
@@ -5009,12 +4991,12 @@ APFloat::opStatus DoubleAPFloat::addWithSpecial(const DoubleAPFloat &LHS,
 
   APFloat A(LHS.Floats[0]), AA(LHS.Floats[1]), C(RHS.Floats[0]),
       CC(RHS.Floats[1]);
-  assert(&A.getSemantics() == &semIEEEdouble);
-  assert(&AA.getSemantics() == &semIEEEdouble);
-  assert(&C.getSemantics() == &semIEEEdouble);
-  assert(&CC.getSemantics() == &semIEEEdouble);
-  assert(&Out.Floats[0].getSemantics() == &semIEEEdouble);
-  assert(&Out.Floats[1].getSemantics() == &semIEEEdouble);
+  assert(&A.getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&AA.getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&C.getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&CC.getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&Out.Floats[0].getSemantics() == &APFloatBase::semIEEEdouble);
+  assert(&Out.Floats[1].getSemantics() == &APFloatBase::semIEEEdouble);
   return Out.addImpl(A, AA, C, CC, RM);
 }
 
@@ -5119,28 +5101,32 @@ APFloat::opStatus DoubleAPFloat::multiply(const DoubleAPFloat &RHS,
 
 APFloat::opStatus DoubleAPFloat::divide(const DoubleAPFloat &RHS,
                                         APFloat::roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  auto Ret =
-      Tmp.divide(APFloat(semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()), RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat Tmp(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt());
+  auto Ret = Tmp.divide(
+      APFloat(APFloatBase::semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()), RM);
+  *this = DoubleAPFloat(APFloatBase::semPPCDoubleDouble, Tmp.bitcastToAPInt());
   return Ret;
 }
 
 APFloat::opStatus DoubleAPFloat::remainder(const DoubleAPFloat &RHS) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  auto Ret =
-      Tmp.remainder(APFloat(semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()));
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat Tmp(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt());
+  auto Ret = Tmp.remainder(
+      APFloat(APFloatBase::semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()));
+  *this = DoubleAPFloat(APFloatBase::semPPCDoubleDouble, Tmp.bitcastToAPInt());
   return Ret;
 }
 
 APFloat::opStatus DoubleAPFloat::mod(const DoubleAPFloat &RHS) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  auto Ret = Tmp.mod(APFloat(semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()));
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat Tmp(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt());
+  auto Ret = Tmp.mod(
+      APFloat(APFloatBase::semPPCDoubleDoubleLegacy, RHS.bitcastToAPInt()));
+  *this = DoubleAPFloat(APFloatBase::semPPCDoubleDouble, Tmp.bitcastToAPInt());
   return Ret;
 }
 
@@ -5148,17 +5134,21 @@ APFloat::opStatus
 DoubleAPFloat::fusedMultiplyAdd(const DoubleAPFloat &Multiplicand,
                                 const DoubleAPFloat &Addend,
                                 APFloat::roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat Tmp(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt());
   auto Ret = Tmp.fusedMultiplyAdd(
-      APFloat(semPPCDoubleDoubleLegacy, Multiplicand.bitcastToAPInt()),
-      APFloat(semPPCDoubleDoubleLegacy, Addend.bitcastToAPInt()), RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
+      APFloat(APFloatBase::semPPCDoubleDoubleLegacy,
+              Multiplicand.bitcastToAPInt()),
+      APFloat(APFloatBase::semPPCDoubleDoubleLegacy, Addend.bitcastToAPInt()),
+      RM);
+  *this = DoubleAPFloat(APFloatBase::semPPCDoubleDouble, Tmp.bitcastToAPInt());
   return Ret;
 }
 
 APFloat::opStatus DoubleAPFloat::roundToIntegral(APFloat::roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
   const APFloat &Hi = getFirst();
   const APFloat &Lo = getSecond();
 
@@ -5309,22 +5299,28 @@ void DoubleAPFloat::makeZero(bool Neg) {
 }
 
 void DoubleAPFloat::makeLargest(bool Neg) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  Floats[0] = APFloat(semIEEEdouble, APInt(64, 0x7fefffffffffffffull));
-  Floats[1] = APFloat(semIEEEdouble, APInt(64, 0x7c8ffffffffffffeull));
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  Floats[0] =
+      APFloat(APFloatBase::semIEEEdouble, APInt(64, 0x7fefffffffffffffull));
+  Floats[1] =
+      APFloat(APFloatBase::semIEEEdouble, APInt(64, 0x7c8ffffffffffffeull));
   if (Neg)
     changeSign();
 }
 
 void DoubleAPFloat::makeSmallest(bool Neg) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
   Floats[0].makeSmallest(Neg);
   Floats[1].makeZero(/* Neg = */ false);
 }
 
 void DoubleAPFloat::makeSmallestNormalized(bool Neg) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  Floats[0] = APFloat(semIEEEdouble, APInt(64, 0x0360000000000000ull));
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  Floats[0] =
+      APFloat(APFloatBase::semIEEEdouble, APInt(64, 0x0360000000000000ull));
   if (Neg)
     Floats[0].changeSign();
   Floats[1].makeZero(/* Neg = */ false);
@@ -5355,7 +5351,8 @@ hash_code hash_value(const DoubleAPFloat &Arg) {
 }
 
 APInt DoubleAPFloat::bitcastToAPInt() const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
   uint64_t Data[] = {
       Floats[0].bitcastToAPInt().getRawData()[0],
       Floats[1].bitcastToAPInt().getRawData()[0],
@@ -5365,10 +5362,11 @@ APInt DoubleAPFloat::bitcastToAPInt() const {
 
 Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
                                                              roundingMode RM) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy);
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat Tmp(APFloatBase::semPPCDoubleDoubleLegacy);
   auto Ret = Tmp.convertFromString(S, RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
+  *this = DoubleAPFloat(APFloatBase::semPPCDoubleDouble, Tmp.bitcastToAPInt());
   return Ret;
 }
 
@@ -5379,7 +5377,8 @@ Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
 // nextUp must choose the smallest output > input that follows these rules.
 // nexDown must choose the largest output < input that follows these rules.
 APFloat::opStatus DoubleAPFloat::next(bool nextDown) {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
   // nextDown(x) = -nextUp(-x)
   if (nextDown) {
     changeSign();
@@ -5481,7 +5480,8 @@ APFloat::opStatus DoubleAPFloat::next(bool nextDown) {
 APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
     MutableArrayRef<integerPart> Input, unsigned int Width, bool IsSigned,
     roundingMode RM, bool *IsExact) const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
 
   // If Hi is not finite, or Lo is zero, the value is entirely represented
   // by Hi. Delegate to the simpler single-APFloat conversion.
@@ -5761,8 +5761,9 @@ unsigned int DoubleAPFloat::convertToHexString(char *DST,
                                                unsigned int HexDigits,
                                                bool UpperCase,
                                                roundingMode RM) const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  return APFloat(semPPCDoubleDoubleLegacy, bitcastToAPInt())
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  return APFloat(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt())
       .convertToHexString(DST, HexDigits, UpperCase, RM);
 }
 
@@ -5799,7 +5800,8 @@ bool DoubleAPFloat::isLargest() const {
 }
 
 bool DoubleAPFloat::isInteger() const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
   return Floats[0].isInteger() && Floats[1].isInteger();
 }
 
@@ -5807,8 +5809,9 @@ void DoubleAPFloat::toString(SmallVectorImpl<char> &Str,
                              unsigned FormatPrecision,
                              unsigned FormatMaxPadding,
                              bool TruncateZero) const {
-  assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat(semPPCDoubleDoubleLegacy, bitcastToAPInt())
+  assert(Semantics == &APFloatBase::semPPCDoubleDouble &&
+         "Unexpected Semantics");
+  APFloat(APFloatBase::semPPCDoubleDoubleLegacy, bitcastToAPInt())
       .toString(Str, FormatPrecision, FormatMaxPadding, TruncateZero);
 }
 
@@ -5840,14 +5843,17 @@ int ilogb(const DoubleAPFloat &Arg) {
 
 DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
                      APFloat::roundingMode RM) {
-  assert(Arg.Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  return DoubleAPFloat(semPPCDoubleDouble, scalbn(Arg.Floats[0], Exp, RM),
+  assert(Arg.Semantics == &APFloatBase::PPCDoubleDouble() &&
+         "Unexpected Semantics");
+  return DoubleAPFloat(APFloatBase::PPCDoubleDouble(),
+                       scalbn(Arg.Floats[0], Exp, RM),
                        scalbn(Arg.Floats[1], Exp, RM));
 }
 
 DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                     APFloat::roundingMode RM) {
-  assert(Arg.Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
+  assert(Arg.Semantics == &APFloatBase::PPCDoubleDouble() &&
+         "Unexpected Semantics");
 
   // Get the unbiased exponent e of the number, where |Arg| = m * 2^e for m in
   // [1.0, 2.0).
@@ -5943,7 +5949,8 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
   }
 
   APFloat First = scalbn(Hi, -Exp, RM);
-  return DoubleAPFloat(semPPCDoubleDouble, std::move(First), std::move(Second));
+  return DoubleAPFloat(APFloatBase::PPCDoubleDouble(), std::move(First),
+                       std::move(Second));
 }
 
 } // namespace detail
@@ -5955,9 +5962,8 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
   }
   if (usesLayout<DoubleAPFloat>(Semantics)) {
     const fltSemantics& S = F.getSemantics();
-    new (&Double)
-        DoubleAPFloat(Semantics, APFloat(std::move(F), S),
-                      APFloat(semIEEEdouble));
+    new (&Double) DoubleAPFloat(Semantics, APFloat(std::move(F), S),
+                                APFloat(APFloatBase::IEEEdouble()));
     return;
   }
   llvm_unreachable("Unexpected semantics");
@@ -6065,8 +6071,9 @@ APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,
     return U.IEEE.convert(ToSemantics, RM, losesInfo);
   if (usesLayout<IEEEFloat>(getSemantics()) &&
       usesLayout<DoubleAPFloat>(ToSemantics)) {
-    assert(&ToSemantics == &semPPCDoubleDouble);
-    auto Ret = U.IEEE.convert(semPPCDoubleDoubleLegacy, RM, losesInfo);
+    assert(&ToSemantics == &APFloatBase::semPPCDoubleDouble);
+    auto Ret =
+        U.IEEE.convert(APFloatBase::semPPCDoubleDoubleLegacy, RM, losesInfo);
     *this = APFloat(ToSemantics, U.IEEE.bitcastToAPInt());
     return Ret;
   }
@@ -6113,13 +6120,15 @@ APFloat::opStatus APFloat::convertToInteger(APSInt &result,
 }
 
 double APFloat::convertToDouble() const {
-  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEdouble)
+  if (&getSemantics() ==
+      (const llvm::fltSemantics *)&APFloatBase::semIEEEdouble)
     return getIEEE().convertToDouble();
   assert(isRepresentableBy(getSemantics(), semIEEEdouble) &&
          "Float semantics is not representable by IEEEdouble");
   APFloat Temp = *this;
   bool LosesInfo;
-  opStatus St = Temp.convert(semIEEEdouble, rmNearestTiesToEven, &LosesInfo);
+  opStatus St =
+      Temp.convert(APFloatBase::semIEEEdouble, rmNearestTiesToEven, &LosesInfo);
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToDouble();
@@ -6127,13 +6136,14 @@ double APFloat::convertToDouble() const {
 
 #ifdef HAS_IEE754_FLOAT128
 float128 APFloat::convertToQuad() const {
-  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEquad)
+  if (&getSemantics() == (const llvm::fltSemantics *)&APFloatBase::semIEEEquad)
     return getIEEE().convertToQuad();
   assert(isRepresentableBy(getSemantics(), semIEEEquad) &&
          "Float semantics is not representable by IEEEquad");
   APFloat Temp = *this;
   bool LosesInfo;
-  opStatus St = Temp.convert(semIEEEquad, rmNearestTiesToEven, &LosesInfo);
+  opStatus St =
+      Temp.convert(APFloatBase::semIEEEquad, rmNearestTiesToEven, &LosesInfo);
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToQuad();
@@ -6141,13 +6151,15 @@ float128 APFloat::convertToQuad() const {
 #endif
 
 float APFloat::convertToFloat() const {
-  if (&getSemantics() == (const llvm::fltSemantics *)&semIEEEsingle)
+  if (&getSemantics() ==
+      (const llvm::fltSemantics *)&APFloatBase::semIEEEsingle)
     return getIEEE().convertToFloat();
   assert(isRepresentableBy(getSemantics(), semIEEEsingle) &&
          "Float semantics is not representable by IEEEsingle");
   APFloat Temp = *this;
   bool LosesInfo;
-  opStatus St = Temp.convert(semIEEEsingle, rmNearestTiesToEven, &LosesInfo);
+  opStatus St =
+      Temp.convert(APFloatBase::semIEEEsingle, rmNearestTiesToEven, &LosesInfo);
   assert(!(St & opInexact) && !LosesInfo && "Unexpected imprecision");
   (void)St;
   return Temp.getIEEE().convertToFloat();
