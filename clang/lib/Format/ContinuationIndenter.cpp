@@ -833,7 +833,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   auto IsOpeningBracket = [&](const FormatToken &Tok) {
     auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
-             Style.Cpp11BracedListStyle;
+             Style.Cpp11BracedListStyle != FormatStyle::BLS_Block;
     };
     if (Tok.isNoneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
         !IsStartOfBracedList()) {
@@ -925,7 +925,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                         TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+       (Previous.is(BK_BracedInit) &&
+        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
+         !Previous.Previous ||
+         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
+                                     BK_BracedInit))) ||
+       Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;

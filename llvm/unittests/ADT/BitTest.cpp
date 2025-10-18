@@ -270,6 +270,22 @@ TEST(BitTest, BitWidthConstexpr) {
       llvm::bit_width_constexpr(std::numeric_limits<uint64_t>::max()) == 64);
 }
 
+TEST(BitTest, BitCeilConstexpr) {
+  static_assert(llvm::bit_ceil_constexpr(0u) == 1);
+  static_assert(llvm::bit_ceil_constexpr(1u) == 1);
+  static_assert(llvm::bit_ceil_constexpr(2u) == 2);
+  static_assert(llvm::bit_ceil_constexpr(3u) == 4);
+  static_assert(llvm::bit_ceil_constexpr(4u) == 4);
+  static_assert(llvm::bit_ceil_constexpr(5u) == 8);
+  static_assert(llvm::bit_ceil_constexpr(6u) == 8);
+  static_assert(llvm::bit_ceil_constexpr(7u) == 8);
+  static_assert(llvm::bit_ceil_constexpr(8u) == 8);
+
+  static_assert(llvm::bit_ceil_constexpr(255u) == 256);
+  static_assert(llvm::bit_ceil_constexpr(256u) == 256);
+  static_assert(llvm::bit_ceil_constexpr(257u) == 512);
+}
+
 TEST(BitTest, CountlZero) {
   uint8_t Z8 = 0;
   uint16_t Z16 = 0;
