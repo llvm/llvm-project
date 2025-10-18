@@ -1627,6 +1627,10 @@ struct CallHierarchyIncomingCall {
   /// The range at which the calls appear.
   /// This is relative to the caller denoted by `From`.
   std::vector<Range> fromRanges;
+
+  /// This caller might be a false positive.
+  /// We currently have no way of 100% confirming this.
+  bool mightNeverCall = false;
 };
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &);
 
