@@ -138,10 +138,16 @@ enum lostFraction { // Example of truncated bits:
 /// New operations: sqrt, IEEE remainder, C90 fmod, nexttoward.
 ///
 
+namespace detail {
+class IEEEFloat;
+class DoubleAPFloat;
+} // namespace detail
+
 // This is the common type definitions shared by APFloat and its internal
 // implementation classes. This struct should not define any non-static data
 // members.
-struct APFloatBase {
+class APFloatBase {
+public:
   typedef APInt::WordType integerPart;
   static constexpr unsigned integerPartWidth = APInt::APINT_BITS_PER_WORD;
 
@@ -257,30 +263,64 @@ struct APFloatBase {
   LLVM_ABI static const llvm::fltSemantics &EnumToSemantics(Semantics S);
   LLVM_ABI static Semantics SemanticsToEnum(const llvm::fltSemantics &Sem);
 
-  LLVM_ABI static const fltSemantics &IEEEhalf() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &BFloat() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEsingle() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEdouble() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &IEEEquad() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &PPCDoubleDouble() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &PPCDoubleDoubleLegacy() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E5M2() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E5M2FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E4M3B11FNUZ() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E3M4() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &FloatTF32() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float8E8M0FNU() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float6E3M2FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float6E2M3FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &Float4E2M1FN() LLVM_READNONE;
-  LLVM_ABI static const fltSemantics &x87DoubleExtended() LLVM_READNONE;
+private:
+  LLVM_ABI static const fltSemantics semIEEEhalf;
+  LLVM_ABI static const fltSemantics semBFloat;
+  LLVM_ABI static const fltSemantics semIEEEsingle;
+  LLVM_ABI static const fltSemantics semIEEEdouble;
+  LLVM_ABI static const fltSemantics semIEEEquad;
+  LLVM_ABI static const fltSemantics semFloat8E5M2;
+  LLVM_ABI static const fltSemantics semFloat8E5M2FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FN;
+  LLVM_ABI static const fltSemantics semFloat8E4M3FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E4M3B11FNUZ;
+  LLVM_ABI static const fltSemantics semFloat8E3M4;
+  LLVM_ABI static const fltSemantics semFloatTF32;
+  LLVM_ABI static const fltSemantics semFloat8E8M0FNU;
+  LLVM_ABI static const fltSemantics semFloat6E3M2FN;
+  LLVM_ABI static const fltSemantics semFloat6E2M3FN;
+  LLVM_ABI static const fltSemantics semFloat4E2M1FN;
+  LLVM_ABI static const fltSemantics semX87DoubleExtended;
+  LLVM_ABI static const fltSemantics semBogus;
+  LLVM_ABI static const fltSemantics semPPCDoubleDouble;
+  LLVM_ABI static const fltSemantics semPPCDoubleDoubleLegacy;
+
+  friend class detail::IEEEFloat;
+  friend class detail::DoubleAPFloat;
+  friend class APFloat;
+
+public:
+  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static const fltSemantics &BFloat() { return semBFloat; }
+  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
+  static const fltSemantics &PPCDoubleDoubleLegacy() {
+    return semPPCDoubleDoubleLegacy;
+  }
+  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
+  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
+  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
+  static const fltSemantics &Float8E4M3B11FNUZ() {
+    return semFloat8E4M3B11FNUZ;
+  }
+  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
+  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
+  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
+  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static const fltSemantics &x87DoubleExtended() {
+    return semX87DoubleExtended;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  LLVM_ABI static const fltSemantics &Bogus() LLVM_READNONE;
+  static const fltSemantics &Bogus() { return semBogus; }
 
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
