@@ -1106,21 +1106,17 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     // For each unrolled tile in the result.
     for (SmallVector<int64_t> tileOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
-
       // Create the target tile type.
       auto tileType =
           VectorType::get(*targetShape, resultType.getElementType());
-
       // Build the tile by extracting individual elements.
       Value tile = createTileFromElements(
           rewriter, loc, shapeCastOp.getSource(), sourceShape, resultShape,
           tileOffsets, *targetShape, tileType);
-
       // Insert the tile into the result.
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, tile, result, tileOffsets, strides);
     }
-
     rewriter.replaceOp(shapeCastOp, result);
     return success();
   }
