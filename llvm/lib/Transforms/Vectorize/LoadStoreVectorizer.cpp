@@ -627,8 +627,8 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
   Ret.push_back({C.front()});
 
   unsigned ElemBytes = DL.getTypeStoreSize(getChainElemTy(C));
-  APInt PrevReadEnd = C[0].OffsetFromLeader + 
-                    DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+  APInt PrevReadEnd = C[0].OffsetFromLeader +
+                      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
     // `prev` accesses offsets [PrevDistFromBase, PrevReadEnd).
     auto &CurChain = Ret.back();
@@ -882,8 +882,7 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   Type *VecElemTy = getChainElemTy(C);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  int BytesAdded =
-      DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
+  int BytesAdded = DL.getTypeSizeInBits(getLoadStoreType(&*C[0].Inst)) / 8;
   APInt PrevReadEnd = C[0].OffsetFromLeader + BytesAdded;
   int ChainBytes = BytesAdded;
   for (auto It = std::next(C.begin()), End = C.end(); It != End; ++It) {
@@ -899,8 +898,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
-  Type *VecTy = FixedVectorType::get(
-      VecElemTy, 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy));
+  unsigned NumElem = 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy);
+  Type *VecTy = FixedVectorType::get(VecElemTy, NumElem);
 
   Align Alignment = getLoadStoreAlignment(C[0].Inst);
   // If this is a load/store of an alloca, we might have upgraded the alloca's
@@ -927,7 +926,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
         llvm::min_element(C, [](const auto &A, const auto &B) {
           return A.Inst->comesBefore(B.Inst);
         })->Inst);
-
+    // This can happen due to a chain of redundant loads.
+    // In this case, just use the element-type, and avoid ExtractElement.
+    if (NumElem == 1)
+      VecTy = VecElemTy;
     // Chain is in offset order, so C[0] is the instr with the lowest offset,
     // i.e. the root of the vector.
     VecInst = Builder.CreateAlignedLoad(VecTy,
@@ -944,9 +946,11 @@ bool Vectorizer::vectorizeChain(Chain &C) {
         auto Mask = llvm::to_vector<8>(
             llvm::seq<int>(VecIdx, VecIdx + VT->getNumElements()));
         V = Builder.CreateShuffleVector(VecInst, Mask, I->getName());
-      } else {
+      } else if (VecTy != VecElemTy) {
         V = Builder.CreateExtractElement(VecInst, Builder.getInt32(VecIdx),
                                          I->getName());
+      } else {
+        V = VecInst;
       }
       if (V->getType() != I->getType())
         V = Builder.CreateBitOrPointerCast(V, I->getType());
