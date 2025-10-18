@@ -81,6 +81,7 @@ STATISTIC(
 STATISTIC(NumInvariantConditionsInjected,
           "Number of invariant conditions injected and unswitched");
 
+namespace llvm {
 static cl::opt<bool> EnableNonTrivialUnswitch(
     "enable-nontrivial-unswitch", cl::init(false), cl::Hidden,
     cl::desc("Forcibly enables non-trivial loop unswitching rather than "
@@ -131,10 +132,16 @@ static cl::opt<bool> InjectInvariantConditions(
 
 static cl::opt<unsigned> InjectInvariantConditionHotnesThreshold(
     "simple-loop-unswitch-inject-invariant-condition-hotness-threshold",
-    cl::Hidden, cl::desc("Only try to inject loop invariant conditions and "
-                         "unswitch on them to eliminate branches that are "
-                         "not-taken 1/<this option> times or less."),
+    cl::Hidden,
+    cl::desc("Only try to inject loop invariant conditions and "
+             "unswitch on them to eliminate branches that are "
+             "not-taken 1/<this option> times or less."),
     cl::init(16));
+
+static cl::opt<bool> EstimateProfile("simple-loop-unswitch-estimate-profile",
+                                     cl::Hidden, cl::init(true));
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 AnalysisKey ShouldRunExtraSimpleLoopUnswitch::Key;
 namespace {
@@ -271,10 +278,33 @@ static bool areLoopExitPHIsLoopInvariant(const Loop &L,
 /// Copy a set of loop invariant values \p ToDuplicate and insert them at the
 /// end of \p BB and conditionally branch on the copied condition. We only
 /// branch on a single value.
+/// We attempt to estimate the profile of the resulting conditional branch from
+/// \p ComputeProfFrom, which is the original conditional branch we're
+/// unswitching.
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
-    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
+    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT,
+    const BranchInst &ComputeProfFrom) {
+
+  SmallVector<uint32_t> BranchWeights;
+  bool HasBranchWeights = EstimateProfile && !ProfcheckDisableMetadataFixes &&
+                          extractBranchWeights(ComputeProfFrom, BranchWeights);
+  // If Direction is true, that means we had a disjunction and that the "true"
+  // case exits. The probability of the disjunction of the subset of terms is at
+  // most as high as the original one. So, if the probability is higher than the
+  // one we'd assign in absence of a profile (i.e. 0.5), we will use 0.5,
+  // but if it's lower, we will use the original probability.
+  // Coversely, if Direction is false, that means we had a conjunction, and the
+  // probability of exiting is captured in the second branch weight. That
+  // probability is a disjunction (of the negation of the original terms). The
+  // same reasoning applies as above.
+  if (HasBranchWeights &&
+      static_cast<double>(BranchWeights[Direction ? 0 : 1]) /
+              static_cast<double>(sum_of(BranchWeights)) >
+          0.5)
+    HasBranchWeights = false;
+
   IRBuilder<> IRB(&BB);
   IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
 
@@ -287,8 +317,14 @@ static void buildPartialUnswitchConditionalBranch(
 
   Value *Cond = Direction ? IRB.CreateOr(FrozenInvariants)
                           : IRB.CreateAnd(FrozenInvariants);
-  IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
-                   Direction ? &NormalSucc : &UnswitchedSucc);
+  auto *BR = IRB.CreateCondBr(
+      Cond, Direction ? &UnswitchedSucc : &NormalSucc,
+      Direction ? &NormalSucc : &UnswitchedSucc,
+      HasBranchWeights ? ComputeProfFrom.getMetadata(LLVMContext::MD_prof)
+                       : nullptr);
+  if (!HasBranchWeights)
+    setExplicitlyUnknownBranchWeightsIfProfiled(
+        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
 }
 
 /// Copy a set of loop invariant values, and conditionally branch on them.
@@ -658,7 +694,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
              " condition!");
     buildPartialUnswitchConditionalBranch(
         *OldPH, Invariants, ExitDirection, *UnswitchedBB, *NewPH,
-        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT);
+        FreezeLoopUnswitchCond, OldPH->getTerminator(), nullptr, DT, BI);
   }
 
   // Update the dominator tree with the added edge.
@@ -2477,7 +2513,7 @@ static void unswitchNontrivialInvariants(
     else {
       buildPartialUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
-          FreezeLoopUnswitchCond, BI, &AC, DT);
+          FreezeLoopUnswitchCond, BI, &AC, DT, *BI);
     }
     DTUpdates.push_back({DominatorTree::Insert, SplitBB, ClonedPH});
 
