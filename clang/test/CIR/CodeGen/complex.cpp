@@ -1360,6 +1360,30 @@ void complex_type_argument() {
 // OGCG: %[[TMP_ARG:.*]] = load <2 x float>, ptr %[[ARG_ADDR]], align 4
 // OGCG: call void @_Z22complex_type_parameterCf(<2 x float> noundef %[[TMP_ARG]])
 
+float _Complex complex_type_return_type() {
+  return { 1.0f, 2.0f };
+}
+
+// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["__retval"]
+// CIR: %[[RET_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[RET_VAL]], %[[RET_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.return %[[TMP_RET]] : !cir.complex<!cir.float>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+// LLVM: %[[RET_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 2.000000e+00 }, ptr %[[RET_ADDR]], align 4
+// LLVM: %[[TMP_RET:.*]] = load { float, float }, ptr %[[RET_ADDR]], align 4
+// LLVM: ret { float, float } %[[TMP_RET]]
+
+// OGCG: %[[RET_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[RET_VAL_REAL:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 0
+// OGCG: %[[RET_VAL_IMAG:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RET_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[RET_VAL_REAL]], align 4
+// OGCG: store float 2.000000e+00, ptr %[[RET_VAL_IMAG]], align 4
+// OGCG: %[[TMP_RET:.*]] = load <2 x float>, ptr %[[RET_ADDR]], align 4
+// OGCG: ret <2 x float> %[[TMP_RET]]
+
 void real_on_scalar_bool() {
   bool a;
   bool b = __real__ a;
