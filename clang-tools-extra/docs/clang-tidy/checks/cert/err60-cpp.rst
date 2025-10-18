@@ -5,7 +5,7 @@
 cert-err60-cpp
 ==============
 
-The `cert-err60-cpp`` check is an alias, please see
+The `cert-err60-cpp` check is an alias, please see
 `bugprone-exception-type-not-nothrow-copy-constructible <../bugprone/exception-type-not-nothrow-copy-constructible.html>`_
 for more information.
 
