@@ -253,3 +253,24 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
 
   return UncountableCondition;
 }
+
+VPSingleDefRecipe *vputils::getSingleScalarClone(VPSingleDefRecipe *R) {
+  return TypeSwitch<VPSingleDefRecipe *, VPSingleDefRecipe *>(R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenSelectRecipe,
+            VPWidenCallRecipe, VPReplicateRecipe>([](auto *I) {
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true,
+                                     /*Mask*/ nullptr,
+                                     /*Metadata*/ *I);
+      })
+      .Case<VPWidenGEPRecipe>([](auto *I) {
+        // WidenGEP does not have metadata.
+        return new VPReplicateRecipe(I->getUnderlyingInstr(), I->operands(),
+                                     /*IsSingleScalar*/ true, /*Mask*/ nullptr);
+      })
+      .Case<VPScalarIVStepsRecipe>([](auto *I) { return I->clone(); })
+      .Default([](auto *I) {
+        llvm_unreachable("Recipe not convertible to single-scalar");
+        return nullptr;
+      });
+}
