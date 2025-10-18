@@ -129,6 +129,10 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
   // If this is a view, unwrap to the source.
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
     if (result == view.getViewDest()) {
+      // TODO: if view.isSameStart() returns false here,
+      // we have to make sure that further analysis may return
+      // PartialAlias for all underlying addresses we are going
+      // to collect from this point up the def-use.
       return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
                                             visited, output);
     }

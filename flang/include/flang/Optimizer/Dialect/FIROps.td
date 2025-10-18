@@ -17,6 +17,7 @@
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
@@ -1730,8 +1731,9 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
 // Record and array type operations
 //===----------------------------------------------------------------------===//
 
-def fir_ArrayCoorOp : fir_Op<"array_coor",
-    [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_ArrayCoorOp
+    : fir_Op<"array_coor", [NoMemoryEffect, AttrSizedOperandSegments,
+                            ViewLikeOpInterface]> {
 
   let summary = "Find the coordinate of an element of an array";
 
@@ -1774,9 +1776,13 @@ def fir_ArrayCoorOp : fir_Op<"array_coor",
 
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
+  let extraClassDeclaration = [{
+    mlir::Value getViewSource() { return getMemref(); }
+  }];
 }
 
-def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
+def fir_CoordinateOp
+    : fir_Op<"coordinate_of", [NoMemoryEffect, ViewLikeOpInterface]> {
 
   let summary = "Finds the coordinate (location) of a value in memory";
 
@@ -1828,6 +1834,7 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let extraClassDeclaration = [{
     constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
+    mlir::Value getViewSource() { return getRef(); }
   }];
 }
 
@@ -2792,7 +2799,8 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   let hasFolder = 1;
 }
 
-def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
+def fir_ConvertOp
+    : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
@@ -2830,6 +2838,8 @@ def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
     static bool isPointerCompatible(mlir::Type ty);
     static bool canBeConverted(mlir::Type inType, mlir::Type outType);
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
+    mlir::Value getViewSource() { return getValue(); }
+    bool isSameStart() { return true; }
   }];
   let hasCanonicalizer = 1;
 }
