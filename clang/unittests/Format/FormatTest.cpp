@@ -9727,6 +9727,19 @@ TEST_F(FormatTest, ParenthesesAndOperandAlignment) {
                Style);
 }
 
+TEST_F(FormatTest, BlockIndentAndNamespace) {
+  auto Style = getLLVMStyleWithColumns(120);
+  Style.AllowShortNamespacesOnASingleLine = true;
+  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+
+  verifyNoCrash(
+      "namespace {\n"
+      "void xxxxxxxxxxxxxxxxxxxxx(nnnnn::TTTTTTTTTTTTT const *mmmm,\n"
+      "                           YYYYYYYYYYYYYYYYY &yyyyyyyyyyyyyy);\n"
+      "} //",
+      Style);
+}
+
 TEST_F(FormatTest, BreaksConditionalExpressions) {
   verifyFormat(
       "aaaa(aaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaa\n"
