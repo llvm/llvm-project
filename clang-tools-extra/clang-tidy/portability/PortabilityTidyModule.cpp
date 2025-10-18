@@ -10,6 +10,7 @@
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidPragmaOnceCheck.h"
+#include "AvoidUnprototypedFunctionsCheck.h"
 #include "RestrictSystemIncludesCheck.h"
 #include "SIMDIntrinsicsCheck.h"
 #include "StdAllocatorConstCheck.h"
@@ -23,6 +24,8 @@ public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
     CheckFactories.registerCheck<AvoidPragmaOnceCheck>(
         "portability-avoid-pragma-once");
+    CheckFactories.registerCheck<AvoidUnprototypedFunctionsCheck>(
+        "portability-avoid-unprototyped-functions");
     CheckFactories.registerCheck<RestrictSystemIncludesCheck>(
         "portability-restrict-system-includes");
     CheckFactories.registerCheck<SIMDIntrinsicsCheck>(
