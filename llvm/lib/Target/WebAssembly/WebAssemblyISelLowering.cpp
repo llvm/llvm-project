@@ -137,9 +137,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op :
-         {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FMA})
+    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA})
       setOperationAction(Op, T, Expand);
+    setOperationAction(ISD::FREM, T, LibCall);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
