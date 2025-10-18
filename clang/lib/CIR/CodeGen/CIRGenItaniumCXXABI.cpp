@@ -1990,7 +1990,7 @@ CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
   // The array cookie is a size_t; pad that up to the element alignment.
   // The cookie is actually right-justified in that space.
   return std::max(
-      CharUnits::fromQuantity(cgm.SizeSizeInBytes),
+      cgm.getSizeSize(),
       cgm.getASTContext().getPreferredTypeAlignInChars(elementType));
 }
 
