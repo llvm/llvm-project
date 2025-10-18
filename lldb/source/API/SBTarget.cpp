@@ -1641,6 +1641,14 @@ lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
   return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
 }
 
+const char *SBTarget::GetTargetSessionName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return ConstString(target_sp->GetTargetSessionName().data()).AsCString();
+  return nullptr;
+}
+
 SBError SBTarget::SetLabel(const char *label) {
   LLDB_INSTRUMENT_VA(this, label);
 

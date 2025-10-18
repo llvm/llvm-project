@@ -17,6 +17,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include <cstdint>
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -29,14 +30,20 @@ namespace lldb_dap {
 /// Since attaching is debugger/runtime specific, the arguments for this request
 /// are not part of this specification.
 Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
+  // Initialize DAP debugger and related components if not sharing previously
+  // launched debugger.
+  std::optional<uint32_t> target_id = args.targetId;
+  if (Error err = dap.InitializeDebugger(target_id))
+    return err;
+
   // Validate that we have a well formed attach request.
   if (args.attachCommands.empty() && args.coreFile.empty() &&
       args.configuration.program.empty() &&
       args.pid == LLDB_INVALID_PROCESS_ID &&
-      args.gdbRemotePort == LLDB_DAP_INVALID_PORT)
+      args.gdbRemotePort == LLDB_DAP_INVALID_PORT && !target_id.has_value())
     return make_error<DAPError>(
         "expected one of 'pid', 'program', 'attachCommands', "
-        "'coreFile' or 'gdb-remote-port' to be specified");
+        "'coreFile', 'gdb-remote-port', or target_id to be specified");
 
   // Check if we have mutually exclusive arguments.
   if ((args.pid != LLDB_INVALID_PROCESS_ID) &&
@@ -64,7 +71,18 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   dap.ConfigureSourceMaps();
 
   lldb::SBError error;
-  lldb::SBTarget target = dap.CreateTarget(error);
+  lldb::SBTarget target;
+  if (target_id) {
+    // Use the unique target ID to get the target.
+    target = dap.debugger.FindTargetByGloballyUniqueID(*target_id);
+    if (!target.IsValid()) {
+      error.SetErrorStringWithFormat("invalid target_id %u in attach config",
+                                     *target_id);
+    }
+  } else {
+    target = dap.CreateTarget(error);
+  }
+
   if (error.Fail())
     return ToError(error);
 
@@ -114,7 +132,7 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       connect_url += std::to_string(args.gdbRemotePort);
       dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
                                error);
-    } else {
+    } else if (!target_id.has_value()) {
       // Attach by pid or process name.
       lldb::SBAttachInfo attach_info;
       if (args.pid != LLDB_INVALID_PROCESS_ID)

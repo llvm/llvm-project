@@ -186,6 +186,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_latest_stop_hook_id(0), m_valid(true), m_suppress_stop_hooks(false),
       m_is_dummy_target(is_dummy_target),
       m_target_unique_id(g_target_unique_id++),
+      m_target_session_name(
+          llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -193,6 +195,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
+  SetEventName(eBroadcastBitNewTargetCreated, "new-target-created");
 
   CheckInWithManager();
 
