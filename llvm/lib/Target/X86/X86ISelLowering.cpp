@@ -44813,10 +44813,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (OriginalDemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return TLO.CombineTo(Op, Op.getOperand(1));
+    if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode())) {
+      // iff we only need the signbit then we can use R directly.
+      if (OriginalDemandedBits.isSignMask())
+        return TLO.CombineTo(Op, Op.getOperand(1));
+      // otherwise we just need R's signbit for the comparison.
+      APInt SignMask = APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(Op.getOperand(1), SignMask, OriginalDemandedElts,
+                               Known, TLO, Depth + 1))
+        return true;
+    }
     break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);
