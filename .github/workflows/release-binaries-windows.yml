@@ -14,4 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
       - run: |
-          llvm\utils\release\build_llvm_release.bat --x64 --version 20.1.8 --skip-checkout --local-python
+          subst S: ${{ github.workspace }}
+      - run: |
+          S:\llvm\utils\release\build_llvm_release.bat --x64 --version 20.1.8 --skip-checkout --local-python
