@@ -9499,6 +9499,8 @@ def err_kern_is_nonstatic_method : Error<
   "kernel function %0 must be a free function or static member function">;
 def err_config_scalar_return : Error<
   "CUDA special function '%0' must have scalar return type">;
+def err_config_pointer_return
+    : Error<"CUDA special function '%0' must have pointer return type">;
 def err_kern_call_not_global_function : Error<
   "kernel call to non-global function %0">;
 def err_global_call_not_config : Error<
@@ -13690,4 +13692,10 @@ def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def err_cuda_device_kernel_launch_not_supported
+    : Error<"device-side kernel call/launch is not supported">;
+def err_cuda_device_kernel_launch_require_rdc
+    : Error<"kernel launch from __device__ or __global__ function requires "
+            "relocatable device code, also known as separate compilation mode">;
 } // end of sema component.

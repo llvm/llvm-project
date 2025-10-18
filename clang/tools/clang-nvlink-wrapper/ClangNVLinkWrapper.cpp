@@ -497,6 +497,11 @@ Expected<SmallVector<StringRef>> getInput(const ArgList &Args) {
       continue;
     }
 
+    // Skip '-lcudadevrt'.
+    if (Arg->getOption().matches(OPT_library) &&
+        StringRef(Arg->getValue()) == "cudadevrt")
+      continue;
+
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
             ? searchLibrary(Arg->getValue(), /*Root=*/"", LibraryPaths)
@@ -715,7 +720,8 @@ Error runNVLink(ArrayRef<StringRef> Files, const ArgList &Args) {
 
     // Do not forward any inputs that we have processed.
     if (Arg->getOption().matches(OPT_INPUT) ||
-        Arg->getOption().matches(OPT_library))
+        (Arg->getOption().matches(OPT_library) &&
+         StringRef(Arg->getValue()) != "cudadevrt"))
       continue;
 
     Arg->render(Args, NewLinkerArgs);

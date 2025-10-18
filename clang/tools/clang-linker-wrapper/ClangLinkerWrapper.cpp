@@ -545,6 +545,16 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
         Arg->render(Args, LinkerArgs);
     }
     llvm::append_range(CmdArgs, LinkerArgs);
+  } else if (Triple.isNVPTX()) {
+    // Need to pass '-lcudadevrt' if any.
+    ArgStringList LinkerArgs;
+    for (const opt::Arg *Arg : Args.filtered(OPT_library, OPT_library_path)) {
+      if (Arg->getOption().matches(OPT_library) &&
+          StringRef(Arg->getValue()) != "cudadevrt")
+        continue;
+      Arg->render(Args, LinkerArgs);
+    }
+    llvm::append_range(CmdArgs, LinkerArgs);
   }
 
   // Pass on -mllvm options to the linker invocation.

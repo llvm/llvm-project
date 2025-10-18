@@ -72,7 +72,12 @@ extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
 extern "C" cudaError_t cudaLaunchKernel_ptsz(const void *func, dim3 gridDim,
                                         dim3 blockDim, void **args,
                                         size_t sharedMem, cudaStream_t stream);
-
+extern __device__ cudaError_t cudaLaunchDevice(void *func,
+                                               void *parameterBuffer,
+                                               dim3 gridDim, dim3 blockDim,
+                                               unsigned int sharedMem,
+                                               cudaStream_t stream);
+extern __device__ void *cudaGetParameterBuffer(size_t alignment, size_t size);
 #endif
 
 extern "C" __device__ int printf(const char*, ...);
