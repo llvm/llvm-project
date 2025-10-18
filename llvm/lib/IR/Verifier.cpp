@@ -4446,10 +4446,18 @@ void Verifier::visitLoadInst(LoadInst &LI) {
     Check(LI.getOrdering() != AtomicOrdering::Release &&
               LI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Load cannot have Release ordering", &LI);
-    Check(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
-          "atomic load operand must have integer, pointer, or floating point "
-          "type!",
-          ElTy, &LI);
+    if (TT.isX86())
+      Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+                ElTy->getScalarType()->isFloatingPointTy(),
+            "atomic load operand must have integer, pointer, floating point, "
+            "or vector type!",
+            ElTy, &LI);
+    else
+      Check(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
+            "atomic load operand must have integer, pointer, or floating point "
+            "type!",
+            ElTy, &LI);
+
     checkAtomicMemAccessSize(ElTy, &LI);
   } else {
     Check(LI.getSyncScopeID() == SyncScope::System,
@@ -4472,10 +4480,17 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
-    Check(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
-          "atomic store operand must have integer, pointer, or floating point "
-          "type!",
-          ElTy, &SI);
+    if (TT.isX86())
+      Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+                ElTy->getScalarType()->isFloatingPointTy(),
+            "atomic store operand must have integer, pointer, floating point, "
+            "or vector type!",
+            ElTy, &SI);
+    else
+      Check(ElTy->isIntOrPtrTy() || ElTy->isFloatingPointTy(),
+            "atomic load operand must have integer, pointer, or floating point "
+            "type!",
+            ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
     Check(SI.getSyncScopeID() == SyncScope::System,
