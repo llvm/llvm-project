@@ -211,13 +211,13 @@ private:
     if (!DefaultType)
       return;
 
-    ProgramStateRef State = ConstructorCall->getState();
+    ProgramStateRef State = C.getState();
     State = State->set<VariantHeldTypeMap>(ThisMemRegion, *DefaultType);
     C.addTransition(State);
   }
 
   bool handleStdGetCall(const CallEvent &Call, CheckerContext &C) const {
-    ProgramStateRef State = Call.getState();
+    ProgramStateRef State = C.getState();
 
     const auto &ArgType = Call.getArgSVal(0)
                               .getType(C.getASTContext())

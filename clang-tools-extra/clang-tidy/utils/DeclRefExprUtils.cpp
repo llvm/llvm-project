@@ -19,9 +19,8 @@ namespace clang::tidy::utils::decl_ref_expr {
 using namespace ::clang::ast_matchers;
 using llvm::SmallPtrSet;
 
-namespace {
-
-template <typename S> bool isSetDifferenceEmpty(const S &S1, const S &S2) {
+template <typename S>
+static bool isSetDifferenceEmpty(const S &S1, const S &S2) {
   for (auto E : S1)
     if (S2.count(E) == 0)
       return false;
@@ -30,15 +29,15 @@ template <typename S> bool isSetDifferenceEmpty(const S &S1, const S &S2) {
 
 // Extracts all Nodes keyed by ID from Matches and inserts them into Nodes.
 template <typename Node>
-void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
-                        SmallPtrSet<const Node *, 16> &Nodes) {
+static void extractNodesByIdTo(ArrayRef<BoundNodes> Matches, StringRef ID,
+                               SmallPtrSet<const Node *, 16> &Nodes) {
   for (const auto &Match : Matches)
     Nodes.insert(Match.getNodeAs<Node>(ID));
 }
 
 // Returns true if both types refer to the same type,
 // ignoring the const-qualifier.
-bool isSameTypeIgnoringConst(QualType A, QualType B) {
+static bool isSameTypeIgnoringConst(QualType A, QualType B) {
   A = A.getCanonicalType();
   B = B.getCanonicalType();
   A.addConst();
@@ -47,7 +46,8 @@ bool isSameTypeIgnoringConst(QualType A, QualType B) {
 }
 
 // Returns true if `D` and `O` have the same parameter types.
-bool hasSameParameterTypes(const CXXMethodDecl &D, const CXXMethodDecl &O) {
+static bool hasSameParameterTypes(const CXXMethodDecl &D,
+                                  const CXXMethodDecl &O) {
   if (D.getNumParams() != O.getNumParams())
     return false;
   for (int I = 0, E = D.getNumParams(); I < E; ++I) {
@@ -60,7 +60,7 @@ bool hasSameParameterTypes(const CXXMethodDecl &D, const CXXMethodDecl &O) {
 
 // If `D` has a const-qualified overload with otherwise identical
 // ref-qualifiers and parameter types, returns that overload.
-const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
+static const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
   assert(!D.isConst());
 
   DeclContext::lookup_result LookupResult =
@@ -81,7 +81,7 @@ const CXXMethodDecl *findConstOverload(const CXXMethodDecl &D) {
 
 // Returns true if both types are pointers or reference to the same type,
 // ignoring the const-qualifier.
-bool pointsToSameTypeIgnoringConst(QualType A, QualType B) {
+static bool pointsToSameTypeIgnoringConst(QualType A, QualType B) {
   assert(A->isPointerType() || A->isReferenceType());
   assert(B->isPointerType() || B->isReferenceType());
   return isSameTypeIgnoringConst(A->getPointeeType(), B->getPointeeType());
@@ -122,7 +122,7 @@ bool pointsToSameTypeIgnoringConst(QualType A, QualType B) {
 //
 // This function checks (A) ad (B), but the caller should make sure that the
 // object is not mutated through the return value.
-bool isLikelyShallowConst(const CXXMethodDecl &M) {
+static bool isLikelyShallowConst(const CXXMethodDecl &M) {
   assert(!M.isConst());
   // The method can mutate our variable.
 
@@ -145,6 +145,8 @@ bool isLikelyShallowConst(const CXXMethodDecl &M) {
   }
   return isSameTypeIgnoringConst(CallTy, OverloadTy);
 }
+
+namespace {
 
 // A matcher that matches DeclRefExprs that are used in ways such that the
 // underlying declaration is not modified.

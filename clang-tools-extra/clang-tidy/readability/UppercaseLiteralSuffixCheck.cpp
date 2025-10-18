@@ -55,8 +55,10 @@ struct NewSuffix {
   std::optional<FixItHint> FixIt;
 };
 
-std::optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
-                                                    const SourceManager &SM) {
+} // namespace
+
+static std::optional<SourceLocation>
+getMacroAwareLocation(SourceLocation Loc, const SourceManager &SM) {
   // Do nothing if the provided location is invalid.
   if (Loc.isInvalid())
     return std::nullopt;
@@ -67,8 +69,8 @@ std::optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
   return SpellingLoc;
 }
 
-std::optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
-                                                    const SourceManager &SM) {
+static std::optional<SourceRange>
+getMacroAwareSourceRange(SourceRange Loc, const SourceManager &SM) {
   std::optional<SourceLocation> Begin =
       getMacroAwareLocation(Loc.getBegin(), SM);
   std::optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
@@ -77,7 +79,7 @@ std::optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
   return SourceRange(*Begin, *End);
 }
 
-std::optional<std::string>
+static std::optional<std::string>
 getNewSuffix(llvm::StringRef OldSuffix,
              const std::vector<StringRef> &NewSuffixes) {
   // If there is no config, just uppercase the entirety of the suffix.
@@ -96,7 +98,7 @@ getNewSuffix(llvm::StringRef OldSuffix,
 }
 
 template <typename LiteralType>
-std::optional<NewSuffix>
+static std::optional<NewSuffix>
 shouldReplaceLiteralSuffix(const Expr &Literal,
                            const std::vector<StringRef> &NewSuffixes,
                            const SourceManager &SM, const LangOptions &LO) {
@@ -173,8 +175,6 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
 
   return ReplacementDsc;
 }
-
-} // namespace
 
 UppercaseLiteralSuffixCheck::UppercaseLiteralSuffixCheck(
     StringRef Name, ClangTidyContext *Context)
