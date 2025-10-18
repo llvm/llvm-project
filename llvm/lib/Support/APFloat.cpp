@@ -6165,6 +6165,70 @@ float APFloat::convertToFloat() const {
   return Temp.getIEEE().convertToFloat();
 }
 
+APFloat::Storage::~Storage() {
+  if (usesLayout<IEEEFloat>(*semantics)) {
+    IEEE.~IEEEFloat();
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*semantics)) {
+    Double.~DoubleAPFloat();
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage::Storage(const APFloat::Storage &RHS) {
+  if (usesLayout<IEEEFloat>(*RHS.semantics)) {
+    new (this) IEEEFloat(RHS.IEEE);
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    new (this) DoubleAPFloat(RHS.Double);
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage::Storage(APFloat::Storage &&RHS) {
+  if (usesLayout<IEEEFloat>(*RHS.semantics)) {
+    new (this) IEEEFloat(std::move(RHS.IEEE));
+    return;
+  }
+  if (usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    new (this) DoubleAPFloat(std::move(RHS.Double));
+    return;
+  }
+  llvm_unreachable("Unexpected semantics");
+}
+
+APFloat::Storage &APFloat::Storage::operator=(const APFloat::Storage &RHS) {
+  if (usesLayout<IEEEFloat>(*semantics) &&
+      usesLayout<IEEEFloat>(*RHS.semantics)) {
+    IEEE = RHS.IEEE;
+  } else if (usesLayout<DoubleAPFloat>(*semantics) &&
+             usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    Double = RHS.Double;
+  } else if (this != &RHS) {
+    this->~Storage();
+    new (this) Storage(RHS);
+  }
+  return *this;
+}
+
+APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
+  if (usesLayout<IEEEFloat>(*semantics) &&
+      usesLayout<IEEEFloat>(*RHS.semantics)) {
+    IEEE = std::move(RHS.IEEE);
+  } else if (usesLayout<DoubleAPFloat>(*semantics) &&
+             usesLayout<DoubleAPFloat>(*RHS.semantics)) {
+    Double = std::move(RHS.Double);
+  } else if (this != &RHS) {
+    this->~Storage();
+    new (this) Storage(std::move(RHS));
+  }
+  return *this;
+}
+
 } // namespace llvm
 
 #undef APFLOAT_DISPATCH_ON_SEMANTICS
