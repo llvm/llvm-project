@@ -239,6 +239,30 @@ def G_USDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_UHADD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_URHADD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SHADD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_SRHADD : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type1:$src2);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -285,6 +309,11 @@ def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;
 def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 def : GINodeEquiv<G_USDOT, AArch64usdot>;
+
+def : GINodeEquiv<G_UHADD, avgflooru>;
+def : GINodeEquiv<G_URHADD, avgceilu>;
+def : GINodeEquiv<G_SHADD, avgfloors>;
+def : GINodeEquiv<G_SRHADD, avgceils>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
