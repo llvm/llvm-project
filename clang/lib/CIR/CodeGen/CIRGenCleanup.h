@@ -82,7 +82,7 @@ public:
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
 
-  bool hasEHBranches() const {
+  bool mayThrow() const {
     // Traditional LLVM codegen also checks for `!block->use_empty()`, but
     // in CIRGen the block content is not important, just used as a way to
     // signal `hasEHBranches`.
@@ -105,12 +105,11 @@ class EHCatchScope : public EHScope {
 
 public:
   struct Handler {
-    /// A type info value, or null (C++ null, not an LLVM null pointer)
-    /// for a catch-all.
+    /// A type info value, or null MLIR attribute for a catch-all
     CatchTypeInfo type;
 
     /// The catch handler for this type.
-    mlir::Block *block;
+    mlir::Region *region;
   };
 
 private:
@@ -130,10 +129,10 @@ public:
 
   unsigned getNumHandlers() const { return catchBits.numHandlers; }
 
-  void setHandler(unsigned i, CatchTypeInfo type, mlir::Block *block) {
+  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
     assert(i < getNumHandlers());
     getHandlers()[i].type = type;
-    getHandlers()[i].block = block;
+    getHandlers()[i].region = region;
   }
 
   // Clear all handler blocks.

@@ -38,7 +38,7 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
 }
 
 CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
-  return CatchTypeInfo{nullptr, 0};
+  return CatchTypeInfo{{}, 0};
 }
 
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,

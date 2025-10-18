@@ -942,7 +942,7 @@ public:
 
     LexicalScope *parentScope = nullptr;
 
-    // Holds actual value for ScopeKind::Try
+    // Holds the actual value for ScopeKind::Try
     cir::TryOp tryOp = nullptr;
 
     // Only Regular is used at the moment. Support for other kinds will be

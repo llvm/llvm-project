@@ -111,8 +111,8 @@ CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
   }
 
   // Create the scope to represent only the C/C++ `try {}` part. However,
-  // don't populate right away. Reserve some space to store the exception
-  // info but don't emit the bulk right away, for now only make sure the
+  // don't populate right away. Create regions for the catch handlers,
+  // but don't emit the handler bodies yet. For now, only make sure the
   // scope returns the exception information.
   auto tryOp = cir::TryOp::create(
       builder, tryLoc,
@@ -130,8 +130,10 @@ CIRGenFunction::emitCXXTryStmtUnderScope(const CXXTryStmt &s) {
         unsigned numRegionsToCreate =
             hasCatchAll ? numHandlers : numHandlers + 1;
 
-        for (unsigned i = 0; i != numRegionsToCreate; ++i)
-          builder.createBlock(result.addRegion());
+        for (unsigned i = 0; i != numRegionsToCreate; ++i) {
+          mlir::Region *region = result.addRegion();
+          builder.createBlock(region);
+        }
       });
 
   // Finally emit the body for try/catch.
@@ -175,10 +177,10 @@ void CIRGenFunction::enterCXXTryStmt(const CXXTryStmt &s, cir::TryOp tryOp,
     }
 
     // No exception decl indicates '...', a catch-all.
-    mlir::Block *handler = &tryOp.getHandlerRegions()[i].getBlocks().front();
+    mlir::Region *handler = &tryOp.getHandlerRegions()[i];
     catchScope->setHandler(i, cgm.getCXXABI().getCatchAllTypeInfo(), handler);
 
-    // Under async exceptions, catch(...) need to catch HW exception too
+    // Under async exceptions, catch(...) needs to catch HW exception too
     // Mark scope with SehTryBegin as a SEH __try scope
     if (getLangOpts().EHAsynch) {
       cgm.errorNYI("enterCXXTryStmt: EHAsynch");
@@ -194,7 +196,7 @@ void CIRGenFunction::exitCXXTryStmt(const CXXTryStmt &s, bool isFnTryBlock) {
   cir::TryOp tryOp = curLexScope->getTry();
 
   // If the catch was not required, bail out now.
-  if (!catchScope.hasEHBranches()) {
+  if (!catchScope.mayThrow()) {
     catchScope.clearHandlerBlocks();
     ehStack.popCatch();
 
