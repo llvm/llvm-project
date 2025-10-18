@@ -11,6 +11,5 @@ static_library("Models") {
   sources = [
     "ChromiumCheckModel.cpp",
     "UncheckedOptionalAccessModel.cpp",
-    "UncheckedStatusOrAccessModel.cpp",
   ]
 }
