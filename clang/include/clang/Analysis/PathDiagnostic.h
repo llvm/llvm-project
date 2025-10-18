@@ -68,6 +68,11 @@ struct PathDiagnosticConsumerOptions {
   /// without re-compiling the program under analysis.
   bool ShouldDisplayMacroExpansions = false;
 
+  /// Whether to include clang-formatted macros during macro expansions
+  /// or to keep it as it was stored, the default setting is to keep it as
+  /// is.
+  bool ShouldFormatMacrosPlist = false;
+
   /// Whether to include LLVM statistics of the process in the diagnostic.
   /// Useful for profiling the tool on large real-world codebases.
   bool ShouldSerializeStats = false;

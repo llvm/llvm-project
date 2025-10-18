@@ -351,6 +351,11 @@ ANALYZER_OPTION(bool, ShouldDisplayMacroExpansions, "expand-macros",
                 "expanded and included in the plist output.",
                 false)
 
+ANALYZER_OPTION(bool, ShouldFormatMacrosPlist, "format-macros-plist",
+                "Whether the macros being displayed in the plist "
+                "files are clang-formatted .",
+                false)
+
 ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
                 "Whether to emit verbose output about "
                 "the analyzer's progress related to ctu.",
