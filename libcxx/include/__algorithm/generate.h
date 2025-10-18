@@ -22,7 +22,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _ForwardIterator, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 generate(_ForwardIterator __first, _ForwardIterator __last, _Generator __gen) {
-  std::for_each(__first, __last, [&](decltype(*__first) __element) { __element = __gen(); });
+  using __iter_ref = decltype(*__first);
+  std::for_each(__first, __last, [&](__iter_ref __element) { std::forward<__iter_ref>(__element) = __gen(); });
 }
 
 _LIBCPP_END_NAMESPACE_STD
