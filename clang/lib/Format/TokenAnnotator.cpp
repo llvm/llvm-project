@@ -3775,7 +3775,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (Current.isNoneOf(tok::identifier, tok::kw_operator))
+  if (!Current.isOneOf(tok::identifier, tok::kw_operator))
     return false;
 
   const auto *Prev = Current.getPreviousNonComment();
