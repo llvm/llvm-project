@@ -317,8 +317,7 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     // as keys. We have already serialized function arguments so we probably can
     // remove them from the map as external function will not have any uses.
     for (Value arg : op.getArguments())
-      if (valueIDMap.count(arg))
-        valueIDMap.erase(arg);
+      valueIDMap.erase(arg);
 
     // Don't need to process the added block, there is nothing to process,
     // the fake body was added just to get the arguments, remove the body,
