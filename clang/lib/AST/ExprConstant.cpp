@@ -15497,8 +15497,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
-      APSInt A = LHS.getVectorElt(ElemNum).getInt();
-      APSInt B = RHS.getVectorElt(ElemNum).getInt();
+      const APSInt &A = LHS.getVectorElt(ElemNum).getInt();
+      const APSInt &B = RHS.getVectorElt(ElemNum).getInt();
       bool result = false;
 
       switch (Opcode.getExtValue() & 0x7) {
@@ -15531,7 +15531,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       RetMask.setBitVal(ElemNum, Mask[ElemNum] && result);
     }
 
-    RetMask.setIsUnsigned(true);
     return Success(APValue(RetMask), E);
   }
   }
