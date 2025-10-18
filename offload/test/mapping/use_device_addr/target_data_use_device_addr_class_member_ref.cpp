@@ -23,9 +23,9 @@ struct ST {
 #pragma omp target data use_device_addr(d)
       {
         printf("%d\n", &d == mapped_ptr); // CHECK: 1
-      };
+      }
     }
-  };
+  }
 };
 
 int main() {

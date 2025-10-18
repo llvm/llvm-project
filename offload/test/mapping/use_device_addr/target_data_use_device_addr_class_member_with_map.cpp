@@ -32,9 +32,9 @@ struct ST {
         // CHECK:    0 1
         printf("%d %d\n", &c == mapped_ptr,
                (uintptr_t)&c == (uintptr_t)mapped_ptr - offset);
-      };
+      }
     }
-  };
+  }
 };
 
 int main() {

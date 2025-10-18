@@ -40,7 +40,7 @@ struct ST {
                (uintptr_t)&d == (uintptr_t)mapped_ptr - offset);
       }
     }
-  };
+  }
 };
 
 int main() {

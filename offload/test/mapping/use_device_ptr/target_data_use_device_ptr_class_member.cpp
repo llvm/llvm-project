@@ -23,9 +23,9 @@ struct ST {
 #pragma omp target data use_device_ptr(a)
       {
         printf("%d\n", a == mapped_ptr); // CHECK: 1
-      };
+      }
     }
-  };
+  }
 };
 
 int main() {
