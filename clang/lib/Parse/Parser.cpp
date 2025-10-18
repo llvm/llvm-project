@@ -2486,6 +2486,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     SeenError = false;
     break;
   case Sema::ModuleImportState::FirstDecl:
+    if (getLangOpts().CPlusPlusModules) {
+      Diag(ImportLoc, diag::err_import_decl_not_in_module_fragment);
+      Diag(ImportLoc, diag::note_global_module_introducer_missing)
+          << FixItHint::CreateInsertion(PP.getMainFileFirstPPTokenLoc(),
+                                        "module;");
+    }
+
     // If we found an import decl as the first declaration, we must be not in
     // a C++20 module unit or we are in an invalid state.
     ImportState = Sema::ModuleImportState::NotACXX20Module;
