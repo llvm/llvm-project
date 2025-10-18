@@ -164,6 +164,11 @@ LLVM_ABI bool
 isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
 
+/// Identifies if the vector form of the intrinsic that returns a struct has
+/// a scalar element at the struct element index \p RetIdx.
+LLVM_ABI bool isVectorIntrinsicWithStructReturnScalarAtField(Intrinsic::ID ID,
+                                                             int RetIdx);
+
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
 /// consider target specific intrinsics, if no target specific intrinsics
