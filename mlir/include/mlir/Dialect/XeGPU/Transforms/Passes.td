@@ -43,7 +43,12 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
   let options = [Option<
     "printOnly", "print-analysis-only", "bool",
     /*default=*/"false",
-    "Print the result of layout propagation analysis and exit.">];
+    "Print the result of layout propagation analysis and exit.">,
+    Option<
+    "assumeUnrolled", "assume-unrolled", "bool",
+    /*default=*/"false",
+    "If the input IR has SG-sized tiles matching instruction sizes, omit `inst_data`.">
+  ];
 }
 
 def XeGPUWgToSgDistribute : Pass<"xegpu-wg-to-sg-distribute"> {

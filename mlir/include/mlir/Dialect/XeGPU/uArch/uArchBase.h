@@ -32,8 +32,11 @@ namespace uArch {
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
 enum class InstructionKind {
-  DPAS, // Dot Product Accumulate Systolic (DPAS) is a matrix
-        // multiply-add operation
+  DPAS,       // Dot Product Accumulate Systolic (DPAS) is a matrix
+              // multiply-add operation
+  STORE_ND,   // Subgroup-level 2D block write instruction
+  LOAD_ND,    // Subgroup-level 2D block load instruction
+  PREFETCH_ND // Subgroup-level 2D block prefetch instruction
   // @TODO: Add more instructions as needed
 };
 
@@ -54,6 +57,12 @@ struct Instruction {
     switch (instKind) {
     case InstructionKind::DPAS:
       return "dpas";
+    case InstructionKind::STORE_ND:
+      return "store_nd";
+    case InstructionKind::LOAD_ND:
+      return "load_nd";
+    case InstructionKind::PREFETCH_ND:
+      return "prefetch_nd";
     }
     llvm_unreachable("Unknown InstructionKind");
   }
@@ -142,11 +151,21 @@ struct uArch {
       : name(name), description(description),
         registerFileInfo(registerFileInfo), cacheInfo(cacheInfo),
         instructions(instructions) {}
-
+  virtual ~uArch() = default;
   // Get methods
   const std::string &getName() const { return name; }
 
   const std::string &getDescription() const { return description; }
+
+  virtual int getSubgroupSize() const = 0;
+  virtual unsigned getPackedFormatBitSizeGatherScatter() const = 0;
+  virtual unsigned getPackedFormatBitSize() const = 0;
+  virtual std::optional<unsigned> getPackedFormatBitSizeDpasB() const = 0;
+
+  std::shared_ptr<Instruction> getInstruction(InstructionKind instKind) const {
+    assert(instructions.find(instKind) != instructions.end());
+    return instructions.at(instKind);
+  }
 
   const std::map<RegisterFileType, RegisterFileInfo> &
   getRegisterFileInfo() const {
