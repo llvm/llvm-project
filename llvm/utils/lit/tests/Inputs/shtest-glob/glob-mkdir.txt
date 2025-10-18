@@ -1,2 +1,10 @@
 ## Tests glob pattern handling in the mkdir command.
+
+## This mkdir should fail because the `example_file*.input`s are regular files.
 # RUN: not mkdir %S/example_file*.input
+
+# RUN: mkdir %S/example_dir1.new
+# RUN: mkdir %S/example_dir2.new
+
+## This mkdir should succeed (so RUN should fail) because the `example_dir*.new`s are directories already exist.
+# RUN: not mkdir %S/example_dir*.new
