@@ -1427,6 +1427,13 @@ mlir::Type BaseBoxType::unwrapInnerType() const {
   return fir::unwrapInnerType(getEleTy());
 }
 
+mlir::Type BaseBoxType::getElementOrSequenceType() const {
+  mlir::Type eleTy = getEleTy();
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+    return seqTy;
+  return fir::unwrapRefType(eleTy);
+}
+
 static mlir::Type
 changeTypeShape(mlir::Type type,
                 std::optional<fir::SequenceType::ShapeRef> newShape) {
