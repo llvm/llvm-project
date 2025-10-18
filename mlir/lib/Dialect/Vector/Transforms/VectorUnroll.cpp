@@ -75,6 +75,54 @@ static SmallVector<Value> sliceLoadStoreIndices(PatternRewriter &rewriter,
   return indices;
 }
 
+/// Creates a result tile by extracting individual elements from the source
+/// and inserting them at the correct positions in the tile.
+static Value createTileFromElements(PatternRewriter &rewriter, Location loc,
+                                    Value source, ArrayRef<int64_t> sourceShape,
+                                    ArrayRef<int64_t> resultShape,
+                                    ArrayRef<int64_t> tileOffsets,
+                                    ArrayRef<int64_t> tileShape,
+                                    VectorType tileType) {
+
+  // Initialize tile with zeros.
+  Value tile = rewriter.create<arith::ConstantOp>(
+      loc, tileType, rewriter.getZeroAttr(tileType));
+
+  // Calculate strides for both source and result shapes.
+  SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
+  SmallVector<int64_t> resultStrides = computeStrides(resultShape);
+
+  // Iterate over all positions in the tile using linear indexing.
+  for (int64_t linearTileIdx = 0; linearTileIdx < computeProduct(tileShape);
+       ++linearTileIdx) {
+    // Convert linear tile index to multi-dimensional tile position.
+    SmallVector<int64_t> tilePosition =
+        delinearize(linearTileIdx, computeStrides(tileShape));
+
+    // Calculate the global position in the result.
+    SmallVector<int64_t> globalResultPos;
+    globalResultPos.reserve(tileOffsets.size());
+    for (auto [offset, pos] : llvm::zip(tileOffsets, tilePosition)) {
+      globalResultPos.push_back(offset + pos);
+    }
+
+    // Convert result position to linear index.
+    int64_t linearIndex = linearize(globalResultPos, resultStrides);
+
+    // Convert linear index to source position.
+    SmallVector<int64_t> sourcePos =
+        delinearize(linearIndex, computeStrides(sourceShape));
+
+    // Extract element from source.
+    Value element = vector::ExtractOp::create(rewriter, loc, source, sourcePos);
+
+    // Insert element into tile.
+    tile = vector::InsertOp::create(rewriter, loc, element, tile, tilePosition);
+  }
+
+  return tile;
+}
+
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
 static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
@@ -1057,24 +1105,24 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
     ArrayRef<int64_t> sourceShape = sourceType.getShape();
 
     SmallVector<int64_t> strides(targetShape->size(), 1);
-    Value result = rewriter.create<arith::ConstantOp>(
-        loc, resultType, rewriter.getZeroAttr(resultType));
+    Value result = arith::ConstantOp::create(rewriter, loc, resultType,
+                                             rewriter.getZeroAttr(resultType));
 
-    // For each unrolled tile in the result
+    // For each unrolled tile in the result.
     for (SmallVector<int64_t> tileOffsets :
          StaticTileOffsetRange(resultShape, *targetShape)) {
 
-      // Create the target tile type
-      VectorType tileType =
+      // Create the target tile type.
+      auto tileType =
           VectorType::get(*targetShape, resultType.getElementType());
 
-      // Build the tile by extracting individual elements
+      // Build the tile by extracting individual elements.
       Value tile = createTileFromElements(
           rewriter, loc, shapeCastOp.getSource(), sourceShape, resultShape,
           tileOffsets, *targetShape, tileType);
 
-      // Insert the tile into the result
-      result = rewriter.create<vector::InsertStridedSliceOp>(
+      // Insert the tile into the result.
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, tile, result, tileOffsets, strides);
     }
 
@@ -1083,70 +1131,6 @@ struct UnrollShapeCastPattern : public OpRewritePattern<vector::ShapeCastOp> {
   }
 
 private:
-  /// Creates a result tile by extracting individual elements from the source
-  /// and inserting them at the correct positions in the tile.
-  Value createTileFromElements(PatternRewriter &rewriter, Location loc,
-                               Value source, ArrayRef<int64_t> sourceShape,
-                               ArrayRef<int64_t> resultShape,
-                               ArrayRef<int64_t> tileOffsets,
-                               ArrayRef<int64_t> tileShape,
-                               VectorType tileType) const {
-
-    // Initialize tile with zeros
-    Value tile = rewriter.create<arith::ConstantOp>(
-        loc, tileType, rewriter.getZeroAttr(tileType));
-
-    // Calculate strides for both source and result shapes
-    SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
-    SmallVector<int64_t> resultStrides = computeStrides(resultShape);
-
-    // Iterate over all positions in the tile using linear indexing
-    for (int64_t linearTileIdx = 0; linearTileIdx < computeProduct(tileShape);
-         ++linearTileIdx) {
-      // Convert linear tile index to multi-dimensional tile position
-      SmallVector<int64_t> tilePosition =
-          linearIndexToMultiDim(linearTileIdx, tileShape);
-
-      // Calculate the global position in the result
-      SmallVector<int64_t> globalResultPos;
-      globalResultPos.reserve(tileOffsets.size());
-      for (auto [offset, pos] : llvm::zip(tileOffsets, tilePosition)) {
-        globalResultPos.push_back(offset + pos);
-      }
-
-      // Convert result position to linear index
-      int64_t linearIndex = linearize(globalResultPos, resultStrides);
-
-      // Convert linear index to source position
-      SmallVector<int64_t> sourcePos =
-          linearIndexToMultiDim(linearIndex, sourceShape);
-
-      // Extract element from source
-      Value element =
-          rewriter.create<vector::ExtractOp>(loc, source, sourcePos);
-
-      // Insert element into tile
-      tile =
-          rewriter.create<vector::InsertOp>(loc, element, tile, tilePosition);
-    }
-
-    return tile;
-  }
-
-  /// Converts a linear index to multi-dimensional position within a given
-  /// shape.
-  SmallVector<int64_t> linearIndexToMultiDim(int64_t linearIndex,
-                                             ArrayRef<int64_t> shape) const {
-    SmallVector<int64_t> position(shape.size());
-
-    for (int64_t i = shape.size() - 1; i >= 0; --i) {
-      position[i] = linearIndex % shape[i];
-      linearIndex /= shape[i];
-    }
-
-    return position;
-  }
-
   vector::UnrollVectorOptions options;
 };
 
