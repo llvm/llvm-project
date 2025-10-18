@@ -79,6 +79,14 @@ static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
                   cl::desc("Enable the global merge pass"));
 
+static cl::opt<bool> EnableARMDeadRegisterElimination(
+    "arm-enable-dead-defs", cl::Hidden,
+    cl::desc("Enable the pass that replaces"
+             " dead-dest flag-setting ALU"
+             " instructions with compares/tests"
+             " pre-RA"),
+    cl::init(true));
+
 namespace llvm {
   void initializeARMExecutionDomainFixPass(PassRegistry&);
 }
@@ -98,6 +106,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
+  initializeARMConvertToComparesPass(Registry);
   initializeARMExecutionDomainFixPass(Registry);
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
@@ -459,6 +468,10 @@ bool ARMPassConfig::addGlobalInstructionSelect() {
 
 void ARMPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    // Replace dead-dest flag-setting ALU with compares/tests pre-RA.
+    if (EnableARMDeadRegisterElimination)
+      addPass(createARMConvertToComparesPass());
+
     if (getOptLevel() == CodeGenOptLevel::Aggressive)
       addPass(&MachinePipelinerID);
 
