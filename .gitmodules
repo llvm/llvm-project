@@ -1,0 +1,3 @@
+[submodule "cpu-rtl"]
+	path = cpu-rtl
+	url = git@github.com:OpenXiangShan/XiangShan.git
