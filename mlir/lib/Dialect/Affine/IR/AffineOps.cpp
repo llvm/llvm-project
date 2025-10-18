@@ -2649,9 +2649,8 @@ static SmallVector<OpFoldResult> AffineForEmptyLoopFolder(AffineForOp forOp) {
       if (OpFoldResult lastTripIv = getConstantInductionVarForLastTrip(forOp)) {
         replacements.push_back(lastTripIv);
         continue;
-      } else {
-        return {};
       }
+      return {};
     }
     if (iterArgIt == iterArgs.end()) {
       // `val` is defined outside of the loop.
