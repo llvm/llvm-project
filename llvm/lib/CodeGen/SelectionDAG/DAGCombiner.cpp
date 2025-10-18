@@ -10205,18 +10205,20 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     SDValue B;
     SDValue C;
     APInt Cst;
-    if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Or(m_Value(B), m_Value(C))), m_ConstInt(Cst))) &&
+    if (sd_match(N, m_Xor(m_Or(m_Value(A), m_Or(m_Value(B), m_Value(C))),
+                          m_ConstInt(Cst))) &&
         Cst.isAllOnes()) {
       auto Ty = N->getValueType(0);
 
-      auto NegA = DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(Cst, DL, Ty));
-      auto NegB = DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(Cst, DL, Ty));
-      auto NegC = DAG.getNode(ISD::XOR, DL, VT, C, DAG.getConstant(Cst, DL, Ty));
+      auto NegA =
+          DAG.getNode(ISD::XOR, DL, VT, A, DAG.getConstant(Cst, DL, Ty));
+      auto NegB =
+          DAG.getNode(ISD::XOR, DL, VT, B, DAG.getConstant(Cst, DL, Ty));
+      auto NegC =
+          DAG.getNode(ISD::XOR, DL, VT, C, DAG.getConstant(Cst, DL, Ty));
 
-      return DAG.getNode(
-          ISD::AND, DL, VT,
-          NegA,
-          DAG.getNode(ISD::AND, DL, VT, NegB, NegC));
+      return DAG.getNode(ISD::AND, DL, VT, NegA,
+                         DAG.getNode(ISD::AND, DL, VT, NegB, NegC));
     }
   }
 
