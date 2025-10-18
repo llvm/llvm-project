@@ -17,6 +17,8 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "gtest/gtest.h"
+#include <cstdint>
+#include <random>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -224,4 +226,64 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
                                                        // instead of using an
                                                        // old cache
+}
+
+/// A process class that reads `lower_byte(address)` for each `address` it
+/// reads.
+class DummyReaderProcess : public Process {
+public:
+  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    uint8_t *buffer = static_cast<uint8_t *>(buf);
+    for (size_t addr = vm_addr; addr < vm_addr + size; addr++)
+      buffer[addr - vm_addr] = addr;
+    return size;
+  }
+  // Boilerplate, nothing interesting below.
+  DummyReaderProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+};
+
+TEST_F(MemoryTest, TestReadMemoryRanges) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  process->SetMaxReadSize(1024);
+
+  llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
+
+  // Read 8 ranges of 128 bytes, starting at random addresses
+  std::mt19937 rng(42);
+  std::uniform_int_distribution<addr_t> distribution(1, 100000);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges;
+  for (unsigned i = 0; i < 1024; i += 128)
+    ranges.emplace_back(distribution(rng), 128);
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(ranges, buffer);
+
+  for (auto [range, memory] : llvm::zip(ranges, read_results)) {
+    ASSERT_EQ(memory.size(), 128u);
+    addr_t range_base = range.GetRangeBase();
+    for (auto [idx, byte] : llvm::enumerate(memory))
+      ASSERT_EQ(byte, static_cast<uint8_t>(range_base + idx));
+  }
 }
