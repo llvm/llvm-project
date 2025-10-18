@@ -182,6 +182,20 @@ class XX3Form_XTAB6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31} = XT{5};
 }
 
+class XForm_RBS5<bits<6> opCode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                 InstrItinClass itin, list<dag> pattern>
+    : I<opCode, OOL, IOL, asmstr, itin> {
+
+  bits<5> RB;
+  bits<5> RS;
+
+  let Pattern = pattern;
+
+  let Inst{6...10} = RS;
+  let Inst{16...20} = RB;
+  let Inst{21...30} = xo;
+}
+
 class XX3Form_XTAB6_S<bits<5> xo, dag OOL, dag IOL, string asmstr,
                        list<dag> pattern>
     : I<59, OOL, IOL, asmstr, NoItinerary> {
@@ -294,6 +308,12 @@ let Predicates = [IsISAFuture] in {
   defm SUBFUS : XOForm_RTAB5_L1r<31, 72, (outs g8rc:$RT),
                                  (ins g8rc:$RA, g8rc:$RB, u1imm:$L), "subfus",
                                  "$RT, $L, $RA, $RB", []>;
+  def MTLPL : XForm_RBS5<31, 275, (outs), (ins gprc:$RB, gprc:$RS),
+                         "mtlpl $RB, $RS", IIC_SprMTSPR, []>;
+  let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
+    def MTLPL8 : XForm_RBS5<31, 275, (outs), (ins g8rc:$RB, g8rc:$RS),
+                            "mtlpl $RB, $RS", IIC_SprMTSPR, []>, isPPC64;
+  }
 }
 
 let Predicates = [HasVSX, IsISAFuture] in {
