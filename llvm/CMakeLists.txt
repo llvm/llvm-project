@@ -867,6 +867,11 @@ option(LLVM_INSTALL_GTEST
   "Install the llvm gtest library.  This should be on if you want to do
    stand-alone builds of the other projects and run their unit tests." OFF)
 
+option(LLVM_ENABLE_EXPENSIVE_CMAKE_CHECKS
+  "Enable use of expensive CMake checks for unused source files" ON)
+option(LLVM_ENABLE_LIT_CONVENIENCE_TARGETS
+  "Enable use of convenience targets for all subdirectories of a LIT test suite" ON)
+
 option(LLVM_BUILD_BENCHMARKS "Add LLVM benchmark targets to the list of default
 targets. If OFF, benchmarks still could be built using Benchmarks target." OFF)
 option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks can't be built." ON)
@@ -1027,9 +1032,18 @@ endif()
 find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION} REQUIRED
     COMPONENTS Interpreter)
 
+set(LLVM_TOOLCHAIN_CHECK_CACHE "" CACHE PATH
+  "Path to where a generated *.cmake cache file will be saved.")
+
+include(LLVMCacheSnapshot)
 # All options referred to from HandleLLVMOptions have to be specified
 # BEFORE this include, otherwise options will not be correctly set on
-# first cmake run
+# first cmake run.
+if(LLVM_TOOLCHAIN_CHECK_CACHE AND EXISTS "${LLVM_TOOLCHAIN_CHECK_CACHE}")
+  include("${LLVM_TOOLCHAIN_CHECK_CACHE}")
+elseif(LLVM_TOOLCHAIN_CHECK_CACHE)
+  llvm_get_list_of_existing_cache_variables(cache_before)
+endif()
 include(config-ix)
 
 # By default, we target the host, but this can be overridden at CMake
@@ -1080,6 +1094,12 @@ if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
 endif()
 
 include(HandleLLVMOptions)
+
+if(LLVM_TOOLCHAIN_CHECK_CACHE AND NOT EXISTS "${LLVM_TOOLCHAIN_CHECK_CACHE}")
+  llvm_list_of_new_cache_variables_and_values(cache_before cache_new_pairs)
+  list(JOIN cache_new_pairs "\n" cache_new_pairs_joined)
+  file(WRITE "${LLVM_TOOLCHAIN_CHECK_CACHE}" "${cache_new_pairs_joined}")
+endif()
 
 ######
 
