@@ -87,6 +87,12 @@ static cl::opt<bool>
                                "be combined with a shift"),
                       cl::init(true));
 
+static cl::opt<bool> EnablePExtCodeGen(
+    DEBUG_TYPE "-enable-p-ext-codegen", cl::Hidden,
+    cl::desc("Turn on P Extension codegen(This is a temporary switch where "
+             "only partial codegen is currently supported."),
+    cl::init(false));
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -277,6 +283,17 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::riscv_nxv16i8x3, &RISCV::VRN3M2RegClass);
     addRegisterClass(MVT::riscv_nxv16i8x4, &RISCV::VRN4M2RegClass);
     addRegisterClass(MVT::riscv_nxv32i8x2, &RISCV::VRN2M4RegClass);
+  }
+
+  // fixed vector is stored in GPRs for P extension packed operations
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
+    addRegisterClass(MVT::v2i16, &RISCV::GPRRegClass);
+    addRegisterClass(MVT::v4i8, &RISCV::GPRRegClass);
+    if (Subtarget.is64Bit()) {
+      addRegisterClass(MVT::v2i32, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v4i16, &RISCV::GPRRegClass);
+      addRegisterClass(MVT::v8i8, &RISCV::GPRRegClass);
+    }
   }
 
   // Compute derived properties from the register classes.
@@ -478,6 +495,32 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::SETCC,        ISD::FCEIL,         ISD::FFLOOR,
       ISD::FTRUNC,       ISD::FRINT,         ISD::FROUND,
       ISD::FROUNDEVEN,   ISD::FCANONICALIZE};
+
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
+    setTargetDAGCombine(ISD::TRUNCATE);
+    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+    setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
+    // load/store are already handled by pattern matching
+    SmallVector<MVT, 2> VTs = {MVT::v2i16, MVT::v4i8};
+    if (Subtarget.is64Bit()) {
+      VTs.append({MVT::v2i32, MVT::v4i16, MVT::v8i8});
+      setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
+      setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
+      setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
+    }
+    for (auto VT : VTs) {
+      setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
+      setOperationAction(ISD::UADDSAT, VT, Legal);
+      setOperationAction(ISD::SADDSAT, VT, Legal);
+      setOperationAction(ISD::USUBSAT, VT, Legal);
+      setOperationAction(ISD::SSUBSAT, VT, Legal);
+      setOperationAction(ISD::SSHLSAT, VT, Legal);
+      setOperationAction(ISD::USHLSAT, VT, Legal);
+      setOperationAction(ISD::BITCAST, VT, Custom);
+      setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VT, Legal);
+      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+    }
+  }
 
   if (Subtarget.hasStdExtZfbfmin()) {
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
@@ -4313,6 +4356,34 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   MVT XLenVT = Subtarget.getXLenVT();
 
   SDLoc DL(Op);
+  // Handle P extension packed vector BUILD_VECTOR with PLI for splat constants
+  if (Subtarget.hasStdExtP() && EnablePExtCodeGen) {
+    bool IsPExtVector =
+        (VT == MVT::v2i16 || VT == MVT::v4i8) ||
+        (Subtarget.is64Bit() &&
+         (VT == MVT::v4i16 || VT == MVT::v8i8 || VT == MVT::v2i32));
+    if (IsPExtVector) {
+      if (SDValue SplatValue = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+        if (auto *C = dyn_cast<ConstantSDNode>(SplatValue)) {
+          int64_t SplatImm = C->getSExtValue();
+          bool IsValidImm = false;
+
+          // Check immediate range based on vector type
+          if (VT == MVT::v8i8 || VT == MVT::v4i8)
+            // PLI_B uses 8-bit unsigned immediate
+            IsValidImm = isUInt<8>(SplatImm);
+          else
+            // PLI_H and PLI_W use 10-bit signed immediate
+            IsValidImm = isInt<10>(SplatImm);
+
+          if (IsValidImm) {
+            SDValue Imm = DAG.getConstant(SplatImm, DL, XLenVT);
+            return DAG.getNode(RISCVISD::PLI, DL, VT, Imm);
+          }
+        }
+      }
+    }
+  }
 
   // Proper support for f16 requires Zvfh. bf16 always requires special
   // handling. We need to cast the scalar to integer and create an integer
@@ -15998,10 +16069,98 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
 }
 
+// Handle P extension averaging subtraction pattern:
+// (vXiY (trunc (srl (sub ([s|z]ext vXiY:$a), ([s|z]ext vXiY:$b)), 1)))
+// -> PASUB/PASUBU
+static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
+                                   const RISCVSubtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  if (!Subtarget.hasStdExtP() || !VT.isFixedLengthVector())
+    return SDValue();
+
+  if (N0.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  // Check if shift amount is 1
+  SDValue ShAmt = N0.getOperand(1);
+  if (ShAmt.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(ShAmt.getNode());
+  if (!BV)
+    return SDValue();
+  SDValue Splat = BV->getSplatValue();
+  if (!Splat)
+    return SDValue();
+  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
+  if (!C)
+    return SDValue();
+  if (C->getZExtValue() != 1)
+    return SDValue();
+
+  // Check for SUB operation
+  SDValue Sub = N0.getOperand(0);
+  if (Sub.getOpcode() != ISD::SUB)
+    return SDValue();
+
+  SDValue LHS = Sub.getOperand(0);
+  SDValue RHS = Sub.getOperand(1);
+
+  // Check if both operands are sign/zero extends from the target
+  // type
+  bool IsSignExt = LHS.getOpcode() == ISD::SIGN_EXTEND &&
+                   RHS.getOpcode() == ISD::SIGN_EXTEND;
+  bool IsZeroExt = LHS.getOpcode() == ISD::ZERO_EXTEND &&
+                   RHS.getOpcode() == ISD::ZERO_EXTEND;
+
+  if (!IsSignExt && !IsZeroExt)
+    return SDValue();
+
+  SDValue A = LHS.getOperand(0);
+  SDValue B = RHS.getOperand(0);
+
+  // Check if the extends are from our target vector type
+  if (A.getValueType() != VT || B.getValueType() != VT)
+    return SDValue();
+
+  // Determine the instruction based on type and signedness
+  unsigned Opc;
+  MVT VecVT = VT.getSimpleVT();
+  if (VecVT == MVT::v4i16 && IsSignExt)
+    Opc = RISCV::PASUB_H;
+  else if (VecVT == MVT::v4i16 && IsZeroExt)
+    Opc = RISCV::PASUBU_H;
+  else if (VecVT == MVT::v2i16 && IsSignExt)
+    Opc = RISCV::PASUB_H;
+  else if (VecVT == MVT::v2i16 && IsZeroExt)
+    Opc = RISCV::PASUBU_H;
+  else if (VecVT == MVT::v8i8 && IsSignExt)
+    Opc = RISCV::PASUB_B;
+  else if (VecVT == MVT::v8i8 && IsZeroExt)
+    Opc = RISCV::PASUBU_B;
+  else if (VecVT == MVT::v4i8 && IsSignExt)
+    Opc = RISCV::PASUB_B;
+  else if (VecVT == MVT::v4i8 && IsZeroExt)
+    Opc = RISCV::PASUBU_B;
+  else if (VecVT == MVT::v2i32 && IsSignExt)
+    Opc = RISCV::PASUB_W;
+  else if (VecVT == MVT::v2i32 && IsZeroExt)
+    Opc = RISCV::PASUBU_W;
+  else
+    return SDValue();
+
+  // Create the machine node directly
+  return SDValue(DAG.getMachineNode(Opc, SDLoc(N), VT, {A, B}), 0);
+}
+
 static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+
+  if (Subtarget.hasStdExtP() && VT.isFixedLengthVector() && EnablePExtCodeGen)
+    return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
