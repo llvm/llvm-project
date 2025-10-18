@@ -65,12 +65,13 @@ bool FormatToken::isTypeOrIdentifier(const LangOptions &LangOpts) const {
 
 bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
   assert(is(tok::r_brace));
+  assert(MatchingParen);
+  assert(MatchingParen->is(tok::l_brace));
   if (!Style.Cpp11BracedListStyle ||
       Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
     return false;
   }
   const auto *LBrace = MatchingParen;
-  assert(LBrace && LBrace->is(tok::l_brace));
   if (LBrace->is(BK_BracedInit))
     return true;
   if (LBrace->Previous && LBrace->Previous->is(tok::equal))
