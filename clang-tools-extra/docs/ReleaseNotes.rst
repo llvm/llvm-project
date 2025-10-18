@@ -302,7 +302,9 @@ Changes in existing checks
   exceptions from captures are now diagnosed, exceptions in the bodies of
   lambdas that aren't actually invoked are not. Additionally, fixed an issue
   where the check wouldn't diagnose throws in arguments to functions or
-  constructors.
+  constructors. Added fine-grained configuration via options 
+  `CheckDestructors`, `CheckMoveMemberFunctions`, `CheckMain`,
+  `CheckedSwapFunctions`, and `CheckNothrowFunctions`.
 
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
