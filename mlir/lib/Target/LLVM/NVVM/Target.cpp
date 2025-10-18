@@ -24,9 +24,11 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
+#include "llvm/Support/InterleavedRange.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/Targets.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -265,6 +267,8 @@ NVPTXSerializer::NVPTXSerializer(Operation &module, NVVMTargetAttr target,
 std::optional<NVPTXSerializer::TmpFile>
 NVPTXSerializer::createTemp(StringRef name, StringRef suffix) {
   llvm::SmallString<128> filename;
+  if (name.size() > 80)
+    name = name.substr(0, 80);
   std::error_code ec =
       llvm::sys::fs::createTemporaryFile(name, suffix, filename);
   if (ec) {
@@ -452,17 +456,11 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
 
   // Dump tool invocation commands.
 #define DEBUG_TYPE "serialize-to-binary"
-  LLVM_DEBUG({
-    llvm::dbgs() << "Tool invocation for module: "
-                 << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << "ptxas executable:" << ptxasCompiler.value() << "\n";
-    llvm::interleave(ptxasArgs, llvm::dbgs(), " ");
-    llvm::dbgs() << "\n";
-    if (createFatbin) {
-      llvm::interleave(fatbinArgs, llvm::dbgs(), " ");
-      llvm::dbgs() << "\n";
-    }
-  });
+  LDBG() << "Tool invocation for module: " << getOperation().getNameAttr()
+         << "\nptxas executable:" << ptxasCompiler.value()
+         << "\nptxas args: " << llvm::interleaved(ptxasArgs, " ");
+  if (createFatbin)
+    LDBG() << "fatbin args: " << llvm::interleaved(fatbinArgs, " ");
 #undef DEBUG_TYPE
 
   // Helper function for printing tool error logs.
@@ -507,7 +505,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
     if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
-      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
       llvm::dbgs().flush();
     }
   });
@@ -529,7 +527,7 @@ NVPTXSerializer::compileToBinary(const std::string &ptxCode) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> logBuffer =
         llvm::MemoryBuffer::getFile(logFile->first);
     if (logBuffer && !(*logBuffer)->getBuffer().empty()) {
-      llvm::dbgs() << "Output:\n" << (*logBuffer)->getBuffer() << "\n";
+      LDBG() << "Output:\n" << (*logBuffer)->getBuffer();
       llvm::dbgs().flush();
     }
   });
@@ -629,12 +627,11 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
       SmallVector<char> log(logSize + 1, 0);
       RETURN_ON_NVPTXCOMPILER_ERROR(
           nvPTXCompilerGetInfoLog(compiler, log.data()));
-      llvm::dbgs() << "NVPTX compiler invocation for module: "
-                   << getOperation().getNameAttr() << "\n";
-      llvm::dbgs() << "Arguments: ";
-      llvm::interleave(cmdOpts.second, llvm::dbgs(), " ");
-      llvm::dbgs() << "\nOutput\n" << log.data() << "\n";
-      llvm::dbgs().flush();
+      LDBG() << "NVPTX compiler invocation for module: "
+             << getOperation().getNameAttr()
+             << "\nArguments: " << llvm::interleaved(cmdOpts.second, " ")
+             << "\nOutput\n"
+             << log.data();
     }
   });
 #undef DEBUG_TYPE
@@ -678,10 +675,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return LLVM IR if the compilation target is `offload`.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
-    llvm::dbgs() << "LLVM IR for module: " << getOperation().getNameAttr()
-                 << "\n";
-    llvm::dbgs() << llvmModule << "\n";
-    llvm::dbgs().flush();
+    LDBG() << "LLVM IR for module: " << getOperation().getNameAttr();
+    LDBG() << llvmModule;
   });
 #undef DEBUG_TYPE
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
@@ -716,11 +711,8 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
     isaCallback(serializedISA.value());
 
 #define DEBUG_TYPE "serialize-to-isa"
-  LLVM_DEBUG({
-    llvm::dbgs() << "PTX for module: " << getOperation().getNameAttr() << "\n";
-    llvm::dbgs() << *serializedISA << "\n";
-    llvm::dbgs().flush();
-  });
+  LDBG() << "PTX for module: " << getOperation().getNameAttr() << "\n"
+         << *serializedISA;
 #undef DEBUG_TYPE
 
   // Return PTX if the compilation target is `assembly`.

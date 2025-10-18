@@ -1,4 +1,4 @@
-//===--- InefficientVectorOperationCheck.cpp - clang-tidy------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,7 +39,7 @@ namespace {
 //   - LoopCounterName: The entire for loop (as ForStmt).
 //   - LoopParentName: The body of function f (as CompoundStmt).
 //   - VectorVarDeclName: 'v' (as VarDecl).
-//   - VectorVarDeclStmatName: The entire 'std::vector<T> v;' statement (as
+//   - VectorVarDeclStmtName: The entire 'std::vector<T> v;' statement (as
 //     DeclStmt).
 //   - PushBackOrEmplaceBackCallName: 'v.push_back(i)' (as cxxMemberCallExpr).
 //   - LoopInitVarName: 'i' (as VarDecl).

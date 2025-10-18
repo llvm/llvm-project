@@ -4,8 +4,8 @@
 
 template<class X> struct A {};
 
-template<class X> struct B : A<X> { 
-  B() : A<X>() {} 
+template<class X> struct B : A<X> {
+  B() : A<X>() {}
 };
 B<int> x;
 
@@ -76,3 +76,12 @@ namespace NonDependentError {
   Derived1<void> d1;
   Derived2<void> d2;
 }
+
+namespace UnresolvedUsing {
+  template <class T> class A {
+    using typename T::B;
+    struct C : B {
+      C() : B() {}
+    };
+  };
+} // namespace UnresolvedUsing

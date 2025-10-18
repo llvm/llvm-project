@@ -1,4 +1,4 @@
-//===--- RenamerClangTidyCheck.cpp - clang-tidy ---------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -194,6 +194,8 @@ public:
       return;
     if (SM.isWrittenInCommandLineFile(MacroNameTok.getLocation()))
       return;
+    if (SM.isInSystemHeader(MacroNameTok.getLocation()))
+      return;
     Check->checkMacro(MacroNameTok, Info, SM);
   }
 
@@ -329,7 +331,7 @@ public:
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
@@ -348,6 +350,8 @@ public:
     const TemplateDecl *Decl =
         Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
             /*IgnoreDeduced=*/true);
+    if (!Decl)
+      return true;
 
     if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())

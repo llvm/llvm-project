@@ -269,8 +269,7 @@ TEST_P(CASTest, NodesBig) {
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
 
-// FIXME: Re-enable the test.
-#if 0
+#if LLVM_ENABLE_THREADS
 /// Common test functionality for creating blobs in parallel. You can vary which
 /// cas instances are the same or different, and the size of the created blobs.
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
@@ -318,10 +317,10 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 
   DefaultThreadPool Threads;
   for (unsigned I = 0; I < BlobCount; ++I) {
-    Threads.async(Consumer, I, &Read1);
-    Threads.async(Consumer, I, &Read2);
     Threads.async(Producer, I, &Write1);
     Threads.async(Producer, I, &Write2);
+    Threads.async(Consumer, I, &Read1);
+    Threads.async(Consumer, I, &Read2);
   }
 
   Threads.wait();

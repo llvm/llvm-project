@@ -1,6 +1,7 @@
 add_lldb_unittest(DAPTests
   DAPErrorTest.cpp
   DAPTest.cpp
+  DAPTypesTest.cpp
   FifoFilesTest.cpp
   Handler/DisconnectTest.cpp
   Handler/ContinueTest.cpp
@@ -10,6 +11,8 @@ add_lldb_unittest(DAPTests
   ProtocolUtilsTest.cpp
   TestBase.cpp
   VariablesTest.cpp
+
+  SBAPITEST
 
   LINK_COMPONENTS
     Support

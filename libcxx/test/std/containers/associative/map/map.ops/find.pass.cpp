@@ -72,6 +72,22 @@ int main(int, char**) {
       assert(r == std::next(m.begin(), 8));
     }
   }
+  { // Check with std::greater to ensure we're actually using the correct comparator
+    using Pair = std::pair<const int, int>;
+    using Map  = std::map<int, int, std::greater<int> >;
+    Pair ar[]  = {Pair(5, 5), Pair(6, 6), Pair(7, 7), Pair(8, 8), Pair(9, 9), Pair(10, 10), Pair(11, 11), Pair(12, 12)};
+    Map m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+    assert(m.find(12) == std::next(m.begin(), 0));
+    assert(m.find(11) == std::next(m.begin(), 1));
+    assert(m.find(10) == std::next(m.begin(), 2));
+    assert(m.find(9) == std::next(m.begin(), 3));
+    assert(m.find(8) == std::next(m.begin(), 4));
+    assert(m.find(7) == std::next(m.begin(), 5));
+    assert(m.find(6) == std::next(m.begin(), 6));
+    assert(m.find(5) == std::next(m.begin(), 7));
+    assert(m.find(4) == std::next(m.begin(), 8));
+    assert(std::next(m.begin(), 8) == m.end());
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::pair<const int, double> V;

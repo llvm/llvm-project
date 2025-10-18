@@ -7,7 +7,11 @@ unittest("CASTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "ActionCacheTest.cpp",
     "CASTestConfig.cpp",
     "ObjectStoreTest.cpp",
+    "OnDiskDataAllocatorTest.cpp",
+    "OnDiskTrieRawHashMapTest.cpp",
+    "ProgramTest.cpp",
   ]
 }

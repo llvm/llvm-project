@@ -43,7 +43,8 @@ class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getOperand().getType());
     }
   }];
 }
@@ -57,7 +58,9 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If both operands are fundamental types, the operation is pure.
+      return !isFundamentalType(getOperand(0).getType()) ||
+        !isFundamentalType(getOperand(1).getType());
     }
   }];
 }
@@ -399,7 +402,8 @@ def EmitC_CmpOp : EmitC_BinaryOp<"cmp", []> {
   let assemblyFormat = "$predicate `,` operands attr-dict `:` functional-type(operands, results)";
 }
 
-def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
+def EmitC_ConstantOp
+    : EmitC_Op<"constant", [ConstantLike, CExpressionInterface]> {
   let summary = "Constant operation";
   let description = [{
     The `emitc.constant` operation produces an SSA value equal to some constant
@@ -426,6 +430,13 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasSideEffects() {
+      // If operand is fundamental type, the operation is pure.
+      return !isFundamentalType(getResult().getType());
+    }
+  }];
 }
 
 def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
@@ -452,51 +463,53 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
-def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, OpAsmOpInterface,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">, NoRegionArguments]> {
+def EmitC_ExpressionOp
+    : EmitC_Op<
+          "expression", [HasOnlyGraphRegion, OpAsmOpInterface,
+                         IsolatedFromAbove,
+                         SingleBlockImplicitTerminator<"emitc::YieldOp">]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
-    its single-basic-block region. The operation doesn't take any arguments.
+    its single-basic-block region. The operation takes zero or more input operands 
+    that are passed as block arguments to the region.
 
     As the operation is to be emitted as a C expression, the operations within
-    its body must form a single Def-Use tree of emitc ops whose result is
-    yielded by a terminating `emitc.yield`.
+    its body must form a single Def-Use tree, or a DAG trivially expandable to
+    one, i.e. a DAG where each operation with side effects is only reachable
+    once from the expression root.
+
+    Input operands can be of both value types (`EmitCType`) and lvalue types
+    (`EmitC_LValueType`).
 
     Example:
-
     ```mlir
-    %r = emitc.expression : i32 {
-      %0 = emitc.add %a, %b : (i32, i32) -> i32
-      %1 = emitc.call_opaque "foo"(%0) : (i32) -> i32
-      %2 = emitc.add %c, %d : (i32, i32) -> i32
-      %3 = emitc.mul %1, %2 : (i32, i32) -> i32
-      emitc.yield %3 : i32
+    %r = emitc.expression %a, %b, %c : (i32, i32, i32) -> i32 {
+      %0 = emitc.call_opaque "foo"(%a) : (i32) -> i32
+      %1 = emitc.add %b, %c : (i32, i32) -> i32
+      %2 = emitc.mul %0, %1 : (i32, i32) -> i32
+      emitc.yield %2 : i32
     }
     ```
 
-    May be emitted as
-
+    May be emitted as:
     ```c++
-    int32_t v7 = foo(v1 + v2) * (v3 + v4);
+    int32_t v4 = foo(v1) * (v2 + v3);
     ```
 
-    The operations allowed within expression body are EmitC operations with the
-    CExpressionInterface interface.
-
-    When specified, the optional `do_not_inline` indicates that the expression is
+    When specified, the optional `noinline` indicates that the expression is
     to be emitted as seen above, i.e. as the rhs of an EmitC SSA value
     definition. Otherwise, the expression may be emitted inline, i.e. directly
     at its use.
   }];
 
-  let arguments = (ins UnitAttr:$do_not_inline);
+  let arguments = (ins Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$defs,
+      UnitAttr:$do_not_inline);
   let results = (outs EmitCType:$result);
   let regions = (region SizedRegion<1>:$region);
 
   let hasVerifier = 1;
-  let assemblyFormat = "attr-dict (`noinline` $do_not_inline^)? `:` type($result) $region";
+  let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -507,6 +520,13 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
     Operation *getRootOp();
+    Block &createBody() {
+      assert(getRegion().empty() && "expression already has a body");
+      Block &block = getRegion().emplaceBlock();
+      for (auto operand : getOperands())
+        block.addArgument(operand.getType(), operand.getLoc());
+      return block;
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods
@@ -1051,6 +1071,8 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
+    %1 = "emitc.member" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1058,7 +1080,7 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
@@ -1073,6 +1095,9 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.lvalue<i32>
+    %1 = "emitc.member_of_ptr" (%arg0) {member = "b"}
+        : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
+        -> !emitc.array<2xi32>
     ```
   }];
 
@@ -1080,7 +1105,7 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
     Arg<StrAttr, "the member to access">:$member,
     EmitC_LValueOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
   );
-  let results = (outs EmitC_LValueOf<[EmitCType]>);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
@@ -1366,7 +1391,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp", "SwitchOp"]>]> {
+      [Pure, Terminator, ParentOneOf<["DoOp", "ExpressionOp", "ForOp", "IfOp", "SwitchOp"]>]> {
   let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
@@ -1618,7 +1643,7 @@ def EmitC_ClassOp
         return
       }
     }
-    // Class with a final speciferAdd commentMore actions
+    // Class with a final specifer
     emitc.class final @modelClass {
       emitc.field @fieldName0 : !emitc.array<1xf32> = {emitc.opaque = "input_tensor"}
       emitc.func @execute() {
@@ -1639,8 +1664,6 @@ def EmitC_ClassOp
     // Returns the body block containing class members and methods.
     Block &getBlock();
   }];
-
-  let hasCustomAssemblyFormat = 1;
 
   let assemblyFormat =
       [{ (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];
@@ -1698,6 +1721,107 @@ def EmitC_GetFieldOp
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
   let hasVerifier = 1;
+}
+
+def EmitC_DoOp : EmitC_Op<"do",
+      [NoTerminator, OpAsmOpInterface, RecursiveMemoryEffects]> {
+  let summary = "Do-while operation";
+  let description = [{
+    The `emitc.do` operation represents a C/C++ do-while loop construct that
+    repeatedly executes a body region as long as a condition region evaluates to
+    true. The operation has two regions:
+
+    1. A body region that contains the loop body
+    2. A condition region that must yield a boolean value (i1)
+
+    The condition is evaluated before each iteration as follows:
+    - The condition region must contain exactly one block with:
+      1. An `emitc.expression` operation producing an i1 value
+      2. An `emitc.yield` passing through the expression result
+    - The expression's body contains the actual condition logic
+
+    The body region is executed before the first evaluation of the 
+    condition. Thus, there is a guarantee that the loop will be executed 
+    at least once. The loop terminates when the condition yields false.
+
+    The canonical structure of `emitc.do` is:
+
+    ```mlir
+    emitc.do {
+      // Body region (no terminator required).
+      // Loop body operations...
+    } while {
+      // Condition region (must yield i1)
+      %condition = emitc.expression : () -> i1 {
+        // Condition computation...
+        %result = ... : i1  // Last operation must produce i1
+        emitc.yield %result : i1
+      }
+      // Forward expression result
+      emitc.yield %condition : i1  
+    }
+    ```
+
+    Example:
+
+    ```mlir
+    emitc.func @do_example() {
+      %counter = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+      %end = emitc.literal "10" : i32
+      %step = emitc.literal "1" : i32
+
+      emitc.do {
+        // Print current value
+        %val = emitc.load %counter : !emitc.lvalue<i32>
+        emitc.verbatim "printf(\"%d\\n\", {});" args %val : i32
+
+        // Increment counter
+        %new_val = emitc.add %val, %step : (i32, i32) -> i32
+        "emitc.assign"(%counter, %new_val) : (!emitc.lvalue<i32>, i32) -> ()
+      } while {
+        %condition = emitc.expression %counter, %end : (!emitc.lvalue<i32>, i32) -> i1 {
+          %current = emitc.load %counter : !emitc.lvalue<i32>
+          %cmp_res = emitc.cmp lt, %current, %end : (i32, i32) -> i1
+          emitc.yield %cmp_res : i1
+        }
+        emitc.yield %condition : i1
+      }
+      return
+    }
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    void do_example() {
+      int32_t v1 = 0;
+      do {
+        int32_t v2 = v1;
+        printf("%d\n", v2);
+        int32_t v3 = v2 + 1;
+        v1 = v3;
+      } while (v1 < 10);
+      return;
+    }
+    ```
+  }];
+
+  let arguments = (ins);
+  let results = (outs); 
+  let regions = (region SizedRegion<1>:$bodyRegion,
+                        SizedRegion<1>:$conditionRegion);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

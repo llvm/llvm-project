@@ -77,6 +77,35 @@ static void DescribeAddressBriefly(Stream &strm, const Address &addr,
   strm.Printf(".\n");
 }
 
+static constexpr uint8_t g_mte_tag_shift = 64 - 8;
+static constexpr addr_t g_mte_tag_mask = (addr_t)0x0f << g_mte_tag_shift;
+
+bool StopInfoMachException::DetermineTagMismatch(ExecutionContext &exe_ctx) {
+  const bool IsBadAccess = m_value == 1;            // EXC_BAD_ACCESS
+  const bool IsMTETagFault = (m_exc_code == 0x106); // EXC_ARM_MTE_TAG_FAULT
+  if (!IsBadAccess || !IsMTETagFault)
+    return false;
+
+  if (m_exc_data_count < 2)
+    return false;
+
+  const uint64_t bad_address = m_exc_subcode;
+
+  StreamString strm;
+  strm.Printf("EXC_ARM_MTE_TAG_FAULT (code=%" PRIu64 ", address=0x%" PRIx64
+              ")\n",
+              m_exc_code, bad_address);
+
+  const uint8_t tag = (bad_address & g_mte_tag_mask) >> g_mte_tag_shift;
+  const addr_t canonical_addr = bad_address & ~g_mte_tag_mask;
+  strm.Printf(
+      "Note: MTE tag mismatch detected: pointer tag=%d, address=0x%" PRIx64,
+      tag, canonical_addr);
+  m_description = std::string(strm.GetString());
+
+  return true;
+}
+
 bool StopInfoMachException::DeterminePtrauthFailure(ExecutionContext &exe_ctx) {
   bool IsBreakpoint = m_value == 6; // EXC_BREAKPOINT
   bool IsBadAccess = m_value == 1;  // EXC_BAD_ACCESS
@@ -265,6 +294,8 @@ const char *StopInfoMachException::GetDescription() {
 
     case llvm::Triple::aarch64:
       if (DeterminePtrauthFailure(exe_ctx))
+        return m_description.c_str();
+      if (DetermineTagMismatch(exe_ctx))
         return m_description.c_str();
       break;
 
