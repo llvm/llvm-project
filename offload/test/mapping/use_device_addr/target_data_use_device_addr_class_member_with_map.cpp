@@ -23,8 +23,8 @@ struct ST {
       printf("%d\n", mapped_ptr != NULL); // CHECK: 1
 #pragma omp target data map(m, c) use_device_addr(c)
       {
-        // FIXME: RT is currently doing the translation for "&this[0]" instead of
-        // &this->c, for a map like:
+        // FIXME: RT is currently doing the translation for "&this[0]" instead
+        // of &this->c, for a map like:
         //   this, &this->c, ..., RETURN_PARAM
         // We either need to fix RT, or emit a separate entry for such
         // use_device_addr, even if there is a matching map entry already.

@@ -20,7 +20,7 @@ struct ST {
 #pragma omp target data map(to : m, d)
     {
       void *mapped_ptr = omp_get_mapped_ptr(&d, omp_get_default_device());
-      printf("%d\n", mapped_ptr != NULL);      // CHECK: 1
+      printf("%d\n", mapped_ptr != NULL); // CHECK: 1
 #pragma omp target data map(m, d) use_device_addr(d)
       {
         // FIXME: Clang is mapping class member references using:
