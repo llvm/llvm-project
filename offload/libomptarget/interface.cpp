@@ -49,25 +49,26 @@ using namespace llvm::omp::target::ompt;
 // This step might be skipped if offload is disabled.
 bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
   if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED) {
-    DP("Offload is disabled\n");
+    DPIF(DEVICE, "Offload is disabled\n");
     return true;
   }
 
   if (DeviceID == OFFLOAD_DEVICE_DEFAULT) {
     DeviceID = omp_get_default_device();
-    DP("Use default device id %" PRId64 "\n", DeviceID);
+    DPIF(DEVICE, "Use default device id %" PRId64 "\n", DeviceID);
   }
 
   // Proposed behavior for OpenMP 5.2 in OpenMP spec github issue 2669.
   if (omp_get_num_devices() == 0) {
-    DP("omp_get_num_devices() == 0 but offload is manadatory\n");
+    DPIF(DEVICE, "omp_get_num_devices() == 0 but offload is manadatory\n");
     handleTargetOutcome(false, Loc);
     return true;
   }
 
   if (DeviceID == omp_get_initial_device()) {
-    DP("Device is host (%" PRId64 "), returning as if offload is disabled\n",
-       DeviceID);
+    DPIF(DEVICE,
+         "Device is host (%" PRId64 "), returning as if offload is disabled\n",
+         DeviceID);
     return true;
   }
   return false;
@@ -123,11 +124,11 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy",
                                    "NumArgs=" + std::to_string(ArgNum), Loc);
 
-  DP("Entering data %s region for device %" PRId64 " with %d mappings\n",
-     RegionName, DeviceId, ArgNum);
+  DPIF(MAP, "Entering data %s region for device %" PRId64 " with %d mappings\n",
+       RegionName, DeviceId, ArgNum);
 
   if (checkDevice(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    DPIF(MAP, "Not offloading to device %" PRId64 "\n", DeviceId);
     return;
   }
 
@@ -136,10 +137,11 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
                          RegionTypeMsg);
 #ifdef OMPTARGET_DEBUG
   for (int I = 0; I < ArgNum; ++I) {
-    DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-       ", Type=0x%" PRIx64 ", Name=%s\n",
-       I, DPxPTR(ArgsBase[I]), DPxPTR(Args[I]), ArgSizes[I], ArgTypes[I],
-       (ArgNames) ? getNameFromMapping(ArgNames[I]).c_str() : "unknown");
+    DPIF(MAP,
+         "Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
+         ", Type=0x%" PRIx64 ", Name=%s\n",
+         I, DPxPTR(ArgsBase[I]), DPxPTR(Args[I]), ArgSizes[I], ArgTypes[I],
+         (ArgNames) ? getNameFromMapping(ArgNames[I]).c_str() : "unknown");
   }
 #endif
 
@@ -274,7 +276,7 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
                                        KernelArgsTy &LocalKernelArgs,
                                        int32_t NumTeams, int32_t ThreadLimit) {
   if (KernelArgs->Version > OMP_KERNEL_ARG_VERSION)
-    DP("Unexpected ABI version: %u\n", KernelArgs->Version);
+    DPIF(KERNEL, "Unexpected ABI version: %u\n", KernelArgs->Version);
 
   uint32_t UpgradedVersion = KernelArgs->Version;
   if (KernelArgs->Version < OMP_KERNEL_ARG_VERSION) {
@@ -326,12 +328,13 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   assert(PM && "Runtime not initialized");
   static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
-  DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
-     "\n",
-     DeviceId, DPxPTR(HostPtr));
+  DPIF(KERNEL,
+       "Entering target region for device %" PRId64 " with entry point " DPxMOD
+       "\n",
+       DeviceId, DPxPTR(HostPtr));
 
   if (checkDevice(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    DPIF(KERNEL, "Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }
 
@@ -356,13 +359,14 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                          KernelArgs->ArgNames, "Entering OpenMP kernel");
 #ifdef OMPTARGET_DEBUG
   for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
-    DP("Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-       ", Type=0x%" PRIx64 ", Name=%s\n",
-       I, DPxPTR(KernelArgs->ArgBasePtrs[I]), DPxPTR(KernelArgs->ArgPtrs[I]),
-       KernelArgs->ArgSizes[I], KernelArgs->ArgTypes[I],
-       (KernelArgs->ArgNames)
-           ? getNameFromMapping(KernelArgs->ArgNames[I]).c_str()
-           : "unknown");
+    DPIF(KERNEL,
+         "Entry %2d: Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
+         ", Type=0x%" PRIx64 ", Name=%s\n",
+         I, DPxPTR(KernelArgs->ArgBasePtrs[I]), DPxPTR(KernelArgs->ArgPtrs[I]),
+         KernelArgs->ArgSizes[I], KernelArgs->ArgTypes[I],
+         (KernelArgs->ArgNames)
+             ? getNameFromMapping(KernelArgs->ArgNames[I]).c_str()
+             : "unknown");
   }
 #endif
 
@@ -463,7 +467,7 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDevice(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
+    DPIF(KERNEL, "Not offloading to device %" PRId64 "\n", DeviceId);
     return OMP_TGT_FAIL;
   }
   auto DeviceOrErr = PM->getDevice(DeviceId);
@@ -491,8 +495,9 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
 EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)RtMapperHandle;
   int64_t Size = MapperComponentsPtr->Components.size();
-  DP("__tgt_mapper_num_components(Handle=" DPxMOD ") returns %" PRId64 "\n",
-     DPxPTR(RtMapperHandle), Size);
+  DPIF(MAP,
+       "__tgt_mapper_num_components(Handle=" DPxMOD ") returns %" PRId64 "\n",
+       DPxPTR(RtMapperHandle), Size);
   return Size;
 }
 
@@ -500,11 +505,12 @@ EXTERN int64_t __tgt_mapper_num_components(void *RtMapperHandle) {
 EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
                                         void *Begin, int64_t Size, int64_t Type,
                                         void *Name) {
-  DP("__tgt_push_mapper_component(Handle=" DPxMOD
-     ") adds an entry (Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
-     ", Type=0x%" PRIx64 ", Name=%s).\n",
-     DPxPTR(RtMapperHandle), DPxPTR(Base), DPxPTR(Begin), Size, Type,
-     (Name) ? getNameFromMapping(Name).c_str() : "unknown");
+  DPIF(MAP,
+       "__tgt_push_mapper_component(Handle=" DPxMOD
+       ") adds an entry (Base=" DPxMOD ", Begin=" DPxMOD ", Size=%" PRId64
+       ", Type=0x%" PRIx64 ", Name=%s).\n",
+       DPxPTR(RtMapperHandle), DPxPTR(Base), DPxPTR(Begin), Size, Type,
+       (Name) ? getNameFromMapping(Name).c_str() : "unknown");
   auto *MapperComponentsPtr = (struct MapperComponentsTy *)RtMapperHandle;
   MapperComponentsPtr->Components.push_back(
       MapComponentInfoTy(Base, Begin, Size, Type, Name));

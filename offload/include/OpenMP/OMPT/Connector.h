@@ -76,7 +76,7 @@ private:
     std::string LibName = LibIdent;
     LibName += ".so";
 
-    DP("OMPT: Trying to load library %s\n", LibName.c_str());
+    DPIF(TOOL, "OMPT: Trying to load library %s\n", LibName.c_str());
     auto DynLibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
         llvm::sys::DynamicLibrary::getPermanentLibrary(LibName.c_str(),
                                                        &ErrMsg));
@@ -85,12 +85,12 @@ private:
       LibConnHandle = nullptr;
     } else {
       auto LibConnRtn = "ompt_" + LibIdent + "_connect";
-      DP("OMPT: Trying to get address of connection routine %s\n",
-         LibConnRtn.c_str());
+      DPIF(TOOL, "OMPT: Trying to get address of connection routine %s\n",
+           LibConnRtn.c_str());
       LibConnHandle = reinterpret_cast<OmptConnectRtnTy>(
           DynLibHandle->getAddressOfSymbol(LibConnRtn.c_str()));
     }
-    DP("OMPT: Library connection handle = %p\n", LibConnHandle);
+    DPIF(TOOL, "OMPT: Library connection handle = %p\n", LibConnHandle);
     IsInitialized = true;
   }
 

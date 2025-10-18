@@ -37,12 +37,12 @@ class OffloadPolicy {
       return;
     default:
       if (PM.getNumDevices()) {
-        DP("Default TARGET OFFLOAD policy is now mandatory "
-           "(devices were found)\n");
+        DPIF(RTL, "Default TARGET OFFLOAD policy is now mandatory "
+                  "(devices were found)\n");
         Kind = MANDATORY;
       } else {
-        DP("Default TARGET OFFLOAD policy is now disabled "
-           "(no devices were found)\n");
+        DPIF(RTL, "Default TARGET OFFLOAD policy is now disabled "
+                  "(no devices were found)\n");
         Kind = DISABLED;
       }
       return;
