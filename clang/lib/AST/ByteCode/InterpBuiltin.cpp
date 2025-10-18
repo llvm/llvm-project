@@ -3046,6 +3046,222 @@ static bool interp__builtin_ia32_pternlog(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// Mapping for COMI/UCOMI/CMPS/CMPP
+static inline bool evalCmpImm(uint32_t imm, llvm::APFloatBase::cmpResult cmp) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  bool result = false;
+  bool isUnordered = (cmp == llvm::APFloatBase::cmpUnordered);
+  bool isEq = (cmp == CmpResult::cmpEqual);
+  bool isGt = (cmp == CmpResult::cmpGreaterThan);
+  bool isLt = (cmp == CmpResult::cmpLessThan);
+
+  switch (imm & 0x1F) {
+  case 0x00: /* _CMP_EQ_OQ */
+  case 0x10: /* _CMP_EQ_OS */
+    result = isEq && !isUnordered;
+    break;
+  case 0x01: /* _CMP_LT_OS */
+  case 0x11: /* _CMP_LT_OQ */
+    result = isLt && !isUnordered;
+    break;
+  case 0x02: /* _CMP_LE_OS */
+  case 0x12: /* _CMP_LE_OQ */
+    result = !isGt && !isUnordered;
+    break;
+  case 0x03: /* _CMP_UNORD_Q */
+  case 0x13: /* _CMP_UNORD_S */
+    result = isUnordered;
+    break;
+  case 0x04: /* _CMP_NEQ_UQ */
+  case 0x14: /* _CMP_NEQ_US */
+    result = !isEq || isUnordered;
+    break;
+  case 0x05: /* _CMP_NLT_US */
+  case 0x15: /* _CMP_NLT_UQ */
+    result = !isLt || isUnordered;
+    break;
+  case 0x06: /* _CMP_NLE_US */
+  case 0x16: /* _CMP_NLE_UQ */
+    result = isGt || isUnordered;
+    break;
+  case 0x07: /* _CMP_ORD_Q */
+  case 0x17: /* _CMP_ORD_S */
+    result = !isUnordered;
+    break;
+  case 0x08: /* _CMP_EQ_UQ */
+  case 0x18: /* _CMP_EQ_US */
+    result = isEq || isUnordered;
+    break;
+  case 0x09: /* _CMP_NGE_US */
+  case 0x19: /* _CMP_NGE_UQ */
+    result = isLt || isUnordered;
+    break;
+  case 0x0a: /* _CMP_NGT_US */
+  case 0x1a: /* _CMP_NGT_UQ */
+    result = !isGt || isUnordered;
+    break;
+  case 0x0b: /* _CMP_FALSE_OQ */
+  case 0x1b: /* _CMP_FALSE_OS */
+    result = false;
+    break;
+  case 0x0c: /* _CMP_NEQ_OQ */
+  case 0x1c: /* _CMP_NEQ_OS */
+    result = !isEq && !isUnordered;
+    break;
+  case 0x0d: /* _CMP_GE_OS */
+  case 0x1d: /* _CMP_GE_OQ */
+    result = !isLt && !isUnordered;
+    break;
+  case 0x0e: /* _CMP_GT_OS */
+  case 0x1e: /* _CMP_GT_OQ */
+    result = isGt && !isUnordered;
+    break;
+  case 0x0f: /* _CMP_TRUE_UQ */
+  case 0x1f: /* _CMP_TRUE_US */
+    result = true;
+    break;
+  }
+  return result;
+}
+
+static inline void writeMaskFloat(Pointer &Vec, unsigned lane, bool truth,
+                                  bool isF64) {
+  if (isF64) {
+    llvm::APInt bits(64, truth ? ~0ULL : 0ULL);
+    llvm::APFloat F(llvm::APFloat::IEEEdouble(), bits);
+    Vec.elem<Floating>(lane) = Floating(F);
+  } else {
+    llvm::APInt bits(32, truth ? 0xFFFFFFFFu : 0u);
+    llvm::APFloat F(llvm::APFloat::IEEEsingle(), bits);
+    Vec.elem<Floating>(lane) = Floating(F);
+  }
+}
+
+static inline bool laneCompareToBool(const Pointer &A, const Pointer &B,
+                                     int Lane, uint32_t Imm) {
+  llvm::APFloat A0 = A.elem<Floating>(Lane).getAPFloat();
+  llvm::APFloat B0 = B.elem<Floating>(Lane).getAPFloat();
+  auto CR = A0.compare(B0);
+  return evalCmpImm(Imm, CR);
+}
+
+bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
+                             const InterpFrame *Frame, const CallExpr *Call,
+                             unsigned ID) {
+  llvm::APSInt ImmAPS =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  uint32_t imm = ImmAPS.getZExtValue();
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+  Pointer &Dst = S.Stk.peek<Pointer>();
+
+  bool isScalar = (ID == X86::BI__builtin_ia32_cmpss) ||
+                  (ID == X86::BI__builtin_ia32_cmpsd);
+  bool isF64 = (ID == X86::BI__builtin_ia32_cmppd) ||
+               (ID == X86::BI__builtin_ia32_cmpsd) ||
+               (ID == X86::BI__builtin_ia32_cmppd256);
+  int lanes = VA.getNumElems();
+
+  if (isScalar) {
+    bool Result = laneCompareToBool(VA, VB, /*lane*/ 0, imm);
+    writeMaskFloat(Dst, /*lane*/ 0, Result, isF64);
+    for (int i = 1; i < lanes; ++i)
+      Dst.elem<Floating>(i) = VA.elem<Floating>(i);
+  } else {
+    for (int i = 0; i < lanes; i++) {
+      bool Result = laneCompareToBool(VA, VB, i, imm);
+      writeMaskFloat(Dst, i, Result, isF64);
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_x86_vcomish(InterpState &S, CodePtr OpPC,
+                                        const InterpFrame *Frame,
+                                        const CallExpr *Call) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  llvm::APSInt R =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(3)));
+  llvm::APSInt P =
+      popToAPSInt(S.Stk, *S.getContext().classify(Call->getArg(2)));
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+  bool result = evalCmpImm(static_cast<uint32_t>(P.getZExtValue()), cmp);
+
+  pushInteger(S, result ? 1 : 0, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_x86_compare_scalar(InterpState &S, CodePtr OpPC,
+                                               const InterpFrame *Frame,
+                                               const CallExpr *Call,
+                                               unsigned ID) {
+  using CmpResult = llvm::APFloatBase::cmpResult;
+
+  const Pointer &VB = S.Stk.pop<Pointer>();
+  const Pointer &VA = S.Stk.pop<Pointer>();
+
+  llvm::APFloat A0 = VA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B0 = VB.elem<Floating>(0).getAPFloat();
+  CmpResult cmp = A0.compare(B0);
+
+  bool isEq = cmp == (CmpResult::cmpEqual);
+  bool isGt = cmp == (CmpResult::cmpGreaterThan);
+  bool isLt = cmp == (CmpResult::cmpLessThan);
+  bool result = false;
+
+  switch (ID) {
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+    result = isEq && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+    result = !isEq || A0.isNaN() || B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+    result = !isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+    result = isLt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    result = isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+    result = !isGt && !A0.isNaN() && !B0.isNaN();
+    break;
+  default:
+    return false;
+  }
+  pushInteger(S, result ? 1 : 0, S.getASTContext().IntTy);
+  return true;
+}
+
 static bool interp__builtin_vec_ext(InterpState &S, CodePtr OpPC,
                                     const CallExpr *Call, unsigned ID) {
   assert(Call->getNumArgs() == 2);
@@ -4117,6 +4333,41 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_insert128i256:
     return interp__builtin_x86_insert_subvector(S, OpPC, Call, BuiltinID);
 
+  case X86::BI__builtin_ia32_vcomish:
+    return interp__builtin_x86_vcomish(S, OpPC, Frame, Call);
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    return interp__builtin_x86_compare_scalar(S, OpPC, Frame, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256:
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID);
   case X86::BI__builtin_ia32_vec_ext_v4hi:
   case X86::BI__builtin_ia32_vec_ext_v16qi:
   case X86::BI__builtin_ia32_vec_ext_v8hi:
@@ -4176,8 +4427,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       break;
     }
     case OffsetOfNode::Array: {
-      // When generating bytecode, we put all the index expressions as Sint64 on
-      // the stack.
+      // When generating bytecode, we put all the index expressions as Sint64
+      // on the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
