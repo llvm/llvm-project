@@ -202,6 +202,13 @@ functions:
       - type: void *__restrict
       - type: errno_t
     guard: 'LIBC_HAS_ANNEX_K'
+  - name: set_constraint_handler_s
+    standards:
+      - stdc
+    return_type: constraint_handler_t
+    arguments:
+      - type: constraint_handler_t
+    guard: 'LIBC_HAS_ANNEX_K'
   - name: srand
     standards:
       - stdc
