@@ -257,6 +257,8 @@ void ProfiledBinary::load() {
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
 
+  populateSymbolsFromBinary(Obj);
+
   // Disassemble the text sections.
   disassemble(Obj);
 
@@ -604,13 +606,13 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Record potential call targets for tail frame inference later-on.
       if (InferMissingFrames && FRange) {
         uint64_t Target = 0;
-        MIA->evaluateBranch(Inst, Address, Size, Target);
+        bool Err = MIA->evaluateBranch(Inst, Address, Size, Target);
         if (MCDesc.isCall()) {
           // Indirect call targets are unknown at this point. Recording the
           // unknown target (zero) for further LBR-based refinement.
           MissingContextInferrer->CallEdges[Address].insert(Target);
         } else if (MCDesc.isUnconditionalBranch()) {
-          assert(Target &&
+          assert(Err &&
                  "target should be known for unconditional direct branch");
           // Any inter-function unconditional jump is considered tail call at
           // this point. This is not 100% accurate and could further be
@@ -817,6 +819,48 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
     uint64_t GUID = Function::getGUIDAssumingExternalLinkage(Name);
     SymbolStartAddrs[GUID] = Addr;
     StartAddrToSymMap.emplace(Addr, GUID);
+  }
+}
+
+void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
+  // Load binary functions from symbol table when Debug info is incomplete
+  StringRef FileName = Obj->getFileName();
+  for (const SymbolRef &Symbol : Obj->symbols()) {
+    const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
+    const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
+    const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
+    const uint64_t Size = Symbol.getSize();
+
+    if (Size == 0 || Type != SymbolRef::ST_Function)
+      continue;
+
+    SmallVector<StringRef> Suffixes(
+        {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
+    const StringRef SymName =
+        FunctionSamples::getCanonicalFnName(Name, Suffixes);
+
+    auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+    auto &Func = Ret.first->second;
+    if (Ret.second)
+      Func.FuncName = Ret.first->first;
+
+    if (auto Range = findFuncRange(Addr)) {
+      if (Ret.second && ShowDetailedWarning)
+        WithColor::warning()
+            << "Symbol " << Name << " start address "
+            << format("%8" PRIx64, Addr) << " already exists in DWARF at "
+            << format("%8" PRIx64, Range->StartAddress) << " in function "
+            << Range->getFuncName() << "\n";
+    } else {
+      // Store/Update Function Range from SymTab
+      Func.Ranges.emplace_back(Addr, Addr + Size);
+
+      auto R = StartAddrToFuncRangeMap.emplace(Addr, FuncRange());
+      FuncRange &FRange = R.first->second;
+      FRange.Func = &Func;
+      FRange.StartAddress = Addr;
+      FRange.EndAddress = Addr + Size;
+    }
   }
 }
 
