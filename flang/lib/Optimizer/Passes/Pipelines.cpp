@@ -301,8 +301,10 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP != EnableOpenMP::None)
+  if (enableOpenMP != EnableOpenMP::None) {
     pm.addPass(flangomp::createLowerWorkshare());
+    pm.addPass(flangomp::createLowerWorkdistribute());
+  }
   if (enableOpenMP == EnableOpenMP::Simd)
     pm.addPass(flangomp::createSimdOnlyPass());
 }
