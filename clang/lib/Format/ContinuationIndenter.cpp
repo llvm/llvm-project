@@ -411,7 +411,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
-       (Current.is(tok::r_brace) &&
+       (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
   }
