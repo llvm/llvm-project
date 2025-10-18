@@ -1008,12 +1008,10 @@ public:
     ComputeAnyOfResult,
     ComputeFindIVResult,
     ComputeReductionResult,
-    // Extracts the last lane from its operand if it is a vector, or the last
-    // part if scalar. In the latter case, the recipe will be removed during
-    // unrolling.
-    ExtractLastElement,
-    // Extracts the last lane for each part from its operand.
-    ExtractLastLanePerPart,
+    // Extracts the last part of its operand.
+    ExtractLastPart,
+    // Extracts the last lane of the current part of its operand.
+    ExtractLastLane,
     // Extracts the second-to-last lane from its operand or the second-to-last
     // part if it is scalar. In the latter case, the recipe will be removed
     // during unrolling.
