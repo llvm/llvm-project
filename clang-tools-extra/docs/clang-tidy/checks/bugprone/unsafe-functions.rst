@@ -98,7 +98,9 @@ The `reason` is optional and is used to provide additional information about the
 reasoning behind the replacement. The default reason is `is marked as unsafe`.
 
 If `replacement` is empty, the text `it should not be used` will be shown
-instead of the suggestion for a replacement.
+instead of the suggestion for a replacement. If the `reason` starts with the
+character `>`, the replacement message is disabled, to allow better control over
+the suggestions.
 
 As an example, the configuration `^original$, replacement, is deprecated;`
 will produce the following diagnostic message.
@@ -113,6 +115,9 @@ If the regular expression contains the character `:`, it is matched against the
 qualified name (i.e. ``std::original``), otherwise the regex is matched against the unqualified name (``original``).
 If the regular expression starts with `::` (or `^::`), it is matched against the
 fully qualified name (``::std::original``).
+
+A similar diagnostic message can be printed with the cofiguration
+`^original$,,> is deprecated, 'replacement' should be used instead`.
 
 .. note::
 
