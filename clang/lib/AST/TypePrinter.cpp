@@ -2147,9 +2147,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::DeviceKernel:
-    OS << T->getAttr()->getSpelling();
-    break;
   case attr::IntelOclBicc:
     OS << "inteloclbicc";
     break;
