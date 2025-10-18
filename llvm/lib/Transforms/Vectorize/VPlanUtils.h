@@ -64,7 +64,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
-    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    const VPRegionBlock *RegionOfR = Rep->getRegion();
     // Don't consider recipes in replicate regions as uniform yet; their first
     // lane cannot be accessed when executing the replicate region for other
     // lanes.
