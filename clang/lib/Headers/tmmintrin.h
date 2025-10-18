@@ -544,8 +544,8 @@ _mm_maddubs_pi16(__m64 __a, __m64 __b) {
 ///    A 128-bit vector of [8 x i16] containing one of the source operands.
 /// \returns A 128-bit vector of [8 x i16] containing the rounded and scaled
 ///    products of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhrs_epi16(__m128i __a,
-                                                              __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhrs_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmulhrsw128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -563,11 +563,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhrs_epi16(__m128i __a,
 ///    A 64-bit vector of [4 x i16] containing one of the source operands.
 /// \returns A 64-bit vector of [4 x i16] containing the rounded and scaled
 ///    products of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_mulhrs_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pmulhrsw128((__v8hi)__anyext128(__a),
-                                                (__v8hi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhrs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmulhrsw128((__v8hi)__zext128(__a),
+                                              (__v8hi)__zext128(__b)));
 }
 
 /// Copies the 8-bit integers from a 128-bit integer vector to the
