@@ -10,8 +10,9 @@
 
 // class multimap
 
-//       iterator lower_bound(const key_type& k);
-// const_iterator lower_bound(const key_type& k) const;
+//       iterator lower_bound(const key_type& k); // constexpr since C++26
+
+// const_iterator lower_bound(const key_type& k) const; // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -21,7 +22,8 @@
 #include "private_constructor.h"
 #include "is_transparent.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::pair<const int, double> V;
   {
     typedef std::multimap<int, double> M;
@@ -178,5 +180,13 @@ int main(int, char**) {
 
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

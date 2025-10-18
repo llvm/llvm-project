@@ -13,7 +13,7 @@
 // class multimap
 
 // template <class P>
-//   iterator insert(P&& p);
+//   iterator insert(P&& p); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 template <class Container>
-void do_insert_rv_test() {
+TEST_CONSTEXPR_CXX26 void do_insert_rv_test() {
   typedef std::multimap<int, MoveOnly> M;
   typedef typename M::iterator R;
   typedef typename M::value_type VT;
@@ -53,7 +53,8 @@ void do_insert_rv_test() {
   assert(r->second == 3);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   do_insert_rv_test<std::multimap<int, MoveOnly>>();
   {
     typedef std::multimap<int, MoveOnly, std::less<int>, min_allocator<std::pair<const int, MoveOnly>>> M;
@@ -88,5 +89,13 @@ int main(int, char**) {
     assert(r->second == 3);
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

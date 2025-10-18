@@ -17,7 +17,8 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   typedef std::multimap<int, std::string> map_type;
   typedef map_type::value_compare value_compare;
   typedef map_type::value_type value_type;
@@ -26,5 +27,13 @@ int main(int, char**) {
   ASSERT_SAME_TYPE(value_compare::first_argument_type, value_type);
   ASSERT_SAME_TYPE(value_compare::second_argument_type, value_type);
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
