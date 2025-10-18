@@ -1,8 +1,11 @@
-; RUN: opt %loadNPMPolly -polly-detect-full-functions -polly-invariant-load-hoisting '-passes=cgscc(polly-inline),function(print<polly-function-scops>)' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-detect-full-functions -polly-scop-inliner \
+; RUN: -polly-invariant-load-hoisting '-passes=print<polly-function-scops>' -disable-output < %s | FileCheck %s
 
 ; Check that we inline a function that requires invariant load hoisting
 ; correctly.
 ; CHECK:    Max Loop Depth:  2
+
+; REQUIRES: pollyacc
 
 
 ; void to_be_inlined(int A[], int *begin, int *end) {
