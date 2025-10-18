@@ -48,7 +48,7 @@
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/TimeProfilerTool.inc"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -87,19 +87,6 @@ static cl::opt<unsigned>
     TimeCompilations("time-compilations", cl::Hidden, cl::init(1u),
                      cl::value_desc("N"),
                      cl::desc("Repeat compilation N times for timing"));
-
-static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
-
-static cl::opt<unsigned> TimeTraceGranularity(
-    "time-trace-granularity",
-    cl::desc(
-        "Minimum time granularity (in microseconds) traced by time profiler"),
-    cl::init(500), cl::Hidden);
-
-static cl::opt<std::string>
-    TimeTraceFile("time-trace-file",
-                  cl::desc("Specify time trace file destination"),
-                  cl::value_desc("filename"));
 
 static cl::opt<std::string>
     BinutilsVersion("binutils-version", cl::Hidden,
@@ -404,19 +391,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  if (TimeTrace)
-    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-  auto TimeTraceScopeExit = make_scope_exit([]() {
-    if (TimeTrace) {
-      if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          errs() << SE.getMessage() << "\n";
-        });
-        return;
-      }
-      timeTraceProfilerCleanup();
-    }
-  });
+  TimeTraceProfilerRAII TimeTracer(argv[0], OutputFilename);
 
   LLVMContext Context;
   Context.setDiscardValueNames(DiscardValueNames);

@@ -47,7 +47,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/TimeProfilerTool.inc"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -242,19 +242,6 @@ static cl::opt<bool> DiscardValueNames(
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
-
-static cl::opt<unsigned> TimeTraceGranularity(
-    "time-trace-granularity",
-    cl::desc(
-        "Minimum time granularity (in microseconds) traced by time profiler"),
-    cl::init(500), cl::Hidden);
-
-static cl::opt<std::string>
-    TimeTraceFile("time-trace-file",
-                  cl::desc("Specify time trace file destination"),
-                  cl::value_desc("filename"));
-
 static cl::opt<bool> RemarksWithHotness(
     "pass-remarks-with-hotness",
     cl::desc("With PGO, include profile count in optimization remarks"),
@@ -295,24 +282,6 @@ static cl::list<std::string>
 static CodeGenOptLevel GetCodeGenOptLevel() {
   return static_cast<CodeGenOptLevel>(unsigned(CodeGenOptLevelCL));
 }
-
-struct TimeTracerRAII {
-  TimeTracerRAII(StringRef ProgramName) {
-    if (TimeTrace)
-      timeTraceProfilerInitialize(TimeTraceGranularity, ProgramName);
-  }
-  ~TimeTracerRAII() {
-    if (TimeTrace) {
-      if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-        handleAllErrors(std::move(E), [&](const StringError &SE) {
-          errs() << SE.getMessage() << "\n";
-        });
-        return;
-      }
-      timeTraceProfilerCleanup();
-    }
-  }
-};
 
 // For use in NPM transition. Currently this contains most codegen-specific
 // passes. Remove passes from here when porting to the NPM.
@@ -492,7 +461,7 @@ extern "C" int optMain(
     return 0;
   }
 
-  TimeTracerRAII TimeTracer(argv[0]);
+  TimeTraceProfilerRAII TimeTracer(argv[0], OutputFilename);
 
   SMDiagnostic Err;
 

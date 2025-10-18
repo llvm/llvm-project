@@ -38,7 +38,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/TimeProfilerTool.inc"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
@@ -247,19 +247,6 @@ static cl::opt<unsigned>
     NumBenchmarkRuns("runs", cl::desc("Number of runs for benchmarking"),
                      cl::cat(MCCategory));
 
-static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
-
-static cl::opt<unsigned> TimeTraceGranularity(
-    "time-trace-granularity",
-    cl::desc(
-        "Minimum time granularity (in microseconds) traced by time profiler"),
-    cl::init(500), cl::Hidden);
-
-static cl::opt<std::string>
-    TimeTraceFile("time-trace-file",
-                  cl::desc("Specify time trace file destination"),
-                  cl::value_desc("filename"));
-
 static const Target *GetTarget(const char *ProgName) {
   // Figure out the target triple.
   if (TripleName.empty())
@@ -392,18 +379,7 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&MCCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm machine code playground\n");
 
-  if (TimeTrace)
-    timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
-
-  auto TimeTraceScopeExit = make_scope_exit([]() {
-    if (!TimeTrace)
-      return;
-    if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
-      logAllUnhandledErrors(std::move(E), errs());
-      return;
-    }
-    timeTraceProfilerCleanup();
-  });
+  TimeTraceProfilerRAII TimeTracer(argv[0], OutputFilename);
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
