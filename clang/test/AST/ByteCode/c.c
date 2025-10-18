@@ -372,3 +372,12 @@ void discardedCmp(void)
 /// ArraySubscriptExpr that's not an lvalue
 typedef unsigned char U __attribute__((vector_size(1)));
 void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
