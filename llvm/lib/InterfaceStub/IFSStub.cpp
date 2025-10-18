@@ -19,6 +19,8 @@ IFSStub::IFSStub(IFSStub const &Stub) {
   SoName = Stub.SoName;
   NeededLibs = Stub.NeededLibs;
   Symbols = Stub.Symbols;
+  VersionDefinitions = Stub.VersionDefinitions;
+  VersionRequirements = Stub.VersionRequirements;
 }
 
 IFSStub::IFSStub(IFSStub &&Stub) {
@@ -27,6 +29,8 @@ IFSStub::IFSStub(IFSStub &&Stub) {
   SoName = std::move(Stub.SoName);
   NeededLibs = std::move(Stub.NeededLibs);
   Symbols = std::move(Stub.Symbols);
+  VersionDefinitions = std::move(Stub.VersionDefinitions);
+  VersionRequirements = std::move(Stub.VersionRequirements);
 }
 
 IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) : IFSStub() {
@@ -35,6 +39,8 @@ IFSStubTriple::IFSStubTriple(IFSStubTriple const &Stub) : IFSStub() {
   SoName = Stub.SoName;
   NeededLibs = Stub.NeededLibs;
   Symbols = Stub.Symbols;
+  VersionDefinitions = Stub.VersionDefinitions;
+  VersionRequirements = Stub.VersionRequirements;
 }
 
 IFSStubTriple::IFSStubTriple(IFSStub const &Stub) {
@@ -43,6 +49,8 @@ IFSStubTriple::IFSStubTriple(IFSStub const &Stub) {
   SoName = Stub.SoName;
   NeededLibs = Stub.NeededLibs;
   Symbols = Stub.Symbols;
+  VersionDefinitions = Stub.VersionDefinitions;
+  VersionRequirements = Stub.VersionRequirements;
 }
 
 IFSStubTriple::IFSStubTriple(IFSStubTriple &&Stub) {
@@ -51,6 +59,8 @@ IFSStubTriple::IFSStubTriple(IFSStubTriple &&Stub) {
   SoName = std::move(Stub.SoName);
   NeededLibs = std::move(Stub.NeededLibs);
   Symbols = std::move(Stub.Symbols);
+  VersionDefinitions = std::move(Stub.VersionDefinitions);
+  VersionRequirements = std::move(Stub.VersionRequirements);
 }
 
 bool IFSTarget::empty() {

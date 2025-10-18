@@ -24,9 +24,25 @@ using namespace llvm;
 using namespace llvm::ifs;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(IFSSymbol)
+LLVM_YAML_IS_SEQUENCE_VECTOR(IFSVerDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(IFSVerNeed)
+LLVM_YAML_STRONG_TYPEDEF(std::string, FlowString)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(FlowString)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct ScalarTraits<FlowString> {
+  static void output(const FlowString &Value, void *, llvm::raw_ostream &Out) {
+    Out << Value;
+  }
+
+  static StringRef input(StringRef Scalar, void *, FlowString &Value) {
+    return Scalar;
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
 
 /// YAML traits for ELFSymbolType.
 template <> struct ScalarEnumerationTraits<IFSSymbolType> {
@@ -116,6 +132,7 @@ template <> struct MappingTraits<IFSTarget> {
 template <> struct MappingTraits<IFSSymbol> {
   static void mapping(IO &IO, IFSSymbol &Symbol) {
     IO.mapRequired("Name", Symbol.Name);
+    IO.mapOptional("Version", Symbol.Version, "");
     IO.mapRequired("Type", Symbol.Type);
     // The need for symbol size depends on the symbol type.
     if (Symbol.Type == IFSSymbolType::NoType) {
@@ -135,6 +152,44 @@ template <> struct MappingTraits<IFSSymbol> {
   static const bool flow = true; // NOLINT(readability-identifier-naming)
 };
 
+/// YAML traits for ELFVersionDefinition.
+template <> struct MappingTraits<IFSVerDef> {
+  static void mapping(IO &IO, IFSVerDef &VerDef) {
+    IO.mapRequired("Name", VerDef.Name);
+    if (IO.outputting()) {
+      std::vector<FlowString> Parents;
+      for (const std::string &Parent : VerDef.Parents) {
+        Parents.push_back(Parent);
+      }
+      IO.mapOptional("Parents", Parents);
+    } else {
+      IO.mapOptional("Parents", VerDef.Parents);
+    }
+  }
+
+  // Compacts symbol information into a single line.
+  static const bool flow = true; // NOLINT(readability-identifier-naming)
+};
+
+/// YAML traits for ELFVersionRequirements.
+template <> struct MappingTraits<IFSVerNeed> {
+  static void mapping(IO &IO, IFSVerNeed &VerNeed) {
+    IO.mapRequired("File", VerNeed.File);
+    if (IO.outputting()) {
+      std::vector<FlowString> Names;
+      for (const std::string &Parent : VerNeed.Names) {
+        Names.push_back(Parent);
+      }
+      IO.mapOptional("Names", Names);
+    } else {
+      IO.mapOptional("Names", VerNeed.Names);
+    }
+  }
+
+  // Compacts symbol information into a single line.
+  static const bool flow = true; // NOLINT(readability-identifier-naming)
+};
+
 /// YAML traits for ELFStub objects.
 template <> struct MappingTraits<IFSStub> {
   static void mapping(IO &IO, IFSStub &Stub) {
@@ -145,6 +200,8 @@ template <> struct MappingTraits<IFSStub> {
     IO.mapOptional("Target", Stub.Target);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
+    IO.mapOptional("VersionDefinitions", Stub.VersionDefinitions);
+    IO.mapOptional("VersionRequirements", Stub.VersionRequirements);
   }
 };
 
@@ -158,6 +215,8 @@ template <> struct MappingTraits<IFSStubTriple> {
     IO.mapOptional("Target", Stub.Target.Triple);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);
+    IO.mapOptional("VersionDefinitions", Stub.VersionDefinitions);
+    IO.mapOptional("VersionRequirements", Stub.VersionRequirements);
   }
 };
 } // end namespace yaml

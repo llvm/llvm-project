@@ -393,7 +393,7 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
 
   // Attempt to merge input.
   IFSStub Stub;
-  std::map<std::string, IFSSymbol> SymbolMap;
+  std::map<std::tuple<std::string, std::string>, IFSSymbol> SymbolMap;
   std::string PreviousInputFilePath;
   for (const std::string &InputFilePath : Config.InputFilePaths) {
     Expected<std::unique_ptr<IFSStub>> StubOrErr =
@@ -407,6 +407,8 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
       Stub.Target = TargetStub->Target;
       Stub.SoName = TargetStub->SoName;
       Stub.NeededLibs = TargetStub->NeededLibs;
+      Stub.VersionDefinitions = TargetStub->VersionDefinitions;
+      Stub.VersionRequirements = TargetStub->VersionRequirements;
     } else {
       if (Stub.IfsVersion != TargetStub->IfsVersion) {
         if (Stub.IfsVersion.getMajor() != IfsVersionCurrent.getMajor()) {
@@ -440,10 +442,23 @@ int llvm_ifs_main(int argc, char **argv, const llvm::ToolContext &) {
                            << InputFilePath << "\n";
         return -1;
       }
+      if (Stub.VersionDefinitions != TargetStub->VersionDefinitions) {
+        WithColor::error() << "Interface Stub: VersionDefinitions Mismatch."
+                           << "\nFilenames: " << PreviousInputFilePath << " "
+                           << InputFilePath << "\n";
+        return -1;
+      }
+      if (Stub.VersionRequirements != TargetStub->VersionRequirements) {
+        WithColor::error() << "Interface Stub: VersionRequirements Mismatch."
+                           << "\nFilenames: " << PreviousInputFilePath << " "
+                           << InputFilePath << "\n";
+        return -1;
+      }
     }
 
     for (auto Symbol : TargetStub->Symbols) {
-      auto [SI, Inserted] = SymbolMap.try_emplace(Symbol.Name, Symbol);
+      auto [SI, Inserted] =
+          SymbolMap.try_emplace({Symbol.Name, Symbol.Version}, Symbol);
       if (Inserted)
         continue;
 

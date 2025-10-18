@@ -52,8 +52,10 @@ enum class IFSBitWidthType {
 
 struct IFSSymbol {
   IFSSymbol() = default;
-  explicit IFSSymbol(std::string SymbolName) : Name(std::move(SymbolName)) {}
+  explicit IFSSymbol(std::string SymbolName, std::string SymVer)
+      : Name(std::move(SymbolName)), Version(std::move(SymVer)) {}
   std::string Name;
+  std::string Version;
   std::optional<uint64_t> Size;
   IFSSymbolType Type = IFSSymbolType::NoType;
   bool Undefined = false;
@@ -61,6 +63,36 @@ struct IFSSymbol {
   std::optional<std::string> Warning;
   bool operator<(const IFSSymbol &RHS) const { return Name < RHS.Name; }
 };
+
+struct IFSVerDef {
+  std::string Name;
+  std::vector<std::string> Parents;
+};
+
+inline bool operator==(const IFSVerDef &Lhs, const IFSVerDef &Rhs) {
+  if (Lhs.Name != Rhs.Name || Lhs.Parents != Rhs.Parents)
+    return false;
+  return true;
+}
+
+inline bool operator!=(const IFSVerDef &Lhs, const IFSVerDef &Rhs) {
+  return !(Lhs == Rhs);
+}
+
+struct IFSVerNeed {
+  std::string File;
+  std::vector<std::string> Names;
+};
+
+inline bool operator==(const IFSVerNeed &Lhs, const IFSVerNeed &Rhs) {
+  if (Lhs.File != Rhs.File || Lhs.Names != Rhs.Names)
+    return false;
+  return true;
+}
+
+inline bool operator!=(const IFSVerNeed &Lhs, const IFSVerNeed &Rhs) {
+  return !(Lhs == Rhs);
+}
 
 struct IFSTarget {
   std::optional<std::string> Triple;
@@ -94,6 +126,8 @@ struct IFSStub {
   IFSTarget Target;
   std::vector<std::string> NeededLibs;
   std::vector<IFSSymbol> Symbols;
+  std::vector<IFSVerDef> VersionDefinitions;
+  std::vector<IFSVerNeed> VersionRequirements;
 
   IFSStub() = default;
   LLVM_ABI IFSStub(const IFSStub &Stub);
