@@ -4119,9 +4119,6 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
-  if (N->getFlags().hasNoCtSelectOpt())
-    return SDValue();
-
   if (SDValue V = foldSubCtlzNot<EmptyMatchContext>(N, DAG))
     return V;
 

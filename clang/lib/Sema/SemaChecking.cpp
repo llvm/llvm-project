@@ -3528,7 +3528,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
         if ((AIsInteger && BIsInteger) || (AIsFloating && BIsFloating)) {
           // Both are in the same category, allow usual arithmetic conversions
           ResultTy = UsualArithmeticConversions(
-              ARes, BRes, TheCall->getBeginLoc(), ACK_Conditional);
+              ARes, BRes, TheCall->getBeginLoc(), ArithConvKind::Conditional);
           if (ARes.isInvalid() || BRes.isInvalid() || ResultTy.isNull()) {
             return Diag(A->getBeginLoc(),
                         diag::err_typecheck_cond_incompatible_operands)
