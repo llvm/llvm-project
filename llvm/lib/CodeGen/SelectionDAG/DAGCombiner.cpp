@@ -12257,9 +12257,16 @@ static SDValue foldVSelectToSignBitSplatMask(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(ISD::AND, DL, VT, Not, DAG.getFreeze(N2));
   }
 
-  // TODO: There's another pattern in this family, but it may require
-  //       implementing hasOrNot() to check for profitability:
-  //       (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | freeze(N2)
+  // If we have to invert the sign bit mask and OR with -1, only do that
+  // transform if the target has a bitwise 'or not' instruction (the invert is
+  // free). (Cond0 s> -1) ? -1 : N2 --> ~(Cond0 s>> BW-1) | freeze(N2)
+  if (isAllOnesOrAllOnesSplat(N2) && TLI.hasOrNot(N2)) {
+    SDLoc DL(N);
+    SDValue ShiftAmt = DAG.getShiftAmountConstant(EltSizeInBits - 1, VT, DL);
+    SDValue Sra = DAG.getNode(ISD::SRA, DL, VT, Cond0, ShiftAmt);
+    SDValue Not = DAG.getNOT(DL, Sra, VT);
+    return DAG.getNode(ISD::OR, DL, VT, Not, DAG.getFreeze(N1));
+  }
 
   return SDValue();
 }
