@@ -11,6 +11,7 @@
 
 #include "src/__support/macros/config.h"
 
+#include "hdr/errno_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -132,14 +133,46 @@ template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
 
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
-// These are the printf return values for when an error has occurred. They are
-// all negative, and should be distinct.
-constexpr int FILE_WRITE_ERROR = -1;
-constexpr int FILE_STATUS_ERROR = -2;
-constexpr int NULLPTR_WRITE_ERROR = -3;
-constexpr int INT_CONVERSION_ERROR = -4;
-constexpr int FIXED_POINT_CONVERSION_ERROR = -5;
-constexpr int ALLOCATION_ERROR = -6;
+// These are the error return values used by the printf engine when an
+// error has occurred. They are all large negative, distinct values starting
+// from -1000 to not overlap with system errors.
+constexpr int FILE_WRITE_ERROR = -1001;
+constexpr int FILE_STATUS_ERROR = -1002;
+constexpr int NULLPTR_WRITE_ERROR = -1003;
+constexpr int INT_CONVERSION_ERROR = -1004;
+constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
+constexpr int ALLOCATION_ERROR = -1006;
+
+LIBC_INLINE static int internal_error_to_errno(int internal_error) {
+  // System error occured, return error as is.
+  if (internal_error < 1001) {
+    return internal_error;
+  }
+
+  // Map internal error to errno.
+  switch (-internal_error) {
+  case WRITE_OK:
+    return 0;
+  case FILE_WRITE_ERROR:
+    return EIO;
+  case FILE_STATUS_ERROR:
+    return EIO;
+  case NULLPTR_WRITE_ERROR:
+    return EINVAL;
+  case INT_CONVERSION_ERROR:
+    return ERANGE;
+  case FIXED_POINT_CONVERSION_ERROR:
+    return EINVAL;
+  case ALLOCATION_ERROR:
+    return ENOMEM;
+  default:
+    LIBC_ASSERT(
+        false &&
+        "Invalid internal printf error code passed to internal_error_to_errno");
+    return EINVAL;
+  }
+}
+
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 

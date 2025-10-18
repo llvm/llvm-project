@@ -394,6 +394,7 @@ list(APPEND fprintf_deps
       libc.hdr.types.FILE
       libc.src.__support.arg_list
       libc.src.stdio.printf_core.vfprintf_internal
+      libc.src.stdio.printf_core.core_structs
 )
 
 if(LLVM_LIBC_FULL_BUILD)
