@@ -9,7 +9,7 @@ define void @switch_replace_default(i32 %x) {
 ; CHECK-LABEL: define void @switch_replace_default(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 3)
-; CHECK-NEXT:    switch i32 [[MIN]], label %[[COMMON_RET:.*]] [
+; CHECK-NEXT:    switch i32 [[X]], label %[[COMMON_RET:.*]] [
 ; CHECK-NEXT:      i32 0, label %[[CASE0:.*]]
 ; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
 ; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]

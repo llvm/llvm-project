@@ -7555,45 +7555,41 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 ///
 /// Transforms into:
 ///
-/// switch(umin(a, 3)) {
+/// switch(a) {
 /// case 0:
 /// case 1:
 /// case 2:
 /// default:
 ///   // This is case 3
 /// }
-static bool simplifySwitchWhenUMin(SwitchInst *SI, IRBuilder<> &Builder) {
-  auto *Call = dyn_cast<IntrinsicInst>(SI->getCondition());
+static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
+  Value *A;
+  ConstantInt *Constant;
 
-  if (!Call)
-    return false;
-
-  if (Call->getIntrinsicID() != Intrinsic::umin)
+  if (!match(SI->getCondition(), m_UMin(m_Value(A), m_ConstantInt(Constant))))
     return false;
 
   if (!SI->defaultDestUnreachable())
     return false;
 
-  // Extract the constant operand from the intrinsic.
-  auto *Constant = dyn_cast<ConstantInt>(Call->getArgOperand(1));
+  auto Case = SI->findCaseValue(Constant);
 
-  if (!Constant) {
+  // When the case value cannot be found then `findCaseValue` returns the
+  // default cause. This means that there is no `case 3:` and this
+  // simplification fails.
+  if (Case == SI->case_default())
     return false;
-  }
 
-  for (auto Case = SI->case_begin(), e = SI->case_end(); Case != e; Case++) {
-    uint64_t CaseValue = Case->getCaseValue()->getValue().getZExtValue();
+  BasicBlock *Unreachable = SI->getDefaultDest();
+  SI->setDefaultDest(Case->getCaseSuccessor());
+  SI->removeCase(Case);
+  SI->setCondition(A);
 
-    // We found the case which is equal to the case's umin argument.
-    // We can make the case the default case.
-    if (Constant->equalsInt(CaseValue)) {
-      SI->setDefaultDest(Case->getCaseSuccessor());
-      SI->removeCase(Case);
-      return true;
-    }
-  }
+  BasicBlock *BB = SI->getParent();
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Delete, BB, Unreachable}});
 
-  return false;
+  return true;
 }
 
 /// Tries to transform switch of powers of two to reduce switch range.
@@ -8022,7 +8018,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (simplifyDuplicateSwitchArms(SI, DTU))
     return requestResimplify();
 
-  if (simplifySwitchWhenUMin(SI, Builder))
+  if (simplifySwitchWhenUMin(SI, DTU))
     return requestResimplify();
 
   return false;
