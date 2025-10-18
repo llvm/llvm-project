@@ -115,6 +115,12 @@ cl::opt<std::string>
                             "perf-script output in a textual format"),
                    cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
 
+cl::opt<bool>
+    ReadPerfScript("perfscript",
+                   cl::desc("skip perf and read perf-script trace created by "
+                            "Linux perf tool with script command"),
+                   cl::ReallyHidden, cl::cat(AggregatorCategory));
+
 static cl::opt<bool>
 TimeAggregator("time-aggr",
   cl::desc("time BOLT aggregator"),
@@ -184,7 +190,8 @@ void DataAggregator::start() {
 
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
+  if (opts::ReadPreAggregated || opts::ReadPerfScript ||
+      !opts::ReadPerfEvents.empty())
     return;
 
   findPerfExecutable();
@@ -226,7 +233,7 @@ void DataAggregator::start() {
 }
 
 void DataAggregator::abort() {
-  if (opts::ReadPreAggregated)
+  if (opts::ReadPreAggregated || opts::ReadPerfScript)
     return;
 
   std::string Error;
@@ -326,7 +333,7 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
-  if (opts::ReadPreAggregated)
+  if (opts::ReadPreAggregated || opts::ReadPerfScript)
     return true;
 
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
@@ -368,6 +375,80 @@ void DataAggregator::parsePreAggregated() {
   Line = 1;
   if (parsePreAggregatedLBRSamples()) {
     errs() << "PERF2BOLT: failed to parse samples\n";
+    exit(1);
+  }
+}
+
+bool DataAggregator::isMMapEvent(StringRef Line) {
+  // Short cut to avoid string find is possible.
+  if (Line.empty() || Line.size() < 50)
+    return false;
+
+  // Check that PERF_RECORD_MMAP2 or PERF_RECORD_MMAP appear in the line.
+  return Line.contains("PERF_RECORD_MMAP");
+}
+
+void DataAggregator::parsePerfScriptEvents() {
+  outs() << "PERF2BOLT: parsing a hybrid perf-script events...\n";
+  NamedRegionTimer T("parsePerfScriptEvents", "Parsing perf-script events",
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+      MemoryBuffer::getFileOrSTDIN(Filename);
+  if (std::error_code EC = MB.getError()) {
+    errs() << "PERF2BOLT-ERROR: cannot open " << Filename << ": "
+           << EC.message() << "\n";
+    exit(1);
+  }
+
+  FileBuf = std::move(*MB);
+  ParsingBuf = FileBuf->getBuffer();
+  Col = 0;
+  Line = 1;
+  std::string MMapEvents = "";
+  std::string BranchEvents = "";
+
+  if (!hasData())
+    return;
+
+  while (hasData()) {
+
+    size_t LineEnd = ParsingBuf.find_first_of("\n");
+    if (LineEnd == StringRef::npos) {
+      reportError("expected rest of line");
+      errs() << "Found: " << ParsingBuf << "\n";
+    }
+    StringRef Event = ParsingBuf.substr(0, LineEnd);
+
+    if (isMMapEvent(Event)) {
+      MMapEvents += Event.str();
+      MMapEvents += "\n";
+    } else {
+      BranchEvents += Event.str();
+      BranchEvents += '\n';
+    }
+
+    ParsingBuf = ParsingBuf.drop_front(LineEnd + 1);
+    Col = 0;
+    Line += 1;
+  }
+
+  // Set ParsingBuf for MMapEvents
+  ParsingBuf = StringRef(MMapEvents);
+  Col = 0;
+  Line = 1;
+  if (!ParsingBuf.empty() && parseMMapEvents()) {
+    errs() << "PERF2BOLT: failed to parse mmap events from the perf-script "
+              "file.\n";
+    exit(1);
+  }
+
+  // Set ParsingBuf for BranchEvents
+  ParsingBuf = StringRef(BranchEvents);
+  Col = 0;
+  Line = 1;
+  if (!ParsingBuf.empty() && parseBranchEvents()) {
+    errs() << "PERF2BOLT: failed to parse samples from perf-script file.\n";
     exit(1);
   }
 }
@@ -586,6 +667,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
 
   if (opts::ReadPreAggregated) {
     parsePreAggregated();
+  } else if (opts::ReadPerfScript) {
+    parsePerfScriptEvents();
   } else {
     parsePerfData(BC);
   }
