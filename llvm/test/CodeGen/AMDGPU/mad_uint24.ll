@@ -133,11 +133,10 @@ define amdgpu_kernel void @i16_mad24(ptr addrspace(1) %out, i16 %a, i16 %b, i16 
 ; GCN-LABEL: i16_mad24:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshr_b32 s2, s2, 16
-; GCN-NEXT:    s_mul_i32 s2, s4, s2
+; GCN-NEXT:    s_lshr_b32 s4, s2, 16
+; GCN-NEXT:    s_mul_i32 s2, s2, s4
 ; GCN-NEXT:    s_add_i32 s2, s2, s3
 ; GCN-NEXT:    s_sext_i32_i16 s2, s2
 ; GCN-NEXT:    s_mov_b32 s6, -1
@@ -150,13 +149,12 @@ define amdgpu_kernel void @i16_mad24(ptr addrspace(1) %out, i16 %a, i16 %b, i16 
 ; GFX8-LABEL: i16_mad24:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX8-NEXT:    s_load_dword s8, s[4:5], 0x2c
 ; GFX8-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX8-NEXT:    s_mov_b32 s6, -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b32 s4, s0
 ; GFX8-NEXT:    s_lshr_b32 s0, s2, 16
-; GFX8-NEXT:    s_mul_i32 s0, s8, s0
+; GFX8-NEXT:    s_mul_i32 s0, s2, s0
 ; GFX8-NEXT:    s_add_i32 s0, s0, s3
 ; GFX8-NEXT:    s_sext_i32_i16 s0, s0
 ; GFX8-NEXT:    s_mov_b32 s5, s1
