@@ -127,23 +127,22 @@ using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::HasInvalidDistributeNesting(
     const parser::OpenMPLoopConstruct &x) {
-  bool violation{false};
   const parser::OmpDirectiveName &beginName{x.BeginDir().DirName()};
   if (llvm::omp::topDistributeSet.test(beginName.v)) {
     // `distribute` region has to be nested
-    if (!CurrentDirectiveIsNested()) {
-      violation = true;
-    } else {
+    if (CurrentDirectiveIsNested()) {
       // `distribute` region has to be strictly nested inside `teams`
       if (!llvm::omp::bottomTeamsSet.test(GetContextParent().directive)) {
-        violation = true;
+        context_.Say(beginName.source,
+            "`DISTRIBUTE` region has to be strictly nested inside `TEAMS` "
+            "region."_err_en_US);
       }
+    } else {
+      // If not lexically nested (orphaned), issue a warning.
+      context_.Say(beginName.source,
+          "`DISTRIBUTE` must be dynamically enclosed in a `TEAMS` "
+          "region."_warn_en_US);
     }
-  }
-  if (violation) {
-    context_.Say(beginName.source,
-        "`DISTRIBUTE` region has to be strictly nested inside `TEAMS` "
-        "region."_err_en_US);
   }
 }
 void OmpStructureChecker::HasInvalidLoopBinding(
