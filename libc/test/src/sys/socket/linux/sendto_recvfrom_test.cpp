@@ -53,7 +53,7 @@ TEST_F(LlvmLibcSendToRecvFromTest, SendToFails) {
   const size_t MESSAGE_LEN = sizeof(TEST_MESSAGE);
 
   ASSERT_THAT(
-      LIBC_NAMESPACE::sendto(-1, TEST_MESSAGE, MESSAGE_LEN, 0, nullptr, 0),
+      LIBC_NAMESPACE::sendto(ssize_t(-1), TEST_MESSAGE, MESSAGE_LEN, 0, nullptr, 0),
       Fails(ssize_t(EBADF)));
 }
 
