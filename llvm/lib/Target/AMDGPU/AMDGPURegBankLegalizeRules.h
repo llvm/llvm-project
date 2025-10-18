@@ -127,6 +127,7 @@ enum RegBankLLTMappingApplyID {
   None,
   IntrId,
   Imm,
+  Scc,
   Vcc,
 
   // sgpr scalars, pointers, vectors and B-types

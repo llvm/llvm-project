@@ -1284,6 +1284,9 @@ void RegBankLegalizeHelper::applyMappingSrc(
       Op.setReg(Zext.getReg(0));
       break;
     }
+    case Scc: {
+      break;
+    }
     default:
       llvm_unreachable("ID not supported");
     }
