@@ -3119,40 +3119,53 @@ static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
 
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
       INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      APSInt B = RHS.elem<T>(ElemNum).toAPSInt();
-      bool Result = false;
-      switch (Opcode.getExtValue() & 0x7) {
-      case 0x00: // _MM_CMPINT_EQ
-        Result = (LHS.elem<T>(ElemNum).toAPSInt() == RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x01: // _MM_CMPINT_LT
-        Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ult(RHS.elem<T>(ElemNum).toAPSInt()) : LHS.elem<T>(ElemNum).toAPSInt().slt(RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x02: // _MM_CMPINT_LE
-        Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ule(RHS.elem<T>(ElemNum).toAPSInt()) : LHS.elem<T>(ElemNum).toAPSInt().sle(RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x03: // _MM_CMPINT_FALSE
-        Result = false;
-        break;
-      case 0x04: // _MM_CMPINT_NE
-        Result = (LHS.elem<T>(ElemNum).toAPSInt() != RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x05: // _MM_CMPINT_NLT (>=)
-        Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().uge(RHS.elem<T>(ElemNum).toAPSInt()) : LHS.elem<T>(ElemNum).toAPSInt().sge(RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x06: // _MM_CMPINT_NLE (>)
-        Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ugt(RHS.elem<T>(ElemNum).toAPSInt()) : LHS.elem<T>(ElemNum).toAPSInt().sgt(RHS.elem<T>(ElemNum).toAPSInt());
-        break;
-      case 0x07: // _MM_CMPINT_TRUE
-        Result = true;
-        break;
-      }
+        APSInt B = RHS.elem<T>(ElemNum).toAPSInt();
+        bool Result = false;
+        switch (Opcode.getExtValue() & 0x7) {
+        case 0x00: // _MM_CMPINT_EQ
+          Result = (LHS.elem<T>(ElemNum).toAPSInt() ==
+                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x01: // _MM_CMPINT_LT
+          Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ult(
+                                    RHS.elem<T>(ElemNum).toAPSInt())
+                              : LHS.elem<T>(ElemNum).toAPSInt().slt(
+                                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x02: // _MM_CMPINT_LE
+          Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ule(
+                                    RHS.elem<T>(ElemNum).toAPSInt())
+                              : LHS.elem<T>(ElemNum).toAPSInt().sle(
+                                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x03: // _MM_CMPINT_FALSE
+          Result = false;
+          break;
+        case 0x04: // _MM_CMPINT_NE
+          Result = (LHS.elem<T>(ElemNum).toAPSInt() !=
+                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x05: // _MM_CMPINT_NLT (>=)
+          Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().uge(
+                                    RHS.elem<T>(ElemNum).toAPSInt())
+                              : LHS.elem<T>(ElemNum).toAPSInt().sge(
+                                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x06: // _MM_CMPINT_NLE (>)
+          Result = IsUnsigned ? LHS.elem<T>(ElemNum).toAPSInt().ugt(
+                                    RHS.elem<T>(ElemNum).toAPSInt())
+                              : LHS.elem<T>(ElemNum).toAPSInt().sgt(
+                                    RHS.elem<T>(ElemNum).toAPSInt());
+          break;
+        case 0x07: // _MM_CMPINT_TRUE
+          Result = true;
+          break;
+        }
 
-      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
+        RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
       });
-
     }
-  
+
   pushInteger(S, RetMask, Call->getType());
   return true;
 }
@@ -4210,7 +4223,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cmpd512_mask:
   case X86::BI__builtin_ia32_cmpq512_mask:
     return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
-                                    /*IsUnsigned=*/ false);
+                                    /*IsUnsigned=*/false);
 
   case X86::BI__builtin_ia32_ucmpb128_mask:
   case X86::BI__builtin_ia32_ucmpw128_mask:
@@ -4225,7 +4238,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_ucmpd512_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
     return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
-                                    /*IsUnsigned=*/ true);
+                                    /*IsUnsigned=*/true);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
