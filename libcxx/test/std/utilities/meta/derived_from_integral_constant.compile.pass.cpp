@@ -113,4 +113,6 @@ static_assert(std::is_base_of<std::false_type, std::is_scoped_enum<int>>::value,
 #  if defined(__cpp_lib_is_virtual_base_of) && __cpp_lib_is_virtual_base_of >= 202406L
 static_assert(std::is_base_of<std::false_type, std::is_virtual_base_of<int, int>>::value, "");
 #  endif
+static_assert(std::is_base_of<std::false_type, std::is_applicable<int, int>>::value, "");
+static_assert(std::is_base_of<std::false_type, std::is_nothrow_applicable<int, int>>::value, "");
 #endif
