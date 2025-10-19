@@ -3953,8 +3953,8 @@ TEST(CompletionTest, DelayedTemplateParsing) {
     template <typename T> int foo() { return xx^; }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Even though delayed-template-parsing is on, we will disable it to provide
-  // completion in templates.
+  // We provide completion in templates even when delayed-template-parsing
+  // is on.
   TU.ExtraArgs.push_back("-fdelayed-template-parsing");
 
   EXPECT_THAT(completions(TU, Test.point()).Completions,

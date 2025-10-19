@@ -1382,7 +1382,6 @@ TEST(RenameTest, Renameable) {
     SCOPED_TRACE(Case.Code);
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     if (Case.IsHeaderFile) {
       // We open the .h file as the main file.
       TU.Filename = "test.h";
