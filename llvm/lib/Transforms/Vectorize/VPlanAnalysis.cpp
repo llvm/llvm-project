@@ -377,7 +377,7 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
 
 #ifndef NDEBUG
   auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    VPRegionBlock *Region = R->getRegion();
     if (Region && Region->isReplicator()) {
       assert(Region->getNumSuccessors() == 1 &&
              Region->getNumPredecessors() == 1 && "Expected SESE region!");
