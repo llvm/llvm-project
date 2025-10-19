@@ -110,16 +110,6 @@ static cl::opt<bool> SuppressWarnings("suppress-warnings",
                                       cl::desc("Suppress all linking warnings"),
                                       cl::init(false), cl::cat(LinkCategory));
 
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM bitcode."),
-    cl::init(true), cl::Hidden, cl::cat(LinkCategory));
-
-static cl::opt<bool> PreserveAssemblyUseListOrder(
-    "preserve-ll-uselistorder",
-    cl::desc("Preserve use-list order when writing LLVM assembly."),
-    cl::init(false), cl::Hidden, cl::cat(LinkCategory));
-
 static cl::opt<bool> NoVerify("disable-verify",
                               cl::desc("Do not run the verifier"), cl::Hidden,
                               cl::cat(LinkCategory));
@@ -525,9 +515,10 @@ int main(int argc, char **argv) {
     errs() << "Writing bitcode...\n";
   Composite->removeDebugIntrinsicDeclarations();
   if (OutputAssembly) {
-    Composite->print(Out.os(), nullptr, PreserveAssemblyUseListOrder);
+    Composite->print(Out.os(), nullptr, /* ShouldPreserveUseListOrder */ false);
   } else if (Force || !CheckBitcodeOutputToConsole(Out.os())) {
-    WriteBitcodeToFile(*Composite, Out.os(), PreserveBitcodeUseListOrder);
+    WriteBitcodeToFile(*Composite, Out.os(),
+                       /* ShouldPreserveUseListOrder */ true);
   }
 
   // Declare success.

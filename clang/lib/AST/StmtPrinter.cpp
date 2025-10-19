@@ -151,11 +151,11 @@ namespace {
       else StmtVisitor<StmtPrinter>::Visit(S);
     }
 
-    void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
       Indent() << "<<unknown stmt type>>" << NL;
     }
 
-    void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
       OS << "<<unknown expr type>>";
     }
 
@@ -792,6 +792,11 @@ void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
 
 void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
+  Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
 }
 

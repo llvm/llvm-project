@@ -443,40 +443,101 @@ using GetNumWaitStatesFn = function_ref<unsigned int(const MachineInstr &)>;
 // Search for a hazard in a block and its predecessors.
 template <typename StateT>
 static bool
-hasHazard(StateT State,
+hasHazard(StateT InitialState,
           function_ref<HazardFnResult(StateT &, const MachineInstr &)> IsHazard,
           function_ref<void(StateT &, const MachineInstr &)> UpdateState,
-          const MachineBasicBlock *MBB,
-          MachineBasicBlock::const_reverse_instr_iterator I,
-          DenseSet<const MachineBasicBlock *> &Visited) {
-  for (auto E = MBB->instr_rend(); I != E; ++I) {
-    // No need to look at parent BUNDLE instructions.
-    if (I->isBundle())
-      continue;
+          const MachineBasicBlock *InitialMBB,
+          MachineBasicBlock::const_reverse_instr_iterator InitialI) {
+  struct StateMapKey {
+    SmallVectorImpl<StateT> *States;
+    unsigned Idx;
+    static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
+      return LHS.States == RHS.States && LHS.Idx == RHS.Idx;
+    }
+  };
+  struct StateMapKeyTraits : DenseMapInfo<StateMapKey> {
+    static inline StateMapKey getEmptyKey() {
+      return {static_cast<SmallVectorImpl<StateT> *>(
+                  DenseMapInfo<void *>::getEmptyKey()),
+              DenseMapInfo<unsigned>::getEmptyKey()};
+    }
+    static inline StateMapKey getTombstoneKey() {
+      return {static_cast<SmallVectorImpl<StateT> *>(
+                  DenseMapInfo<void *>::getTombstoneKey()),
+              DenseMapInfo<unsigned>::getTombstoneKey()};
+    }
+    static unsigned getHashValue(const StateMapKey &Key) {
+      return StateT::getHashValue((*Key.States)[Key.Idx]);
+    }
+    static unsigned getHashValue(const StateT &State) {
+      return StateT::getHashValue(State);
+    }
+    static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
+      const auto EKey = getEmptyKey();
+      const auto TKey = getTombstoneKey();
+      if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey) ||
+          StateMapKey::isEqual(LHS, TKey) || StateMapKey::isEqual(RHS, TKey))
+        return StateMapKey::isEqual(LHS, RHS);
+      return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
+    }
+    static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
+      if (StateMapKey::isEqual(RHS, getEmptyKey()) ||
+          StateMapKey::isEqual(RHS, getTombstoneKey()))
+        return false;
+      return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
+    }
+  };
 
-    switch (IsHazard(State, *I)) {
-    case HazardFound:
-      return true;
-    case HazardExpired:
-      return false;
-    default:
-      // Continue search
-      break;
+  SmallDenseMap<StateMapKey, unsigned, 8, StateMapKeyTraits> StateMap;
+  SmallVector<StateT, 8> States;
+
+  MachineBasicBlock::const_reverse_instr_iterator I = InitialI;
+  const MachineBasicBlock *MBB = InitialMBB;
+  StateT State = InitialState;
+
+  SmallSetVector<std::pair<const MachineBasicBlock *, unsigned>, 16> Worklist;
+  unsigned WorkIdx = 0;
+  for (;;) {
+    bool Expired = false;
+    for (auto E = MBB->instr_rend(); I != E; ++I) {
+      // No need to look at parent BUNDLE instructions.
+      if (I->isBundle())
+        continue;
+
+      auto Result = IsHazard(State, *I);
+      if (Result == HazardFound)
+        return true;
+      if (Result == HazardExpired) {
+        Expired = true;
+        break;
+      }
+
+      if (I->isInlineAsm() || I->isMetaInstruction())
+        continue;
+
+      UpdateState(State, *I);
     }
 
-    if (I->isInlineAsm() || I->isMetaInstruction())
-      continue;
+    if (!Expired) {
+      unsigned StateIdx = States.size();
+      StateMapKey Key = {&States, StateIdx};
+      auto Insertion = StateMap.insert_as(std::pair(Key, StateIdx), State);
+      if (Insertion.second) {
+        States.emplace_back(State);
+      } else {
+        StateIdx = Insertion.first->second;
+      }
+      for (MachineBasicBlock *Pred : MBB->predecessors())
+        Worklist.insert(std::pair(Pred, StateIdx));
+    }
 
-    UpdateState(State, *I);
-  }
+    if (WorkIdx == Worklist.size())
+      break;
 
-  for (MachineBasicBlock *Pred : MBB->predecessors()) {
-    if (!Visited.insert(Pred).second)
-      continue;
-
-    if (hasHazard(State, IsHazard, UpdateState, Pred, Pred->instr_rbegin(),
-                  Visited))
-      return true;
+    unsigned StateIdx;
+    std::tie(MBB, StateIdx) = Worklist[WorkIdx++];
+    State = States[StateIdx];
+    I = MBB->instr_rbegin();
   }
 
   return false;
@@ -808,7 +869,7 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   int VDataIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdata);
   int VDataRCID = -1;
   if (VDataIdx != -1)
-    VDataRCID = Desc.operands()[VDataIdx].RegClass;
+    VDataRCID = TII->getOpRegClassID(Desc.operands()[VDataIdx]);
 
   if (TII->isMUBUF(MI) || TII->isMTBUF(MI)) {
     // There is no hazard if the instruction does not use vector regs
@@ -832,8 +893,8 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) {
   // All our MIMG definitions use a 256-bit T#, so we can skip checking for them.
   if (TII->isMIMG(MI)) {
     int SRsrcIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::srsrc);
-    assert(SRsrcIdx != -1 &&
-           AMDGPU::getRegBitWidth(Desc.operands()[SRsrcIdx].RegClass) == 256);
+    assert(SRsrcIdx != -1 && AMDGPU::getRegBitWidth(TII->getOpRegClassID(
+                                 Desc.operands()[SRsrcIdx])) == 256);
     (void)SRsrcIdx;
   }
 
@@ -1641,6 +1702,15 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
     SmallDenseMap<Register, int, 4> DefPos;
     int ExecPos = std::numeric_limits<int>::max();
     int VALUs = 0;
+
+    static unsigned getHashValue(const StateType &State) {
+      return hash_combine(State.ExecPos, State.VALUs,
+                          hash_combine_range(State.DefPos));
+    }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.DefPos == RHS.DefPos && LHS.ExecPos == RHS.ExecPos &&
+             LHS.VALUs == RHS.VALUs;
+    }
   };
 
   StateType State;
@@ -1735,9 +1805,8 @@ bool GCNHazardRecognizer::fixVALUPartialForwardingHazard(MachineInstr *MI) {
       State.VALUs += 1;
   };
 
-  DenseSet<const MachineBasicBlock *> Visited;
   if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
-                            std::next(MI->getReverseIterator()), Visited))
+                            std::next(MI->getReverseIterator())))
     return false;
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
@@ -1778,6 +1847,13 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
   struct StateType {
     int VALUs = 0;
     int TRANS = 0;
+
+    static unsigned getHashValue(const StateType &State) {
+      return hash_combine(State.VALUs, State.TRANS);
+    }
+    static bool isEqual(const StateType &LHS, const StateType &RHS) {
+      return LHS.VALUs == RHS.VALUs && LHS.TRANS == RHS.TRANS;
+    }
   };
 
   StateType State;
@@ -1813,9 +1889,8 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
       State.TRANS += 1;
   };
 
-  DenseSet<const MachineBasicBlock *> Visited;
   if (!hasHazard<StateType>(State, IsHazardFn, UpdateStateFn, MI->getParent(),
-                            std::next(MI->getReverseIterator()), Visited))
+                            std::next(MI->getReverseIterator())))
     return false;
 
   // Hazard is observed - insert a wait on va_dst counter to ensure hazard is

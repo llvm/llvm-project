@@ -162,8 +162,8 @@ public:
 
     for (const BasicBlock &BB : F) {
       for (const auto &I : BB.instructionsWithoutDebug()) {
-        unsigned Opcode = Vocabulary::getSlotIndex(I.getOpcode());
-        unsigned TypeID = Vocabulary::getSlotIndex(I.getType()->getTypeID());
+        unsigned Opcode = Vocabulary::getIndex(I.getOpcode());
+        unsigned TypeID = Vocabulary::getIndex(I.getType()->getTypeID());
 
         // Add "Next" relationship with previous instruction
         if (HasPrevOpcode) {
@@ -184,7 +184,7 @@ public:
         // Add "Arg" relationships
         unsigned ArgIndex = 0;
         for (const Use &U : I.operands()) {
-          unsigned OperandID = Vocabulary::getSlotIndex(*U);
+          unsigned OperandID = Vocabulary::getIndex(*U.get());
           unsigned RelationID = ArgRelation + ArgIndex;
           OS << Opcode << '\t' << OperandID << '\t' << RelationID << '\n';
 
@@ -253,25 +253,17 @@ public:
       break;
     }
     case BasicBlockLevel: {
-      const auto &BBVecMap = Emb->getBBVecMap();
       for (const BasicBlock &BB : F) {
-        auto It = BBVecMap.find(&BB);
-        if (It != BBVecMap.end()) {
-          OS << BB.getName() << ":";
-          It->second.print(OS);
-        }
+        OS << BB.getName() << ":";
+        Emb->getBBVector(BB).print(OS);
       }
       break;
     }
     case InstructionLevel: {
-      const auto &InstMap = Emb->getInstVecMap();
       for (const BasicBlock &BB : F) {
         for (const Instruction &I : BB) {
-          auto It = InstMap.find(&I);
-          if (It != InstMap.end()) {
-            I.print(OS);
-            It->second.print(OS);
-          }
+          I.print(OS);
+          Emb->getInstVector(I).print(OS);
         }
       }
       break;
