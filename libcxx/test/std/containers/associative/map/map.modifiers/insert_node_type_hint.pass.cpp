@@ -19,20 +19,20 @@
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type
+TEST_CONSTEXPR_CXX26 std::pair<Container, typename Container::node_type>
 node_factory(typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
-  static Container c;
+  Container c;
   auto p = c.insert({key, mapped});
   assert(p.second);
-  return c.extract(p.first);
+  return {c, c.extract(p.first)};
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
   auto* nf = &node_factory<Container>;
 
   for (int i = 0; i != 10; ++i) {
-    typename Container::node_type node = nf(i, i + 1);
+    auto [/*Container*/ staticContainer, /*typename Container::node_type*/ node] = nf(i, i + 1);
     assert(!node.empty());
     std::size_t prev = c.size();
     auto it          = c.insert(c.end(), std::move(node));
@@ -50,11 +50,21 @@ void test(Container& c) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   std::map<int, int> m;
   test(m);
   std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
   test(m2);
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
