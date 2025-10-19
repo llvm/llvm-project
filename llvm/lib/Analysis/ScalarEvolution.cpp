@@ -15473,21 +15473,22 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
   }
 }
 
-    // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and greater or equal than Expr. For now, only handle constant
-    // Expr.
+// Return a new SCEV that modifies \p Expr to the closest number divides by
+// \p Divisor and greater or equal than Expr. For now, only handle constant
+// Expr.
 static const SCEV *getNextSCEVDividesByDivisor(const SCEV *Expr,
-                                           const APInt &DivisorVal, ScalarEvolution &SE) {
-      const APInt *ExprVal;
-      if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
-          DivisorVal.isNonPositive())
-        return Expr;
-      APInt Rem = ExprVal->urem(DivisorVal);
-      if (Rem.isZero())
-        return Expr;
-      // return the SCEV: Expr + Divisor - Expr % Divisor
-      return SE.getConstant(*ExprVal + DivisorVal - Rem);
-    }
+                                               const APInt &DivisorVal,
+                                               ScalarEvolution &SE) {
+  const APInt *ExprVal;
+  if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
+      DivisorVal.isNonPositive())
+    return Expr;
+  APInt Rem = ExprVal->urem(DivisorVal);
+  if (Rem.isZero())
+    return Expr;
+  // return the SCEV: Expr + Divisor - Expr % Divisor
+  return SE.getConstant(*ExprVal + DivisorVal - Rem);
+}
 
 void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
@@ -15963,11 +15964,11 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         if (MatchBinarySub(S, LHS, RHS)) {
           if (LHS > RHS)
             std::swap(LHS, RHS);
-          if (NotEqual.contains({LHS, RHS})){
+          if (NotEqual.contains({LHS, RHS})) {
             const SCEV *OneAlignedUp = getNextSCEVDividesByDivisor(
                 SE.getOne(S->getType()), SE.getConstantMultiple(S), SE);
-            return SE.getUMaxExpr(OneAlignedUp , S);
-            }
+            return SE.getUMaxExpr(OneAlignedUp, S);
+          }
         }
         return nullptr;
       };
