@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -Wno-c99-designator %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-c99-designator %s
 
 // PR5290
 int const f0();
@@ -156,12 +157,89 @@ struct A {
   }
 };
 
+
+
 // This shouldn't crash.
 static_assert(A<int>().f<int>() == 0, "");
 // The result should not be dependent.
 static_assert(A<int>().f<int>() != 0, ""); // expected-error {{static assertion failed due to requirement 'GH99873::A<int>().f<int>() != 0'}}
                                            // expected-note@-1 {{expression evaluates to '0 != 0'}}
 }
+
+
+#if __cplusplus >= 201703L
+namespace GH160497 {
+
+template <class> struct S {
+    template <class>
+    inline static auto mem =
+    [] { static_assert(false); // expected-error {{static assertion failed}} \
+        // expected-note {{while substituting into a lambda expression here}}
+        return 42;
+    }();
+};
+
+using T = decltype(S<void>::mem<void>);
+ // expected-note@-1 {{in instantiation of static data member 'GH160497::S<void>::mem<void>' requested here}}
+
+
+template <class> struct S2 {
+    template <class>
+    inline static auto* mem =
+    [] { static_assert(false); // expected-error {{static assertion failed}} \
+        // expected-note {{while substituting into a lambda expression here}}
+        return static_cast<int*>(nullptr);
+    }();
+};
+
+using T2 = decltype(S2<void>::mem<void>);
+//expected-note@-1 {{in instantiation of static data member 'GH160497::S2<void>::mem<void>' requested here}}
+
+template <class> struct S3 {
+    template <class>
+    inline static int mem =    // Check we don't instantiate when the type is not deduced.
+    [] { static_assert(false);
+        return 42;
+    }();
+};
+
+using T = decltype(S3<void>::mem<void>);
+}
+
+namespace N1 {
+
+template<class>
+struct S {
+  template<class>
+  inline static auto mem = 42;
+};
+
+using T = decltype(S<void>::mem<void>);
+
+T y = 42;
+
+}
+
+namespace GH161196 {
+
+template <typename> struct A {
+  static constexpr int digits = 0;
+};
+
+template <typename> struct B {
+  template <int, typename MaskInt = int, int = A<MaskInt>::digits>
+  static constexpr auto XBitMask = 0;
+};
+
+struct C {
+  using ReferenceHost = B<int>;
+  template <int> static decltype(ReferenceHost::XBitMask<0>) XBitMask;
+};
+
+void test() { (void)C::XBitMask<0>; }
+
+}
+#endif
 
 template<typename>
 class conditional {

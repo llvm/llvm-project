@@ -11,6 +11,7 @@
 
 #include <__assert>
 #include <__config>
+#include <__utility/scope_guard.h>
 #include <array>
 #include <cstdarg>
 #include <cstddef>
@@ -55,17 +56,8 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2) string format_string(const cha
   string ret;
   va_list ap;
   va_start(ap, msg);
-#if _LIBCPP_HAS_EXCEPTIONS
-  try {
-#endif // _LIBCPP_HAS_EXCEPTIONS
-    ret = detail::vformat_string(msg, ap);
-#if _LIBCPP_HAS_EXCEPTIONS
-  } catch (...) {
-    va_end(ap);
-    throw;
-  }
-#endif // _LIBCPP_HAS_EXCEPTIONS
-  va_end(ap);
+  __scope_guard guard([&] { va_end(ap); });
+  ret = detail::vformat_string(msg, ap);
   return ret;
 }
 

@@ -47,12 +47,15 @@ body:             |
     ; X86-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C2]](s32), [[C]](s32)
     ; X86-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
     ; X86-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV1]](s64)
-    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[UV6]], [[UV8]]
-    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s1) = G_USUBE [[UV7]], [[UV9]], [[USUBO1]]
+    ; X86-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s8) = G_USUBO [[UV6]], [[UV8]]
+    ; X86-NEXT: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[USUBO1]](s8)
+    ; X86-NEXT: [[ZEXT2:%[0-9]+]]:_(s8) = G_ZEXT [[TRUNC1]](s1)
+    ; X86-NEXT: [[USUBE:%[0-9]+]]:_(s32), [[USUBE1:%[0-9]+]]:_(s8) = G_USUBE [[UV7]], [[UV9]], [[ZEXT2]]
+    ; X86-NEXT: [[TRUNC2:%[0-9]+]]:_(s1) = G_TRUNC [[USUBE1]](s8)
     ; X86-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
-    ; X86-NEXT: [[TRUNC1:%[0-9]+]]:_(s35) = G_TRUNC [[MV2]](s64)
-    ; X86-NEXT: [[ZEXT2:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC1]](s35)
-    ; X86-NEXT: RET 0, implicit [[ZEXT2]](s64)
+    ; X86-NEXT: [[TRUNC3:%[0-9]+]]:_(s35) = G_TRUNC [[MV2]](s64)
+    ; X86-NEXT: [[ZEXT3:%[0-9]+]]:_(s64) = G_ZEXT [[TRUNC3]](s35)
+    ; X86-NEXT: RET 0, implicit [[ZEXT3]](s64)
     %0(s64) = COPY $rdx
     %1:_(s35) = G_TRUNC %0(s64)
     %2:_(s35) = G_CTLZ %1
