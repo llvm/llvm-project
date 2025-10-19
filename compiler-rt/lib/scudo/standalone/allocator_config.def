@@ -114,6 +114,15 @@ PRIMARY_OPTIONAL_TYPE(ConditionVariableT, ConditionVariableDummy)
 // to, in increments of a power-of-2 scale. See `CompactPtrScale` also.
 PRIMARY_OPTIONAL_TYPE(CompactPtrT, uptr)
 
+// When enabled, chunk contents are zeroed out on deallocation. This can be
+// beneficial for security (to prevent information leaks) and for memory usage
+// on some systems where pages filled with zeroes can be decommitted by the OS
+// or better compressed by features like zram.
+PRIMARY_OPTIONAL(const bool, EnableZeroOnDealloc, false)
+// Only chunks smaller or equal to this threshold will be zeroed on
+// deallocation. Requires zero on dealloc to be enabled.
+PRIMARY_OPTIONAL(const s32, DefaultZeroOnDeallocMaxSize, INT32_MAX)
+
 // SECONDARY_REQUIRED_TEMPLATE_TYPE(NAME)
 //
 // Defines the type of Secondary Cache to use.

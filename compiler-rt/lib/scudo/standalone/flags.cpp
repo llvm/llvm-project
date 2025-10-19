@@ -9,6 +9,7 @@
 #include "flags.h"
 #include "common.h"
 #include "flags_parser.h"
+#include <limits.h>
 
 #include "scudo/interface.h"
 
