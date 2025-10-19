@@ -393,7 +393,7 @@ Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
 
 OpFoldResult arith::AddIOp::fold(FoldAdaptor adaptor) {
   // addi(x, 0) -> x
-  if (matchPattern(adaptor.getRhs(), m_Zero()))
+  if (matchPattern(adaptor.getRhs(), m_Zero()) && getLhs() != *this)
     return getLhs();
 
   // addi(subi(a, b), b) -> a
