@@ -808,7 +808,8 @@ static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
          StringRef(SM.getCharacterData(T2.getLocation()), T2.getLength());
 }
 
-static bool isTokAtEndOfExpr(SourceRange ExprSR, Token T, const SourceManager &SM) {
+static bool isTokAtEndOfExpr(SourceRange ExprSR, Token T,
+                             const SourceManager &SM) {
   return SM.getExpansionLoc(ExprSR.getEnd()) == T.getLocation();
 }
 
