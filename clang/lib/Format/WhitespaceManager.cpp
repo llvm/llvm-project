@@ -664,12 +664,14 @@ void WhitespaceManager::alignConsecutiveMacros() {
 
     // If token is a ")", skip over the parameter list, to the
     // token that precedes the "("
-    if (const auto *MatchingParen = Current->MatchingParen;
-        Current->is(tok::r_paren) && MatchingParen) {
+    if (Current->is(tok::r_paren)) {
+      const auto *MatchingParen = Current->MatchingParen;
       // For a macro function, 0 spaces are required between the
       // identifier and the lparen that opens the parameter list.
-      if (MatchingParen->SpacesRequiredBefore > 0)
+      if (!MatchingParen || MatchingParen->SpacesRequiredBefore > 0 ||
+          !MatchingParen->Previous) {
         return false;
+      }
       Current = MatchingParen->Previous;
     } else if (Current->Next->SpacesRequiredBefore != 1) {
       // For a simple macro, 1 space is required between the
@@ -677,8 +679,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
       return false;
     }
 
-    return Current && Current->is(tok::identifier) && Current->Previous &&
-           Current->Previous->is(tok::pp_define);
+    return Current->endsSequence(tok::identifier, tok::pp_define);
   };
 
   unsigned MinColumn = 0;
