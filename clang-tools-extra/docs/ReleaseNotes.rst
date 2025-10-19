@@ -363,6 +363,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
 
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
