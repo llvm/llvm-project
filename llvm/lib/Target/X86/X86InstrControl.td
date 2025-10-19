@@ -212,21 +212,21 @@ let isCall = 1 in
   let Uses = [ESP, SSP] in {
     def CALLpcrel32 : Ii32PCRel<0xE8, RawFrm,
                            (outs), (ins i32imm_brtarget:$dst),
-                           "call{l}\t$dst", []>, OpSize32,
+                           "call{l|}\t$dst", []>, OpSize32,
                       Requires<[Not64BitMode]>, Sched<[WriteJump]>;
     def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
-                        "call{w}\t{*}$dst", [(X86call GR16:$dst)]>,
+                        "call{w|}\t{*}$dst", [(X86call GR16:$dst)]>,
                       OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>;
     def CALL16m     : I<0xFF, MRM2m, (outs), (ins i16mem:$dst),
-                        "call{w}\t{*}$dst", [(X86call (loadi16 addr:$dst))]>,
+                        "call{w|}\t{*}$dst", [(X86call (loadi16 addr:$dst))]>,
                         OpSize16, Requires<[Not64BitMode,FavorMemIndirectCall]>,
                         Sched<[WriteJumpLd]>;
     def CALL32r     : I<0xFF, MRM2r, (outs), (ins GR32:$dst),
-                        "call{l}\t{*}$dst", [(X86call GR32:$dst)]>, OpSize32,
+                        "call{l|}\t{*}$dst", [(X86call GR32:$dst)]>, OpSize32,
                         Requires<[Not64BitMode,NotUseIndirectThunkCalls]>,
                         Sched<[WriteJump]>;
     def CALL32m     : I<0xFF, MRM2m, (outs), (ins i32mem:$dst),
-                        "call{l}\t{*}$dst", [(X86call (loadi32 addr:$dst))]>,
+                        "call{l|}\t{*}$dst", [(X86call (loadi32 addr:$dst))]>,
                         OpSize32,
                         Requires<[Not64BitMode,FavorMemIndirectCall,
                                   NotUseIndirectThunkCalls]>,
@@ -235,17 +235,17 @@ let isCall = 1 in
     // Non-tracking calls for IBT, use with caution.
     let isCodeGenOnly = 1 in {
       def CALL16r_NT : I<0xFF, MRM2r, (outs), (ins GR16 : $dst),
-                        "call{w}\t{*}$dst",[(X86NoTrackCall GR16 : $dst)]>,
+                        "call{w|}\t{*}$dst",[(X86NoTrackCall GR16 : $dst)]>,
                         OpSize16, Requires<[Not64BitMode]>, Sched<[WriteJump]>, NOTRACK;
       def CALL16m_NT : I<0xFF, MRM2m, (outs), (ins i16mem : $dst),
-                        "call{w}\t{*}$dst",[(X86NoTrackCall(loadi16 addr : $dst))]>,
+                        "call{w|}\t{*}$dst",[(X86NoTrackCall(loadi16 addr : $dst))]>,
                         OpSize16, Requires<[Not64BitMode,FavorMemIndirectCall]>,
                         Sched<[WriteJumpLd]>, NOTRACK;
       def CALL32r_NT : I<0xFF, MRM2r, (outs), (ins GR32 : $dst),
-                        "call{l}\t{*}$dst",[(X86NoTrackCall GR32 : $dst)]>,
+                        "call{l|}\t{*}$dst",[(X86NoTrackCall GR32 : $dst)]>,
                         OpSize32, Requires<[Not64BitMode]>, Sched<[WriteJump]>, NOTRACK;
       def CALL32m_NT : I<0xFF, MRM2m, (outs), (ins i32mem : $dst),
-                        "call{l}\t{*}$dst",[(X86NoTrackCall(loadi32 addr : $dst))]>,
+                        "call{l|}\t{*}$dst",[(X86NoTrackCall(loadi32 addr : $dst))]>,
                         OpSize32, Requires<[Not64BitMode,FavorMemIndirectCall]>,
                         Sched<[WriteJumpLd]>, NOTRACK;
     }
@@ -322,35 +322,35 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
   // the 32-bit pcrel field that we have.
   def CALL64pcrel32 : Ii32PCRel<0xE8, RawFrm,
                         (outs), (ins i64i32imm_brtarget:$dst),
-                        "call{q}\t$dst", []>, OpSize32,
+                        "call{q|}\t$dst", []>, OpSize32,
                       Requires<[In64BitMode]>;
   let hasSideEffects = 0 in
     def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
                            (outs), (ins i16imm_brtarget:$dst),
-                           "call{w}\t$dst", []>, OpSize16,
+                           "call{w|}\t$dst", []>, OpSize16,
                       Sched<[WriteJump]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
-                        "call{q}\t{*}$dst", [(X86call GR64:$dst)]>,
+                        "call{q|}\t{*}$dst", [(X86call GR64:$dst)]>,
                       Requires<[In64BitMode,NotUseIndirectThunkCalls,ImportCallOptimizationDisabled]>;
   def CALL64m       : I<0xFF, MRM2m, (outs), (ins i64mem:$dst),
-                        "call{q}\t{*}$dst", [(X86call (loadi64 addr:$dst))]>,
+                        "call{q|}\t{*}$dst", [(X86call (loadi64 addr:$dst))]>,
                       Requires<[In64BitMode,FavorMemIndirectCall,
                                 NotUseIndirectThunkCalls]>;
 
   // Non-tracking calls for IBT, use with caution.
   let isCodeGenOnly = 1 in {
     def CALL64r_NT : I<0xFF, MRM2r, (outs), (ins GR64 : $dst),
-                      "call{q}\t{*}$dst",[(X86NoTrackCall GR64 : $dst)]>,
+                      "call{q|}\t{*}$dst",[(X86NoTrackCall GR64 : $dst)]>,
                       Requires<[In64BitMode]>, NOTRACK;
     def CALL64m_NT : I<0xFF, MRM2m, (outs), (ins i64mem : $dst),
-                       "call{q}\t{*}$dst",
+                       "call{q|}\t{*}$dst",
                        [(X86NoTrackCall(loadi64 addr : $dst))]>,
                        Requires<[In64BitMode,FavorMemIndirectCall]>, NOTRACK;
   }
 
   let mayLoad = 1 in
   def FARCALL64m  : RI<0xFF, MRM3m, (outs), (ins opaquemem:$dst),
-                       "lcall{q}\t{*}$dst", []>;
+                       "lcall{q|}\t{*}$dst", []>;
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,

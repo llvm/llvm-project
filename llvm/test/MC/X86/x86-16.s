@@ -548,18 +548,14 @@ ljmp	$0x7ace,$0x7ace
 
 // CHECK: calll a
 // CHECK: calll a
-// CHECK: calll a
 // CHECK: callw 42
 // CHECK: encoding: [0xe8,A,A]
  calll a
 data32 call a
-data32 callw a
 callw 42
 
 // CHECK:      ljmpl $1, $2
-// CHECK-NEXT: ljmpl $1, $2
 data32 ljmp $1, $2
-data32 ljmpw $1, $2
 
 // CHECK:	incb	%al # encoding: [0xfe,0xc0]
 	incb %al

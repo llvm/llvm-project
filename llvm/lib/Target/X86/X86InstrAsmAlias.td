@@ -249,12 +249,6 @@ defm : CMPCCXADD_Aliases<"g",  15>;
 def : MnemonicAlias<"call", "callw", "att">, Requires<[In16BitMode]>;
 def : MnemonicAlias<"call", "calll", "att">, Requires<[In32BitMode]>;
 def : MnemonicAlias<"call", "callq", "att">, Requires<[In64BitMode]>;
-def : MnemonicAlias<"call", "callw", "intel">, Requires<[In16BitMode]>;
-def : MnemonicAlias<"call", "calll", "intel">, Requires<[In32BitMode]>;
-def : MnemonicAlias<"call", "callq", "intel">, Requires<[In64BitMode]>;
-
-def : MnemonicAlias<"ljmp", "ljmpw", "intel">, Requires<[In16BitMode]>;
-def : MnemonicAlias<"ljmp", "ljmpl", "intel">, Requires<[In32BitMode]>;
 
 def : MnemonicAlias<"cbw",  "cbtw", "att">;
 def : MnemonicAlias<"cwde", "cwtl", "att">;
@@ -675,9 +669,9 @@ def : InstAlias<"calll\t$seg, $off", (FARCALL32i i32imm:$off, i16imm:$seg)>, Req
 def : InstAlias<"jmpl\t$seg, $off",  (FARJMP32i  i32imm:$off, i16imm:$seg)>, Requires<[Not64BitMode]>;
 
 // Near call aliases for data16/data32 prefix support
-def : InstAlias<"callw\t$dst", (CALLpcrel16 i16imm_brtarget:$dst)>;
-def : InstAlias<"calll\t$dst", (CALLpcrel32 i32imm_brtarget:$dst)>, Requires<[Not64BitMode]>;
-def : InstAlias<"callq\t$dst", (CALL64pcrel32 i64i32imm_brtarget:$dst)>, Requires<[In64BitMode]>;
+def : InstAlias<"callw\t$dst", (CALLpcrel16 i16imm_brtarget:$dst), 0>;
+def : InstAlias<"calll\t$dst", (CALLpcrel32 i32imm_brtarget:$dst), 0>, Requires<[Not64BitMode]>;
+def : InstAlias<"callq\t$dst", (CALL64pcrel32 i64i32imm_brtarget:$dst), 0>, Requires<[In64BitMode]>;
 
 // Match 'movq <largeimm>, <reg>' as an alias for movabsq.
 def : InstAlias<"mov{q}\t{$imm, $reg|$reg, $imm}", (MOV64ri GR64:$reg, i64imm:$imm), 0>;
