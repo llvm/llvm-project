@@ -325,7 +325,7 @@ private:
     if (R.second) {
       llvm::SmallString<256> AbsPath = Path;
       if (!llvm::sys::path::is_absolute(AbsPath) && !FallbackDir.empty())
-        llvm::sys::fs::make_absolute(FallbackDir, AbsPath);
+        llvm::sys::path::make_absolute(FallbackDir, AbsPath);
       assert(llvm::sys::path::is_absolute(AbsPath) &&
              "If the VFS can't make paths absolute, a FallbackDir must be "
              "provided");

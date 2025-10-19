@@ -48,7 +48,7 @@ the TableGen files, the back-ends and their users.
 For instance, a global contract is that each back-end produces macro-guarded
 sections. Based on whether the file is included by a header or a source file,
 or even in which context of each file the include is being used, you have
-todefine a macro just before including it, to get the right output:
+to define a macro just before including it, to get the right output:
 
 .. code-block:: c++
 
@@ -80,8 +80,8 @@ in the TableGen files.
 CodeEmitter
 -----------
 
-**Purpose**: CodeEmitterGen uses the descriptions of instructions and their fields to
-construct an automated code emitter: a function that, given a MachineInstr,
+**Purpose**: ``CodeEmitterGen`` uses the descriptions of instructions and their fields to
+construct an automated code emitter: a function that, given a ``MachineInstr``,
 returns the (currently, 32-bit unsigned) value of the instruction.
 
 **Output**: C++ code, implementing the target's CodeEmitter
@@ -130,7 +130,7 @@ AsmMatcher
 ----------
 
 **Purpose**: Emits a target specifier matcher for
-converting parsed assembly operands in the MCInst structures. It also
+converting parsed assembly operands in the ``MCInst`` structures. It also
 emits a matcher for custom operand parsing. Extensive documentation is
 written on the ``AsmMatcherEmitter.cpp`` file.
 
@@ -167,7 +167,7 @@ CallingConv
 conventions supported by this target.
 
 **Output**: Implement static functions to deal with calling conventions
-chained by matching styles, returning false on no match.
+chained by matching styles, returning ``false`` on no match.
 
 **Usage**: Used in ISelLowering and FastIsel as function pointers to
 implementation returned by a CC selection function.
@@ -200,7 +200,7 @@ FastISel
 
 **Purpose**: This tablegen backend emits code for use by the "fast"
 instruction selection algorithm. See the comments at the top of
-lib/CodeGen/SelectionDAG/FastISel.cpp for background. This file
+``lib/CodeGen/SelectionDAG/FastISel.cpp`` for background. This file
 scans through the target's tablegen instruction-info files
 and extracts instructions with obvious-looking patterns, and it emits
 code to look up these instructions by type and operator.
@@ -270,23 +270,23 @@ This file is included as part of ``Attr.h``.
 ClangAttrParserStringSwitches
 -----------------------------
 
-**Purpose**: Creates AttrParserStringSwitches.inc, which contains
-StringSwitch::Case statements for parser-related string switches. Each switch
+**Purpose**: Creates ``AttrParserStringSwitches.inc``, which contains
+``StringSwitch::Case`` statements for parser-related string switches. Each switch
 is given its own macro (such as ``CLANG_ATTR_ARG_CONTEXT_LIST``, or
 ``CLANG_ATTR_IDENTIFIER_ARG_LIST``), which is expected to be defined before
-including AttrParserStringSwitches.inc, and undefined after.
+including ``AttrParserStringSwitches.inc``, and undefined after.
 
 ClangAttrImpl
 -------------
 
-**Purpose**: Creates AttrImpl.inc, which contains semantic attribute class
+**Purpose**: Creates ``AttrImpl.inc``, which contains semantic attribute class
 definitions for any attribute in ``Attr.td`` that has not set ``ASTNode = 0``.
 This file is included as part of ``AttrImpl.cpp``.
 
 ClangAttrList
 -------------
 
-**Purpose**: Creates AttrList.inc, which is used when a list of semantic
+**Purpose**: Creates ``AttrList.inc``, which is used when a list of semantic
 attribute identifiers is required. For instance, ``AttrKinds.h`` includes this
 file to generate the list of ``attr::Kind`` enumeration values. This list is
 separated out into multiple categories: attributes, inheritable attributes, and
@@ -297,25 +297,25 @@ functionality required for ``dyn_cast`` and similar APIs.
 ClangAttrPCHRead
 ----------------
 
-**Purpose**: Creates AttrPCHRead.inc, which is used to deserialize attributes
+**Purpose**: Creates ``AttrPCHRead.inc``, which is used to deserialize attributes
 in the ``ASTReader::ReadAttributes`` function.
 
 ClangAttrPCHWrite
 -----------------
 
-**Purpose**: Creates AttrPCHWrite.inc, which is used to serialize attributes in
+**Purpose**: Creates ``AttrPCHWrite.inc``, which is used to serialize attributes in
 the ``ASTWriter::WriteAttributes`` function.
 
 ClangAttrSpellings
 ---------------------
 
-**Purpose**: Creates AttrSpellings.inc, which is used to implement the
+**Purpose**: Creates ``AttrSpellings.inc``, which is used to implement the
 ``__has_attribute`` feature test macro.
 
 ClangAttrSpellingListIndex
 --------------------------
 
-**Purpose**: Creates AttrSpellingListIndex.inc, which is used to map parsed
+**Purpose**: Creates ``AttrSpellingListIndex.inc``, which is used to map parsed
 attribute spellings (including which syntax or scope was used) to an attribute
 spelling list index. These spelling list index values are internal
 implementation details exposed via
@@ -324,26 +324,26 @@ implementation details exposed via
 ClangAttrVisitor
 -------------------
 
-**Purpose**: Creates AttrVisitor.inc, which is used when implementing
+**Purpose**: Creates ``AttrVisitor.inc``, which is used when implementing
 recursive AST visitors.
 
 ClangAttrTemplateInstantiate
 ----------------------------
 
-**Purpose**: Creates AttrTemplateInstantiate.inc, which implements the
+**Purpose**: Creates ``AttrTemplateInstantiate.inc``, which implements the
 ``instantiateTemplateAttribute`` function, used when instantiating a template
 that requires an attribute to be cloned.
 
 ClangAttrParsedAttrList
 -----------------------
 
-**Purpose**: Creates AttrParsedAttrList.inc, which is used to generate the
+**Purpose**: Creates ``AttrParsedAttrList.inc``, which is used to generate the
 ``AttributeList::Kind`` parsed attribute enumeration.
 
 ClangAttrParsedAttrImpl
 -----------------------
 
-**Purpose**: Creates AttrParsedAttrImpl.inc, which is used by
+**Purpose**: Creates ``AttrParsedAttrImpl.inc``, which is used by
 ``AttributeList.cpp`` to implement several functions on the ``AttributeList``
 class. This functionality is implemented via the ``AttrInfoMap ParsedAttrInfo``
 array, which contains one element per parsed attribute object.
@@ -351,14 +351,14 @@ array, which contains one element per parsed attribute object.
 ClangAttrParsedAttrKinds
 ------------------------
 
-**Purpose**: Creates AttrParsedAttrKinds.inc, which is used to implement the
+**Purpose**: Creates ``AttrParsedAttrKinds.inc``, which is used to implement the
 ``AttributeList::getKind`` function, mapping a string (and syntax) to a parsed
 attribute ``AttributeList::Kind`` enumeration.
 
 ClangAttrDump
 -------------
 
-**Purpose**: Creates AttrDump.inc, which dumps information about an attribute.
+**Purpose**: Creates ``AttrDump.inc``, which dumps information about an attribute.
 It is used to implement ``ASTDumper::dumpAttr``.
 
 ClangDiagsDefs
@@ -424,7 +424,7 @@ Generate list of commands that are used in documentation comments.
 ArmNeon
 -------
 
-Generate arm_neon.h for clang.
+Generate ``arm_neon.h`` for clang.
 
 ArmNeonSema
 -----------
@@ -473,7 +473,7 @@ to a built-in backend.
 
 **Output**:
 
-The root of the output file is a JSON object (i.e. dictionary),
+The root of the output file is a JSON object (i.e., dictionary),
 containing the following fixed keys:
 
 * ``!tablegen_json_version``: a numeric version field that will
@@ -520,7 +520,7 @@ conventions described below.
 Some TableGen data types are translated directly into the
 corresponding JSON type:
 
-* A completely undefined value (e.g. for a variable declared without
+* A completely undefined value (e.g., for a variable declared without
   initializer in some superclass of this record, and never initialized
   by the record itself or any other superclass) is emitted as the JSON
   ``null`` value.
@@ -964,7 +964,7 @@ Here is the modified lookup function.
 
 The new lookup function will return an iterator range with first pointer to the
 first result and the last pointer to the last matching result from the table.
-However, please note that the support for emitting modified definition exists
+However, please note that the support for emitting a modified definition exists
 for ``PrimaryKeyName`` only.
 
 The ``PrimaryKeyEarlyOut`` field, when set to 1, modifies the lookup

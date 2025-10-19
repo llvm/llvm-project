@@ -342,10 +342,15 @@ void CIRGenFunction::LexicalScope::cleanup() {
 cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
 
-  if (!cgf.curFn.getFunctionType().hasVoidReturn()) {
+  // If we are on a coroutine, add the coro_end builtin call.
+  assert(!cir::MissingFeatures::coroEndBuiltinCall());
+
+  auto fn = dyn_cast<cir::FuncOp>(cgf.curFn);
+  assert(fn && "emitReturn from non-function");
+  if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     auto value = builder.create<cir::LoadOp>(
-        loc, cgf.curFn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return builder.create<cir::ReturnOp>(loc,
                                          llvm::ArrayRef(value.getResult()));
   }
@@ -405,6 +410,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
@@ -459,7 +466,9 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     const auto *md = cast<CXXMethodDecl>(d);
     if (md->getParent()->isLambda() && md->getOverloadedOperator() == OO_Call) {
       // We're in a lambda.
-      curFn.setLambda(true);
+      auto fn = dyn_cast<cir::FuncOp>(curFn);
+      assert(fn && "lambda in non-function region");
+      fn.setLambda(true);
 
       // Figure out the captures.
       md->getParent()->getCaptureFields(lambdaCaptureFields,
@@ -671,7 +680,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    RunCleanupsScope dtorEpilogue(*this);
+    enterDtorCleanups(dtor, Dtor_Deleting);
+    if (haveInsertPoint()) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+    }
     return;
   }
 
@@ -682,7 +697,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Enter the epilogue cleanups.
+  RunCleanupsScope dtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -701,7 +718,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert((body || getTarget().getCXXABI().isMicrosoft()) &&
            "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for virtual bases.
+    enterDtorCleanups(dtor, Dtor_Complete);
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
@@ -716,7 +734,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    enterDtorCleanups(dtor, Dtor_Base);
+
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
@@ -734,7 +754,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     break;
   }
 
-  assert(!cir::MissingFeatures::dtorCleanups());
+  // Jump out through the epilogue cleanups.
+  dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)
@@ -811,6 +832,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitMemberExpr(cast<MemberExpr>(e));
   case Expr::CompoundLiteralExprClass:
     return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
@@ -832,6 +855,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCallExprLValue(cast<CallExpr>(e));
   case Expr::ParenExprClass:
     return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   case Expr::CStyleCastExprClass:
@@ -841,6 +866,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
 }
 
@@ -981,6 +1008,41 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
                                  offsetValue);
 }
 
+CIRGenFunction::VlaSizePair CIRGenFunction::getVLASize(QualType type) {
+  const VariableArrayType *vla =
+      cgm.getASTContext().getAsVariableArrayType(type);
+  assert(vla && "type was not a variable array type!");
+  return getVLASize(vla);
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLASize(const VariableArrayType *type) {
+  // The number of elements so far; always size_t.
+  mlir::Value numElements;
+
+  QualType elementType;
+  do {
+    elementType = type->getElementType();
+    mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
+    assert(vlaSize && "no size for VLA!");
+    assert(vlaSize.getType() == SizeTy);
+
+    if (!numElements) {
+      numElements = vlaSize;
+    } else {
+      // It's undefined behavior if this wraps around, so mark it that way.
+      // FIXME: Teach -fsanitize=undefined to trap this.
+
+      numElements =
+          builder.createMul(numElements.getLoc(), numElements, vlaSize,
+                            cir::OverflowBehavior::NoUnsignedWrap);
+    }
+  } while ((type = getContext().getAsVariableArrayType(elementType)));
+
+  assert(numElements && "Undefined elements number");
+  return {numElements, elementType};
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
@@ -1061,7 +1123,26 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
 
     case Type::VariableArray: {
-      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType VLA");
+      // Losing element qualification here is fine.
+      const VariableArrayType *vat = cast<clang::VariableArrayType>(ty);
+
+      // Unknown size indication requires no size computation.
+      // Otherwise, evaluate and record it.
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
+        // It's possible that we might have emitted this already,
+        // e.g. with a typedef and a pointer to it.
+        mlir::Value &entry = vlaSizeMap[sizeExpr];
+        if (!entry) {
+          mlir::Value size = emitScalarExpr(sizeExpr);
+          assert(!cir::MissingFeatures::sanitizers());
+
+          // Always zexting here would be wrong if it weren't
+          // undefined behavior to have a negative bound.
+          // FIXME: What about when size's type is larger than size_t?
+          entry = builder.createIntCast(size, SizeTy);
+        }
+      }
+      type = vat->getElementType();
       break;
     }
 
