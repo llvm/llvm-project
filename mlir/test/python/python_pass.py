@@ -4,7 +4,7 @@ import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import pdl
+from mlir.dialects import pdl, func, arith
 from mlir.rewrite import *
 
 

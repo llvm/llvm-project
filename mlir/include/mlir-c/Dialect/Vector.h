@@ -26,6 +26,9 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Vector, vector);
 
+MLIR_CAPI_EXPORTED void
+mlirVectorRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

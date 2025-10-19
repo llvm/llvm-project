@@ -23,6 +23,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
   ADD_TO_PARENT MLIRPythonSources.Core
   SOURCES
     _mlir_libs/__init__.py
+    _mlir_libs/_capi.py
     _mlir_libs/_mlir/py.typed
     ir.py
     passmanager.py
@@ -64,7 +65,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/affine.py
   DIALECT_NAME affine
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIAffine
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -73,14 +77,20 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/amdgpu.py
   DIALECT_NAME amdgpu
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIAMDGPU
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/AsyncOps.td
   SOURCES_GLOB dialects/async_dialect/*.py
-  DIALECT_NAME async)
+  DIALECT_NAME async
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIAsync
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -91,6 +101,8 @@ declare_mlir_dialect_python_bindings(
   DIALECT_NAME bufferization
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIBufferization
 )
 
 declare_mlir_dialect_python_bindings(
@@ -99,7 +111,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/BuiltinOps.td
   SOURCES
     dialects/builtin.py
-  DIALECT_NAME builtin)
+  DIALECT_NAME builtin
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIBuiltin
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -107,7 +122,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/ComplexOps.td
   SOURCES
     dialects/complex.py
-  DIALECT_NAME complex)
+  DIALECT_NAME complex
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIComplex
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -116,7 +134,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/index.py
   DIALECT_NAME index
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIndex
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -124,7 +145,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/ControlFlowOps.td
   SOURCES
     dialects/cf.py
-  DIALECT_NAME cf)
+  DIALECT_NAME cf
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIControlFlow
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -132,7 +156,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/FuncOps.td
   SOURCES
     dialects/func.py
-  DIALECT_NAME func)
+  DIALECT_NAME func
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIFunc
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -150,7 +177,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/GPUOps.td
   SOURCES_GLOB dialects/gpu/*.py
   DIALECT_NAME gpu
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIGPU
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -161,7 +191,10 @@ declare_mlir_dialect_python_bindings(
     dialects/linalg/*.py
   DIALECT_NAME linalg
   DEPENDS LinalgOdsGen
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPILinalg
+  )
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -170,11 +203,14 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/llvm.py
   DIALECT_NAME llvm
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPILLVM
+  )
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformPDLExtensionOps.td
   SOURCES
     dialects/transform/pdl.py
@@ -182,8 +218,8 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   EXTENSION_NAME transform_pdl_extension)
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformSMTExtensionOps.td
   SOURCES
     dialects/transform/smt.py
@@ -191,8 +227,8 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   EXTENSION_NAME transform_smt_extension)
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformDebugExtensionOps.td
   SOURCES
     dialects/transform/debug.py
@@ -200,8 +236,8 @@ ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   EXTENSION_NAME transform_debug_extension)
 
 declare_mlir_dialect_extension_python_bindings(
-ADD_TO_PARENT MLIRPythonSources.Dialects
-ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TransformTuneExtensionOps.td
   SOURCES
     dialects/transform/tune.py
@@ -218,7 +254,9 @@ declare_mlir_dialect_python_bindings(
   DIALECT_NAME transform
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/Transform/IR/TransformAttrs.td"
-)
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPITransformDialect
+  )
 
 declare_mlir_python_sources(
   MLIRPythonSources.Dialects.transform.extras
@@ -327,7 +365,10 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MathOps.td
   SOURCES dialects/math.py
-  DIALECT_NAME math)
+  DIALECT_NAME math
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIMath
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -336,7 +377,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/arith.py
   DIALECT_NAME arith
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIArith
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -344,7 +388,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/MemRefOps.td
   SOURCES
     dialects/memref.py
-  DIALECT_NAME memref)
+  DIALECT_NAME memref
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIMemRef
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -352,7 +399,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/MLProgramOps.td
   SOURCES
     dialects/ml_program.py
-  DIALECT_NAME ml_program)
+  DIALECT_NAME ml_program
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIMLProgram
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -361,7 +411,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/nvgpu.py
   DIALECT_NAME nvgpu
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPINVGPU
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -370,7 +423,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/nvvm.py
   DIALECT_NAME nvvm
-  GEN_ENUM_BINDINGS)
+  GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPINVVM
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -378,16 +434,23 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/ROCDLOps.td
   SOURCES
     dialects/rocdl.py
-  DIALECT_NAME rocdl)
+  DIALECT_NAME rocdl
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIROCDL
+)
 
-declare_mlir_python_sources(
-  MLIRPythonSources.Dialects.quant
+declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/QuantOps.td
   GEN_ENUM_BINDINGS
   SOURCES
     dialects/quant.py
-    _mlir_libs/_mlir/dialects/quant.pyi)
+    _mlir_libs/_mlir/dialects/quant.pyi
+  DIALECT_NAME quant
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIQuant
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -395,7 +458,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/EmitC.td
   SOURCES
     dialects/emitc.py
-  DIALECT_NAME emitc)
+  DIALECT_NAME emitc
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIEmitC
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -404,7 +470,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/pdl.py
     _mlir_libs/_mlir/dialects/pdl.pyi
-  DIALECT_NAME pdl)
+  DIALECT_NAME pdl
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIPDL
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -413,7 +482,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/openmp.py
   DIALECT_NAME omp
-  DEPENDS omp_common_td)
+  DEPENDS omp_common_td
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIOpenMP
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -421,14 +493,20 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/SCFOps.td
   SOURCES
     dialects/scf.py
-  DIALECT_NAME scf)
+  DIALECT_NAME scf
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPISCF
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/ShapeOps.td
   SOURCES dialects/shape.py
-  DIALECT_NAME shape)
+  DIALECT_NAME shape
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIShape
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -438,6 +516,8 @@ declare_mlir_dialect_python_bindings(
   DIALECT_NAME sparse_tensor
   GEN_ENUM_BINDINGS_TD_FILE
     "../../include/mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPISparseTensor
 )
 
 declare_mlir_dialect_python_bindings(
@@ -447,14 +527,20 @@ declare_mlir_dialect_python_bindings(
   GEN_ENUM_BINDINGS
   SOURCES
     dialects/smt.py
-  DIALECT_NAME smt)
+  DIALECT_NAME smt
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPISMT
+)
 
 declare_mlir_dialect_python_bindings(
-    ADD_TO_PARENT MLIRPythonSources.Dialects
-    ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-    TD_FILE dialects/SPIRVOps.td
-    SOURCES dialects/spirv.py
-    DIALECT_NAME spirv)
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SPIRVOps.td
+  SOURCES dialects/spirv.py
+  DIALECT_NAME spirv
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPISPIRV
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -462,7 +548,10 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TensorOps.td
   SOURCES
     dialects/tensor.py
-  DIALECT_NAME tensor)
+  DIALECT_NAME tensor
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPITensor
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -470,6 +559,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/TosaOps.td
   SOURCES dialects/tosa.py
   DIALECT_NAME tosa
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPITosa
 )
 
 declare_mlir_dialect_python_bindings(
@@ -478,6 +569,8 @@ declare_mlir_dialect_python_bindings(
   TD_FILE dialects/UBOps.td
   SOURCES dialects/ub.py
   DIALECT_NAME ub
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIUB
 )
 
 declare_mlir_dialect_python_bindings(
@@ -487,7 +580,10 @@ declare_mlir_dialect_python_bindings(
   SOURCES dialects/vector.py
   DIALECT_NAME vector
   GEN_ENUM_BINDINGS_TD_FILE
-    "dialects/VectorAttributes.td")
+    "dialects/VectorAttributes.td"
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIVector
+)
 
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
@@ -496,6 +592,8 @@ declare_mlir_dialect_python_bindings(
   SOURCES dialects/irdl.py
   DIALECT_NAME irdl
   GEN_ENUM_BINDINGS
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIRDL
 )
 
 ################################################################################
@@ -535,6 +633,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     MLIRCAPIDebug
     MLIRCAPIIR
     MLIRCAPIInterfaces
+    MLIRCAPITransforms
+    MLIRCAPIBuiltin
 
     # Dialects
     MLIRCAPIFunc
@@ -558,7 +658,10 @@ declare_mlir_python_extension(MLIRPythonExtension.RegisterEverything
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIConversion
     MLIRCAPITransforms
-    MLIRCAPIRegisterEverything
+    MLIRCAPIRegisterAllPasses
+    MLIRCAPIRegisterAllExtensions
+    MLIRCAPIRegisterAllLLVMTranslations
+    MLIRCAPIRegisterAllExternalModels
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Linalg.Pybind
@@ -973,7 +1076,9 @@ endif()
 # This must come last.
 ################################################################################
 
-set(_declared_sources MLIRPythonSources MLIRPythonExtension.RegisterEverything)
+set(_declared_sources
+  MLIRPythonSources
+  MLIRPythonExtension.RegisterEverything)
 if(NOT CMAKE_CROSSCOMPILING)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()

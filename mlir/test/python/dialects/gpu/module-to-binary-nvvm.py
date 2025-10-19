@@ -2,7 +2,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
-import mlir.dialects.gpu as gpu
+from mlir.dialects import gpu, llvm, nvvm
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
 

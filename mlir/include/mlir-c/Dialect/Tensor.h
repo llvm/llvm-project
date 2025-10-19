@@ -18,6 +18,9 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(Tensor, tensor);
 
+MLIR_CAPI_EXPORTED void
+mlirTensorRegisterTransformDialectExtension(MlirDialectRegistry registry);
+
 #ifdef __cplusplus
 }
 #endif

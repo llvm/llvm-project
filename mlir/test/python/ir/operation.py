@@ -6,7 +6,7 @@ import itertools
 from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
-from mlir.dialects import arith
+from mlir.dialects import arith, func
 from mlir.dialects._ods_common import _cext
 
 

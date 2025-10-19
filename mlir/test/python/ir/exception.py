@@ -2,6 +2,7 @@
 
 import gc
 from mlir.ir import *
+import mlir.dialects.func
 
 
 def run(f):

@@ -4,6 +4,7 @@ import gc
 import sys
 from mlir.ir import *
 from mlir.dialects._ods_common import _cext
+from mlir.dialects import func, arith, scf, cf
 
 
 def run(f):

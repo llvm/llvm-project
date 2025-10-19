@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 from mlir.dialects.irdl import *
+import mlir.dialects.arith
 import sys
 
 

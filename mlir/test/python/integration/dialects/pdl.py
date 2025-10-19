@@ -1,6 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 
-from mlir.dialects import arith, func, pdl
+from mlir.dialects import arith, func, pdl, irdl
 from mlir.dialects.builtin import module
 from mlir.ir import *
 from mlir.rewrite import *
