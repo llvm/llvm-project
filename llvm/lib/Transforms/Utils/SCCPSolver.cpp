@@ -1407,10 +1407,10 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
         if (PhiState.isOverdefined())
           break;
       }
-      mergeInValue(getStructValueState(&PN, i), &PN, PhiState,
+      ValueLatticeElement &PhiStateRef = getStructValueState(&PN, i);
+      mergeInValue(PhiStateRef, &PN, PhiState,
                    ValueLatticeElement::MergeOptions().setMaxWidenSteps(
                        FeasibleIncomingIndices.size() + 1));
-      ValueLatticeElement &PhiStateRef = getStructValueState(&PN, i);
       PhiStateRef.setNumRangeExtensions(
           std::max((unsigned)FeasibleIncomingIndices.size(),
                    PhiStateRef.getNumRangeExtensions()));
@@ -1428,7 +1428,7 @@ void SCCPInstVisitor::visitPHINode(PHINode &PN) {
     // extensions to match the number of active incoming values. This helps to
     // limit multiple extensions caused by the same incoming value, if other
     // incoming values are equal.
-    ValueLatticeElement &PhiStateRef = getValueState(&PN);
+    ValueLatticeElement &PhiStateRef = ValueState[&PN];
     mergeInValue(PhiStateRef, &PN, PhiState,
                  ValueLatticeElement::MergeOptions().setMaxWidenSteps(
                      FeasibleIncomingIndices.size() + 1));
