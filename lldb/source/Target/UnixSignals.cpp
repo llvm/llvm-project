@@ -137,7 +137,7 @@ llvm::StringRef UnixSignals::GetSignalAsStringRef(int32_t signo) const {
   return pos->second.m_name;
 }
 
-llvm::StringRef UnixSignals::GetSignalNoDescription(int32_t signo) const {
+llvm::StringRef UnixSignals::GetSignalNumberDescription(int32_t signo) const {
   const auto pos = m_signals.find(signo);
   if (pos == m_signals.end())
     return {};

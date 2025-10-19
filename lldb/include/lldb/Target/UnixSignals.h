@@ -31,7 +31,7 @@ public:
 
   llvm::StringRef GetSignalAsStringRef(int32_t signo) const;
 
-  llvm::StringRef GetSignalNoDescription(int32_t signo) const;
+  llvm::StringRef GetSignalNumberDescription(int32_t signo) const;
 
   std::string
   GetSignalDescription(int32_t signo,

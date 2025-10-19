@@ -1620,7 +1620,7 @@ public:
                  (stop ? "true " : "false"), (notify ? "true " : "false"));
 
       llvm::StringRef sig_description =
-          signals_sp->GetSignalNoDescription(signo);
+          signals_sp->GetSignalNumberDescription(signo);
       if (!sig_description.empty()) {
         str.PutCString(" ");
         str.PutCString(sig_description);
