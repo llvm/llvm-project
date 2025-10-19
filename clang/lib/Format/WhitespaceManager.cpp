@@ -546,7 +546,7 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
       } else if (CurrentChange.indentAndNestingLevel() >
                  IndentAndNestingLevel) {
         // Call AlignTokens recursively, skipping over this scope block.
-        unsigned StoppedAt =
+        const auto StoppedAt =
             AlignTokens(Style, Matches, Changes, i, ACS, RightJustify);
         i = StoppedAt - 1;
         continue;
@@ -690,7 +690,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
     return Current->Next->SpacesRequiredBefore == SpacesRequiredBefore;
   };
 
-  AlignTokens<decltype(AlignMacrosMatches) &, /*DontRecurse=*/true>(
+  AlignTokens<decltype(AlignMacrosMatches) &, /*SimpleCheck=*/true>(
       Style, AlignMacrosMatches, Changes, 0, Style.AlignConsecutiveMacros);
 }
 
