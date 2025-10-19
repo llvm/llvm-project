@@ -51,11 +51,11 @@ func3:
 # CHECK-2-NEXT:       - Offset:
 # CHECK-2-NEXT:           Opcode:          I32_CONST
 # CHECK-2-NEXT:           Value:           1
-# CHECK-2-NEXT:         Functions:       [ 0, 1, 0, 2, 0, 3 ]
+# CHECK-2-NEXT:         Functions:       [ 1, 2, 0, 3, 0 ]
 
 # CHECK-3:        - Type:            ELEM
 # CHECK-3-NEXT:     Segments:
 # CHECK-3-NEXT:       - Offset:
 # CHECK-3-NEXT:           Opcode:          I32_CONST
 # CHECK-3-NEXT:           Value:           1
-# CHECK-3-NEXT:         Functions:       [ 0, 0, 1, 0, 0, 2, 0, 0, 3 ]
+# CHECK-3-NEXT:         Functions:       [ 1, 0, 2, 0, 0, 3, 0, 0 ]

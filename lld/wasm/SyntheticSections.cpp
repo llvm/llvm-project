@@ -580,6 +580,7 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
   if (sym->hasTableIndex() || sym->isStub)
     return;
   sym->setTableIndex(ctx.arg.tableBase + indirectFunctions.size());
+  indirectFunctions.emplace_back(sym);
 
   // Pad with null function pointers if alignment is requesting.
   if (ctx.arg.functionPointerAlignment > 1) {
@@ -587,8 +588,6 @@ void ElemSection::addEntry(FunctionSymbol *sym) {
       indirectFunctions.push_back(nullptr);
     }
   }
-
-  indirectFunctions.emplace_back(sym);
 }
 
 void ElemSection::writeBody() {
