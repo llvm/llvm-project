@@ -54,6 +54,11 @@ public:
   bool enableWritePrefetching() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
+  InstructionCost
+  getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+                 ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
+                 VectorType *SubTp, ArrayRef<const Value *> Args = {},
+                 const Instruction *CxtI = nullptr) const override;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };
