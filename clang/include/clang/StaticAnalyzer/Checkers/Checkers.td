@@ -841,6 +841,14 @@ let ParentPackage = InsecureAPI in {
 
 def SecuritySyntaxChecker : Checker<"SecuritySyntaxChecker">,
   HelpText<"Base of various security function related checkers">,
+  CheckerOptions<[
+    CmdLineOption<String,
+                  "Warn",
+                  "List of space-separated function name to be warned about. "
+                  "Defaults to an empty list.",
+                  "",
+                  InAlpha>
+  ]>,
   Documentation<NotDocumented>,
   Hidden;
 

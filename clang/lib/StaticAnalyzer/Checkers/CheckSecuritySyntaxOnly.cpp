@@ -53,6 +53,7 @@ struct ChecksFilter {
   CheckerNameRef checkName_bcmp;
   CheckerNameRef checkName_bcopy;
   CheckerNameRef checkName_bzero;
+  CheckerNameRef checkName_custom;
   CheckerNameRef checkName_gets;
   CheckerNameRef checkName_getpw;
   CheckerNameRef checkName_mktemp;
@@ -74,13 +75,14 @@ class WalkAST : public StmtVisitor<WalkAST> {
 
   const bool CheckRand;
   const ChecksFilter &filter;
+  llvm::StringSet<> WarnFunctions;
 
 public:
-  WalkAST(BugReporter &br, AnalysisDeclContext* ac,
-          const ChecksFilter &f)
-  : BR(br), AC(ac), II_setid(),
-    CheckRand(isArc4RandomAvailable(BR.getContext())),
-    filter(f) {}
+  WalkAST(BugReporter &br, AnalysisDeclContext *ac, const ChecksFilter &f,
+          llvm::StringSet<> wf)
+      : BR(br), AC(ac), II_setid(),
+        CheckRand(isArc4RandomAvailable(BR.getContext())), filter(f),
+        WarnFunctions(wf) {}
 
   // Statement visitor methods.
   void VisitCallExpr(CallExpr *CE);
@@ -101,6 +103,7 @@ public:
   void checkLoopConditionForFloat(const ForStmt *FS);
   void checkCall_bcmp(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_bcopy(const CallExpr *CE, const FunctionDecl *FD);
+  void checkCall_custom(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_bzero(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_gets(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD);
@@ -175,12 +178,10 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
           .Case("rand_r", &WalkAST::checkCall_rand)
           .Case("random", &WalkAST::checkCall_random)
           .Case("vfork", &WalkAST::checkCall_vfork)
-          .Default(nullptr);
+          .Default(&WalkAST::checkCall_custom);
 
-  // If the callee isn't defined, it is not of security concern.
   // Check and evaluate the call.
-  if (evalFunction)
-    (this->*evalFunction)(CE, FD);
+  (this->*evalFunction)(CE, FD);
 
   // Recurse and check children.
   VisitChildren(CE);
@@ -540,6 +541,29 @@ void WalkAST::checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD) {
                      "The getpw() function is dangerous as it may overflow the "
                      "provided buffer. It is obsoleted by getpwuid().",
                      CELoc, CE->getCallee()->getSourceRange());
+}
+
+//===----------------------------------------------------------------------===//
+// Check: Any use of a function from the user-provided list.
+//===----------------------------------------------------------------------===//
+
+void WalkAST::checkCall_custom(const CallExpr *CE, const FunctionDecl *FD) {
+  IdentifierInfo *II = FD->getIdentifier();
+  if (!II) // if no identifier, not a simple C function
+    return;
+  StringRef Name = II->getName();
+  Name.consume_front("__builtin_");
+
+  if (!(this->WarnFunctions.contains(Name)))
+    return;
+
+  // Issue a warning.
+  std::string Msg = ("Call to user-defined function '" + Name + "'.").str();
+  PathDiagnosticLocation CELoc =
+      PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
+  BR.EmitBasicReport(AC->getDecl(), filter.checkName_custom,
+                     "User-provided function to be warned about", "Security",
+                     Msg, CELoc, CE->getCallee()->getSourceRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1075,17 +1099,30 @@ namespace {
 class SecuritySyntaxChecker : public Checker<check::ASTCodeBody> {
 public:
   ChecksFilter filter;
+  llvm::StringSet<> WarnFunctions;
 
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
-    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter);
+    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter, WarnFunctions);
     walker.Visit(D->getBody());
+  }
+
+  void setWarnFunctions(StringRef Input) {
+    StringRef CurrentStr = Input;
+    while (!CurrentStr.empty()) {
+      auto SplitResult = CurrentStr.split(' ');
+      WarnFunctions.insert(SplitResult.first);
+      CurrentStr = SplitResult.second;
+    }
   }
 };
 }
 
 void ento::registerSecuritySyntaxChecker(CheckerManager &mgr) {
-  mgr.registerChecker<SecuritySyntaxChecker>();
+  SecuritySyntaxChecker *checker = mgr.registerChecker<SecuritySyntaxChecker>();
+  StringRef WarnOption =
+      mgr.getAnalyzerOptions().getCheckerStringOption(checker, "Warn");
+  checker->setWarnFunctions(WarnOption);
 }
 
 bool ento::shouldRegisterSecuritySyntaxChecker(const CheckerManager &mgr) {
