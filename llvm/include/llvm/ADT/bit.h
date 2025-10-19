@@ -336,6 +336,21 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   return T(1) << llvm::bit_width<T>(Value - 1u);
 }
 
+/// Returns the smallest integral power of two no smaller than Value if Value is
+/// nonzero.  Returns 1 otherwise.
+///
+/// Ex. bit_ceil(5) == 8.
+///
+/// The return value is undefined if the input is larger than the largest power
+/// of two representable in T.
+template <typename T> [[nodiscard]] constexpr T bit_ceil_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (Value < 2)
+    return 1;
+  return T(1) << llvm::bit_width_constexpr<T>(Value - 1u);
+}
+
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 [[nodiscard]] constexpr T rotl(T V, int R) {
   constexpr unsigned N = std::numeric_limits<T>::digits;

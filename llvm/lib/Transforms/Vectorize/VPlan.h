@@ -407,6 +407,10 @@ public:
   VPBasicBlock *getParent() { return Parent; }
   const VPBasicBlock *getParent() const { return Parent; }
 
+  /// \return the VPRegionBlock which the recipe belongs to.
+  VPRegionBlock *getRegion();
+  const VPRegionBlock *getRegion() const;
+
   /// The method which generates the output IR instructions that correspond to
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
@@ -4074,6 +4078,14 @@ public:
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
 };
+
+inline VPRegionBlock *VPRecipeBase::getRegion() {
+  return getParent()->getParent();
+}
+
+inline const VPRegionBlock *VPRecipeBase::getRegion() const {
+  return getParent()->getParent();
+}
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and
