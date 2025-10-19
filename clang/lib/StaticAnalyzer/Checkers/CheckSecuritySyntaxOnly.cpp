@@ -10,14 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
-#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -40,9 +45,12 @@ struct ChecksFilter {
   bool check_bzero = false;
   bool check_gets = false;
   bool check_getpw = false;
+  bool check_lstrcatA = false;
+  bool check_lstrcpyA = false;
   bool check_mktemp = false;
   bool check_mkstemp = false;
   bool check_strcpy = false;
+  bool check_strdup = false;
   bool check_DeprecatedOrUnsafeBufferHandling = false;
   bool check_rand = false;
   bool check_vfork = false;
@@ -55,9 +63,12 @@ struct ChecksFilter {
   CheckerNameRef checkName_bzero;
   CheckerNameRef checkName_gets;
   CheckerNameRef checkName_getpw;
+  CheckerNameRef checkName_lstrcatA;
+  CheckerNameRef checkName_lstrcpyA;
   CheckerNameRef checkName_mktemp;
   CheckerNameRef checkName_mkstemp;
   CheckerNameRef checkName_strcpy;
+  CheckerNameRef checkName_strdup;
   CheckerNameRef checkName_DeprecatedOrUnsafeBufferHandling;
   CheckerNameRef checkName_rand;
   CheckerNameRef checkName_vfork;
@@ -104,9 +115,12 @@ public:
   void checkCall_bzero(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_gets(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD);
+  void checkCall_lstrcatA(const CallExpr *CE, const FunctionDecl *FD);
+  void checkCall_lstrcpyA(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_mktemp(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_mkstemp(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD);
+  void checkCall_strdup(const CallExpr *CE, const FunctionDecl *FD);
   void checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD);
   void checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
                                              const FunctionDecl *FD);
@@ -150,12 +164,15 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
           .Case("bzero", &WalkAST::checkCall_bzero)
           .Case("gets", &WalkAST::checkCall_gets)
           .Case("getpw", &WalkAST::checkCall_getpw)
+          .Case("lstrcatA", &WalkAST::checkCall_lstrcatA)
+          .Case("lstrcpyA", &WalkAST::checkCall_lstrcpyA)
           .Case("mktemp", &WalkAST::checkCall_mktemp)
           .Case("mkstemp", &WalkAST::checkCall_mkstemp)
           .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
           .Case("mkstemps", &WalkAST::checkCall_mkstemp)
           .Cases({"strcpy", "__strcpy_chk"}, &WalkAST::checkCall_strcpy)
           .Cases({"strcat", "__strcat_chk"}, &WalkAST::checkCall_strcat)
+          .Case("_strdup", &WalkAST::checkCall_strdup)
           .Cases({"sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
                   "vscanf", "vwscanf", "vfscanf", "vfwscanf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
@@ -543,6 +560,145 @@ void WalkAST::checkCall_getpw(const CallExpr *CE, const FunctionDecl *FD) {
 }
 
 //===----------------------------------------------------------------------===//
+// Check: Any use of 'lstrcatA' is insecure.
+//
+// CWE-119: Improper Restriction of Operations within
+// the Bounds of a Memory Buffer
+//===----------------------------------------------------------------------===//
+
+void WalkAST::checkCall_lstrcatA(const CallExpr *CE, const FunctionDecl *FD) {
+  if (!filter.check_lstrcatA)
+    return;
+
+  // Verify that the operating system is Windows
+  if (!FD->getASTContext().getTargetInfo().getTriple().isOSWindows())
+    return;
+
+  // Checking the type of the arguments
+  const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return;
+
+  // Verify the function takes two arguments, three in the _chk version.
+  int numArgs = FPT->getNumParams();
+  if (numArgs != 2)
+    return;
+
+  // Verify the type for both arguments.
+  for (int i = 0; i < 2; i++) {
+    // Verify that the arguments are pointers.
+    const PointerType *PT = FPT->getParamType(i)->getAs<PointerType>();
+    if (!PT)
+      return;
+
+    // Verify that the argument is a 'char*'.
+    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+      return;
+  }
+  // Second argument has to have 'const' qualifier
+  if (!FPT->getParamType(1)
+           ->getAs<PointerType>()
+           ->getPointeeType()
+           .isConstQualified())
+    return;
+
+  // Verify that the function returns 'char *'
+  const PointerType *PTReturnType = FPT->getReturnType()->getAs<PointerType>();
+  if (!PTReturnType)
+    return;
+  if (PTReturnType->getPointeeType().getUnqualifiedType() !=
+      BR.getContext().CharTy)
+    return;
+
+  // Issue a warning.
+  PathDiagnosticLocation CELoc =
+      PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
+  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strcpy,
+                     "Potential insecure memory buffer bounds restriction in "
+                     "call 'lstrcatA'",
+                     "Security",
+                     "Call to function 'lstrcatA' is insecure as it does not "
+                     "provide bounding of the memory buffer. Consider "
+                     "using 'StringCchCat' instead. CWE-119.",
+                     CELoc, CE->getCallee()->getSourceRange());
+}
+
+//===----------------------------------------------------------------------===//
+// Check: Any use of 'lstrcpyA' is insecure.
+//
+// CWE-119: Improper Restriction of Operations within
+// the Bounds of a Memory Buffer
+//===----------------------------------------------------------------------===//
+
+void WalkAST::checkCall_lstrcpyA(const CallExpr *CE, const FunctionDecl *FD) {
+  if (!filter.check_lstrcpyA)
+    return;
+
+  // Verify that the operating system is Windows
+  if (!FD->getASTContext().getTargetInfo().getTriple().isOSWindows())
+    return;
+
+  // Checking the type of the arguments
+  const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return;
+
+  // Verify the function takes two arguments, three in the _chk version.
+  int numArgs = FPT->getNumParams();
+  if (numArgs != 2)
+    return;
+
+  // Verify the type for both arguments.
+  for (int i = 0; i < 2; i++) {
+    // Verify that the arguments are pointers.
+    const PointerType *PT = FPT->getParamType(i)->getAs<PointerType>();
+    if (!PT)
+      return;
+
+    // Verify that the argument is a 'char*'.
+    if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+      return;
+  }
+  // Second argument has to have 'const' qualifier
+  if (!FPT->getParamType(1)
+           ->getAs<PointerType>()
+           ->getPointeeType()
+           .isConstQualified())
+    return;
+
+  // Verify that the function returns 'char *'
+  const PointerType *PTReturnType = FPT->getReturnType()->getAs<PointerType>();
+  if (!PTReturnType)
+    return;
+  if (PTReturnType->getPointeeType().getUnqualifiedType() !=
+      BR.getContext().CharTy)
+    return;
+
+  const auto *Target = CE->getArg(0)->IgnoreImpCasts(),
+             *Source = CE->getArg(1)->IgnoreImpCasts();
+
+  if (const auto *Array = dyn_cast<ConstantArrayType>(Target->getType())) {
+    uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
+    if (const auto *String = dyn_cast<StringLiteral>(Source)) {
+      if (ArraySize >= String->getLength() + 1)
+        return;
+    }
+  }
+
+  // Issue a warning.
+  PathDiagnosticLocation CELoc =
+      PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
+  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strcpy,
+                     "Potential insecure memory buffer bounds restriction in "
+                     "call 'lstrcpyA'",
+                     "Security",
+                     "Call to function 'lstrcpyA' is insecure as it does not "
+                     "provide bounding of the memory buffer. Consider "
+                     "using StringCchCopy instead. CWE-119.",
+                     CELoc, CE->getCallee()->getSourceRange());
+}
+
+//===----------------------------------------------------------------------===//
 // Check: Any use of 'mktemp' is insecure.  It is obsoleted by mkstemp().
 // CWE-377: Insecure Temporary File
 //===----------------------------------------------------------------------===//
@@ -730,6 +886,60 @@ void WalkAST::checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD) {
                      "provide bounding of the memory buffer. Replace "
                      "unbounded copy functions with analogous functions that "
                      "support length arguments such as 'strlcat'. CWE-119.",
+                     CELoc, CE->getCallee()->getSourceRange());
+}
+
+// TODO: Add the CWE number if it exists for this?
+//===----------------------------------------------------------------------===//
+// Check: '_strdup' should not be used.
+//
+// CWE-690: Unchecked Return Value to NULL Pointer Dereference
+//===----------------------------------------------------------------------===//
+
+void WalkAST::checkCall_strdup(const CallExpr *CE, const FunctionDecl *FD) {
+  if (!filter.check_strdup)
+    return;
+
+  // Verify that the operating system is Windows
+  if (!FD->getASTContext().getTargetInfo().getTriple().isOSWindows())
+    return;
+
+  const FunctionProtoType *FPT = FD->getType()->getAs<FunctionProtoType>();
+  if (!FPT)
+    return;
+
+  // Verify the function takes one argument
+  int numArgs = FPT->getNumParams();
+  if (numArgs != 1)
+    return;
+
+  // Verify that the argument is a pointer
+  const PointerType *PT = FPT->getParamType(0)->getAs<PointerType>();
+  if (!PT)
+    return;
+
+  // Verify that the argument is a 'const char*'.
+  if (PT->getPointeeType().getUnqualifiedType() != BR.getContext().CharTy)
+    return;
+  if (!PT->getPointeeType().isConstQualified())
+    return;
+
+  // Verify that the function returns 'char *'
+  const PointerType *PTReturnType = FPT->getReturnType()->getAs<PointerType>();
+  if (!PTReturnType)
+    return;
+  if (PTReturnType->getPointeeType().getUnqualifiedType() !=
+      BR.getContext().CharTy)
+    return;
+
+  // Issue a warning.
+  PathDiagnosticLocation CELoc =
+      PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(), AC);
+  BR.EmitBasicReport(AC->getDecl(), filter.checkName_strdup,
+                     "Potential unfreed memory from call of '_strdup'",
+                     "Security",
+                     "Call to function '_strdup' allocates memory on heap "
+                     "and requires to be freed manually. CWE-690.",
                      CELoc, CE->getCallee()->getSourceRange());
 }
 
@@ -1106,9 +1316,12 @@ REGISTER_CHECKER(bcopy)
 REGISTER_CHECKER(bzero)
 REGISTER_CHECKER(gets)
 REGISTER_CHECKER(getpw)
+REGISTER_CHECKER(lstrcatA)
+REGISTER_CHECKER(lstrcpyA)
 REGISTER_CHECKER(mkstemp)
 REGISTER_CHECKER(mktemp)
 REGISTER_CHECKER(strcpy)
+REGISTER_CHECKER(strdup)
 REGISTER_CHECKER(rand)
 REGISTER_CHECKER(vfork)
 REGISTER_CHECKER(FloatLoopCounter)
