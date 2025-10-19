@@ -620,11 +620,10 @@ public:
 
 // This line fails with:
 // libcxx/test-suite-install/include/c++/v1/__memory/construct_at.h:38:49: note: non-literal type
-// 'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression
-//
+// `'std::__tree_node<std::__value_type<Key, int>, void *>' cannot be used in a constant expression`
 // during constant evaluation as part of P3372
 // on:
-// 1. AppleClang is not yet using clang >= 20.x, which has "fixed" this issue
+// 1. AppleClang, which is not yet using clang >= 20.x, which has "fixed" this issue
 // FIXME: when AppleClang is based off of clang >= 20.x
 // FIXME: when Clang-based CI is using clang >= 20.x
 #if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2000) ||                                                        \
