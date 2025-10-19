@@ -3484,29 +3484,20 @@ bool X86TargetLowering::isMaskAndCmp0FoldingBeneficial(
 }
 
 bool X86TargetLowering::hasAndNotCompare(SDValue Y) const {
-  EVT VT = Y.getValueType();
-
-  if (VT.isVector())
-    return false;
-
-  if (!Subtarget.hasBMI())
-    return false;
-
-  // There are only 32-bit and 64-bit forms for 'andn'.
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return false;
-
-  return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  return Y.getValueType().isScalarInteger();
 }
 
 bool X86TargetLowering::hasAndNot(SDValue Y) const {
   EVT VT = Y.getValueType();
 
-  if (!VT.isVector())
-    return hasAndNotCompare(Y);
+  if (!VT.isVector()) {
+    if (!Subtarget.hasBMI() || VT.getSizeInBits() < 32)
+      return false;
+
+    return !isa<ConstantSDNode>(Y) || cast<ConstantSDNode>(Y)->isOpaque();
+  }
 
   // Vector.
-
   if (!Subtarget.hasSSE1() || VT.getSizeInBits() < 128)
     return false;
 
@@ -38436,9 +38427,9 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
     return false;
   }
 
-  // Only optimize Ands to prevent shrinking a constant that could be
-  // matched by movzx.
-  if (Opcode != ISD::AND)
+  // Only optimize certain opcodes to prevent shrinking a constant that could be
+  // matched by specific instructions.
+  if (Opcode != ISD::AND && Opcode != ISD::XOR)
     return false;
 
   // Make sure the RHS really is a constant.
@@ -38447,6 +38438,20 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
     return false;
 
   const APInt &Mask = C->getAPIntValue();
+
+  if (Opcode == ISD::XOR) {
+    // If all demanded bits are 1s in the mask, we can replace the mask with
+    // all 1s, which allows this to be turned into a NOT.
+    if (DemandedBits.isSubsetOf(Mask)) {
+      if (Mask.isAllOnes())
+        return false;
+      // Replace the constant with all ones.
+      SDLoc DL(Op);
+      SDValue Not = TLO.DAG.getNOT(DL, Op.getOperand(0), VT);
+      return TLO.CombineTo(Op, Not);
+    }
+    return false;
+  }
 
   // Clear all non-demanded bits initially.
   APInt ShrunkMask = Mask & DemandedBits;
@@ -56443,42 +56448,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
 
   if (CC == ISD::SETNE || CC == ISD::SETEQ) {
     if (OpVT.isScalarInteger()) {
-      // cmpeq(or(X,Y),X) --> cmpeq(and(~X,Y),0)
-      // cmpne(or(X,Y),X) --> cmpne(and(~X,Y),0)
-      auto MatchOrCmpEq = [&](SDValue N0, SDValue N1) {
-        if (N0.getOpcode() == ISD::OR && N0->hasOneUse()) {
-          if (N0.getOperand(0) == N1)
-            return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                               N0.getOperand(1));
-          if (N0.getOperand(1) == N1)
-            return DAG.getNode(ISD::AND, DL, OpVT, DAG.getNOT(DL, N1, OpVT),
-                               N0.getOperand(0));
-        }
-        return SDValue();
-      };
-      if (SDValue AndN = MatchOrCmpEq(LHS, RHS))
-        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-      if (SDValue AndN = MatchOrCmpEq(RHS, LHS))
-        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
-      // cmpeq(and(X,Y),Y) --> cmpeq(and(~X,Y),0)
-      // cmpne(and(X,Y),Y) --> cmpne(and(~X,Y),0)
-      auto MatchAndCmpEq = [&](SDValue N0, SDValue N1) {
-        if (N0.getOpcode() == ISD::AND && N0->hasOneUse()) {
-          if (N0.getOperand(0) == N1)
-            return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                               DAG.getNOT(DL, N0.getOperand(1), OpVT));
-          if (N0.getOperand(1) == N1)
-            return DAG.getNode(ISD::AND, DL, OpVT, N1,
-                               DAG.getNOT(DL, N0.getOperand(0), OpVT));
-        }
-        return SDValue();
-      };
-      if (SDValue AndN = MatchAndCmpEq(LHS, RHS))
-        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-      if (SDValue AndN = MatchAndCmpEq(RHS, LHS))
-        return DAG.getSetCC(DL, VT, AndN, DAG.getConstant(0, DL, OpVT), CC);
-
       // cmpeq(trunc(x),C) --> cmpeq(x,C)
       // cmpne(trunc(x),C) --> cmpne(x,C)
       // iff x upper bits are zero.
