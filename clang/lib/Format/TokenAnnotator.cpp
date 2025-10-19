@@ -531,10 +531,6 @@ private:
             OpeningParen.Previous->is(TT_LeadingJavaAnnotation)) {
           CurrentToken->setType(TT_LeadingJavaAnnotation);
         }
-        if (OpeningParen.Previous &&
-            OpeningParen.Previous->is(TT_AttributeSquare)) {
-          CurrentToken->setType(TT_AttributeSquare);
-        }
 
         if (!HasMultipleLines)
           OpeningParen.setPackingKind(PPK_Inconclusive);
@@ -722,9 +718,11 @@ private:
       } else if (InsideInlineASM) {
         Left->setType(TT_InlineASMSymbolicNameLSquare);
       } else if (IsCpp11AttributeSpecifier) {
-        Left->setType(TT_AttributeSquare);
-        if (!IsInnerSquare && Left->Previous)
-          Left->Previous->EndsCppAttributeGroup = false;
+        if (!IsInnerSquare) {
+          Left->setType(TT_AttributeLSquare);
+          if (Left->Previous)
+            Left->Previous->EndsCppAttributeGroup = false;
+        }
       } else if (Style.isJavaScript() && Parent &&
                  Contexts.back().ContextKind == tok::l_brace &&
                  Parent->isOneOf(tok::l_brace, tok::comma)) {
@@ -733,7 +731,7 @@ private:
                  Parent && Parent->isOneOf(tok::l_brace, tok::comma)) {
         Left->setType(TT_DesignatedInitializerLSquare);
       } else if (IsCSharpAttributeSpecifier) {
-        Left->setType(TT_AttributeSquare);
+        Left->setType(TT_AttributeLSquare);
       } else if (CurrentToken->is(tok::r_square) && Parent &&
                  Parent->is(TT_TemplateCloser)) {
         Left->setType(TT_ArraySubscriptLSquare);
@@ -797,13 +795,12 @@ private:
 
     while (CurrentToken) {
       if (CurrentToken->is(tok::r_square)) {
-        if (IsCpp11AttributeSpecifier) {
-          CurrentToken->setType(TT_AttributeSquare);
-          if (!IsInnerSquare)
-            CurrentToken->EndsCppAttributeGroup = true;
+        if (IsCpp11AttributeSpecifier && !IsInnerSquare) {
+          CurrentToken->setType(TT_AttributeRSquare);
+          CurrentToken->EndsCppAttributeGroup = true;
         }
         if (IsCSharpAttributeSpecifier) {
-          CurrentToken->setType(TT_AttributeSquare);
+          CurrentToken->setType(TT_AttributeRSquare);
         } else if (((CurrentToken->Next &&
                      CurrentToken->Next->is(tok::l_paren)) ||
                     (CurrentToken->Previous &&
@@ -1297,7 +1294,7 @@ private:
   bool consumeToken() {
     if (IsCpp) {
       const auto *Prev = CurrentToken->getPreviousNonComment();
-      if (Prev && Prev->is(tok::r_square) && Prev->is(TT_AttributeSquare) &&
+      if (Prev && Prev->is(TT_AttributeRSquare) &&
           CurrentToken->isOneOf(tok::kw_if, tok::kw_switch, tok::kw_case,
                                 tok::kw_default, tok::kw_for, tok::kw_while) &&
           mustBreakAfterAttributes(*CurrentToken, Style)) {
@@ -2850,7 +2847,7 @@ private:
             T = Tok->Previous;
             continue;
           }
-        } else if (T->is(TT_AttributeSquare)) {
+        } else if (T->is(TT_AttributeRSquare)) {
           // Handle `x = (foo *[[clang::foo]])&v;`:
           if (T->MatchingParen && T->MatchingParen->Previous) {
             T = T->MatchingParen->Previous;
@@ -3656,7 +3653,7 @@ static FormatToken *getFunctionName(const AnnotatedLine &Line,
   for (FormatToken *Tok = Line.getFirstNonComment(), *Name = nullptr; Tok;
        Tok = Tok->getNextNonComment()) {
     // Skip C++11 attributes both before and after the function name.
-    if (Tok->is(tok::l_square) && Tok->is(TT_AttributeSquare)) {
+    if (Tok->is(TT_AttributeLSquare)) {
       Tok = Tok->MatchingParen;
       if (!Tok)
         break;
@@ -4325,7 +4322,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return 35;
     if (Right.isNoneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
                        TT_ArrayInitializerLSquare,
-                       TT_DesignatedInitializerLSquare, TT_AttributeSquare)) {
+                       TT_DesignatedInitializerLSquare, TT_AttributeLSquare)) {
       return 500;
     }
   }
@@ -4808,7 +4805,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Right.is(tok::l_square) &&
       Right.isNoneOf(TT_ObjCMethodExpr, TT_LambdaLSquare,
                      TT_DesignatedInitializerLSquare,
-                     TT_StructuredBindingLSquare, TT_AttributeSquare) &&
+                     TT_StructuredBindingLSquare, TT_AttributeLSquare) &&
       Left.isNoneOf(tok::numeric_constant, TT_DictLiteral) &&
       !(Left.isNot(tok::r_square) && Style.SpaceBeforeSquareBrackets &&
         Right.is(TT_ArraySubscriptLSquare))) {
@@ -4827,7 +4824,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
 
   // Space between template and attribute.
   // e.g. template <typename T> [[nodiscard]] ...
-  if (Left.is(TT_TemplateCloser) && Right.is(TT_AttributeSquare))
+  if (Left.is(TT_TemplateCloser) && Right.is(TT_AttributeLSquare))
     return true;
   // Space before parentheses common for all languages
   if (Right.is(tok::l_paren)) {
@@ -4842,10 +4839,8 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterRequiresInExpression ||
              spaceRequiredBeforeParens(Right);
     }
-    if (Left.is(TT_AttributeRParen) ||
-        (Left.is(tok::r_square) && Left.is(TT_AttributeSquare))) {
+    if (Left.isOneOf(TT_AttributeRParen, TT_AttributeRSquare))
       return true;
-    }
     if (Left.is(TT_ForEachMacro)) {
       return Style.SpaceBeforeParensOptions.AfterForeachMacros ||
              spaceRequiredBeforeParens(Right);
@@ -5663,16 +5658,14 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     }
 
     // Break after C# [...] and before public/protected/private/internal.
-    if (Left.is(TT_AttributeSquare) && Left.is(tok::r_square) &&
+    if (Left.is(TT_AttributeRSquare) &&
         (Right.isAccessSpecifier(/*ColonRequired=*/false) ||
          Right.is(Keywords.kw_internal))) {
       return true;
     }
     // Break between ] and [ but only when there are really 2 attributes.
-    if (Left.is(TT_AttributeSquare) && Right.is(TT_AttributeSquare) &&
-        Left.is(tok::r_square) && Right.is(tok::l_square)) {
+    if (Left.is(TT_AttributeRSquare) && Right.is(TT_AttributeLSquare))
       return true;
-    }
   } else if (Style.isJavaScript()) {
     // FIXME: This might apply to other languages and token kinds.
     if (Right.is(tok::string_literal) && Left.is(tok::plus) && BeforeLeft &&
@@ -6412,8 +6405,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.isAttribute())
     return true;
 
-  if (Right.is(tok::l_square) && Right.is(TT_AttributeSquare))
-    return Left.isNot(TT_AttributeSquare);
+  if (Right.is(TT_AttributeLSquare)) {
+    assert(Left.isNot(tok::l_square));
+    return true;
+  }
 
   if (Left.is(tok::identifier) && Right.is(tok::string_literal))
     return true;
@@ -6454,8 +6449,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
        Left.getPrecedence() == prec::Assignment)) {
     return true;
   }
-  if ((Left.is(TT_AttributeSquare) && Right.is(tok::l_square)) ||
-      (Left.is(tok::r_square) && Right.is(TT_AttributeSquare))) {
+  if (Left.is(TT_AttributeLSquare) && Right.is(tok::l_square)) {
+    assert(Right.isNot(TT_AttributeLSquare));
+    return false;
+  }
+  if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
+    assert(Left.isNot(TT_AttributeRSquare));
     return false;
   }
 

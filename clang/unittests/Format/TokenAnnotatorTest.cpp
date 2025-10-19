@@ -4237,6 +4237,29 @@ TEST_F(TokenAnnotatorTest, QtProperty) {
   EXPECT_TOKEN(Tokens[12], tok::identifier, TT_QtProperty);
 }
 
+TEST_F(TokenAnnotatorTest, AttributeSquares) {
+  auto Tokens = annotate("[[maybe_unused]] const int i;");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_AttributeLSquare);
+  EXPECT_TOKEN(Tokens[1], tok::l_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[3], tok::r_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::r_square, TT_AttributeRSquare);
+  EXPECT_TRUE(Tokens[4]->EndsCppAttributeGroup);
+
+  Tokens = annotate("[[foo([[]])]] [[maybe_unused]] int j;");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::l_square, TT_AttributeLSquare);
+  EXPECT_TOKEN(Tokens[1], tok::l_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[9], tok::r_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[10], tok::r_square, TT_AttributeRSquare);
+  EXPECT_FALSE(Tokens[10]->EndsCppAttributeGroup);
+  EXPECT_TOKEN(Tokens[11], tok::l_square, TT_AttributeLSquare);
+  EXPECT_TOKEN(Tokens[12], tok::l_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[14], tok::r_square, TT_Unknown);
+  EXPECT_TOKEN(Tokens[15], tok::r_square, TT_AttributeRSquare);
+  EXPECT_TRUE(Tokens[15]->EndsCppAttributeGroup);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
