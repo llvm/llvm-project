@@ -13043,13 +13043,17 @@ def warn_sycl_external_missing_on_first_decl : Warning<
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a"
-  " %select{non-static member function|variadic function|deleted function|"
-           "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine|"
+  " %select{variadic function|deleted function|defaulted function|"
+           "constructor|destructor|coroutine|"
+           "constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|"
            "function defined with a function try block}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
   " declaration%diff{: $ vs $|}1,2">;
+def err_sycl_entry_point_invalid_this : Error<
+  "'this' cannot be%select{| implicitly}0 used in a potentially evaluated"
+  " expression in the body of a function declared with the %1 attribute">;
 def err_sycl_kernel_name_conflict : Error<
   "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
@@ -13065,6 +13069,15 @@ def err_sycl_entry_point_return_type : Error<
 def err_sycl_entry_point_deduced_return_type : Error<
   "the %0 attribute only applies to functions with a non-deduced 'void' return"
   " type">;
+def err_sycl_host_no_launch_function : Error<
+  "unable to find suitable 'sycl_kernel_launch' function for host code "
+  "synthesis">;
+def warn_sycl_device_no_host_launch_function : Warning<
+  "unable to find suitable 'sycl_kernel_launch' function for host code "
+  "synthesis">,
+  InGroup<DiagGroup<"sycl-host-launcher">>;
+def note_sycl_host_launch_function : Note<
+  "define 'sycl_kernel_launch' function template to fix this problem">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "

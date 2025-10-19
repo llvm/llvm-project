@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests validate that the kernel name type argument provided to the
@@ -7,6 +9,12 @@
 // specification.
 
 struct S1;
+
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
+
 // expected-warning@+3 {{redundant 'clang::sycl_kernel_entry_point' attribute}}
 // expected-note@+1  {{previous attribute is here}}
 [[clang::sycl_kernel_entry_point(S1),
@@ -116,3 +124,25 @@ struct B19 {
 };
 // expected-note@+1 {{in instantiation of template class 'B19<int>' requested here}}
 B19<int> b19;
+
+struct auto_name;
+
+// expected-error@+4 {{the 'clang::sycl_kernel_entry_point' kernel name argument conflicts with a previous declaration}}
+// expected-note@+3 {{previous declaration is here}}
+template <typename KernelName, typename KernelType>
+[[clang::sycl_kernel_entry_point(KernelName)]]
+void __kernel_single_task(const KernelType KernelFunc) {
+  KernelFunc();
+}
+
+template <typename KernelType, typename KernelName = auto_name>
+void pf(KernelType K) {
+  // expected-note@+1 {{requested here}}
+  __kernel_single_task<KernelName>(K);
+}
+
+void foo() {
+  pf([](){});
+  // expected-note@+1 {{requested here}}
+  pf([](){});
+}

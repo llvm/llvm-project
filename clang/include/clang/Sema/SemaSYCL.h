@@ -66,7 +66,11 @@ public:
 
   void CheckSYCLExternalFunctionDecl(FunctionDecl *FD);
   void CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD);
-  StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body);
+  StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body,
+                                     Expr *LaunchIdExpr);
+  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KNT);
+  StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *CS,
+                                                     Expr *IdExpr);
 };
 
 } // namespace clang

@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-host -verify %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++20 -fsyntax-only -fsycl-is-device -verify %s
 
 // These tests are intended to validate that a sycl_kernel_entry_point attribute
@@ -7,6 +9,11 @@
 // a substitution failure in the attribute argument or a semantic check of the
 // attribute during instantiation of a specialization unless that specialization
 // is selected by overload resolution.
+
+// A launcher function definition required for host code synthesis to silence
+// complains.
+template <typename KernelName, typename... Tys>
+void sycl_kernel_launch(const char *, Tys &&...Args) {}
 
 // FIXME: C++23 [temp.expl.spec]p12 states:
 // FIXME:   ... Similarly, attributes appearing in the declaration of a template
