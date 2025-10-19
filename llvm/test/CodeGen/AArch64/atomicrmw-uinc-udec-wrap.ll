@@ -113,10 +113,12 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; CHECK-NEXT:  .LBB6_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxr w8, [x0]
+; CHECK-NEXT:    subs w9, w8, #1
+; CHECK-NEXT:    cset w10, lo
 ; CHECK-NEXT:    cmp w8, w1
-; CHECK-NEXT:    sub w9, w8, #1
-; CHECK-NEXT:    ccmp w8, #0, #4, ls
-; CHECK-NEXT:    csel w9, w1, w9, eq
+; CHECK-NEXT:    csinc w10, w10, wzr, ls
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    csel w9, w1, w9, ne
 ; CHECK-NEXT:    stlxr w10, w9, [x0]
 ; CHECK-NEXT:    cbnz w10, .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end
@@ -133,10 +135,12 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; CHECK-NEXT:  .LBB7_1: // %atomicrmw.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldaxr x0, [x8]
+; CHECK-NEXT:    subs x9, x0, #1
+; CHECK-NEXT:    cset w10, lo
 ; CHECK-NEXT:    cmp x0, x1
-; CHECK-NEXT:    sub x9, x0, #1
-; CHECK-NEXT:    ccmp x0, #0, #4, ls
-; CHECK-NEXT:    csel x9, x1, x9, eq
+; CHECK-NEXT:    csinc w10, w10, wzr, ls
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    csel x9, x1, x9, ne
 ; CHECK-NEXT:    stlxr w10, x9, [x8]
 ; CHECK-NEXT:    cbnz w10, .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end

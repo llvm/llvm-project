@@ -2,20 +2,18 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -O3 < %s | FileCheck %s
 
 ; This used to miscompile:
-; The 16-bit -1 should not become 32-bit -1 (sub w8, w8, #1).
 
 @g = global i16 0, align 4
 define i32 @srl_and()  {
 ; CHECK-LABEL: srl_and:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, :got:g
-; CHECK-NEXT:    mov w9, #50
 ; CHECK-NEXT:    ldr x8, [x8, :got_lo12:g]
 ; CHECK-NEXT:    ldrh w8, [x8]
-; CHECK-NEXT:    eor w8, w8, w9
-; CHECK-NEXT:    mov w9, #65535
-; CHECK-NEXT:    add w8, w8, w9
-; CHECK-NEXT:    and w0, w8, w8, lsr #16
+; CHECK-NEXT:    cmp w8, #50
+; CHECK-NEXT:    sub w8, w8, #1
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    and w0, w8, w9
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i16, ptr @g, align 4
