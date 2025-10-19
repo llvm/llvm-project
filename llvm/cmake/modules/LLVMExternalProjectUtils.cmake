@@ -364,6 +364,7 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   else()
     set(llvm_config_path "$<TARGET_FILE:llvm-config>")
+    list(APPEND ARG_DEPENDS llvm-config)
     set(cmake_args ${ARG_CMAKE_ARGS})
   endif()
 
@@ -379,7 +380,7 @@ function(llvm_ExternalProject_Add name source_dir)
   endif()
 
   ExternalProject_Add(${name}
-    DEPENDS ${ARG_DEPENDS} llvm-config
+    DEPENDS ${ARG_DEPENDS}
     ${name}-clobber
     PREFIX ${CMAKE_BINARY_DIR}/projects/${name}
     SOURCE_DIR ${source_dir}
