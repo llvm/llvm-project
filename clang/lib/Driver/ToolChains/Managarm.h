@@ -35,11 +35,6 @@ public:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool IsAArch64OutlineAtomicsDefault(
-      const llvm::opt::ArgList &Args) const override {
-    return true;
-  }
-
   SanitizerMask getSupportedSanitizers() const override;
   std::string computeSysRoot() const override;
 
