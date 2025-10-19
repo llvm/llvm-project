@@ -160,7 +160,7 @@ struct __atomic_wait_backoff_impl {
         auto __atomic_value = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
           return true;
-        std::__libcpp_atomic_wait_native<sizeof(__value_type)>(__contention_address, &__atomic_value);
+        std::__libcpp_atomic_wait_native<sizeof(__value_type)>(__contention_address, std::addressof(__atomic_value));
       } else {
         __cxx_contention_t __monitor_val = std::__libcpp_atomic_monitor_global(__contention_address);
         auto __atomic_value              = __waitable_traits::__atomic_load(__a_, __order_);
