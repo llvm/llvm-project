@@ -313,9 +313,9 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 define i1 @add_ultcmp_bad_i8_i16(i16 %x) nounwind {
 ; CHECK-LABEL: add_ultcmp_bad_i8_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    add w8, w8, #128
-; CHECK-NEXT:    lsr w0, w8, #16
+; CHECK-NEXT:    add w8, w0, #128
+; CHECK-NEXT:    tst w8, #0xff80
+; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
   %tmp1 = icmp ult i16 %tmp0, 128 ; 1U << (8-1)

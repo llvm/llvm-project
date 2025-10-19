@@ -295,6 +295,15 @@ public:
   bool isFsqrtCheap(SDValue Operand, SelectionDAG &DAG) const override {
     return true;
   }
+
+  bool shouldFormOverflowOp(unsigned Opcode, EVT VT,
+                            bool MathUsed) const override {
+    if (isOperationLegal(Opcode, VT))
+      return true;
+
+    return MathUsed && (VT.isSimple() || !isOperationExpand(Opcode, VT));
+  }
+
   SDValue getSqrtEstimate(SDValue Operand, SelectionDAG &DAG, int Enabled,
                            int &RefinementSteps, bool &UseOneConstNR,
                            bool Reciprocal) const override;

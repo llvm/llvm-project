@@ -8,19 +8,21 @@ define i32 @optbranch_32(i32 %Arg) {
 ; RV32-LABEL: optbranch_32:
 ; RV32:       # %bb.0: # %bb
 ; RV32-NEXT:    addi a0, a0, 1
-; RV32-NEXT:    bnez a0, .LBB0_2
-; RV32-NEXT:  # %bb.1: # %bb2
+; RV32-NEXT:    beqz a0, .LBB0_2
+; RV32-NEXT:  # %bb.1: # %bb3
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB0_2: # %bb2
 ; RV32-NEXT:    li a0, -1
-; RV32-NEXT:  .LBB0_2: # %bb3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: optbranch_32:
 ; RV64:       # %bb.0: # %bb
 ; RV64-NEXT:    addiw a0, a0, 1
-; RV64-NEXT:    bnez a0, .LBB0_2
-; RV64-NEXT:  # %bb.1: # %bb2
+; RV64-NEXT:    beqz a0, .LBB0_2
+; RV64-NEXT:  # %bb.1: # %bb3
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB0_2: # %bb2
 ; RV64-NEXT:    li a0, -1
-; RV64-NEXT:  .LBB0_2: # %bb3
 ; RV64-NEXT:    ret
 bb:
   %i1 = icmp eq i32 %Arg, -1
@@ -41,20 +43,22 @@ define i64 @optbranch_64(i64 %Arg) {
 ; RV32-NEXT:    seqz a2, a0
 ; RV32-NEXT:    add a1, a1, a2
 ; RV32-NEXT:    or a2, a0, a1
-; RV32-NEXT:    bnez a2, .LBB1_2
-; RV32-NEXT:  # %bb.1: # %bb2
+; RV32-NEXT:    beqz a2, .LBB1_2
+; RV32-NEXT:  # %bb.1: # %bb3
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB1_2: # %bb2
 ; RV32-NEXT:    li a0, -1
 ; RV32-NEXT:    li a1, -1
-; RV32-NEXT:  .LBB1_2: # %bb3
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: optbranch_64:
 ; RV64:       # %bb.0: # %bb
 ; RV64-NEXT:    addi a0, a0, 1
-; RV64-NEXT:    bnez a0, .LBB1_2
-; RV64-NEXT:  # %bb.1: # %bb2
+; RV64-NEXT:    beqz a0, .LBB1_2
+; RV64-NEXT:  # %bb.1: # %bb3
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB1_2: # %bb2
 ; RV64-NEXT:    li a0, -1
-; RV64-NEXT:  .LBB1_2: # %bb3
 ; RV64-NEXT:    ret
 bb:
   %i1 = icmp eq i64 %Arg, -1
