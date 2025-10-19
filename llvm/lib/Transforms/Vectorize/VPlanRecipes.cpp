@@ -515,6 +515,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
+  case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1246,6 +1247,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::VScale:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1290,7 +1292,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
-    return Op == getOperand(0);
+    // WidePtrAdd supports scalar and vector base addresses.
+    return false;
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
@@ -1416,6 +1419,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::Unpack:
+    O << "unpack";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -2886,6 +2892,13 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
               [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); }) &&
       "expression cannot contain recipes with side-effects");
   return false;
+}
+
+bool VPExpressionRecipe::isSingleScalar() const {
+  // Cannot use vputils::isSingleScalar(), because all external operands
+  // of the expression will be live-ins while bundled.
+  return isa<VPReductionRecipe>(ExpressionRecipes.back()) &&
+         !isa<VPPartialReductionRecipe>(ExpressionRecipes.back());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

@@ -41846,7 +41846,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     if (!X86::mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
         X86::mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();
-    Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
+    Imm = llvm::rotl<uint8_t>(Imm, 4);
     return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
                        DAG.getTargetConstant(Imm, DL, MVT::i8));
   };

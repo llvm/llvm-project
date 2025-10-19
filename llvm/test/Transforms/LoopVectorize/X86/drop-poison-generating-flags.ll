@@ -240,8 +240,8 @@ define void @drop_vector_nuw_nsw(ptr noalias nocapture readonly %input, ptr %out
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[INPUT]], <4 x i64> <i64 -1, i64 0, i64 1, i64 2>
-; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[TMP3]], i32 0
+; CHECK-NEXT:    store <4 x ptr> [[TMP3]], ptr [[PTRS]], align 8
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[TMP6]], i32 4, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> [[WIDE_MASKED_LOAD]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[OUTPUT]], align 4
