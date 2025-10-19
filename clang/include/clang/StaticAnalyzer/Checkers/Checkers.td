@@ -870,14 +870,14 @@ def getpw : Checker<"getpw">,
   Documentation<HasDocumentation>;
 
 def lstrcatA : Checker<"lstrcatA">,
-  HelpText<"Warn on uses of the 'lstrcatA' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+               HelpText<"Warn on uses of the 'lstrcatA' function">,
+               Dependencies<[SecuritySyntaxChecker]>,
+               Documentation<HasDocumentation>;
 
 def lstrcpyA : Checker<"lstrcpyA">,
-  HelpText<"Warn on uses of the 'lstrcpyA' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+               HelpText<"Warn on uses of the 'lstrcpyA' function">,
+               Dependencies<[SecuritySyntaxChecker]>,
+               Documentation<HasDocumentation>;
 
 def mktemp : Checker<"mktemp">,
   HelpText<"Warn on uses of the 'mktemp' function">,
@@ -901,9 +901,9 @@ def strcpy : Checker<"strcpy">,
   Documentation<HasDocumentation>;
 
 def strdup : Checker<"strdup">,
-  HelpText<"Warn on uses of the '_strdup' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+             HelpText<"Warn on uses of the '_strdup' function">,
+             Dependencies<[SecuritySyntaxChecker]>,
+             Documentation<HasDocumentation>;
 
 def vfork : Checker<"vfork">,
   HelpText<"Warn on uses of the 'vfork' function">,
