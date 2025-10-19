@@ -47,7 +47,7 @@ class TestDAP_invalidatedEvent(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             thread_id,
             event_body["threadId"],
-            f"Expected the  event from thread {thread_id}.",
+            f"Expected the event from thread {thread_id}.",
         )
 
         # confirm we are back at the main frame.

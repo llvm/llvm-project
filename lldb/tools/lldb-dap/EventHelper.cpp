@@ -15,7 +15,6 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFileSpec.h"
-#include "lldb/lldb-defines.h"
 #include "llvm/Support/Error.h"
 #include <utility>
 
