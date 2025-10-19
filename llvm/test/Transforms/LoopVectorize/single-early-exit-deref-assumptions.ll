@@ -387,7 +387,7 @@ exit:
   ret i64 %res
 }
 
-; TODO: The existing assumptions should be strong enough to vectorize this.
+; The existing assumptions is strong enough to vectorize this.
 define ptr @find_deref_pointer_distance_align_attribute_argument(ptr align 2 %first, ptr align 2 %last) nofree nosync {
 ; CHECK-LABEL: define ptr @find_deref_pointer_distance_align_attribute_argument(
 ; CHECK-SAME: ptr align 2 [[FIRST:%.*]], ptr align 2 [[LAST:%.*]]) #[[ATTR0]] {
@@ -481,7 +481,7 @@ exit:
   ret ptr %first.addr.0.lcssa.i
 }
 
-; TODO: The existing assumptions should be strong enough to vectorize this.
+; The existing assumptions is strong enough to vectorize this.
 define ptr @find_deref_pointer_distance_align_assumption(ptr %first, ptr %last) nofree nosync {
 ; CHECK-LABEL: define ptr @find_deref_pointer_distance_align_assumption(
 ; CHECK-SAME: ptr [[FIRST:%.*]], ptr [[LAST:%.*]]) #[[ATTR0]] {
