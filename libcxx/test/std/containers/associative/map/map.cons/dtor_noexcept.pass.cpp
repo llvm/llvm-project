@@ -8,7 +8,7 @@
 
 // <map>
 
-// ~map() // implied noexcept; constexpr since C++26
+// constexpr ~map() // implied noexcept; constexpr since C++26
 
 // UNSUPPORTED: c++03
 

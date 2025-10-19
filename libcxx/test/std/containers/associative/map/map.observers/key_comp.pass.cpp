@@ -8,7 +8,7 @@
 
 // <map>
 
-// key_compare key_comp() const; // constexpr since C++26
+// constexpr key_compare key_comp() const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

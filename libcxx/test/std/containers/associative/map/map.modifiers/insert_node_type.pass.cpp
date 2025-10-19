@@ -51,7 +51,7 @@ node_factory(typename Container::key_type const& key, typename Container::mapped
 }
 
 template <class Container>
-void test(Container& c) {
+TEST_CONSTEXPR_CXX26 bool test(Container& c) {
   auto* nf = &node_factory<Container>;
 
   for (int i = 0; i != 10; ++i) {
@@ -94,13 +94,25 @@ void test(Container& c) {
     assert(c.count(i) == 1);
     assert(c[i] == i + 1);
   }
+  return true;
 }
 
 int main(int, char**) {
-  std::map<int, int> m;
-  test(m);
-  std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
-  test(m2);
+  {
+    std::map<int, int> m;
+    test(m);
+    std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
+    test(m2);
+  }
+
+#if TEST_STD_VER >= 26
+  {
+    std::map<int, int> m;
+    test(m);
+    std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
+    test(m2);
+  }
+#endif
 
   return 0;
 }

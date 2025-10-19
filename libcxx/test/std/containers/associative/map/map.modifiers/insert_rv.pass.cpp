@@ -12,9 +12,9 @@
 
 // class map
 
-// pair<iterator, bool> insert( value_type&& v);  // C++17 and later
+// constexpr pair<iterator, bool> insert( value_type&& v);  // C++17 and later
 // template <class P>
-//   pair<iterator, bool> insert(P&& p); // constexpr since C++26
+//   constexpr pair<iterator, bool> insert(P&& p); // constexpr since C++26
 
 #include <map>
 #include <cassert>

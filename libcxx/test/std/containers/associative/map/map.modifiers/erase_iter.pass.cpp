@@ -10,7 +10,7 @@
 
 // class map
 
-// iterator erase(const_iterator position); // constexpr since C++26
+// constexpr iterator erase(const_iterator position); // constexpr since C++26
 
 #include <map>
 #include <cassert>

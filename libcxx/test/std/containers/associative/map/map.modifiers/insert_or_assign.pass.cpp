@@ -13,13 +13,13 @@
 // class map
 
 // template <class M>
-//  pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17, constexpr since C++26
+//  constexpr pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17, constexpr since C++26
 // template <class M>
-//  pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17, constexpr since C++26
+//  constexpr pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17, constexpr since C++26
 // template <class M>
-//  iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17, constexpr since C++26
+//  constexpr iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17, constexpr since C++26
 // template <class M>
-//  iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17, constexpr since C++26
+//  constexpr iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17, constexpr since C++26
 
 #include <map>
 #include <cassert>

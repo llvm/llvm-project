@@ -8,7 +8,7 @@
 
 // <map>
 
-// value_compare value_comp() const; // constexpr since C++26
+// constexpr value_compare value_comp() const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

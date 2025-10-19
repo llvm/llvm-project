@@ -12,9 +12,9 @@
 // class map
 
 // template<class Key, class T, class Compare, class Allocator>
-//   synth-three-way-result<pair<const Key, T>>
+//   constexpr synth-three-way-result<pair<const Key, T>>
 //     operator<=>(const map<Key, T, Compare, Allocator>& x,
-//                 const map<Key, T, Compare, Allocator>& y);
+//                 const map<Key, T, Compare, Allocator>& y); // constexpr since C++26
 
 #include <cassert>
 #include <map>

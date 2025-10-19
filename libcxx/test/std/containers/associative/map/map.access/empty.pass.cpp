@@ -10,7 +10,7 @@
 
 // class map
 
-// bool empty() const;// constexpr since C++26
+// constexpr bool empty() const; // constexpr since C++26
 
 #include <map>
 #include <cassert>

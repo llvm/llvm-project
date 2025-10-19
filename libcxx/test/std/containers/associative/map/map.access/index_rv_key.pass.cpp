@@ -12,7 +12,7 @@
 
 // class map
 
-// mapped_type& operator[](key_type&& k);// constexpr since C++26
+// constexpr mapped_type& operator[](key_type&& k); // constexpr since C++26
 
 #include <map>
 #include <cassert>

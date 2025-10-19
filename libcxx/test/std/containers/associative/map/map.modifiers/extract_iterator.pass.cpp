@@ -12,7 +12,7 @@
 
 // class map
 
-// node_type extract(const_iterator); // constexpr since C++26
+// constexpr node_type extract(const_iterator); // constexpr since C++26
 
 #include <map>
 #include "test_macros.h"
