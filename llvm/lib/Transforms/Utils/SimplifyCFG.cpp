@@ -42,6 +42,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -7588,8 +7589,26 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   SIW->setCondition(A);
 
   BasicBlock *BB = SIW->getParent();
+  SmallVector<DominatorTree::UpdateType> Updates;
+  Updates.push_back({DominatorTree::Delete, BB, Unreachable});
+
+  // A case is dead when its value is higher than the Constant.
+  SmallVector<ConstantInt *, 4> DeadCases;
+  for (auto Case = SI->case_begin(), e = SI->case_end(); Case != e; Case++) {
+    if (Case->getCaseValue()->getValue().ugt(Constant->getValue())) {
+      DeadCases.push_back(Case->getCaseValue());
+    }
+  }
+
+  for (ConstantInt *DeadCase : DeadCases) {
+    SwitchInst::CaseIt CaseI = SIW->findCaseValue(DeadCase);
+    CaseI->getCaseSuccessor()->removePredecessor(SIW->getParent());
+    SIW.removeCase(Case);
+    Updates.push_back({DominatorTree::Delete, BB, Case->getCaseSuccessor()});
+  }
+
   if (DTU)
-    DTU->applyUpdates({{DominatorTree::Delete, BB, Unreachable}});
+    DTU->applyUpdates(Updates);
 
   return true;
 }
