@@ -68,6 +68,15 @@ body:             |
 ...
 
 ---
+name: vcc_to_src_shared_base
+body:             |
+  bb.0:
+    ; GFX9-LABEL: name: vcc_to_src_shared_base
+    ; GFX9: $src_shared_base = S_MOV_B64 $vcc
+    $src_shared_base = COPY $vcc
+...
+
+---
 name: sgpr96_aligned_src_dst
 body:             |
   bb.0:

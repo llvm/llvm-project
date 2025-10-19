@@ -845,6 +845,14 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     }
   }
 
+  if (AMDGPU::APERTURE_ClassRegClass.contains(DestReg)) {
+    if (SrcReg == AMDGPU::VCC) {
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), DestReg)
+          .addReg(SrcReg, getKillRegState(KillSrc));
+      return;
+    }
+  }
+
   if (RC == &AMDGPU::VGPR_32RegClass) {
     assert(AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
            AMDGPU::SReg_32RegClass.contains(SrcReg) ||
