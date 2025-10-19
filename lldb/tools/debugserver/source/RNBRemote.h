@@ -121,6 +121,7 @@ public:
     set_list_threads_in_stop_reply,     // 'QListThreadsInStopReply:'
     sync_thread_state,                  // 'QSyncThreadState:'
     memory_region_info,                 // 'qMemoryRegionInfo:'
+    get_memory_tags,                    // 'qMemTags:'
     get_profile_data,                   // 'qGetProfileData'
     set_enable_profiling,               // 'QSetEnableAsyncProfiling'
     enable_compression,                 // 'QEnableCompression:'
@@ -135,6 +136,7 @@ public:
     query_transfer,                     // 'qXfer:'
     json_query_dyld_process_state,      // 'jGetDyldProcessState'
     enable_error_strings,               // 'QEnableErrorStrings'
+    multi_mem_read,                     // 'MultiMemRead'
     unknown_type
   };
   // clang-format on
@@ -215,6 +217,7 @@ public:
   rnb_err_t HandlePacket_last_signal(const char *p);
   rnb_err_t HandlePacket_m(const char *p);
   rnb_err_t HandlePacket_M(const char *p);
+  rnb_err_t HandlePacket_MultiMemRead(const char *p);
   rnb_err_t HandlePacket_x(const char *p);
   rnb_err_t HandlePacket_X(const char *p);
   rnb_err_t HandlePacket_z(const char *p);
@@ -237,6 +240,7 @@ public:
   rnb_err_t HandlePacket_SaveRegisterState(const char *p);
   rnb_err_t HandlePacket_RestoreRegisterState(const char *p);
   rnb_err_t HandlePacket_MemoryRegionInfo(const char *p);
+  rnb_err_t HandlePacket_qMemTags(const char *p);
   rnb_err_t HandlePacket_GetProfileData(const char *p);
   rnb_err_t HandlePacket_SetEnableAsyncProfiling(const char *p);
   rnb_err_t HandlePacket_QEnableCompression(const char *p);

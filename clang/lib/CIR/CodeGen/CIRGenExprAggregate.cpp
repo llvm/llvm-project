@@ -46,6 +46,12 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
     return dest;
   }
 
+  void ensureDest(mlir::Location loc, QualType ty) {
+    if (!dest.isIgnored())
+      return;
+    dest = cgf.createAggTemp(ty, loc, "agg.tmp.ensured");
+  }
+
 public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot dest)
       : cgf(cgf), dest(dest) {}
@@ -91,11 +97,27 @@ public:
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
-
-  void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
-    assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
-    Visit(e->getSubExpr());
+  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
+    CIRGenFunction::CXXDefaultInitExprScope Scope(cgf, die);
+    Visit(die->getExpr());
   }
+  void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
+    // Ensure that we have a slot, but if we already do, remember
+    // whether it was externally destructed.
+    bool wasExternallyDestructed = dest.isExternallyDestructed();
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    // We're going to push a destructor if there isn't already one.
+    dest.setExternallyDestructed();
+
+    Visit(e->getSubExpr());
+
+    // Push that destructor we promised.
+    if (!wasExternallyDestructed)
+      cgf.emitCXXTemporary(e->getTemporary(), e->getType(), dest.getAddress());
+  }
+  void VisitLambdaExpr(LambdaExpr *e);
+  void VisitExprWithCleanups(ExprWithCleanups *e);
 
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
@@ -127,12 +149,9 @@ public:
                      std::string("AggExprEmitter::VisitStmt: ") +
                          s->getStmtClassName());
   }
-  void VisitParenExpr(ParenExpr *pe) {
-    cgf.cgm.errorNYI(pe->getSourceRange(), "AggExprEmitter: VisitParenExpr");
-  }
+  void VisitParenExpr(ParenExpr *pe) { Visit(pe->getSubExpr()); }
   void VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
-    cgf.cgm.errorNYI(ge->getSourceRange(),
-                     "AggExprEmitter: VisitGenericSelectionExpr");
+    Visit(ge->getResultExpr());
   }
   void VisitCoawaitExpr(CoawaitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCoawaitExpr");
@@ -143,10 +162,7 @@ public:
   void VisitUnaryCoawait(UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryCoawait");
   }
-  void VisitUnaryExtension(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitUnaryExtension");
-  }
+  void VisitUnaryExtension(UnaryOperator *e) { Visit(e->getSubExpr()); }
   void VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitSubstNonTypeTemplateParmExpr");
@@ -183,7 +199,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
   }
   void VisitBinComma(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinComma");
+    cgf.emitIgnoredExpr(e->getLHS());
+    Visit(e->getRHS());
   }
   void VisitBinCmp(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinCmp");
@@ -202,20 +219,22 @@ public:
   }
 
   void VisitDesignatedInitUpdateExpr(DesignatedInitUpdateExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitDesignatedInitUpdateExpr");
+    AggValueSlot dest = ensureSlot(cgf.getLoc(e->getExprLoc()), e->getType());
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    emitInitializationToLValue(e->getBase(), destLV);
+    VisitInitListExpr(e->getUpdater());
   }
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitAbstractConditionalOperator");
   }
-  void VisitChooseExpr(const ChooseExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitChooseExpr");
-  }
+  void VisitChooseExpr(const ChooseExpr *e) { Visit(e->getChosenSubExpr()); }
   void VisitCXXParenListInitExpr(CXXParenListInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXParenListInitExpr");
+    visitCXXParenListOrInitListExpr(e, e->getInitExprs(),
+                                    e->getInitializedFieldInUnion(),
+                                    e->getArrayFiller());
   }
+
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *e,
                               llvm::Value *outerBegin = nullptr) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -232,25 +251,13 @@ public:
     cgf.cgm.errorNYI(dae->getSourceRange(),
                      "AggExprEmitter: VisitCXXDefaultArgExpr");
   }
-  void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
-    cgf.cgm.errorNYI(die->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultInitExpr");
-  }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXInheritedCtorInitExpr");
   }
-  void VisitLambdaExpr(LambdaExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitLambdaExpr");
-  }
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXStdInitializerListExpr");
-  }
-
-  void VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitExprWithCleanups");
   }
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -496,12 +503,14 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   if (isa<NoInitExpr>(e))
     return;
 
-  if (type->isReferenceType())
-    cgf.cgm.errorNYI("emitInitializationToLValue ReferenceType");
+  if (type->isReferenceType()) {
+    RValue rv = cgf.emitReferenceBindingToExpr(e);
+    return cgf.emitStoreThroughLValue(rv, lv);
+  }
 
   switch (cgf.getEvaluationKind(type)) {
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI("emitInitializationToLValue TEK_Complex");
+    cgf.emitComplexExprIntoLValue(e, lv, /*isInit*/ true);
     break;
   case cir::TEK_Aggregate:
     cgf.emitAggExpr(e, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
@@ -549,6 +558,52 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
   // memsets; that would be easy for arrays, but relatively
   // difficult for structures with the current code.
   cgf.emitNullInitialization(loc, lv.getAddress(), lv.getType());
+}
+
+void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
+  CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  [[maybe_unused]] LValue slotLV =
+      cgf.makeAddrLValue(slot.getAddress(), e->getType());
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception or contains branch out of the expressions.
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+
+  for (auto [curField, capture, captureInit] : llvm::zip(
+           e->getLambdaClass()->fields(), e->captures(), e->capture_inits())) {
+    // Pick a name for the field.
+    llvm::StringRef fieldName = curField->getName();
+    if (capture.capturesVariable()) {
+      assert(!curField->isBitField() && "lambdas don't have bitfield members!");
+      ValueDecl *v = capture.getCapturedVar();
+      fieldName = v->getName();
+      cgf.cgm.lambdaFieldToName[curField] = fieldName;
+    } else if (capture.capturesThis()) {
+      cgf.cgm.lambdaFieldToName[curField] = "this";
+    } else {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Unhandled capture kind");
+      cgf.cgm.lambdaFieldToName[curField] = "unhandled-capture-kind";
+    }
+
+    // Emit initialization
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(slotLV, curField, fieldName);
+    if (curField->hasCapturedVLAType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda captured VLA type");
+
+    emitInitializationToLValue(captureInit, lv);
+
+    // Push a destructor if necessary.
+    if ([[maybe_unused]] QualType::DestructionKind DtorKind =
+            curField->getType().isDestructedType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
+  }
+}
+
+void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
+  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -792,6 +847,26 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
       builder.createCopy(destPtr.getPointer(), srcPtr.getPointer());
 
   assert(!cir::MissingFeatures::opTBAA());
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t
+CIRGenFunction::getOverlapForFieldInit(const FieldDecl *fd) {
+  if (!fd->hasAttr<NoUniqueAddressAttr>() || !fd->getType()->isRecordType())
+    return AggValueSlot::DoesNotOverlap;
+
+  // If the field lies entirely within the enclosing class's nvsize, its tail
+  // padding cannot overlap any already-initialized object. (The only subobjects
+  // with greater addresses that might already be initialized are vbases.)
+  const RecordDecl *classRD = fd->getParent();
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(classRD);
+  if (layout.getFieldOffset(fd->getFieldIndex()) +
+          getContext().getTypeSize(fd->getType()) <=
+      (uint64_t)getContext().toBits(layout.getNonVirtualSize()))
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 LValue CIRGenFunction::emitAggExprToLValue(const Expr *e) {

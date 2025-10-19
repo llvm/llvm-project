@@ -1,4 +1,4 @@
-// RUN: fir-opt --omp-do-concurrent-conversion="map-to=device" -verify-diagnostics %s
+// RUN: fir-opt --omp-do-concurrent-conversion="map-to=device" %s -o - | FileCheck %s
 
 func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_basic"} {
     %2 = fir.address_of(@_QFEa) : !fir.ref<!fir.array<10xi32>>
@@ -11,8 +11,12 @@ func.func @do_concurrent_basic() attributes {fir.bindc_name = "do_concurrent_bas
     %8 = fir.convert %c10_i32 : (i32) -> index
     %c1 = arith.constant 1 : index
 
-    // expected-error@+2 {{not yet implemented: Mapping `do concurrent` loops to device}}
-    // expected-error@below {{failed to legalize operation 'fir.do_concurrent'}}
+    // CHECK: omp.target
+    // CHECK: omp.teams
+    // CHECK: omp.parallel
+    // CHECK: omp.distribute
+    // CHECK: omp.wsloop
+    // CHECK: omp.loop_nest
     fir.do_concurrent {
       %0 = fir.alloca i32 {bindc_name = "i"}
       %1:2 = hlfir.declare %0 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

@@ -12,15 +12,24 @@ function(add_orc_rt_unittest test_dirname)
 endfunction()
 
 add_orc_rt_unittest(CoreTests
+  AllocActionTest.cpp
   BitmaskEnumTest.cpp
-  CommonTestUtils.cpp
+  CallableTraitsHelperTest.cpp
   ErrorTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   MathTest.cpp
+  MemoryFlagsTest.cpp
   RTTITest.cpp
+  ScopeExitTest.cpp
+  SessionTest.cpp
+  SimpleNativeMemoryMapTest.cpp
   SimplePackedSerializationTest.cpp
+  SPSAllocActionTest.cpp
+  SPSMemoryFlagsTest.cpp
+  SPSWrapperFunctionTest.cpp
+  SPSWrapperFunctionBufferTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp

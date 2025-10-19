@@ -97,12 +97,15 @@ class kmp_stats_list;
 // OMPD_SKIP_HWLOC used in libompd/omp-icv.cpp to avoid OMPD depending on hwloc
 #if KMP_USE_HWLOC && KMP_AFFINITY_SUPPORTED && !defined(OMPD_SKIP_HWLOC)
 #include "hwloc.h"
+#define KMP_HWLOC_ENABLED 1
 #ifndef HWLOC_OBJ_NUMANODE
 #define HWLOC_OBJ_NUMANODE HWLOC_OBJ_NODE
 #endif
 #ifndef HWLOC_OBJ_PACKAGE
 #define HWLOC_OBJ_PACKAGE HWLOC_OBJ_SOCKET
 #endif
+#else
+#define KMP_HWLOC_ENABLED 0
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
@@ -672,10 +675,10 @@ typedef BOOL (*kmp_SetThreadGroupAffinity_t)(HANDLE, const GROUP_AFFINITY *,
 extern kmp_SetThreadGroupAffinity_t __kmp_SetThreadGroupAffinity;
 #endif /* KMP_OS_WINDOWS */
 
-#if KMP_USE_HWLOC && !defined(OMPD_SKIP_HWLOC)
+#if KMP_HWLOC_ENABLED
 extern hwloc_topology_t __kmp_hwloc_topology;
 extern int __kmp_hwloc_error;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 extern size_t __kmp_affin_mask_size;
 #define KMP_AFFINITY_CAPABLE() (__kmp_affin_mask_size > 0)
@@ -784,10 +787,10 @@ public:
   static void destroy_api();
   enum api_type {
     NATIVE_OS
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
     ,
     HWLOC
-#endif
+#endif // KMP_HWLOC_ENABLED
   };
   virtual api_type get_api_type() const {
     KMP_ASSERT(0);
@@ -856,9 +859,9 @@ enum affinity_top_method {
   affinity_top_method_group,
 #endif /* KMP_GROUP_AFFINITY */
   affinity_top_method_flat,
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   affinity_top_method_hwloc,
-#endif
+#endif // KMP_HWLOC_ENABLED
   affinity_top_method_default
 };
 
@@ -1125,9 +1128,9 @@ typedef struct kmp_allocator_t {
   omp_alloctrait_value_t target_access;
   omp_alloctrait_value_t atomic_scope;
   size_t part_size;
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   omp_alloctrait_value_t membind;
-#endif
+#endif // KMP_HWLOC_ENABLED
 } kmp_allocator_t;
 
 extern omp_allocator_handle_t __kmpc_init_allocator(int gtid,
@@ -2087,12 +2090,12 @@ typedef struct dispatch_shared_info {
 #if KMP_USE_HIER_SCHED
   void *hier;
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // When linking with libhwloc, the ORDERED EPCC test slows down on big
   // machines (> 48 cores). Performance analysis showed that a cache thrash
   // was occurring and this padding helps alleviate the problem.
   char padding[64];
-#endif
+#endif // KMP_HWLOC_ENABLED
 } dispatch_shared_info_t;
 
 typedef struct kmp_disp {

@@ -64,8 +64,6 @@ def Cplusplus : Package<"cplusplus">;
 def CplusplusAlpha : Package<"cplusplus">, ParentPackage<Alpha>;
 def CplusplusOptIn : Package<"cplusplus">, ParentPackage<OptIn>;
 
-def Valist : Package<"valist">;
-
 def DeadCode : Package<"deadcode">;
 def DeadCodeAlpha : Package<"deadcode">, ParentPackage<Alpha>;
 
@@ -77,9 +75,6 @@ def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
-
-def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
 
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
@@ -195,6 +190,11 @@ def FixedAddressDereferenceChecker
 def NullDereferenceChecker
     : Checker<"NullDereference">,
       HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
+
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
       Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
@@ -779,35 +779,6 @@ def SmartPtrChecker: Checker<"SmartPtr">,
 
 } // end: "alpha.cplusplus"
 
-
-//===----------------------------------------------------------------------===//
-// Valist checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = Valist in {
-
-def ValistBase : Checker<"ValistBase">,
-  HelpText<"Gathers information about va_lists.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def UninitializedChecker : Checker<"Uninitialized">,
-  HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def UnterminatedChecker : Checker<"Unterminated">,
-  HelpText<"Check for va_lists which are not released by a va_end call.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def CopyToSelfChecker : Checker<"CopyToSelf">,
-  HelpText<"Check for va_lists which are copied onto itself.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-} // end : "valist"
-
 //===----------------------------------------------------------------------===//
 // Deadcode checkers.
 //===----------------------------------------------------------------------===//
@@ -981,6 +952,10 @@ let ParentPackage = Security in {
         HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
                  "'setuid(getuid())' (CERT: POS36-C)">,
         Documentation<HasDocumentation>;
+
+  def VAListChecker : Checker<"VAList">,
+                      HelpText<"Warn on misuse of va_list objects">,
+                      Documentation<HasDocumentation>;
 
 } // end "security"
 
@@ -1753,7 +1728,7 @@ def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
-  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
+  HelpText<"Check for correct use of RetainPtr/OSObjectPtr constructor, adoptNS, adoptCF, and adoptOSObject">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

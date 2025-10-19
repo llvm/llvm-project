@@ -268,5 +268,30 @@ define amdgpu_kernel void @test_get_99999_i64(ptr addrspace(1) %out) {
   ret void
 }
 
+define amdgpu_kernel void @test_get_136_i64(ptr addrspace(1) %out) {
+; GFX11-LABEL: test_get_136_i64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(136, 0, 0)
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: test_get_136_i64:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX1250-NEXT:    s_sendmsg_rtn_b64 s[2:3], sendmsg(MSG_RTN_GET_CLUSTER_BARRIER_STATE)
+; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX1250-NEXT:    s_endpgm
+  %ret = call i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32 136)
+  store i64 %ret, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.s.sendmsg.rtn.i32(i32)
 declare i64 @llvm.amdgcn.s.sendmsg.rtn.i64(i32)

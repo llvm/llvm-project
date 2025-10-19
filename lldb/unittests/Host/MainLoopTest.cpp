@@ -424,9 +424,9 @@ TEST_F(MainLoopTest, ManyPendingCallbacks) {
 
 TEST_F(MainLoopTest, CallbackWithTimeout) {
   MainLoop loop;
+  auto start = std::chrono::steady_clock::now();
   loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
                    std::chrono::seconds(2));
-  auto start = std::chrono::steady_clock::now();
   ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
   EXPECT_GE(std::chrono::steady_clock::now() - start, std::chrono::seconds(2));
 }

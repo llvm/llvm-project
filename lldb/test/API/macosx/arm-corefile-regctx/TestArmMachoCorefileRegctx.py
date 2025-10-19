@@ -13,7 +13,6 @@ from lldbsuite.test import lldbutil
 class TestArmMachoCorefileRegctx(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin # CI fail on Windows, lr has value 0x0F000000?
     def test_armv7_corefile(self):
         ### Create corefile
         corefile = self.getBuildArtifact("core")

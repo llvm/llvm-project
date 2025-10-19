@@ -26,6 +26,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -64,14 +65,12 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
 
-namespace llvm {
-cl::opt<bool> EmitLongStrLiterals(
+cl::opt<bool> llvm::EmitLongStrLiterals(
     "long-string-literals",
     cl::desc("when emitting large string tables, prefer string literals over "
              "comma-separated char literals. This can be a readability and "
              "compile-time performance win, but upsets some compilers"),
     cl::Hidden, cl::init(true));
-} // end namespace llvm
 
 static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
@@ -130,6 +129,7 @@ int llvm::TableGenMain(const char *argv0,
   // Record the location of the include directory so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 

@@ -270,10 +270,19 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     const MCInstrDesc &Desc, const MCOperand &MO, unsigned OpNo,
     const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-  int64_t Imm;
+  int64_t Imm = 0;
   if (MO.isExpr()) {
-    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-      return AMDGPU::getOperandSize(OpInfo) == 8 ? 254 : 255;
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm) ||
+        AMDGPU::isLitExpr(MO.getExpr())) {
+      if (OpInfo.OperandType == AMDGPU::OPERAND_KIMM16 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM32 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
+        return Imm;
+      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+          AMDGPU::getOperandSize(OpInfo) == 8)
+        return 254;
+      return 255;
+    }
   } else {
     assert(!MO.isDFPImm());
 
@@ -345,7 +354,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
-    return MO.getImm();
+    return Imm;
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -452,11 +461,16 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Yes! Encode it
     int64_t Imm = 0;
 
+    bool IsLit = false;
     if (Op.isImm())
       Imm = Op.getImm();
     else if (Op.isExpr()) {
-      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
+      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr())) {
         Imm = C->getValue();
+      } else if (AMDGPU::isLitExpr(Op.getExpr())) {
+        IsLit = true;
+        Imm = AMDGPU::getLitValue(Op.getExpr());
+      }
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
@@ -464,8 +478,9 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       assert(STI.hasFeature(AMDGPU::Feature64BitLiterals));
       support::endian::write<uint64_t>(CB, Imm, llvm::endianness::little);
     } else {
-      if (Desc.operands()[i].OperandType == AMDGPU::OPERAND_REG_IMM_FP64)
-        Imm = Hi_32(Imm);
+      auto OpType =
+          static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
+      Imm = AMDGPU::encode32BitLiteral(Imm, OpType, IsLit);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
 
