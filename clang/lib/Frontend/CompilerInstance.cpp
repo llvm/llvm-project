@@ -173,10 +173,13 @@ bool CompilerInstance::createTarget() {
 }
 
 void CompilerInstance::setFileManager(FileManager *Value) {
-  if (!hasVirtualFileSystem())
-    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
-  assert(Value == nullptr ||
-         getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
+  if (Value == nullptr) {
+    FileMgr = nullptr;
+    return;
+  }
+  if (VFS == nullptr)
+    VFS = Value->getVirtualFileSystemPtr();
+  assert(VFS == Value->getVirtualFileSystemPtr());
   FileMgr = Value;
 }
 
