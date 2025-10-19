@@ -1,0 +1,37 @@
+# RUN: clangd -lit-test < %s | FileCheck -strict-whitespace --dump-input always %s
+void bob();
+void f() {
+  bob();
+}
+---
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{"textDocument": {"foldingRange": {"lineFoldingOnly": true}}},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"languageId":"cpp","text":"void bob();\nvoid f() {\n  bob();\n}\n","uri":"test:///foo.cpp","version":1}}}
+---
+{"id":1,"jsonrpc":"2.0","method":"textDocument/searchAST","params":{"textDocument":{"uri":"test:///foo.cpp"},"query":"declRefExpr(to(namedDecl(hasName(\"bob\"))))"}}
+#      CHECK:  "id": 1,
+# CHECK-NEXT:  "jsonrpc": "2.0",
+# CHECK-NEXT:  "result": [
+# CHECK-NEXT:    {
+# CHECK-NEXT:      "root": {
+# CHECK-NEXT:        "arcana": "DeclRefExpr {{.*}} 'void ()' lvalue Function {{.*}} 'bob' 'void ()'",
+# CHECK-NEXT:        "detail": "bob",
+# CHECK-NEXT:        "kind": "DeclRef",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 5,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 2,
+# CHECK-NEXT:            "line": 2
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "role": "expression"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    }
+# CHECK-NEXT:  ]
+---
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

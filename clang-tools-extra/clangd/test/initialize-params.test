@@ -6,6 +6,10 @@
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "capabilities": {
 # CHECK-NEXT:      "astProvider": true,
+# CHECK-NEXT:      "astSearchProvider": {
+# CHECK-NEXT:        "replace": false,
+# CHECK-NEXT:        "search": true
+# CHECK-NEXT:      },
 # CHECK-NEXT:      "callHierarchyProvider": true,
 # CHECK-NEXT:      "clangdInlayHintsProvider": true,
 # CHECK-NEXT:      "codeActionProvider": true,
