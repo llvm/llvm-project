@@ -29,9 +29,9 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-T2NODSP-LABEL: func:
 ; CHECK-T2NODSP:       @ %bb.0:
 ; CHECK-T2NODSP-NEXT:    subs r0, r0, r1
-; CHECK-T2NODSP-NEXT:    mov.w r1, #-2147483648
+; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
 ; CHECK-T2NODSP-NEXT:    it vs
-; CHECK-T2NODSP-NEXT:    eorvs.w r0, r1, r0, asr #31
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
 ; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: func:
@@ -42,8 +42,8 @@ define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-ARMNODPS-LABEL: func:
 ; CHECK-ARMNODPS:       @ %bb.0:
 ; CHECK-ARMNODPS-NEXT:    subs r0, r0, r1
-; CHECK-ARMNODPS-NEXT:    mov r1, #-2147483648
-; CHECK-ARMNODPS-NEXT:    eorvs r0, r1, r0, asr #31
+; CHECK-ARMNODPS-NEXT:    mov r2, #-2147483648
+; CHECK-ARMNODPS-NEXT:    eorvs r0, r2, r0, asr #31
 ; CHECK-ARMNODPS-NEXT:    bx lr
 ;
 ; CHECK-ARMBASEDSP-LABEL: func:
@@ -347,10 +347,10 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-T2NODSP:       @ %bb.0:
 ; CHECK-T2NODSP-NEXT:    .save {r7, lr}
 ; CHECK-T2NODSP-NEXT:    push {r7, lr}
-; CHECK-T2NODSP-NEXT:    ldr.w r12, [sp, #8]
-; CHECK-T2NODSP-NEXT:    ldr.w lr, [sp, #12]
-; CHECK-T2NODSP-NEXT:    subs.w r0, r0, r12
+; CHECK-T2NODSP-NEXT:    ldr.w lr, [sp, #8]
 ; CHECK-T2NODSP-NEXT:    mov.w r12, #-2147483648
+; CHECK-T2NODSP-NEXT:    subs.w r0, r0, lr
+; CHECK-T2NODSP-NEXT:    ldr.w lr, [sp, #12]
 ; CHECK-T2NODSP-NEXT:    it vs
 ; CHECK-T2NODSP-NEXT:    eorvs.w r0, r12, r0, asr #31
 ; CHECK-T2NODSP-NEXT:    subs.w r1, r1, lr
@@ -382,10 +382,10 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-ARMNODPS:       @ %bb.0:
 ; CHECK-ARMNODPS-NEXT:    .save {r11, lr}
 ; CHECK-ARMNODPS-NEXT:    push {r11, lr}
-; CHECK-ARMNODPS-NEXT:    ldr r12, [sp, #8]
-; CHECK-ARMNODPS-NEXT:    ldr lr, [sp, #12]
-; CHECK-ARMNODPS-NEXT:    subs r0, r0, r12
+; CHECK-ARMNODPS-NEXT:    ldr lr, [sp, #8]
 ; CHECK-ARMNODPS-NEXT:    mov r12, #-2147483648
+; CHECK-ARMNODPS-NEXT:    subs r0, r0, lr
+; CHECK-ARMNODPS-NEXT:    ldr lr, [sp, #12]
 ; CHECK-ARMNODPS-NEXT:    eorvs r0, r12, r0, asr #31
 ; CHECK-ARMNODPS-NEXT:    subs r1, r1, lr
 ; CHECK-ARMNODPS-NEXT:    ldr lr, [sp, #16]
