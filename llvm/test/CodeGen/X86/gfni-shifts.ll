@@ -1684,12 +1684,12 @@ define <64 x i8> @var_shl_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_shl_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm2
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm3
-; GFNIAVX512BW-NEXT:    vpsllvw %zmm2, %zmm3, %zmm2
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm2
+; GFNIAVX512BW-NEXT:    vpsllvw %zmm2, %zmm0, %zmm2
+; GFNIAVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    movabsq $-6148914691236517206, %rax # imm = 0xAAAAAAAAAAAAAAAA
+; GFNIAVX512BW-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
 ; GFNIAVX512BW-NEXT:    kmovq %rax, %k1
 ; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
 ; GFNIAVX512BW-NEXT:    retq
@@ -1875,16 +1875,15 @@ define <64 x i8> @var_lshr_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ;
 ; GFNIAVX512BW-LABEL: var_lshr_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
-; GFNIAVX512BW-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
+; GFNIAVX512BW-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; GFNIAVX512BW-NEXT:    vpandq %zmm2, %zmm1, %zmm3
 ; GFNIAVX512BW-NEXT:    vpandq %zmm2, %zmm0, %zmm2
 ; GFNIAVX512BW-NEXT:    vpsrlvw %zmm3, %zmm2, %zmm2
 ; GFNIAVX512BW-NEXT:    vpsrlw $8, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpsrlvw %zmm1, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    movabsq $-6148914691236517206, %rax # imm = 0xAAAAAAAAAAAAAAAA
+; GFNIAVX512BW-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
 ; GFNIAVX512BW-NEXT:    kmovq %rax, %k1
-; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm0, %zmm2 {%k1}
-; GFNIAVX512BW-NEXT:    vmovdqa64 %zmm2, %zmm0
+; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
 ; GFNIAVX512BW-NEXT:    retq
   %shift = lshr <64 x i8> %a, %b
   ret <64 x i8> %shift
@@ -2238,9 +2237,10 @@ define <64 x i8> @var_ashr_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; GFNIAVX512BW-NEXT:    vpsllw $8, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    vpsraw $8, %zmm0, %zmm0
 ; GFNIAVX512BW-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
-; GFNIAVX512BW-NEXT:    movabsq $-6148914691236517206, %rax # imm = 0xAAAAAAAAAAAAAAAA
+; GFNIAVX512BW-NEXT:    movabsq $6148914691236517205, %rax # imm = 0x5555555555555555
 ; GFNIAVX512BW-NEXT:    kmovq %rax, %k1
-; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
+; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm0, %zmm2 {%k1}
+; GFNIAVX512BW-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; GFNIAVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, %b
   ret <64 x i8> %shift

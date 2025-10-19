@@ -30976,24 +30976,13 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     // can efficiently be merged together using a masked move.
     MVT ExtVT = MVT::v32i16;
 
-    // When used in a vectorshuffle, selects even-index lanes from the first
-    // vector and odd index lanes from the second vector.
-    SmallVector<int, 64> InterleaveIndices;
-    for (unsigned i = 0; i < 64; ++i) {
-      unsigned offset = (i % 2 == 0) ? 0 : 64;
-      InterleaveIndices.push_back(i + offset);
-    }
-
-    SDValue zero = DAG.getConstant(0, dl, VT);
-    SDValue eight = DAG.getTargetConstant(8, dl, MVT::i8);
     SDValue RLo, RHi;
-
-    // Isolate lower and upper lanes of Amt by shuffling zeros into AmtLo and
+    // Isolate lower and upper lanes of Amt by masking odd lanes in AmtLo and
     // right shifting AmtHi.
-    SDValue AmtLo = DAG.getBitcast(
-        ExtVT, DAG.getVectorShuffle(VT, dl, Amt, zero, InterleaveIndices));
-    SDValue AmtHi = DAG.getNode(X86ISD::VSRLI, dl, ExtVT,
-                                DAG.getBitcast(ExtVT, Amt), eight);
+    SDValue AmtLo = DAG.getNode(ISD::AND, dl, ExtVT, DAG.getBitcast(ExtVT, Amt),
+                                DAG.getConstant(0x00ff, dl, ExtVT));
+    SDValue AmtHi = getTargetVShiftByConstNode(
+        X86ISD::VSRLI, dl, ExtVT, DAG.getBitcast(ExtVT, Amt), 8, DAG);
     unsigned int ShiftOp;
     switch (Opc) {
     case ISD::SHL:
@@ -31002,16 +30991,16 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // prevent high bits of an even lane overflowing into low bits of an odd
       // lane.
       RLo = DAG.getBitcast(ExtVT, R);
-      RHi = DAG.getBitcast(
-          ExtVT, DAG.getVectorShuffle(VT, dl, zero, R, InterleaveIndices));
+      RHi = DAG.getNode(ISD::AND, dl, ExtVT, RLo,
+                        DAG.getConstant(0xff00, dl, ExtVT));
       ShiftOp = X86ISD::VSHLV;
       break;
     case ISD::SRL:
       // Same idea as above, but this time we need to make sure no low bits of
       // an odd lane can overflow into high bits of an even lane.
-      RLo = DAG.getBitcast(
-          ExtVT, DAG.getVectorShuffle(VT, dl, R, zero, InterleaveIndices));
       RHi = DAG.getBitcast(ExtVT, R);
+      RLo = DAG.getNode(ISD::AND, dl, ExtVT, RHi,
+                        DAG.getConstant(0x00ff, dl, ExtVT));
       ShiftOp = X86ISD::VSRLV;
       break;
     case ISD::SRA:
@@ -31020,8 +31009,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // depending on the sign bit of the original lane. We do this using 2
       // immediate shifts.
       RHi = DAG.getBitcast(ExtVT, R);
-      RLo = DAG.getNode(X86ISD::VSHLI, dl, ExtVT, RHi, eight);
-      RLo = DAG.getNode(X86ISD::VSRAI, dl, ExtVT, RLo, eight);
+      RLo = getTargetVShiftByConstNode(X86ISD::VSHLI, dl, ExtVT, RHi, 8, DAG);
+      RLo = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExtVT, RLo, 8, DAG);
       ShiftOp = X86ISD::VSRAV;
       break;
     default:
@@ -31034,8 +31023,11 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
     SDValue ShiftedHi =
         DAG.getBitcast(VT, DAG.getNode(ShiftOp, dl, ExtVT, RHi, AmtHi));
 
-    return DAG.getVectorShuffle(VT, dl, ShiftedLo, ShiftedHi,
-                                InterleaveIndices);
+    // To merge the shifted vectors back together, we select even lanes
+    // from ShiftedLo and odd lanes from ShiftedHi.
+    SDValue SelectMask = DAG.getBitcast(
+        MVT::v64i1, DAG.getConstant(0x5555555555555555, dl, MVT::i64));
+    return DAG.getSelect(dl, VT, SelectMask, ShiftedLo, ShiftedHi);
   }
 
   if (VT == MVT::v16i8 ||
