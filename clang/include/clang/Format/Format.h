@@ -3174,7 +3174,12 @@ struct FormatStyle {
   ///
   /// You can also specify a minimum number of digits (``BinaryMinDigits``,
   /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  /// have in order for the separators to be inserted.
+  /// have in order for the separators to be inserted, and a maximum number of
+  /// digits (``BinaryMaxDigitsNoSeparator``, ``DecimalMaxDigitsNoSeparator``,
+  /// and ``HexMaxDigitsNoSeparator``) until the separators are removed. This
+  /// divides the literals in 3 regions, always without separator (up until
+  /// including ``xxxMaxDigitsNoSeparator``), maybe with, or without separators
+  /// (up until excluding ``xxxMinDigits``), and finally always with separators.
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -3192,6 +3197,17 @@ struct FormatStyle {
     ///   b2 = 0b1'101'101;
     /// \endcode
     int8_t BinaryMinDigits;
+    /// Remove separators in binary literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigits: 7
+    ///   // BinaryMaxDigitsNoSeparator: 4
+    ///   b0 = 0b1011; // Always removed.
+    ///   b1 = 0b101101; // Not added.
+    ///   b2 = 0b101'101; // Not removed.
+    ///   b3 = 0b1'101'101; // Always added.
+    /// \endcode
+    int8_t BinaryMaxDigitsNoSeparator;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -3207,6 +3223,17 @@ struct FormatStyle {
     ///   d2 = 10'000;
     /// \endcode
     int8_t DecimalMinDigits;
+    /// Remove separators in decimal literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigits: 7
+    ///   // DecimalMaxDigitsNoSeparator: 4
+    ///   d0 = 2023; // Always removed.
+    ///   d1 = 123456; // Not added.
+    ///   d2 = 123'456; // Not removed.
+    ///   d3 = 5'000'000; // Always added.
+    /// \endcode
+    int8_t DecimalMaxDigitsNoSeparator;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -3223,10 +3250,25 @@ struct FormatStyle {
     ///   h2 = 0xAB'CD'EF;
     /// \endcode
     int8_t HexMinDigits;
+    /// Remove separators in hexadecimal literals with a maximum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigits: 6
+    ///   // HexMaxDigitsNoSeparator: 4
+    ///   h0 = 0xAFFE; // Always removed.
+    ///   h1 = 0xABCDE; // Not added.
+    ///   h2 = 0xA'BC'DE; // Not removed.
+    ///   h3 = 0xAB'CD'EF; // Always added.
+    /// \endcode
+    int8_t HexMaxDigitsNoSeparator;
     bool operator==(const IntegerLiteralSeparatorStyle &R) const {
       return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
+             BinaryMaxDigitsNoSeparator == R.BinaryMaxDigitsNoSeparator &&
              Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
-             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+             DecimalMaxDigitsNoSeparator == R.DecimalMaxDigitsNoSeparator &&
+             Hex == R.Hex && HexMinDigits == R.HexMinDigits &&
+             HexMaxDigitsNoSeparator == R.HexMaxDigitsNoSeparator;
     }
   };
 

@@ -72,11 +72,25 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
   if (SkipBinary && SkipDecimal && SkipHex)
     return {};
 
-  const auto BinaryMinDigits =
-      std::max((int)Option.BinaryMinDigits, Binary + 1);
-  const auto DecimalMinDigits =
-      std::max((int)Option.DecimalMinDigits, Decimal + 1);
-  const auto HexMinDigits = std::max((int)Option.HexMinDigits, Hex + 1);
+  auto CalcMinAndMax = [](int8_t Digits, int8_t MinDigits,
+                          int8_t MaxDigitsNoSeparator) {
+    std::pair<int, int> Ret;
+    Ret.first = std::max<int>(MinDigits, Digits + 1);
+    if (Ret.first == 0)
+      Ret.second = 0;
+    else if (MaxDigitsNoSeparator < 0)
+      Ret.second = Ret.first - 1;
+    else
+      Ret.second = std::min<int>(MaxDigitsNoSeparator, Ret.first - 1);
+    return Ret;
+  };
+
+  const auto [BinaryMinDigits, BinaryMaxDigitsNoSeparator] = CalcMinAndMax(
+      Binary, Option.BinaryMinDigits, Option.BinaryMaxDigitsNoSeparator);
+  const auto [DecimalMinDigits, DecimalMaxDigitsNoSeparator] = CalcMinAndMax(
+      Decimal, Option.DecimalMinDigits, Option.DecimalMaxDigitsNoSeparator);
+  const auto [HexMinDigits, HexMaxDigitsNoSeparator] =
+      CalcMinAndMax(Hex, Option.HexMinDigits, Option.HexMaxDigitsNoSeparator);
 
   const auto &SourceMgr = Env.getSourceManager();
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
@@ -139,19 +153,29 @@ IntegerLiteralSeparatorFixer::process(const Environment &Env,
     }
     auto DigitsPerGroup = Decimal;
     auto MinDigits = DecimalMinDigits;
+    auto MaxDigitsNoSeparator = DecimalMaxDigitsNoSeparator;
     if (IsBase2) {
       DigitsPerGroup = Binary;
       MinDigits = BinaryMinDigits;
+      MaxDigitsNoSeparator = BinaryMaxDigitsNoSeparator;
     } else if (IsBase16) {
       DigitsPerGroup = Hex;
       MinDigits = HexMinDigits;
+      MaxDigitsNoSeparator = HexMaxDigitsNoSeparator;
     }
     const auto SeparatorCount = Text.count(Separator);
     const int DigitCount = Length - SeparatorCount;
-    const bool RemoveSeparator = DigitsPerGroup < 0 || DigitCount < MinDigits;
+    const bool RemoveSeparator =
+        DigitsPerGroup < 0 || DigitCount <= MaxDigitsNoSeparator;
+    const bool AddSeparator =
+        DigitsPerGroup > 0 &&
+        (DigitCount >= MinDigits ||
+         (DigitCount > MaxDigitsNoSeparator && SeparatorCount > 0));
+    if (!RemoveSeparator && !AddSeparator)
+      continue;
     if (RemoveSeparator && SeparatorCount == 0)
       continue;
-    if (!RemoveSeparator && SeparatorCount > 0 &&
+    if (AddSeparator && SeparatorCount > 0 &&
         checkSeparator(Text, DigitsPerGroup)) {
       continue;
     }
