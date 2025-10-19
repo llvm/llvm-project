@@ -7,7 +7,7 @@
 // RUN:   -fnative-half-arguments-and-returns -munsafe-fp-atomics | FileCheck -check-prefixes=FUN,CHECK,UNSAFEIR %s
 
 // RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   -fcuda-is-device -target-cpu gfx1100 -fnative-half-type \
+// RUN:   -fcuda-is-device -target-cpu gfx1100 -fnative-half-type -fno-atomic-backward-compatible \
 // RUN:   -fnative-half-arguments-and-returns | FileCheck -check-prefixes=FUN,SAFE %s
 
 // RUN: %clang_cc1 -x hip %s -O3 -S -o - -triple=amdgcn-amd-amdhsa \

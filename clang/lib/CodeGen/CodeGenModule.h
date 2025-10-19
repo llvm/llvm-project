@@ -677,7 +677,7 @@ private:
   std::optional<PointerAuthQualifier>
   computeVTPointerAuthentication(const CXXRecordDecl *ThisClass);
 
-  AtomicOptions AtomicOpts;
+  std::optional<AtomicOptions> AtomicOpts;
 
   // A set of functions which should be hot-patched; see
   // -fms-hotpatch-functions-file (and -list). This will nearly always be empty.
@@ -699,11 +699,11 @@ public:
   /// Finalize LLVM code generation.
   void Release();
 
-  /// Get the current Atomic options.
-  AtomicOptions getAtomicOpts() { return AtomicOpts; }
+  /// Get the current atomic options.
+  std::optional<AtomicOptions> getAtomicOpts() { return AtomicOpts; }
 
-  /// Set the current Atomic options.
-  void setAtomicOpts(AtomicOptions AO) { AtomicOpts = AO; }
+  /// Set the current atomic options.
+  void setAtomicOpts(std::optional<AtomicOptions> AO) { AtomicOpts = AO; }
 
   /// Return true if we should emit location information for expressions.
   bool getExpressionLocationsEnabled() const;
