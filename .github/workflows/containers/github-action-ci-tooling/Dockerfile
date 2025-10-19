@@ -1,5 +1,5 @@
 ARG LLVM_VERSION=21.1.0
-# FIXME: Use "${LLVM_VERSION%%.*}"" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
+# FIXME: Use "${LLVM_VERSION%%.*}" instead of "LLVM_VERSION_MAJOR" once we update runners to Ubuntu-26.04 with Buildah >= 1.37
 ARG LLVM_VERSION_MAJOR=21
 
 FROM docker.io/library/ubuntu:24.04 AS llvm-downloader
