@@ -10,6 +10,11 @@ void test_basic_type_checks() {
   static_assert(__is_same(unsigned int, decltype(__builtin_bswapg((unsigned int)0))), "");
   static_assert(__is_same(long, decltype(__builtin_bswapg((long)0))), "");
   static_assert(__is_same(unsigned long, decltype(__builtin_bswapg((unsigned long)0))), "");
+	static_assert(__is_same(_BitInt(8), decltype(__builtin_bswapg((_BitInt(8))0))), "");
+	static_assert(__is_same(_BitInt(16), decltype(__builtin_bswapg((_BitInt(16))0))), "");
+	static_assert(__is_same(_BitInt(32), decltype(__builtin_bswapg((_BitInt(32))0))), "");
+	static_assert(__is_same(_BitInt(64), decltype(__builtin_bswapg((_BitInt(64))0))), "");
+	static_assert(__is_same(_BitInt(128), decltype(__builtin_bswapg((_BitInt(128))0))), "");
 }
 
 template<typename T>
@@ -31,7 +36,11 @@ template void test_template_type_check<unsigned short>();
 template void test_template_type_check<int>();
 template void test_template_type_check<unsigned int>();
 template void test_template_type_check<long>();
-template void test_template_type_check<unsigned long>();
+template void test_template_type_check<_BitInt(8)>();
+template void test_template_type_check<_BitInt(16)>();
+template void test_template_type_check<_BitInt(32)>();
+template void test_template_type_check<_BitInt(64)>();
+template void test_template_type_check<_BitInt(128)>();
 
 void test_lambda_type_checks() {
   auto lambda = [](auto x) {
@@ -135,8 +144,17 @@ void test_lambda_errors() {
   // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<const char *>' requested here}}
 }
 
-void test_argument_count_errors() {
-  int h14 = __builtin_bswapg(1, 2); // expected-error {{too many arguments to function call, expected 1, have 2}}
+template <class... Args> void test_variadic_template_argument_count(Args... args) {
+   int result = __builtin_bswapg(args...); // #arg_use
+}
+void test_variadic_template_args() {
+  test_variadic_template_argument_count();
+  // expected-error@#arg_use {{too few arguments to function call, expected 1, have 0}}
+	// expected-note@-2 {{in instantiation of function template specialization 'test_variadic_template_argument_count<>' requested here}}
+  test_variadic_template_argument_count(1);
+  test_variadic_template_argument_count(1, 2);
+  // expected-error@#arg_use {{too many arguments to function call, expected 1, have 2}}
+	// expected-note@-2 {{in instantiation of function template specialization 'test_variadic_template_argument_count<int, int>' requested here}}
 }
 
 void test_lvalue_reference(int& a) {
