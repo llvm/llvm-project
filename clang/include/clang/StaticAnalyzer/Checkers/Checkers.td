@@ -839,87 +839,89 @@ def PaddingChecker : Checker<"Padding">,
 
 let ParentPackage = InsecureAPI in {
 
-def SecuritySyntaxChecker : Checker<"SecuritySyntaxChecker">,
-  HelpText<"Base of various security function related checkers">,
-  CheckerOptions<[
-    CmdLineOption<String,
-                  "Warn",
-                  "List of space-separated function name to be warned about. "
-                  "Defaults to an empty list.",
-                  "",
-                  InAlpha>
-  ]>,
-  Documentation<NotDocumented>,
-  Hidden;
+  def SecuritySyntaxChecker
+      : Checker<"SecuritySyntaxChecker">,
+        HelpText<"Base of various security function related checkers">,
+        CheckerOptions<[CmdLineOption<
+            String, "Warn",
+            "List of space-separated function name to be warned about. "
+            "Defaults to an empty list.",
+            "", InAlpha>]>,
+        Documentation<NotDocumented>,
+        Hidden;
 
-def bcmp : Checker<"bcmp">,
-  HelpText<"Warn on uses of the 'bcmp' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def bcmp : Checker<"bcmp">,
+             HelpText<"Warn on uses of the 'bcmp' function">,
+             Dependencies<[SecuritySyntaxChecker]>,
+             Documentation<HasDocumentation>;
 
-def bcopy : Checker<"bcopy">,
-  HelpText<"Warn on uses of the 'bcopy' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def bcopy : Checker<"bcopy">,
+              HelpText<"Warn on uses of the 'bcopy' function">,
+              Dependencies<[SecuritySyntaxChecker]>,
+              Documentation<HasDocumentation>;
 
-def bzero : Checker<"bzero">,
-  HelpText<"Warn on uses of the 'bzero' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def bzero : Checker<"bzero">,
+              HelpText<"Warn on uses of the 'bzero' function">,
+              Dependencies<[SecuritySyntaxChecker]>,
+              Documentation<HasDocumentation>;
 
-def gets : Checker<"gets">,
-  HelpText<"Warn on uses of the 'gets' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def gets : Checker<"gets">,
+             HelpText<"Warn on uses of the 'gets' function">,
+             Dependencies<[SecuritySyntaxChecker]>,
+             Documentation<HasDocumentation>;
 
-def getpw : Checker<"getpw">,
-  HelpText<"Warn on uses of the 'getpw' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def getpw : Checker<"getpw">,
+              HelpText<"Warn on uses of the 'getpw' function">,
+              Dependencies<[SecuritySyntaxChecker]>,
+              Documentation<HasDocumentation>;
 
-def mktemp : Checker<"mktemp">,
-  HelpText<"Warn on uses of the 'mktemp' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def mktemp : Checker<"mktemp">,
+               HelpText<"Warn on uses of the 'mktemp' function">,
+               Dependencies<[SecuritySyntaxChecker]>,
+               Documentation<HasDocumentation>;
 
-def mkstemp : Checker<"mkstemp">,
-  HelpText<"Warn when 'mkstemp' is passed fewer than 6 X's in the format "
-           "string">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def mkstemp
+      : Checker<"mkstemp">,
+        HelpText<"Warn when 'mkstemp' is passed fewer than 6 X's in the format "
+                 "string">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def rand : Checker<"rand">,
-  HelpText<"Warn on uses of the 'rand', 'random', and related functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def rand
+      : Checker<"rand">,
+        HelpText<"Warn on uses of the 'rand', 'random', and related functions">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def strcpy : Checker<"strcpy">,
-  HelpText<"Warn on uses of the 'strcpy' and 'strcat' functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def strcpy : Checker<"strcpy">,
+               HelpText<"Warn on uses of the 'strcpy' and 'strcat' functions">,
+               Dependencies<[SecuritySyntaxChecker]>,
+               Documentation<HasDocumentation>;
 
-def vfork : Checker<"vfork">,
-  HelpText<"Warn on uses of the 'vfork' function">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def vfork : Checker<"vfork">,
+              HelpText<"Warn on uses of the 'vfork' function">,
+              Dependencies<[SecuritySyntaxChecker]>,
+              Documentation<HasDocumentation>;
 
-def UncheckedReturn : Checker<"UncheckedReturn">,
-  HelpText<"Warn on uses of functions whose return values must be always "
-           "checked">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def UncheckedReturn
+      : Checker<"UncheckedReturn">,
+        HelpText<"Warn on uses of functions whose return values must be always "
+                 "checked">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def DeprecatedOrUnsafeBufferHandling :
-  Checker<"DeprecatedOrUnsafeBufferHandling">,
-  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
-           "functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def DeprecatedOrUnsafeBufferHandling
+      : Checker<"DeprecatedOrUnsafeBufferHandling">,
+        HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+                 "functions">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
-  HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def decodeValueOfObjCType
+      : Checker<"decodeValueOfObjCType">,
+        HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
 } // end "security.insecureAPI"
 
