@@ -1238,6 +1238,13 @@ def FeatureSetPrioIncWgInst : SubtargetFeature<"setprio-inc-wg-inst",
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
 
+def FeatureDisableAggressiveFMAFusion : SubtargetFeature<
+  "disable-aggressive-fma-fusion",
+  "DisableAggressiveFMAFusion",
+  "true",
+  "Do not fold fmul and fadd/fsub into fma."
+>;
+
 // Ugly hack to accomodate assembling modules with mixed
 // wavesizes. Ideally we would have a mapping symbol in assembly which
 // would keep track of which sections of code should be treated as
