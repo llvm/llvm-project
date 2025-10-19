@@ -2023,10 +2023,10 @@ void SubstituteParameterMappings::buildParameterMapping(
                                          /*Depth=*/0, OccurringIndices);
   }
   unsigned Size = OccurringIndices.count();
-  // It's OK when Size is 0. We build an empty parameter mapping when the atomic
-  // constraint is independent of any template parameters, so we can distinguish
-  // it from cases where no mapping exists at all, e.g. when there are only
-  // atomic constraints.
+  // When the constraint is independent of any template parameters,
+  // we build an empty mapping so that we can distinguish these cases
+  // from cases where no mapping exists at all, e.g. when there are only atomic
+  // constraints.
   TemplateArgumentLoc *TempArgs =
       new (SemaRef.Context) TemplateArgumentLoc[Size];
   llvm::SmallVector<NamedDecl *> UsedParams;
@@ -2059,8 +2059,7 @@ bool SubstituteParameterMappings::substitute(
   if (!N.hasParameterMapping())
     buildParameterMapping(N);
 
-  // Don't bother into substituting if we have determined the mapping maps to
-  // nothing.
+  // If the parameter mapping is empty, there is nothing to substitute.
   if (N.getParameterMapping().empty())
     return false;
 
