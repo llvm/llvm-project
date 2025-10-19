@@ -45,7 +45,6 @@ Implemented Papers
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
-- P3372R3: ``constexpr map`` (`Github <https://llvm.org/PR134330>`__) (The paper is partially implemented. ``constexpr map`` is implemented in this release)
 
 Improvements and New Features
 -----------------------------
