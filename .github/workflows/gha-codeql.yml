@@ -31,7 +31,11 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@303c0aef88fc2fe5ff6d63d3b1596bfd83dfa1f9 # v3.30.4
         with:
-          languages: actions
+          languages: actions, swift
           queries: security-extended
+      - name: Build Swift code
+        run: |
+          swiftc llvm/test/tools/opt-viewer/Inputs/suppress/s.swift
+          swiftc llvm/test/tools/opt-viewer/Inputs/unicode-function-name/s.swift
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@303c0aef88fc2fe5ff6d63d3b1596bfd83dfa1f9 # v3.30.4
