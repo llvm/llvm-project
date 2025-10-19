@@ -433,7 +433,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if ((startsNextParameter(Current, Style) || Previous.is(tok::semi) ||
        (Previous.is(TT_TemplateCloser) && Current.is(TT_StartOfName) &&
-        State.Line->First->isNot(TT_AttributeSquare) && Style.isCpp() &&
+        State.Line->First->isNot(TT_AttributeLSquare) && Style.isCpp() &&
         // FIXME: This is a temporary workaround for the case where clang-format
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
@@ -1374,7 +1374,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
   if (Current.is(TT_LambdaArrow) &&
       Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
-                       tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
+                       tok::kw_consteval, tok::kw_static,
+                       TT_AttributeRSquare)) {
     return ContinuationIndent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
@@ -1499,9 +1500,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
          Current.isNot(tok::l_paren) &&
          !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
                                TT_PointerOrReference)) ||
-        PreviousNonComment->isOneOf(
-            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
-            TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
+        PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
+                                    TT_FunctionAnnotationRParen,
+                                    TT_JavaAnnotation,
+                                    TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
     return std::max(CurrentState.LastSpace, CurrentState.Indent);
