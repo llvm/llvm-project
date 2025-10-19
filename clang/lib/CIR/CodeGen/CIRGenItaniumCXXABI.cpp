@@ -941,9 +941,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
-    cgm.errorNYI("VTableClassNameForType: __array_type_info");
-    break;
-
+    return "_ZTVN10__cxxabiv117__array_type_infoE";
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     cgm.errorNYI("VTableClassNameForType: __function_type_info");
