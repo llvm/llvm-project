@@ -15,6 +15,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -23,6 +24,9 @@ struct clang::CIRGen::CGCoroData {
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
   cir::CallOp coroId = nullptr;
+
+  // Stores the result of __builtin_coro_begin call.
+  mlir::Value coroBegin = nullptr;
 };
 
 // Defining these here allows to keep CGCoroData private to this file.
@@ -63,6 +67,48 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
                                                nullPtr, nullPtr, nullPtr});
 }
 
+cir::CallOp CIRGenFunction::emitCoroAllocBuiltinCall(mlir::Location loc) {
+  cir::BoolType boolTy = builder.getBoolTy();
+  cir::IntType int32Ty = builder.getUInt32Ty();
+
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroAlloc);
+
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(loc, cgm.builtinCoroAlloc,
+                                        cir::FuncType::get({int32Ty}, boolTy),
+                                        /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+
+  return builder.createCallOp(
+      loc, fnOp, mlir::ValueRange{curCoro.data->coroId.getResult()});
+}
+
+cir::CallOp
+CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
+                                         mlir::Value coroframeAddr) {
+  cir::IntType int32Ty = builder.getUInt32Ty();
+  mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroBegin);
+
+  cir::FuncOp fnOp;
+  if (!builtin) {
+    fnOp = cgm.createCIRBuiltinFunction(
+        loc, cgm.builtinCoroBegin,
+        cir::FuncType::get({int32Ty, VoidPtrTy}, VoidPtrTy),
+        /*FD=*/nullptr);
+    assert(fnOp && "should always succeed");
+  } else {
+    fnOp = cast<cir::FuncOp>(builtin);
+  }
+
+  return builder.createCallOp(
+      loc, fnOp,
+      mlir::ValueRange{curCoro.data->coroId.getResult(), coroframeAddr});
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   mlir::Location openCurlyLoc = getLoc(s.getBeginLoc());
@@ -73,10 +119,39 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   cir::CallOp coroId = emitCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, curCoro, coroId);
 
-  assert(!cir::MissingFeatures::coroAllocBuiltinCall());
+  // Backend is allowed to elide memory allocations, to help it, emit
+  // auto mem = coro.alloc() ? 0 : ... allocation code ...;
+  cir::CallOp coroAlloc = emitCoroAllocBuiltinCall(openCurlyLoc);
 
-  assert(!cir::MissingFeatures::coroBeginBuiltinCall());
+  // Initialize address of coroutine frame to null
+  CanQualType astVoidPtrTy = cgm.getASTContext().VoidPtrTy;
+  mlir::Type allocaTy = convertTypeForMem(astVoidPtrTy);
+  Address coroFrame =
+      createTempAlloca(allocaTy, getContext().getTypeAlignInChars(astVoidPtrTy),
+                       openCurlyLoc, "__coro_frame_addr",
+                       /*ArraySize=*/nullptr);
+
+  mlir::Value storeAddr = coroFrame.getPointer();
+  builder.CIRBaseBuilderTy::createStore(openCurlyLoc, nullPtrCst, storeAddr);
+  cir::IfOp::create(
+      builder, openCurlyLoc, coroAlloc.getResult(),
+      /*withElseRegion=*/false,
+      /*thenBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
+        builder.CIRBaseBuilderTy::createStore(
+            loc, emitScalarExpr(s.getAllocate()), storeAddr);
+        builder.create<cir::YieldOp>(loc);
+      });
+  curCoro.data->coroBegin =
+      emitCoroBeginBuiltinCall(
+          openCurlyLoc,
+          builder.create<cir::LoadOp>(openCurlyLoc, allocaTy, storeAddr))
+          .getResult();
+
+  // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
+  if (s.getReturnStmtOnAllocFailure())
+    cgm.errorNYI("NYI");
 
   assert(!cir::MissingFeatures::generateDebugInfo());
+  assert(!cir::MissingFeatures::emitBodyAndFallthrough());
   return mlir::success();
 }
