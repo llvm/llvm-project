@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t -- -- -fdelayed-template-parsing
+// RUN: %check_clang_tidy %s cppcoreguidelines-pro-type-member-init %t
 
 template <class T>
 struct PositiveFieldBeforeConstructor {

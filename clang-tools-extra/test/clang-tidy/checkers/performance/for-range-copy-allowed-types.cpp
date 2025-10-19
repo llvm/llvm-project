@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy %s performance-for-range-copy %t -- \
-// RUN:     -config="{CheckOptions: {performance-for-range-copy.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType'}}" \
-// RUN:     -- -fno-delayed-template-parsing
+// RUN:     -config="{CheckOptions: {performance-for-range-copy.AllowedTypes: '[Pp]ointer$;[Pp]tr$;[Rr]ef(erence)?$;qualified::Type;::fully::QualifiedType'}}"
 
 template <typename T>
 struct Iterator {

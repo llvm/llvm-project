@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 -check-suffixes=,CXX11 %s bugprone-use-after-move %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t
 
 typedef decltype(nullptr) nullptr_t;
 

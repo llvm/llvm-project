@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-delete-null-pointer %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s readability-delete-null-pointer %t
 
 #define NULL 0
 

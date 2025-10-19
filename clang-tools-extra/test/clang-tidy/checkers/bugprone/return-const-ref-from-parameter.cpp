@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-return-const-ref-from-parameter %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-return-const-ref-from-parameter %t
 
 using T = int;
 using TConst = int const;

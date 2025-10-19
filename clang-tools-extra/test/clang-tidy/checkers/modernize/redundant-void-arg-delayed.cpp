@@ -1,5 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-redundant-void-arg %t -- -- -fdelayed-template-parsing
-
+// RUN: %check_clang_tidy %s modernize-redundant-void-arg %t
 int foo(void) {
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant void argument list in function definition [modernize-redundant-void-arg]
 // CHECK-FIXES: int foo() {

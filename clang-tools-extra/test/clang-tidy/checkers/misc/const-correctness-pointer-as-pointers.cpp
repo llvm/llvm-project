@@ -7,8 +7,7 @@
 // RUN:   misc-const-correctness.WarnPointersAsPointers: true,\
 // RUN:   misc-const-correctness.TransformPointersAsValues: false,\
 // RUN:   misc-const-correctness.TransformPointersAsPointers: true\
-// RUN: }}' \
-// RUN: -- -fno-delayed-template-parsing
+// RUN: }}'
 
 void pointee_to_const() {
   int a[] = {1, 2};

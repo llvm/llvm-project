@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s bugprone-infinite-loop %t \
-// RUN:                   -- -- -fexceptions -fblocks -fno-delayed-template-parsing
+// RUN:                   -- -- -fexceptions -fblocks
 
 void simple_infinite_loop1() {
   int i = 0;

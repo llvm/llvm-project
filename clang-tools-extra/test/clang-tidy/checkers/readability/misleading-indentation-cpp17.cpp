@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-misleading-indentation %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-misleading-indentation %t
 
 namespace PR61435 {
 

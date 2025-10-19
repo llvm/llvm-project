@@ -4,7 +4,7 @@
 // RUN:   misc-const-correctness.TransformReferences: true, \
 // RUN:   misc-const-correctness.WarnPointersAsValues: false, \
 // RUN:   misc-const-correctness.TransformPointersAsValues: false} \
-// RUN:   }" -- -fno-delayed-template-parsing
+// RUN:   }"
 
 template <typename T>
 void type_dependent_variables() {

@@ -4,7 +4,7 @@
 // RUN:     misc-const-correctness.WarnPointersAsValues: false, \
 // RUN:     misc-const-correctness.WarnPointersAsPointers: false, \
 // RUN:     misc-const-correctness.TransformPointersAsValues: false \
-// RUN:   }}" -- -fno-delayed-template-parsing -fexceptions
+// RUN:   }}" -- -fexceptions
 
 // ------- Provide test samples for primitive builtins ---------
 // - every 'p_*' variable is a 'potential_const_*' variable

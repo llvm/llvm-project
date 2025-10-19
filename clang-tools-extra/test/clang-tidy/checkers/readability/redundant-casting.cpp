@@ -1,18 +1,16 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s readability-redundant-casting %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s readability-redundant-casting %t
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix=,MACROS %s readability-redundant-casting %t -- \
-// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}' \
-// RUN:   -- -fno-delayed-template-parsing
+// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}'
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
-// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
-// RUN:   -- -fno-delayed-template-parsing
+// RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}'
 // RUN: %check_clang_tidy -std=c++20 %s readability-redundant-casting %t -- \
-// RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
+// RUN:   -- -D CXX_20=1
 // RUN: %check_clang_tidy -std=c++20 -check-suffix=,MACROS %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreMacros: false }}' \
-// RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
+// RUN:   -- -D CXX_20=1
 // RUN: %check_clang_tidy -std=c++20 -check-suffix=,ALIASES %s readability-redundant-casting %t -- \
 // RUN:   -config='{CheckOptions: { readability-redundant-casting.IgnoreTypeAliases: true }}' \
-// RUN:   -- -fno-delayed-template-parsing -D CXX_20=1
+// RUN:   -- -D CXX_20=1
 
 struct A {};
 struct B : A {};

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-pass-by-value %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s modernize-pass-by-value %t
 
 namespace {
 // POD types are trivially move constructible.

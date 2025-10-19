@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-switch-missing-default-case %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-switch-missing-default-case %t
 
 typedef int MyInt;
 enum EnumType { eE2 };

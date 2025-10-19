@@ -2,7 +2,7 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  {"misc-include-cleaner.UnusedIncludes": false,\
 // RUN:   "misc-include-cleaner.MissingIncludes": false,\
-// RUN:  }}' -- -I%S/Inputs -isystem%S/Inputs/system -fno-delayed-template-parsing
+// RUN:  }}' -- -I%S/Inputs -isystem%S/Inputs/system
 
 // CHECK-MESSAGES: warning: The check 'misc-include-cleaner' will not perform any analysis because 'UnusedIncludes' and 'MissingIncludes' are both false. [clang-tidy-config]
 

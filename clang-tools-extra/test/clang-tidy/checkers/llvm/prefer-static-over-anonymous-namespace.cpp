@@ -1,12 +1,12 @@
-// RUN: %check_clang_tidy %s llvm-prefer-static-over-anonymous-namespace %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s llvm-prefer-static-over-anonymous-namespace %t
 // RUN: %check_clang_tidy -check-suffixes=,VAR %s llvm-prefer-static-over-anonymous-namespace %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     llvm-prefer-static-over-anonymous-namespace.AllowVariableDeclarations: false }, \
-// RUN:   }" -- -fno-delayed-template-parsing
+// RUN:   }"
 // RUN: %check_clang_tidy -check-suffixes=,MEM %s llvm-prefer-static-over-anonymous-namespace %t -- \
 // RUN:   -config="{CheckOptions: { \
 // RUN:     llvm-prefer-static-over-anonymous-namespace.AllowMemberFunctionsInClass: false }, \
-// RUN:   }" -- -fno-delayed-template-parsing
+// RUN:   }"
 
 namespace {
 

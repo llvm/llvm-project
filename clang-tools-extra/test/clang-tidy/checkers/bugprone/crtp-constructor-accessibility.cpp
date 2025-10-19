@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-crtp-constructor-accessibility %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-crtp-constructor-accessibility %t
 
 namespace class_implicit_ctor {
 template <typename T>
