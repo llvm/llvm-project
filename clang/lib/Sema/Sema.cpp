@@ -1254,7 +1254,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (LangOpts.DelayedTemplateParsing) {
       // Try to parse any templates that have been delayed and never
       // instantiated so that their bodies are available for static
-	  // analysis tools to analyze.
+      // analysis tools to analyze.
       Diags.setSuppressAllDiagnostics(true);
       for (auto &[Decl, Template] : LateParsedTemplateMap)
         if (Decl->isLateTemplateParsed())
