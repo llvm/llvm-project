@@ -5061,6 +5061,34 @@ def STRHpost : StorePostIdx<0b01, 1, 0b00, FPR16Op,  "str", post_store, f16>;
 def STRSpost : StorePostIdx<0b10, 1, 0b00, FPR32Op,  "str", post_store, f32>;
 def STRDpost : StorePostIdx<0b11, 1, 0b00, FPR64Op,  "str", post_store, f64>;
 def STRQpost : StorePostIdx<0b00, 1, 0b10, FPR128Op, "str", post_store, f128>;
+                    
+// Post-increment stores (writeback addressing)
+def : Pat<(post_truncsti8 (i32 (vector_extract (v4i32 FPR128:$vec), 0)),
+                          GPR64sp:$Rn, 
+                          simm9:$offset),
+          (STRBpost (aarch64mfp8 (EXTRACT_SUBREG FPR128:$vec, bsub)), 
+                    GPR64sp:$Rn, 
+                    simm9:$offset)>;
+
+def : Pat<(post_truncsti16 (i32 (vector_extract (v4i32 FPR128:$vec), 0)),
+                           GPR64sp:$Rn, 
+                           simm9:$offset),
+          (STRHpost (f16 (EXTRACT_SUBREG FPR128:$vec, hsub)), 
+                    GPR64sp:$Rn, 
+                    simm9:$offset)>;
+
+// Regular indexed stores (no writeback)
+def : Pat<(truncstorei8 (i32 (vector_extract (v4i32 FPR128:$vec), 0)),
+                        (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset)),
+          (STRBui (aarch64mfp8 (EXTRACT_SUBREG FPR128:$vec, bsub)), 
+                  GPR64sp:$Rn, 
+                  uimm12s1:$offset)>;
+
+def : Pat<(truncstorei16 (i32 (vector_extract (v4i32 FPR128:$vec), 0)),
+                         (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset)),
+          (STRHui (f16 (EXTRACT_SUBREG FPR128:$vec, hsub)), 
+                  GPR64sp:$Rn, 
+                  uimm12s2:$offset)>;
 }
 
 def STRBBpost : StorePostIdx<0b00, 0, 0b00, GPR32z, "strb", post_truncsti8, i32>;
