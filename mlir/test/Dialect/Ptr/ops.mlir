@@ -239,3 +239,39 @@ func.func @ptr_diff_tensor_2d_ops(%ptrs1: tensor<4x8x!ptr.ptr<#ptr.generic_space
   %diff = ptr.ptr_diff %ptrs1, %ptrs2 : tensor<4x8x!ptr.ptr<#ptr.generic_space>> -> tensor<4x8xi64>
   return %diff : tensor<4x8xi64>
 }
+
+/// Check read op assembly.
+func.func @read_ops(%ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>, %passthrough: vector<4x4xf32>) {
+  // Row-major styled read
+  %0 = ptr.read %ptr, %mask, %passthrough contiguity = [1, 4] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  // Column-major styled read
+  %1 = ptr.read %ptr, %mask, %passthrough alignment = 8 contiguity = [4, 1] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  // Gather styled read
+  %2 = ptr.read %ptr, %mask, %passthrough alignment = 8 contiguity = [1, 1] : vector<4x4x!ptr.ptr<#ptr.generic_space>> -> vector<4x4xf32>
+  return
+}
+
+/// Check read op assembly with tensors
+func.func @read_ops_tensor(%ptr: tensor<8x!ptr.ptr<#ptr.generic_space>>, %mask: tensor<8xi1>, %passthrough: tensor<8xf32>) {
+  %0 = ptr.read %ptr, %mask, %passthrough contiguity = [1] : tensor<8x!ptr.ptr<#ptr.generic_space>> -> tensor<8xf32>
+  %1 = ptr.read %ptr, %mask, %passthrough alignment = 4 contiguity = [8] : tensor<8x!ptr.ptr<#ptr.generic_space>> -> tensor<8xf32>
+  return
+}
+
+/// Check write op assembly.
+func.func @write_ops(%value: vector<4x4xf32>, %ptr: vector<4x4x!ptr.ptr<#ptr.generic_space>>, %mask: vector<4x4xi1>) {
+  // Row-major styled write
+  ptr.write %value, %ptr, %mask contiguity = [1, 4] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  // Column-major styled write
+  ptr.write %value, %ptr, %mask alignment = 8 contiguity = [4, 1] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  // Scatter styled write
+  ptr.write %value, %ptr, %mask alignment = 8 contiguity = [1, 1] : vector<4x4xf32>, vector<4x4x!ptr.ptr<#ptr.generic_space>>
+  return
+}
+
+/// Check write op assembly with tensors
+func.func @write_ops_tensor(%value: tensor<8xf32>, %ptr: tensor<8x!ptr.ptr<#ptr.generic_space>>, %mask: tensor<8xi1>) {
+  ptr.write %value, %ptr, %mask contiguity = [1] : tensor<8xf32>, tensor<8x!ptr.ptr<#ptr.generic_space>>
+  ptr.write %value, %ptr, %mask alignment = 4 contiguity = [8] : tensor<8xf32>, tensor<8x!ptr.ptr<#ptr.generic_space>>
+  return
+}
