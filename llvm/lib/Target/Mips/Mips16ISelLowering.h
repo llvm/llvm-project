@@ -31,9 +31,10 @@ namespace llvm {
                                 MachineBasicBlock *MBB) const override;
 
   private:
-    bool isEligibleForTailCallOptimization(
-        const CCState &CCInfo, unsigned NextStackOffset,
-        const MipsFunctionInfo &FI, bool IsMustTail) const override;
+    bool isEligibleForTailCallOptimization(const CCState &CCInfo,
+                                           unsigned NextStackOffset,
+                                           const MipsFunctionInfo &FI,
+                                           bool IsMustTail) const override;
 
     void setMips16HardFloatLibCalls();
 
