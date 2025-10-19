@@ -12014,13 +12014,20 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
                                                    SourceLocation CC) {
   assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
          Source != Target);
+
+  // Lone surrogates have a distinct representation in UTF-32.
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
+  // so don't warn on such conversion.
+  if (Source->isChar16Type() && Target->isChar32Type())
+    return;
+
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
                        S.isConstantEvaluatedContext())) {
     llvm::APSInt Value(32);
     Value = Result.Val.getInt();
     bool IsASCII = Value <= 0x7F;
-    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool IsBMP = Value <= 0xDFFF || (Value >= 0xE000 && Value <= 0xFFFF);
     bool ConversionPreservesSemantics =
         IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
 
