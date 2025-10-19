@@ -17,4 +17,4 @@ jobs:
           subst S: ${{ github.workspace }}\llvm\utils\release\
       - run: |
           cd S:\
-          .\build_llvm_release.bat --x64 --version 21.1.3 --local-python
+          .\build_llvm_release.bat --x64 --version 21.1.3 --local-python --no-checkout
