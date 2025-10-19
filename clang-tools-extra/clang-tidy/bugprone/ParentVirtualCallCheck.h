@@ -1,4 +1,4 @@
-//===--- ParentVirtualCallCheck.h - clang-tidy-------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds calls to grand..-parent virtual methods instead of parent's.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/parent-virtual-call.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/parent-virtual-call.html
 class ParentVirtualCallCheck : public ClangTidyCheck {
 public:
   ParentVirtualCallCheck(StringRef Name, ClangTidyContext *Context)

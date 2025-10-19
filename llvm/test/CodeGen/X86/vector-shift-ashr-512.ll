@@ -59,10 +59,10 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsraw $4, %ymm5, %ymm6
 ; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm6, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpsraw $2, %ymm5, %ymm6
-; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm6, %ymm5, %ymm5
+; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm7
+; AVX512DQ-NEXT:    vpblendvb %ymm7, %ymm6, %ymm5, %ymm5
 ; AVX512DQ-NEXT:    vpsraw $1, %ymm5, %ymm6
-; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpsllw $2, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm6, %ymm5, %ymm3
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpunpcklbw {{.*#+}} ymm2 = ymm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
@@ -70,10 +70,10 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsraw $4, %ymm4, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm5, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vpsraw $2, %ymm4, %ymm5
-; AVX512DQ-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
-; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm5, %ymm4, %ymm4
+; AVX512DQ-NEXT:    vpaddw %ymm2, %ymm2, %ymm6
+; AVX512DQ-NEXT:    vpblendvb %ymm6, %ymm5, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vpsraw $1, %ymm4, %ymm5
-; AVX512DQ-NEXT:    vpaddw %ymm2, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpsllw $2, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpblendvb %ymm2, %ymm5, %ymm4, %ymm2
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm2, %ymm2
 ; AVX512DQ-NEXT:    vpackuswb %ymm3, %ymm2, %ymm2
@@ -83,10 +83,10 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsraw $4, %ymm4, %ymm5
 ; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm5, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vpsraw $2, %ymm4, %ymm5
-; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm3
-; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm5, %ymm4, %ymm4
+; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm6
+; AVX512DQ-NEXT:    vpblendvb %ymm6, %ymm5, %ymm4, %ymm4
 ; AVX512DQ-NEXT:    vpsraw $1, %ymm4, %ymm5
-; AVX512DQ-NEXT:    vpaddw %ymm3, %ymm3, %ymm3
+; AVX512DQ-NEXT:    vpsllw $2, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpblendvb %ymm3, %ymm5, %ymm4, %ymm3
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm3, %ymm3
 ; AVX512DQ-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
@@ -94,10 +94,10 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512DQ-NEXT:    vpsraw $4, %ymm0, %ymm4
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsraw $2, %ymm0, %ymm4
-; AVX512DQ-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
-; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpaddw %ymm1, %ymm1, %ymm5
+; AVX512DQ-NEXT:    vpblendvb %ymm5, %ymm4, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsraw $1, %ymm0, %ymm4
-; AVX512DQ-NEXT:    vpaddw %ymm1, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; AVX512DQ-NEXT:    vpblendvb %ymm1, %ymm4, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpackuswb %ymm3, %ymm0, %ymm0
@@ -113,11 +113,11 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512BW-NEXT:    vpmovb2m %zmm4, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm2 {%k1}
 ; AVX512BW-NEXT:    vpsraw $2, %zmm2, %zmm3
-; AVX512BW-NEXT:    vpaddw %zmm4, %zmm4, %zmm4
-; AVX512BW-NEXT:    vpmovb2m %zmm4, %k1
+; AVX512BW-NEXT:    vpaddw %zmm4, %zmm4, %zmm5
+; AVX512BW-NEXT:    vpmovb2m %zmm5, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm2 {%k1}
 ; AVX512BW-NEXT:    vpsraw $1, %zmm2, %zmm3
-; AVX512BW-NEXT:    vpaddw %zmm4, %zmm4, %zmm4
+; AVX512BW-NEXT:    vpsllw $2, %zmm4, %zmm4
 ; AVX512BW-NEXT:    vpmovb2m %zmm4, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm2 {%k1}
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm2, %zmm2
@@ -127,11 +127,11 @@ define <64 x i8> @var_shift_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm0 {%k1}
 ; AVX512BW-NEXT:    vpsraw $2, %zmm0, %zmm3
-; AVX512BW-NEXT:    vpaddw %zmm1, %zmm1, %zmm1
-; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
+; AVX512BW-NEXT:    vpaddw %zmm1, %zmm1, %zmm4
+; AVX512BW-NEXT:    vpmovb2m %zmm4, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm0 {%k1}
 ; AVX512BW-NEXT:    vpsraw $1, %zmm0, %zmm3
-; AVX512BW-NEXT:    vpaddw %zmm1, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpsllw $2, %zmm1, %zmm1
 ; AVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; AVX512BW-NEXT:    vmovdqu8 %zmm3, %zmm0 {%k1}
 ; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0

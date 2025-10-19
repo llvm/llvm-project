@@ -104,6 +104,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
   INTEL_COREI7_DIAMONDRAPIDS,
+  INTEL_COREI7_NOVALAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -520,6 +521,13 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
 
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
@@ -639,6 +647,19 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x12:
+    switch (Model) {
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1093,6 +1114,12 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_CLZERO);
   if (HasExtLeaf8 && ((EBX >> 9) & 1))
     setFeature(FEATURE_WBNOINVD);
+
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  if (HasExtLeaf21 && ((EAX >> 20) & 1))
+    setFeature(FEATURE_PREFETCHI);
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
                    !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);

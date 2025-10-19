@@ -28,6 +28,12 @@ using namespace clang::CIRGen;
 // CIRGenFunction cleanup related
 //===----------------------------------------------------------------------===//
 
+/// Emits all the code to cause the given temporary to be cleaned up.
+void CIRGenFunction::emitCXXTemporary(const CXXTemporary *temporary,
+                                      QualType tempType, Address ptr) {
+  pushDestroy(NormalAndEHCleanup, ptr, tempType, destroyCXXObject);
+}
+
 //===----------------------------------------------------------------------===//
 // EHScopeStack
 //===----------------------------------------------------------------------===//

@@ -137,13 +137,10 @@ InstCombinerImpl::isEliminableCastPair(const CastInst *CI1,
   Instruction::CastOps secondOp = CI2->getOpcode();
   Type *SrcIntPtrTy =
       SrcTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(SrcTy) : nullptr;
-  Type *MidIntPtrTy =
-      MidTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(MidTy) : nullptr;
   Type *DstIntPtrTy =
       DstTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(DstTy) : nullptr;
   unsigned Res = CastInst::isEliminableCastPair(firstOp, secondOp, SrcTy, MidTy,
-                                                DstTy, SrcIntPtrTy, MidIntPtrTy,
-                                                DstIntPtrTy);
+                                                DstTy, &DL);
 
   // We don't want to form an inttoptr or ptrtoint that converts to an integer
   // type that differs from the pointer size.
@@ -159,9 +156,9 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   Value *Src = CI.getOperand(0);
   Type *Ty = CI.getType();
 
-  if (auto *SrcC = dyn_cast<Constant>(Src))
-    if (Constant *Res = ConstantFoldCastOperand(CI.getOpcode(), SrcC, Ty, DL))
-      return replaceInstUsesWith(CI, Res);
+  if (Value *Res =
+          simplifyCastInst(CI.getOpcode(), Src, Ty, SQ.getWithInstruction(&CI)))
+    return replaceInstUsesWith(CI, Res);
 
   // Try to eliminate a cast of a cast.
   if (auto *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
@@ -977,8 +974,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // trunc ( OP i8 C1, V1) to i1 -> icmp eq V1, log_2(C1) iff C1 is power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_Power2(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
-    Value *Icmp = Builder.CreateICmpEQ(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_EQ, V1, Right);
   }
 
   // OP = { lshr, ashr }
@@ -986,8 +982,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   // power of 2
   if (DestWidth == 1 && match(Src, m_Shr(m_LowBitMask(C1), m_Value(V1)))) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_one());
-    Value *Icmp = Builder.CreateICmpULT(V1, Right);
-    return replaceInstUsesWith(Trunc, Icmp);
+    return new ICmpInst(ICmpInst::ICMP_ULT, V1, Right);
+  }
+
+  // OP = { lshr, ashr }
+  // trunc ( OP i8 C1, V1) to i1 -> icmp ugt V1, cttz(C1) - 1 iff (C1) is
+  // negative power of 2
+  if (DestWidth == 1 && match(Src, m_Shr(m_NegatedPower2(C1), m_Value(V1)))) {
+    Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
+    return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
 
   return Changed ? &Trunc : nullptr;
@@ -2196,6 +2199,11 @@ Instruction *InstCombinerImpl::visitPtrToInt(PtrToIntInst &CI) {
     return InsertElementInst::Create(Vec, NewCast, Index);
   }
 
+  return commonCastTransforms(CI);
+}
+
+Instruction *InstCombinerImpl::visitPtrToAddr(PtrToAddrInst &CI) {
+  // FIXME: Implement variants of ptrtoint folds.
   return commonCastTransforms(CI);
 }
 

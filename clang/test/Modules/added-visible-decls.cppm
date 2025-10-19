@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 %t/b.cppm -emit-reduced-module-interface -o %t/b.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 %t/c.cppm -emit-reduced-module-interface -o %t/c.pcm -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 %t/d.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+// RUN: %clang_cc1 -std=c++20 %t/d.cpp -fprebuilt-module-path=%t -fsyntax-only -verify -fexperimental-new-constant-interpreter
 
 //--- a.h
 template <typename T>

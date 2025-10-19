@@ -64,7 +64,87 @@ TEST(LlvmLibcSIMDTest, MaskOperations) {
 
   EXPECT_TRUE(cpp::any_of(mask));
   EXPECT_FALSE(cpp::all_of(mask));
+  EXPECT_FALSE(cpp::none_of(mask));
   EXPECT_TRUE(cpp::some_of(mask));
   EXPECT_EQ(cpp::find_first_set(mask), 0);
   EXPECT_EQ(cpp::find_last_set(mask), 2);
+  EXPECT_EQ(cpp::popcount(mask), 2);
+}
+
+TEST(LlvmLibcSIMDTest, SplitConcat) {
+  cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
+  auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);
+  EXPECT_TRUE(cpp::all_of(v1 == 1));
+  EXPECT_TRUE(cpp::all_of(v2 == 2));
+  EXPECT_TRUE(cpp::all_of(v3 == 3));
+  EXPECT_TRUE(cpp::all_of(v4 == 4));
+
+  cpp::simd<char, 8> m = cpp::concat(v1, v2, v3, v4);
+  EXPECT_TRUE(cpp::all_of(m == v));
+
+  cpp::simd<char, 1> c(~0);
+  cpp::simd<char, 8> n = cpp::concat(c, c, c, c, c, c, c, c);
+  EXPECT_TRUE(cpp::all_of(n == ~0));
+}
+
+TEST(LlvmLibcSIMDTest, LoadStore) {
+  constexpr size_t SIZE = cpp::simd_size_v<cpp::simd<int>>;
+  alignas(alignof(cpp::simd<int>)) int buf[SIZE];
+
+  cpp::simd<int> v1 = cpp::splat(1);
+  cpp::store(v1, buf);
+  cpp::simd<int> v2 = cpp::load<cpp::simd<int>>(buf);
+
+  EXPECT_TRUE(cpp::all_of(v1 == 1));
+  EXPECT_TRUE(cpp::all_of(v2 == 1));
+
+  cpp::simd<int> v3 = cpp::splat(2);
+  cpp::store(v3, buf, /*aligned=*/true);
+  cpp::simd<int> v4 = cpp::load<cpp::simd<int>>(buf, /*aligned=*/true);
+
+  EXPECT_TRUE(cpp::all_of(v3 == 2));
+  EXPECT_TRUE(cpp::all_of(v4 == 2));
+}
+
+TEST(LlvmLibcSIMDTest, MaskedLoadStore) {
+  constexpr size_t SIZE = cpp::simd_size_v<cpp::simd<int>>;
+  alignas(alignof(cpp::simd<int>)) int buf[SIZE] = {0};
+
+  cpp::simd<int> mask = cpp::iota(0) % 2 == 0;
+  cpp::simd<int> v1 = cpp::splat(1);
+
+  cpp::store_masked<cpp::simd<int>>(mask, v1, buf);
+  cpp::simd<int> v2 = cpp::load_masked<cpp::simd<int>>(mask, buf);
+
+  EXPECT_TRUE(cpp::all_of((v2 == 1) == mask));
+}
+
+TEST(LlvmLibcSIMDTest, GatherScatter) {
+  constexpr int SIZE = cpp::simd_size_v<cpp::simd<int>>;
+  alignas(alignof(cpp::simd<int>)) int buf[SIZE];
+
+  cpp::simd<int> mask = cpp::iota(1);
+  cpp::simd<int> idx = cpp::iota(0);
+  cpp::simd<int> v1 = cpp::splat(1);
+
+  cpp::scatter<cpp::simd<int>>(mask, idx, v1, buf);
+  cpp::simd<int> v2 = cpp::gather<cpp::simd<int>>(mask, idx, buf);
+
+  EXPECT_TRUE(cpp::all_of(v1 == 1));
+  EXPECT_TRUE(cpp::all_of(v2 == 1));
+}
+
+TEST(LlvmLibcSIMDTest, MaskedCompressExpand) {
+  constexpr size_t SIZE = cpp::simd_size_v<cpp::simd<int>>;
+  alignas(alignof(cpp::simd<int>)) int buf[SIZE] = {0};
+
+  cpp::simd<int> mask_expand = cpp::iota(0) % 2 == 0;
+  cpp::simd<int> mask_compress = 1;
+
+  cpp::simd<int> v1 = cpp::iota(0);
+
+  cpp::compress<cpp::simd<int>>(mask_compress, v1, buf);
+  cpp::simd<int> v2 = cpp::expand<cpp::simd<int>>(mask_expand, buf);
+
+  EXPECT_TRUE(cpp::all_of(!mask_expand || v2 <= SIZE / 2));
 }

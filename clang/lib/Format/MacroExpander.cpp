@@ -86,7 +86,7 @@ private:
   }
 
   bool parseExpansion() {
-    if (!Current->isOneOf(tok::equal, tok::eof))
+    if (Current->isNoneOf(tok::equal, tok::eof))
       return false;
     if (Current->is(tok::equal))
       nextToken();

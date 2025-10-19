@@ -21,6 +21,12 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
 
+namespace mlir {
+namespace ptr {
+class PtrType;
+} // namespace ptr
+} // namespace mlir
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.h.inc"
 

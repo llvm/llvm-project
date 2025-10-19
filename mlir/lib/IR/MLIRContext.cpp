@@ -121,6 +121,11 @@ namespace mlir {
 class MLIRContextImpl {
 public:
   //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
+
+  //===--------------------------------------------------------------------===//
   // Debugging
   //===--------------------------------------------------------------------===//
 
@@ -133,11 +138,6 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
-
-  //===--------------------------------------------------------------------===//
-  // Remark
-  //===--------------------------------------------------------------------===//
-  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -357,7 +357,10 @@ MLIRContext::MLIRContext(const DialectRegistry &registry, Threading setting)
   impl->affineUniquer.registerParametricStorageType<IntegerSetStorage>();
 }
 
-MLIRContext::~MLIRContext() = default;
+MLIRContext::~MLIRContext() {
+  // finalize remark engine before destroying anything else.
+  impl->remarkEngine.reset();
+}
 
 /// Copy the specified array of elements into memory managed by the provided
 /// bump pointer allocator.  This assumes the elements are all PODs.
@@ -1201,7 +1204,7 @@ AffineMap AffineMap::getImpl(unsigned dimCount, unsigned symbolCount,
 /// present in result expressions is less than `dimCount` and the highest index
 /// of symbolic identifier present in result expressions is less than
 /// `symbolCount`.
-LLVM_ATTRIBUTE_UNUSED static bool
+[[maybe_unused]] static bool
 willBeValidAffineMap(unsigned dimCount, unsigned symbolCount,
                      ArrayRef<AffineExpr> results) {
   int64_t maxDimPosition = -1;

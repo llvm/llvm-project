@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 
 static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAsCanonical<RecordType>())
-    if (const RecordDecl *Decl = Record->getOriginalDecl())
+    if (const RecordDecl *Decl = Record->getDecl())
       return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())

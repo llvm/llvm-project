@@ -242,6 +242,14 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "std::string",
            /*default=*/"std::string{}",
            "name of the input source file">,
+    Option<"dwarfVersion", "dwarf-version",
+           "int32_t",
+           /*default=*/"0",
+           "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">
+
   ];
 }
 
@@ -549,6 +557,17 @@ def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
       "preferInlineImplementation", "prefer-inline-implementation", "bool",
       /*default=*/"false",
       "Prefer expanding without using Fortran runtime calls.">];
+}
+
+def ConvertComplexPow : Pass<"convert-complex-pow", "mlir::ModuleOp"> {
+  let summary = "Convert complex.pow operations to library calls";
+  let description = [{
+    Replace `complex.pow` operations with calls to the appropriate
+    Fortran runtime or libm functions.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect",
+                           "mlir::complex::ComplexDialect",
+                           "mlir::arith::ArithDialect"];
 }
 
 def OptimizeArrayRepacking

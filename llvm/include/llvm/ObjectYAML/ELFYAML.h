@@ -163,6 +163,7 @@ struct BBAddrMapEntry {
     llvm::yaml::Hex64 Size;
     llvm::yaml::Hex64 Metadata;
     std::optional<std::vector<llvm::yaml::Hex64>> CallsiteEndOffsets;
+    std::optional<llvm::yaml::Hex64> Hash;
   };
   uint8_t Version;
   llvm::yaml::Hex8 Feature;

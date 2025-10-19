@@ -15,8 +15,9 @@
 #ifndef LLVM_ADT_ENUMERATEDARRAY_H
 #define LLVM_ADT_ENUMERATEDARRAY_H
 
+#include "llvm/ADT/STLExtras.h"
+#include <array>
 #include <cassert>
-#include <iterator>
 
 namespace llvm {
 
@@ -24,12 +25,15 @@ template <typename ValueType, typename Enumeration,
           Enumeration LargestEnum = Enumeration::Last, typename IndexType = int,
           IndexType Size = 1 + static_cast<IndexType>(LargestEnum)>
 class EnumeratedArray {
-public:
-  using iterator = ValueType *;
-  using const_iterator = const ValueType *;
+  static_assert(Size > 0);
+  using ArrayTy = std::array<ValueType, Size>;
+  ArrayTy Underlying;
 
-  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-  using reverse_iterator = std::reverse_iterator<iterator>;
+public:
+  using iterator = typename ArrayTy::iterator;
+  using const_iterator = typename ArrayTy::const_iterator;
+  using reverse_iterator = typename ArrayTy::reverse_iterator;
+  using const_reverse_iterator = typename ArrayTy::const_reverse_iterator;
 
   using value_type = ValueType;
   using reference = ValueType &;
@@ -38,16 +42,10 @@ public:
   using const_pointer = const ValueType *;
 
   EnumeratedArray() = default;
-  EnumeratedArray(ValueType V) {
-    for (IndexType IX = 0; IX < Size; ++IX) {
-      Underlying[IX] = V;
-    }
-  }
+  EnumeratedArray(ValueType V) { Underlying.fill(V); }
   EnumeratedArray(std::initializer_list<ValueType> Init) {
     assert(Init.size() == Size && "Incorrect initializer size");
-    for (IndexType IX = 0; IX < Size; ++IX) {
-      Underlying[IX] = *(Init.begin() + IX);
-    }
+    llvm::copy(Init, Underlying.begin());
   }
 
   const ValueType &operator[](Enumeration Index) const {
@@ -62,23 +60,15 @@ public:
   IndexType size() const { return Size; }
   bool empty() const { return size() == 0; }
 
-  iterator begin() { return Underlying; }
-  const_iterator begin() const { return Underlying; }
+  iterator begin() { return Underlying.begin(); }
+  const_iterator begin() const { return Underlying.begin(); }
+  iterator end() { return Underlying.end(); }
+  const_iterator end() const { return Underlying.end(); }
 
-  iterator end() { return begin() + size(); }
-  const_iterator end() const { return begin() + size(); }
-
-  reverse_iterator rbegin() { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const {
-    return const_reverse_iterator(end());
-  }
-  reverse_iterator rend() { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const {
-    return const_reverse_iterator(begin());
-  }
-
-private:
-  ValueType Underlying[Size];
+  reverse_iterator rbegin() { return Underlying.rbegin(); }
+  const_reverse_iterator rbegin() const { return Underlying.rbegin(); }
+  reverse_iterator rend() { return Underlying.rend(); }
+  const_reverse_iterator rend() const { return Underlying.rend(); }
 };
 
 } // namespace llvm

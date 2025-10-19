@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -69,6 +70,16 @@ static Attribute opMTest(PatternRewriter &rewriter, Value val) {
   return rewriter.getIntegerAttr(rewriter.getIntegerType(32), i);
 }
 
+static bool assertBinOpEqualArgsAndReturnTrue(Value v) {
+  Operation *operation = v.getDefiningOp();
+  if (operation->getOperand(0) != operation->getOperand(1)) {
+    // Name binding equality check must happen before user-defined constraints,
+    // thus this must not be triggered.
+    llvm::report_fatal_error("Arguments are not equal");
+  }
+  return true;
+}
+
 namespace {
 #include "TestPatterns.inc"
 } // namespace
@@ -114,7 +125,8 @@ public:
 struct FolderInsertBeforePreviouslyFoldedConstantPattern
     : public OpRewritePattern<TestCastOp> {
 public:
-  using OpRewritePattern<TestCastOp>::OpRewritePattern;
+  static_assert(std::is_same_v<Base, OpRewritePattern<TestCastOp>>);
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TestCastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1306,7 +1318,8 @@ public:
 /// b) or: drops all block arguments and replaces each with 2x the first
 ///    operand.
 class TestConvertBlockArgs : public OpConversionPattern<ConvertBlockArgsOp> {
-  using OpConversionPattern<ConvertBlockArgsOp>::OpConversionPattern;
+  static_assert(std::is_same_v<Base, OpConversionPattern<ConvertBlockArgsOp>>);
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(ConvertBlockArgsOp op, OpAdaptor adaptor,
@@ -1431,7 +1444,9 @@ public:
 
 namespace {
 struct TestTypeConverter : public TypeConverter {
-  using TypeConverter::TypeConverter;
+  static_assert(std::is_same_v<Base, TypeConverter>);
+  using Base::Base;
+
   TestTypeConverter() {
     addConversion(convertType);
     addSourceMaterialization(materializeCast);
