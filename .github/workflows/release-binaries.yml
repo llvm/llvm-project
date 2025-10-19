@@ -131,7 +131,6 @@ jobs:
           macos-13)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
-              target_cmake_flags="$target_cmake_flags 
             else
               build_runs_on="macos-13-large"
             fi
@@ -140,8 +139,6 @@ jobs:
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
-              enable_pgo=0
-              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
             else
               build_runs_on="depot-macos-14"
             fi
@@ -165,13 +162,6 @@ jobs:
             bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
             ;;
         esac
-
-        if [ "$enable_pgo" -eq 1 ]; then
-          bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
-        else
-          bootstrap_prefix="BOOTSTRAP"
-          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PGO=OFF"
-        fi
 
         target="$RUNNER_OS-$RUNNER_ARCH"
         # The hendrikmuhs/ccache-action action does not support installing sccache
