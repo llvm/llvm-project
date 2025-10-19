@@ -1562,20 +1562,11 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
-  if (auto *align{std::get_if<parser::OmpClause::Align>(&clause.u)}) {
-    if (const auto &v{GetIntValue(align->v)}; v && *v <= 0) {
-      context_.Say(clause.source, "The alignment should be positive"_err_en_US);
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   isPredefinedAllocator = true;
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
   for (auto &[symbol, source] : currSymbols) {
@@ -1597,9 +1588,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
           "name"_err_en_US,
           source.ToString());
     }
-  }
-  for (const auto &clause : clauseList.v) {
-    CheckAlignValue(clause);
   }
   CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
 }
@@ -2007,9 +1995,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
 
   isPredefinedAllocator = true;
   const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  for (const auto &clause : clauseList.v) {
-    CheckAlignValue(clause);
-  }
   if (objectList) {
     CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
   }
@@ -3234,7 +3219,6 @@ CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
-CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
@@ -3894,6 +3878,19 @@ void OmpStructureChecker::CheckIsLoopIvPartOfClause(
             name->ToString(),
             parser::ToUpperCaseLetters(getClauseName(clause).str()));
       }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_align);
+  if (const auto &v{GetIntValue(x.v.v)}) {
+    if (*v <= 0) {
+      context_.Say(GetContext().clauseSource,
+          "The alignment should be positive"_err_en_US);
+    } else if (!llvm::isPowerOf2_64(*v)) {
+      context_.Say(GetContext().clauseSource,
+          "The alignment should be a power of 2"_err_en_US);
     }
   }
 }
