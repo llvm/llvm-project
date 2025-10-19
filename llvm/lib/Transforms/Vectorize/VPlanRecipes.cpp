@@ -329,9 +329,12 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // recipe.
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
-      Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
-      if (!Widen)
+      Widen = dyn_cast<VPWidenRecipe>(Op);
+      if (!Widen) {
+        assert(Op->isLiveIn() &&
+               "Operand must either be a VPWidenRecipe or a live-in");
         return;
+      }
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -362,9 +365,10 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
       ExtAType = GetExtendKind(RedPhiOp1R);
     } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(RedPhiOp1R))
       HandleWiden(Widen);
-  } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
+  } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
-  } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
+  } else if (auto Reduction =
+                 dyn_cast_if_present<VPPartialReductionRecipe>(OpR)) {
     return Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));
