@@ -16,11 +16,21 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <optional>
-#include <string>
+#include <cstdint>
 #define DEBUG_TYPE "bolt-ppc"
+#include "bolt/Core/BinaryFunction.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "MCTargetDesc/PPCFixupKinds.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
+// #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include <optional>
+#include <string>
 
 using namespace llvm;
 using namespace bolt;
@@ -368,14 +378,13 @@ PPCMCPlusBuilder::createRelocation(const MCFixup &Fixup,
     return R;
   }
 
-  // Absolute addressing
-  if (Name.equals_insensitive("fixup_ppc_addr16_lo") ||
-      L.find("addr16_lo") != std::string::npos) {
-    R.Type = ELF::R_PPC64_ADDR16_LO;
+  // DS-form low16 (implied 2 zero bits)
+  if (Name.equals_insensitive("fixup_ppc_half16ds")) {
+    R.Type = ELF::R_PPC64_ADDR16_LO_DS;
     return R;
   }
-  if (Name.equals_insensitive("fixup_ppc_addr16_ha") ||
-      L.find("addr16_ha") != std::string::npos) {
+  // Generic half16 — in our stub we use it with ADDIS (HA)
+  if (Name.equals_insensitive("fixup_ppc_half16")) {
     R.Type = ELF::R_PPC64_ADDR16_HA;
     return R;
   }
@@ -490,6 +499,70 @@ bool PPCMCPlusBuilder::isTOCRestoreAfterCall(const MCInst &I) const {
     return false;
 
   return true;
+}
+
+static inline MCOperand R(unsigned Reg) { return MCOperand::createReg(Reg); }
+
+// Build a 64-bit absolute address of the callee's function address (e.g.
+// "puts") into r12, then tail-call it via BCTR.
+void PPCMCPlusBuilder::buildCallStubAbsolute(MCContext *Ctx,
+                                             const MCSymbol *TargetSym,
+                                             std::vector<MCInst> &Out) const {
+  // Registers
+  const unsigned R2 = PPC::X2;   // caller TOC
+  const unsigned R12 = PPC::X12; // scratch / entry per ELFv2
+
+// Wrap with PPC specifiers:
+  const MCExpr *HA = MCSymbolRefExpr::create(TargetSym, PPC::S_HA, *Ctx);
+  const MCExpr *LO = MCSymbolRefExpr::create(TargetSym, PPC::S_LO, *Ctx);
+
+ MCInst I;
+
+  // std r2, 24(r1)      ; save caller's TOC
+ I.setOpcode(PPC::STD);
+ I.addOperand(R(PPC::X2));  // reg (src)
+ I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+ I.addOperand(R(PPC::X1));  // base (slot #2)
+  Out.push_back(I);
+
+  // addis r12, r2, sym@ha
+  I = MCInst();
+  I.setOpcode(PPC::ADDIS);
+  I.addOperand(R(R12));
+  I.addOperand(R(R2));
+  I.addOperand(MCOperand::createExpr(HA));
+  Out.push_back(I);
+
+  // ld r12, sym@lo(r12) ; DS-form: (dst, imm/expr, base)
+  I = MCInst();
+  I.setOpcode(PPC::LD);
+ I.addOperand(R(PPC::X12));                         // reg (dst)
+ I.addOperand(MCOperand::createExpr(LO));           // disp expr (slot #1)
+ I.addOperand(R(PPC::X12));                         // base (slot #2)
+  Out.push_back(I);
+
+  // mtctr r12
+  I = MCInst();
+  I.setOpcode(PPC::MTCTR8);
+  I.addOperand(R(R12));
+  Out.push_back(I);
+
+  // bctrl               ; link-return to stub
+  I = MCInst();
+  I.setOpcode(PPC::BCTRL);
+  Out.push_back(I);
+
+  // ld r2, 24(r1)       ; restore TOC
+ I.setOpcode(PPC::LD);
+ I.addOperand(R(PPC::X2));  // reg (dst)
+ I.addOperand(MCOperand::createExpr(MCConstantExpr::create(24, *Ctx))); // disp (slot #1)
+ I.addOperand(R(PPC::X1));  // base (slot #2)
+  Out.push_back(I);
+
+  // blr                 ; return to caller
+  I = MCInst();
+  I.setOpcode(PPC::BLR8);            // or PPC::BLR on some trees
+  Out.push_back(I);
 }
 
 namespace llvm {
