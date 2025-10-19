@@ -470,8 +470,8 @@ async def main() -> None:
         default=None,
         help="Regular expression matching the names of the "
         "headers to output diagnostics from. Diagnostics from "
-        "the main file of each translation unit are always "
-        "displayed.",
+        "the main file and all non-system headers of each "
+        "translation unit are always displayed.",
     )
     parser.add_argument(
         "-source-filter",

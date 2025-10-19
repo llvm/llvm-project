@@ -216,8 +216,10 @@ An overview of all the command-line options:
                                        .clang-tidy file, if any.
     --header-filter=<string>         - Regular expression matching the names of the
                                        headers to output diagnostics from. Diagnostics
-                                       from the main file of each translation unit are
-                                       always displayed.
+                                       from the main file and all non-system headers
+                                       of each translation unit are always displayed.
+                                       Set this option to an empty string to disable 
+                                       diagnostics from non-system headers.
                                        Can be used together with -line-filter.
                                        This option overrides the 'HeaderFilterRegex'
                                        option in .clang-tidy file, if any.
@@ -338,7 +340,7 @@ An overview of all the command-line options:
       WarningsAsErrors:    ''
       HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
       ImplementationFileExtensions: ['c','cc','cpp','cxx']
-      HeaderFilterRegex:   ''
+      HeaderFilterRegex:   '.*'
       FormatStyle:         none
       InheritParentConfig: true
       User:                user
