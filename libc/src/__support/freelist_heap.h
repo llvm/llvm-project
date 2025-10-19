@@ -89,27 +89,13 @@ LIBC_INLINE void *FreeListHeap::allocate_impl(size_t alignment, size_t size) {
   if (!is_initialized)
     init();
 
-  size_t request_size = size;
-
-  // TODO: usable_space should always be aligned to max_align_t.
-  if (alignment > alignof(max_align_t) ||
-      (Block::BLOCK_OVERHEAD % alignof(max_align_t) != 0)) {
-    // TODO: This bound isn't precisely calculated yet. It assumes one extra
-    // Block::ALIGNMENT to accomodate the possibility for padding block
-    // overhead. (alignment - 1) ensures that there is an aligned point
-    // somewhere in usable_space, but this isn't tight either, since
-    // usable_space is also already somewhat aligned.
-    if (add_overflow(size, (alignment - 1) + Block::ALIGNMENT, request_size))
-      return nullptr;
-  }
+  size_t request_size = Block::min_size_for_allocation(alignment, size);
+  if (!request_size)
+    return nullptr;
 
   Block *block = free_store.remove_best_fit(request_size);
   if (!block)
     return nullptr;
-
-  LIBC_ASSERT(block->can_allocate(alignment, size) &&
-              "block should always be large enough to allocate at the correct "
-              "alignment");
 
   auto block_info = Block::allocate(block, alignment, size);
   if (block_info.next)
@@ -134,6 +120,9 @@ LIBC_INLINE void *FreeListHeap::aligned_allocate(size_t alignment,
   // The size parameter must be an integral multiple of alignment.
   if (size % alignment != 0)
     return nullptr;
+
+  // The minimum alignment supported by Block is max_align_t.
+  alignment = cpp::max(alignment, alignof(max_align_t));
 
   return allocate_impl(alignment, size);
 }

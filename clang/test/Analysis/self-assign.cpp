@@ -42,8 +42,8 @@ StringUsed &StringUsed::operator=(const StringUsed &rhs) {
                                      // expected-note@-2{{TRUE}}
                                      // expected-note@-3{{UNKNOWN}}
   free(str); // expected-note{{Memory is released}}
-  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}
-                         // expected-note@-1{{Use of memory after it is freed}}
+  str = strdup(rhs.str); // expected-warning{{Use of memory after it is released}}
+                         // expected-note@-1{{Use of memory after it is released}}
                          // expected-note@-2{{Memory is allocated}}
   return *this;
 }
@@ -90,8 +90,8 @@ StringUnused &StringUnused::operator=(const StringUnused &rhs) {
                                      // expected-note@-2{{TRUE}}
                                      // expected-note@-3{{UNKNOWN}}
   free(str); // expected-note{{Memory is released}}
-  str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}
-                         // expected-note@-1{{Use of memory after it is freed}}
+  str = strdup(rhs.str); // expected-warning{{Use of memory after it is released}}
+                         // expected-note@-1{{Use of memory after it is released}}
   return *this;
 }
 

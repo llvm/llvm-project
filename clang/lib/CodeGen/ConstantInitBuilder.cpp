@@ -29,7 +29,7 @@ llvm::Type *ConstantInitFuture::getType() const {
 
 void ConstantInitFuture::abandon() {
   assert(Data && "abandoning null future");
-  if (auto builder = Data.dyn_cast<ConstantInitBuilderBase*>()) {
+  if (auto *builder = dyn_cast<ConstantInitBuilderBase *>(Data)) {
     builder->abandon(0);
   }
   Data = nullptr;
@@ -160,7 +160,7 @@ ConstantAggregateBuilderBase::getAddrOfPosition(llvm::Type *type,
                                         nullptr, "");
   Builder.SelfReferences.emplace_back(dummy);
   auto &entry = Builder.SelfReferences.back();
-  (void)getGEPIndicesTo(entry.Indices, position + Begin);
+  getGEPIndicesTo(entry.Indices, position + Begin);
   return dummy;
 }
 

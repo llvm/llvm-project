@@ -31,7 +31,7 @@ b3:                                               ; preds = %b3, %b2
   %v6 = load i32, ptr %v5, align 4
   %v7 = tail call i32 @llvm.hexagon.A2.subsat(i32 %v2, i32 %v6)
   store i32 %v7, ptr %v3, align 4
-  %v8 = add i32 %v0, -1
+  %v8 = add i32 %v0, 1
   %v9 = icmp sgt i32 %v8, 1
   br i1 %v9, label %b3, label %b4
 

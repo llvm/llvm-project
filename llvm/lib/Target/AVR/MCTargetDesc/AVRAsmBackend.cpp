@@ -19,7 +19,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -30,22 +29,6 @@
 namespace adjust {
 
 using namespace llvm;
-
-static void signed_width(unsigned Width, uint64_t Value,
-                         std::string Description, const MCFixup &Fixup,
-                         MCContext *Ctx) {
-  if (!isIntN(Width, Value)) {
-    std::string Diagnostic = "out of range " + Description;
-
-    int64_t Min = minIntN(Width);
-    int64_t Max = maxIntN(Width);
-
-    Diagnostic += " (expected an integer in the range " + std::to_string(Min) +
-                  " to " + std::to_string(Max) + ")";
-
-    Ctx->reportError(Fixup.getLoc(), Diagnostic);
-  }
-}
 
 static void unsigned_width(unsigned Width, uint64_t Value,
                            std::string Description, const MCFixup &Fixup,
@@ -74,8 +57,8 @@ static void adjustBranch(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 }
 
 /// Adjusts the value of a relative branch target before fixup application.
-static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
-                                 uint64_t &Value, MCContext *Ctx) {
+static bool adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
+                                 uint64_t &Value, const MCSubtargetInfo *STI) {
   // Jumps are relative to the current instruction.
   Value -= 2;
 
@@ -83,8 +66,9 @@ static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
   // one.
   Size += 1;
 
-  if (!isIntN(Size, Value) &&
-      Ctx->getSubtargetInfo()->hasFeature(AVR::FeatureWrappingRjmp)) {
+  assert(STI && "STI can not be NULL");
+
+  if (!isIntN(Size, Value) && STI->hasFeature(AVR::FeatureWrappingRjmp)) {
     const int32_t FlashSize = 0x2000;
     int32_t SignedValue = Value;
 
@@ -96,10 +80,14 @@ static void adjustRelativeBranch(unsigned Size, const MCFixup &Fixup,
     }
   }
 
-  signed_width(Size, Value, std::string("branch target"), Fixup, Ctx);
+  if (!isIntN(Size, Value)) {
+    return false;
+  }
 
   // Rightshifts the value by one.
   AVR::fixups::adjustBranchTarget(Value);
+
+  return true;
 }
 
 /// 22-bit absolute fixup.
@@ -126,7 +114,9 @@ static void fixup_call(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Offset of 0 (so the result is left shifted by 3 bits before application).
 static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
                           MCContext *Ctx) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
+  if (!adjustRelativeBranch(Size, Fixup, Value, Ctx->getSubtargetInfo())) {
+    llvm_unreachable("should've been emitted as a relocation");
+  }
 
   // Because the value may be negative, we must mask out the sign bits
   Value &= 0x7f;
@@ -140,7 +130,9 @@ static void fixup_7_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
 /// Offset of 0 (so the result isn't left-shifted before application).
 static void fixup_13_pcrel(unsigned Size, const MCFixup &Fixup, uint64_t &Value,
                            MCContext *Ctx) {
-  adjustRelativeBranch(Size, Fixup, Value, Ctx);
+  if (!adjustRelativeBranch(Size, Fixup, Value, Ctx->getSubtargetInfo())) {
+    llvm_unreachable("should've been emitted as a relocation");
+  }
 
   // Because the value may be negative, we must mask out the sign bits
   Value &= 0xfff;
@@ -181,7 +173,7 @@ static void fixup_port5(const MCFixup &Fixup, uint64_t &Value, MCContext *Ctx) {
   Value <<= 3;
 }
 
-/// 6-bit port number fixup on the `IN` family of instructions.
+/// 6-bit port number fixup on the IN family of instructions.
 ///
 /// Resolves to:
 /// 1011 0AAd dddd AAAA
@@ -367,10 +359,6 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   case FK_Data_4:
   case FK_Data_8:
     break;
-
-  case FK_GPRel_4:
-    llvm_unreachable("don't know how to adjust this fixup");
-    break;
   }
 }
 
@@ -379,34 +367,43 @@ AVRAsmBackend::createObjectTargetWriter() const {
   return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+void AVRAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
+  // AVR sets the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(), Value,
+                                  Target.getSpecifier());
+    if (forceRelocation(F, Fixup, TargetVal))
+      IsResolved = false;
+  }
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
+  if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 
   // The number of bits in the fixup mask
-  auto NumBits = Info.TargetSize + Info.TargetOffset;
+  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
   auto NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i < NumBytes; ++i) {
     uint8_t mask = (((Value >> (i * 8)) & 0xff));
-    Data[Offset + i] |= mask;
+    Data[i] |= mask;
   }
 }
 
@@ -425,7 +422,7 @@ std::optional<MCFixupKind> AVRAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // NOTE: Many AVR fixups work on sets of non-contignous bits. We work around
   // this by saying that the fixup is the size of the entire instruction.
   const static MCFixupKindInfo Infos[AVR::NumTargetFixupKinds] = {
@@ -435,8 +432,8 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // name                    offset  bits  flags
       {"fixup_32", 0, 32, 0},
 
-      {"fixup_7_pcrel", 3, 7, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_13_pcrel", 0, 12, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_7_pcrel", 3, 7, 0},
+      {"fixup_13_pcrel", 0, 12, 0},
 
       {"fixup_16", 0, 16, 0},
       {"fixup_16_pm", 0, 16, 0},
@@ -486,13 +483,13 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
   // any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+  if (mc::isRelocation(Kind))
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < AVR::NumTargetFixupKinds &&
          "Invalid kind!");
 
   return Infos[Kind - FirstTargetFixupKind];
@@ -509,17 +506,14 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI) {
+bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
-    return Fixup.getKind() >= FirstLiteralRelocationKind;
+    return false;
+
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel:
-    // Always resolve relocations for PC-relative branches
-    return false;
   case AVR::fixup_call:
     return true;
   }

@@ -73,7 +73,15 @@ public:
   /// Return this DIE's decl context as it is needed to look up types
   /// in Clang modules. This context will include any modules or functions that
   /// the type is declared in so an exact module match can be efficiently made.
-  std::vector<CompilerContext> GetDeclContext() const;
+  ///
+  /// \param[in] derive_template_names
+  ///   If true, augments the returned names with template arguments derived
+  ///   from the child DIEs, if the names don't contained template arguments
+  ///   already. If false, the returned context will contain the names exactly
+  ///   as they are spelled in the debug info, regardless of whether that
+  ///   includes template arguments or not.
+  std::vector<CompilerContext>
+  GetDeclContext(bool derive_template_names = false) const;
 
   /// Get a context to a type so it can be looked up.
   ///
@@ -85,7 +93,15 @@ public:
   /// appropriate time, like either the translation unit or at a function
   /// context. This is designed to allow users to efficiently look for types
   /// using a full or partial CompilerContext array.
-  std::vector<CompilerContext> GetTypeLookupContext() const;
+  ///
+  /// \param[in] derive_template_names
+  ///   If true, augments the returned names with template arguments derived
+  ///   from the child DIEs, if the names don't contained template arguments
+  ///   already. If false, the returned context will contain the names exactly
+  ///   as they are spelled in the debug info, regardless of whether that
+  ///   includes template arguments or not.
+  std::vector<CompilerContext>
+  GetTypeLookupContext(bool derive_template_names = false) const;
 
   DWARFDeclContext GetDWARFDeclContext() const;
 

@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
 // Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part III of fusion tests in mlir/test/Transforms/loop-fusion-3.mlir
@@ -39,16 +39,20 @@ func.func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4
 
   // We can fuse source loop nest '%i0' into dst loop nest '%i2', but the
   // depth at which we can insert the src loop nest slice into the dst loop
-  // lest must be decreased because of a loop carried dependence on loop '%i3'.
+  // nest must be decreased because of a loop carried dependence on loop '%i3'.
   // As a result, the source loop nest is inserted at dst loop nest depth 1,
   // just above the loop with the carried dependence. In addition, the source
   // loop nest iteration bounds on its loop '%i1' are reduced to 1, so the
-  // memref size can be reduced to 128x1xf32.
+  // memref size can be reduced to 64x1xf32.
 
-  // CHECK:       memref.alloc() : memref<64x1xf32>
+  // In this case, since we have multiple producer stores (for %out) with
+  // different access functions and we don't yet support private memref
+  // computation in such cases, a 64x1 private memref isn't created.
+
+  // CHECK:       memref.alloc() : memref<64x4xf32>
   // CHECK:       affine.for %{{.*}} = 0 to 4 {
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 64 {
-  // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}, 0] : memref<64x1xf32>
+  // CHECK-NEXT:      affine.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<64x4xf32>
   // CHECK-NEXT:    }
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 4 {
   // CHECK-NEXT:      affine.for %{{.*}} = 0 to 16 {
@@ -62,9 +66,9 @@ func.func @should_fuse_at_depth_above_loop_carried_dependence(%arg0: memref<64x4
   // CHECK-NEXT:        }
   // CHECK-NEXT:        affine.for %{{.*}} = 0 to 16 {
   // CHECK-NEXT:          %{{.*}} = "op2"() : () -> f32
-  // CHECK:               affine.load %{{.*}}[%{{.*}} * 16 + %{{.*}}, 0] : memref<64x1xf32>
+  // CHECK:               affine.load %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<64x4xf32>
   // CHECK-NEXT:          arith.addf %{{.*}}, %{{.*}} : f32
-  // CHECK:               affine.store %{{.*}}, %{{.*}}[%{{.*}} * 16 + %{{.*}}, 0] : memref<64x1xf32>
+  // CHECK:               affine.store %{{.*}}, %{{.*}}[%{{.*}} * 16 + %{{.*}}, %{{.*}}] : memref<64x4xf32>
   // CHECK-NEXT:        }
   // CHECK-NEXT:      }
   // CHECK-NEXT:    }
@@ -388,6 +392,8 @@ func.func @should_fuse_init_loops_siblings_then_shared_producer(%arg0: memref<10
 }
 
 // -----
+
+// Test sibling fusion of two matrix-vector products sharing the input matrix.
 
 func.func @two_matrix_vector_products() {
   %in_matrix = memref.alloc() : memref<10x10xf32>

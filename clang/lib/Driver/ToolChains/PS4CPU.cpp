@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
@@ -262,7 +261,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // index the symbols. `uuid` is the cheapest fool-proof method.
     // (The non-determinism and alternative methods are noted in the downstream
     // PlayStation docs).
-    CmdArgs.push_back("--build-id=uuid");
+    // Static executables are only used for a handful of specialized components,
+    // where the extra section is not wanted.
+    if (!Static)
+      CmdArgs.push_back("--build-id=uuid");
 
     // All references are expected to be resolved at static link time for both
     // executables and dynamic libraries. This has been the default linking
@@ -341,6 +343,18 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
+
+  if (const Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
+                                         Twine(D.getClangProgramPath())));
+
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
+
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
     CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
@@ -377,8 +391,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Relocatable &&
       !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
 
-  auto AddCRTObject = [&](const char *Name) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(Name)));
+  auto AddCRTObject = [&](StringRef Name) {
+    // CRT objects can be found on user supplied library paths. This is
+    // an entrenched expectation on PlayStation.
+    CmdArgs.push_back(Args.MakeArgString("-l:" + Name));
   };
 
   if (AddStartFiles) {
@@ -490,7 +506,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
 
   bool Linking = !Args.hasArg(options::OPT_E, options::OPT_c, options::OPT_S,
                               options::OPT_emit_ast);
-  if (!CustomSysroot && Linking) {
+  if (Linking) {
     SmallString<128> Dir(SDKLibraryRootDir);
     llvm::sys::path::append(Dir, "target/lib");
     if (CheckSDKPartExists(Dir, "system libraries"))

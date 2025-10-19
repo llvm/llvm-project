@@ -21,9 +21,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -40,8 +38,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "gpu-to-llvm"
 
@@ -76,14 +72,16 @@ protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
                        MemRefType type, MemRefDescriptor desc) const {
     Type indexType = ConvertToLLVMPattern::getIndexType();
-    return type.hasStaticShape()
-               ? ConvertToLLVMPattern::createIndexAttrConstant(
-                     rewriter, loc, indexType, type.getNumElements())
-               // For identity maps (verified by caller), the number of
-               // elements is stride[0] * size[0].
-               : rewriter.create<LLVM::MulOp>(loc,
-                                              desc.stride(rewriter, loc, 0),
-                                              desc.size(rewriter, loc, 0));
+    if (type.hasStaticShape())
+      return ConvertToLLVMPattern::createIndexAttrConstant(
+          rewriter, loc, indexType, type.getNumElements());
+    // Compute the number of elements by multiplying all the dim sizes.
+    uint64_t rank = type.getRank();
+    Value numElements = desc.size(rewriter, loc, /*pos=*/0);
+    for (unsigned i = 1; i < rank; i++)
+      numElements = LLVM::MulOp::create(rewriter, loc, numElements,
+                                        desc.size(rewriter, loc, /*pos=*/i));
+    return numElements;
   }
 
   MLIRContext *context = &this->getTypeConverter()->getContext();
@@ -427,9 +425,11 @@ class LegalizeLaunchFuncOpPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
   LegalizeLaunchFuncOpPattern(const LLVMTypeConverter &typeConverter,
-                              bool kernelBarePtrCallConv)
+                              bool kernelBarePtrCallConv,
+                              bool kernelIntersperseSizeCallConv)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
+        kernelBarePtrCallConv(kernelBarePtrCallConv),
+        kernelIntersperseSizeCallConv(kernelIntersperseSizeCallConv) {}
 
 private:
   LogicalResult
@@ -437,6 +437,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   bool kernelBarePtrCallConv;
+  bool kernelIntersperseSizeCallConv;
 };
 
 /// A rewrite pattern to convert gpu.memcpy operations into a GPU runtime
@@ -531,6 +532,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     vector::populateVectorTransferLoweringPatterns(patterns,
                                                    /*maxTransferRank=*/1);
+    // Transform N-D vector.from_elements to 1-D vector.from_elements before
+    // conversion.
+    vector::populateVectorFromElementsUnrollPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
@@ -564,7 +568,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns,
-                                      kernelBarePtrCallConv);
+                                      kernelBarePtrCallConv,
+                                      kernelIntersperseSizeCallConv);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -577,10 +582,10 @@ LLVM::CallOp FunctionCallBuilder::create(Location loc, OpBuilder &builder,
   auto function = [&] {
     if (auto function = module.lookupSymbol<LLVM::LLVMFuncOp>(functionName))
       return function;
-    return OpBuilder::atBlockEnd(module.getBody())
-        .create<LLVM::LLVMFuncOp>(loc, functionName, functionType);
+    auto builder = OpBuilder::atBlockEnd(module.getBody());
+    return LLVM::LLVMFuncOp::create(builder, loc, functionName, functionType);
   }();
-  return builder.create<LLVM::CallOp>(loc, function, arguments);
+  return LLVM::CallOp::create(builder, loc, function, arguments);
 }
 
 // Corresponding to cusparseIndexType_t defined in cusparse.h.
@@ -778,13 +783,13 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
-  auto nullPtr = rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPointerType);
+  auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
   Value stream = adaptor.getAsyncDependencies().empty()
                      ? nullPtr
                      : adaptor.getAsyncDependencies().front();
 
-  auto isHostShared = rewriter.create<mlir::LLVM::ConstantOp>(
-      loc, llvmInt8Type, rewriter.getI8IntegerAttr(isShared));
+  auto isHostShared = mlir::LLVM::ConstantOp::create(
+      rewriter, loc, llvmInt8Type, rewriter.getI8IntegerAttr(isShared));
 
   Value allocatedPtr =
       allocCallBuilder.create(loc, rewriter, {sizeBytes, stream, isHostShared})
@@ -966,12 +971,56 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   // stream must be created to pass to subsequent operations.
   else if (launchOp.getAsyncToken())
     stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
+
   // Lower the kernel operands to match kernel parameters.
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
-  SmallVector<Value, 4> arguments = getTypeConverter()->promoteOperands(
-      loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(), rewriter,
+  OperandRange origArguments = launchOp.getKernelOperands();
+  SmallVector<Value, 8> llvmArguments = getTypeConverter()->promoteOperands(
+      loc, origArguments, adaptor.getKernelOperands(), rewriter,
       /*useBarePtrCallConv=*/kernelBarePtrCallConv);
+  SmallVector<Value, 8> llvmArgumentsWithSizes;
+
+  // Intersperse size information if requested.
+  if (kernelIntersperseSizeCallConv) {
+    if (origArguments.size() != llvmArguments.size()) {
+      // This shouldn't happen if the bare-pointer calling convention is used.
+      return rewriter.notifyMatchFailure(
+          launchOp,
+          "Cannot add sizes to arguments with one-to-many LLVM IR expansion.");
+    }
+
+    llvmArgumentsWithSizes.reserve(llvmArguments.size() * 2);
+    for (auto [llvmArg, origArg] : zip_equal(llvmArguments, origArguments)) {
+      auto memrefTy = dyn_cast<MemRefType>(origArg.getType());
+      if (!memrefTy) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref.");
+      }
+
+      if (!memrefTy.hasStaticShape() ||
+          !memrefTy.getElementType().isIntOrFloat()) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref with a static "
+                      "shape and an integer or float element type.");
+      }
+
+      unsigned bitwidth = memrefTy.getElementTypeBitWidth();
+      if (bitwidth % 8 != 0) {
+        return rewriter.notifyMatchFailure(
+            launchOp, "Operand to launch op is not a memref with a "
+                      "byte-aligned element type.");
+      }
+
+      uint64_t staticSize = static_cast<uint64_t>(bitwidth / 8) *
+                            static_cast<uint64_t>(memrefTy.getNumElements());
+
+      Value sizeArg = LLVM::ConstantOp::create(
+          rewriter, loc, getIndexType(), rewriter.getIndexAttr(staticSize));
+      llvmArgumentsWithSizes.push_back(llvmArg); // Presumably a bare pointer.
+      llvmArgumentsWithSizes.push_back(sizeArg);
+    }
+  }
 
   std::optional<gpu::KernelDim3> clusterSize = std::nullopt;
   if (launchOp.hasClusterSize()) {
@@ -979,13 +1028,15 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
         gpu::KernelDim3{adaptor.getClusterSizeX(), adaptor.getClusterSizeY(),
                         adaptor.getClusterSizeZ()};
   }
-  rewriter.create<gpu::LaunchFuncOp>(
-      launchOp.getLoc(), launchOp.getKernelAttr(),
+  gpu::LaunchFuncOp::create(
+      rewriter, launchOp.getLoc(), launchOp.getKernelAttr(),
       gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                       adaptor.getGridSizeZ()},
       gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
                       adaptor.getBlockSizeZ()},
-      adaptor.getDynamicSharedMemorySize(), arguments, stream, clusterSize);
+      adaptor.getDynamicSharedMemorySize(),
+      llvmArgumentsWithSizes.empty() ? llvmArguments : llvmArgumentsWithSizes,
+      stream, clusterSize);
   if (launchOp.getAsyncToken())
     rewriter.replaceOp(launchOp, {stream});
   else
@@ -1000,8 +1051,8 @@ static Value bitAndAddrspaceCast(Location loc,
                                  const LLVMTypeConverter &typeConverter) {
   auto sourceTy = cast<LLVM::LLVMPointerType>(sourcePtr.getType());
   if (destinationType.getAddressSpace() != sourceTy.getAddressSpace())
-    sourcePtr = rewriter.create<LLVM::AddrSpaceCastOp>(
-        loc,
+    sourcePtr = LLVM::AddrSpaceCastOp::create(
+        rewriter, loc,
         LLVM::LLVMPointerType::get(rewriter.getContext(),
                                    destinationType.getAddressSpace()),
         sourcePtr);
@@ -1024,13 +1075,13 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
   Value numElements = getNumElements(rewriter, loc, memRefType, srcDesc);
 
   Type elementPtrType = getElementPtrType(memRefType);
-  Value nullPtr = rewriter.create<LLVM::ZeroOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(
-      loc, elementPtrType,
+  Value nullPtr = LLVM::ZeroOp::create(rewriter, loc, elementPtrType);
+  Value gepPtr = LLVM::GEPOp::create(
+      rewriter, loc, elementPtrType,
       typeConverter->convertType(memRefType.getElementType()), nullPtr,
       numElements);
   auto sizeBytes =
-      rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
+      LLVM::PtrToIntOp::create(rewriter, loc, getIndexType(), gepPtr);
 
   auto src = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
                                  srcDesc.alignedPtr(rewriter, loc),
@@ -1075,7 +1126,7 @@ LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
   Value numElements = getNumElements(rewriter, loc, memRefType, dstDesc);
 
   auto value =
-      rewriter.create<LLVM::BitcastOp>(loc, bitCastType, adaptor.getValue());
+      LLVM::BitcastOp::create(rewriter, loc, bitCastType, adaptor.getValue());
   auto dst = bitAndAddrspaceCast(loc, rewriter, llvmPointerType,
                                  dstDesc.alignedPtr(rewriter, loc),
                                  *getTypeConverter());
@@ -1102,15 +1153,15 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
 template <typename T>
 static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
-  return builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                          static_cast<int32_t>(tValue));
+  return LLVM::ConstantOp::create(builder, loc, llvmInt32Type,
+                                  static_cast<int32_t>(tValue));
 }
 
 template <typename T>
 static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmFloat32Type = builder.getF32Type();
-  return builder.create<LLVM::ConstantOp>(
-      loc, llvmFloat32Type,
+  return LLVM::ConstantOp::create(
+      builder, loc, llvmFloat32Type,
       builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
@@ -1141,11 +1192,11 @@ LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
   // the dnmat is used with spmat with 2:4 sparsity
   if (dims.size() == 2) {
     if (isSpMMCusparseLtOp(op.getDnTensor())) {
-      auto handleSz = rewriter.create<LLVM::ConstantOp>(
-          loc, getIndexType(), rewriter.getIndexAttr(11032));
-      handle = rewriter.create<LLVM::AllocaOp>(
-          loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
-      handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
+      auto handleSz = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                               rewriter.getIndexAttr(11032));
+      handle = LLVM::AllocaOp::create(rewriter, loc, llvmPointerType,
+                                      llvmInt8Type, handleSz, /*alignment=*/16);
+      handle = LLVM::BitcastOp::create(rewriter, loc, llvmPointerType, handle);
 
       createLtDnMatCallBuilder
           .create(loc, rewriter,
@@ -1303,11 +1354,11 @@ LogicalResult ConvertCreate2To4SpMatOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto dtp = genConstInt32From(rewriter, loc, getCuSparseDataTypeFrom(dType));
 
   // CUDA runner asserts the size is 44104 bytes.
-  auto handleSz = rewriter.create<LLVM::ConstantOp>(
-      loc, getIndexType(), rewriter.getIndexAttr(44104));
-  Value handle = rewriter.create<LLVM::AllocaOp>(
-      loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
-  handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
+  auto handleSz = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                           rewriter.getIndexAttr(44104));
+  Value handle = LLVM::AllocaOp::create(
+      rewriter, loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
+  handle = LLVM::BitcastOp::create(rewriter, loc, llvmPointerType, handle);
 
   create2To4SpMatCallBuilder
       .create(loc, rewriter,
@@ -1393,10 +1444,11 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
-    auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(3));
-    auto bufferSize = rewriter.create<LLVM::AllocaOp>(
-        loc, llvmPointerType, llvmPointerType, three, /*alignment=*/16);
+    auto three = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                          rewriter.getIndexAttr(3));
+    auto bufferSize =
+        LLVM::AllocaOp::create(rewriter, loc, llvmPointerType, llvmPointerType,
+                               three, /*alignment=*/16);
     createCuSparseLtSpMMBufferSizeBuilder
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
@@ -1404,20 +1456,20 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
                  pruneFlag, stream})
         .getResult();
 
-    auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(
-        loc, llvmPointerType, llvmPointerType, bufferSize,
-        ValueRange{rewriter.create<LLVM::ConstantOp>(
-            loc, getIndexType(), rewriter.getIndexAttr(1))});
-    auto bufferSizePtr2 = rewriter.create<LLVM::GEPOp>(
-        loc, llvmPointerType, llvmPointerType, bufferSize,
-        ValueRange{rewriter.create<LLVM::ConstantOp>(
-            loc, getIndexType(), rewriter.getIndexAttr(2))});
+    auto bufferSizePtr1 = LLVM::GEPOp::create(
+        rewriter, loc, llvmPointerType, llvmPointerType, bufferSize,
+        ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                            rewriter.getIndexAttr(1))});
+    auto bufferSizePtr2 = LLVM::GEPOp::create(
+        rewriter, loc, llvmPointerType, llvmPointerType, bufferSize,
+        ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                            rewriter.getIndexAttr(2))});
     auto bufferSize0 =
-        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSize);
+        LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, bufferSize);
     auto bufferSize1 =
-        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr1);
+        LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, bufferSizePtr1);
     auto bufferSize2 =
-        rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr2);
+        LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, bufferSizePtr2);
 
     rewriter.replaceOp(op, {bufferSize0, bufferSize1, bufferSize2, stream});
   } else {
@@ -1621,28 +1673,28 @@ LogicalResult ConvertSpMatGetSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = op.getLoc();
   auto stream = adaptor.getAsyncDependencies().front();
 
-  auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                 rewriter.getIndexAttr(3));
-  auto buffer = rewriter.create<LLVM::AllocaOp>(
-      loc, llvmPointerType, llvmInt64Type, three, /*alignment=*/16);
+  auto three = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                        rewriter.getIndexAttr(3));
+  auto buffer = LLVM::AllocaOp::create(rewriter, loc, llvmPointerType,
+                                       llvmInt64Type, three, /*alignment=*/16);
 
-  auto rowsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(0))});
-  auto colsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(1))});
-  auto nnzsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmPointerType, llvmPointerType, buffer,
-      ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(2))});
+  auto rowsPtr = LLVM::GEPOp::create(
+      rewriter, loc, llvmPointerType, llvmPointerType, buffer,
+      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                          rewriter.getIndexAttr(0))});
+  auto colsPtr = LLVM::GEPOp::create(
+      rewriter, loc, llvmPointerType, llvmPointerType, buffer,
+      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                          rewriter.getIndexAttr(1))});
+  auto nnzsPtr = LLVM::GEPOp::create(
+      rewriter, loc, llvmPointerType, llvmPointerType, buffer,
+      ValueRange{LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
+                                          rewriter.getIndexAttr(2))});
   createSpMatGetSizeBuilder.create(
       loc, rewriter, {adaptor.getSpmat(), rowsPtr, colsPtr, nnzsPtr, stream});
-  auto rows = rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, rowsPtr);
-  auto cols = rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, colsPtr);
-  auto nnzs = rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, nnzsPtr);
+  auto rows = LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, rowsPtr);
+  auto cols = LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, colsPtr);
+  auto nnzs = LLVM::LoadOp::create(rewriter, loc, llvmInt64Type, nnzsPtr);
 
   rewriter.replaceOp(op, {rows, cols, nnzs, stream});
   return success();
@@ -1735,9 +1787,9 @@ LogicalResult ConvertCreateBsrOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                               RewritePatternSet &patterns,
-                                               bool kernelBarePtrCallConv) {
+void mlir::populateGpuToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool kernelBarePtrCallConv, bool kernelIntersperseSizeCallConv) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -1774,7 +1826,8 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMCopyOpToGpuRuntimeCallPattern,
                ConvertSpMatGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
-  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv);
+  patterns.add<LegalizeLaunchFuncOpPattern>(converter, kernelBarePtrCallConv,
+                                            kernelIntersperseSizeCallConv);
 }
 
 //===----------------------------------------------------------------------===//

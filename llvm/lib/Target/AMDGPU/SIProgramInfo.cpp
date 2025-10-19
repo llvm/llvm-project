@@ -27,6 +27,8 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 
   const MCExpr *ZeroExpr = MCConstantExpr::create(0, Ctx);
 
+  CodeSizeInBytes.reset();
+
   VGPRBlocks = ZeroExpr;
   SGPRBlocks = ZeroExpr;
   Priority = 0;
@@ -37,6 +39,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   IEEEMode = 0;
   WgpMode = 0;
   MemOrdered = 0;
+  FwdProgress = 0;
   RrWgMode = 0;
   ScratchSize = ZeroExpr;
 
@@ -55,7 +58,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   LdsSize = 0;
   EXCPEnable = 0;
 
-  ComputePGMRSrc3GFX90A = ZeroExpr;
+  ComputePGMRSrc3 = ZeroExpr;
 
   NumVGPR = ZeroExpr;
   NumArchVGPR = ZeroExpr;
@@ -70,6 +73,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
 
   NumSGPRsForWavesPerEU = ZeroExpr;
   NumVGPRsForWavesPerEU = ZeroExpr;
+  NamedBarCnt = ZeroExpr;
   Occupancy = ZeroExpr;
   DynamicCallStack = ZeroExpr;
   VCCUsed = ZeroExpr;
@@ -82,7 +86,8 @@ static uint64_t getComputePGMRSrc1Reg(const SIProgramInfo &ProgInfo,
                  S_00B848_PRIV(ProgInfo.Priv) |
                  S_00B848_DEBUG_MODE(ProgInfo.DebugMode) |
                  S_00B848_WGP_MODE(ProgInfo.WgpMode) |
-                 S_00B848_MEM_ORDERED(ProgInfo.MemOrdered);
+                 S_00B848_MEM_ORDERED(ProgInfo.MemOrdered) |
+                 S_00B848_FWD_PROGRESS(ProgInfo.FwdProgress);
 
   if (ST.hasDX10ClampMode())
     Reg |= S_00B848_DX10_CLAMP(ProgInfo.DX10Clamp);
@@ -198,4 +203,41 @@ const MCExpr *SIProgramInfo::getPGMRSrc2(CallingConv::ID CC,
     return getComputePGMRSrc2(Ctx);
 
   return MCConstantExpr::create(0, Ctx);
+}
+
+uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF,
+                                            bool IsLowerBound) {
+  if (!IsLowerBound && CodeSizeInBytes.has_value())
+    return *CodeSizeInBytes;
+
+  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = STM.getInstrInfo();
+
+  uint64_t CodeSize = 0;
+
+  for (const MachineBasicBlock &MBB : MF) {
+    // The amount of padding to align code can be both underestimated and
+    // overestimated. In case of inline asm used getInstSizeInBytes() will
+    // return a maximum size of a single instruction, where the real size may
+    // differ. At this point CodeSize may be already off.
+    if (!IsLowerBound)
+      CodeSize = alignTo(CodeSize, MBB.getAlignment());
+
+    for (const MachineInstr &MI : MBB) {
+      // TODO: CodeSize should account for multiple functions.
+
+      if (MI.isMetaInstruction())
+        continue;
+
+      // We cannot properly estimate inline asm size. It can be as small as zero
+      // if that is just a comment.
+      if (IsLowerBound && MI.isInlineAsm())
+        continue;
+
+      CodeSize += TII->getInstSizeInBytes(MI);
+    }
+  }
+
+  CodeSizeInBytes = CodeSize;
+  return CodeSize;
 }

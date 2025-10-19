@@ -29,7 +29,7 @@ b2:
 ; CHECK: [[R22]] += dfmpylh([[R20]],[[R21]])
 ; CHECK: [[R22]] += dfmpylh([[R21]],[[R20]])
 ; CHECK: [[R22]] += dfmpyhh([[R20]],[[R21]])
-define double @test_02(double %a0, double %a1) #2 {
+define double @test_02(double %a0, double %a1) #1 {
 b2:
   %v3 = fmul double %a0, %a1
   ret double %v3
@@ -40,13 +40,11 @@ b2:
 ; CHECK: [[R30]] += dfmpylh(r1:0,r3:2)
 ; CHECK: [[R30]] += dfmpylh(r3:2,r1:0)
 ; CHECK: [[R30]] += dfmpyhh(r1:0,r3:2)
-define double @test_03(double %a0, double %a1) #3 {
+define double @test_03(double %a0, double %a1) #1 {
 b2:
-  %v3 = fmul double %a0, %a1
+  %v3 = fmul afn double %a0, %a1
   ret double %v3
 }
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "target-cpu"="hexagonv67" }
-attributes #2 = { nounwind "target-cpu"="hexagonv67" "unsafe-fp-math"="false" }
-attributes #3 = { nounwind "target-cpu"="hexagonv67" "unsafe-fp-math"="true" }

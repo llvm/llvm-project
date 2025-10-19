@@ -401,7 +401,7 @@ namespace {
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
         const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF, /*Kind=*/1);
+        const TargetRegisterClass *TRC = TRI->getPointerRegClass(/*Kind=*/1);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =
@@ -2975,7 +2975,6 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   if (!WideRes)
     return nullptr;
 
-  SDLoc dl(N);
   bool Input32Bit = WideRes.getValueType() == MVT::i32;
   bool Output32Bit = N->getValueType(0) == MVT::i32;
 
@@ -4962,6 +4961,21 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   // If this is just a masked value where the input is not handled, and
   // is not a rotate-left (handled by a pattern in the .td file), emit rlwinm
   if (isRunOfOnes(Imm, MB, ME) && Val.getOpcode() != ISD::ROTL) {
+    // The result of LBARX/LHARX do not need to be cleared as the instructions
+    // implicitly clear the upper bits.
+    unsigned AlreadyCleared = 0;
+    if (Val.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+      auto IntrinsicID = Val.getConstantOperandVal(1);
+      if (IntrinsicID == Intrinsic::ppc_lbarx)
+        AlreadyCleared = 24;
+      else if (IntrinsicID == Intrinsic::ppc_lharx)
+        AlreadyCleared = 16;
+      if (AlreadyCleared != 0 && AlreadyCleared == MB && ME == 31) {
+        ReplaceUses(SDValue(N, 0), N->getOperand(0));
+        return true;
+      }
+    }
+
     SDValue Ops[] = {Val, getI32Imm(0, dl), getI32Imm(MB, dl),
                      getI32Imm(ME, dl)};
     CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
@@ -5473,10 +5487,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
-    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
-        !Subtarget->isTargetELF())
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
+    if (Subtarget->isPPC64() || !TM.isPositionIndependent() ||
+        !Subtarget->isSecurePlt() || !Subtarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);
@@ -5489,8 +5503,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
@@ -7237,7 +7250,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7254,7 +7267,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7270,7 +7283,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7288,10 +7301,10 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     if (Op1OK)
-      ToPromote.insert(ToPromote2.begin(), ToPromote2.end());
+      ToPromote.insert_range(ToPromote2);
 
     return true;
   }
@@ -7311,7 +7324,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     return true;
   }
@@ -7860,8 +7873,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

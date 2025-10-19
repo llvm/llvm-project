@@ -23,7 +23,7 @@
 
 namespace __sanitizer {
 typedef struct {
-  tid_t tid;
+  ThreadID tid;
   thread_t thread;
 } SuspendedThreadInfo;
 
@@ -31,7 +31,7 @@ class SuspendedThreadsListMac final : public SuspendedThreadsList {
  public:
   SuspendedThreadsListMac() = default;
 
-  tid_t GetThreadID(uptr index) const override;
+  ThreadID GetThreadID(uptr index) const override;
   thread_t GetThread(uptr index) const;
   uptr ThreadCount() const override;
   bool ContainsThread(thread_t thread) const;
@@ -111,7 +111,7 @@ typedef x86_thread_state32_t regs_struct;
 #error "Unsupported architecture"
 #endif
 
-tid_t SuspendedThreadsListMac::GetThreadID(uptr index) const {
+ThreadID SuspendedThreadsListMac::GetThreadID(uptr index) const {
   CHECK_LT(index, threads_.size());
   return threads_[index].tid;
 }

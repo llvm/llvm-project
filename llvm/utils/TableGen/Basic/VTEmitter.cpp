@@ -33,11 +33,11 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
   bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
 
   if (IsRISCVVecTuple) {
-    unsigned NElem = VT->getValueAsInt("nElem");
+    unsigned NF = VT->getValueAsInt("NF");
     unsigned Sz = VT->getValueAsInt("Size");
     OS << "TargetExtType::get(Context, \"riscv.vector.tuple\", "
           "ScalableVectorType::get(Type::getInt8Ty(Context), "
-       << (Sz / (NElem * 8)) << "), " << NElem << ")";
+       << (Sz / (NF * 8)) << "), " << NF << ")";
     return;
   }
 
@@ -79,8 +79,9 @@ static void vTtoGetLlvmTyString(raw_ostream &OS, const Record *VT) {
       OS << "Type::getInt" << OutputVTSize << "Ty(Context)";
     else
       OS << "Type::getIntNTy(Context, " << OutputVTSize << ")";
-  } else
+  } else {
     llvm_unreachable("Unhandled case");
+  }
 
   if (IsVector)
     OS << ", " << VT->getValueAsInt("nElem") << ")";
@@ -109,12 +110,13 @@ void VTEmitter::run(raw_ostream &OS) {
   auto UpdateVTRange = [&VTRanges](const char *Key, StringRef Name,
                                    bool Valid) {
     if (Valid) {
-      if (!VTRanges.count(Key))
-        VTRanges[Key].First = Name;
-      assert(!VTRanges[Key].Closed && "Gap detected!");
-      VTRanges[Key].Last = Name;
-    } else if (VTRanges.count(Key)) {
-      VTRanges[Key].Closed = true;
+      auto [It, Inserted] = VTRanges.try_emplace(Key);
+      if (Inserted)
+        It->second.First = Name;
+      assert(!It->second.Closed && "Gap detected!");
+      It->second.Last = Name;
+    } else if (auto It = VTRanges.find(Key); It != VTRanges.end()) {
+      It->second.Closed = true;
     }
   };
 
@@ -130,6 +132,7 @@ void VTEmitter::run(raw_ostream &OS) {
     bool IsVector = VT->getValueAsBit("isVector");
     bool IsScalable = VT->getValueAsBit("isScalable");
     bool IsRISCVVecTuple = VT->getValueAsBit("isRISCVVecTuple");
+    bool IsCheriCapability = VT->getValueAsBit("isCheriCapability");
     int64_t NF = VT->getValueAsInt("NF");
     bool IsNormalValueType =  VT->getValueAsBit("isNormalValueType");
     int64_t NElem = IsVector ? VT->getValueAsInt("nElem") : 0;
@@ -150,6 +153,7 @@ void VTEmitter::run(raw_ostream &OS) {
     UpdateVTRange("INTEGER_VALUETYPE", Name, IsInteger && !IsVector);
     UpdateVTRange("FP_VALUETYPE", Name, IsFP && !IsVector);
     UpdateVTRange("VALUETYPE", Name, IsNormalValueType);
+    UpdateVTRange("CHERI_CAPABILITY_VALUETYPE", Name, IsCheriCapability);
 
     // clang-format off
     OS << "  GET_VT_ATTR("

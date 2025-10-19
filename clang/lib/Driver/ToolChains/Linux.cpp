@@ -12,8 +12,8 @@
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -23,7 +23,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <system_error>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -180,15 +179,6 @@ std::string Linux::getMultiarchTriple(const Driver &D,
 
 static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.isMIPS()) {
-    if (Triple.isAndroid()) {
-      StringRef CPUName;
-      StringRef ABIName;
-      tools::mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-      if (CPUName == "mips32r6")
-        return "libr6";
-      if (CPUName == "mips32r2")
-        return "libr2";
-    }
     // lib32 directory has a special meaning on MIPS targets.
     // It contains N32 ABI binaries. Use this folder if produce
     // code for N32 ABI only.
@@ -221,6 +211,13 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
 
 Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
+  GCCInstallation.TripleToDebianMultiarch = [](const llvm::Triple &T) {
+    StringRef TripleStr = T.str();
+    StringRef DebianMultiarch =
+        T.getArch() == llvm::Triple::x86 ? "i386-linux-gnu" : TripleStr;
+    return DebianMultiarch;
+  };
+
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
@@ -304,11 +301,10 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   // .gnu.hash needs symbols to be grouped by hash code whereas the MIPS
   // ABI requires a mapping between the GOT and the symbol table.
   // Android loader does not support .gnu.hash until API 23.
-  // Hexagon linker/loader does not support .gnu.hash
+  // Hexagon linker/loader does not support .gnu.hash.
+  // SUSE SLES 11 will stop being supported Mar 2028.
   if (!IsMips && !IsHexagon) {
-    if (Distro.IsOpenSUSE() || Distro == Distro::UbuntuLucid ||
-        Distro == Distro::UbuntuJaunty || Distro == Distro::UbuntuKarmic ||
-        (IsAndroid && Triple.isAndroidVersionLT(23)))
+    if (Distro.IsOpenSUSE() || (IsAndroid && Triple.isAndroidVersionLT(23)))
       ExtraOpts.push_back("--hash-style=both");
     else
       ExtraOpts.push_back("--hash-style=gnu");
@@ -352,14 +348,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   }
 
   addPathIfExists(D, concat(SysRoot, "/usr/lib", MultiarchTriple), Paths);
-  // 64-bit OpenEmbedded sysroots may not have a /usr/lib dir. So they cannot
-  // find /usr/lib64 as it is referenced as /usr/lib/../lib64. So we handle
-  // this here.
-  if (Triple.getVendor() == llvm::Triple::OpenEmbedded &&
-      Triple.isArch64Bit())
-    addPathIfExists(D, concat(SysRoot, "/usr", OSLibDir), Paths);
-  else
-    addPathIfExists(D, concat(SysRoot, "/usr/lib/..", OSLibDir), Paths);
+  addPathIfExists(D, concat(SysRoot, "/usr", OSLibDir), Paths);
   if (IsRISCV) {
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     addPathIfExists(D, concat(SysRoot, "/", OSLibDir, ABIName), Paths);
@@ -710,22 +699,15 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
   if (!GCCInstallation.isValid())
     return;
 
-  // Detect Debian g++-multiarch-incdir.diff.
-  StringRef TripleStr = GCCInstallation.getTriple().str();
-  StringRef DebianMultiarch =
-      GCCInstallation.getTriple().getArch() == llvm::Triple::x86
-          ? "i386-linux-gnu"
-          : TripleStr;
-
   // Try generic GCC detection first.
-  if (Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args,
-                                               DebianMultiarch))
+  if (Generic_GCC::addGCCLibStdCxxIncludePaths(DriverArgs, CC1Args))
     return;
 
   StringRef LibDir = GCCInstallation.getParentLibPath();
   const Multilib &Multilib = GCCInstallation.getMultilib();
   const GCCVersion &Version = GCCInstallation.getVersion();
 
+  StringRef TripleStr = GCCInstallation.getTriple().str();
   const std::string LibStdCXXIncludePathCandidates[] = {
       // Android standalone toolchain has C++ headers in yet another place.
       LibDir.str() + "/../" + TripleStr.str() + "/include/c++/" + Version.Text,
@@ -760,9 +742,11 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
       Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false))
-    CmdArgs.append(
-        {"-rpath", Args.MakeArgString(RocmInstallation->getLibPath())});
+                   options::OPT_fno_rtlib_add_rpath, false)) {
+    SmallString<0> p = RocmInstallation->getLibPath();
+    llvm::sys::path::remove_dots(p, true);
+    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  }
 
   CmdArgs.push_back("-lamdhip64");
 }
@@ -775,6 +759,11 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
         GCCInstallation.getParentLibPath() + "/../" +
         GCCInstallation.getTriple().str() + "/include"));
   }
+}
+
+void Linux::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                               ArgStringList &CC1Args) const {
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
@@ -818,6 +807,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
+  const bool IsAndroid = getTriple().isAndroid();
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
@@ -826,7 +816,6 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::KernelAddress;
-  Res |= SanitizerKind::Memory;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64)
@@ -852,6 +841,8 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   }
   if (IsX86_64)
     Res |= SanitizerKind::NumericalStability;
+  if (!IsAndroid)
+    Res |= SanitizerKind::Memory;
 
   // Work around "Cannot represent a difference across sections".
   if (getTriple().getArch() == llvm::Triple::ppc64)

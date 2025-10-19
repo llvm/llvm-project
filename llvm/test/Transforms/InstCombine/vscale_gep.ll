@@ -15,7 +15,7 @@ define <vscale x 2 x ptr> @gep_index_type_is_scalable(ptr %p) {
 define ptr @gep_num_of_indices_1(ptr %p) {
 ; CHECK-LABEL: @gep_num_of_indices_1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
@@ -28,7 +28,7 @@ define void @gep_bitcast(ptr %p) {
 ; CHECK-LABEL: @gep_bitcast(
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    store <vscale x 16 x i8> zeroinitializer, ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
@@ -41,31 +41,27 @@ define void @gep_bitcast(ptr %p) {
 
 ; These tests serve to verify code changes when underlying gep ptr is alloca.
 ; This test is to verify 'inbounds' is added when it's valid to accumulate constant offset.
-define i32 @gep_alloca_inbounds_vscale_zero() {
+define i32 @gep_alloca_inbounds_vscale_zero(ptr %a) {
 ; CHECK-LABEL: @gep_alloca_inbounds_vscale_zero(
-; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %a = alloca <vscale x 4 x i32>
   %tmp = getelementptr <vscale x 4 x i32>, ptr %a, i32 0, i32 2
   %load = load i32, ptr %tmp
   ret i32 %load
 }
 
 ; This test is to verify 'inbounds' is not added when a constant offset can not be determined at compile-time.
-define i32 @gep_alloca_inbounds_vscale_nonzero() {
+define i32 @gep_alloca_inbounds_vscale_nonzero(ptr %a) {
 ; CHECK-LABEL: @gep_alloca_inbounds_vscale_nonzero(
-; CHECK-NEXT:    [[A:%.*]] = alloca <vscale x 4 x i32>, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
-; CHECK-NEXT:    [[TMP_OFFS:%.*]] = or disjoint i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP_OFFS]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[TMP]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %a = alloca <vscale x 4 x i32>
   %tmp = getelementptr <vscale x 4 x i32>, ptr %a, i32 1, i32 2
   %load = load i32, ptr %tmp
   ret i32 %load

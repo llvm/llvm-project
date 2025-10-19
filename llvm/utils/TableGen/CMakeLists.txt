@@ -43,6 +43,8 @@ add_tablegen(llvm-tblgen LLVM
   DAGISelMatcherGen.cpp
   DAGISelMatcherOpt.cpp
   DecoderEmitter.cpp
+  DecoderTableEmitter.cpp
+  DecoderTree.cpp
   DFAEmitter.cpp
   DFAPacketizerEmitter.cpp
   DisassemblerEmitter.cpp
@@ -60,6 +62,7 @@ add_tablegen(llvm-tblgen LLVM
   PseudoLoweringEmitter.cpp
   RegisterBankEmitter.cpp
   RegisterInfoEmitter.cpp
+  SDNodeInfoEmitter.cpp
   SearchableTableEmitter.cpp
   SubtargetEmitter.cpp
   WebAssemblyDisassemblerEmitter.cpp

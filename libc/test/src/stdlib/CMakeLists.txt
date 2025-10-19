@@ -9,6 +9,7 @@ add_libc_test(
   DEPENDS
     libc.src.errno.errno
     libc.src.stdlib.atof
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -64,6 +65,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtod
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_fp_unittest(
@@ -76,6 +78,7 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.stdlib.strtof
     libc.src.__support.FPUtil.fenv_impl
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_header_library(
@@ -86,6 +89,7 @@ add_header_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -95,6 +99,7 @@ add_libc_test(
   SRCS
     strtoint32_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -107,6 +112,7 @@ add_libc_test(
   SRCS
     strtoint64_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
     libc.src.errno.errno
     .strtol_test_support
@@ -133,6 +139,7 @@ add_libc_test(
     libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
@@ -168,7 +175,8 @@ add_libc_test(
     .strtol_test_support
 )
 
-if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT)
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
   list(APPEND strfrom_test_copts "-DLIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
 endif()
 
@@ -218,6 +226,27 @@ add_libc_test(
     libc.src.stdlib.strfroml
   COMPILE_OPTIONS
     ${strfrom_test_copts}
+)
+
+add_libc_test(
+  a64l_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    a64l_test.cpp
+  DEPENDS
+    libc.src.stdlib.a64l
+)
+
+add_libc_test(
+  l64a_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    l64a_test.cpp
+  DEPENDS
+    libc.src.stdlib.l64a
+    libc.src.__support.CPP.limits
 )
 
 add_libc_test(
@@ -301,18 +330,6 @@ add_libc_test(
 )
 
 add_libc_test(
-  quick_sort_test
-  SUITE
-    libc-stdlib-tests
-  SRCS
-    quick_sort_test.cpp
-  HDRS
-    SortingTest.h
-  DEPENDS
-    libc.src.stdlib.qsort_util
-)
-
-add_libc_test(
   heap_sort_test
   SUITE
     libc-stdlib-tests
@@ -321,15 +338,15 @@ add_libc_test(
   HDRS
     SortingTest.h
   DEPENDS
-    libc.src.stdlib.qsort_util
+    libc.src.stdlib.qsort
 )
 
 add_libc_test(
-  qsort_test
+  quick_sort_test
   SUITE
     libc-stdlib-tests
   SRCS
-    qsort_test.cpp
+    quick_sort_test.cpp
   HDRS
     SortingTest.h
   DEPENDS
@@ -356,6 +373,18 @@ add_libc_test(
   DEPENDS
     libc.src.stdlib.rand
     libc.src.stdlib.srand
+)
+
+add_libc_test(
+  memalignment_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    memalignment_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.stdlib
+    libc.src.stdlib.memalignment
 )
 
 if(LLVM_LIBC_FULL_BUILD)
@@ -432,7 +461,8 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 
   # Only baremetal and GPU has an in-tree 'malloc' implementation.
-  if(LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU)
+  if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
+      NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     add_libc_test(
       malloc_test
       HERMETIC_TEST_ONLY

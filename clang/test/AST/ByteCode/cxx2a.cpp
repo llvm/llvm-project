@@ -1,6 +1,25 @@
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both %s
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
 
+
+namespace std {
+  struct type_info;
+  struct destroying_delete_t {
+    explicit destroying_delete_t() = default;
+  } inline constexpr destroying_delete{};
+  struct nothrow_t {
+    explicit nothrow_t() = default;
+  } inline constexpr nothrow{};
+  using size_t = decltype(sizeof(0));
+  enum class align_val_t : size_t {};
+};
+
+constexpr void *operator new(std::size_t, void *p) { return p; }
+namespace std {
+  template<typename T> constexpr T *construct(T *p) { return new (p) T; }
+  template<typename T> constexpr void destroy(T *p) { p->~T(); }
+}
+
 template <unsigned N>
 struct S {
   S() requires (N==1) = default;
@@ -139,9 +158,7 @@ namespace TypeId {
   static_assert(&B2().ti1 == &typeid(B));
   static_assert(&B2().ti2 == &typeid(B2));
   extern B2 extern_b2;
-  static_assert(&typeid(extern_b2) == &typeid(B2)); // both-error {{constant expression}} \
-                                                    // both-note{{typeid applied to object 'extern_b2' whose dynamic type is not constant}}
-
+  static_assert(&typeid(extern_b2) == &typeid(B2));
 
   constexpr B2 b2;
   constexpr const B &b1 = b2;
@@ -169,4 +186,70 @@ namespace TypeId {
     return OK;
   }
   static_assert(side_effects());
+}
+
+consteval int f(int i);
+constexpr bool test(auto i) {
+    return f(0) == 0;
+}
+consteval int f(int i) {
+    return 2 * i;
+}
+static_assert(test(42));
+
+namespace PureVirtual {
+  struct Abstract {
+    constexpr virtual void f() = 0; // both-note {{declared here}}
+    constexpr Abstract() { do_it(); } // both-note {{in call to}}
+    constexpr void do_it() { f(); } // both-note {{pure virtual function 'PureVirtual::Abstract::f' called}}
+  };
+  struct PureVirtualCall : Abstract { void f(); }; // both-note {{in call to 'Abstract}}
+  constexpr PureVirtualCall pure_virtual_call; // both-error {{constant expression}} both-note {{in call to 'PureVirtualCall}}
+}
+
+namespace Dtor {
+  constexpr bool pseudo(bool read, bool recreate) {
+    using T = bool;
+    bool b = false; // both-note {{lifetime has already ended}}
+    // This evaluates the store to 'b'...
+    (b = true).~T();
+    // ... and ends the lifetime of the object.
+    return (read
+            ? b // both-note {{read of object outside its lifetime}}
+            : true) +
+           (recreate
+            ? (std::construct(&b), true)
+            : true);
+  }
+  static_assert(pseudo(false, false)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(pseudo(true, false)); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(pseudo(false, true));
+}
+
+namespace GH150705 {
+  struct A { };
+  struct B : A { };
+  struct C : A {
+    constexpr virtual int foo() const { return 0; }
+  };
+
+  constexpr auto p = &C::foo;
+  constexpr auto q = static_cast<int (A::*)() const>(p);
+  constexpr B b;
+  constexpr const A& a = b;
+  constexpr auto x = (a.*q)(); // both-error {{constant expression}}
+}
+
+namespace DependentRequiresExpr {
+  template <class T,
+            bool = []() -> bool { // both-error {{not a constant expression}}
+              if (requires { T::type; })
+                return true;
+              return false;
+            }()>
+  struct p {
+    using type = void;
+  };
+
+  template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
 }

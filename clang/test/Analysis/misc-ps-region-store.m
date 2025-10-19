@@ -1,5 +1,5 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,alpha.security.ArrayBound -verify -fblocks   -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin9 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,security.ArrayBound -verify -fblocks -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin9 -DTEST_64 -analyzer-checker=core,alpha.core.CastToStruct,alpha.security.ReturnPtrRange,security.ArrayBound -verify -fblocks   -Wno-objc-root-class -Wno-strict-prototypes -Wno-error=implicit-function-declaration %s
 
 typedef long unsigned int size_t;
 void *memcpy(void *, const void *, size_t);
@@ -928,7 +928,7 @@ void pr6288_pos(int z) {
   int *px[1];
   int i;
   for (i = 0; i < z; i++)
-    px[i] = &x[i]; // expected-warning{{Access out-of-bound array element (buffer overflow)}}
+    px[i] = &x[i]; // expected-warning{{Out of bound access to memory after the end of 'px'}}
   *(px[0]) = 0; // expected-warning{{Dereference of undefined pointer value}}
 }
 
@@ -976,12 +976,17 @@ void rdar7817800_qux(void*);
 }
 @end
 
-// PR 6036 - This test case triggered a crash inside StoreManager::CastRegion because the size
-// of 'unsigned long (*)[0]' is 0.
+// PR 6036 - This test case triggered a crash inside StoreManager::CastRegion
+// because the size of 'unsigned long (*)[0]' is 0.
+// NOTE: This old crash was probably triggered via the old alpha checker
+// `alpha.security.ArrayBound` (which was logic that's different from the
+// current `security.ArrayBound`). Although that code was removed, it's worth
+// to keep this testcase as a generic example of a zero-sized type.
 struct pr6036_a { int pr6036_b; };
 struct pr6036_c;
 void u132monitk (struct pr6036_c *pr6036_d) {
-  (void) ((struct pr6036_a *) (unsigned long (*)[0]) ((char *) pr6036_d - 1))->pr6036_b; // expected-warning{{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
+  (void) ((struct pr6036_a *) (unsigned long (*)[0]) ((char *) pr6036_d - 1))->pr6036_b;
+  // expected-warning@-1 {{Casting a non-structure type to a structure type and accessing a field can lead to memory access errors or data corruption}}
 }
 
 // ?-expressions used as a base of a member expression should be treated as an lvalue

@@ -108,7 +108,7 @@ typedef unsigned char xmlChar;
   do {                           \
     xmlChar *s = (xmlChar *)(x); \
   } while (false);
-// CHECK-FIXES: xmlChar *s = (xmlChar *)(x);
+// CHECK-FIXES: xmlChar *s = (xmlChar *)(x); {{\\}}
 
 void f_cstyle_cast() {
   auto *a = new A();

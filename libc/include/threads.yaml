@@ -1,4 +1,6 @@
 header: threads.h
+standards:
+  - stdc
 macros:
   - macro_name: ONCE_FLAG_INIT
     macro_value: '{0}'

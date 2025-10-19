@@ -40,6 +40,10 @@ unsigned MipsWinCOFFObjectWriter::getRelocType(MCContext &Ctx,
   switch (FixupKind) {
   case FK_Data_4:
     return COFF::IMAGE_REL_MIPS_REFWORD;
+  case FK_SecRel_2:
+    return COFF::IMAGE_REL_MIPS_SECTION;
+  case FK_SecRel_4:
+    return COFF::IMAGE_REL_MIPS_SECREL;
   case Mips::fixup_Mips_26:
     return COFF::IMAGE_REL_MIPS_JMPADDR;
   case Mips::fixup_Mips_HI16:

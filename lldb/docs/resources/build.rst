@@ -30,7 +30,7 @@ The following requirements are shared on all platforms.
 If you want to run the test suite, you'll need to build LLDB with Python
 scripting support.
 
-* `Python <http://www.python.org/>`_
+* `Python <http://www.python.org/>`_ 3.8 or later.
 * `SWIG <http://swig.org/>`_ 4 or later.
 
 If you are on FreeBSD or NetBSD, you will need to install ``gmake`` for building
@@ -62,7 +62,7 @@ CMake configuration error.
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Libxml2           | XML                                                          | ``LLDB_ENABLE_LIBXML2``  |
 +-------------------+--------------------------------------------------------------+--------------------------+
-| Python            | Python scripting. >= 3.0 is required, >= 3.8 is recommended. | ``LLDB_ENABLE_PYTHON``   |
+| Python            | Python scripting. >= 3.8 is required.                        | ``LLDB_ENABLE_PYTHON``   |
 +-------------------+--------------------------------------------------------------+--------------------------+
 | Lua               | Lua scripting. Lua 5.3 and 5.4 are supported.                | ``LLDB_ENABLE_LUA``      |
 +-------------------+--------------------------------------------------------------+--------------------------+
@@ -100,7 +100,7 @@ Windows
 * The Active Template Library (ATL).
 * `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
 * `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targetting and (2) install the debug
+  the x64 variant if that's what you're targeting and (2) install the debug
   library if you want to build a debug lldb. The standalone installer is the
   easiest way to get the debug library.
 * `Python Tools for Visual Studio
@@ -204,13 +204,15 @@ checked out above, but now we will have multiple build-trees:
 
 Run CMake with ``-B`` pointing to a new directory for the provided
 build-tree\ :sup:`1` and the positional argument pointing to the ``llvm``
-directory in the source-tree. Note that we leave out LLDB here and only include
+directory in the source-tree.\ :sup:`2` Note that we leave out LLDB here and only include
 Clang. Then we build the ``ALL`` target with ninja:
 
 ::
 
   $ cmake -B /path/to/llvm-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=[<build type>] \
           -DLLVM_ENABLE_PROJECTS=clang \
+          -DCMAKE_BUILD_TYPE=Release \
           [<more cmake options>] /path/to/llvm-project/llvm
   $ ninja
 
@@ -224,6 +226,7 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
 ::
 
   $ cmake -B /path/to/lldb-build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
   $ ninja lldb lldb-server
@@ -236,6 +239,8 @@ remove it from the Ninja command.
    #. The ``-B`` argument was undocumented for a while and is only officially
       supported since `CMake version 3.14
       <https://cmake.org/cmake/help/v3.14/release/3.14.html#command-line>`_
+   #. If you want to have a standalone LLDB build with tests enabled, you also
+      need to pass in ``-DLLVM_ENABLE_RUNTIME='libcxx;libcxxabi;libunwind'`` to your CMake invocation when configuring your LLVM standalone build.
 
 .. _CommonCMakeOptions:
 
@@ -340,7 +345,7 @@ On macOS the LLDB test suite requires libc++. Either add
   code-signed with identity ``lldb_codesign`` (see :ref:`CodeSigning`).
 * ``LLDB_USE_SYSTEM_DEBUGSERVER:BOOL``: Use the system's debugserver, so lldb is
   functional without setting up code-signing.
-
+* ``LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS:BOOL``: Detect missing packages or modules at configuration time.
 
 .. _CMakeCaches:
 

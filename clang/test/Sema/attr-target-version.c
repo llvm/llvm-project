@@ -78,7 +78,7 @@ void __attribute__((target_version("rdm+rng+crc"))) redef(void) {}
 
 int def(void);
 void __attribute__((target_version("dit"))) nodef(void);
-void __attribute__((target_version("ls64"))) nodef(void);
+void __attribute__((target_version("wfxt"))) nodef(void);
 void __attribute__((target_version("aes"))) ovl(void);
 void __attribute__((target_version("default"))) ovl(void);
 int bar() {
@@ -88,7 +88,8 @@ int bar() {
   nodef();
   return def();
 }
-// expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-error@+2 {{function declaration cannot become a multiversioned function after first usage}}
+// expected-note@-13 {{previous declaration is here}}
 int __attribute__((target_version("sha2"))) def(void) { return 1; }
 
 int __attribute__((target_version("sve"))) prot();

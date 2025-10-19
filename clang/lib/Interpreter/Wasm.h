@@ -29,6 +29,9 @@ public:
   llvm::Error removeModule(PartialTranslationUnit &PTU) override;
   llvm::Error runCtors() const override;
   llvm::Error cleanUp() override;
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  getSymbolAddress(llvm::StringRef Name,
+                   SymbolNameKind NameKind) const override;
 
   ~WasmIncrementalExecutor() override;
 };

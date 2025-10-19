@@ -576,11 +576,11 @@ define i32 @sdiv32(i32 %a, i32 %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v2, 0, v1
-; GFX9-NEXT:    v_max_i32_e32 v2, v1, v2
+; GFX9-NEXT:    v_max_i32_e32 v2, v2, v1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, v2
 ; GFX9-NEXT:    v_sub_u32_e32 v4, 0, v2
 ; GFX9-NEXT:    v_sub_u32_e32 v5, 0, v0
-; GFX9-NEXT:    v_max_i32_e32 v5, v0, v5
+; GFX9-NEXT:    v_max_i32_e32 v5, v5, v0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v3
 ; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
@@ -640,11 +640,11 @@ define i32 @srem32(i32 %a, i32 %b) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_sub_u32_e32 v2, 0, v1
-; GFX9-NEXT:    v_max_i32_e32 v1, v1, v2
+; GFX9-NEXT:    v_max_i32_e32 v1, v2, v1
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GFX9-NEXT:    v_sub_u32_e32 v3, 0, v1
 ; GFX9-NEXT:    v_sub_u32_e32 v4, 0, v0
-; GFX9-NEXT:    v_max_i32_e32 v4, v0, v4
+; GFX9-NEXT:    v_max_i32_e32 v4, v4, v0
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 31, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
@@ -860,7 +860,7 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %d = sdiv i64 %a, %b
   %r = srem i64 %a, %b
-  %ins.0 = insertelement <2 x i64> undef, i64 %d, i32 0
+  %ins.0 = insertelement <2 x i64> poison, i64 %d, i32 0
   %ins.1 = insertelement <2 x i64> %ins.0, i64 %r, i32 1
   ret <2 x i64> %ins.1
 }
@@ -1012,7 +1012,7 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %d = udiv i64 %a, %b
   %r = urem i64 %a, %b
-  %ins.0 = insertelement <2 x i64> undef, i64 %d, i32 0
+  %ins.0 = insertelement <2 x i64> poison, i64 %d, i32 0
   %ins.1 = insertelement <2 x i64> %ins.0, i64 %r, i32 1
   ret <2 x i64> %ins.1
 }

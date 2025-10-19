@@ -19,6 +19,8 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include <variant>
+
 using namespace clang;
 using namespace clang::interp;
 
@@ -94,7 +96,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
     PrimType ElemT = *Ctx.classify(ElemType);
     // Special case, since the bools here are packed.
-    bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
+    bool PackedBools =
+        FieldDesc->getType()->isPackedVectorBoolType(Ctx.getASTContext());
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
@@ -227,7 +230,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
     QualType EltTy = VT->getElementType();
     unsigned NElts = VT->getNumElements();
     unsigned EltSize =
-        VT->isExtVectorBoolType() ? 1 : ASTCtx.getTypeSize(EltTy);
+        VT->isPackedVectorBoolType(ASTCtx) ? 1 : ASTCtx.getTypeSize(EltTy);
 
     if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,
@@ -269,7 +272,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
         Bits BitWidth = FullBitWidth;
 
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -301,8 +304,8 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
           assert(NumBits.isFullByte());
           assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
           F.bitcastToMemory(Buff.get());
-          // Now, only (maybe) swap the actual size of the float, excluding the
-          // padding bits.
+          // Now, only (maybe) swap the actual size of the float, excluding
+          // the padding bits.
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
@@ -332,7 +335,8 @@ bool clang::interp::DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   BitcastBuffer Buffer(FullBitWidth);
   size_t BuffSize = FullBitWidth.roundToBytes();
-  if (!CheckBitcastType(S, OpPC, Ptr.getType(), /*IsToType=*/false))
+  QualType DataType = Ptr.getFieldDesc()->getDataType(S.getASTContext());
+  if (!CheckBitcastType(S, OpPC, DataType, /*IsToType=*/false))
     return false;
 
   bool Success = readPointerToBuffer(S.getContext(), Ptr, Buffer,
@@ -367,8 +371,8 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   assert(FromPtr.isBlockPointer());
   assert(ToPtr.isBlockPointer());
 
-  QualType FromType = FromPtr.getType();
-  QualType ToType = ToPtr.getType();
+  QualType FromType = FromPtr.getFieldDesc()->getDataType(S.getASTContext());
+  QualType ToType = ToPtr.getFieldDesc()->getDataType(S.getASTContext());
 
   if (!CheckBitcastType(S, OpPC, ToType, /*IsToType=*/true))
     return false;
@@ -399,14 +403,16 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
           if (llvm::sys::IsBigEndianHost)
             swapBytes(M.get(), NumBits.roundToBytes());
 
-          P.deref<Floating>() = Floating::bitcastFromMemory(M.get(), Semantics);
+          Floating R = S.allocFloat(Semantics);
+          Floating::bitcastFromMemory(M.get(), Semantics, &R);
+          P.deref<Floating>() = R;
           P.initialize();
           return true;
         }
 
         Bits BitWidth;
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -435,13 +441,27 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
         if (llvm::sys::IsBigEndianHost)
           swapBytes(Memory.get(), FullBitWidth.roundToBytes());
 
-        BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
-          if (BitWidth.nonZero())
-            P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
-                               .truncate(BitWidth.getQuantity());
-          else
-            P.deref<T>() = T::zero();
-        });
+        if (T == PT_IntAPS) {
+          P.deref<IntegralAP<true>>() =
+              S.allocAP<IntegralAP<true>>(FullBitWidth.getQuantity());
+          IntegralAP<true>::bitcastFromMemory(Memory.get(),
+                                              FullBitWidth.getQuantity(),
+                                              &P.deref<IntegralAP<true>>());
+        } else if (T == PT_IntAP) {
+          P.deref<IntegralAP<false>>() =
+              S.allocAP<IntegralAP<false>>(FullBitWidth.getQuantity());
+          IntegralAP<false>::bitcastFromMemory(Memory.get(),
+                                               FullBitWidth.getQuantity(),
+                                               &P.deref<IntegralAP<false>>());
+        } else {
+          BITCAST_TYPE_SWITCH_FIXED_SIZE(T, {
+            if (BitWidth.nonZero())
+              P.deref<T>() = T::bitcastFromMemory(Memory.get(), T::bitWidth())
+                                 .truncate(BitWidth.getQuantity());
+            else
+              P.deref<T>() = T::zero();
+          });
+        }
         P.initialize();
         return true;
       });
@@ -449,33 +469,48 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
   return Success;
 }
 
+using PrimTypeVariant =
+    std::variant<Pointer, FunctionPointer, MemberPointer, FixedPoint,
+                 Integral<8, false>, Integral<8, true>, Integral<16, false>,
+                 Integral<16, true>, Integral<32, false>, Integral<32, true>,
+                 Integral<64, false>, Integral<64, true>, IntegralAP<true>,
+                 IntegralAP<false>, Boolean, Floating>;
+
+// NB: This implementation isn't exactly ideal, but:
+//   1) We can't just do a bitcast here since we need to be able to
+//      copy pointers.
+//   2) This also needs to handle overlapping regions.
+//   3) We currently have no way of iterating over the fields of a pointer
+//      backwards.
 bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
                              const Pointer &SrcPtr, const Pointer &DestPtr,
                              Bits Size) {
   assert(SrcPtr.isBlockPointer());
   assert(DestPtr.isBlockPointer());
 
-  unsigned SrcStartOffset = SrcPtr.getByteOffset();
-  unsigned DestStartOffset = DestPtr.getByteOffset();
-
+  llvm::SmallVector<PrimTypeVariant> Values;
   enumeratePointerFields(SrcPtr, S.getContext(), Size,
                          [&](const Pointer &P, PrimType T, Bits BitOffset,
                              Bits FullBitWidth, bool PackedBools) -> bool {
-                           unsigned SrcOffsetDiff =
-                               P.getByteOffset() - SrcStartOffset;
-
-                           Pointer DestP =
-                               Pointer(DestPtr.asBlockPointer().Pointee,
-                                       DestPtr.asBlockPointer().Base,
-                                       DestStartOffset + SrcOffsetDiff);
-
-                           TYPE_SWITCH(T, {
-                             DestP.deref<T>() = P.deref<T>();
-                             DestP.initialize();
-                           });
-
+                           TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
                            return true;
                          });
+
+  unsigned ValueIndex = 0;
+  enumeratePointerFields(DestPtr, S.getContext(), Size,
+                         [&](const Pointer &P, PrimType T, Bits BitOffset,
+                             Bits FullBitWidth, bool PackedBools) -> bool {
+                           TYPE_SWITCH(T, {
+                             P.deref<T>() = std::get<T>(Values[ValueIndex]);
+                             P.initialize();
+                           });
+
+                           ++ValueIndex;
+                           return true;
+                         });
+
+  // We should've read all the values into DestPtr.
+  assert(ValueIndex == Values.size());
 
   return true;
 }

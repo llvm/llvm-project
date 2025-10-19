@@ -14,6 +14,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -30,8 +31,18 @@ class DefinedAbsolute;
 class DefinedRegular;
 class ImportThunkChunk;
 class LazyArchive;
+class SameAddressThunkARM64EC;
 class SectionChunk;
 class Symbol;
+
+// This data structure is instantiated for each -wrap option.
+struct WrappedSymbol {
+  Symbol *sym;
+  Symbol *real;
+  Symbol *wrap;
+};
+
+struct UndefinedDiag;
 
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
@@ -57,33 +68,49 @@ public:
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
   // symbols and warn about imported local symbols.
-  // Returns whether more files might need to be linked in to resolve lazy
-  // symbols, in which case the caller is expected to call the function again
-  // after linking those files.
-  bool resolveRemainingUndefines();
+  void resolveRemainingUndefines(std::vector<Undefined *> &aliases);
+
+  // Try to resolve undefined symbols with alternate names.
+  void resolveAlternateNames();
 
   // Load lazy objects that are needed for MinGW automatic import and for
   // doing stdcall fixups.
   void loadMinGWSymbols();
   bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
 
-  // Returns a list of chunks of selected symbols.
-  std::vector<Chunk *> getChunks() const;
-
   // Returns a symbol for a given name. Returns a nullptr if not found.
   Symbol *find(StringRef name) const;
   Symbol *findUnderscore(StringRef name) const;
+
+  void addUndefinedGlob(StringRef arg);
 
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
   Symbol *findMangle(StringRef name);
+  StringRef mangleMaybe(Symbol *s);
+
+  // Symbol names are mangled by prepending "_" on x86.
+  StringRef mangle(StringRef sym);
+
+  // Windows specific -- "main" is not the only main function in Windows.
+  // You can choose one from these four -- {w,}{WinMain,main}.
+  // There are four different entry point functions for them,
+  // {w,}{WinMain,main}CRTStartup, respectively. The linker needs to
+  // choose the right one depending on which "main" function is defined.
+  // This function looks up the symbol table and resolve corresponding
+  // entry point name.
+  StringRef findDefaultEntry();
+  WindowsSubsystem inferSubsystem();
 
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
   // added and before the writer writes results to a file.
   void compileBitcodeFiles();
+
+  // Creates an Undefined symbol and marks it as live.
+  Symbol *addGCRoot(StringRef sym, bool aliasEC = false);
 
   // Creates an Undefined symbol for a given name.
   Symbol *addUndefined(StringRef name);
@@ -114,6 +141,7 @@ public:
   void addEntryThunk(Symbol *from, Symbol *to);
   void addExitThunk(Symbol *from, Symbol *to);
   void initializeECThunks();
+  void initializeSameAddressThunks();
 
   void reportDuplicate(Symbol *existing, InputFile *newFile,
                        SectionChunk *newSc = nullptr,
@@ -124,11 +152,42 @@ public:
 
   bool isEC() const { return machine == ARM64EC; }
 
+  // An entry point symbol.
+  Symbol *entry = nullptr;
+
   // A list of chunks which to be added to .rdata.
   std::vector<Chunk *> localImportChunks;
 
   // A list of EC EXP+ symbols.
   std::vector<Symbol *> expSymbols;
+
+  std::vector<SameAddressThunkARM64EC *> sameAddressThunks;
+
+  // A list of DLL exports.
+  std::vector<Export> exports;
+  llvm::DenseSet<StringRef> directivesExports;
+  bool hadExplicitExports;
+
+  Chunk *edataStart = nullptr;
+  Chunk *edataEnd = nullptr;
+
+  Symbol *delayLoadHelper = nullptr;
+  Chunk *tailMergeUnwindInfoChunk = nullptr;
+
+  // A list of wrapped symbols.
+  std::vector<WrappedSymbol> wrapped;
+
+  // Used for /alternatename.
+  std::map<StringRef, StringRef> alternateNames;
+
+  // Used for /aligncomm.
+  std::map<std::string, int> alignComm;
+
+  void fixupExports();
+  void assignExportOrdinals();
+  void parseModuleDefs(StringRef path);
+  void parseAlternateName(StringRef);
+  void parseAligncomm(StringRef);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {
@@ -136,9 +195,13 @@ public:
       callback(pair.second);
   }
 
+  std::vector<BitcodeFile *> bitcodeFileInstances;
+
   DefinedRegular *loadConfigSym = nullptr;
   uint32_t loadConfigSize = 0;
   void initializeLoadConfig();
+
+  std::string printSymbol(Symbol *sym) const;
 
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
@@ -149,12 +212,19 @@ private:
   /// Same as insert(Name), but also sets isUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef name, InputFile *f);
 
+  bool findUnderscoreMangle(StringRef sym);
   std::vector<Symbol *> getSymsWithPrefix(StringRef prefix);
 
   llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
   std::unique_ptr<BitcodeCompiler> lto;
   std::vector<std::pair<Symbol *, Symbol *>> entryThunks;
   llvm::DenseMap<Symbol *, Symbol *> exitThunks;
+
+  void
+  reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
+                       const llvm::DenseMap<Symbol *, Symbol *> *localImports,
+                       bool needBitcodeFiles);
+  void reportUndefinedSymbol(const UndefinedDiag &undefDiag);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);

@@ -18,9 +18,8 @@
 
 namespace clang::sema {
 
-// Tells whether the type is annotated with [[gsl::Pointer]] or is a pointer
-// type.
-bool isPointerLikeType(QualType QT);
+// Tells whether the type is annotated with [[gsl::Pointer]].
+bool isGLSPointerType(QualType QT);
 
 /// Describes an entity that is being assigned.
 struct AssignedEntity {
@@ -60,8 +59,6 @@ void checkCaptureByLifetime(Sema &SemaRef, const CapturingEntity &Entity,
 /// function.
 void checkExprLifetimeMustTailArg(Sema &SemaRef,
                                   const InitializedEntity &Entity, Expr *Init);
-
-bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 
 } // namespace clang::sema
 

@@ -51,27 +51,18 @@ protected:
 /// TypeConverter, but otherwise don't care what type conversions are happening.
 void populateSCFStructuralTypeConversionsAndLegality(
     const TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
+    ConversionTarget &target, PatternBenefit benefit = 1);
 
 /// Similar to `populateSCFStructuralTypeConversionsAndLegality` but does not
 /// populate the conversion target.
 void populateSCFStructuralTypeConversions(const TypeConverter &typeConverter,
-                                          RewritePatternSet &patterns);
+                                          RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
 
 /// Updates the ConversionTarget with dynamic legality of SCF operations based
 /// on the provided type converter.
 void populateSCFStructuralTypeConversionTarget(
     const TypeConverter &typeConverter, ConversionTarget &target);
-
-/// Populates the provided pattern set with patterns that do 1:N type
-/// conversions on (some) SCF ops. This is intended to be used with
-/// applyPartialOneToNConversion.
-/// FIXME: The 1:N dialect conversion is deprecated and will be removed soon.
-/// 1:N support has been added to the regular dialect conversion driver.
-LLVM_DEPRECATED("Use populateSCFStructuralTypeConversions() instead",
-                "populateSCFStructuralTypeConversions")
-void populateSCFStructuralOneToNTypeConversions(
-    const TypeConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Populate patterns for SCF software pipelining transformation. See the
 /// ForLoopPipeliningPattern for the transformation details.

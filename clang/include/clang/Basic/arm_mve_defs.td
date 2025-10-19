@@ -102,6 +102,7 @@ def int_min: CGHelperFn<"ARMMVEConstantSplat<1,0>">;
 def int_max: CGHelperFn<"ARMMVEConstantSplat<0,1>">;
 def uint_max: CGHelperFn<"ARMMVEConstantSplat<1,1>">;
 def undef: IRFunction<"UndefValue::get">;
+def poison: IRFunction<"PoisonValue::get">;
 def icmp_eq: IRBuilder<"CreateICmpEQ">;
 def icmp_ne: IRBuilder<"CreateICmpNE">;
 def icmp_ugt: IRBuilder<"CreateICmpUGT">;
@@ -132,6 +133,13 @@ def unzip: CGHelperFn<"VectorUnzip"> {
   let special_params = [IRBuilderIntParam<1, "bool">];
 }
 def zip: CGHelperFn<"VectorZip">;
+
+def masked_load: IRBuilder<"CreateMaskedLoad"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
+def masked_store: IRBuilder<"CreateMaskedStore"> {
+  let special_params = [IRBuilderIntParam<2, "Align">];
+}
 
 // Trivial 'codegen' function that just returns its argument. Useful
 // for wrapping up a variable name like $foo into a thing you can pass

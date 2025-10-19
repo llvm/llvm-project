@@ -336,3 +336,57 @@ exit:
   ret void
 
 }
+
+; Checks correct traversal for loops without a unique predecessor
+; outside the loop.
+define void @pr122913() {
+; CHECK-LABEL: pr122913
+; CHECK-NEXT:  Determining loop execution counts for: @pr122913
+; CHECK-NEXT:  Loop %header: backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: constant max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: symbolic max backedge-taken count is i1 false
+; CHECK-NEXT:  Loop %header: Trip multiple is 1
+entry:
+  br i1 1, label %bb, label %header
+
+bb:
+  br i1 1, label %exit, label %header
+
+header:
+  %0 = phi i32 [ %1, %body ], [ 0, %bb ], [ 0, %entry ]
+  br label %body
+
+body:
+  %1 = add i32 %0, 1
+  %2 = icmp ult i32 %1, 0
+  br i1 %2, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @hang_due_to_unreachable_phi_inblock() personality ptr null {
+bb:
+  br label %bb6
+
+self-loop:                                        ; preds = %self-loop
+  %dead = invoke ptr null()
+          to label %self-loop unwind label %bb4
+
+bb4:                                              ; preds = %self-loop
+  %i5 = landingpad { ptr, i32 }
+          cleanup
+  br label %bb6
+
+bb6:                                              ; preds = %bb4, %bb
+  %i7 = phi ptr [ null, %bb4 ], [ null, %bb ]
+  br label %bb8
+
+bb8:                                              ; preds = %bb8, %bb6
+  %i9 = phi ptr [ null, %bb8 ], [ null, %bb6 ]
+  %i11 = icmp eq ptr %i9, null
+  br i1 %i11, label %bb12, label %bb8
+
+bb12:                                             ; preds = %bb8, %bb6
+  ret void
+}

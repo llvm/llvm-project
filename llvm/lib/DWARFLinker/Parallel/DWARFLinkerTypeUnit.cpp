@@ -8,7 +8,6 @@
 
 #include "DWARFLinkerTypeUnit.h"
 #include "DIEGenerator.h"
-#include "DWARFEmitterImpl.h"
 #include "llvm/Support/LEB128.h"
 
 using namespace llvm;

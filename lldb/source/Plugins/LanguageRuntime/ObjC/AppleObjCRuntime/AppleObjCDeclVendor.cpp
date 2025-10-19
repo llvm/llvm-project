@@ -29,8 +29,9 @@ public:
   AppleObjCExternalASTSource(AppleObjCDeclVendor &decl_vendor)
       : m_decl_vendor(decl_vendor) {}
 
-  bool FindExternalVisibleDeclsByName(const clang::DeclContext *decl_ctx,
-                                      clang::DeclarationName name) override {
+  bool FindExternalVisibleDeclsByName(
+      const clang::DeclContext *decl_ctx, clang::DeclarationName name,
+      const clang::DeclContext *original_dc) override {
 
     Log *log(GetLog(
         LLDBLog::Expressions)); // FIXME - a more appropriate log channel?
@@ -135,9 +136,9 @@ AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
   m_ast_ctx = std::make_shared<TypeSystemClang>(
       "AppleObjCDeclVendor AST",
       runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple());
-  m_external_source = new AppleObjCExternalASTSource(*this);
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> external_source_owning_ptr(
-      m_external_source);
+  auto external_source_owning_ptr =
+      llvm::makeIntrusiveRefCnt<AppleObjCExternalASTSource>(*this);
+  m_external_source = external_source_owning_ptr.get();
   m_ast_ctx->getASTContext().setExternalSource(external_source_owning_ptr);
 }
 

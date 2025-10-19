@@ -17,6 +17,7 @@
 
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang {
 inline StringRef getLambdaStaticInvokerName() {
@@ -33,6 +34,12 @@ inline bool isLambdaCallOperator(const CXXMethodDecl *MD) {
 inline bool isLambdaCallOperator(const DeclContext *DC) {
   if (!DC || !isa<CXXMethodDecl>(DC)) return false;
   return isLambdaCallOperator(cast<CXXMethodDecl>(DC));
+}
+
+inline bool isLambdaMethod(const DeclContext *DC) {
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(DC))
+    return MD->getParent()->isLambda();
+  return false;
 }
 
 inline bool isLambdaCallWithExplicitObjectParameter(const DeclContext *DC) {

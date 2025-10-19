@@ -9,7 +9,6 @@
 #include "../clang-tidy/utils/DesignatedInitializers.h"
 #include "AST.h"
 #include "Config.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,18 +55,24 @@ void stripLeadingUnderscores(StringRef &Name) { Name = Name.ltrim('_'); }
 
 // getDeclForType() returns the decl responsible for Type's spelling.
 // This is the inverse of ASTContext::getTypeDeclType().
-template <typename Ty, typename = decltype(((Ty *)nullptr)->getDecl())>
-const NamedDecl *getDeclForTypeImpl(const Ty *T) {
-  return T->getDecl();
-}
-const NamedDecl *getDeclForTypeImpl(const void *T) { return nullptr; }
 const NamedDecl *getDeclForType(const Type *T) {
   switch (T->getTypeClass()) {
-#define ABSTRACT_TYPE(TY, BASE)
-#define TYPE(TY, BASE)                                                         \
-  case Type::TY:                                                               \
-    return getDeclForTypeImpl(llvm::cast<TY##Type>(T));
-#include "clang/AST/TypeNodes.inc"
+  case Type::Enum:
+  case Type::Record:
+  case Type::InjectedClassName:
+    return cast<TagType>(T)->getDecl();
+  case Type::TemplateSpecialization:
+    return cast<TemplateSpecializationType>(T)
+        ->getTemplateName()
+        .getAsTemplateDecl(/*IgnoreDeduced=*/true);
+  case Type::Typedef:
+    return cast<TypedefType>(T)->getDecl();
+  case Type::UnresolvedUsing:
+    return cast<UnresolvedUsingType>(T)->getDecl();
+  case Type::Using:
+    return cast<UsingType>(T)->getDecl();
+  default:
+    return nullptr;
   }
   llvm_unreachable("Unknown TypeClass enum");
 }
@@ -81,8 +87,6 @@ llvm::StringRef getSimpleName(const NamedDecl &D) {
   return getSimpleName(D.getDeclName());
 }
 llvm::StringRef getSimpleName(QualType T) {
-  if (const auto *ET = llvm::dyn_cast<ElaboratedType>(T))
-    return getSimpleName(ET->getNamedType());
   if (const auto *BT = llvm::dyn_cast<BuiltinType>(T)) {
     PrintingPolicy PP(LangOptions{});
     PP.adjustForCPlusPlus();
@@ -112,7 +116,9 @@ std::string summarizeExpr(const Expr *E) {
       return getSimpleName(*E->getFoundDecl()).str();
     }
     std::string VisitCallExpr(const CallExpr *E) {
-      return Visit(E->getCallee());
+      std::string Result = Visit(E->getCallee());
+      Result += E->getNumArgs() == 0 ? "()" : "(...)";
+      return Result;
     }
     std::string
     VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
@@ -147,6 +153,9 @@ std::string summarizeExpr(const Expr *E) {
     }
 
     // Literals are just printed
+    std::string VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E) {
+      return "nullptr";
+    }
     std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
       return E->getValue() ? "true" : "false";
     }
@@ -165,12 +174,14 @@ std::string summarizeExpr(const Expr *E) {
       std::string Result = "\"";
       if (E->containsNonAscii()) {
         Result += "...";
-      } else if (E->getLength() > 10) {
-        Result += E->getString().take_front(7);
-        Result += "...";
       } else {
         llvm::raw_string_ostream OS(Result);
-        llvm::printEscapedString(E->getString(), OS);
+        if (E->getLength() > 10) {
+          llvm::printEscapedString(E->getString().take_front(7), OS);
+          Result += "...";
+        } else {
+          llvm::printEscapedString(E->getString(), OS);
+        }
       }
       Result.push_back('"');
       return Result;
@@ -331,49 +342,6 @@ QualType maybeDesugar(ASTContext &AST, QualType QT) {
   return QT;
 }
 
-// Given a callee expression `Fn`, if the call is through a function pointer,
-// try to find the declaration of the corresponding function pointer type,
-// so that we can recover argument names from it.
-// FIXME: This function is mostly duplicated in SemaCodeComplete.cpp; unify.
-static FunctionProtoTypeLoc getPrototypeLoc(Expr *Fn) {
-  TypeLoc Target;
-  Expr *NakedFn = Fn->IgnoreParenCasts();
-  if (const auto *T = NakedFn->getType().getTypePtr()->getAs<TypedefType>()) {
-    Target = T->getDecl()->getTypeSourceInfo()->getTypeLoc();
-  } else if (const auto *DR = dyn_cast<DeclRefExpr>(NakedFn)) {
-    const auto *D = DR->getDecl();
-    if (const auto *const VD = dyn_cast<VarDecl>(D)) {
-      Target = VD->getTypeSourceInfo()->getTypeLoc();
-    }
-  }
-
-  if (!Target)
-    return {};
-
-  // Unwrap types that may be wrapping the function type
-  while (true) {
-    if (auto P = Target.getAs<PointerTypeLoc>()) {
-      Target = P.getPointeeLoc();
-      continue;
-    }
-    if (auto A = Target.getAs<AttributedTypeLoc>()) {
-      Target = A.getModifiedLoc();
-      continue;
-    }
-    if (auto P = Target.getAs<ParenTypeLoc>()) {
-      Target = P.getInnerLoc();
-      continue;
-    }
-    break;
-  }
-
-  if (auto F = Target.getAs<FunctionProtoTypeLoc>()) {
-    return F;
-  }
-
-  return {};
-}
-
 ArrayRef<const ParmVarDecl *>
 maybeDropCxxExplicitObjectParameters(ArrayRef<const ParmVarDecl *> Params) {
   if (!Params.empty() && Params.front()->isExplicitObjectParameter())
@@ -408,12 +376,14 @@ struct Callee {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, std::optional<Range> RestrictRange)
+                   const Config &Cfg, std::optional<Range> RestrictRange,
+                   InlayHintOptions HintOptions)
       : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
         Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
-        TypeHintPolicy(this->AST.getPrintingPolicy()) {
+        TypeHintPolicy(this->AST.getPrintingPolicy()),
+        HintOptions(HintOptions) {
     bool Invalid = false;
     llvm::StringRef Buf =
         AST.getSourceManager().getBufferData(MainFileID, &Invalid);
@@ -500,7 +470,8 @@ public:
       Callee.Decl = FD;
     else if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(CalleeDecls[0]))
       Callee.Decl = FTD->getTemplatedDecl();
-    else if (FunctionProtoTypeLoc Loc = getPrototypeLoc(E->getCallee()))
+    else if (FunctionProtoTypeLoc Loc =
+                 Resolver->getFunctionProtoTypeLoc(E->getCallee()))
       Callee.Loc = Loc;
     else
       return true;
@@ -662,13 +633,30 @@ public:
     }
 
     if (auto *AT = D->getType()->getContainedAutoType()) {
-      if (AT->isDeduced() && !D->getType()->isDependentType()) {
-        // Our current approach is to place the hint on the variable
-        // and accordingly print the full type
-        // (e.g. for `const auto& x = 42`, print `const int&`).
-        // Alternatively, we could place the hint on the `auto`
-        // (and then just print the type deduced for the `auto`).
-        addTypeHint(D->getLocation(), D->getType(), /*Prefix=*/": ");
+      if (AT->isDeduced()) {
+        QualType T;
+        // If the type is dependent, HeuristicResolver *may* be able to
+        // resolve it to something that's useful to print. In other
+        // cases, it can't, and the resultng type would just be printed
+        // as "<dependent type>", in which case don't hint it at all.
+        if (D->getType()->isDependentType()) {
+          if (D->hasInit()) {
+            QualType Resolved = Resolver->resolveExprToType(D->getInit());
+            if (Resolved != AST.DependentTy) {
+              T = Resolved;
+            }
+          }
+        } else {
+          T = D->getType();
+        }
+        if (!T.isNull()) {
+          // Our current approach is to place the hint on the variable
+          // and accordingly print the full type
+          // (e.g. for `const auto& x = 42`, print `const int&`).
+          // Alternatively, we could place the hint on the `auto`
+          // (and then just print the type deduced for the `auto`).
+          addTypeHint(D->getLocation(), T, /*Prefix=*/": ");
+        }
       }
     }
 
@@ -1120,7 +1108,6 @@ private:
   // Otherwise, the hint shouldn't be shown.
   std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
                                                 StringRef OptionalPunctuation) {
-    constexpr unsigned HintMinLineLimit = 2;
 
     auto &SM = AST.getSourceManager();
     auto [BlockBeginFileId, BlockBeginOffset] =
@@ -1148,7 +1135,7 @@ private:
     auto RBraceLine = SM.getLineNumber(RBraceFileId, RBraceOffset);
 
     // Don't show hint on trivial blocks like `class X {};`
-    if (BlockBeginLine + HintMinLineLimit - 1 > RBraceLine)
+    if (BlockBeginLine + HintOptions.HintMinLineLimit - 1 > RBraceLine)
       return std::nullopt;
 
     // This is what we attach the hint to, usually "}" or "};".
@@ -1178,23 +1165,26 @@ private:
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
   PrintingPolicy TypeHintPolicy;
+  InlayHintOptions HintOptions;
 };
 
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  std::optional<Range> RestrictRange) {
+                                  std::optional<Range> RestrictRange,
+                                  InlayHintOptions HintOptions) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)
     return Results;
-  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange));
+  InlayHintVisitor Visitor(Results, AST, Cfg, std::move(RestrictRange),
+                           HintOptions);
   Visitor.TraverseAST(AST.getASTContext());
 
   // De-duplicate hints. Duplicates can sometimes occur due to e.g. explicit
   // template instantiations.
   llvm::sort(Results);
-  Results.erase(std::unique(Results.begin(), Results.end()), Results.end());
+  Results.erase(llvm::unique(Results), Results.end());
 
   return Results;
 }

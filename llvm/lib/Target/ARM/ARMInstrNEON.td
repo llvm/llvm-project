@@ -95,28 +95,24 @@ def VectorIndex8 : Operand<i32>, ImmLeaf<i32, [{
 }]> {
   let ParserMatchClass = VectorIndex8Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex16 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 4;
 }]> {
   let ParserMatchClass = VectorIndex16Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex32 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 2;
 }]> {
   let ParserMatchClass = VectorIndex32Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 def VectorIndex64 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint64_t)Imm) < 1;
 }]> {
   let ParserMatchClass = VectorIndex64Operand;
   let PrintMethod = "printVectorIndex";
-  let MIOperandInfo = (ops i32imm);
 }
 
 // Register list of one D register.
@@ -7312,12 +7308,12 @@ multiclass VRINT_FPI<string op, bits<3> op9_7, SDPatternOperator Int> {
   }
 }
 
-defm VRINTNN : VRINT_FPI<"n", 0b000, int_arm_neon_vrintn>;
-defm VRINTXN : VRINT_FPI<"x", 0b001, int_arm_neon_vrintx>;
-defm VRINTAN : VRINT_FPI<"a", 0b010, int_arm_neon_vrinta>;
-defm VRINTZN : VRINT_FPI<"z", 0b011, int_arm_neon_vrintz>;
-defm VRINTMN : VRINT_FPI<"m", 0b101, int_arm_neon_vrintm>;
-defm VRINTPN : VRINT_FPI<"p", 0b111, int_arm_neon_vrintp>;
+defm VRINTNN : VRINT_FPI<"n", 0b000, froundeven>;
+defm VRINTXN : VRINT_FPI<"x", 0b001, frint>;
+defm VRINTAN : VRINT_FPI<"a", 0b010, fround>;
+defm VRINTZN : VRINT_FPI<"z", 0b011, ftrunc>;
+defm VRINTMN : VRINT_FPI<"m", 0b101, ffloor>;
+defm VRINTPN : VRINT_FPI<"p", 0b111, fceil>;
 
 // Cryptography instructions
 let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
@@ -8186,6 +8182,7 @@ def VLD1LNdWB_register_Asm_32 :
                   (ins VecListOneDWordIndexed:$list, addrmode6align32:$addr,
                        rGPR:$Rm, pred:$p)>;
 
+let mayStore = 1 in {
 
 // VST1 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
@@ -8223,6 +8220,8 @@ def VST1LNdWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst1${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListOneDWordIndexed:$list, addrmode6align32:$addr,
                        rGPR:$Rm, pred:$p)>;
+
+}
 
 // VLD2 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
@@ -8282,6 +8281,7 @@ def VLD2LNqWB_register_Asm_32 :
                   (ins VecListTwoQWordIndexed:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
 
+let mayStore = 1 in {
 
 // VST2 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
@@ -8341,6 +8341,8 @@ def VST2LNqWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst2${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListTwoQWordIndexed:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
+
+}
 
 // VLD3 all-lanes pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
@@ -8531,6 +8533,8 @@ def VLD3qWB_register_Asm_32 :
                   (ins VecListThreeQ:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
 
+let mayStore = 1 in {
+
 // VST3 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST3LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst3${p}", ".8", "$list, $addr",
@@ -8649,6 +8653,8 @@ def VST3qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst3${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListThreeQ:$list, addrmode6align64:$addr,
                        rGPR:$Rm, pred:$p)>;
+
+}
 
 // VLD4 all-lanes pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
@@ -8853,6 +8859,8 @@ def VLD4qWB_register_Asm_32 :
                   (ins VecListFourQ:$list, addrmode6align64or128or256:$addr,
                        rGPR:$Rm, pred:$p)>;
 
+let mayStore = 1 in {
+
 // VST4 single-lane pseudo-instructions. These need special handling for
 // the lane index that an InstAlias can't handle, so we use these instead.
 def VST4LNdAsm_8 : NEONDataTypeAsmPseudoInst<"vst4${p}", ".8", "$list, $addr",
@@ -8983,6 +8991,7 @@ def VST4qWB_register_Asm_32 :
         NEONDataTypeAsmPseudoInst<"vst4${p}", ".32", "$list, $addr, $Rm",
                   (ins VecListFourQ:$list, addrmode6align64or128or256:$addr,
                        rGPR:$Rm, pred:$p)>;
+}
 
 // VMOV/VMVN takes an optional datatype suffix
 defm : NEONDTAnyInstAlias<"vmov${p}", "$Vd, $Vm",

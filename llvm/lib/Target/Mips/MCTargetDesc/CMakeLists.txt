@@ -7,9 +7,7 @@ add_llvm_component_library(LLVMMipsDesc
   MipsInstPrinter.cpp
   MipsMCAsmInfo.cpp
   MipsMCCodeEmitter.cpp
-  MipsMCExpr.cpp
   MipsMCTargetDesc.cpp
-  MipsNaClELFStreamer.cpp
   MipsOptionRecord.cpp
   MipsTargetStreamer.cpp
   MipsWinCOFFObjectWriter.cpp

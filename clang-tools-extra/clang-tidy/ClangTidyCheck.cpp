@@ -1,4 +1,4 @@
-//===--- ClangTidyCheck.cpp - clang-tidy ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -62,11 +62,6 @@ ClangTidyCheck::OptionsView::get(StringRef LocalName) const {
   return std::nullopt;
 }
 
-static const llvm::StringSet<> DeprecatedGlobalOptions{
-    "StrictMode",
-    "IgnoreMacros",
-};
-
 static ClangTidyOptions::OptionMap::const_iterator
 findPriorityOption(const ClangTidyOptions::OptionMap &Options,
                    StringRef NamePrefix, StringRef LocalName,
@@ -78,13 +73,6 @@ findPriorityOption(const ClangTidyOptions::OptionMap &Options,
   }
   auto IterLocal = Options.find((NamePrefix + LocalName).str());
   auto IterGlobal = Options.find(LocalName);
-  // FIXME: temporary solution for deprecation warnings, should be removed
-  // after 22.x. Warn configuration deps on deprecation global options.
-  if (IterLocal == Options.end() && IterGlobal != Options.end() &&
-      DeprecatedGlobalOptions.contains(LocalName))
-    Context->configurationDiag(
-        "global option '%0' is deprecated, please use '%1%0' instead.")
-        << LocalName << NamePrefix;
   if (IterLocal == Options.end())
     return IterGlobal;
   if (IterGlobal == Options.end())
@@ -163,9 +151,10 @@ void ClangTidyCheck::OptionsView::store<bool>(
   store(Options, LocalName, Value ? StringRef("true") : StringRef("false"));
 }
 
-std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
-    StringRef LocalName, ArrayRef<NameAndValue> Mapping, bool CheckGlobal,
-    bool IgnoreCase) const {
+std::optional<int64_t>
+ClangTidyCheck::OptionsView::getEnumInt(StringRef LocalName,
+                                        ArrayRef<NameAndValue> Mapping,
+                                        bool CheckGlobal) const {
   if (!CheckGlobal && Context->getOptionsCollector())
     Context->getOptionsCollector()->insert((NamePrefix + LocalName).str());
   auto Iter = CheckGlobal ? findPriorityOption(CheckOptions, NamePrefix,
@@ -178,12 +167,10 @@ std::optional<int64_t> ClangTidyCheck::OptionsView::getEnumInt(
   StringRef Closest;
   unsigned EditDistance = 3;
   for (const auto &NameAndEnum : Mapping) {
-    if (IgnoreCase) {
-      if (Value.equals_insensitive(NameAndEnum.second))
-        return NameAndEnum.first;
-    } else if (Value == NameAndEnum.second) {
+    if (Value == NameAndEnum.second) {
       return NameAndEnum.first;
-    } else if (Value.equals_insensitive(NameAndEnum.second)) {
+    }
+    if (Value.equals_insensitive(NameAndEnum.second)) {
       Closest = NameAndEnum.second;
       EditDistance = 0;
       continue;

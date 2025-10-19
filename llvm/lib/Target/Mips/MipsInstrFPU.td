@@ -622,15 +622,13 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
 // Indexed loads and stores.
 // Base register + offset register addressing mode (indicated by "x" in the
-// instruction mnemonic) is disallowed under NaCl.
-let AdditionalPredicates = [IsNotNaCl] in {
-  def LWXC1 : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>, LWXC1_FM<0>,
-              INSN_MIPS4_32R2_NOT_32R6_64R6;
-  def SWXC1 : MMRel, SWXC1_FT<"swxc1", FGR32Opnd, II_SWXC1, store>, SWXC1_FM<8>,
-              INSN_MIPS4_32R2_NOT_32R6_64R6;
-}
+// instruction mnemonic).
+def LWXC1 : MMRel, LWXC1_FT<"lwxc1", FGR32Opnd, II_LWXC1, load>, LWXC1_FM<0>,
+            INSN_MIPS4_32R2_NOT_32R6_64R6;
+def SWXC1 : MMRel, SWXC1_FT<"swxc1", FGR32Opnd, II_SWXC1, store>, SWXC1_FM<8>,
+            INSN_MIPS4_32R2_NOT_32R6_64R6;
 
-let AdditionalPredicates = [NotInMicroMips, IsNotNaCl] in {
+let AdditionalPredicates = [NotInMicroMips] in {
   def LDXC1 : LWXC1_FT<"ldxc1", AFGR64Opnd, II_LDXC1, load>, LWXC1_FM<1>,
               INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
   def SDXC1 : SWXC1_FT<"sdxc1", AFGR64Opnd, II_SDXC1, store>, SWXC1_FM<9>,
@@ -646,14 +644,14 @@ let DecoderNamespace="MipsFP64" in {
 
 // Load/store doubleword indexed unaligned.
 // FIXME: This instruction should not be defined for FGR_32.
-let AdditionalPredicates = [IsNotNaCl, NotInMicroMips] in {
+let AdditionalPredicates = [NotInMicroMips] in {
   def LUXC1 : MMRel, LWXC1_FT<"luxc1", AFGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
   def SUXC1 : MMRel, SWXC1_FT<"suxc1", AFGR64Opnd, II_SUXC1>, SWXC1_FM<0xd>,
               INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_32;
 }
 
-let AdditionalPredicates = [IsNotNaCl, NotInMicroMips],
+let AdditionalPredicates = [NotInMicroMips],
     DecoderNamespace="MipsFP64" in {
   def LUXC164 : LWXC1_FT<"luxc1", FGR64Opnd, II_LUXC1>, LWXC1_FM<0x5>,
                 INSN_MIPS5_32R2_NOT_32R6_64R6, FGR_64;

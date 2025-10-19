@@ -19,7 +19,6 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <cstdint>
 #include <set>
 #include <string>
 
@@ -162,14 +161,14 @@ static void emitARMTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   for (const Record *Rec : FMVExts) {
     OS << "  I.emplace_back(";
     OS << "\"" << Rec->getValueAsString("Name") << "\"";
-    OS << ", " << Rec->getValueAsString("Bit");
+    OS << ", " << Rec->getValueAsString("FeatureBit");
+    OS << ", " << Rec->getValueAsString("PriorityBit");
     auto FeatName = Rec->getValueAsString("BackendFeature");
     const Record *FeatRec = ExtensionMap[FeatName];
     if (FeatRec)
       OS << ", " << FeatRec->getValueAsString("ArchExtKindSpelling").upper();
     else
       OS << ", std::nullopt";
-    OS << ", " << (uint64_t)Rec->getValueAsInt("Priority");
     OS << ");\n";
   };
   OS << "  return I;\n"

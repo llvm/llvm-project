@@ -15,7 +15,6 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/GenNameParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -70,7 +69,7 @@ static bool findUse(const Init *field, const Init *deprecatedInit,
   }
 
   if (const ListInit *li = dyn_cast<ListInit>(field)) {
-    return memoize(llvm::any_of(li->getValues(), [&](const Init *jt) {
+    return memoize(llvm::any_of(li->getElements(), [&](const Init *jt) {
       return findUse(jt, deprecatedInit, known);
     }));
   }

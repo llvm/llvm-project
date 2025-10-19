@@ -16,8 +16,7 @@ define i32 @reducebase_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_onein_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
@@ -27,8 +26,7 @@ define i32 @reduceshuffle_onein_v4i32(<4 x i32> %a) {
 
 define i32 @reduceshuffle_onein_const_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_const_v4i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[X:%.*]] = xor <4 x i32> [[S]], splat (i32 -1)
+; CHECK-NEXT:    [[X:%.*]] = xor <4 x i32> [[S:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -222,8 +220,7 @@ define i32 @reducebase_v16i32(<16 x i32> %a, <16 x i32> %b) {
 
 define i32 @reduceshuffle_onein_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v16i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x = shufflevector <16 x i32> %a, <16 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -233,8 +230,7 @@ define i32 @reduceshuffle_onein_v16i32(<16 x i32> %a) {
 
 define i32 @reduceshuffle_onein_ext_v16i32(<16 x i32> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_ext_v16i32(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i32> [[A:%.*]], <16 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S]], splat (i32 -1)
+; CHECK-NEXT:    [[X:%.*]] = xor <16 x i32> [[S:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -353,8 +349,7 @@ define i16 @reducebase_v16i16(<16 x i16> %a, <16 x i16> %b) {
 
 define i16 @reduceshuffle_onein_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_v16i16(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X:%.*]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %x = shufflevector <16 x i16> %a, <16 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
@@ -364,8 +359,7 @@ define i16 @reduceshuffle_onein_v16i16(<16 x i16> %a) {
 
 define i16 @reduceshuffle_onein_ext_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: @reduceshuffle_onein_ext_v16i16(
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <16 x i16> [[A:%.*]], <16 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S]], splat (i16 -1)
+; CHECK-NEXT:    [[X:%.*]] = xor <16 x i16> [[S:%.*]], splat (i16 -1)
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[X]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;

@@ -127,7 +127,7 @@ bool GNUstepObjCRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
 bool GNUstepObjCRuntime::GetDynamicTypeAndAddress(
     ValueObject &in_value, DynamicValueType use_dynamic,
     TypeAndOrName &class_type_or_name, Address &address,
-    Value::ValueType &value_type) {
+    Value::ValueType &value_type, llvm::ArrayRef<uint8_t> &local_buffer) {
   return false;
 }
 
@@ -169,7 +169,8 @@ GNUstepObjCRuntime::CreateExceptionResolver(const BreakpointSP &bkpt,
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
         bkpt, "objc_exception_throw", eFunctionNameTypeBase,
-        eLanguageTypeUnknown, Breakpoint::Exact, 0, eLazyBoolNo);
+        eLanguageTypeUnknown, Breakpoint::Exact, 0,
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
 
   return resolver_sp;
 }

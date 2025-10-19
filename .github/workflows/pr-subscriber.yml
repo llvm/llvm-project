@@ -10,11 +10,11 @@ permissions:
 
 jobs:
   auto-subscribe:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Checkout Automation Script
-        uses: actions/checkout@v4
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           sparse-checkout: llvm/utils/git/
           ref: main
