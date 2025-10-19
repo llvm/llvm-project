@@ -5,10 +5,10 @@ define i8 @scmp_8_8(i8 signext %x, i8 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    sub 3, 4, 3
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
   %1 = call i8 @llvm.scmp(i8 %x, i8 %y)
   ret i8 %1
@@ -18,10 +18,10 @@ define i8 @scmp_8_16(i16 signext %x, i16 signext %y) nounwind {
 ; CHECK-LABEL: scmp_8_16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    sub 5, 4, 3
-; CHECK-NEXT:    li 3, -1
-; CHECK-NEXT:    rldicl 5, 5, 1, 63
-; CHECK-NEXT:    isellt 3, 3, 5
+; CHECK-NEXT:    sub 3, 4, 3
+; CHECK-NEXT:    li 4, -1
+; CHECK-NEXT:    rldicl 3, 3, 1, 63
+; CHECK-NEXT:    isellt 3, 4, 3
 ; CHECK-NEXT:    blr
   %1 = call i8 @llvm.scmp(i16 %x, i16 %y)
   ret i8 %1
