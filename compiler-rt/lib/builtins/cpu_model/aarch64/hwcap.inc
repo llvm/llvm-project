@@ -1,13 +1,8 @@
-#if __has_include(<sys/hwcap.h>)
-#include <sys/hwcap.h>
-#define HAVE_SYS_HWCAP_H
-#endif
-
 #ifndef _IFUNC_ARG_HWCAP
 #define _IFUNC_ARG_HWCAP (1ULL << 62)
 #endif
 #ifndef AT_HWCAP
-#define AT_HWCAP 16
+#define AT_HWCAP 16 // Linux value
 #endif
 #ifndef HWCAP_CPUID
 #define HWCAP_CPUID (1 << 11)
@@ -95,7 +90,7 @@
 #endif
 
 #ifndef AT_HWCAP2
-#define AT_HWCAP2 26
+#define AT_HWCAP2 26 // Linux value
 #endif
 #ifndef HWCAP2_DCPODP
 #define HWCAP2_DCPODP (1 << 0)
@@ -189,4 +184,20 @@
 #endif
 #ifndef HWCAP2_CSSC
 #define HWCAP2_CSSC (1UL << 34)
+#endif
+
+#ifndef AT_HWCAP3
+#ifdef __linux__
+#define AT_HWCAP3 29 // Linux value
+#else
+#define AT_HWCAP3 38 // BSD value
+#endif
+#endif
+
+#ifndef AT_HWCAP4
+#ifdef __linux__
+#define AT_HWCAP4 30 // Linux value
+#else
+#define AT_HWCAP4 39 // BSD value
+#endif
 #endif

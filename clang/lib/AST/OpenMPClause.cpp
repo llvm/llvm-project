@@ -309,6 +309,12 @@ OMPClause::child_range OMPIfClause::used_children() {
   return child_range(&Condition, &Condition + 1);
 }
 
+OMPClause::child_range OMPNowaitClause::used_children() {
+  if (Condition)
+    return child_range(&Condition, &Condition + 1);
+  return children();
+}
+
 OMPClause::child_range OMPGrainsizeClause::used_children() {
   if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
     return child_range(C, C + 1);
@@ -1022,6 +1028,26 @@ OMPPartialClause *OMPPartialClause::Create(const ASTContext &C,
 
 OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPPartialClause();
+}
+
+OMPLoopRangeClause *
+OMPLoopRangeClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation FirstLoc,
+                           SourceLocation CountLoc, SourceLocation EndLoc,
+                           Expr *First, Expr *Count) {
+  OMPLoopRangeClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setFirstLoc(FirstLoc);
+  Clause->setCountLoc(CountLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setFirst(First);
+  Clause->setCount(Count);
+  return Clause;
+}
+
+OMPLoopRangeClause *OMPLoopRangeClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPLoopRangeClause();
 }
 
 OMPAllocateClause *OMPAllocateClause::Create(
@@ -1964,6 +1990,21 @@ void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   }
 }
 
+void OMPClausePrinter::VisitOMPLoopRangeClause(OMPLoopRangeClause *Node) {
+  OS << "looprange";
+
+  Expr *First = Node->getFirst();
+  Expr *Count = Node->getCount();
+
+  if (First && Count) {
+    OS << "(";
+    First->printPretty(OS, nullptr, Policy, 0);
+    OS << ",";
+    Count->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
+}
+
 void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
   OS << "allocator(";
   Node->getAllocator()->printPretty(OS, nullptr, Policy, 0);
@@ -2078,8 +2119,13 @@ void OMPClausePrinter::VisitOMPOrderedClause(OMPOrderedClause *Node) {
   }
 }
 
-void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *) {
+void OMPClausePrinter::VisitOMPNowaitClause(OMPNowaitClause *Node) {
   OS << "nowait";
+  if (auto *Cond = Node->getCondition()) {
+    OS << "(";
+    Cond->printPretty(OS, nullptr, Policy, 0);
+    OS << ")";
+  }
 }
 
 void OMPClausePrinter::VisitOMPUntiedClause(OMPUntiedClause *) {

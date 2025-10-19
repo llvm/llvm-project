@@ -1388,7 +1388,7 @@ defm : VPatFPSetCCSDNode_VV_VF_FV<SETOLE, "PseudoVMFLE", "PseudoVMFGE">;
 // Floating-point vselects:
 // 11.15. Vector Integer Merge Instructions
 // 13.15. Vector Floating-Point Merge Instruction
-foreach fvti = AllFloatAndBFloatVectors in {
+foreach fvti = AllFloatAndBF16Vectors in {
   defvar ivti = GetIntVTypeInfo<fvti>.Vti;
   let Predicates = GetVTypePredicates<ivti>.Predicates in {
     def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm), fvti.RegClass:$rs1,

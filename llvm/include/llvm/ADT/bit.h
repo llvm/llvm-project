@@ -292,6 +292,23 @@ template <typename T> [[nodiscard]] int bit_width(T Value) {
   return std::numeric_limits<T>::digits - llvm::countl_zero(Value);
 }
 
+/// Returns the number of bits needed to represent Value if Value is nonzero.
+/// Returns 0 otherwise.
+///
+/// A constexpr version of bit_width.
+///
+/// Ex. bit_width_constexpr(5) == 3.
+template <typename T> [[nodiscard]] constexpr int bit_width_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  int Width = 0;
+  while (Value > 0) {
+    Value >>= 1;
+    ++Width;
+  }
+  return Width;
+}
+
 /// Returns the largest integral power of two no greater than Value if Value is
 /// nonzero.  Returns 0 otherwise.
 ///
@@ -319,33 +336,43 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   return T(1) << llvm::bit_width<T>(Value - 1u);
 }
 
-// Forward-declare rotr so that rotl can use it.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] constexpr T rotr(T V, int R);
+/// Returns the smallest integral power of two no smaller than Value if Value is
+/// nonzero.  Returns 1 otherwise.
+///
+/// Ex. bit_ceil(5) == 8.
+///
+/// The return value is undefined if the input is larger than the largest power
+/// of two representable in T.
+template <typename T> [[nodiscard]] constexpr T bit_ceil_constexpr(T Value) {
+  static_assert(std::is_unsigned_v<T>,
+                "Only unsigned integral types are allowed.");
+  if (Value < 2)
+    return 1;
+  return T(1) << llvm::bit_width_constexpr<T>(Value - 1u);
+}
 
 template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 [[nodiscard]] constexpr T rotl(T V, int R) {
-  unsigned N = std::numeric_limits<T>::digits;
+  constexpr unsigned N = std::numeric_limits<T>::digits;
 
-  R = R % N;
-  if (!R)
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
     return V;
-
-  if (R < 0)
-    return llvm::rotr(V, -R);
 
   return (V << R) | (V >> (N - R));
 }
 
-template <typename T, typename> [[nodiscard]] constexpr T rotr(T V, int R) {
-  unsigned N = std::numeric_limits<T>::digits;
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] constexpr T rotr(T V, int R) {
+  constexpr unsigned N = std::numeric_limits<T>::digits;
 
-  R = R % N;
-  if (!R)
+  static_assert(has_single_bit(N), "& (N - 1) is only valid for powers of two");
+  R = R & (N - 1);
+
+  if (R == 0)
     return V;
-
-  if (R < 0)
-    return llvm::rotl(V, -R);
 
   return (V >> R) | (V << (N - R));
 }
