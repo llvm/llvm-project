@@ -1604,6 +1604,28 @@ func.func @func_execute_region_inline_multi_yield() {
 
 // -----
 
+// CHECK-LABEL:   func.func private @canonicalize_execute_region_yeilding_external_value(
+// CHECK-SAME:                                                                           %[[VAL_0:.*]]: tensor<1x120xui8>) -> tensor<1x60xui8> {
+// CHECK:           %[[VAL_1:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+// CHECK:           scf.execute_region no_inline {
+// CHECK:             scf.yield
+// CHECK:           }
+// CHECK:           %[[VAL_2:.*]] = bufferization.to_tensor %[[VAL_1]] : memref<1x60xui8> to tensor<1x60xui8>
+// CHECK:           return %[[VAL_2]] : tensor<1x60xui8>
+// CHECK:         }
+
+func.func private @canonicalize_execute_region_yeilding_external_value(%arg0: tensor<1x120xui8>) -> tensor<1x60xui8> {
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<1x60xui8>
+  %0 = bufferization.to_tensor %alloc : memref<1x60xui8> to tensor<1x60xui8>
+  %1 = scf.execute_region -> memref<1x60xui8> no_inline {
+    scf.yield %alloc : memref<1x60xui8>
+  }
+  %2 = bufferization.to_tensor %1 : memref<1x60xui8> to tensor<1x60xui8>
+  return %2 : tensor<1x60xui8>
+}
+
+// -----
+
 // CHECK-LABEL: func @canonicalize_parallel_insert_slice_indices(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<1x5xf32>, %[[arg1:.*]]: tensor<?x?xf32>
 func.func @canonicalize_parallel_insert_slice_indices(

@@ -291,9 +291,94 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
   }
 };
 
+// Pattern to eliminate ExecuteRegionOp results when it only forwards external
+// values. It operates only on execute regions with single terminator yield
+// operation.
+struct ExecuteRegionForwardingEliminator
+    : public OpRewritePattern<ExecuteRegionOp> {
+  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExecuteRegionOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getNumResults() == 0)
+      return failure();
+
+    SmallVector<Operation *> yieldOps;
+    for (Block &block : op.getRegion()) {
+      if (auto yield = dyn_cast<scf::YieldOp>(block.getTerminator())) {
+        if (yield.getResults().empty())
+          continue;
+        yieldOps.push_back(yield.getOperation());
+      }
+    }
+
+    if (yieldOps.size() != 1)
+      return failure();
+
+    auto yieldOp = dyn_cast<scf::YieldOp>(yieldOps.front());
+    auto yieldedValues = yieldOp.getOperands();
+    // Check if all yielded values are from outside the region
+    bool allExternal = true;
+    for (Value yieldedValue : yieldedValues) {
+      if (isValueFromInsideRegion(yieldedValue, op)) {
+        allExternal = false;
+        break;
+      }
+    }
+
+    if (!allExternal)
+      return failure();
+
+    // All yielded values are external - create a new execute_region with no
+    // results.
+    auto newOp = rewriter.create<ExecuteRegionOp>(op.getLoc(), TypeRange{});
+    newOp->setAttrs(op->getAttrs());
+
+    // Move the region content to the new operation
+    newOp.getRegion().takeBody(op.getRegion());
+
+    // Replace the yield operation with a new yield operation with no results.
+    rewriter.setInsertionPoint(yieldOp);
+    rewriter.eraseOp(yieldOp);
+    rewriter.create<scf::YieldOp>(yieldOp.getLoc());
+
+    // Replace the old operation with the external values directly.
+    rewriter.replaceOp(op, yieldedValues);
+    return success();
+  }
+
+private:
+  bool isValueFromInsideRegion(Value value,
+                               ExecuteRegionOp executeRegionOp) const {
+    // Check if the value is defined within the execute_region
+    if (Operation *defOp = value.getDefiningOp()) {
+      return executeRegionOp.getRegion().isAncestor(defOp->getParentRegion());
+    }
+
+    // If it's a block argument, check if it's from within the region
+    if (BlockArgument blockArg = dyn_cast<BlockArgument>(value)) {
+      return executeRegionOp.getRegion().isAncestor(blockArg.getParentRegion());
+    }
+
+    return false; // Value is from outside the region
+  }
+};
+
 void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner>(context);
+  results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner,
+              ExecuteRegionForwardingEliminator>(context);
+}
+
+void ExecuteRegionOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  if (!getNoInline())
+    return;
+  // In case there is attribute no_inline we want the region not to be inlined
+  // into the parent operation.
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       SideEffects::DefaultResource::get());
 }
 
 void ExecuteRegionOp::getSuccessorRegions(
