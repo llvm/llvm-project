@@ -26,12 +26,18 @@ if(CLANG_ENABLE_PROTO_FUZZER)
   add_definitions(-DGOOGLE_PROTOBUF_NO_RTTI)
   include_directories(${PROTOBUF_INCLUDE_DIRS})
   include_directories(${CMAKE_CURRENT_BINARY_DIR})
-  protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS cxx_proto.proto)
-  protobuf_generate_cpp(LOOP_PROTO_SRCS LOOP_PROTO_HDRS cxx_loop_proto.proto)
-  set(LLVM_OPTIONAL_SOURCES ${LLVM_OPTIONAL_SOURCES} ${PROTO_SRCS})
+  protobuf_generate(
+    LANGUAGE cpp
+    OUT_VAR PROTO_SRCS
+    PROTOS cxx_proto.proto
+  )
+  protobuf_generate(
+    LANGUAGE cpp
+    OUT_VAR LOOP_PROTO_SRCS
+    PROTOS cxx_loop_proto.proto
+  )
   add_clang_library(clangCXXProto
     ${PROTO_SRCS}
-    ${PROTO_HDRS}
 
     LINK_LIBS
     ${PROTOBUF_LIBRARIES}
@@ -39,7 +45,6 @@ if(CLANG_ENABLE_PROTO_FUZZER)
 
   add_clang_library(clangCXXLoopProto
     ${LOOP_PROTO_SRCS}
-    ${LOOP_PROTO_HDRS}
 
     LINK_LIBS
     ${PROTOBUF_LIBRARIES}
@@ -54,7 +59,7 @@ if(CLANG_ENABLE_PROTO_FUZZER)
 
   # Build the protobuf->LLVM IR translation library and driver.
   add_clang_subdirectory(proto-to-llvm)
-  
+
   # Build the fuzzer initialization library.
   add_clang_subdirectory(fuzzer-initialize)
 
