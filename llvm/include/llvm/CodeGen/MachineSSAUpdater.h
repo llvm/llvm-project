@@ -50,6 +50,7 @@ private:
 
   const TargetInstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   /// MachineSSAUpdater constructor.  If InsertedPHIs is specified, it will be
