@@ -988,30 +988,30 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP35]], i32 [[TMP47]], i32 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP56]], i32 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = sub <4 x i32> [[TMP24]], [[TMP12]]
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP25]], i32 1
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP25]], i32 2
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP25]], i32 3
 ; CHECK-NEXT:    [[TMP39:%.*]] = sub <4 x i32> [[TMP40]], [[TMP40]]
+; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP39]], i32 0
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP39]], i32 1
+; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP39]], i32 2
+; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x i32> [[TMP39]], i32 3
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i32 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP1]], i32 2
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP2]], i32 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP3]], i32 2
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP25]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP30]], ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP25]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[TMP27]], align 8
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP25]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP32]], ptr [[TMP28]], align 8
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP25]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[TMP29]], align 8
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i32 3
 ; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP1]], i32 3
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP2]], i32 3
 ; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP3]], i32 3
-; CHECK-NEXT:    [[TMP52:%.*]] = extractelement <4 x i32> [[TMP39]], i32 0
 ; CHECK-NEXT:    store i32 [[TMP52]], ptr [[TMP48]], align 8
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <4 x i32> [[TMP39]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP53]], ptr [[TMP49]], align 8
-; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <4 x i32> [[TMP39]], i32 2
 ; CHECK-NEXT:    store i32 [[TMP54]], ptr [[TMP50]], align 8
-; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <4 x i32> [[TMP39]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP55]], ptr [[TMP51]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1078,30 +1078,30 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <16 x i32> [[WIDE_VEC5]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
 ; INTER-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <16 x i32> [[WIDE_VEC5]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; INTER-NEXT:    [[TMP17:%.*]] = sub <4 x i32> [[STRIDED_VEC6]], [[STRIDED_VEC]]
+; INTER-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP17]], i32 0
+; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i32 1
+; INTER-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP17]], i32 2
+; INTER-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
 ; INTER-NEXT:    [[TMP18:%.*]] = sub <4 x i32> [[STRIDED_VEC4]], [[STRIDED_VEC4]]
+; INTER-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP18]], i32 0
+; INTER-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP18]], i32 1
+; INTER-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP18]], i32 2
+; INTER-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP18]], i32 3
 ; INTER-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i32 2
 ; INTER-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP1]], i32 2
 ; INTER-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP2]], i32 2
 ; INTER-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP3]], i32 2
-; INTER-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP17]], i32 0
 ; INTER-NEXT:    store i32 [[TMP13]], ptr [[TMP9]], align 8
-; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i32 1
 ; INTER-NEXT:    store i32 [[TMP14]], ptr [[TMP10]], align 8
-; INTER-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP17]], i32 2
 ; INTER-NEXT:    store i32 [[TMP15]], ptr [[TMP11]], align 8
-; INTER-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
 ; INTER-NEXT:    store i32 [[TMP16]], ptr [[TMP12]], align 8
 ; INTER-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i32 3
 ; INTER-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP1]], i32 3
 ; INTER-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP2]], i32 3
 ; INTER-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP3]], i32 3
-; INTER-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP18]], i32 0
 ; INTER-NEXT:    store i32 [[TMP23]], ptr [[TMP19]], align 8
-; INTER-NEXT:    [[TMP24:%.*]] = extractelement <4 x i32> [[TMP18]], i32 1
 ; INTER-NEXT:    store i32 [[TMP24]], ptr [[TMP20]], align 8
-; INTER-NEXT:    [[TMP25:%.*]] = extractelement <4 x i32> [[TMP18]], i32 2
 ; INTER-NEXT:    store i32 [[TMP25]], ptr [[TMP27]], align 8
-; INTER-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP18]], i32 3
 ; INTER-NEXT:    store i32 [[TMP26]], ptr [[TMP22]], align 8
 ; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1316,9 +1316,9 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 8, !alias.scope [[META20:![0-9]+]]
 ; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[NEXT_GEP]], align 8, !alias.scope [[META23:![0-9]+]], !noalias [[META20]]
@@ -1382,9 +1382,9 @@ define i32 @pointer_iv_mixed(ptr %a, ptr %b, i64 %n) {
 ; INTER-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[A]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; INTER-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; INTER-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
+; INTER-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; INTER-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; INTER-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[B]], i64 [[OFFSET_IDX]]
-; INTER-NEXT:    [[TMP6:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; INTER-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 8, !alias.scope [[META20:![0-9]+]]
 ; INTER-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; INTER-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[NEXT_GEP]], align 8, !alias.scope [[META23:![0-9]+]], !noalias [[META20]]

@@ -868,8 +868,7 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
         nwidth = strlen(name) - 1;
     }
 
-    if (nwidth > width)
-      width = nwidth;
+    width = std::max(nwidth, width);
   }
 
   for (int i = 0; i < depth; ++i) {

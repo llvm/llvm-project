@@ -480,8 +480,8 @@ define i16 @test_strided_access(i64 %len, ptr %test_base) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <2 x i8> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[ALLOCA]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP6]], align 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[TMP8]], align 2
@@ -551,8 +551,8 @@ define void @test_rev_loops_strided_deref_loads(ptr nocapture noundef writeonly 
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i32> [[REVERSE]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [1024 x i32], ptr [[LOCAL_SRC]], i64 0, i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP10]], align 4

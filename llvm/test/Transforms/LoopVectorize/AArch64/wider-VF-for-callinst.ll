@@ -54,8 +54,8 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; NARROW-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[WIDE_LOAD]] to <2 x float>
 ; NARROW-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; NARROW-NEXT:    [[TMP3:%.*]] = call float @foo(float [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; NARROW-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; NARROW-NEXT:    [[TMP3:%.*]] = call float @foo(float [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; NARROW-NEXT:    [[TMP5:%.*]] = call float @foo(float [[TMP4]]) #[[ATTR1]]
 ; NARROW-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i32 0
 ; NARROW-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP5]], i32 1
