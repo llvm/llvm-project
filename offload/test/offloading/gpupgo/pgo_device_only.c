@@ -14,7 +14,7 @@
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-PGO"
 
-// REQUIRES: amdgpu
+// REQUIRES: gpu
 // REQUIRES: pgo
 // XFAIL: amdgpu
 
