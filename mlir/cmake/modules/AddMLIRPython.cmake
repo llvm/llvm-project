@@ -780,6 +780,7 @@ function(add_mlir_python_extension libname extname)
     nanobind_add_module(${libname}
       NB_DOMAIN ${MLIR_BINDINGS_PYTHON_NB_DOMAIN}
       FREE_THREADED
+      NB_SUPPRESS_WARNINGS
       ${ARG_SOURCES}
     )
 
@@ -792,25 +793,13 @@ function(add_mlir_python_extension libname extname)
       target_compile_options(${NB_LIBRARY_TARGET_NAME}
         PRIVATE
           -Wall -Wextra -Wpedantic
-          -Wno-c++98-compat-extra-semi
           -Wno-cast-qual
-          -Wno-covered-switch-default
-          -Wno-deprecated-literal-operator
-          -Wno-nested-anon-types
-          -Wno-unused-parameter
-          -Wno-zero-length-array
           ${eh_rtti_enable})
 
       target_compile_options(${libname}
         PRIVATE
           -Wall -Wextra -Wpedantic
-          -Wno-c++98-compat-extra-semi
           -Wno-cast-qual
-          -Wno-covered-switch-default
-          -Wno-deprecated-literal-operator
-          -Wno-nested-anon-types
-          -Wno-unused-parameter
-          -Wno-zero-length-array
           ${eh_rtti_enable})
     endif()
 
