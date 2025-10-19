@@ -105,4 +105,19 @@ void foo(bool A1, bool A2, bool A3, bool A4) {
   // CHECK-FIXES: X = A1 && A2 && A3;
   // CHECK-FIXES-NEXT: X = A1 || (A2 && A3);
   // CHECK-FIXES-NEXT: X = A1 && (A2 || A3);
+
+  struct T {
+    bool operator==(const T&) const;
+    bool operator<(const T&) const;
+  };
+  T T1, T2;
+  X = !(T1 == T2 && A1 == A2);
+  X = !(T1 < T2 || (A1 || !A2));
+  X = !((T1 < T2) || (A1 || !A2));
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: boolean expression can be simplified by DeMorgan's theorem
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: boolean expression can be simplified by DeMorgan's theorem
+  // CHECK-MESSAGES: :[[@LINE-3]]:7: warning: boolean expression can be simplified by DeMorgan's theorem
+  // CHECK-FIXES: X = T1 != T2 || A1 != A2;
+  // CHECK-FIXES-NEXT: X = T1 >= T2 && !A1 && A2;
+  // CHECK-FIXES-NEXT: X = (T1 >= T2) && !A1 && A2;
 }

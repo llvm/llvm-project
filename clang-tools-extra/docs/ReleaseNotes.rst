@@ -425,6 +425,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
   literal suffixes added in C++23 and C23.
 
+- Improved :doc:`readability-simplify-boolean-expr
+  <clang-tidy/checks/readability/simplify-boolean-expr>` check to handle
+  overloaded binary operators when applying De Morgan's law.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
