@@ -131,8 +131,7 @@ jobs:
           macos-13)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
-              enable_pgo=0
-              target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
+              target_cmake_flags="$target_cmake_flags 
             else
               build_runs_on="macos-13-large"
             fi
@@ -151,6 +150,19 @@ jobs:
           *)
             test_runs_on="${{ inputs.runs-on }}"
             build_runs_on=$test_runs_on
+            ;;
+        esac
+        
+        case "$build_runs_on" in
+          # These runners cannot build the full release package faster than
+          # the 6 hours timeout limit, so we need to use a configuration
+          # that builds more quickly. 
+          macos-13 | macos-14)
+            bootstrap_prefix="BOOTSTRAP"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF -D${bootstrap_prefix}-LLVM_TARGETS_TO_BUILD=Native"
+            ;;
+          *)
+            bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
             ;;
         esac
 
