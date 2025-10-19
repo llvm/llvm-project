@@ -23,7 +23,7 @@ def main(commit_sha: str, build_log_files: list[str]):
     )
     test_failures = generate_test_report_lib.get_failures(junit_objects)
     current_platform = f"{platform.system()}-{platform.machine()}".lower()
-    explanation_reuqest = {
+    explanation_request = {
         "base_commit_sha": commit_sha,
         "platform": current_platform,
         "failures": [],
@@ -31,16 +31,16 @@ def main(commit_sha: str, build_log_files: list[str]):
     if test_failures:
         for _, failures in test_failures.items():
             for name, failure_messsage in failures:
-                explanation_reuqest["failures"].append(
+                explanation_request["failures"].append(
                     {"name": name, "message": failure_messsage}
                 )
     else:
         ninja_failures = generate_test_report_lib.find_failure_in_ninja_logs(ninja_logs)
         for name, failure_message in ninja_failures:
-            explanation_reuqest["failures"].append(
+            explanation_request["failures"].append(
                 {"name": name, "message": failure_message}
             )
-    advisor_response = requests.get(PREMERGE_ADVISOR_URL, json=explanation_reuqest)
+    advisor_response = requests.get(PREMERGE_ADVISOR_URL, json=explanation_request)
     print(advisor_response.json)
 
 
