@@ -1251,6 +1251,17 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (LateTemplateParserCleanup)
       LateTemplateParserCleanup(OpaqueParser);
 
+    if (LangOpts.DelayedTemplateParsing) {
+      // Try to parse any templates that have been delayed and never
+      // instantiated so that their bodies are available for static
+	  // analysis tools to analyze.
+      Diags.setSuppressAllDiagnostics(true);
+      for (auto &[Decl, Template] : LateParsedTemplateMap)
+        if (Decl->isLateTemplateParsed())
+          LateTemplateParser(OpaqueParser, *Template);
+      Diags.setSuppressAllDiagnostics(false);
+    }
+
     CheckDelayedMemberExceptionSpecs();
   } else {
     // If we are building a TU prefix for serialization, it is safe to transfer
