@@ -1352,12 +1352,32 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
                                               DataRC1, SubReg);
     }
 
-    if (!MRI->constrainRegClass(Data0->getReg(), DataRC0) ||
-        !MRI->constrainRegClass(Data1->getReg(), DataRC1))
+    if (Data0->getReg().isPhysical() || Data1->getReg().isPhysical()) {
       return nullptr;
+    }
+    bool canBeConstrainedData0 =
+        MRI->constrainRegClass(Data0->getReg(), DataRC0);
+    bool canBeConstrainedData1 =
+        MRI->constrainRegClass(Data1->getReg(), DataRC1);
+    if (!canBeConstrainedData0 && !canBeConstrainedData1) {
+      return nullptr;
+    }
+    if (!canBeConstrainedData0 || !canBeConstrainedData1) {
+      MachineBasicBlock::iterator InsertBefore = CI.I;
+      MachineBasicBlock *MBB = CI.I->getParent();
+      const DebugLoc &DL = DebugLoc::getMergedLocation(CI.I->getDebugLoc(),
+                                                       Paired.I->getDebugLoc());
+      const CombineInfo &ActiveCI = canBeConstrainedData0 ? Paired : CI;
+      MachineOperand *activeData =
+          TII->getNamedOperand(*ActiveCI.I, AMDGPU::OpName::data0);
+      const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
+      const TargetRegisterClass *RC = getDataRegClass(*CI.I);
+      Register BaseReg = MRI->createVirtualRegister(RC);
+      BuildMI(*MBB, InsertBefore, DL, CopyDesc, BaseReg)
+          .addReg(activeData->getReg(), 0);
 
-    // TODO: If one register can be constrained, and not the other, insert a
-    // copy.
+      activeData->setReg(BaseReg);
+    }
   }
 
   return Where;
