@@ -6448,6 +6448,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
        Left.getPrecedence() == prec::Assignment)) {
     return true;
   }
+  if (Left.is(TT_AttributeLSquare) && Right.is(tok::l_square)) {
+    assert(Right.isNot(TT_AttributeLSquare));
+    return false;
+  }
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
