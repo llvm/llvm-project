@@ -336,6 +336,80 @@ struct allocator_traits {
   }
 };
 
+template <class _Tp>
+struct allocator_traits<allocator<_Tp>> {
+  using allocator_type                         = allocator<_Tp>;
+  using value_type                             = _Tp;
+  using pointer                                = _Tp*;
+  using const_pointer                          = const _Tp*;
+  using void_pointer                           = void*;
+  using const_void_pointer                     = const void*;
+  using difference_type                        = ptrdiff_t;
+  using size_type                              = size_t;
+  using propagate_on_container_copy_assignment = false_type;
+  using propagate_on_container_move_assignment = true_type;
+  using propagate_on_container_swap            = false_type;
+  using is_always_equal                        = true_type;
+
+#ifndef _LIBCPP_CXX03_LANG
+  template <class _Up>
+  using rebind_alloc = allocator<_Up>;
+  template <class _Up>
+  using rebind_traits = allocator_traits<allocator<_Up>>;
+#else
+  template <class _Up>
+  struct rebind_alloc {
+    using other = allocator<_Up>;
+  };
+  template <class _Up>
+  struct rebind_traits {
+    using other = allocator_traits<allocator<_Up> >;
+  };
+#endif
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer allocate(allocator_type& __alloc, size_type __n) {
+    return __alloc.allocate(__n);
+  }
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
+  allocate(allocator_type& __alloc, size_type __n, const_void_pointer) {
+    return __alloc.allocate(__n);
+  }
+
+#if _LIBCPP_STD_VER >= 23
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr allocation_result<pointer, size_type>
+  allocate_at_least(allocator_type& __alloc, size_type __n) {
+    return {__alloc.allocate(__n), __n};
+  }
+#endif
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
+  deallocate(allocator_type& __alloc, pointer __ptr, size_type __n) _NOEXCEPT {
+    __alloc.deallocate(__ptr, __n);
+  }
+
+  template <class _Up, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void
+  construct(allocator_type&, _Up* __ptr, _Args&&... __args) {
+    std::__construct_at(__ptr, std::forward<_Args>(__args)...);
+  }
+
+  template <class _Up>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void destroy(allocator_type&, _Up* __ptr) {
+    std::__destroy_at(__ptr);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type&) _NOEXCEPT {
+    return numeric_limits<size_type>::max() / sizeof(value_type);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  select_on_container_copy_construction(const allocator_type&) _NOEXCEPT {
+    return allocator_type();
+  }
+};
+
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Traits, class _Tp>
 using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>;
