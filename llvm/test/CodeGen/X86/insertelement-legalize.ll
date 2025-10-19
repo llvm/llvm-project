@@ -14,11 +14,11 @@ define void @test(<2 x i64> %val, ptr %dst, i64 %x) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    adcl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    addl %ecx, %ecx
-; CHECK-NEXT:    adcl %edx, %edx
-; CHECK-NEXT:    movl %ecx, 8(%eax)
+; CHECK-NEXT:    addl %edx, %edx
+; CHECK-NEXT:    adcl %ecx, %ecx
+; CHECK-NEXT:    movl %edx, 8(%eax)
 ; CHECK-NEXT:    movl %esi, (%eax)
-; CHECK-NEXT:    movl %edx, 12(%eax)
+; CHECK-NEXT:    movl %ecx, 12(%eax)
 ; CHECK-NEXT:    movl %edi, 4(%eax)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

@@ -3619,8 +3619,8 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    movq %rdx, %rcx
 ; AVX-NEXT:    movq %rsi, %r11
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r13
 ; AVX-NEXT:    movq %rsi, %rbp
 ; AVX-NEXT:    sarq $63, %rbp
 ; AVX-NEXT:    imulq %r8, %rbp
@@ -3724,8 +3724,8 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    movq %rcx, %r11
 ; AVX512F-NEXT:    movq %rdx, %r10
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r12
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512F-NEXT:    movq %r11, %rbp
 ; AVX512F-NEXT:    sarq $63, %rbp
 ; AVX512F-NEXT:    imulq %r14, %rbp
@@ -3831,8 +3831,8 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    movq %rcx, %r11
 ; AVX512BW-NEXT:    movq %rdx, %r10
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r12
-; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r14
 ; AVX512BW-NEXT:    movq %r11, %rbp
 ; AVX512BW-NEXT:    sarq $63, %rbp
 ; AVX512BW-NEXT:    imulq %r14, %rbp
