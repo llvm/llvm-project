@@ -213,9 +213,26 @@ public:
     case RISCV::C_J:
     case RISCV::C_JR:
       break;
+    case RISCV::BEQ:
+    case RISCV::BNE:
+    case RISCV::BGE:
+    case RISCV::BGEU:
+    case RISCV::BLT:
+    case RISCV::BLTU:
+    case RISCV::C_BEQZ:
+    case RISCV::C_BNEZ:
+      break;
     }
 
     setTailCall(Inst);
+    return true;
+  }
+
+  bool convertTailCallToJmp(MCInst &Inst) override {
+    removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    clearOffset(Inst);
+    if (getConditionalTailCall(Inst))
+      unsetConditionalTailCall(Inst);
     return true;
   }
 
@@ -320,6 +337,7 @@ public:
     default:
       return false;
     case RISCV::C_J:
+    case RISCV::PseudoTAIL:
       OpNum = 0;
       return true;
     case RISCV::AUIPC:
