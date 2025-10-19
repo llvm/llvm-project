@@ -268,6 +268,12 @@ if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
     endif()
   endif()
 
+  if (LLVM_LINKER_IS_GNULD)
+    if(POLICY CMP0179)
+      cmake_policy(SET CMP0179 OLD)
+    endif()
+  endif()
+
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     include(CheckLinkerFlag)
     # Linkers that support Darwin allow a setting to internalize all symbol exports,
