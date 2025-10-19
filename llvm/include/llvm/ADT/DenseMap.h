@@ -42,7 +42,7 @@ namespace detail {
 // We extend a pair to allow users to override the bucket type with their own
 // implementation without requiring two members.
 template <typename KeyT, typename ValueT>
-struct DenseMapPair : public std::pair<KeyT, ValueT> {
+struct DenseMapPair : std::pair<KeyT, ValueT> {
   using std::pair<KeyT, ValueT>::pair;
 
   KeyT &getFirst() { return std::pair<KeyT, ValueT>::first; }
@@ -438,10 +438,6 @@ protected:
           ::new (&Buckets[I].getSecond()) ValueT(OtherBuckets[I].getSecond());
       }
     }
-  }
-
-  static unsigned getHashValue(const KeyT &Val) {
-    return KeyInfoT::getHashValue(Val);
   }
 
   template <typename LookupKeyT>

@@ -656,6 +656,10 @@ MlirLocation mlirOperationGetLocation(MlirOperation op) {
   return wrap(unwrap(op)->getLoc());
 }
 
+void mlirOperationSetLocation(MlirOperation op, MlirLocation loc) {
+  unwrap(op)->setLoc(unwrap(loc));
+}
+
 MlirTypeID mlirOperationGetTypeID(MlirOperation op) {
   if (auto info = unwrap(op)->getRegisteredInfo())
     return wrap(info->getTypeID());

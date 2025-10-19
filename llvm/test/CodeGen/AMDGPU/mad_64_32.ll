@@ -1117,18 +1117,19 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ;
 ; GFX1250-LABEL: mad_i64_i32_uniform:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX1250-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    s_load_b64 s[4:5], s[4:5], 0x34
-; GFX1250-NEXT:    s_mov_b32 s7, 0
+; GFX1250-NEXT:    s_mov_b32 s5, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b32 s6, s2
+; GFX1250-NEXT:    s_mov_b32 s4, s2
 ; GFX1250-NEXT:    s_mov_b32 s2, s3
-; GFX1250-NEXT:    s_mov_b32 s3, s7
+; GFX1250-NEXT:    s_mov_b32 s3, s5
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_mul_u64 s[2:3], s[6:7], s[2:3]
-; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[4:5]
+; GFX1250-NEXT:    s_mul_u64 s[2:3], s[4:5], s[2:3]
+; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], s[6:7]
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX1250-NEXT:    global_store_b64 v2, v[0:1], s[0:1]

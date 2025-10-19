@@ -1,4 +1,5 @@
 ! REQUIRES: flang
+! REQUIRES: gpu
 
 ! RUN: %libomptarget-compile-fortran-generic -O3  -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription
 ! RUN: env LIBOMPTARGET_INFO=16 OMP_NUM_TEAMS=16 OMP_TEAMS_THREAD_LIMIT=16 %libomptarget-run-generic 2>&1 | %fcheck-generic

@@ -20,6 +20,7 @@ def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
 def loongarch_xvperm: SDNode<"LoongArchISD::XVPERM", SDT_LoongArchXVPERM>;
 def loongarch_xvreplve0: SDNode<"LoongArchISD::XVREPLVE0", SDT_LoongArchXVREPLVE0>;
 def loongarch_xvreplve0q: SDNode<"LoongArchISD::XVREPLVE0Q", SDT_LoongArchXVREPLVE0>;
+def loongarch_xvinsve0 : SDNode<"LoongArchISD::XVINSVE0", SDT_LoongArchV2RUimm>;
 def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskgez: SDNode<"LoongArchISD::XVMSKGEZ", SDT_LoongArchVMSKCOND>;
 def loongarch_xvmskeqz: SDNode<"LoongArchISD::XVMSKEQZ", SDT_LoongArchVMSKCOND>;
@@ -1708,6 +1709,14 @@ def : Pat<(vector_insert v4f64:$xd, (f64(bitconvert i64:$rj)), uimm2:$imm),
           (XVINSGR2VR_D v4f64:$xd, GPR:$rj, uimm2:$imm)>;
 
 // XVINSVE0_{W/D}
+def : Pat<(loongarch_xvinsve0 v8i32:$xd, v8i32:$xj, uimm3:$imm),
+          (XVINSVE0_W v8i32:$xd, v8i32:$xj, uimm3:$imm)>;
+def : Pat<(loongarch_xvinsve0 v4i64:$xd, v4i64:$xj, uimm2:$imm),
+          (XVINSVE0_D v4i64:$xd, v4i64:$xj, uimm2:$imm)>;
+def : Pat<(loongarch_xvinsve0 v8f32:$xd, v8f32:$xj, uimm3:$imm),
+          (XVINSVE0_W v8f32:$xd, v8f32:$xj, uimm3:$imm)>;
+def : Pat<(loongarch_xvinsve0 v4f64:$xd, v4f64:$xj, uimm2:$imm),
+          (XVINSVE0_D v4f64:$xd, v4f64:$xj, uimm2:$imm)>;
 def : Pat<(vector_insert v8f32:$xd, FPR32:$fj, uimm3:$imm),
           (XVINSVE0_W v8f32:$xd, (SUBREG_TO_REG(i64 0), FPR32:$fj, sub_32),
               uimm3:$imm)>;

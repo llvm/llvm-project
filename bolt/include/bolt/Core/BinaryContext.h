@@ -190,6 +190,9 @@ class BinaryContext {
   /// Unique build ID if available for the binary.
   std::optional<std::string> FileBuildID;
 
+  /// GNU property note indicating AArch64 BTI.
+  bool UsesBTI{false};
+
   /// Set of all sections.
   struct CompareSections {
     bool operator()(const BinarySection *A, const BinarySection *B) const {
@@ -383,6 +386,9 @@ public:
     return std::nullopt;
   }
   void setFileBuildID(StringRef ID) { FileBuildID = std::string(ID); }
+
+  bool usesBTI() const { return UsesBTI; }
+  void setUsesBTI(bool Value) { UsesBTI = Value; }
 
   bool hasSymbolsWithFileName() const { return HasSymbolsWithFileName; }
   void setHasSymbolsWithFileName(bool Value) { HasSymbolsWithFileName = Value; }

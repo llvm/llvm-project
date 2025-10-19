@@ -2342,6 +2342,14 @@ struct ImplicitDeallocationParameters {
   SizedDeallocationMode PassSize;
 };
 
+/// The parameters to pass to a usual operator delete.
+struct UsualDeleteParams {
+  TypeAwareAllocationMode TypeAwareDelete = TypeAwareAllocationMode::No;
+  bool DestroyingDelete = false;
+  bool Size = false;
+  AlignedAllocationMode Alignment = AlignedAllocationMode::No;
+};
+
 /// Represents a new-expression for memory allocation and constructor
 /// calls, e.g: "new CXXNewExpr(foo)".
 class CXXNewExpr final
