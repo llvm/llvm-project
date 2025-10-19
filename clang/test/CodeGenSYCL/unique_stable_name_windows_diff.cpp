@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple spir64-unknown-unknown -aux-triple x86_64-pc-windows-msvc -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s '-D$ADDRSPACE=addrspace(1) '
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsycl-is-host -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s '-D$ADDRSPACE='
+// RUN: %clang_cc1 -triple spir64-unknown-unknown -aux-triple x86_64-pc-windows-msvc -fsycl-is-device -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=DEVICE
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -fsycl-is-host -disable-llvm-passes -emit-llvm %s -o - | FileCheck %s --check-prefix=HOST
 
 
 template<typename KN, typename Func>
@@ -47,7 +47,24 @@ int main() {
   // Make sure the following 3 are the same between the host and device compile.
   // Note that these are NOT the same value as each other, they differ by the
   // signature.
-  // CHECK: private unnamed_addr [[$ADDRSPACE]]constant [17 x i8] c"_ZTSZ4mainEUlvE_\00"
-  // CHECK: private unnamed_addr [[$ADDRSPACE]]constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
-  // CHECK: private unnamed_addr [[$ADDRSPACE]]constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
+  // HOST: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUlvE_\00"
+  // HOST: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
+  // HOST: private unnamed_addr constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
+
+  // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUlvE_\00"
+  // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUliE_\00"
+  // DEVICE: private unnamed_addr addrspace(1) constant [17 x i8] c"_ZTSZ4mainEUldE_\00"
+
+  // DEVICE: define dso_local spir_kernel void @_ZTSZ4mainE2K1
+  // DEVICE: call spir_func void @_ZZ4mainENKUlvE_clEv
+  // DEVICE: define internal spir_func void @_ZZ4mainENKUlvE_clEv
+  // DEVICE: define dso_local spir_kernel void @_ZTSZ4mainE2K2
+  // DEVICE: call spir_func void @_ZZ4mainENKUliE_clEi
+  // DEVICE: define internal spir_func void @_ZZ4mainENKUliE_clEi
+  // DEVICE: define dso_local spir_kernel void @_ZTSZ4mainE2K3
+  // DEVICE: call spir_func void @_ZZ4mainENKUldE_clEd
+  // DEVICE: define internal spir_func void @_ZZ4mainENKUldE_clEd
+  // DEVICE: define dso_local spir_kernel void @_ZTSZ4mainE2K4
+  // DEVICE: call spir_func void @_ZZ4mainENKUlvE0_clEv
+  // DEVICE: define internal spir_func void @_ZZ4mainENKUlvE0_clEv
 }
