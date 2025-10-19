@@ -1389,7 +1389,7 @@ void InstrInfoEmitter::emitEnums(
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     OS << "    " << left_justify(Inst->getName(), MaxNameSize) << " = "
        << Target.getInstrIntValue(Inst->TheDef) << ", // "
-       << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getLoc().front())
+       << SrcMgr.getFormattedLocationNoOffset(Inst->TheDef->getTopDefLoc())
        << '\n';
   }
   OS << "    INSTRUCTION_LIST_END = " << NumberedInstructions.size() << '\n';
