@@ -24704,6 +24704,150 @@ static unsigned getFPSubregForVT(EVT VT) {
   }
 }
 
+// Try to keep extracted vector elements in SIMD registers through scalar
+// operations and stores. This avoids expensive cross-register-bank moves (fmov).
+// Pattern: extract_vector_elt -> [scalar ops] -> [trunc] -> store
+// Becomes: [vector ops on lane 0] -> extract -> store from FPR
+static SDValue tryKeepExtractInSIMD(StoreSDNode *ST, SelectionDAG &DAG,
+                                     const AArch64Subtarget *Subtarget) {
+  EVT MemVT = ST->getMemoryVT();
+
+  // Only handle simple i8/i16/i32/i64 stores
+  if (!ST->isSimple() ||
+      (MemVT != MVT::i8 && MemVT != MVT::i16 && MemVT != MVT::i32 && MemVT != MVT::i64))
+    return SDValue();
+
+  SDValue StoreVal = ST->getValue();
+
+  // Check if the value type is simple
+  if (!StoreVal.getValueType().isSimple())
+    return SDValue();
+
+  MVT ScalarVT = StoreVal.getSimpleValueType(); // Type of the scalar being stored
+
+  // Handle truncation if present
+  if (StoreVal.getOpcode() == ISD::TRUNCATE) {
+    // Only optimize if truncate has a single use
+    if (!StoreVal.hasOneUse())
+      return SDValue();
+
+    StoreVal = StoreVal.getOperand(0);
+    if (!StoreVal.getValueType().isSimple())
+      return SDValue();
+    ScalarVT = StoreVal.getSimpleValueType();
+    // Only support truncating from i32 or i64
+    if (ScalarVT != MVT::i32 && ScalarVT != MVT::i64)
+      return SDValue();
+  }
+
+  // Operations must be in i32 or i64
+  if (ScalarVT != MVT::i32 && ScalarVT != MVT::i64)
+    return SDValue();
+
+  // Walk backwards through scalar operations to find extract_vector_elt
+  SmallVector<std::pair<unsigned, SDValue>, 4> Ops; // (Opcode, Operand)
+  SDValue CurVal = StoreVal;
+
+  while (CurVal.getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+    unsigned Opc = CurVal.getOpcode();
+    if (Opc == ISD::ADD || Opc == ISD::SUB ||
+        Opc == ISD::SRL || Opc == ISD::SHL ||
+        Opc == ISD::AND || Opc == ISD::OR || Opc == ISD::XOR ||
+        Opc == ISD::MUL) {
+      // Only optimize if this operation has a single use
+      if (!CurVal.hasOneUse())
+        return SDValue();
+
+      // Record the operation and operand
+      Ops.push_back({Opc, CurVal.getOperand(1)});
+      CurVal = CurVal.getOperand(0);
+    } else {
+      return SDValue();
+    }
+
+    if (Ops.size() > 8)
+      return SDValue();
+  }
+
+  // Must be extracting lane 0 from a vector
+  SDValue Extract = CurVal;
+  if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  // Only optimize if the extract has a single use
+  if (!Extract.hasOneUse())
+    return SDValue();
+
+  auto *ExtractIdx = dyn_cast<ConstantSDNode>(Extract.getOperand(1));
+  if (!ExtractIdx || !ExtractIdx->isZero())
+    return SDValue();
+
+  // Only apply optimization if there are operations to vectorize
+  // Otherwise we'd create an infinite loop
+  if (Ops.empty())
+    return SDValue();
+
+  SDValue VecSrc = Extract.getOperand(0);
+
+  // Get source vector type and verify it matches our scalar type
+  if (!VecSrc.getValueType().isSimple())
+    return SDValue();
+
+  MVT SrcVecVT = VecSrc.getSimpleValueType();
+  if (!SrcVecVT.isVector())
+    return SDValue();
+
+  MVT SrcEltVT = SrcVecVT.getVectorElementType();
+  if (SrcEltVT != ScalarVT)
+    return SDValue();
+
+  // Keep value in SIMD registers and apply ops as vector operations
+  SDLoc DL(ST);
+
+  // Determine vector type for operations - use v2 for efficiency
+  MVT VecVT = ScalarVT == MVT::i32 ? MVT::v2i32 : MVT::v2i64;
+
+  // Get vector in the right size (v2iXX)
+  SDValue Vec;
+  if (SrcVecVT == VecVT) {
+    // Already the right size
+    Vec = VecSrc;
+  } else if (SrcVecVT.getVectorNumElements() > VecVT.getVectorNumElements()) {
+    // Need to extract subvector
+    Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT, VecSrc,
+                      DAG.getConstant(0, DL, MVT::i64));
+  } else {
+    // Source vector is smaller than v2, would need to extend - skip optimization
+    return SDValue();
+  }
+
+  // Apply operations in vector form (operating on lane 0, others don't matter)
+  for (auto [Opcode, Operand] : reverse(Ops)) {
+    // Create vector splat of the constant
+    if (auto *Cst = dyn_cast<ConstantSDNode>(Operand)) {
+      SDValue VecOperand = DAG.getConstant(Cst->getZExtValue(), DL, VecVT);
+      Vec = DAG.getNode(Opcode, DL, VecVT, Vec, VecOperand);
+    } else {
+      return SDValue(); // Only handle constants for now
+    }
+  }
+
+  // Extract lane 0 - but this will be stored directly from FPR
+  SDValue Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT, Vec,
+                                DAG.getConstant(0, DL, MVT::i64));
+
+  // Create store (use truncating store if needed for i8/i16/i32 from i64)
+  if (MemVT != ScalarVT) {
+    return DAG.getTruncStore(ST->getChain(), DL, Result, ST->getBasePtr(),
+                             ST->getPointerInfo(), MemVT, ST->getAlign(),
+                             ST->getMemOperand()->getFlags(), ST->getAAInfo());
+  } else {
+    return DAG.getStore(ST->getChain(), DL, Result, ST->getBasePtr(),
+                        ST->getPointerInfo(), ST->getAlign(),
+                        ST->getMemOperand()->getFlags(), ST->getAAInfo());
+  }
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -24716,6 +24860,10 @@ static SDValue performSTORECombine(SDNode *N,
   EVT MemVT = ST->getMemoryVT();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDLoc DL(ST);
+
+  // Try to keep extracted values in SIMD registers to avoid fmov
+  // if (SDValue Res = tryKeepExtractInSIMD(ST, DAG, Subtarget))
+  //   return Res;
 
   if (SDValue Res = combineStoreValueFPToInt(ST, DCI, DAG, Subtarget))
     return Res;
