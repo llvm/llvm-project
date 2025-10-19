@@ -134,6 +134,11 @@ int main(void) {
   P(bswapg, ((short)N));
   P(bswapg, ((int)N));
   P(bswapg, ((unsigned long)N));
+  P(bswapg, ((_BitInt(8))N));
+  P(bswapg, ((_BitInt(16))N));
+  P(bswapg, ((_BitInt(32))N));
+  P(bswapg, ((_BitInt(64))N));
+  P(bswapg, ((_BitInt(128))N));
   P(bswap16, (N));
   P(bswap32, (N));
   P(bswap64, (N));
