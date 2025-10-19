@@ -2864,9 +2864,9 @@ TemplateInstantiator::TransformNestedRequirement(
         TemplateArgs, Constraint->getSourceRange(), Satisfaction,
         /*TopLevelConceptId=*/nullptr, &NewConstraint);
 
-    assert(!Success || !Trap.hasErrorOccurred() &&
-                           "Substitution failures must be handled "
-                           "by CheckConstraintSatisfaction.");
+    assert((!Success || !Trap.hasErrorOccurred()) &&
+           "Substitution failures must be handled "
+           "by CheckConstraintSatisfaction.");
   }
 
   if (!Success || Satisfaction.HasSubstitutionFailure())
