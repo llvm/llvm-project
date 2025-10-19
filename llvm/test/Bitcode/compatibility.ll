@@ -1157,6 +1157,9 @@ define void @fastMathFlagsForCalls(float %f, double %d1, <4 x double> %d2) {
   %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf_v4f64()
   ; CHECK: %call.nnan.ninf = tail call nnan ninf fastcc <4 x double> @fmf_v4f64()
 
+  %call.fcmp.intrinsic = call nnan i1 @llvm.experimental.constrained.fcmp.f32(float %f, float %f, metadata !"oeq", metadata !"fpexcept.ignore")
+  ; CHECK: %call.fcmp.intrinsic = call nnan i1 @llvm.experimental.constrained.fcmp.f32(float %f, float %f, metadata !"oeq", metadata !"fpexcept.ignore")
+
   ret void
 }
 
@@ -1718,7 +1721,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #55
+  ; CHECK: call void @f.nobuiltin() #56
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2288,7 +2291,8 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
 ; CHECK: attributes #54 = { sanitize_alloc_token }
-; CHECK: attributes #55 = { builtin }
+; CHECK: attributes #55 = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
+; CHECK: attributes #56 = { builtin }
 
 ;; Metadata
 

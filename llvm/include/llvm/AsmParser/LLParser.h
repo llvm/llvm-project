@@ -39,6 +39,7 @@ namespace llvm {
   class Value;
   class BasicBlock;
   class Instruction;
+  class CallInst;
   class Constant;
   class GlobalValue;
   class Comdat;
@@ -176,6 +177,10 @@ namespace llvm {
 
     // Map of module ID to path.
     std::map<unsigned, StringRef> ModuleIdMap;
+
+    // FIXME: Only after validateEndOfModule, these intrinsic
+    // calls are FPMathOperator.
+    std::map<CallInst *, FastMathFlags> FCmpIntrinsicFMFs;
 
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
