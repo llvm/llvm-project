@@ -35,6 +35,8 @@ struct S {
 
 template <int Size>
 struct Expected {
+  Expected(S<Size> ss) : s(ss) {}
+
   S<Size> s;
   bool b = true; // used to validate that s's operation won't overwrite the memory next to it
 };
