@@ -153,17 +153,20 @@ define void @uniform_gep_for_replicating_gep(ptr %dst) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[STEP_ADD]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i32> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <2 x i32> [[STEP_ADD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i8>
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP3]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i8> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP6]], i32 1
 ; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP18]], align 1
-; CHECK-NEXT:    store i8 [[TMP22]], ptr [[TMP19]], align 1
+; CHECK-NEXT:    store i8 [[TMP12]], ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[INDEX_NEXT]], 128

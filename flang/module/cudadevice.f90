@@ -1992,7 +1992,7 @@ implicit none
   interface 
     attributes(device) subroutine barrier_init(barrier, count)
       integer(8), shared :: barrier
-      integer(4) :: count
+      integer(4), value :: count
     end subroutine
   end interface
 
@@ -2003,9 +2003,44 @@ implicit none
     end function
     attributes(device) function barrier_arrive_cnt(barrier, count) result(token)
       integer(8), shared :: barrier
-      integer(4) :: count
+      integer(4), value :: count
       integer(8) :: token
     end function
+  end interface
+
+  interface
+    attributes(device) subroutine fence_proxy_async()
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_commit_group()
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_wait_group()
+    end subroutine
+  end interface
+
+  ! Generic load, count is in bytes
+  interface
+    attributes(device) subroutine tma_bulk_g2s(barrier, src, dst, nbytes)
+      !dir$ ignore_tkr src, dst
+      integer(8), shared :: barrier
+      integer(4), device :: src(*)
+      integer(4), shared :: dst(*)
+      integer(4), value  :: nbytes
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_s2g(src, dst, nbytes)
+      !dir$ ignore_tkr src, dst
+      integer(4), shared  :: src(*)
+      integer(4), device  :: dst(*)
+      integer(4), value   :: nbytes
+    end subroutine
   end interface
 
 contains

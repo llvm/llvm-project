@@ -2979,10 +2979,14 @@ Instruction *InstCombinerImpl::foldAndOrOfSelectUsingImpliedCond(Value *Op,
          "Op must be either i1 or vector of i1.");
   if (SI.getCondition()->getType() != Op->getType())
     return nullptr;
-  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL))
-    return SelectInst::Create(Op,
-                              IsAnd ? V : ConstantInt::getTrue(Op->getType()),
-                              IsAnd ? ConstantInt::getFalse(Op->getType()) : V);
+  if (Value *V = simplifyNestedSelectsUsingImpliedCond(SI, Op, IsAnd, DL)) {
+    Instruction *MDFrom = nullptr;
+    if (!ProfcheckDisableMetadataFixes)
+      MDFrom = &SI;
+    return SelectInst::Create(
+        Op, IsAnd ? V : ConstantInt::getTrue(Op->getType()),
+        IsAnd ? ConstantInt::getFalse(Op->getType()) : V, "", nullptr, MDFrom);
+  }
   return nullptr;
 }
 
@@ -3753,6 +3757,10 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder,
 //   (x < y) ? -1 : zext(x > y)
 //   (x > y) ? 1 : sext(x != y)
 //   (x > y) ? 1 : sext(x < y)
+//   (x == y) ? 0 : (x > y ? 1 : -1)
+//   (x == y) ? 0 : (x < y ? -1 : 1)
+//   Special case: x == C ? 0 : (x > C - 1 ? 1 : -1)
+//   Special case: x == C ? 0 : (x < C + 1 ? -1 : 1)
 // Into ucmp/scmp(x, y), where signedness is determined by the signedness
 // of the comparison in the original sequence.
 Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
@@ -3842,6 +3850,44 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
         InnerFV->isAllOnes()) {
       IsSigned = ICmpInst::isSigned(FalseBranchSelectPredicate);
       Replace = true;
+    }
+  }
+
+  // Special cases with constants: x == C ? 0 : (x > C-1 ? 1 : -1)
+  if (Pred == ICmpInst::ICMP_EQ && match(TV, m_Zero())) {
+    const APInt *C;
+    if (match(RHS, m_APInt(C))) {
+      CmpPredicate InnerPred;
+      Value *InnerRHS;
+      const APInt *InnerTV, *InnerFV;
+      if (match(FV,
+                m_Select(m_ICmp(InnerPred, m_Specific(LHS), m_Value(InnerRHS)),
+                         m_APInt(InnerTV), m_APInt(InnerFV)))) {
+
+        // x == C ? 0 : (x > C-1 ? 1 : -1)
+        if (ICmpInst::isGT(InnerPred) && InnerTV->isOne() &&
+            InnerFV->isAllOnes()) {
+          IsSigned = ICmpInst::isSigned(InnerPred);
+          bool CanSubOne = IsSigned ? !C->isMinSignedValue() : !C->isMinValue();
+          if (CanSubOne) {
+            APInt Cminus1 = *C - 1;
+            if (match(InnerRHS, m_SpecificInt(Cminus1)))
+              Replace = true;
+          }
+        }
+
+        // x == C ? 0 : (x < C+1 ? -1 : 1)
+        if (ICmpInst::isLT(InnerPred) && InnerTV->isAllOnes() &&
+            InnerFV->isOne()) {
+          IsSigned = ICmpInst::isSigned(InnerPred);
+          bool CanAddOne = IsSigned ? !C->isMaxSignedValue() : !C->isMaxValue();
+          if (CanAddOne) {
+            APInt Cplus1 = *C + 1;
+            if (match(InnerRHS, m_SpecificInt(Cplus1)))
+              Replace = true;
+          }
+        }
+      }
     }
   }
 

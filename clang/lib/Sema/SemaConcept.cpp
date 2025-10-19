@@ -432,7 +432,7 @@ private:
   // XXX: It is SLOW! Use it very carefully.
   std::optional<MultiLevelTemplateArgumentList> SubstitutionInTemplateArguments(
       const NormalizedConstraintWithParamMapping &Constraint,
-      MultiLevelTemplateArgumentList MLTAL,
+      const MultiLevelTemplateArgumentList &MLTAL,
       llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost);
 
   ExprResult EvaluateSlow(const AtomicConstraint &Constraint,
@@ -564,8 +564,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
 std::optional<MultiLevelTemplateArgumentList>
 ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
     const NormalizedConstraintWithParamMapping &Constraint,
-    MultiLevelTemplateArgumentList MLTAL,
-    llvm::SmallVector<TemplateArgument> &SubstitutedOuterMost) {
+    const MultiLevelTemplateArgumentList &MLTAL,
+    llvm::SmallVector<TemplateArgument> &SubstitutedOutermost) {
 
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
@@ -606,38 +606,39 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
       Constraint.mappingOccurenceList();
   // The empty MLTAL situation should only occur when evaluating non-dependent
   // constraints.
-  if (!MLTAL.getNumSubstitutedLevels())
-    MLTAL.addOuterTemplateArguments(TD, {}, /*Final=*/false);
-  SubstitutedOuterMost =
-      llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+  if (MLTAL.getNumSubstitutedLevels())
+    SubstitutedOutermost =
+        llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
   unsigned Offset = 0;
   for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
     TemplateArgument Arg;
     if (Used[I])
       Arg = S.Context.getCanonicalTemplateArgument(
           CTAI.SugaredConverted[MappedIndex++]);
-    if (I < SubstitutedOuterMost.size()) {
-      SubstitutedOuterMost[I] = Arg;
+    if (I < SubstitutedOutermost.size()) {
+      SubstitutedOutermost[I] = Arg;
       Offset = I + 1;
     } else {
-      SubstitutedOuterMost.push_back(Arg);
-      Offset = SubstitutedOuterMost.size();
+      SubstitutedOutermost.push_back(Arg);
+      Offset = SubstitutedOutermost.size();
     }
   }
-  if (Offset < SubstitutedOuterMost.size())
-    SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+  if (Offset < SubstitutedOutermost.size())
+    SubstitutedOutermost.erase(SubstitutedOutermost.begin() + Offset);
 
-  MLTAL.replaceOutermostTemplateArguments(TD, SubstitutedOuterMost);
-  return std::move(MLTAL);
+  MultiLevelTemplateArgumentList SubstitutedTemplateArgs;
+  SubstitutedTemplateArgs.addOuterTemplateArguments(TD, SubstitutedOutermost,
+                                                    /*Final=*/false);
+  return std::move(SubstitutedTemplateArgs);
 }
 
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprEmpty();
@@ -785,13 +786,13 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                      FoldExpandedConstraint::FoldOperatorKind::And;
   unsigned EffectiveDetailEndIndex = Satisfaction.Details.size();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   // FIXME: Is PackSubstitutionIndex correct?
   llvm::SaveAndRestore _(PackSubstitutionIndex, S.ArgPackSubstIndex);
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
       SubstitutionInTemplateArguments(
           static_cast<const NormalizedConstraintWithParamMapping &>(Constraint),
-          MLTAL, SubstitutedOuterMost);
+          MLTAL, SubstitutedOutermost);
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
     return ExprError();
@@ -879,9 +880,9 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const MultiLevelTemplateArgumentList &MLTAL, unsigned Size) {
   const ConceptReference *ConceptId = Constraint.getConceptId();
 
-  llvm::SmallVector<TemplateArgument> SubstitutedOuterMost;
+  llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
-      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOuterMost);
+      SubstitutionInTemplateArguments(Constraint, MLTAL, SubstitutedOutermost);
 
   if (!SubstitutedArgs) {
     Satisfaction.IsSatisfied = false;
@@ -1216,13 +1217,51 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
+static const ExprResult
+SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
+                                        const ConceptSpecializationExpr *CSE,
+                                        UnsignedOrNone SubstIndex) {
+
+  // [C++2c] [temp.constr.normal]
+  // Otherwise, to form CE, any non-dependent concept template argument Ai
+  // is substituted into the constraint-expression of C.
+  // If any such substitution results in an invalid concept-id,
+  // the program is ill-formed; no diagnostic is required.
+
+  ConceptDecl *Concept = CSE->getNamedConcept()->getCanonicalDecl();
+  Sema::ArgPackSubstIndexRAII _(S, SubstIndex);
+
+  const ASTTemplateArgumentListInfo *ArgsAsWritten =
+      CSE->getTemplateArgsAsWritten();
+  if (llvm::none_of(
+          ArgsAsWritten->arguments(), [&](const TemplateArgumentLoc &ArgLoc) {
+            return !ArgLoc.getArgument().isDependent() &&
+                   ArgLoc.getArgument().isConceptOrConceptTemplateParameter();
+          })) {
+    return Concept->getConstraintExpr();
+  }
+
+  MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
+      Concept, Concept->getLexicalDeclContext(),
+      /*Final=*/false, CSE->getTemplateArguments(),
+      /*RelativeToPrimary=*/true,
+      /*Pattern=*/nullptr,
+      /*ForConstraintInstantiation=*/true);
+  return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
+                                         MLTAL);
+}
+
 bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
+  ExprResult Res = SubstituteConceptsInConstrainExpression(
+      *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
+  if (!Res.isUsable())
+    return true;
+
   llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(
-      ConstraintExpr->getNamedConcept()->getConstraintExpr());
+  Constraints.emplace_back(Res.get());
 
   MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
                                        ConstraintExpr->getTemplateArguments(),
@@ -2248,8 +2287,14 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       // Use canonical declarations to merge ConceptDecls across
       // different modules.
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
+
+      ExprResult Res =
+          SubstituteConceptsInConstrainExpression(S, D, CSE, SubstIndex);
+      if (!Res.isUsable())
+        return nullptr;
+
       SubNF = NormalizedConstraint::fromAssociatedConstraints(
-          S, CD, AssociatedConstraint(CD->getConstraintExpr(), SubstIndex));
+          S, CD, AssociatedConstraint(Res.get(), SubstIndex));
 
       if (!SubNF)
         return nullptr;

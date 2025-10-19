@@ -48,6 +48,10 @@ mlir_tablegen(LLVMIntrinsicFromLLVMIRConversions.inc -gen-intr-from-llvmir-conve
 mlir_tablegen(LLVMConvertibleLLVMIRIntrinsics.inc -gen-convertible-llvmir-intrinsics)
 add_mlir_dialect_tablegen_target(MLIRLLVMIntrinsicConversionsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LLVMDialectBytecode.td)
+mlir_tablegen(LLVMDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="LLVM")
+add_public_tablegen_target(MLIRLLVMDialectBytecodeIncGen)
+
 set(LLVM_TARGET_DEFINITIONS BasicPtxBuilderInterface.td)
 mlir_tablegen(BasicPtxBuilderInterface.h.inc -gen-op-interface-decls)
 mlir_tablegen(BasicPtxBuilderInterface.cpp.inc -gen-op-interface-defs)
