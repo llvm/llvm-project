@@ -21,12 +21,3 @@ struct PositiveFieldAfterConstructor {
 };
 // Explicit instantiation.
 template class PositiveFieldAfterConstructor<int>;
-
-// This declaration isn't used and won't be parsed 'delayed-template-parsing'.
-// The body of the declaration is 'null' and may cause crash if not handled
-// properly by checkers.
-template <class T>
-struct UnusedDelayedConstructor {
-  UnusedDelayedConstructor() {}
-  int F;
-};
