@@ -62,5 +62,5 @@ TEST_F(LlvmLibcSendToRecvFromTest, RecvFromFails) {
 
   ASSERT_THAT(
       LIBC_NAMESPACE::recvfrom(-1, buffer, sizeof(buffer), 0, nullptr, 0),
-      Fails(ssize_t(EBADF)));
+      Fails(ssize_t(EBADF), ssize_t(-1)));
 }
