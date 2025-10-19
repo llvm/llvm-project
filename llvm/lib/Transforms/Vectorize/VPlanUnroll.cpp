@@ -372,22 +372,27 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-    if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_VPValue(Op0)))) {
-      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+
+    // Handle extraction from the last part. For scalar VF, directly replace
+    // with the appropriate scalar part. Otherwise, update operand to use the
+    // part.
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                      m_ExtractLastPart(m_VPValue(Op0)))) ||
+        match(&R, m_ExtractLastElement(m_VPValue(Op0)))) {
+      auto *I = cast<VPInstruction>(&R);
+      bool IsPenultimate =
+          I->getOpcode() == VPInstruction::ExtractPenultimateElement;
+      unsigned PartIdx = IsPenultimate ? UF - 2 : UF - 1;
+
       if (Plan.hasScalarVFOnly()) {
-        auto *I = cast<VPInstruction>(&R);
-        // Extracting from end with VF = 1 implies retrieving the last or
-        // penultimate scalar part (UF-1 or UF-2).
-        unsigned Offset =
-            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
-        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
-        R.eraseFromParent();
-      } else {
-        // Otherwise we extract from the last part.
-        remapOperands(&R, UF - 1);
+        // For scalar VF, directly use the scalar part value.
+        addUniformForAllParts(I);
+        I->replaceAllUsesWith(getValueForPart(Op0, PartIdx));
+        continue;
       }
+      // For vector VF, extract from the last part.
+      addUniformForAllParts(I);
+      R.setOperand(0, getValueForPart(Op0, UF - 1));
       continue;
     }
 
@@ -480,8 +485,10 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       continue;
     }
     if (Lane.getKind() == VPLane::Kind::ScalableLast) {
+      auto *ExtractPart =
+          Builder.createNaryOp(VPInstruction::ExtractLastPart, {Op});
       NewOps.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
+          Builder.createNaryOp(VPInstruction::ExtractLastLane, {ExtractPart}));
       continue;
     }
     if (vputils::isSingleScalar(Op)) {
