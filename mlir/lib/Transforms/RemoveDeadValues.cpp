@@ -235,6 +235,30 @@ static void dropUsesAndEraseResults(Operation *op, BitVector toErase) {
   op->erase();
 }
 
+// Remove the dead functions from moduleOp.
+static void deleteDeadFunction(Operation *module) {
+  auto functions = module->getRegion(0).getOps<FunctionOpInterface>();
+  llvm::DenseSet<FunctionOpInterface> tasks(functions.begin(), functions.end());
+  while (!tasks.empty()) {
+    llvm::DenseSet<FunctionOpInterface> nextTasks;
+    for (FunctionOpInterface funcOp : tasks) {
+      if (funcOp.isPublic() || funcOp.isExternal())
+        return;
+      SymbolTable::UseRange uses = *funcOp.getSymbolUses(module);
+      auto callSites = funcOp.getFunctionBody().getOps<CallOpInterface>();
+      if (uses.empty() && !callSites.empty()) {
+        for (CallOpInterface callOp : callSites) {
+          nextTasks.insert(cast<FunctionOpInterface>(callOp.resolveCallable()));
+        }
+      }
+
+      if (uses.empty() && !nextTasks.contains(funcOp))
+        funcOp.erase();
+    }
+    tasks = nextTasks;
+  }
+}
+
 /// Convert a list of `Operand`s to a list of `OpOperand`s.
 static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
   OpOperand *values = operands.getBase();
@@ -881,6 +905,8 @@ void RemoveDeadValues::runOnOperation() {
   // end of this pass.
   RDVFinalCleanupList finalCleanupList;
 
+  // Remove the dead function in advance.
+  deleteDeadFunction(module);
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
       processFuncOp(funcOp, module, la, deadVals, finalCleanupList);

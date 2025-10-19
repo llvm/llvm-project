@@ -455,7 +455,7 @@ module @llvm_unreachable {
   func.func private @fn_with_llvm_unreachable(%arg0: tensor<4x4xf32>) -> tensor<4x4xi1> {
     llvm.unreachable
   }
-  func.func private @main(%arg0: tensor<4x4xf32>) {
+  func.func @main(%arg0: tensor<4x4xf32>) {
     %0 = call @fn_with_llvm_unreachable(%arg0) : (tensor<4x4xf32>) -> tensor<4x4xi1>
     llvm.return
   }
@@ -646,6 +646,52 @@ func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
 // CHECK: call @eliminate_parameter() : () -> ()
   call @eliminate_parameter(%arg0, %arg1) : (index, index) -> ()
 // CHECK: call @mutl_parameter(%[[ARG1]]) : (index) -> index
+  %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
+  return %res : index
+}
+
+// -----
+
+// Test the elimination of dead functions.
+
+// CHECK-NOT: func private @single_private_func
+func.func private @single_private_func(%arg0: i64) -> (i64) {
+    %c0_i64 = arith.constant 0 : i64
+    %2 = arith.cmpi eq, %arg0, %c0_i64 : i64
+    cf.cond_br %2, ^bb1, ^bb2
+  ^bb1:  // pred: ^bb0
+    %c1_i64 = arith.constant 1 : i64
+    return %c1_i64 : i64
+  ^bb2:  // pred: ^bb0
+    %c3_i64 = arith.constant 3 : i64
+    return %c3_i64 : i64
+}
+
+// -----
+
+// Test the elimination of dead functions.
+
+// CHECK-NOT: @single_parameter
+func.func private @single_parameter(%arg0: index) {
+  return
+}
+
+// CHECK-NOT: @mutl_parameter
+func.func private @mutl_parameter(%arg0: index, %arg1: index, %arg2: index) -> index {
+  return %arg1 : index
+}
+
+// CHECK-NOT: @eliminate_parameter
+func.func private @eliminate_parameter(%arg0: index, %arg1: index) {
+  call @single_parameter(%arg0) : (index) -> ()
+  return
+}
+
+// CHECK-NOT: @callee
+func.func private @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
+  // CHECK-NOT: call @eliminate_parameter
+  call @eliminate_parameter(%arg0, %arg1) : (index, index) -> ()
+  // CHECK-NOT: call @mutl_parameter 
   %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
   return %res : index
 }
