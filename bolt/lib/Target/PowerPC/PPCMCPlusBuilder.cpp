@@ -16,11 +16,18 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include <optional>
-#include <string>
+#include <cstdint>
 #define DEBUG_TYPE "bolt-ppc"
+#include "bolt/Core/BinaryFunction.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
+#include <string>
 
 using namespace llvm;
 using namespace bolt;
@@ -490,6 +497,96 @@ bool PPCMCPlusBuilder::isTOCRestoreAfterCall(const MCInst &I) const {
     return false;
 
   return true;
+}
+
+static inline MCOperand R(unsigned Reg) { return MCOperand::createReg(Reg); }
+static inline MCOperand Imm(int64_t I) { return MCOperand::createImm(I); }
+// Build a 64-bit absolute address of the callee's function address (e.g.
+// "puts") into r12, then tail-call it via BCTR.
+void PPCMCPlusBuilder::buildCallStubAbsolute(std::vector<MCInst> &Out,
+                                             const MCSymbol *TargetSym,
+                                             uint16_t highest, uint16_t higher,
+                                             uint16_t ha, uint16_t l) const {
+  // Registers
+  const unsigned R1 = PPC::X1;   // sp
+  const unsigned R2 = PPC::X2;   // caller TOC
+  const unsigned R12 = PPC::X12; // scratch / entry per ELFv2
+
+  // 1) Optional: save caller TOC in the standard post-call slot 24(r1)
+  // ABI compliant PPC64 code should do this before calls.
+  {
+    MCInst I;
+    I.setOpcode(PPC::STD); // STD rS, D(rA)
+    I.addOperand(R(R2));
+    I.addOperand(R(R1));
+    I.addOperand(Imm(24));
+    Out.push_back(std::move(I));
+  }
+  // Top 32 bits
+  // 2) Materialize absolute 64-bit address into r12 (no @toc*)
+  // addis r12, r0, target@highest. bits (63-48)
+  {
+    MCInst I;
+    I.setOpcode(PPC::ADDIS);
+    I.addOperand(R(R12));
+    I.addOperand(R(PPC::X0));
+    I.addOperand(Imm(highest));
+    Out.push_back(std::move(I));
+  }
+  // ori r12, r12, target@higher. bits (47-32)
+  {
+    MCInst I;
+    I.setOpcode(PPC::ORI);
+    I.addOperand(R(R12));
+    I.addOperand(R(R12));
+    I.addOperand(Imm(higher));
+    Out.push_back(std::move(I));
+  }
+  // rldicr r12, r12, 32, 31   ; aka sldi r12, r12, 32
+  // shift left to make room for lower 32 bits
+  {
+    MCInst I;
+    I.setOpcode(PPC::RLDICR);
+    I.addOperand(R(R12));
+    I.addOperand(R(R12));
+    I.addOperand(Imm(32));
+    I.addOperand(Imm(31));
+    Out.push_back(std::move(I));
+  }
+  // Low 32 bits
+  // addis r12, r12, target@ha
+  {
+    MCInst I;
+    I.setOpcode(PPC::ADDIS);
+    I.addOperand(R(R12));
+    I.addOperand(R(R12));
+    I.addOperand(Imm(ha));
+    Out.push_back(std::move(I));
+  }
+  // ori r12, r12, target@l
+  {
+    MCInst I;
+    I.setOpcode(PPC::ORI);
+    I.addOperand(R(R12));
+    I.addOperand(R(R12));
+    I.addOperand(Imm(l));
+    Out.push_back(std::move(I));
+  }
+  // Now r12 has the full 64-bit address of TargetSym.
+  // 3) mtctr r12 ; bctr
+  // Move address to Counter Register
+  {
+    MCInst I;
+    I.setOpcode(PPC::MTCTR);
+    I.addOperand(R(R12));
+    Out.push_back(std::move(I));
+  }
+  // Branch to the address in CTR (tail call to TargetSym)
+  {
+    MCInst I;
+    I.setOpcode(PPC::BCTR);
+    Out.push_back(std::move(I));
+  }
 }
 
 namespace llvm {
