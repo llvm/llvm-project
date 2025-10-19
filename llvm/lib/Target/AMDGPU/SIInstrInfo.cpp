@@ -865,22 +865,16 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (DestReg == AMDGPU::VCC_LO) {
-      if (AMDGPU::SReg_32RegClass.contains(SrcReg)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), AMDGPU::VCC_LO)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else {
+    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
+      if (DestReg == AMDGPU::VCC_LO) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-          .addImm(0)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addImm(0)
+            .addReg(SrcReg, getKillRegState(KillSrc));
+        return;
       }
 
-      return;
-    }
-
-    if (!AMDGPU::SReg_32RegClass.contains(SrcReg)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -898,22 +892,16 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    if (DestReg == AMDGPU::VCC) {
-      if (AMDGPU::SReg_64RegClass.contains(SrcReg)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B64), AMDGPU::VCC)
-          .addReg(SrcReg, getKillRegState(KillSrc));
-      } else {
+    if (!AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
+      if (DestReg == AMDGPU::VCC) {
         // FIXME: Hack until VReg_1 removed.
         assert(AMDGPU::VGPR_32RegClass.contains(SrcReg));
         BuildMI(MBB, MI, DL, get(AMDGPU::V_CMP_NE_U32_e32))
-          .addImm(0)
-          .addReg(SrcReg, getKillRegState(KillSrc));
+            .addImm(0)
+            .addReg(SrcReg, getKillRegState(KillSrc));
+        return;
       }
 
-      return;
-    }
-
-    if (!AMDGPU::SReg_64_EncodableRegClass.contains(SrcReg)) {
       reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc);
       return;
     }
@@ -9083,6 +9071,67 @@ void SIInstrInfo::movePackToVALU(SIInstrWorklist &Worklist,
   MachineOperand &Src0 = Inst.getOperand(1);
   MachineOperand &Src1 = Inst.getOperand(2);
   const DebugLoc &DL = Inst.getDebugLoc();
+
+  if (ST.useRealTrue16Insts()) {
+    Register SrcReg0, SrcReg1;
+    if (!Src0.isReg() || !RI.isVGPR(MRI, Src0.getReg())) {
+      SrcReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg0).add(Src0);
+    } else {
+      SrcReg0 = Src0.getReg();
+    }
+
+    if (!Src1.isReg() || !RI.isVGPR(MRI, Src1.getReg())) {
+      SrcReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      BuildMI(*MBB, Inst, DL, get(AMDGPU::V_MOV_B32_e32), SrcReg1).add(Src1);
+    } else {
+      SrcReg1 = Src1.getReg();
+    }
+
+    bool isSrc0Reg16 = MRI.constrainRegClass(SrcReg0, &AMDGPU::VGPR_16RegClass);
+    bool isSrc1Reg16 = MRI.constrainRegClass(SrcReg1, &AMDGPU::VGPR_16RegClass);
+
+    auto NewMI = BuildMI(*MBB, Inst, DL, get(AMDGPU::REG_SEQUENCE), ResultReg);
+    switch (Inst.getOpcode()) {
+    case AMDGPU::S_PACK_LL_B32_B16:
+      NewMI
+          .addReg(SrcReg0, 0,
+                  isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0,
+                  isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_LH_B32_B16:
+      NewMI
+          .addReg(SrcReg0, 0,
+                  isSrc0Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_HL_B32_B16:
+      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0,
+                  isSrc1Reg16 ? AMDGPU::NoSubRegister : AMDGPU::lo16)
+          .addImm(AMDGPU::hi16);
+      break;
+    case AMDGPU::S_PACK_HH_B32_B16:
+      NewMI.addReg(SrcReg0, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::lo16)
+          .addReg(SrcReg1, 0, AMDGPU::hi16)
+          .addImm(AMDGPU::hi16);
+      break;
+    default:
+      llvm_unreachable("unhandled s_pack_* instruction");
+    }
+
+    MachineOperand &Dest = Inst.getOperand(0);
+    MRI.replaceRegWith(Dest.getReg(), ResultReg);
+    addUsersToMoveToVALUWorklist(ResultReg, MRI, Worklist);
+    return;
+  }
 
   switch (Inst.getOpcode()) {
   case AMDGPU::S_PACK_LL_B32_B16: {

@@ -535,7 +535,8 @@ private:
     if (const SomeExpr * expr{GetExpr(context_, scalarExpression)}) {
       if (!ExprHasTypeCategory(*expr, TypeCategory::Integer)) {
         // No warnings or errors for type INTEGER
-        const parser::CharBlock &loc{scalarExpression.thing.value().source};
+        parser::CharBlock loc{
+            parser::UnwrapRef<parser::Expr>(scalarExpression).source};
         CheckDoControl(loc, ExprHasTypeCategory(*expr, TypeCategory::Real));
       }
     }
@@ -552,7 +553,7 @@ private:
       CheckDoExpression(*bounds.step);
       if (IsZero(*bounds.step)) {
         context_.Warn(common::UsageWarning::ZeroDoStep,
-            bounds.step->thing.value().source,
+            parser::UnwrapRef<parser::Expr>(bounds.step).source,
             "DO step expression should not be zero"_warn_en_US);
       }
     }
@@ -615,7 +616,7 @@ private:
   // C1121 - procedures in mask must be pure
   void CheckMaskIsPure(const parser::ScalarLogicalExpr &mask) const {
     UnorderedSymbolSet references{
-        GatherSymbolsFromExpression(mask.thing.thing.value())};
+        GatherSymbolsFromExpression(parser::UnwrapRef<parser::Expr>(mask))};
     for (const Symbol &ref : OrderBySourcePosition(references)) {
       if (IsProcedure(ref) && !IsPureProcedure(ref)) {
         context_.SayWithDecl(ref, parser::Unwrap<parser::Expr>(mask)->source,
@@ -639,32 +640,33 @@ private:
   }
 
   void HasNoReferences(const UnorderedSymbolSet &indexNames,
-      const parser::ScalarIntExpr &expr) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
-        indexNames,
+      const parser::ScalarIntExpr &scalarIntExpr) const {
+    const auto &expr{parser::UnwrapRef<parser::Expr>(scalarIntExpr)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), indexNames,
         "%s limit expression may not reference index variable '%s'"_err_en_US,
-        expr.thing.thing.value().source);
+        expr.source);
   }
 
   // C1129, names in local locality-specs can't be in mask expressions
   void CheckMaskDoesNotReferenceLocal(const parser::ScalarLogicalExpr &mask,
       const UnorderedSymbolSet &localVars) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(mask.thing.thing.value()),
-        localVars,
+    const auto &expr{parser::UnwrapRef<parser::Expr>(mask)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), localVars,
         "%s mask expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
-        mask.thing.thing.value().source);
+        expr.source);
   }
 
   // C1129, names in local locality-specs can't be in limit or step
   // expressions
-  void CheckExprDoesNotReferenceLocal(const parser::ScalarIntExpr &expr,
+  void CheckExprDoesNotReferenceLocal(
+      const parser::ScalarIntExpr &scalarIntExpr,
       const UnorderedSymbolSet &localVars) const {
-    CheckNoCollisions(GatherSymbolsFromExpression(expr.thing.thing.value()),
-        localVars,
+    const auto &expr{parser::UnwrapRef<parser::Expr>(scalarIntExpr)};
+    CheckNoCollisions(GatherSymbolsFromExpression(expr), localVars,
         "%s expression references variable '%s'"
         " in LOCAL locality-spec"_err_en_US,
-        expr.thing.thing.value().source);
+        expr.source);
   }
 
   // C1130, DEFAULT(NONE) locality requires names to be in locality-specs to
@@ -772,7 +774,7 @@ private:
         HasNoReferences(indexNames, std::get<2>(control.t));
         if (const auto &intExpr{
                 std::get<std::optional<parser::ScalarIntExpr>>(control.t)}) {
-          const parser::Expr &expr{intExpr->thing.thing.value()};
+          const auto &expr{parser::UnwrapRef<parser::Expr>(intExpr)};
           CheckNoCollisions(GatherSymbolsFromExpression(expr), indexNames,
               "%s step expression may not reference index variable '%s'"_err_en_US,
               expr.source);
@@ -840,7 +842,7 @@ private:
   }
   void CheckForImpureCall(const parser::ScalarIntExpr &x,
       std::optional<IndexVarKind> nesting) const {
-    const auto &parsedExpr{x.thing.thing.value()};
+    const auto &parsedExpr{parser::UnwrapRef<parser::Expr>(x)};
     auto oldLocation{context_.location()};
     context_.set_location(parsedExpr.source);
     if (const auto &typedExpr{parsedExpr.typedExpr}) {
@@ -1124,7 +1126,8 @@ void DoForallChecker::Leave(const parser::ConnectSpec &connectSpec) {
   const auto *newunit{
       std::get_if<parser::ConnectSpec::Newunit>(&connectSpec.u)};
   if (newunit) {
-    context_.CheckIndexVarRedefine(newunit->v.thing.thing);
+    context_.CheckIndexVarRedefine(
+        parser::UnwrapRef<parser::Variable>(newunit));
   }
 }
 
@@ -1166,14 +1169,14 @@ void DoForallChecker::Leave(const parser::InquireSpec &inquireSpec) {
   const auto *intVar{std::get_if<parser::InquireSpec::IntVar>(&inquireSpec.u)};
   if (intVar) {
     const auto &scalar{std::get<parser::ScalarIntVariable>(intVar->t)};
-    context_.CheckIndexVarRedefine(scalar.thing.thing);
+    context_.CheckIndexVarRedefine(parser::UnwrapRef<parser::Variable>(scalar));
   }
 }
 
 void DoForallChecker::Leave(const parser::IoControlSpec &ioControlSpec) {
   const auto *size{std::get_if<parser::IoControlSpec::Size>(&ioControlSpec.u)};
   if (size) {
-    context_.CheckIndexVarRedefine(size->v.thing.thing);
+    context_.CheckIndexVarRedefine(parser::UnwrapRef<parser::Variable>(size));
   }
 }
 
@@ -1190,16 +1193,19 @@ static void CheckIoImpliedDoIndex(
 
 void DoForallChecker::Leave(const parser::OutputImpliedDo &outputImpliedDo) {
   CheckIoImpliedDoIndex(context_,
-      std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).name.thing.thing);
+      parser::UnwrapRef<parser::Name>(
+          std::get<parser::IoImpliedDoControl>(outputImpliedDo.t).name));
 }
 
 void DoForallChecker::Leave(const parser::InputImpliedDo &inputImpliedDo) {
   CheckIoImpliedDoIndex(context_,
-      std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).name.thing.thing);
+      parser::UnwrapRef<parser::Name>(
+          std::get<parser::IoImpliedDoControl>(inputImpliedDo.t).name));
 }
 
 void DoForallChecker::Leave(const parser::StatVariable &statVariable) {
-  context_.CheckIndexVarRedefine(statVariable.v.thing.thing);
+  context_.CheckIndexVarRedefine(
+      parser::UnwrapRef<parser::Variable>(statVariable));
 }
 
 } // namespace Fortran::semantics
