@@ -1404,6 +1404,43 @@ static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
 
 }
 
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
+
+}
+
+namespace case8 {
+
+template <class T>
+struct type_identity {
+    using type = T;
+};
+
+template <typename Inner>
+struct Cat {};
+
+template <typename T>
+concept CatConcept = requires {
+    []<class Inner>(type_identity<Cat<Inner>>) {}(type_identity<T>{});
+};
+
+template <typename Dummy>
+struct Feeder {
+    template <CatConcept Dummy2>
+    void feed() noexcept {}
+};
+
+void main() { Feeder<int>{}.feed<Cat<int>>(); }
+
+}
+
 }
 
 namespace GH162125 {
@@ -1476,3 +1513,45 @@ static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overl
 // expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
 
 }
+
+namespace GH162092 {
+
+template <typename T>
+struct vector;
+
+template <typename T, typename U>
+concept C = __is_same_as(T, U);
+
+template<class T, auto Cpt>
+concept generic_range_value = requires {
+    Cpt.template operator()<int>();
+};
+
+
+template<generic_range_value<[]<
+   C<int>
+   >() {}> T>
+void x() {}
+
+void foo() {
+  x<vector<int>>();
+}
+
+}
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770

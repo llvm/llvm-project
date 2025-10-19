@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-equals-default %t -- -- -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-equals-default %t -- -- -fno-delayed-template-parsing -fexceptions
 
 // Out of line definition.
 class OL {
@@ -145,7 +145,7 @@ struct ST {
   // CHECK-FIXES: ST() = default;
   ~ST() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: ST() = default;
+  // CHECK-FIXES: ~ST() = default;
 };
 
 // Deleted constructor/destructor.

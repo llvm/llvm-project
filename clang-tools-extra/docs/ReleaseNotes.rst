@@ -276,7 +276,8 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-not-null-terminated-result
   <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
-  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows.
+  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows and
+  a crash caused by certain value-dependent expressions.
 
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
@@ -289,6 +290,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-sizeof-expression
   <clang-tidy/checks/bugprone/sizeof-expression>` check by fixing
   a crash on ``sizeof`` of an array of dependent type.
+
+- Improved :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check by adding
+  `IgnoredRegex` option.
 
 - Improved :doc:`bugprone-tagged-union-member-count
   <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
@@ -310,6 +315,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
   detection.
+
+- Improved :doc:`cppcoreguidelines-init-variables
+  <clang-tidy/checks/cppcoreguidelines/init-variables>` check by fixing the
+  insertion location for function pointers with multiple parameters.
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
@@ -355,6 +364,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
 
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
+
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
   on Windows when the check was enabled with a 32-bit :program:`clang-tidy`
@@ -397,6 +411,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations and macros in system headers. The documentation is also improved
   to differentiate the general options from the specific ones.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check by correctly
+  adding parentheses when the inner expression are implicitly converted
+  multiple times.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

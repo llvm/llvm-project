@@ -2068,7 +2068,7 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
     addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr);
+                                /*var type*/ ty, name, alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;
