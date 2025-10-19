@@ -12,6 +12,7 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -22,12 +23,14 @@
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/CmpPredicate.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
@@ -7161,6 +7164,66 @@ Instruction *InstCombinerImpl::foldICmpUsingBoolRange(ICmpInst &I) {
   return nullptr;
 }
 
+/// Fold icmp(ult, sub(add(sext(X), Cst1), sext(Y)), Cst2) -->
+/// extract(__builtin_ssub_overflow(X, Y), 1)
+Instruction *InstCombinerImpl::foldICmpsToSignedSubOverflow(Instruction &I) {
+  CmpPredicate Pred;
+  ConstantInt *Cst1, *Cst2;
+  Value *X, *Y;
+
+  /*
+    This transformation detects the pattern used to check for
+    a signed subtraction overflow.
+
+    The matched sequence performs the following steps:
+
+      1. X = sext(x)
+         Y = sext(y)
+         // Sign-extend 32-bit operands to 64 bits.
+
+      2. Shifted = X + Cst1
+         // Shift the signed range [-2^31, 2^31-1] by adding the minimum
+         // signed value (Cst1 = INT_MIN), producing an unsigned range
+         // [0, 2^32).
+
+      3. Sub = Shifted - Y
+         // Compute the shifted subtraction result.
+
+      4. icmp ult Sub, Cst2
+         // Check whether the result fits in [0, 2^32).
+         // If not, the subtraction overflowed.
+  */
+
+  auto SExtX = m_SExt(m_Value(X));
+  auto SExtY = m_SExt(m_Value(Y));
+  auto Shifted = m_Add(SExtX, m_ConstantInt(Cst1));
+  auto Sub = m_Sub(Shifted, SExtY);
+
+  if (!match(&I, m_ICmp(Pred, Sub, m_ConstantInt(Cst2))) ||
+      Pred != CmpInst::ICMP_ULT)
+    return nullptr;
+
+  const auto SignedMin =
+      APInt::getSignedMinValue(X->getType()->getScalarSizeInBits());
+  const auto ExpectedRange = SignedMin.getSExtValue() << 1;
+
+  // Cst1 must equal to SignedMin
+  // Cst2 must equal to ExpectedRange
+  if (SignedMin.getSExtValue() != Cst1->getValue().getSExtValue() ||
+      ExpectedRange != Cst2->getValue().getSExtValue())
+    return nullptr;
+
+  Module *M = I.getModule();
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::ssub_with_overflow, X->getType());
+
+  Builder.SetInsertPoint(&I);
+  auto *Call = Builder.CreateCall(F, {X, Y});
+  auto *Extract = Builder.CreateExtractValue(Call, 1);
+
+  return replaceInstUsesWith(I, Extract);
+}
+
 /// If we have an icmp le or icmp ge instruction with a constant operand, turn
 /// it into the appropriate icmp lt or icmp gt instruction. This transform
 /// allows them to be folded in visitICmpInst.
@@ -7969,6 +8032,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
   }
+
+  if (Instruction *R = foldICmpsToSignedSubOverflow(I))
+    return R;
 
   return Changed ? &I : nullptr;
 }
