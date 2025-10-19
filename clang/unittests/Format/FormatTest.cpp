@@ -18559,6 +18559,11 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define bbbb 4\n"
                "#define ccc       (5)",
                Style);
+
+  Style.ColumnLimit = 30;
+  verifyFormat("#define MY_FUNC(x) callMe(X)\n"
+               "#define MY_LONG_CONSTANT 17",
+               Style);
 }
 
 TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLines) {
