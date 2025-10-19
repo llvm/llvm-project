@@ -931,8 +931,8 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       if (DerivedIV->getNumUsers() == 1 &&
           DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel = MiddleBuilder.createSelect(AnyNaN, LoopRegion->getCanonicalIV(),
-                                                  &Plan.getVectorTripCount());
+        auto *NewSel = MiddleBuilder.createSelect(
+            AnyNaN, LoopRegion->getCanonicalIV(), &Plan.getVectorTripCount());
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
