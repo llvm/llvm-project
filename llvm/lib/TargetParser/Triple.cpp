@@ -982,7 +982,6 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::kalimba:
   case Triple::lanai:
   case Triple::loongarch32:
-  case Triple::loongarch64:
   case Triple::m68k:
   case Triple::mips64:
   case Triple::mips64el:
@@ -1011,6 +1010,11 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ve:
   case Triple::xcore:
   case Triple::xtensa:
+    return Triple::ELF;
+
+  case Triple::loongarch64:
+    if (T.isUEFI())
+      return Triple::COFF;
     return Triple::ELF;
 
   case Triple::mipsel:
