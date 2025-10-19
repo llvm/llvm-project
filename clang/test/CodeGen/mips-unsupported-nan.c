@@ -35,9 +35,9 @@
 // CHECK-MIPS3: warning: ignoring '-mnan=2008' option because the 'mips3' architecture does not support it
 // CHECK-MIPS4: warning: ignoring '-mnan=2008' option because the 'mips4' architecture does not support it
 // CHECK-MIPS32: warning: ignoring '-mnan=2008' option because the 'mips32' architecture does not support it
-// CHECK-MIPS32R6: warning: ignoring '-mnan=legacy' option because the 'mips32r6' architecture does not support it
+// CHECK-MIPS32R6: warning: ignoring unsupported '-mnan=legacy' option and instead set to `-mnan=2008` option because the 'mips32r6' architecture supports it
 // CHECK-MIPS64: warning: ignoring '-mnan=2008' option because the 'mips64' architecture does not support it
-// CHECK-MIPS64R6: warning: ignoring '-mnan=legacy' option because the 'mips64r6' architecture does not support it
+// CHECK-MIPS64R6: warning: ignoring unsupported '-mnan=legacy' option and instead set to `-mnan=2008` option because the 'mips64r6' architecture supports it
 
 // This call creates a QNAN double with an empty payload.
 // The quiet bit is inverted in legacy mode: it is clear to indicate QNAN,
