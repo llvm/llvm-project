@@ -687,6 +687,9 @@ clang-format
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
 - Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
+- Rename ``(Binary|Decimal|Hex)MinDigits`` to ``...MinDigitsInsert`` and  add
+  ``(Binary|Decimal|Hex)MaxDigitsSeparator`` suboptions to
+  ``IntegerLiteralSeparator``.
 
 libclang
 --------

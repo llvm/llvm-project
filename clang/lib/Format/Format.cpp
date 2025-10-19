@@ -405,11 +405,19 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
 template <> struct MappingTraits<FormatStyle::IntegerLiteralSeparatorStyle> {
   static void mapping(IO &IO, FormatStyle::IntegerLiteralSeparatorStyle &Base) {
     IO.mapOptional("Binary", Base.Binary);
-    IO.mapOptional("BinaryMinDigits", Base.BinaryMinDigits);
+    IO.mapOptional("BinaryMinDigitsInsert", Base.BinaryMinDigitsInsert);
+    IO.mapOptional("BinaryMaxDigitsRemove", Base.BinaryMaxDigitsRemove);
     IO.mapOptional("Decimal", Base.Decimal);
-    IO.mapOptional("DecimalMinDigits", Base.DecimalMinDigits);
+    IO.mapOptional("DecimalMinDigitsInsert", Base.DecimalMinDigitsInsert);
+    IO.mapOptional("DecimalMaxDigitsRemove", Base.DecimalMaxDigitsRemove);
     IO.mapOptional("Hex", Base.Hex);
-    IO.mapOptional("HexMinDigits", Base.HexMinDigits);
+    IO.mapOptional("HexMinDigitsInsert", Base.HexMinDigitsInsert);
+    IO.mapOptional("HexMaxDigitsRemove", Base.HexMaxDigitsRemove);
+
+    // For backward compatibility.
+    IO.mapOptional("BinaryMinDigits", Base.BinaryMinDigitsInsert);
+    IO.mapOptional("DecimalMinDigits", Base.DecimalMinDigitsInsert);
+    IO.mapOptional("HexMinDigits", Base.HexMinDigitsInsert);
   }
 };
 
@@ -1758,10 +1766,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
-  LLVMStyle.IntegerLiteralSeparator = {
-      /*Binary=*/0,  /*BinaryMinDigits=*/0,
-      /*Decimal=*/0, /*DecimalMinDigits=*/0,
-      /*Hex=*/0,     /*HexMinDigits=*/0};
+  LLVMStyle.IntegerLiteralSeparator = {};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLines = {
@@ -2183,7 +2188,7 @@ FormatStyle getClangFormatStyle() {
   Style.InsertBraces = true;
   Style.InsertNewlineAtEOF = true;
   Style.IntegerLiteralSeparator.Decimal = 3;
-  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
+  Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
   Style.RemoveEmptyLinesInUnwrappedLines = true;

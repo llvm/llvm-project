@@ -4767,7 +4767,12 @@ the configuration (without a prefix: ``Auto``).
 
   You can also specify a minimum number of digits (``BinaryMinDigits``,
   ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  have in order for the separators to be inserted.
+  have in order for the separators to be inserted, and a maximum number of
+  digits (``BinaryMaxDigitsNoSeparator``, ``DecimalMaxDigitsNoSeparator``,
+  and ``HexMaxDigitsNoSeparator``) until the separators are removed. This
+  divides the literals in 3 regions, always without separator (up until
+  including ``xxxMaxDigitsNoSeparator``), maybe with, or without separators
+  (up until excluding ``xxxMinDigits``), and finally always with separators.
 
   * ``int8_t Binary`` Format separators in binary literals.
 
@@ -4787,6 +4792,19 @@ the configuration (without a prefix: ``Auto``).
       b1 = 0b101101;
       b2 = 0b1'101'101;
 
+  * ``int8_t BinaryMaxDigitsNoSeparator`` Remove separators in binary literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Binary: 3
+      // BinaryMinDigits: 7
+      // BinaryMaxDigitsNoSeparator: 4
+      b0 = 0b1011; // Always removed.
+      b1 = 0b101101; // Not added.
+      b2 = 0b101'101; // Not removed.
+      b3 = 0b1'101'101; // Always added.
+      b4 = 0b10'1101; // Corrected to 0b101'101.
+
   * ``int8_t Decimal`` Format separators in decimal literals.
 
     .. code-block:: text
@@ -4803,6 +4821,19 @@ the configuration (without a prefix: ``Auto``).
       // DecimalMinDigits: 5
       d1 = 2023;
       d2 = 10'000;
+
+  * ``int8_t DecimalMaxDigitsNoSeparator`` Remove separators in decimal literals with a maximum number of digits.
+
+    .. code-block:: text
+
+      // Decimal: 3
+      // DecimalMinDigits: 7
+      // DecimalMaxDigitsNoSeparator: 4
+      d0 = 2023; // Always removed.
+      d1 = 123456; // Not added.
+      d2 = 123'456; // Not removed.
+      d3 = 5'000'000; // Always added.
+      d4 = 1'23'45; // Corrected to 12'345.
 
   * ``int8_t Hex`` Format separators in hexadecimal literals.
 
@@ -4821,6 +4852,20 @@ the configuration (without a prefix: ``Auto``).
       // HexMinDigits: 6
       h1 = 0xABCDE;
       h2 = 0xAB'CD'EF;
+
+  * ``int8_t HexMaxDigitsNoSeparator`` Remove separators in hexadecimal literals with a maximum number of
+    digits.
+
+    .. code-block:: text
+
+      // Hex: 2
+      // HexMinDigits: 6
+      // HexMaxDigitsNoSeparator: 4
+      h0 = 0xAFFE; // Always removed.
+      h1 = 0xABCDE; // Not added.
+      h2 = 0xA'BC'DE; // Not removed.
+      h3 = 0xAB'CD'EF; // Always added.
+      h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
 
 
 .. _JavaImportGroups:

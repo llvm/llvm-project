@@ -137,34 +137,34 @@ TEST_F(IntegerLiteralSeparatorTest, UnderscoreAsSeparator) {
   verifyFormat("o = 0o400000000000000003n;", Style);
 }
 
-TEST_F(IntegerLiteralSeparatorTest, MinDigits) {
+TEST_F(IntegerLiteralSeparatorTest, MinDigitsInsert) {
   FormatStyle Style = getLLVMStyle();
   Style.IntegerLiteralSeparator.Binary = 3;
   Style.IntegerLiteralSeparator.Decimal = 3;
   Style.IntegerLiteralSeparator.Hex = 2;
 
-  Style.IntegerLiteralSeparator.BinaryMinDigits = 7;
+  Style.IntegerLiteralSeparator.BinaryMinDigitsInsert = 7;
   verifyFormat("b1 = 0b101101;\n"
                "b2 = 0b1'101'101;",
                "b1 = 0b101'101;\n"
                "b2 = 0b1101101;",
                Style);
 
-  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
+  Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 5;
   verifyFormat("d1 = 2023;\n"
                "d2 = 10'000;",
                "d1 = 2'023;\n"
                "d2 = 100'00;",
                Style);
 
-  Style.IntegerLiteralSeparator.DecimalMinDigits = 3;
+  Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 3;
   verifyFormat("d1 = 123;\n"
                "d2 = 1'234;",
                "d1 = 12'3;\n"
                "d2 = 12'34;",
                Style);
 
-  Style.IntegerLiteralSeparator.HexMinDigits = 6;
+  Style.IntegerLiteralSeparator.HexMinDigitsInsert = 6;
   verifyFormat("h1 = 0xABCDE;\n"
                "h2 = 0xAB'CD'EF;",
                "h1 = 0xA'BC'DE;\n"
@@ -240,6 +240,22 @@ TEST_F(IntegerLiteralSeparatorTest, FloatingPoint) {
                "F = 1234F;\n"
                "d = 5678d;\n"
                "M = 9012M",
+               Style);
+}
+
+TEST_F(IntegerLiteralSeparatorTest, MaxDigitsRemove) {
+  auto Style = getLLVMStyle();
+  Style.IntegerLiteralSeparator.Decimal = 3;
+  Style.IntegerLiteralSeparator.DecimalMaxDigitsRemove = 4;
+  Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 7;
+  verifyFormat("d0 = 2023;\n"
+               "d1 = 123456;\n"
+               "d2 = 1234'56;\n"
+               "d3 = 5'000'000;",
+               "d0 = 20'2'3;\n"
+               "d1 = 123456;\n"
+               "d2 = 1234'56;\n"
+               "d3 = 5000000;",
                Style);
 }
 
