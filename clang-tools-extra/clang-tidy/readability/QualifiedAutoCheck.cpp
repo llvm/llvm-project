@@ -142,12 +142,11 @@ void QualifiedAutoCheck::registerMatchers(MatchFinder *Finder) {
     if (this->IgnoreAliasing) {
       return qualType(
           hasUnqualifiedDesugaredType(pointerType(pointee(InnerMatchers...))));
-    } else {
-      return qualType(
-          anyOf(qualType(pointerType(pointee(InnerMatchers...))),
-                qualType(substTemplateTypeParmType(hasReplacementType(
-                    pointerType(pointee(InnerMatchers...)))))));
     }
+    return qualType(anyOf(qualType(pointerType(pointee(InnerMatchers...))),
+                          qualType(substTemplateTypeParmType(hasReplacementType(
+                              pointerType(pointee(InnerMatchers...)))))));
+   
   };
 
   auto IsAutoDeducedToPointer =

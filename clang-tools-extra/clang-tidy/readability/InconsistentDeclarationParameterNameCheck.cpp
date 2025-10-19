@@ -54,9 +54,12 @@ struct InconsistentDeclarationInfo {
 using InconsistentDeclarationsContainer =
     llvm::SmallVector<InconsistentDeclarationInfo, 2>;
 
-bool checkIfFixItHintIsApplicable(
-    const FunctionDecl *ParameterSourceDeclaration,
-    const ParmVarDecl *SourceParam, const FunctionDecl *OriginalDeclaration) {
+} // namespace
+
+static bool
+checkIfFixItHintIsApplicable(const FunctionDecl *ParameterSourceDeclaration,
+                             const ParmVarDecl *SourceParam,
+                             const FunctionDecl *OriginalDeclaration) {
   // Assumptions with regard to function declarations/definition:
   //  * If both function declaration and definition are seen, assume that
   //    definition is most up-to-date, and use it to generate replacements.
@@ -83,7 +86,7 @@ bool checkIfFixItHintIsApplicable(
   return true;
 }
 
-bool nameMatch(StringRef L, StringRef R, bool Strict) {
+static bool nameMatch(StringRef L, StringRef R, bool Strict) {
   if (Strict)
     return L.empty() || R.empty() || L == R;
   // We allow two names if one is a prefix/suffix of the other, ignoring case.
@@ -92,7 +95,7 @@ bool nameMatch(StringRef L, StringRef R, bool Strict) {
          L.ends_with_insensitive(R) || R.ends_with_insensitive(L);
 }
 
-DifferingParamsContainer
+static DifferingParamsContainer
 findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
                                  const FunctionDecl *OtherDeclaration,
                                  const FunctionDecl *OriginalDeclaration,
@@ -129,7 +132,7 @@ findDifferingParamsInDeclaration(const FunctionDecl *ParameterSourceDeclaration,
   return DifferingParams;
 }
 
-InconsistentDeclarationsContainer
+static InconsistentDeclarationsContainer
 findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
                              const FunctionDecl *ParameterSourceDeclaration,
                              SourceManager &SM, bool Strict) {
@@ -162,7 +165,7 @@ findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
   return InconsistentDeclarations;
 }
 
-const FunctionDecl *
+static const FunctionDecl *
 getParameterSourceDeclaration(const FunctionDecl *OriginalDeclaration) {
   const FunctionTemplateDecl *PrimaryTemplate =
       OriginalDeclaration->getPrimaryTemplate();
@@ -187,7 +190,7 @@ getParameterSourceDeclaration(const FunctionDecl *OriginalDeclaration) {
   return OriginalDeclaration;
 }
 
-std::string joinParameterNames(
+static std::string joinParameterNames(
     const DifferingParamsContainer &DifferingParams,
     llvm::function_ref<StringRef(const DifferingParamInfo &)> ChooseParamName) {
   llvm::SmallString<40> Str;
@@ -202,7 +205,7 @@ std::string joinParameterNames(
   return std::string(Str);
 }
 
-void formatDifferingParamsDiagnostic(
+static void formatDifferingParamsDiagnostic(
     InconsistentDeclarationParameterNameCheck *Check, SourceLocation Location,
     StringRef OtherDeclarationDescription,
     const DifferingParamsContainer &DifferingParams) {
@@ -230,7 +233,7 @@ void formatDifferingParamsDiagnostic(
   }
 }
 
-void formatDiagnosticsForDeclarations(
+static void formatDiagnosticsForDeclarations(
     InconsistentDeclarationParameterNameCheck *Check,
     const FunctionDecl *ParameterSourceDeclaration,
     const FunctionDecl *OriginalDeclaration,
@@ -256,7 +259,7 @@ void formatDiagnosticsForDeclarations(
   }
 }
 
-void formatDiagnostics(
+static void formatDiagnostics(
     InconsistentDeclarationParameterNameCheck *Check,
     const FunctionDecl *ParameterSourceDeclaration,
     const FunctionDecl *OriginalDeclaration,
@@ -278,8 +281,6 @@ void formatDiagnostics(
         ParameterSourceDescription, InconsistentDeclaration.DifferingParams);
   }
 }
-
-} // anonymous namespace
 
 void InconsistentDeclarationParameterNameCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {

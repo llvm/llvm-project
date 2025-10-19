@@ -154,12 +154,9 @@ struct ResolveUnderlyingType {
   using type = std::underlying_type_t<T>;
 };
 template <typename T> struct ResolveUnderlyingType<T, false> {
-  using type = T;
-};
-template <> struct ResolveUnderlyingType<bool, false> {
-  /// In case sizeof(bool) != 1, replace `void` by an additionnal
-  /// std::conditional.
-  using type = std::conditional_t<sizeof(bool) == 1, uint8_t, void>;
+  static_assert(!std::is_same_v<T, bool> || sizeof(bool) == 1,
+                "T being bool requires sizeof(bool) == 1.");
+  using type = std::conditional_t<std::is_same_v<T, bool>, uint8_t, T>;
 };
 
 } // namespace bitfields_details

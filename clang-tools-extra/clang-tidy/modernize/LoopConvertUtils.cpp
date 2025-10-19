@@ -370,7 +370,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
       DeclarationType = DeclarationType.getNonReferenceType();
 
     if (InitType.isNull() || DeclarationType.isNull() ||
-        !Context->hasSameUnqualifiedType(DeclarationType, InitType))
+        !ASTContext::hasSameUnqualifiedType(DeclarationType, InitType))
       return false;
   }
 
