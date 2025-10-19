@@ -21,8 +21,6 @@ using namespace llvm;
 namespace clang::tidy::modernize {
 namespace {
 
-const char CastSequence[] = "sequence";
-
 AST_MATCHER(Type, sugaredNullptrType) {
   const Type *DesugaredType = Node.getUnqualifiedDesugaredType();
   if (const auto *BT = dyn_cast<BuiltinType>(DesugaredType))
@@ -31,6 +29,8 @@ AST_MATCHER(Type, sugaredNullptrType) {
 }
 
 } // namespace
+
+static const char CastSequence[] = "sequence";
 
 /// Create a matcher that finds implicit casts as well as the head of a
 /// sequence of zero or more nested explicit casts that have an implicit cast
