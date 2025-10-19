@@ -4024,6 +4024,31 @@ def : Pat <(f32 (bitconvert (i32 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s
 def : Pat <(f32 (bitconvert (i32 (zextloadi8 (am_indexed16 GPR64sp:$Rn, uimm12s1:$offset))))),
            (SUBREG_TO_REG (i32 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
 
+// load zero-extended i8/i16 into vector element 0
+// This avoids the pattern: ldrb w1, [x0]; fmov s0, w1
+// Instead use: ldr b0, [x0]
+let AddedComplexity = 10 in {
+def : Pat<(v4i32 (scalar_to_vector (i32 (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                         (LDRBui GPR64sp:$Rn, uimm12s1:$offset),
+                         bsub)>;
+
+def : Pat<(v4i32 (scalar_to_vector (i32 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+          (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
+                         (LDRHui GPR64sp:$Rn, uimm12s2:$offset),
+                         hsub)>;
+
+def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
+                         (LDRBui GPR64sp:$Rn, uimm12s1:$offset),
+                         bsub)>;
+
+def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+          (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)),
+                         (LDRHui GPR64sp:$Rn, uimm12s2:$offset),
+                         hsub)>;
+}
+
 // Pre-fetch.
 def PRFMui : PrefetchUI<0b11, 0, 0b10, "prfm",
                         [(AArch64Prefetch timm:$Rt,
