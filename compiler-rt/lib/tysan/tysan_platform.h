@@ -41,6 +41,12 @@ struct Mapping48 {
   static const uptr kAppMemMsk = ~0x0fff800000000ull;
 };
 #define TYSAN_RUNTIME_VMA 1
+#elif defined(__s390x__)
+struct Mapping {
+  static const uptr kShadowAddr = 0x080000000000ULL;
+  static const uptr kAppAddr = 0x460000000000ULL;
+  static const uptr kAppMemMsk = ~0xC00000000000ULL;
+};
 #else
 #error "TySan not supported for this platform!"
 #endif
