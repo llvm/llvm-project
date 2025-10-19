@@ -3,5 +3,6 @@
 // RUN: cat %t.c | od -t x1 | not grep -q 'ef\s*bb\s*bf'
 // RUN: %clang_cc1 -fsyntax-only -verify %t.c
 // expected-no-diagnostics
+// UNSUPPORTED: system-windows
 
 #include "rewrite-includes-bom.h"
