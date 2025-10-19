@@ -5,15 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include <__atomic/contention_t.h>
-#include <__thread/timed_backoff_policy.h>
 #include <atomic>
 #include <climits>
 #include <cstddef>
 #include <cstring>
 #include <functional>
 #include <thread>
+#include <type_traits>
 
 #include "include/apple_availability.h"
 
@@ -329,51 +327,34 @@ _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native(void const vola
   __contention_notify<_Size>(__get_native_waiter_count(__location), __location, false);
 }
 
+// ==================================================
 // Instantiation of the templates with supported size
-#ifdef __linux__
+// ==================================================
+
+#if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
+
+#  define _INSTANTIATE(_SIZE)                                                                                          \
+    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait_native<_SIZE>(                                        \
+        void const volatile*, void const*) noexcept;                                                                   \
+    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<_SIZE>(void const volatile*) noexcept;   \
+    template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<_SIZE>(void const volatile*) noexcept;
+
+_LIBCPP_ATOMIC_WAIT_SIZES_LIST(_INSTANTIATE)
+
+#  undef _INSTANTIATE
+
+#else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+
+template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_wait_native<sizeof(__cxx_contention_t)>(
+    void const volatile* __address, void const* __old_value) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<4>(void const volatile* __address, void const* __old_value) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
-
-#elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
+__libcpp_atomic_notify_one_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<4>(void const volatile* __address, void const* __old_value) noexcept;
+__libcpp_atomic_notify_all_native<sizeof(__cxx_contention_t)>(void const volatile* __location) noexcept;
 
-template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<4>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<4>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
-
-#elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
-
-template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
-
-#else // <- Add other operating systems here
-
-template _LIBCPP_EXPORTED_FROM_ABI void
-__libcpp_atomic_wait_native<8>(void const volatile* __address, void const* __old_value) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_one_native<8>(void const volatile* __location) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __libcpp_atomic_notify_all_native<8>(void const volatile* __location) noexcept;
-
-#endif // __linux__
+#endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
 // =============================================================
 // Old dylib exported symbols, for backwards compatibility

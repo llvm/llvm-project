@@ -9,16 +9,20 @@
 #ifndef _LIBCPP___ATOMIC_ATOMIC_SYNC_H
 #define _LIBCPP___ATOMIC_ATOMIC_SYNC_H
 
+#include <__algorithm/ranges_find.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
+#include <__ranges/access.h>
 #include <__thread/poll_with_backoff.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
 #include <cstring>
@@ -88,7 +92,7 @@ __libcpp_atomic_notify_all_global_table(void const volatile*) _NOEXCEPT;
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 
-__libcpp_atomic_wait_native(void const volatile* __address, void const volatile* __old_value) _NOEXCEPT;
+__libcpp_atomic_wait_native(void const volatile* __address, void const* __old_value) _NOEXCEPT;
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_notify_one_native(const volatile void*) _NOEXCEPT;
@@ -96,6 +100,48 @@ __libcpp_atomic_notify_one_native(const volatile void*) _NOEXCEPT;
 template <std::size_t _Size>
 _LIBCPP_AVAILABILITY_NEW_SYNC _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_notify_all_native(const volatile void*) _NOEXCEPT;
+
+// concepts defines the types are supported natively by the platform's wait
+
+#    if defined(_LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE)
+
+#      ifdef __linux__
+
+#        define _LIBCPP_ATOMIC_WAIT_SIZES_LIST(_APPLY) _APPLY(4)
+
+#      elif defined(__APPLE__)
+
+#        define _LIBCPP_ATOMIC_WAIT_SIZES_LIST(_APPLY)                                                                 \
+          _APPLY(4)                                                                                                    \
+          _APPLY(8)
+
+#      elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
+
+#        define _LIBCPP_ATOMIC_WAIT_SIZES_LIST(_APPLY) _APPLY(8)
+
+#      else
+
+#        define _LIBCPP_ATOMIC_WAIT_SIZES_LIST(_APPLY) _APPLY(sizeof(__cxx_contention_t))
+
+#      endif // __linux__
+
+inline constexpr std::size_t __supported_native_wait_sizes[] = {
+#      define _IDENTITY(_SIZE) _SIZE,
+    _LIBCPP_ATOMIC_WAIT_SIZES_LIST(_IDENTITY)
+#      undef _IDENTITY
+};
+
+template <class _Tp>
+concept __atomic_wait_native_type =
+    has_unique_object_representations_v<_Tp> &&
+    std::ranges::find(__supported_native_wait_sizes, sizeof(_Tp)) != ranges::end(__supported_native_wait_sizes);
+
+#    else // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
+
+template <class _Tp>
+concept __atomic_wait_native_type = is_same_v<_Tp, __cxx_contention_t>;
+
+#    endif // _LIBCPP_ABI_ATOMIC_WAIT_NATIVE_BY_SIZE
 
 template <class _AtomicWaitable, class _Poll>
 struct __atomic_wait_backoff_impl {
@@ -110,7 +156,7 @@ struct __atomic_wait_backoff_impl {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = __waitable_traits::__atomic_contention_address(__a_);
 
-      if constexpr (__is_atomic_wait_native_type<__value_type>::value) {
+      if constexpr (__atomic_wait_native_type<__value_type>) {
         auto __atomic_value = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
           return true;
@@ -153,7 +199,7 @@ template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_one(const _AtomicWaitable& __a) {
   static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
   using __value_type _LIBCPP_NODEBUG = typename __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__value_type;
-  if constexpr (__is_atomic_wait_native_type<__value_type>::value) {
+  if constexpr (__atomic_wait_native_type<__value_type>) {
     std::__libcpp_atomic_notify_one_native<sizeof(__value_type)>(
         __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
   } else {
@@ -166,7 +212,7 @@ template <class _AtomicWaitable>
 _LIBCPP_HIDE_FROM_ABI void __atomic_notify_all(const _AtomicWaitable& __a) {
   static_assert(__atomic_waitable<_AtomicWaitable>::value, "");
   using __value_type _LIBCPP_NODEBUG = typename __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__value_type;
-  if constexpr (__is_atomic_wait_native_type<__value_type>::value) {
+  if constexpr (__atomic_wait_native_type<__value_type>) {
     std::__libcpp_atomic_notify_all_native<sizeof(__value_type)>(
         __atomic_waitable_traits<__decay_t<_AtomicWaitable> >::__atomic_contention_address(__a));
   } else {
