@@ -3128,6 +3128,36 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Shift = ImmAPS.getZExtValue();
+
+  const Pointer &Concat = S.Stk.pop<Pointer>();
+  if (!Concat.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Concat.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = Concat.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (I + Shift < NumElems)
+        Dst.elem<T>(I) = Concat.elem<T>(I + Shift);
+      else
+        Dst.elem<T>(I) = T();
+    }
+  });
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -4148,6 +4178,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v8si:
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+    return interp__builtin_x86_psrldq_byteshift(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

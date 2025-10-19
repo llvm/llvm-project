@@ -12790,6 +12790,33 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(Elems.data(), NumElems), E);
   }
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Concat;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Concat) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Concat.getVectorLength();
+    unsigned Shift = Imm.getZExtValue();
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned I = 0; I < VecLen; ++I) {
+      if (I + Shift < VecLen) {
+        ResultElements.push_back(Concat.getVectorElt(I + Shift));
+      } else {
+        APSInt Zero(8, /*isUnsigned=*/true);
+        Zero = 0;
+        ResultElements.push_back(APValue(Zero));
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
