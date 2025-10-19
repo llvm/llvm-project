@@ -1185,6 +1185,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GFX11-NEXT:    v_cmp_lt_f32_e32 vcc, 0x3e800000, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, vcc
 ; GFX11-NEXT:    v_cmp_nle_f32_e32 vcc, 0, v0
+; GFX11-NEXT:    s_waitcnt_depctr 0xfffd
 ; GFX11-NEXT:    s_and_not1_b64 exec, exec, vcc
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB21_1
 ; GFX11-NEXT:    s_endpgm
@@ -1595,6 +1596,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
+; GFX11-NEXT:    s_waitcnt_depctr 0xf1ff
 ; GFX11-NEXT:  .LBB26_2: ; %bb
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
