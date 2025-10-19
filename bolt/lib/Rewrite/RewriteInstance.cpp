@@ -34,6 +34,7 @@
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
+#include "bolt/Target/PowerPC/PPCMCPlusBuilder.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
@@ -60,10 +61,12 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cstdint>
 #include <fstream>
 #include <memory>
 #include <optional>
 #include <system_error>
+#include <unordered_map>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
@@ -2863,6 +2866,58 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     handleRelocation(RelocatedSection, Rel);
 }
 
+static bool shouldUsePPCAbsoluteCallStub(const RelocationRef &Rel,
+                                         MCSymbol *TargetSym) {
+  (void)Rel;
+  (void)TargetSym;
+  return true;
+}
+
+static BinaryFunction *getOrCreatePPCAbsoluteCallStub(BinaryContext &BC,
+                                                      MCSymbol &TargetSym,
+                                                      MCPlusBuilder &MIB) {
+  std::string StubName =
+      ("__bolt_ppc_abs_call_stub." + TargetSym.getName()).str();
+
+  static std::unordered_map<std::string, BinaryFunction *> PPCStubCache;
+  auto It = PPCStubCache.find(StubName);
+  if (It != PPCStubCache.end())
+    return It->second;
+
+  // Create an injected fuction for the stub.
+  auto *StubBF = BC.createInjectedBinaryFunction(StubName);
+  StubBF->setSimple(true);
+  StubBF->setCodeSectionName(".text"); // or a dedicated stubs section
+
+  // Build one basic block
+  BinaryBasicBlock *BB = StubBF->addBasicBlock(/*Label=*/nullptr);
+
+  uint64_t TargetAddr = 0;
+  if (auto *BSym = BC.getBinaryDataByName(TargetSym.getName())) {
+    TargetAddr = BSym->getAddress();
+  }
+
+  assert(TargetAddr && "target symbol address expected");
+
+  auto highest = static_cast<uint16_t>((TargetAddr >> 48) & 0xFFFF);
+  auto higher = static_cast<uint16_t>((TargetAddr >> 32) & 0xFFFF);
+  auto half = static_cast<uint16_t>(((TargetAddr + 0x8000) >> 16) & 0xFFFF);
+  auto lower = static_cast<uint16_t>(TargetAddr & 0xFFFF);
+
+  // Build the stub MCInsts
+  std::vector<MCInst> Seq;
+  auto &PPCBuilder = static_cast<PPCMCPlusBuilder &>(*BC.MIB);
+  PPCBuilder.buildCallStubAbsolute(Seq, &TargetSym, highest, higher, half,
+                                   lower);
+
+  // Append instructions to the basic block
+  for (auto &I : Seq)
+    BB->addInstruction(I);
+
+  PPCStubCache.emplace(StubName, StubBF);
+  return StubBF;
+}
+
 void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
@@ -2985,6 +3040,24 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       ReferencedSymbol = BD->getSymbol();
     }
   }
+
+  if (IsPPC64 && IsFromCode &&
+      (RType == ELF::R_PPC64_REL24 || RType == ELF::R_PPC64_REL24_NOTOC) &&
+      ReferencedSymbol) {
+
+    const StringRef SymName = ReferencedSymbol->getName();
+    const bool AlreadyStub = SymName.starts_with("__bolt_ppc_abs_call_stub.");
+
+    if (!AlreadyStub && shouldUsePPCAbsoluteCallStub(Rel, ReferencedSymbol)) {
+      auto *StubBF =
+          getOrCreatePPCAbsoluteCallStub(*BC, *ReferencedSymbol, *BC->MIB);
+      ReferencedSymbol = StubBF->getSymbol(); // redirect to stub
+      Addend = 0;
+      ExtractedValue = 0;
+    }
+  }
+  BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
+                    ExtractedValue);
 
   ErrorOr<BinarySection &> ReferencedSection{std::errc::bad_address};
 

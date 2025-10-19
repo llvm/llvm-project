@@ -1,8 +1,10 @@
 #pragma once
-
 #include "bolt/Core/MCPlusBuilder.h"
+#include <vector>
 
 namespace llvm {
+class MCInst;
+class MCSymbol;
 namespace bolt {
 
 class PPCMCPlusBuilder : public MCPlusBuilder {
@@ -75,6 +77,14 @@ public:
                    const MCAsmBackend &MAB) const override;
 
   bool isTOCRestoreAfterCall(const MCInst &I) const override;
+
+  // Build a PPC64 call-stub as MCInsts; the stub tail-calls Target via CTR.
+  // Out will receive: [std r2,24(r1)] (optional), address materialization into
+  // r12, mtctr r12, bctr. No @toc* fixups are used.
+  void buildCallStubAbsolute(std::vector<llvm::MCInst> &Out,
+                             const llvm::MCSymbol *TargetSym, uint16_t highest,
+                             uint16_t higher, uint16_t half,
+                             uint16_t lower) const;
 };
 
 } // namespace bolt
