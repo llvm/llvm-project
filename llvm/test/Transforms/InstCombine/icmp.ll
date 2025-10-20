@@ -6240,3 +6240,19 @@ entry:
   %cmp = icmp ult i8 %p0, %p1
   ret i1 %cmp
 }
+
+; Transform (x | y) > x + y into x > x + y
+; This is valid because (x | y) >= x always, so (x | y) > x + y is equivalent to x > x + y
+define i1 @uaddo_or(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @uaddo_or(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[OR]], [[ADD]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i32 %y, %x
+  %add = add i32 %y, %x
+  %cmp = icmp ugt i32 %or, %add
+  ret i1 %cmp
+}
