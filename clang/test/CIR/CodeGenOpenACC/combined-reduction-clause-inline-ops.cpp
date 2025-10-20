@@ -17,7 +17,7 @@ struct HasOperatorsInline {
   bool &operator&&(HasOperatorsInline& other);
   bool &operator||(HasOperatorsInline& other);
   // For min/max
-  HasOperatorsInline &operator<(HasOperatorsInline& other);
+  bool operator<(HasOperatorsInline& other);
   HasOperatorsInline &operator=(HasOperatorsInline& other);
 };
 
@@ -110,7 +110,13 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[RHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}):  
@@ -119,7 +125,7 @@ void acc_combined() {
 // CHECK-NEXT: }
   for(int i=0;i < 5; ++i);
 #pragma acc parallel loop reduction(min:someVar)
-// CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <min> init {
+// CHECK: acc.reduction.recipe @reduction_min__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_HasOperatorsInline, !cir.ptr<!rec_HasOperatorsInline>, ["openacc.reduction.init", init]
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
@@ -141,7 +147,13 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[RHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline> {{.*}}):  
@@ -631,7 +643,34 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}):  
@@ -753,7 +792,34 @@ void acc_combined() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}})
-// TODO OpenACC: Expecting combination operation here
+// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[END_VAL:.*]] = cir.const #cir.int<5> : !s64i
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[END_VAL]]) : !s64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}):  
@@ -1528,6 +1594,38 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
@@ -1605,6 +1703,38 @@ void acc_combined() {
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
+// CHECK-NEXT: cir.scope {
+// CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
+// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.for : cond {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[COND:.*]] = cir.cmp(lt, %[[ITR_LOAD]], %[[UB_CAST]]) : !u64i, !cir.bool
+// CHECK-NEXT: cir.condition(%[[COND]])
+// CHECK-NEXT: } body {
+// CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[LHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZN18HasOperatorsInlineltERS_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.bool
+// CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
+// CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }, false {
+// CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.call @_ZN18HasOperatorsInlineaSERS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!rec_HasOperatorsInline>) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } step {
+// CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}): 
