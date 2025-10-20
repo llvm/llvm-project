@@ -34,11 +34,13 @@
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS128 _mm_cvtsh_h(__m128h __a) {
+static __inline__ _Float16 __DEFAULT_FN_ATTRS128_CONSTEXPR
+_mm_cvtsh_h(__m128h __a) {
   return __a[0];
 }
 
-static __inline__ _Float16 __DEFAULT_FN_ATTRS256 _mm256_cvtsh_h(__m256h __a) {
+static __inline__ _Float16 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtsh_h(__m256h __a) {
   return __a[0];
 }
 

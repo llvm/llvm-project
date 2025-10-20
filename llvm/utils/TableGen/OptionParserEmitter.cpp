@@ -9,8 +9,10 @@
 #include "Common/OptEmitter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Record.h"
@@ -258,6 +260,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   std::vector<const Record *> Opts = Records.getAllDerivedDefinitions("Option");
   llvm::sort(Opts, IsOptionRecordsLess);
 
+  std::vector<const Record *> SubCommands =
+      Records.getAllDerivedDefinitions("SubCommand");
+
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
   // Generate prefix groups.
@@ -269,6 +274,35 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
     Prefixes.try_emplace(PrefixKey, 0);
+  }
+
+  // Generate sub command groups.
+  typedef SmallVector<StringRef, 2> SubCommandKeyT;
+  typedef std::map<SubCommandKeyT, unsigned> SubCommandIDsT;
+  SubCommandIDsT SubCommandIDs;
+
+  auto PrintSubCommandIdsOffset = [&SubCommandIDs, &OS](const Record &R) {
+    if (R.getValue("SubCommands") != nullptr) {
+      std::vector<const Record *> SubCommands =
+          R.getValueAsListOfDefs("SubCommands");
+      SubCommandKeyT SubCommandKey;
+      for (const auto &SubCommand : SubCommands)
+        SubCommandKey.push_back(SubCommand->getName());
+      OS << SubCommandIDs[SubCommandKey];
+    } else {
+      // The option SubCommandIDsOffset (for default top level toolname is 0).
+      OS << " 0";
+    }
+  };
+
+  SubCommandIDs.try_emplace(SubCommandKeyT(), 0);
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    std::vector<const Record *> RSubCommands =
+        R.getValueAsListOfDefs("SubCommands");
+    SubCommandKeyT SubCommandKey;
+    for (const auto &SubCommand : RSubCommands)
+      SubCommandKey.push_back(SubCommand->getName());
+    SubCommandIDs.try_emplace(SubCommandKey, 0);
   }
 
   DenseSet<StringRef> PrefixesUnionSet;
@@ -322,6 +356,40 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   }
   OS << "\n};\n";
   OS << "#endif // OPTTABLE_PREFIXES_TABLE_CODE\n\n";
+
+  // Dump subcommand IDs.
+  OS << "/////////";
+  OS << "// SubCommand IDs\n\n";
+  OS << "#ifdef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE\n";
+  OS << "static constexpr unsigned OptionSubCommandIDsTable[] = {\n";
+  {
+    // Ensure the first subcommand set is always empty.
+    assert(!SubCommandIDs.empty() &&
+           "We should always emit an empty set of subcommands");
+    assert(SubCommandIDs.begin()->first.empty() &&
+           "First subcommand set should always be empty");
+    llvm::ListSeparator Sep(",\n");
+    unsigned CurIndex = 0;
+    for (auto &[SubCommand, SubCommandIndex] : SubCommandIDs) {
+      // First emit the number of subcommand strings in this list of
+      // subcommands.
+      OS << Sep << "  " << SubCommand.size() << " /* subcommands */";
+      SubCommandIndex = CurIndex;
+      assert((CurIndex == 0 || !SubCommand.empty()) &&
+             "Only first subcommand set should be empty!");
+      for (const auto &SubCommandKey : SubCommand) {
+        auto It = std::find_if(
+            SubCommands.begin(), SubCommands.end(),
+            [&](const Record *R) { return R->getName() == SubCommandKey; });
+        assert(It != SubCommands.end() && "SubCommand not found");
+        OS << ", " << std::distance(SubCommands.begin(), It) << " /* '"
+           << SubCommandKey << "' */";
+      }
+      CurIndex += SubCommand.size() + 1;
+    }
+  }
+  OS << "\n};\n";
+  OS << "#endif // OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE\n\n";
 
   // Dump prefixes union.
   OS << "/////////\n";
@@ -400,7 +468,12 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     OS << ", nullptr";
 
     // The option Values (unused for groups).
-    OS << ", nullptr)\n";
+    OS << ", nullptr";
+
+    // The option SubCommandIDsOffset.
+    OS << ", ";
+    PrintSubCommandIdsOffset(R);
+    OS << ")\n";
   }
   OS << "\n";
 
@@ -527,6 +600,10 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << getOptionName(R) << "_Values";
     else
       OS << "nullptr";
+
+    // The option SubCommandIDsOffset.
+    OS << ", ";
+    PrintSubCommandIdsOffset(R);
   };
 
   auto IsMarshallingOption = [](const Record &R) {
@@ -595,6 +672,19 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "#endif // SIMPLE_ENUM_VALUE_TABLE\n";
   OS << "\n";
+  OS << "/////////\n";
+  OS << "\n// SubCommands\n\n";
+  OS << "#ifdef OPTTABLE_SUBCOMMANDS_CODE\n";
+  OS << "static constexpr llvm::opt::OptTable::SubCommand OptionSubCommands[] "
+        "= "
+        "{\n";
+  for (const Record *SubCommand : SubCommands) {
+    OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
+    OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
+    OS << "\"" << SubCommand->getValueAsString("Usage") << "\" },\n";
+  }
+  OS << "};\n";
+  OS << "#endif // OPTTABLE_SUBCOMMANDS_CODE\n\n";
 
   OS << "\n";
 }

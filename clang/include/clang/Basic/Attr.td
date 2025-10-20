@@ -1572,6 +1572,23 @@ def HIPManaged : InheritableAttr {
   let Documentation = [HIPManagedAttrDocs];
 }
 
+def CUDAClusterDims : InheritableAttr {
+  let Spellings = [GNU<"cluster_dims">];
+  let Args = [ExprArgument<"X">, ExprArgument<"Y", /*opt=*/1>, ExprArgument<"Z", /*opt=*/1>];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDAClusterDimsAttrDoc];
+}
+
+def CUDANoCluster : InheritableAttr {
+  let Spellings = [GNU<"no_cluster">];
+  let Subjects = SubjectList<[ObjCMethod, FunctionLike]>;
+  let LangOpts = [CUDA];
+  let Documentation = [CUDANoClusterAttrDoc];
+}
+
+def : MutualExclusions<[CUDAClusterDims, CUDANoCluster]>;
+
 def CUDAInvalidTarget : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
@@ -1599,8 +1616,15 @@ def CUDAShared : InheritableAttr {
 }
 def : MutualExclusions<[CUDAConstant, CUDAShared, HIPManaged]>;
 
+def SYCLKernel : InheritableAttr {
+  let Spellings = [Clang<"sycl_kernel">];
+  let Subjects = SubjectList<[FunctionTmpl]>;
+  let LangOpts = [SYCLDevice];
+  let Documentation = [SYCLKernelDocs];
+}
+
 def DeviceKernel : DeclOrTypeAttr {
-  let Spellings = [Clang<"device_kernel">, Clang<"sycl_kernel">,
+  let Spellings = [Clang<"device_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
   let Documentation = [DeviceKernelDocs];
@@ -1623,15 +1647,6 @@ def DeviceKernel : DeclOrTypeAttr {
     static inline bool isNVPTXSpelling(const AttributeCommonInfo* A) {
       if(!A) return false;
       return isNVPTXSpelling(*A);
-    }
-    static inline bool isSYCLSpelling(const AttributeCommonInfo& A) {
-      return A.getAttributeSpellingListIndex() == GNU_sycl_kernel ||
-             A.getAttributeSpellingListIndex() == CXX11_clang_sycl_kernel ||
-             A.getAttributeSpellingListIndex() == C23_clang_sycl_kernel;
-    }
-    static inline bool isSYCLSpelling(const AttributeCommonInfo* A) {
-      if(!A) return false;
-      return isSYCLSpelling(*A);
     }
     static inline bool isOpenCLSpelling(const AttributeCommonInfo& A) {
     // Tablegen trips underscores from spellings to build the spelling
@@ -4944,6 +4959,7 @@ def HLSLResourceBinding: InheritableAttr {
       std::optional<unsigned> SlotNumber;
       unsigned SpaceNumber;
       std::optional<unsigned> ImplicitBindingOrderID;
+      std::optional<unsigned> ImplicitCounterBindingOrderID;
 
   public:
       void setBinding(RegisterType RT, std::optional<unsigned> SlotNum, unsigned SpaceNum) {
@@ -4975,6 +4991,17 @@ def HLSLResourceBinding: InheritableAttr {
       uint32_t getImplicitBindingOrderID() const {
         assert(hasImplicitBindingOrderID() && "attribute does not have implicit binding order id");
         return ImplicitBindingOrderID.value();
+      }
+      void setImplicitCounterBindingOrderID(uint32_t Value) {
+        assert(!hasImplicitCounterBindingOrderID() && "attribute already has implicit counter binding order id");
+        ImplicitCounterBindingOrderID = Value;
+      }
+      bool hasImplicitCounterBindingOrderID() const {
+        return ImplicitCounterBindingOrderID.has_value();
+      }
+      uint32_t getImplicitCounterBindingOrderID() const {
+        assert(hasImplicitCounterBindingOrderID() && "attribute does not have implicit counter binding order id");
+        return ImplicitCounterBindingOrderID.value();
       }
   }];
 }

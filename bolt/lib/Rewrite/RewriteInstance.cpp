@@ -917,9 +917,6 @@ void RewriteInstance::discoverFileObjects() {
     bool IsData = false;
     uint64_t LastAddr = 0;
     for (const auto &SymInfo : SortedSymbols) {
-      if (LastAddr == SymInfo.Address) // don't repeat markers
-        continue;
-
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
 
       // Treat ST_Function as code.
@@ -929,8 +926,14 @@ void RewriteInstance::discoverFileObjects() {
         if (IsData) {
           Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
           consumeError(NameOrError.takeError());
-          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
-                     << " lacks code marker\n";
+          if (LastAddr == SymInfo.Address) {
+            BC->errs() << "BOLT-WARNING: ignoring data marker conflicting with "
+                          "function symbol "
+                       << *NameOrError << '\n';
+          } else {
+            BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                       << " lacks code marker\n";
+          }
         }
         MarkerType = MarkerSymType::CODE;
       }
@@ -1084,7 +1087,7 @@ void RewriteInstance::discoverFileObjects() {
 
     if (SymbolAddress == Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
-             "unexpect non-zero sized symbol at end of section");
+             "unexpected non-zero sized symbol at end of section");
       LLVM_DEBUG(
           dbgs()
           << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
@@ -1511,6 +1514,12 @@ void RewriteInstance::registerFragments() {
       }
       if (BD) {
         BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
+        if (BF == &Function) {
+          BC->errs()
+              << "BOLT-WARNING: fragment maps to the same function as parent: "
+              << Function << '\n';
+          continue;
+        }
         if (BF) {
           BC->registerFragment(Function, *BF);
           continue;
@@ -2431,7 +2440,7 @@ void RewriteInstance::processDynamicRelocations() {
   }
 
   // The rest of dynamic relocations - DT_RELA.
-  // The static executable might have .rela.dyn secion and not have PT_DYNAMIC
+  // The static executable might have .rela.dyn section and not have PT_DYNAMIC
   if (!DynamicRelocationsSize && BC->IsStaticExecutable) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getUniqueSectionByName(getRelaDynSectionName());
@@ -3521,6 +3530,17 @@ void RewriteInstance::disassembleFunctions() {
       }
     }
 
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (!opts::UpdateBranchProtection) {
+        BC->errs()
+            << "BOLT-ERROR: --update-branch-protection is set to false, but "
+            << Function.getPrintName() << " contains .cfi-negate-ra-state\n";
+        exit(1);
+      }
+    }
+
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
         !BC->getFragmentsToSkip().count(&Function)) {
@@ -3991,10 +4011,12 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       BC->outs() << '\n';
       AllocationDone = true;
     } else {
-      BC->errs() << "BOLT-WARNING: original .text too small to fit the new code"
-                 << " using 0x" << Twine::utohexstr(opts::AlignText)
-                 << " alignment. " << CodeSize << " bytes needed, have "
-                 << BC->OldTextSectionSize << " bytes available.\n";
+      BC->errs() << "BOLT-WARNING: --use-old-text failed. The original .text "
+                    "too small to fit the new code using 0x"
+                 << Twine::utohexstr(opts::AlignText) << " alignment. "
+                 << CodeSize << " bytes needed, have " << BC->OldTextSectionSize
+                 << " bytes available. Rebuilding without --use-old-text may "
+                    "produce a smaller binary\n";
       opts::UseOldText = false;
     }
   }
@@ -4995,7 +5017,7 @@ void RewriteInstance::updateELFSymbolTable(
     if (!Section)
       return false;
 
-    // Remove the section symbol iif the corresponding section was stripped.
+    // Remove the section symbol if the corresponding section was stripped.
     if (Symbol.getType() == ELF::STT_SECTION) {
       if (!getNewSectionIndex(Symbol.st_shndx))
         return true;

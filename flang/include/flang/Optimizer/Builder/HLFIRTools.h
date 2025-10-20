@@ -485,9 +485,18 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
 /// would be incorrect.
 bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 
-std::pair<hlfir::Entity, mlir::Value>
-createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                   hlfir::Entity mold);
+/// Create a new temporary based on the provided \p mold entity.
+///
+/// The returned temporary has the same element type, shape and type parameters
+/// as the mold. When possible, the storage is stack-allocated; otherwise it is
+/// heap-allocated (for instance for arrays with dynamic shape or polymorphic
+/// cases). The bool result indicates whether heap allocation was used.
+///
+/// If the returned bool is true, callers are responsible for arranging cleanup
+/// (e.g., generating destruction/deallocation code at an appropriate point).
+std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder,
+                                                  hlfir::Entity mold);
 
 // TODO: this does not support polymorphic molds
 hlfir::Entity createStackTempFromMold(mlir::Location loc,
