@@ -10546,8 +10546,11 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons/copyable operations are still valid
         // for vectorization (div/rem are not allowed).
-        if (!S.areInstructionsWithCopyableElements() &&
-            !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
+        if ((!S.areInstructionsWithCopyableElements() &&
+             !getSameOpcode(PaddedUniqueValues, TLI).valid()) ||
+            (S.areInstructionsWithCopyableElements() && S.isMulDivLikeOp() &&
+             (S.getMainOp()->isIntDivRem() || S.getMainOp()->isFPDivRem() ||
+              isa<CallInst>(S.getMainOp())))) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
           return false;
