@@ -110,7 +110,8 @@ static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
 static llvm::StringRef
 prettyLanguageVersionString(const DWARFAttribute &AttrValue,
                             const DWARFDie &Die) {
-  assert(AttrValue.Attr == DW_AT_language_version);
+  if (AttrValue.Attr != DW_AT_language_version)
+    return {};
 
   auto NameForm = Die.find(DW_AT_language_name);
   if (!NameForm)
@@ -164,20 +165,31 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
         }
       }
     }
-  } else if (Attr == llvm::dwarf::DW_AT_language_version && !DumpOpts.Verbose)
-    Name = prettyLanguageVersionString(AttrValue, Die);
-  else if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
+  } else if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
 
-  if (!Name.empty())
-    WithColor(OS, Color) << Name;
-  else if (Attr == DW_AT_decl_line || Attr == DW_AT_decl_column ||
-           Attr == DW_AT_call_line || Attr == DW_AT_call_column ||
-           Attr == DW_AT_language_version) {
+  auto DumpUnsignedConstant = [&OS,
+                               &DumpOpts](const DWARFFormValue &FormValue) {
     if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
       OS << *Val;
     else
       FormValue.dump(OS, DumpOpts);
+  };
+
+  llvm::StringRef PrettyVersionName =
+      prettyLanguageVersionString(AttrValue, Die);
+  const bool ShouldDumpRawLanguageVersion =
+      Attr == DW_AT_language_version &&
+      (DumpOpts.Verbose || PrettyVersionName.empty());
+
+  if (!Name.empty())
+    WithColor(OS, Color) << Name;
+  else if (Attr == DW_AT_decl_line || Attr == DW_AT_decl_column ||
+           Attr == DW_AT_call_line || Attr == DW_AT_call_column) {
+    DumpUnsignedConstant(FormValue);
+  } else if (Attr == DW_AT_language_version) {
+    if (ShouldDumpRawLanguageVersion)
+      DumpUnsignedConstant(FormValue);
   } else if (Attr == DW_AT_low_pc &&
              (FormValue.getAsAddress() ==
               dwarf::computeTombstoneAddress(U->getAddressByteSize()))) {
@@ -249,6 +261,10 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       DumpOpts.RecoverableErrorHandler(createStringError(
           errc::invalid_argument, "decoding address ranges: %s",
           toString(RangesOrError.takeError()).c_str()));
+  } else if (Attr == DW_AT_language_version) {
+    if (!PrettyVersionName.empty())
+      WithColor(OS, Color) << (ShouldDumpRawLanguageVersion ? " " : "")
+                           << PrettyVersionName;
   }
 
   OS << ")\n";

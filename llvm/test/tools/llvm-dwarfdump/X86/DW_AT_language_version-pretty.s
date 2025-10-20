@@ -1,10 +1,15 @@
 # Demonstrate dumping DW_AT_language_version in human-readable form.
-# RUN: llvm-mc -triple=x86_64--linux -filetype=obj < %s | \
-# RUN:     llvm-dwarfdump - | FileCheck %s --implicit-check-not "DW_AT_language_version"
+# RUN: llvm-mc -triple=x86_64--linux -filetype=obj -o %t.o < %s
+# RUN: llvm-dwarfdump %t.o -v | FileCheck %s --check-prefix=VERBOSE
+# RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=NO-VERBOSE
 
-# CHECK: .debug_info contents:
-# CHECK: DW_AT_language_name (DW_LNAME_C)
-# CHECK: DW_AT_language_version (C11)
+# VERBOSE: .debug_info contents:
+# VERBOSE: DW_AT_language_name [DW_FORM_data2] (DW_LNAME_C)
+# VERBOSE: DW_AT_language_version [DW_FORM_data4] (201112 C11)
+
+# NO-VERBOSE: .debug_info contents:
+# NO-VERBOSE: DW_AT_language_name (DW_LNAME_C)
+# NO-VERBOSE: DW_AT_language_version (C11)
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code

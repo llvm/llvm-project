@@ -4,7 +4,7 @@
 
 ; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_ObjC_plus_plus)
 ; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_C_plus_plus)
-; CHECK:     DW_AT_language_version [DW_FORM_data4] (201100)
+; CHECK:     DW_AT_language_version [DW_FORM_data4] (201100 C++11)
 ; CHECK:     DW_AT_language_name [DW_FORM_data2] (DW_LNAME_Rust)
 ; CHECK-NOT: DW_AT_language_version
 
