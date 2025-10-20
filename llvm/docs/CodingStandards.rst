@@ -860,10 +860,10 @@ your private interface remains private and undisturbed by outsiders.
     It's okay to put extra implementation methods in a public class itself. Just
     make them private (or protected) and all is well.
 
-Use Namespace Qualifiers to Define Previously Declared Entities
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Namespace Qualifiers to Define Previously Declared Symbols
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out-of-line definition for various entities (variables,
+When providing an out-of-line definition for various symbols (variables,
 functions, opaque classes) in a source file, do not open namespace blocks in the
 source file. Instead, use namespace qualifiers to help ensure that your
 definition matches an existing declaration. Do this:
