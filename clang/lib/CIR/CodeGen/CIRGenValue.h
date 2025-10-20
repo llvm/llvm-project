@@ -390,6 +390,8 @@ public:
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
 
+  IsAliased_t isPotentiallyAliased() const { return IsAliased_t(aliasedFlag); }
+
   RValue asRValue() const {
     if (isIgnored())
       return RValue::getIgnored();

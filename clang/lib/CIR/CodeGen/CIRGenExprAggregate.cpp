@@ -170,19 +170,10 @@ public:
   void VisitConstantExpr(ConstantExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitConstantExpr");
   }
-  void VisitMemberExpr(MemberExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitMemberExpr");
-  }
-  void VisitUnaryDeref(UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitUnaryDeref");
-  }
-  void VisitStringLiteral(StringLiteral *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitStringLiteral");
-  }
-  void VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCompoundLiteralExpr");
-  }
+  void VisitMemberExpr(MemberExpr *e) { emitAggLoadOfLValue(e); }
+  void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
+  void VisitStringLiteral(StringLiteral *e) { emitAggLoadOfLValue(e); }
+  void VisitCompoundLiteralExpr(CompoundLiteralExpr *e);
   void VisitPredefinedExpr(const PredefinedExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitPredefinedExpr");
@@ -323,6 +314,31 @@ void AggExprEmitter::emitAggLoadOfLValue(const Expr *e) {
   assert(!cir::MissingFeatures::opLoadStoreAtomic());
 
   emitFinalDestCopy(e->getType(), lv);
+}
+
+void AggExprEmitter::VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
+  if (dest.isPotentiallyAliased() && e->getType().isPODType(cgf.getContext())) {
+    // For a POD type, just emit a load of the lvalue + a copy, because our
+    // compound literal might alias the destination.
+    emitAggLoadOfLValue(e);
+    return;
+  }
+
+  AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+
+  // Block-scope compound literals are destroyed at the end of the enclosing
+  // scope in C.
+  bool destruct =
+      !cgf.getLangOpts().CPlusPlus && !slot.isExternallyDestructed();
+  if (destruct)
+    slot.setExternallyDestructed();
+
+  cgf.emitAggExpr(e->getInitializer(), slot);
+
+  if (destruct)
+    if ([[maybe_unused]] QualType::DestructionKind dtorKind =
+            e->getType().isDestructedType())
+      cgf.cgm.errorNYI(e->getSourceRange(), "compound literal with destructor");
 }
 
 void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
