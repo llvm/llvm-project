@@ -125,15 +125,18 @@ __m128i test_mm_sign_epi8(__m128i a, __m128i b) {
   // CHECK: call <16 x i8> @llvm.x86.ssse3.psign.b.128(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_sign_epi8(a, b);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_sign_epi8((__m128i)(__v16qi){'g','r','i','n','d','i','n','g', 'l','e','e','t','c','o','d','e'}, (__m128i)(__v16qi){0,1,0,1, 1,1,0,0, 0,0,1,1, 1,0,1,0}), 0,'r',0,'n', 'd','i',0,0, 0,0,'e','t', 'c',0,'d',0));
 
 __m128i test_mm_sign_epi16(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_sign_epi16
   // CHECK: call <8 x i16> @llvm.x86.ssse3.psign.w.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_sign_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_sign_epi16((__m128i)(__v8hi){0,-2,0,-4,0,-6,0,-8}, (__m128i)(__v8hi){-1,-2,-3,-4,-5,-6,7,-8}), 0,2,0,4,0,6,0,8));
 
 __m128i test_mm_sign_epi32(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_sign_epi32
   // CHECK: call <4 x i32> @llvm.x86.ssse3.psign.d.128(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   return _mm_sign_epi32(a, b);
 }
+TEST_CONSTEXPR(match_v4si(_mm_sign_epi32((__m128i)(__v4si){-1,-2,-3,-4}, (__m128i)(__v4si){-4,-3,-2,-1}), 1,2,3,4));
