@@ -2012,7 +2012,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
-        .Case<VPVectorPointerRecipe>([](auto *I) {
+        .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
           // For recipes that do not directly map to LLVM IR instructions,
           // assign opcodes after the last VPInstruction opcode (which is also
           // after the last IR Instruction opcode), based on the VPDefID.
@@ -2089,6 +2089,15 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
         return false;
+    // Recipes in replicate regions implicitly depend on predicate. If either
+    // recipe is in a replicate region, only consider them equal if both have
+    // the same parent.
+    const VPRegionBlock *RegionL = L->getParent()->getParent();
+    const VPRegionBlock *RegionR = R->getParent()->getParent();
+    if (((RegionL && RegionL->isReplicator()) ||
+         (RegionR && RegionR->isReplicator())) &&
+        L->getParent() != R->getParent())
+      return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
     return TypeInfo.inferScalarType(L) == TypeInfo.inferScalarType(R);
