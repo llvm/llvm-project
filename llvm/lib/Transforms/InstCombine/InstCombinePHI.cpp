@@ -1621,101 +1621,11 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     // Note that even though we've just canonicalized this PHI, due to the
     // worklist visitation order, there are no guarantess that *every* PHI
     // has been canonicalized, so we can't just compare operands ranges.
-    if (PN.isIdenticalToWhenDefined(&IdenticalPN)) {
-      // Just use that PHI instead then.
-      ++NumPHICSEs;
-      return replaceInstUsesWith(PN, &IdenticalPN);
-    }
-
-    // Look for the following pattern and do PHI CSE to clean up the
-    // redundant %phi. Here %phi, %1 and %phi.next perform the same
-    // functionality as %identicalPhi and hence %phi can be eliminated.
-    //
-    // BB1:
-    //   %identicalPhi = phi [ X, %BB0 ], [ %identicalPhi.next, %BB1 ]
-    //   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
-    //   ...
-    //   %identicalPhi.next = select %cmp, %val, %identicalPhi
-    //                      (or select %cmp, %identicalPhi, %val)
-    //   %1 = select %cmp2, %identicalPhi, %phi
-    //   %phi.next = select %cmp, %val, %1
-    //             (or select %cmp, %1, %val)
-    //
-    // Prove that %phi and %identicalPhi are the same by induction:
-    //
-    // Base case: Both %phi and %identicalPhi are equal on entry to the loop.
-    // Inductive case:
-    // Suppose %phi and %identicalPhi are equal at iteration i.
-    // We look at their values at iteration i+1 which are %phi.next and
-    // %identicalPhi.next. They would have become different only when %cmp is
-    // false and the corresponding values %1 and %identicalPhi differ
-    // (similar reason for the other "or" case in the bracket).
-    //
-    // The only condition when %1 and %identicalPh could differ is when %cmp2
-    // is false and %1 is %phi, which contradicts our inductive hypothesis
-    // that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
-    // always equal at iteration i+1.
-
-    if (PN.getNumIncomingValues() == 2) {
-      unsigned DiffVals = 0;
-      BasicBlock *DiffValBB = nullptr;
-      // Check that only the backedge incoming value is different.
-      for (unsigned i = 0; i < 2; i++) {
-        BasicBlock *PredBB = PN.getIncomingBlock(i);
-        if (PN.getIncomingValueForBlock(PredBB) !=
-            IdenticalPN.getIncomingValueForBlock(PredBB)) {
-          DiffVals++;
-          DiffValBB = PredBB;
-        }
-      }
-
-      if (DiffVals != 1)
-        continue;
-      // Now check that the backedge incoming values are two select
-      // instructions that are in the same BB, and have the same condition.
-      // Either their true values are the same, or their false values are
-      // the same.
-      auto *Val = PN.getIncomingValueForBlock(DiffValBB);
-      auto *IdenticalVal = IdenticalPN.getIncomingValueForBlock(DiffValBB);
-      if (!isa<SelectInst>(Val) || !isa<SelectInst>(IdenticalVal))
-        continue;
-
-      auto *SI = cast<SelectInst>(Val);
-      auto *IdenticalSI = cast<SelectInst>(IdenticalVal);
-      if (SI->getCondition() != IdenticalSI->getCondition() ||
-          (SI->getTrueValue() != IdenticalSI->getTrueValue() &&
-           SI->getFalseValue() != IdenticalSI->getFalseValue()))
-        continue;
-      Value *SIOtherVal = nullptr;
-      Value *IdenticalSIOtherVal = nullptr;
-      if (SI->getTrueValue() == IdenticalSI->getTrueValue()) {
-        SIOtherVal = SI->getFalseValue();
-        IdenticalSIOtherVal = IdenticalSI->getFalseValue();
-      } else {
-        SIOtherVal = SI->getTrueValue();
-        IdenticalSIOtherVal = IdenticalSI->getTrueValue();
-      }
-
-      // Now check that the other values in select, i.e., %1 and %identicalPhi,
-      // are essentially the same value within the same BB.
-      auto SameSelAndPhi = [&](SelectInst *SI, PHINode *IdenticalPN,
-                               PHINode *PN) {
-        if (SI->getTrueValue() == IdenticalPN) {
-          return SI->getFalseValue() == PN;
-        }
-        return false;
-      };
-      if (!isa<SelectInst>(SIOtherVal) || !isa<PHINode>(IdenticalSIOtherVal))
-        continue;
-      if (cast<PHINode>(IdenticalSIOtherVal) != &IdenticalPN)
-        continue;
-      auto *SIOtherValAsSel = cast<SelectInst>(SIOtherVal);
-      if (!SameSelAndPhi(SIOtherValAsSel, &IdenticalPN, &PN))
-        continue;
-
-      ++NumPHICSEs;
-      return replaceInstUsesWith(PN, &IdenticalPN);
-    }
+    if (!PN.isIdenticalToWhenDefined(&IdenticalPN))
+      continue;
+    // Just use that PHI instead then.
+    ++NumPHICSEs;
+    return replaceInstUsesWith(PN, &IdenticalPN);
   }
 
   // If this is an integer PHI and we know that it has an illegal type, see if

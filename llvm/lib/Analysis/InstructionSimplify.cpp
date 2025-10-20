@@ -4866,6 +4866,89 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   return nullptr;
 }
 
+// Look for the following pattern and simplify %1 to %identicalPhi.
+// Here %phi, %1 and %phi.next perform the same functionality as
+// %identicalPhi and hence the select instruction %1 can be folded
+// into %identicalPhi.
+//
+// BB1:
+//   %identicalPhi = phi [ X, %BB0 ], [ %identicalPhi.next, %BB1 ]
+//   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
+//   ...
+//   %identicalPhi.next = select %cmp, %val, %identicalPhi
+//                      (or select %cmp, %identicalPhi, %val)
+//   %1 = select %cmp2, %identicalPhi, %phi
+//   %phi.next = select %cmp, %val, %1
+//             (or select %cmp, %1, %val)
+//
+// Prove that %phi and %identicalPhi are the same by induction:
+//
+// Base case: Both %phi and %identicalPhi are equal on entry to the loop.
+// Inductive case:
+// Suppose %phi and %identicalPhi are equal at iteration i.
+// We look at their values at iteration i+1 which are %phi.next and
+// %identicalPhi.next. They would have become different only when %cmp is
+// false and the corresponding values %1 and %identicalPhi differ
+// (similar reason for the other "or" case in the bracket).
+//
+// The only condition when %1 and %identicalPh could differ is when %cmp2
+// is false and %1 is %phi, which contradicts our inductive hypothesis
+// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
+// always equal at iteration i+1.
+bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
+  if (PN.getParent() != IdenticalPN.getParent())
+    return false;
+  if (PN.getNumIncomingValues() != 2)
+    return false;
+
+  // Check that only the backedge incoming value is different.
+  unsigned DiffVals = 0;
+  BasicBlock *DiffValBB = nullptr;
+  for (unsigned i = 0; i < 2; i++) {
+    BasicBlock *PredBB = PN.getIncomingBlock(i);
+    if (PN.getIncomingValueForBlock(PredBB) !=
+        IdenticalPN.getIncomingValueForBlock(PredBB)) {
+      DiffVals++;
+      DiffValBB = PredBB;
+    }
+  }
+  if (DiffVals != 1)
+    return false;
+  // Now check that the backedge incoming values are two select
+  // instructions with the same condition. Either their true
+  // values are the same, or their false values are the same.
+  auto *SI = dyn_cast<SelectInst>(PN.getIncomingValueForBlock(DiffValBB));
+  auto *IdenticalSI =
+      dyn_cast<SelectInst>(IdenticalPN.getIncomingValueForBlock(DiffValBB));
+  if (!SI || !IdenticalSI)
+    return false;
+  if (SI->getCondition() != IdenticalSI->getCondition() ||
+      (SI->getTrueValue() != IdenticalSI->getTrueValue() &&
+       SI->getFalseValue() != IdenticalSI->getFalseValue()))
+    return false;
+
+  SelectInst *SIOtherVal = nullptr;
+  Value *IdenticalSIOtherVal = nullptr;
+  if (SI->getTrueValue() == IdenticalSI->getTrueValue()) {
+    SIOtherVal = dyn_cast<SelectInst>(SI->getFalseValue());
+    IdenticalSIOtherVal = IdenticalSI->getFalseValue();
+  } else {
+    SIOtherVal = dyn_cast<SelectInst>(SI->getTrueValue());
+    IdenticalSIOtherVal = IdenticalSI->getTrueValue();
+  }
+
+  // Now check that the other values in select, i.e., %1 and %identicalPhi,
+  // are essentially the same value within the same BB.
+  if (!SIOtherVal || IdenticalSIOtherVal != &IdenticalPN)
+    return false;
+  if (!(SIOtherVal->getTrueValue() == &IdenticalPN &&
+        SIOtherVal->getFalseValue() == &PN) &&
+      !(SIOtherVal->getTrueValue() == &PN &&
+        SIOtherVal->getFalseValue() == &IdenticalPN))
+    return false;
+  return true;
+}
+
 /// Given operands for a SelectInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
@@ -5041,7 +5124,14 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   std::optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
   if (Imp)
     return *Imp ? TrueVal : FalseVal;
-
+  // Look for same PHIs in the true and false values.
+  if (auto *TruePHI = dyn_cast<PHINode>(TrueVal))
+    if (auto *FalsePHI = dyn_cast<PHINode>(FalseVal)) {
+      if (isSimplifierIdenticalPHI(*TruePHI, *FalsePHI))
+        return FalseVal;
+      if (isSimplifierIdenticalPHI(*FalsePHI, *TruePHI))
+        return TrueVal;
+    }
   return nullptr;
 }
 
