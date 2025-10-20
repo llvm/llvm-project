@@ -50,14 +50,14 @@ AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,
 
 AST_MATCHER(Expr, offsetOfExpr) { return isa<OffsetOfExpr>(Node); }
 
-CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
+} // namespace
+
+static CharUnits getSizeOfType(const ASTContext &Ctx, const Type *Ty) {
   if (!Ty || Ty->isIncompleteType() || Ty->isDependentType() ||
       isa<DependentSizedArrayType>(Ty) || !Ty->isConstantSizeType())
     return CharUnits::Zero();
   return Ctx.getTypeSizeInChars(Ty);
 }
-
-} // namespace
 
 SizeofExpressionCheck::SizeofExpressionCheck(StringRef Name,
                                              ClangTidyContext *Context)
