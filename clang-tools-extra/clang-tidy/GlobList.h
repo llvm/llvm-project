@@ -24,7 +24,7 @@ namespace clang::tidy {
 /// them in the order of appearance in the list.
 class GlobList {
 public:
-  virtual ~GlobList() = default;
+  GlobList() = default;
 
   /// \p Globs is a comma-separated list of globs (only the '*' metacharacter is
   /// supported) with an optional '-' prefix to denote exclusion.
@@ -38,7 +38,7 @@ public:
 
   /// Returns \c true if the pattern matches \p S. The result is the last
   /// matching glob's Positive flag.
-  virtual bool contains(StringRef S) const;
+  bool contains(StringRef S) const;
 
 private:
   struct GlobListItem {
@@ -54,12 +54,12 @@ public:
 
 /// A \p GlobList that caches search results, so that search is performed only
 /// once for the same query.
-class CachedGlobList final : public GlobList {
+class CachedGlobList : public GlobList {
 public:
   using GlobList::GlobList;
 
   /// \see GlobList::contains
-  bool contains(StringRef S) const override;
+  bool contains(StringRef S) const;
 
 private:
   mutable llvm::StringMap<bool> Cache;

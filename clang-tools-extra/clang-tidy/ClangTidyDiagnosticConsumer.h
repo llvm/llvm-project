@@ -12,6 +12,7 @@
 #include "ClangTidyOptions.h"
 #include "ClangTidyProfiling.h"
 #include "FileExtensionsSet.h"
+#include "GlobList.h"
 #include "NoLintDirectiveHandler.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Tooling/Core/Diagnostic.h"
@@ -27,7 +28,6 @@ class ASTContext;
 class SourceManager;
 
 namespace tidy {
-class CachedGlobList;
 
 /// A detected error complete with information to display diagnostic and
 /// automatic fix.
@@ -247,8 +247,8 @@ private:
   std::string CurrentFile;
   ClangTidyOptions CurrentOptions;
 
-  std::unique_ptr<CachedGlobList> CheckFilter;
-  std::unique_ptr<CachedGlobList> WarningAsErrorFilter;
+  CachedGlobList CheckFilter;
+  CachedGlobList WarningAsErrorFilter;
 
   FileExtensionsSet HeaderFileExtensions;
   FileExtensionsSet ImplementationFileExtensions;

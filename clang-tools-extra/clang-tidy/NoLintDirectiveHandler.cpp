@@ -79,9 +79,8 @@ public:
   // - Negative globs ignored (which would effectively disable the suppression).
   NoLintToken(NoLintType Type, size_t Pos,
               const std::optional<StringRef> &Checks)
-      : Type(Type), Pos(Pos), ChecksGlob(std::make_unique<CachedGlobList>(
-                                  Checks.value_or("*"),
-                                  /*KeepNegativeGlobs=*/false)) {
+      : Type(Type), Pos(Pos), ChecksGlob(Checks.value_or("*"),
+                                         /*KeepNegativeGlobs=*/false) {
     if (Checks)
       this->Checks = trimWhitespace(*Checks);
   }
@@ -93,13 +92,13 @@ public:
   size_t Pos;
 
   // A glob of the checks this NOLINT token disables.
-  std::unique_ptr<CachedGlobList> ChecksGlob;
+  CachedGlobList ChecksGlob;
 
   // If this NOLINT specifies checks, return the checks.
   const std::optional<std::string> &checks() const { return Checks; }
 
   // Whether this NOLINT applies to the provided check.
-  bool suppresses(StringRef Check) const { return ChecksGlob->contains(Check); }
+  bool suppresses(StringRef Check) const { return ChecksGlob.contains(Check); }
 
 private:
   std::optional<std::string> Checks;
@@ -156,21 +155,20 @@ namespace {
 // Represents a source range within a pair of NOLINT(BEGIN/END) comments.
 class NoLintBlockToken {
 public:
-  NoLintBlockToken(size_t BeginPos, size_t EndPos,
-                   std::unique_ptr<CachedGlobList> ChecksGlob)
+  NoLintBlockToken(size_t BeginPos, size_t EndPos, CachedGlobList ChecksGlob)
       : BeginPos(BeginPos), EndPos(EndPos), ChecksGlob(std::move(ChecksGlob)) {}
 
   // Whether the provided diagnostic is within and is suppressible by this block
   // of NOLINT(BEGIN/END) comments.
   bool suppresses(size_t DiagPos, StringRef DiagName) const {
     return (BeginPos < DiagPos) && (DiagPos < EndPos) &&
-           ChecksGlob->contains(DiagName);
+           ChecksGlob.contains(DiagName);
   }
 
 private:
   size_t BeginPos;
   size_t EndPos;
-  std::unique_ptr<CachedGlobList> ChecksGlob;
+  CachedGlobList ChecksGlob;
 };
 
 } // namespace
