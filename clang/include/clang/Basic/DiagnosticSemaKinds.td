@@ -13676,6 +13676,9 @@ def err_acc_reduction_recipe_no_op
             "not have a valid operation available">;
 def note_acc_reduction_recipe_noop_field
     : Note<"while forming combiner for compound type %0">;
+def note_acc_reduction_combiner_forming
+    : Note<"while forming %select{|binary operator '%1'|conditional "
+           "operator|final assignment operator}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

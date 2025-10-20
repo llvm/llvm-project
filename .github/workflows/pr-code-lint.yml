@@ -20,7 +20,7 @@ jobs:
       run:
         shell: bash
     container:
-      image: 'ghcr.io/llvm/ci-ubuntu-24.04:latest'
+      image: 'ghcr.io/llvm/ci-ubuntu-24.04-lint'
     timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,6 +30,11 @@ jobs:
         uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           fetch-depth: 2
+      
+      # FIXME: same as in ".github/workflows/pr-code-format.yml"
+      - name: Set Safe Directory
+        run: |
+          chown -R root $(pwd)
       
       - name: Get changed files
         id: changed-files
@@ -46,22 +51,6 @@ jobs:
         run: |
           echo "Changed files:"
           echo "$CHANGED_FILES"
-
-      # The clang tidy version should always be upgraded to the first version
-      # of a release cycle (x.1.0) or the last version of a release cycle, or
-      # if there have been relevant clang-format backports.
-      - name: Install clang-tidy
-        uses: aminya/setup-cpp@a276e6e3d1db9160db5edc458e99a30d3b109949 # v1.7.1
-        with:
-          clang-tidy: 21.1.0
-      
-      - name: Setup Python env
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        with:
-          python-version: '3.13'
-
-      - name: Install Python dependencies
-        run: python3 -m pip install -r llvm/utils/git/requirements_linting.txt
       
       # TODO: create special mapping for 'codegen' targets, for now build predefined set
       # TODO: add entrypoint in 'compute_projects.py' that only adds a project and its direct dependencies
