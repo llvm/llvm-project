@@ -7387,9 +7387,9 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (Op.getOpcode() == ISD::INSERT_SUBVECTOR) {
       // match: `insert_subvector undef, (splat X), N2` as `splat X`
       SDValue N0 = Op.getOperand(0);
-      auto* BV = dyn_cast<BuildVectorSDNode>(Op.getOperand(1));
+      auto *BV = dyn_cast<BuildVectorSDNode>(Op.getOperand(1));
       if (!N0.isUndef() || !BV || !(Op = BV->getSplatValue()))
-          return SDValue();
+        return SDValue();
     }
     PreprocessedOps.push_back(Op);
   }
@@ -7413,8 +7413,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       // insert_subvector has been preprocessed, so if it was of the form
       // `insert_subvector undef, (splat X), N2`, it has been replaced with the
       // splat value (X).
-      SDValue ScalarOp = Op.getOpcode() == ISD::INSERT_SUBVECTOR ? Op :
-          Op.getOperand(Op.getOpcode() == ISD::SPLAT_VECTOR ? 0 : I);
+      SDValue ScalarOp =
+          Op.getOpcode() == ISD::INSERT_SUBVECTOR
+              ? Op
+              : Op.getOperand(Op.getOpcode() == ISD::SPLAT_VECTOR ? 0 : I);
       EVT ScalarVT = ScalarOp.getValueType();
 
       // Build vector (integer) scalar operands may need implicit
