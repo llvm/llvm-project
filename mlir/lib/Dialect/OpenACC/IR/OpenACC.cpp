@@ -4650,14 +4650,3 @@ mlir::acc::getMutableDataOperands(mlir::Operation *accOp) {
           .Default([&](mlir::Operation *) { return nullptr; })};
   return dataOperands;
 }
-
-mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
-  mlir::Operation *parentOp = region.getParentOp();
-  while (parentOp) {
-    if (mlir::isa<ACC_COMPUTE_CONSTRUCT_OPS>(parentOp)) {
-      return parentOp;
-    }
-    parentOp = parentOp->getParentOp();
-  }
-  return nullptr;
-}
