@@ -411,14 +411,16 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                                           const char *ExtraCode,
                                           raw_ostream &O) {
-  auto reportAsmMemError = [&] (StringRef errMsg) {
+  auto reportAsmMemError = [&](StringRef errMsg) {
     const char *AsmStr = MI->getOperand(0).getSymbolName();
     const MDNode *LocMD = MI->getLocCookieMD();
-    uint64_t LocCookie = LocMD ?
-     mdconst::extract<ConstantInt>(LocMD->getOperand(0))->getZExtValue() : 0;
+    uint64_t LocCookie =
+        LocMD ? mdconst::extract<ConstantInt>(LocMD->getOperand(0))
+                    ->getZExtValue()
+              : 0;
     const Function &Fn = MI->getMF()->getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoInlineAsm(
-        LocCookie, errMsg + Twine(AsmStr) + "'"));
+    Fn.getContext().diagnose(
+        DiagnosticInfoInlineAsm(LocCookie, errMsg + Twine(AsmStr) + "'"));
     return true;
   };
   if (ExtraCode && ExtraCode[0]) {
