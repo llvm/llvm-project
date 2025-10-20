@@ -203,8 +203,8 @@ define void @predicated_sincos(float %x, ptr noalias %in, ptr noalias writeonly 
 ; CHECK-ARMPL:    [[TMP15:%.*]] = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float> [[WIDE_MASKED_LOAD:%.*]])
 ; CHECK-ARMPL:    [[TMP16:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP15]], 0
 ; CHECK-ARMPL:    [[TMP17:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP15]], 1
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP16]], ptr [[TMP19:%.*]], i32 4, <vscale x 4 x i1> [[TMP14:%.*]])
-; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP17]], ptr [[TMP21:%.*]], i32 4, <vscale x 4 x i1> [[TMP14]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP16]], ptr align 4 [[TMP13:%.*]], <vscale x 4 x i1> [[TMP9:%.*]])
+; CHECK-ARMPL:    call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> [[TMP17]], ptr align 4 [[TMP14:%.*]], <vscale x 4 x i1> [[TMP9]])
 ; CHECK-ARMPL:  [[IF_MERGE:.*:]]
 ; CHECK-ARMPL:  [[FOR_END:.*:]]
 ;

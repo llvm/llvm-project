@@ -16,9 +16,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
 
-namespace {
-
-const TemplateParameterList *
+static const TemplateParameterList *
 getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
   const TemplateParameterList *ReturnList =
       FuncDecl->getDescribedTemplateParams();
@@ -34,8 +32,6 @@ getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
 
   return ReturnList;
 }
-
-} // namespace
 
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)
