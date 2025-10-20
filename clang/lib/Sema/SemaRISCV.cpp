@@ -708,8 +708,37 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
            SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 4);
   }
-  case RISCVVector::BI__builtin_rvv_sf_vtzero_t:
-    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
+  case RISCVVector::BI__builtin_rvv_sf_vtzero_t: {
+    llvm::APSInt Log2SEWResult;
+    llvm::APSInt TWidenResult;
+    if (SemaRef.BuiltinConstantArg(TheCall, 3, Log2SEWResult) ||
+        SemaRef.BuiltinConstantArg(TheCall, 4, TWidenResult))
+      return true;
+
+    int Log2SEW = Log2SEWResult.getSExtValue();
+    int TWiden = TWidenResult.getSExtValue();
+    int TEW = (1 << Log2SEW) * TWiden;
+
+    // 3 <= LogSEW <= 6
+    if (SemaRef.BuiltinConstantArgRange(TheCall, 3, 3, 6))
+      return true;
+
+    // TWiden
+    if (TWiden != 1 && TWiden != 2 && TWiden != 4)
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_invalid_twiden);
+
+    // For TEW = 8, mtd can be 0~15.
+    // For TEW = 16 or 64, mtd can only be 0, 2, 4, 6, 8, 10, 12, 14.
+    // For TEW = 32, mtd can only be 0, 4, 8, 12.
+    if (TEW == 8)
+      return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
+    if (TEW == 16 || TEW == 64)
+      return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
+             SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 2);
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
+           SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 4);
+  }
   case RISCVVector::BI__builtin_rvv_vget_v: {
     ASTContext::BuiltinVectorTypeInfo ResVecInfo =
         Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(

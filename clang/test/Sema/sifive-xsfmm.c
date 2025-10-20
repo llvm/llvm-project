@@ -19,4 +19,8 @@ void test(vfloat32m8_t arg0, vuint8m8_t arg1) {
   __riscv_sf_mm_e5m2_e4m3(20, arg1, arg1, 1, 2, 3); /* expected-error {{argument value 20 is outside the valid range [0, 15]}} */
   __riscv_sf_mm_u_u(24, arg1, arg1, 1, 2, 3); /* expected-error {{argument value 24 is outside the valid range [0, 15]}} */
   __riscv_sf_vtzero_t_e8w1(18, 0, 0); /* expected-error {{argument value 18 is outside the valid range [0, 15]}} */
+  __riscv_sf_vtzero_t_e16w1(3, 0, 0); /* expected-error {{argument should be a multiple of 2}} */
+  __riscv_sf_vtzero_t_e16w2(3, 0, 0); /* expected-error {{argument should be a multiple of 4}} */
+  __riscv_sf_vtzero_t_e32w1(5, 0, 0); /* expected-error {{argument should be a multiple of 4}} */
+  __riscv_sf_vtzero_t_e32w2(5, 0, 0); /* expected-error {{argument should be a multiple of 2}} */
 }
