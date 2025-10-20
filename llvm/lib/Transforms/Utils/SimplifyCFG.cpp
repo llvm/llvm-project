@@ -7583,7 +7583,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   SwitchInstProfUpdateWrapper SIW(*SI);
 
   BasicBlock *Unreachable = SI->getDefaultDest();
-  SIW->setDefaultDest(Case->getCaseSuccessor());
+  SIW.setDefaultDest(Case);
   SIW.removeCase(Case);
   SIW->setCondition(A);
 

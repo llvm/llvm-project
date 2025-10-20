@@ -189,5 +189,5 @@ unreachable:
 
 !0 = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99, i32 5}
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99}
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 5, i32 2, i32 3, i32 99}
 ;.
