@@ -45,9 +45,17 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
-    BasicAggregation("nl",
-                     cl::desc("aggregate basic samples (without brstack info)"),
+    BasicAggregation("basic-events",
+                     cl::desc("aggregate basic events (without brstack info)"),
                      cl::cat(AggregatorCategory));
+
+static cl::alias BasicAggregationAlias("ba",
+                                       cl::desc("Alias for --basic-events"),
+                                       cl::aliasopt(BasicAggregation));
+
+static cl::alias BasicAggregationAliasNlDeprecated(
+    "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
+    cl::aliasopt(BasicAggregation), llvm::cl::ReallyHidden);
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
@@ -1433,7 +1441,7 @@ std::error_code DataAggregator::printLBRHeatMap() {
                 "Cannot build heatmap.";
     } else {
       errs() << "HEATMAP-ERROR: no brstack traces detected in profile. "
-                "Cannot build heatmap. Use -nl for building heatmap from "
+                "Cannot build heatmap. Use -ba for building heatmap from "
                 "basic events.\n";
     }
     exit(1);
@@ -1629,8 +1637,8 @@ std::error_code DataAggregator::parseBranchEvents() {
             << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
                "brstack. Record profile with perf record -j any or run "
                "perf2bolt "
-               "in non-brstack mode with -nl (the performance improvement in "
-               "-nl "
+               "in non-brstack mode with -ba (the performance improvement in "
+               "-ba "
                "mode may be limited)\n";
       else
         errs()
