@@ -1479,7 +1479,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     return false;
 
   const APInt *TC;
-  if (!match(Plan.getTripCount(), m_APInt(TC)) || !BestVF.isFixed())
+  if (!BestVF.isFixed() || !match(Plan.getTripCount(), m_APInt(TC)))
     return false;
 
   // Calculate the minimum power-of-2 bit width that can fit the known TC, VF
