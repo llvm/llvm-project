@@ -4350,7 +4350,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   if (hasInitializer(GlobalVar) && !Init)
     return true;
 
-  std::optional<SPIRV::LinkageType::LinkageType> LnkType =
+  const std::optional<SPIRV::LinkageType::LinkageType> LnkType =
       getSpirvLinkageTypeFor(STI, *GV);
 
   const unsigned AddrSpace = GV->getAddressSpace();

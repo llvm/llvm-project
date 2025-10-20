@@ -479,7 +479,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
                     {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
