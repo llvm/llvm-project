@@ -1042,7 +1042,7 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
-  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+  if (GV.hasLocalLinkage())
     return std::nullopt;
 
   if (GV.isDeclarationForLinker())

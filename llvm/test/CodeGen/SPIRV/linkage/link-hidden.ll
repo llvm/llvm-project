@@ -1,6 +1,9 @@
-; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - 2>&1 | FileCheck %s
-; CHECK: LLVM ERROR: Unknown function in:
-; CHECK-SAME: OpFunctionCall %{{[0-9]+}}:type, @bar
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK: OpName %[[BAR:[0-9]+]] "bar"
+; CHECK: OpDecorate %[[BAR]] LinkageAttributes "bar" Import
+; CHECK: %[[BAR]] = OpFunction
 
 define hidden spir_kernel void @foo() addrspace(4) {
 entry:
