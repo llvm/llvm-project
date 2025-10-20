@@ -1695,21 +1695,37 @@ defm SIMD_RELAXED_FMAX :
 // Transform standard fminimum/fmaximum to relaxed versions
 // AddedComplexity ensures these patterns match before the standard MIN/MAX
 let AddedComplexity = 1 in {
-def : Pat<(v4f32 (fminimum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+  def : Pat<(v4f32 (fminnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+            (SIMD_RELAXED_FMIN_F32x4 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
 
-def : Pat<(v4f32 (fmaximum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+  def : Pat<(v4f32 (fminimumnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+            (SIMD_RELAXED_FMIN_F32x4 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
 
-def : Pat<(v2f64 (fminimum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+  def : Pat<(v4f32 (fmaxnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+            (SIMD_RELAXED_FMAX_F32x4 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
 
-def : Pat<(v2f64 (fmaximum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+  def : Pat<(v4f32 (fmaximumnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
+            (SIMD_RELAXED_FMAX_F32x4 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(v2f64 (fminnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+            (SIMD_RELAXED_FMIN_F64x2 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(v2f64 (fminimumnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+            (SIMD_RELAXED_FMIN_F64x2 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(v2f64 (fmaxnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+            (SIMD_RELAXED_FMAX_F64x2 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
+
+  def : Pat<(v2f64 (fmaximumnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
+            (SIMD_RELAXED_FMAX_F64x2 V128:$lhs, V128:$rhs)>,
+        Requires<[HasRelaxedSIMD]>;
 }
 
 //===----------------------------------------------------------------------===//
