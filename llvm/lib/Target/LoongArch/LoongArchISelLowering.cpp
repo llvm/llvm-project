@@ -1719,11 +1719,8 @@ lowerVECTOR_SHUFFLE_IsReverse(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
       VT != MVT::v16i16)
     return SDValue();
 
-  int MaskSize = Mask.size();
-  for (int i = 0; i < MaskSize; ++i) {
-    if (Mask[i] != -1 && Mask[i] != MaskSize - 1 - i)
-      return SDValue();
-  }
+  if (!ShuffleVectorInst::isReverseMask(Mask, Mask.size()))
+    return SDValue();
 
   int WidenNumElts = VT.getVectorNumElements() / 4;
   SmallVector<int, 16> WidenMask(WidenNumElts, -1);
