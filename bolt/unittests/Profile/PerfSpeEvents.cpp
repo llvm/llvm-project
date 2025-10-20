@@ -187,35 +187,46 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
 
   // ExpectedSamples contains the aggregated information about
   // a branch {{From, To, TraceTo}, {TakenCount, MispredCount}}.
-  // When the SPE previous branch target address (named as PBT)
-  // feature is available, an SPE sample by combining this PBT feature,
-  // has two entries.
-  // Arm SPE records SRC/DEST addresses of the latest sampled branch operation,
-  // and it stores into the first entry. PBT records the target address of
-  // most recently taken branch in program order before the sampled operation,
-  // it places into the second entry.
-  // They are formed a chain of two consecutive branches.
-  // Where:
-  //   - The previous branch operation (PBT) is always taken.
-  //   - In SPE entry, the current source branch (SRC) may be either
-  //     fall-through or taken.
-  //   - The target address (DEST) of the recorded
-  //     branch operation is always what was architecturally executed.
-  // However PBT lacks associated information such as branch
-  // source address, branch type, and prediction bit.
-  // Considering this Trace pair:
-  //  {{0xd456, 0xd789, Trace::BR_ONLY}, {2, 2}},
-  //    {{0x0, 0xd123, 0xd456}, {2, 0}}
-  // For SPE trace please see the description above.
-  // The second entry is the PBT trace:
-  // {{0x0, 0xd123, 0xd456}, {2, 0}}.
-  // The PBT entry has a TakenCount = 2, as we have two samples for
-  // (0x0, 0xd123) entry in our input. The 'MispredsCount = 0' is
-  // always zero, because it lacks prediction information.
-  // It also has no information about source branch address therefore
-  // Bolt doesn't evaluate the 'From' field, and leaves it as zero (0x0).
-  // TraceTo = 0xc456, means the execution jumped from
-  // 0xc123 (PBT) to 0xc456 (SRC), and jumped further to 0xd789 (DEST).
+  // Where
+  // - From: is the source address of the sampled branch operation.
+  // - To: is the target address of the sampled branch operation.
+  // - TraceTo could be either
+  //    - A 'Type = Trace::BR_ONLY', which means the trace only contains branch data.
+  //    - Or an address, when the trace contains information about the previous branch.
+  //
+  // When FEAT_SPE_PBT is present, Arm SPE emits two records per sample:
+  // - the current branch (Spe.From/Spe.To), and
+  // - the previous taken branch target (PBT) (PBT.From, PBT.To).
+  //
+  // Together they behave like a depth-1 branch stack where:
+  //   - the PBT entry is always taken
+  //   - the current branch entry may represent a taken branch or a fall-through
+  //   - the destination (Spe.To) is the architecturally executed target
+  //
+  // There can be fall-throughs to be inferred between the PBT entry and
+  // the current branch (Spe.From), but there cannot be between current
+  // branch's (Spe.From/Spe.To).
+  //
+  // PBT records only the target address (PBT.To), meaning we have no information as the
+  // branch source (PBT.From=0x0), branch type, and the prediction bit.
+  //
+  // Consider the trace pair:
+  // {{Spe.From, Spe.To, Type}, {TK, MP}}, {{PBT.From, PBT.To, TraceTo}, {TK, MP}}
+  // {{0xd456, 0xd789, Trace::BR_ONLY}, {2, 2}}, {{0x0, 0xd123, 0xd456}, {2, 0}}
+  //
+  // The first entry is the Spe record, which represents a trace from 0xd456 (Spe.From) to
+  // 0xd789 (Spe.To). Type = Trace::BR_ONLY, as Bolt processes the current branch event first.
+  // At this point we have no information about the previous trace (PBT).
+  // This entry has a TakenCount = 2, as we have two samples for (0xd456, 0xd789)
+  // in our input. It also has MispredsCount = 2, as 'M' misprediction flag appears
+  // in both cases.
+  //
+  // The second entry is the PBT record. TakenCount = 2 because the
+  // (PBT.From = 0x0, PBT.To = 0xd123) branch target appears twice in the input,
+  // and MispredsCount = 0 because prediction data is absent. There is no branch
+  // source information, so the PBT.From field is zero (0x0). TraceTo = 0xd456
+  // connect the flow to the previous taken branch at 0xd123 (PBT.To) to the current
+  // source branch at 0xd456 (Spe.From), which then continues to 0xd789 (Spe.To).
   std::vector<std::pair<Trace, TakenBranchInfo>> ExpectedSamples = {
       {{0xa002, 0xa003, Trace::BR_ONLY}, {1, 0}},
       {{0x0, 0xa001, 0xa002}, {1, 0}},
