@@ -408,6 +408,28 @@ RESOURCE<float> Buffer;
 // CHECK-CONSUME-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-CONSUME-NEXT: IntegerLiteral {{.*}} 'int' -1
 
+// GetDimensions method
+
+// CHECK: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int, out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} numStructs 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: ParmVarDecl {{.*}} stride 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'numStructs' 'unsigned int &__restrict'
+// CHECK-NEXT: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getstride' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'stride' 'unsigned int &__restrict'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK: ClassTemplateSpecializationDecl {{.*}} class [[RESOURCE]] definition
 // CHECK: TemplateArgument type 'float'
 // CHECK-NEXT: BuiltinType {{.*}} 'float'

@@ -1039,12 +1039,17 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   } else
     NewCU.addString(Die, dwarf::DW_AT_producer, Producer);
 
-  if (auto Lang = DIUnit->getSourceLanguage(); Lang.hasVersionedName())
+  if (auto Lang = DIUnit->getSourceLanguage(); Lang.hasVersionedName()) {
     NewCU.addUInt(Die, dwarf::DW_AT_language_name, dwarf::DW_FORM_data2,
                   Lang.getName());
-  else
+
+    if (uint32_t LangVersion = Lang.getVersion(); LangVersion != 0)
+      NewCU.addUInt(Die, dwarf::DW_AT_language_version, /*Form=*/std::nullopt,
+                    LangVersion);
+  } else {
     NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                   Lang.getName());
+  }
 
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
   StringRef SysRoot = DIUnit->getSysRoot();
@@ -2066,11 +2071,36 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   if (NoDebug)
     return;
 
+  auto RecordLineZero = [&]() {
+    // Preserve the file and column numbers, if we can, to save space in
+    // the encoded line table.
+    // Do not update PrevInstLoc, it remembers the last non-0 line.
+    const MDNode *Scope = nullptr;
+    unsigned Column = 0;
+    if (PrevInstLoc) {
+      Scope = PrevInstLoc.getScope();
+      Column = PrevInstLoc.getCol();
+    }
+    recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
+  };
+
+  // When we emit a line-0 record, we don't update PrevInstLoc; so look at
+  // the last line number actually emitted, to see if it was line 0.
+  unsigned LastAsmLine =
+      Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
+
   // Check if source location changes, but ignore DBG_VALUE and CFI locations.
   // If the instruction is part of the function frame setup code, do not emit
   // any line record, as there is no correspondence with any user code.
-  if (MI->isMetaInstruction() || MI->getFlag(MachineInstr::FrameSetup))
+  if (MI->isMetaInstruction())
     return;
+  if (MI->getFlag(MachineInstr::FrameSetup)) {
+    // Prevent a loc from the previous block leaking into frame setup instrs.
+    if (LastAsmLine && PrevInstBB && PrevInstBB != MI->getParent())
+      RecordLineZero();
+    return;
+  }
+
   const DebugLoc &DL = MI->getDebugLoc();
   unsigned Flags = 0;
 
@@ -2092,11 +2122,6 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
                      LocationString);
   };
-
-  // When we emit a line-0 record, we don't update PrevInstLoc; so look at
-  // the last line number actually emitted, to see if it was line 0.
-  unsigned LastAsmLine =
-      Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
   // There may be a mixture of scopes using and not using Key Instructions.
   // Not-Key-Instructions functions inlined into Key Instructions functions
@@ -2163,18 +2188,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     // - Instruction is at the top of a block; we don't want to inherit the
     //   location from the physically previous (maybe unrelated) block.
     if (UnknownLocations == Enable || PrevLabel ||
-        (PrevInstBB && PrevInstBB != MI->getParent())) {
-      // Preserve the file and column numbers, if we can, to save space in
-      // the encoded line table.
-      // Do not update PrevInstLoc, it remembers the last non-0 line.
-      const MDNode *Scope = nullptr;
-      unsigned Column = 0;
-      if (PrevInstLoc) {
-        Scope = PrevInstLoc.getScope();
-        Column = PrevInstLoc.getCol();
-      }
-      recordSourceLine(/*Line=*/0, Column, Scope, /*Flags=*/0);
-    }
+        (PrevInstBB && PrevInstBB != MI->getParent()))
+      RecordLineZero();
     return;
   }
 
