@@ -769,6 +769,11 @@ LnoR2Fix:
 //
   .p2align 2
 DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
+
+#if __has_feature(ptrauth_calls)
+  pacibsp
+#endif
+
   stp    x0, x1,  [x0, #0x000]
   stp    x2, x3,  [x0, #0x010]
   stp    x4, x5,  [x0, #0x020]
@@ -809,7 +814,12 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   str    d31,     [x0, #0x208]
 #endif
   mov    x0, #0                   // return UNW_ESUCCESS
+
+#if __has_feature(ptrauth_calls)
+  retab
+#else
   ret
+#endif
 
 #elif defined(__arm__) && !defined(__APPLE__)
 
