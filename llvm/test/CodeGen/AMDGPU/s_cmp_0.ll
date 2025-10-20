@@ -601,7 +601,7 @@ define amdgpu_ps i32 @not64(i64 inreg %val0) {
 
 @1 = external dso_local addrspace(4) constant i32
 
-define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize(ptr addrspace(1) %out) {
+define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize() {
 ; CHECK-LABEL: si_pc_add_rel_offset_must_not_optimize:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
