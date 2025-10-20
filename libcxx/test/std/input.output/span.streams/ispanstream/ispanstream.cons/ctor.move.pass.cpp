@@ -49,8 +49,8 @@ void test() {
     assert(spSt.span().size() == 4);
 
     // Test after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
+    assert(rhsSpSt.span().size() == 0);
   }
   // Mode: explicit `in`
   {
@@ -63,8 +63,8 @@ void test() {
     assert(spSt.span().size() == 4);
 
     // Test after move
-    assert(rhsSpSt.span().data() == arr);
-    assert(rhsSpSt.span().size() == 4);
+    assert(rhsSpSt.span().data() == nullptr);
+    assert(rhsSpSt.span().size() == 0);
   }
 }
 

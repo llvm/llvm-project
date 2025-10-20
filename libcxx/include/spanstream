@@ -117,7 +117,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI basic_spanbuf(basic_spanbuf&& __rhs)
       : basic_streambuf<_CharT, _Traits>{std::move(__rhs)},
         __mode_{std::move(__rhs.__mode_)},
-        __buf_{std::move(__rhs.__buf_)} {}
+        __buf_{std::exchange(__rhs.__buf_, {})} {}
 
   // [spanbuf.assign], assignment and swap
 
