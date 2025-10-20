@@ -306,7 +306,12 @@ void TextOutputSection::finalize() {
     // contains several branch instructions in succession, then the distance
     // from the current position to the position where the thunks are inserted
     // grows. So leave room for a bunch of thunks.
-    unsigned slop = 256 * thunkSize;
+#ifdef LLD_MACHO_SLOP_FACTOR
+    const unsigned kSlopFact = LLD_MACHO_SLOP_FACTOR;
+#else
+    const unsigned kSlopFact = 256;
+#endif
+    unsigned slop = kSlopFact * thunkSize;
     while (finalIdx < endIdx) {
       uint64_t expectedNewSize =
           alignToPowerOf2(addr + size, inputs[finalIdx]->align) +
