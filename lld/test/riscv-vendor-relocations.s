@@ -14,5 +14,5 @@ TARGET:
 1:
   nop
 
-# CHECK: error: {{.*}} malformed consecutive R_RISCV_VENDOR relocations
-# CHECK: error: {{.*}} unknown vendor-specific relocation (255) in vendor namespace "INVALID_VENDOR" against symbol TARGET
+# CHECK: error: {{.*}}:(.text+0x4): malformed consecutive R_RISCV_VENDOR relocations
+# CHECK: error: {{.*}}:(.text+0x4): unknown vendor-specific relocation (255) in vendor namespace "INVALID_VENDOR" against symbol TARGET
