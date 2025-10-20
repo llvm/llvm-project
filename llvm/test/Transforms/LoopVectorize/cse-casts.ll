@@ -368,12 +368,11 @@ define void @simplified_cast_preserves_irflag_type(ptr noalias %p, ptr noalias %
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[Q]], align 2
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[R]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], -9223372036854775808
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 48
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
@@ -387,8 +386,8 @@ loop:
   %x.i16 = zext i8 %x to i16
   store i16 %x.i16, ptr %r
   %iv.next = add i64 %iv, 2
-  %done = icmp eq i64 %iv.next, 0
-  br i1 %done, label %exit, label %loop
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
