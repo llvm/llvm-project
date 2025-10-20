@@ -1,3 +1,5 @@
+; AIX doesn't have support for DWARF 6 DW_AT_language_name
+; XFAIL: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info - | FileCheck %s --implicit-check-not "DW_AT_language_name"
 
 ; CHECK: DW_AT_language (DW_LANG_C)
