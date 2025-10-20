@@ -32,10 +32,10 @@ public:
   createOrDie(const std::vector<std::string> &Paths,
               llvm::vfs::FileSystem &VFS);
 
-  bool isEmpty() const { return Sections.empty(); }
+  bool isEmpty() const { return sections().empty(); }
 
   bool hasPrefix(StringRef Prefix) const {
-    for (const auto &It : Sections)
+    for (const auto &It : sections())
       if (It.Entries.count(Prefix) > 0)
         return true;
     return false;

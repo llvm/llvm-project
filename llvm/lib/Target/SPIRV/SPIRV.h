@@ -21,6 +21,7 @@ class RegisterBankInfo;
 
 ModulePass *createSPIRVPrepareFunctionsPass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVStructurizerPass();
+ModulePass *createSPIRVCBufferAccessLegacyPass();
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
 FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
@@ -43,6 +44,7 @@ void initializeSPIRVPreLegalizerPass(PassRegistry &);
 void initializeSPIRVPreLegalizerCombinerPass(PassRegistry &);
 void initializeSPIRVPostLegalizerPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
+void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
 void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastPass(PassRegistry &);

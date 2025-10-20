@@ -33,8 +33,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
-
 class recursive_directory_iterator {
 public:
   using value_type        = directory_entry;
@@ -140,19 +138,15 @@ inline _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator end(recursive_director
   return recursive_directory_iterator();
 }
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
-
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #  if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
 
 #  endif // _LIBCPP_STD_VER >= 20
 

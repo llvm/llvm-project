@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 ///   i += 0.1;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/narrowing-conversions.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/narrowing-conversions.html
 class NarrowingConversionsCheck : public ClangTidyCheck {
 public:
   NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context);

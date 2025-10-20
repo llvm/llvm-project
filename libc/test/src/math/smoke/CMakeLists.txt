@@ -3503,14 +3503,27 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros  
+    libc.hdr.fenv_macros  
+    libc.src.math.rsqrtf 
+)
+
+add_fp_unittest(
   rsqrtf16_test
   SUITE
     libc-math-smoke-tests
   SRCS
     rsqrtf16_test.cpp
   DEPENDS
+    libc.hdr.errno_macros  
+    libc.hdr.fenv_macros 
     libc.src.math.rsqrtf16
-    libc.hdr.errno_macros
 )
 
 add_fp_unittest(
@@ -4340,6 +4353,19 @@ add_fp_unittest(
     libc.hdr.fenv_macros
     libc.src.math.logf16
     libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
+  log_bf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log_bf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.log_bf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

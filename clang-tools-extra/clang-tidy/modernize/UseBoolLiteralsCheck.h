@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Finds integer literals which are cast to bool.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-bool-literals.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-bool-literals.html
 class UseBoolLiteralsCheck : public ClangTidyCheck {
 public:
   UseBoolLiteralsCheck(StringRef Name, ClangTidyContext *Context);

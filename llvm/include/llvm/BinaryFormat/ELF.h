@@ -303,7 +303,7 @@ enum {
   EM_BA2 = 202,           // Beyond BA2 CPU architecture
   EM_XCORE = 203,         // XMOS xCORE processor family
   EM_MCHP_PIC = 204,      // Microchip 8-bit PIC(r) family
-  EM_INTEL205 = 205,      // Reserved by Intel
+  EM_INTELGT = 205,       // Intel Graphics Technology
   EM_INTEL206 = 206,      // Reserved by Intel
   EM_INTEL207 = 207,      // Reserved by Intel
   EM_INTEL208 = 208,      // Reserved by Intel
@@ -647,6 +647,7 @@ enum {
   EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
   EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
   EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
+  EF_HEXAGON_ISA_V91 = 0x00000091,  // Hexagon V91 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
 
   // Tiny core flag, bit[15]
@@ -680,6 +681,7 @@ enum {
   EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
   EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
   EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+  EF_HEXAGON_MACH_V91 = EF_HEXAGON_ISA_V91,      // Hexagon V91
 
   EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };

@@ -23,6 +23,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorBootstrapService.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorResolver.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
@@ -39,8 +40,6 @@ public:
   virtual ~SimpleExecutorDylibManager();
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
-  Expected<std::vector<ExecutorSymbolDef>>
-  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &L);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
@@ -52,10 +51,11 @@ private:
   openWrapper(const char *ArgData, size_t ArgSize);
 
   static llvm::orc::shared::CWrapperFunctionResult
-  lookupWrapper(const char *ArgData, size_t ArgSize);
+  resolveWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;
   DylibSet Dylibs;
+  std::vector<std::unique_ptr<ExecutorResolver>> Resolvers;
 };
 
 } // end namespace rt_bootstrap
