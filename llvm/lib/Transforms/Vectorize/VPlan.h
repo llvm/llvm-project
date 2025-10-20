@@ -4164,8 +4164,6 @@ class VPlan {
   SmallVector<VPValue *, 16> VPLiveIns;
 
   /// Mapping from SCEVs to the VPValues representing their expansions.
-  /// NOTE: This mapping is temporary and will be removed once all users have
-  /// been modeled in VPlan directly.
   DenseMap<const SCEV *, VPValue *> SCEVToExpansion;
 
   /// Blocks allocated and owned by the VPlan. They will be deleted once the
