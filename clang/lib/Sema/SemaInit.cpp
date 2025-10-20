@@ -1912,14 +1912,7 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
   }
 
   // HLSL requires exactly NumEltsInit to equal Max initializers.
-  if (NumEltsInit != MaxElts) {
-    if (!VerifyOnly)
-      SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_tensor_incorrect_num_elements)
-          << (NumEltsInit < MaxElts) << /*matrix*/ 1 << MaxElts << NumEltsInit
-          << /*initialization*/ 0;
-    hadError = true;
-  }
+  assert(NumEltsInit == MaxElts && "NumEltsInit must equal MaxElts");
 }
 
 void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
@@ -2071,9 +2064,9 @@ void InitListChecker::CheckVectorType(const InitializedEntity &Entity,
   if (numEltsInit != maxElements) {
     if (!VerifyOnly)
       SemaRef.Diag(IList->getBeginLoc(),
-                   diag::err_tensor_incorrect_num_elements)
-          << (numEltsInit < maxElements) << /*vector*/ 0 << maxElements
-          << numEltsInit << /*initialization*/ 0;
+                   diag::err_vector_incorrect_num_elements)
+          << (numEltsInit < maxElements) << maxElements << numEltsInit
+          << /*initialization*/ 0;
     hadError = true;
   }
 }

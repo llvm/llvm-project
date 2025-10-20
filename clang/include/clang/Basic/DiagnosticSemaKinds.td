@@ -11089,8 +11089,8 @@ def err_first_argument_to_cwsc_pdtor_call : Error<
 def err_second_argument_to_cwsc_not_pointer : Error<
   "second argument to __builtin_call_with_static_chain must be of pointer type">;
 
-def err_tensor_incorrect_num_elements : Error<
-  "%select{too many|too few}0 elements in %select{vector|matrix}1 %select{initialization|operand}4 (expected %2 elements, have %3)">;
+def err_vector_incorrect_num_elements : Error<
+  "%select{too many|too few}0 elements in vector %select{initialization|operand}3 (expected %1 elements, have %2)">;
 def err_altivec_empty_initializer : Error<"expected initializer">;
 
 def err_vector_incorrect_bit_count : Error<
