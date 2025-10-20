@@ -1439,6 +1439,21 @@ SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   return LibcallSymbols;
 }
 
+SmallVector<const char *> LTO::getLibFuncSymbols(const Triple &TT,
+                                                 StringSaver &Saver) {
+  auto TLII = std::make_unique<TargetLibraryInfoImpl>(TT);
+  TargetLibraryInfo TLI(*TLII);
+  SmallVector<const char *> LibFuncSymbols;
+  LibFuncSymbols.reserve(LibFunc::NumLibFuncs);
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
+       ++I) {
+    LibFunc F = static_cast<LibFunc>(I);
+    if (TLI.has(F))
+      LibFuncSymbols.push_back(Saver.save(TLI.getName(F)).data());
+  }
+  return LibFuncSymbols;
+}
+
 Error ThinBackendProc::emitFiles(
     const FunctionImporter::ImportMapTy &ImportList, llvm::StringRef ModulePath,
     const std::string &NewModulePath) const {
