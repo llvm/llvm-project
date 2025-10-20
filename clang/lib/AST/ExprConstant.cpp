@@ -15503,6 +15503,340 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS + RHS; });
   }
 
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256: {
+    using CmpResult = llvm::APFloatBase::cmpResult;
+
+    const Expr *A = E->getArg(0);
+    const Expr *B = E->getArg(1);
+    const Expr *Imm = E->getArg(2);
+
+    APValue AV, BV;
+    APSInt ImmVal;
+    if (!EvaluateVector(A, AV, Info) || !EvaluateVector(B, BV, Info))
+      return false;
+    if (!EvaluateInteger(Imm, ImmVal, Info))
+      return false;
+
+    if (!AV.isVector() || !BV.isVector())
+      return false;
+    unsigned Lanes = AV.getVectorLength();
+    if (Lanes == 0 || BV.getVectorLength() != Lanes)
+      return false;
+
+    QualType RetTy = E->getType();
+    const auto *VT = RetTy->getAs<VectorType>();
+    if (!VT)
+      return false;
+    bool IsF64 =
+        VT->getElementType()->isSpecificBuiltinType(BuiltinType::Double);
+    const bool IsScalar = (BuiltinOp == X86::BI__builtin_ia32_cmpss) ||
+                          (BuiltinOp == X86::BI__builtin_ia32_cmpsd);
+    const uint32_t imm = ImmVal.getZExtValue();
+
+    auto evalCmpImm = [](uint32_t imm,
+                         llvm::APFloatBase::cmpResult cmp) -> bool {
+      bool isUnordered = (cmp == llvm::APFloatBase::cmpUnordered);
+      bool isEq = (cmp == CmpResult::cmpEqual);
+      bool isGt = (cmp == CmpResult::cmpGreaterThan);
+      bool isLt = (cmp == CmpResult::cmpLessThan);
+      bool result = false;
+
+      switch (imm & 0x1F) {
+      case 0x00: /* _CMP_EQ_OQ */
+      case 0x10: /* _CMP_EQ_OS */
+        result = isEq && !isUnordered;
+        break;
+      case 0x01: /* _CMP_LT_OS */
+      case 0x11: /* _CMP_LT_OQ */
+        result = isLt && !isUnordered;
+        break;
+      case 0x02: /* _CMP_LE_OS */
+      case 0x12: /* _CMP_LE_OQ */
+        result = !isGt && !isUnordered;
+        break;
+      case 0x03: /* _CMP_UNORD_Q */
+      case 0x13: /* _CMP_UNORD_S */
+        result = isUnordered;
+        break;
+      case 0x04: /* _CMP_NEQ_UQ */
+      case 0x14: /* _CMP_NEQ_US */
+        result = !isEq || isUnordered;
+        break;
+      case 0x05: /* _CMP_NLT_US */
+      case 0x15: /* _CMP_NLT_UQ */
+        result = !isLt || isUnordered;
+        break;
+      case 0x06: /* _CMP_NLE_US */
+      case 0x16: /* _CMP_NLE_UQ */
+        result = isGt || isUnordered;
+        break;
+      case 0x07: /* _CMP_ORD_Q */
+      case 0x17: /* _CMP_ORD_S */
+        result = !isUnordered;
+        break;
+      case 0x08: /* _CMP_EQ_UQ */
+      case 0x18: /* _CMP_EQ_US */
+        result = isEq || isUnordered;
+        break;
+      case 0x09: /* _CMP_NGE_US */
+      case 0x19: /* _CMP_NGE_UQ */
+        result = isLt || isUnordered;
+        break;
+      case 0x0a: /* _CMP_NGT_US */
+      case 0x1a: /* _CMP_NGT_UQ */
+        result = !isGt || isUnordered;
+        break;
+      case 0x0b: /* _CMP_FALSE_OQ */
+      case 0x1b: /* _CMP_FALSE_OS */
+        result = false;
+        break;
+      case 0x0c: /* _CMP_NEQ_OQ */
+      case 0x1c: /* _CMP_NEQ_OS */
+        result = !isEq && !isUnordered;
+        break;
+      case 0x0d: /* _CMP_GE_OS */
+      case 0x1d: /* _CMP_GE_OQ */
+        result = !isLt && !isUnordered;
+        break;
+      case 0x0e: /* _CMP_GT_OS */
+      case 0x1e: /* _CMP_GT_OQ */
+        result = isGt && !isUnordered;
+        break;
+      case 0x0f: /* _CMP_TRUE_UQ */
+      case 0x1f: /* _CMP_TRUE_US */
+        result = true;
+        break;
+      }
+      return result;
+    };
+
+    auto writeMaskFloat = [&](APValue &Dst, unsigned Lane, bool Bit,
+                              bool IsF64Elt) {
+      if (IsF64Elt) {
+        llvm::APInt I(64, Bit ? ~0ULL : 0ULL);
+        llvm::APFloat F(Info.Ctx.getFloatTypeSemantics(Info.Ctx.DoubleTy), I);
+        Dst.getVectorElt(Lane) = APValue(F);
+      } else {
+        llvm::APInt I(32, Bit ? 0xFFFFFFFFu : 0u);
+        llvm::APFloat F(Info.Ctx.getFloatTypeSemantics(Info.Ctx.FloatTy), I);
+        Dst.getVectorElt(Lane) = APValue(F);
+      }
+    };
+
+    auto cmpLaneToBit = [&](unsigned Lane) -> bool {
+      const APValue &AE = AV.getVectorElt(Lane);
+      const APValue &BE = BV.getVectorElt(Lane);
+      if (!AE.isFloat() || !BE.isFloat())
+        return false;
+      llvm::APFloat A0 = AE.getFloat();
+      llvm::APFloat B0 = BE.getFloat();
+      return evalCmpImm(imm, A0.compare(B0));
+    };
+
+    APValue Res((const APValue *)nullptr, Lanes);
+    for (unsigned i = 0; i < Lanes; ++i)
+      Res.getVectorElt(i) = AV.getVectorElt(i);
+
+    if (IsScalar) {
+      bool bit = cmpLaneToBit(0);
+      writeMaskFloat(Res, 0, bit, IsF64);
+    } else {
+      for (unsigned i = 0; i < Lanes; ++i) {
+        bool bit = cmpLaneToBit(i);
+        writeMaskFloat(Res, i, bit, IsF64);
+      }
+    }
+    return Success(Res, E);
+  }
+  case X86::BI__builtin_ia32_vcomish: {
+    APSInt R, P;
+    if (!EvaluateInteger(E->getArg(3), R, Info))
+      return false;
+    if (!EvaluateInteger(E->getArg(2), P, Info))
+      return false;
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto Cmp = A0.compare(B0);
+
+    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
+    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
+    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
+    bool Result = false;
+
+    switch (P.getExtValue()) {
+    case 0x00: /* _CMP_EQ_OQ */
+    case 0x10: /* _CMP_EQ_OS */
+      Result = IsEq && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x01: /* _CMP_LT_OS */
+    case 0x11: /* _CMP_LT_OQ */
+      Result = IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x02: /* _CMP_LE_OS */
+    case 0x12: /* _CMP_LE_OQ */
+      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x03: /* _CMP_UNORD_Q */
+    case 0x13: /* _CMP_UNORD_S */
+      Result = A0.isNaN() || B0.isNaN();
+      break;
+    case 0x04: /* _CMP_NEQ_UQ */
+    case 0x14: /* _CMP_NEQ_US */
+      Result = !IsEq || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x05: /* _CMP_NLT_US */
+    case 0x15: /* _CMP_NLT_UQ */
+      Result = !IsLt || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x06: /* _CMP_NLE_US */
+    case 0x16: /* _CMP_NLE_UQ */
+      Result = IsGt || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x07: /* _CMP_ORD_Q */
+    case 0x17: /* _CMP_ORD_S */
+      Result = !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x08: /* _CMP_EQ_UQ */
+    case 0x18: /* _CMP_EQ_US */
+      Result = IsEq || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x09: /* _CMP_NGE_US */
+    case 0x19: /* _CMP_NGE_UQ */
+      Result = IsLt || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x0a: /* _CMP_NGT_US */
+    case 0x1a: /* _CMP_NGT_UQ */
+      Result = !IsGt || A0.isNaN() || B0.isNaN();
+      break;
+    case 0x0b: /* _CMP_FALSE_OQ */
+    case 0x1b: /* _CMP_FALSE_OS */
+      Result = false;
+      break;
+    case 0x0c: /* _CMP_NEQ_OQ */
+    case 0x1c: /* _CMP_NEQ_OS */
+      Result = !IsEq && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x0d: /* _CMP_GE_OS */
+    case 0x1d: /* _CMP_GE_OQ */
+      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x0e: /* _CMP_GT_OS */
+    case 0x1e: /* _CMP_GT_OQ */
+      Result = IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case 0x0f: /* _CMP_TRUE_UQ */
+    case 0x1f: /* _CMP_TRUE_US */
+      Result = true;
+      break;
+
+    default:
+      return false;
+    }
+    return Success(Result ? 1 : 0, E);
+  }
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle: {
+    APValue AV, BV;
+    if (!EvaluateVector(E->getArg(0), AV, Info) ||
+        !EvaluateVector(E->getArg(1), BV, Info))
+      return false;
+    if (!AV.isVector() || !BV.isVector() || AV.getVectorLength() == 0 ||
+        BV.getVectorLength() == 0)
+      return false;
+    const APValue &A0V = AV.getVectorElt(0);
+    const APValue &B0V = BV.getVectorElt(0);
+    if (!A0V.isFloat() || !B0V.isFloat())
+      return false;
+    const llvm::APFloat &A0 = A0V.getFloat();
+    const llvm::APFloat &B0 = B0V.getFloat();
+    auto Cmp = A0.compare(B0);
+
+    const bool IsEq = (Cmp == llvm::APFloatBase::cmpEqual);
+    const bool IsLt = (Cmp == llvm::APFloatBase::cmpLessThan);
+    const bool IsGt = (Cmp == llvm::APFloatBase::cmpGreaterThan);
+    bool Result = false;
+
+    switch (BuiltinOp) {
+    case X86::BI__builtin_ia32_comieq:
+    case X86::BI__builtin_ia32_ucomieq:
+    case X86::BI__builtin_ia32_comisdeq:
+    case X86::BI__builtin_ia32_ucomisdeq:
+      Result = IsEq && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comineq:
+    case X86::BI__builtin_ia32_ucomineq:
+    case X86::BI__builtin_ia32_comisdneq:
+    case X86::BI__builtin_ia32_ucomisdneq:
+      Result = !IsEq || A0.isNaN() || B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comige:
+    case X86::BI__builtin_ia32_ucomige:
+    case X86::BI__builtin_ia32_comisdge:
+    case X86::BI__builtin_ia32_ucomisdge:
+      Result = !IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comilt:
+    case X86::BI__builtin_ia32_ucomilt:
+    case X86::BI__builtin_ia32_comisdlt:
+    case X86::BI__builtin_ia32_ucomisdlt:
+      Result = IsLt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comigt:
+    case X86::BI__builtin_ia32_ucomigt:
+    case X86::BI__builtin_ia32_comisdgt:
+    case X86::BI__builtin_ia32_ucomisdgt:
+      Result = IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    case X86::BI__builtin_ia32_comile:
+    case X86::BI__builtin_ia32_ucomile:
+    case X86::BI__builtin_ia32_comisdle:
+    case X86::BI__builtin_ia32_ucomisdle:
+      Result = !IsGt && !A0.isNaN() && !B0.isNaN();
+      break;
+    default:
+      return false;
+    }
+    return Success(Result ? 1 : 0, E);
+  }
+
   case clang::X86::BI__builtin_ia32_vec_ext_v4hi:
   case clang::X86::BI__builtin_ia32_vec_ext_v16qi:
   case clang::X86::BI__builtin_ia32_vec_ext_v8hi:
