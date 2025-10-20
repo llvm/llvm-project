@@ -15426,6 +15426,23 @@ void ScalarEvolution::LoopGuards::collectFromPHI(
   }
 }
 
+// Return a new SCEV that modifies \p Expr to the closest number divides by
+// \p Divisor and greater or equal than Expr. For now, only handle constant
+// Expr.
+static const SCEV *getNextSCEVDividesByDivisor(const SCEV *Expr,
+                                               const APInt &DivisorVal,
+                                               ScalarEvolution &SE) {
+  const APInt *ExprVal;
+  if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
+      DivisorVal.isNonPositive())
+    return Expr;
+  APInt Rem = ExprVal->urem(DivisorVal);
+  if (Rem.isZero())
+    return Expr;
+  // return the SCEV: Expr + Divisor - Expr % Divisor
+  return SE.getConstant(*ExprVal + DivisorVal - Rem);
+}
+
 void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
@@ -15500,22 +15517,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         };
 
     // Return a new SCEV that modifies \p Expr to the closest number divides by
-    // \p Divisor and greater or equal than Expr. For now, only handle constant
-    // Expr.
-    auto GetNextSCEVDividesByDivisor = [&](const SCEV *Expr,
-                                           const APInt &DivisorVal) {
-      const APInt *ExprVal;
-      if (!match(Expr, m_scev_APInt(ExprVal)) || ExprVal->isNegative() ||
-          DivisorVal.isNonPositive())
-        return Expr;
-      APInt Rem = ExprVal->urem(DivisorVal);
-      if (Rem.isZero())
-        return Expr;
-      // return the SCEV: Expr + Divisor - Expr % Divisor
-      return SE.getConstant(*ExprVal + DivisorVal - Rem);
-    };
-
-    // Return a new SCEV that modifies \p Expr to the closest number divides by
     // \p Divisor and less or equal than Expr. For now, only handle constant
     // Expr.
     auto GetPreviousSCEVDividesByDivisor = [&](const SCEV *Expr,
@@ -15551,7 +15552,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
                  "Expected non-negative operand!");
           auto *DivisibleExpr =
               IsMin ? GetPreviousSCEVDividesByDivisor(MinMaxLHS, DivisorVal)
-                    : GetNextSCEVDividesByDivisor(MinMaxLHS, DivisorVal);
+                    : getNextSCEVDividesByDivisor(MinMaxLHS, DivisorVal, SE);
           SmallVector<const SCEV *> Ops = {
               ApplyDivisibiltyOnMinMaxExpr(MinMaxRHS, Divisor), DivisibleExpr};
           return SE.getMinMaxExpr(SCTy, Ops);
@@ -15634,7 +15635,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       case CmpInst::ICMP_UGT:
       case CmpInst::ICMP_SGT:
         RHS = SE.getAddExpr(RHS, One);
-        RHS = GetNextSCEVDividesByDivisor(RHS, DividesBy);
+        RHS = getNextSCEVDividesByDivisor(RHS, DividesBy, SE);
         break;
       case CmpInst::ICMP_ULE:
       case CmpInst::ICMP_SLE:
@@ -15642,7 +15643,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         break;
       case CmpInst::ICMP_UGE:
       case CmpInst::ICMP_SGE:
-        RHS = GetNextSCEVDividesByDivisor(RHS, DividesBy);
+        RHS = getNextSCEVDividesByDivisor(RHS, DividesBy, SE);
         break;
       default:
         break;
@@ -15696,7 +15697,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       case CmpInst::ICMP_NE:
         if (match(RHS, m_scev_Zero())) {
           const SCEV *OneAlignedUp =
-              GetNextSCEVDividesByDivisor(One, DividesBy);
+              getNextSCEVDividesByDivisor(One, DividesBy, SE);
           To = SE.getUMaxExpr(FromRewritten, OneAlignedUp);
         } else {
           // LHS != RHS can be rewritten as (LHS - RHS) = UMax(1, LHS - RHS),
@@ -15922,8 +15923,11 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
         if (MatchBinarySub(S, LHS, RHS)) {
           if (LHS > RHS)
             std::swap(LHS, RHS);
-          if (NotEqual.contains({LHS, RHS}))
-            return SE.getUMaxExpr(S, SE.getOne(S->getType()));
+          if (NotEqual.contains({LHS, RHS})) {
+            const SCEV *OneAlignedUp = getNextSCEVDividesByDivisor(
+                SE.getOne(S->getType()), SE.getConstantMultiple(S), SE);
+            return SE.getUMaxExpr(OneAlignedUp, S);
+          }
         }
         return nullptr;
       };

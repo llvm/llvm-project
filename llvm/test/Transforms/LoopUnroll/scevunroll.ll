@@ -439,20 +439,18 @@ declare void @fn(i32)
 define void @peel_int_eq_condition(i32 %start) {
 ; CHECK-LABEL: @peel_int_eq_condition(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[START:%.*]], i32 100)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label [[LOOP_PEEL_BEGIN:%.*]]
 ; CHECK:       loop.peel.begin:
 ; CHECK-NEXT:    br label [[LOOP_PEEL:%.*]]
 ; CHECK:       loop.peel:
-; CHECK-NEXT:    [[C_0_PEEL:%.*]] = icmp eq i32 [[START]], [[START]]
+; CHECK-NEXT:    [[C_0_PEEL:%.*]] = icmp eq i32 [[START:%.*]], [[START]]
 ; CHECK-NEXT:    br i1 [[C_0_PEEL]], label [[IF_THEN_PEEL:%.*]], label [[LOOP_LATCH_PEEL:%.*]]
 ; CHECK:       if.then.peel:
 ; CHECK-NEXT:    call void @fn(i32 [[START]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH_PEEL]]
 ; CHECK:       loop.latch.peel:
 ; CHECK-NEXT:    [[IV_NEXT_PEEL:%.*]] = add i32 [[START]], 1
-; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp ne i32 [[IV_NEXT_PEEL]], [[TMP0]]
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp slt i32 [[START]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label [[LOOP_PEEL_NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.peel.next:
 ; CHECK-NEXT:    br label [[LOOP_PEEL_NEXT1:%.*]]
@@ -467,9 +465,9 @@ define void @peel_int_eq_condition(i32 %start) {
 ; CHECK-NEXT:    call void @fn(i32 [[IV]])
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp slt i32 [[IV]], 100
+; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
