@@ -91,7 +91,7 @@ define <4 x i32> @mul_v4i32c(<4 x i32> %i) nounwind  {
 ;
 ; SSE41-LABEL: mul_v4i32c:
 ; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [117,117,117,117]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: mul_v4i32c:

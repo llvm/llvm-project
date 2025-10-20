@@ -62,7 +62,9 @@ ALWAYS_ENABLED_STATISTIC(
     "The # of visited basic blocks in the analyzed functions.");
 ALWAYS_ENABLED_STATISTIC(PercentReachableBlocks,
                          "The % of reachable basic blocks.");
-STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
+ALWAYS_ENABLED_STATISTIC(MaxCFGSize,
+                         "The maximum number of basic blocks in a function.");
+static UnsignedEPStat CFGSize("CFGSize");
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
@@ -783,14 +785,18 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
                                               ExprEngine::InliningModes IMode,
                                               SetOfConstDecls *VisitedCallees) {
+  auto *CFG = Mgr->getCFG(D);
+
   // Construct the analysis engine.  First check if the CFG is valid.
   // FIXME: Inter-procedural analysis will need to handle invalid CFGs.
-  if (!Mgr->getCFG(D))
+  if (!CFG)
     return;
 
   // See if the LiveVariables analysis scales.
   if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
     return;
+
+  CFGSize.set(CFG->size());
 
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
