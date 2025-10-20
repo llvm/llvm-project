@@ -215,6 +215,43 @@ SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
   });
 }
 
+SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeFloatWithEncoding(
+    uint32_t Width, MachineIRBuilder &MIRBuilder,
+    SPIRV::FPEncoding::FPEncoding FPEncode) {
+  auto Key = std::make_pair(Width, static_cast<unsigned>(FPEncode));
+  if (SPIRVType *Existing = FloatTypesWithEncoding.lookup(Key)) {
+    // Check if the existing type is from the current function
+    const MachineFunction *TypeMF = Existing->getParent()->getParent();
+    if (TypeMF == &MIRBuilder.getMF())
+      return Existing;
+    // Type is from a different function, need to create a new one for current function
+  }
+
+  SPIRVType *SpvType = getOpTypeFloat(Width, MIRBuilder, FPEncode);
+  LLVMContext &Ctx = MIRBuilder.getMF().getFunction().getContext();
+  Type *LLVMTy = nullptr;
+  switch (Width) {
+  case 8:
+    LLVMTy = Type::getInt8Ty(Ctx);
+    break;
+  case 16:
+    LLVMTy = Type::getHalfTy(Ctx);
+    break;
+  case 32:
+    LLVMTy = Type::getFloatTy(Ctx);
+    break;
+  case 64:
+    LLVMTy = Type::getDoubleTy(Ctx);
+    break;
+  default:
+    report_fatal_error("unsupported floating-point width for SPIR-V encoding");
+  }
+
+  SpvType = finishCreatingSPIRVType(LLVMTy, SpvType);
+  FloatTypesWithEncoding.try_emplace(Key, SpvType);
+  return SpvType;
+}
+
 SPIRVType *SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpTypeVoid)

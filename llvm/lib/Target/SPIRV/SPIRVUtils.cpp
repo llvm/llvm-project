@@ -356,6 +356,23 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
   return SPIRV::Scope::CrossDevice;
 }
 
+std::optional<SPIRV::FPRoundingMode::FPRoundingMode>
+toSPIRVRoundingMode(RoundingMode Mode) {
+  using namespace SPIRV::FPRoundingMode;
+  switch (Mode) {
+  case RoundingMode::NearestTiesToEven:
+    return FPRoundingMode::RTE;
+  case RoundingMode::TowardNegative:
+    return FPRoundingMode::RTN;
+  case RoundingMode::TowardPositive:
+    return FPRoundingMode::RTP;
+  case RoundingMode::TowardZero:
+    return FPRoundingMode::RTZ;
+  default:
+    return std::nullopt;
+  }
+}
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);

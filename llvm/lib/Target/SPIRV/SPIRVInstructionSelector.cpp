@@ -22,6 +22,8 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
@@ -194,6 +196,9 @@ private:
 
   bool selectFloatDot(Register ResVReg, const SPIRVType *ResType,
                       MachineInstr &I) const;
+
+  bool selectArbitraryFPConvert(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
 
   bool selectOverflowArith(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
@@ -2101,6 +2106,439 @@ bool SPIRVInstructionSelector::selectFloatDot(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
+static std::optional<SPIRV::FPEncoding::FPEncoding>
+getFloat8EncodingFromString(StringRef Interpretation) {
+  return StringSwitch<std::optional<SPIRV::FPEncoding::FPEncoding>>(Interpretation)
+      .Case("spv.E4M3EXT", SPIRV::FPEncoding::Float8E4M3EXT)
+      .Case("spv.E5M2EXT", SPIRV::FPEncoding::Float8E5M2EXT)
+      .Default(std::nullopt);
+}
+
+// Enum to classify interpretation types
+enum class InterpretationType {
+  None,
+  Signed,
+  Unsigned,
+  Float8E4M3,
+  Float8E5M2,
+  Unknown
+};
+
+static InterpretationType classifyInterpretation(StringRef Interp) {
+  return StringSwitch<InterpretationType>(Interp)
+      .Case("none", InterpretationType::None)
+      .Case("signed", InterpretationType::Signed)
+      .Case("unsigned", InterpretationType::Unsigned)
+      .Case("spv.E4M3EXT", InterpretationType::Float8E4M3)
+      .Case("spv.E5M2EXT", InterpretationType::Float8E5M2)
+      .Default(InterpretationType::Unknown);
+}
+
+static std::optional<SPIRV::FPEncoding::FPEncoding>
+interpretationToFP8Encoding(InterpretationType Type) {
+  switch (Type) {
+  case InterpretationType::Float8E4M3:
+    return SPIRV::FPEncoding::Float8E4M3EXT;
+  case InterpretationType::Float8E5M2:
+    return SPIRV::FPEncoding::Float8E5M2EXT;
+  default:
+    return std::nullopt;
+  }
+}
+
+// Helper struct to hold parsed intrinsic parameters
+struct ArbitraryConvertParams {
+  Register SrcReg;
+  StringRef ResultInterp;
+  StringRef InputInterp;
+  StringRef RoundingInterp;
+  bool UseSaturation;
+
+  InterpretationType SrcType;
+  InterpretationType DstType;
+
+  static std::optional<ArbitraryConvertParams>
+  parse(const MachineInstr &I, const MachineRegisterInfo *MRI) {
+    unsigned IntrinsicIdx = I.getNumDefs();
+    if (IntrinsicIdx >= I.getNumOperands())
+      return std::nullopt;
+
+    unsigned ValueIdx = IntrinsicIdx + 1;
+    if (ValueIdx + 4 >= I.getNumOperands())
+      return std::nullopt;
+
+    const MachineOperand &ValueOp = I.getOperand(ValueIdx);
+    if (!ValueOp.isReg())
+      return std::nullopt;
+
+    auto GetStringFromMD = [&](unsigned OperandIdx) -> std::optional<StringRef> {
+      const MachineOperand &Op = I.getOperand(OperandIdx);
+      if (!Op.isMetadata())
+        return std::nullopt;
+      const MDNode *MD = Op.getMetadata();
+      if (!MD || MD->getNumOperands() != 1)
+        return std::nullopt;
+      if (auto *Str = dyn_cast<MDString>(MD->getOperand(0)))
+        return Str->getString();
+      return std::nullopt;
+    };
+
+    std::optional<StringRef> ResultInterp = GetStringFromMD(ValueIdx + 1);
+    std::optional<StringRef> InputInterp = GetStringFromMD(ValueIdx + 2);
+    std::optional<StringRef> RoundingInterp = GetStringFromMD(ValueIdx + 3);
+    if (!ResultInterp || !InputInterp || !RoundingInterp)
+      return std::nullopt;
+
+    // Get saturation parameter
+    const MachineOperand &SaturationOp = I.getOperand(ValueIdx + 4);
+    int64_t SaturationValue;
+    if (SaturationOp.isImm()) {
+      SaturationValue = SaturationOp.getImm();
+    } else if (SaturationOp.isReg()) {
+      SaturationValue = foldImm(SaturationOp, MRI);
+    } else {
+      return std::nullopt;
+    }
+
+    ArbitraryConvertParams Params;
+    Params.SrcReg = ValueOp.getReg();
+    Params.ResultInterp = *ResultInterp;
+    Params.InputInterp = *InputInterp;
+    Params.RoundingInterp = *RoundingInterp;
+    Params.UseSaturation = SaturationValue != 0;
+
+    Params.SrcType = classifyInterpretation(Params.InputInterp);
+    Params.DstType = classifyInterpretation(Params.ResultInterp);
+
+    return Params;
+  }
+
+  // Helper methods for type checking
+  bool isSrcFP8() const {
+    return SrcType == InterpretationType::Float8E4M3 ||
+           SrcType == InterpretationType::Float8E5M2;
+  }
+
+  bool isDstFP8() const {
+    return DstType == InterpretationType::Float8E4M3 ||
+           DstType == InterpretationType::Float8E5M2;
+  }
+
+  std::optional<SPIRV::FPEncoding::FPEncoding> getSrcFP8Encoding() const {
+    return interpretationToFP8Encoding(SrcType);
+  }
+
+  std::optional<SPIRV::FPEncoding::FPEncoding> getDstFP8Encoding() const {
+    return interpretationToFP8Encoding(DstType);
+  }
+};
+
+// Helper function to create Float8 type (scalar or vector)
+static SPIRVType *createFloat8Type(unsigned ComponentCount,
+                                    SPIRV::FPEncoding::FPEncoding Encoding,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry &GR) {
+  SPIRVType *Float8ScalarType =
+      GR.getOrCreateOpTypeFloatWithEncoding(8, MIRBuilder, Encoding);
+  if (ComponentCount > 1)
+    return GR.getOrCreateSPIRVVectorType(Float8ScalarType, ComponentCount,
+                                         MIRBuilder, false);
+  return Float8ScalarType;
+}
+
+// Helper function to build bitcast if type conversion is needed
+static std::optional<Register>
+buildBitcastIfNeeded(Register SrcReg, SPIRVType *SrcType, SPIRVType *TargetType,
+                     MachineInstr &I, const TargetInstrInfo &TII,
+                     const TargetRegisterInfo &TRI,
+                     const RegisterBankInfo &RBI, MachineRegisterInfo *MRI,
+                     SPIRVGlobalRegistry &GR) {
+  if (SrcType == TargetType)
+    return SrcReg;
+
+  Register CastReg = MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+  GR.assignSPIRVTypeToVReg(TargetType, CastReg, *I.getMF());
+  auto BitcastMIB =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpBitcast))
+          .addDef(CastReg)
+          .addUse(GR.getSPIRVTypeID(TargetType))
+          .addUse(SrcReg);
+  if (!BitcastMIB.constrainAllUses(TII, TRI, RBI))
+    return std::nullopt;
+  return CastReg;
+}
+
+bool SPIRVInstructionSelector::selectArbitraryFPConvert(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  // Parse intrinsic parameters
+  std::optional<ArbitraryConvertParams> MaybeParams =
+      ArbitraryConvertParams::parse(I, MRI);
+  if (!MaybeParams)
+    return false;
+
+  const ArbitraryConvertParams &Params = *MaybeParams;
+  Register SrcReg = Params.SrcReg;
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  LLT SrcLLT = MRI->getType(SrcReg);
+
+  // Parse and validate rounding mode
+  bool RoundingNone = Params.RoundingInterp == "none";
+  std::optional<RoundingMode> RM;
+  if (!RoundingNone) {
+    RM = convertStrToRoundingMode(Params.RoundingInterp);
+    if (!RM || *RM == RoundingMode::Dynamic ||
+        *RM == RoundingMode::NearestTiesToAway)
+      return false;
+  }
+
+  auto GetComponentInfo = [&](const SPIRVType *Type)
+      -> std::pair<const SPIRVType *, unsigned> {
+    if (!Type)
+      return {nullptr, 0};
+    return {GR.getScalarOrVectorComponentType(Type),
+            GR.getScalarOrVectorComponentCount(Type)};
+  };
+
+  MachineIRBuilder MIRBuilder(I);
+
+  // Conversion path 1: FP8 -> Float (e.g., spv.E4M3EXT -> none)
+  if (Params.DstType == InterpretationType::None && Params.isSrcFP8()) {
+    if (RM)
+      return false;
+
+    auto [ResScalarType, ComponentCount] = GetComponentInfo(ResType);
+    if (!ResScalarType || ResScalarType->getOpcode() != SPIRV::OpTypeFloat)
+      return false;
+
+    unsigned Width = ResScalarType->getOperand(1).getImm();
+    if (Width != 16 && Width != 32 && Width != 64)
+      return false;
+
+    unsigned SrcComponentCount = 0;
+    if (SrcType) {
+      SrcComponentCount = GR.getScalarOrVectorComponentCount(SrcType);
+    } else {
+      if (!SrcLLT.isValid())
+        return false;
+      SrcComponentCount = SrcLLT.isVector() ? SrcLLT.getNumElements() : 1;
+    }
+    if (SrcComponentCount != ComponentCount)
+      return false;
+
+    SPIRVType *Float8Type =
+        createFloat8Type(ComponentCount, *Params.getSrcFP8Encoding(), MIRBuilder, GR);
+
+    std::optional<Register> Float8Reg = buildBitcastIfNeeded(
+        SrcReg, SrcType, Float8Type, I, TII, TRI, RBI, MRI, GR);
+    if (!Float8Reg)
+      return false;
+
+    if (!RBI.constrainGenericRegister(ResVReg, SPIRV::iIDRegClass, *MRI))
+      return false;
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpFConvert))
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addUse(*Float8Reg);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
+
+  // Conversion path 2: Float -> FP8 (e.g., none -> spv.E5M2EXT)
+  if (Params.SrcType == InterpretationType::None && Params.isDstFP8()) {
+    auto [SrcScalarType, ComponentCount] = GetComponentInfo(SrcType);
+    if (SrcType) {
+      if (!SrcScalarType || SrcScalarType->getOpcode() != SPIRV::OpTypeFloat)
+        return false;
+
+      unsigned Width = SrcScalarType->getOperand(1).getImm();
+      if (Width != 16 && Width != 32 && Width != 64)
+        return false;
+    } else {
+      if (!SrcLLT.isValid())
+        return false;
+      if (!SrcLLT.isScalar() && !SrcLLT.isVector())
+        return false;
+      unsigned Width = SrcLLT.getScalarSizeInBits();
+      if (Width != 16 && Width != 32 && Width != 64)
+        return false;
+      ComponentCount = SrcLLT.isVector() ? SrcLLT.getNumElements() : 1;
+      SrcScalarType = nullptr;
+    }
+
+    if (GR.getScalarOrVectorComponentCount(ResType) != ComponentCount)
+      return false;
+
+    SPIRVType *Float8Type =
+        createFloat8Type(ComponentCount, *Params.getDstFP8Encoding(), MIRBuilder, GR);
+
+    Register ConvertedReg =
+        MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+    GR.assignSPIRVTypeToVReg(Float8Type, ConvertedReg, *I.getMF());
+
+    auto ConvertMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpFConvert))
+                          .addDef(ConvertedReg)
+                          .addUse(GR.getSPIRVTypeID(Float8Type))
+                          .addUse(SrcReg);
+    if (!ConvertMIB.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    if (RM) {
+      auto MaybeRM = toSPIRVRoundingMode(*RM);
+      if (!MaybeRM)
+        return false;
+      buildOpDecorate(ConvertedReg, I, TII,
+                      SPIRV::Decoration::FPRoundingMode,
+                      {static_cast<uint32_t>(*MaybeRM)});
+    } else if (!RoundingNone) {
+      return false;
+    }
+
+    // Add saturation decoration if requested
+    if (Params.UseSaturation) {
+      buildOpDecorate(ConvertedReg, I, TII,
+                      SPIRV::Decoration::SaturatedToLargestFloat8NormalConversionEXT,
+                      {});
+    }
+
+    if (!RBI.constrainGenericRegister(ResVReg, SPIRV::iIDRegClass, *MRI))
+      return false;
+    auto BitcastMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpBitcast))
+                          .addDef(ResVReg)
+                          .addUse(GR.getSPIRVTypeID(ResType))
+                          .addUse(ConvertedReg);
+    return BitcastMIB.constrainAllUses(TII, TRI, RBI);
+  }
+
+  // Conversion path 3: FP8 -> Int (e.g., spv.E4M3EXT -> signed/unsigned)
+  if ((Params.DstType == InterpretationType::Signed ||
+       Params.DstType == InterpretationType::Unsigned) && Params.isSrcFP8()) {
+    if (RM)
+      return false;
+
+    auto [ResScalarType, ComponentCount] = GetComponentInfo(ResType);
+    if (!ResScalarType || ResScalarType->getOpcode() != SPIRV::OpTypeInt)
+      return false;
+
+    unsigned ResultWidth = ResScalarType->getOperand(1).getImm();
+    if (ResultWidth != 8 && ResultWidth != 16 && ResultWidth != 32 &&
+        ResultWidth != 64)
+      return false;
+
+    unsigned SrcComponentCount = 0;
+    if (SrcType) {
+      auto [SrcScalarType, Count] = GetComponentInfo(SrcType);
+      if (!SrcScalarType || SrcScalarType->getOpcode() != SPIRV::OpTypeInt ||
+          SrcScalarType->getOperand(1).getImm() != 8)
+        return false;
+      SrcComponentCount = Count;
+    } else {
+      if (!SrcLLT.isValid())
+        return false;
+      if (!SrcLLT.isScalar() && !SrcLLT.isVector())
+        return false;
+      if (SrcLLT.getScalarSizeInBits() != 8)
+        return false;
+      SrcComponentCount = SrcLLT.isVector() ? SrcLLT.getNumElements() : 1;
+    }
+
+    if (SrcComponentCount != ComponentCount)
+      return false;
+
+    SPIRVType *Float8Type =
+        createFloat8Type(ComponentCount, *Params.getSrcFP8Encoding(), MIRBuilder, GR);
+
+    std::optional<Register> Float8Reg = buildBitcastIfNeeded(
+        SrcReg, SrcType, Float8Type, I, TII, TRI, RBI, MRI, GR);
+    if (!Float8Reg)
+      return false;
+
+    if (!RBI.constrainGenericRegister(ResVReg, SPIRV::iIDRegClass, *MRI))
+      return false;
+
+    unsigned Opcode = Params.DstType == InterpretationType::Signed
+                          ? SPIRV::OpConvertFToS
+                          : SPIRV::OpConvertFToU;
+    auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                   .addDef(ResVReg)
+                   .addUse(GR.getSPIRVTypeID(ResType))
+                   .addUse(*Float8Reg);
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
+
+  // Conversion path 4: Int -> FP8 (e.g., signed/unsigned -> spv.E5M2EXT)
+  if ((Params.SrcType == InterpretationType::Signed ||
+       Params.SrcType == InterpretationType::Unsigned) && Params.isDstFP8()) {
+    if (RM)
+      return false;
+
+    unsigned ComponentCount = 0;
+    unsigned SrcWidth = 0;
+    if (SrcType) {
+      auto [SrcScalarType, Count] = GetComponentInfo(SrcType);
+      if (!SrcScalarType || SrcScalarType->getOpcode() != SPIRV::OpTypeInt)
+        return false;
+      SrcWidth = SrcScalarType->getOperand(1).getImm();
+      ComponentCount = Count;
+    } else {
+      if (!SrcLLT.isValid())
+        return false;
+      if (!SrcLLT.isScalar() && !SrcLLT.isVector())
+        return false;
+      SrcWidth = SrcLLT.getScalarSizeInBits();
+      ComponentCount = SrcLLT.isVector() ? SrcLLT.getNumElements() : 1;
+    }
+
+    if (SrcWidth != 8 && SrcWidth != 16 && SrcWidth != 32 && SrcWidth != 64)
+      return false;
+
+    auto [ResScalarType, ResComponentCount] = GetComponentInfo(ResType);
+    if (!ResScalarType || ResScalarType->getOpcode() != SPIRV::OpTypeInt ||
+        ResScalarType->getOperand(1).getImm() != 8)
+      return false;
+
+    if (ResComponentCount != ComponentCount)
+      return false;
+
+    SPIRVType *Float8Type =
+        createFloat8Type(ComponentCount, *Params.getDstFP8Encoding(), MIRBuilder, GR);
+
+    Register ConvertedReg =
+        MRI->createVirtualRegister(&SPIRV::iIDRegClass);
+    GR.assignSPIRVTypeToVReg(Float8Type, ConvertedReg, *I.getMF());
+
+    unsigned Opcode = Params.SrcType == InterpretationType::Signed
+                          ? SPIRV::OpConvertSToF
+                          : SPIRV::OpConvertUToF;
+    auto ConvertMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(Opcode))
+                          .addDef(ConvertedReg)
+                          .addUse(GR.getSPIRVTypeID(Float8Type))
+                          .addUse(SrcReg);
+    if (!ConvertMIB.constrainAllUses(TII, TRI, RBI))
+      return false;
+
+    // Add saturation decoration if requested
+    if (Params.UseSaturation) {
+      buildOpDecorate(ConvertedReg, I, TII,
+                      SPIRV::Decoration::SaturatedToLargestFloat8NormalConversionEXT,
+                      {});
+    }
+
+    if (!RBI.constrainGenericRegister(ResVReg, SPIRV::iIDRegClass, *MRI))
+      return false;
+    auto BitcastMIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                              TII.get(SPIRV::OpBitcast))
+                          .addDef(ResVReg)
+                          .addUse(GR.getSPIRVTypeID(ResType))
+                          .addUse(ConvertedReg);
+    return BitcastMIB.constrainAllUses(TII, TRI, RBI);
+  }
+
+  return false;
+}
+
 bool SPIRVInstructionSelector::selectIntegerDot(Register ResVReg,
                                                 const SPIRVType *ResType,
                                                 MachineInstr &I,
@@ -3440,6 +3878,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
     return selectExtInst(ResVReg, ResType, I, CL::radians, GL::Radians);
+  case Intrinsic::arbitrary_fp_convert:
+    return selectArbitraryFPConvert(ResVReg, ResType, I);
   // Discard intrinsics which we do not expect to actually represent code after
   // lowering or intrinsics which are not implemented but should not crash when
   // found in a customer's LLVM IR input.

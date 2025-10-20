@@ -2842,7 +2842,10 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
       if (!MDN) {
         if (auto *ConstMD = dyn_cast<ConstantAsMetadata>(MD))
           MDN = MDNode::get(MF->getFunction().getContext(), ConstMD);
-        else // This was probably an MDString.
+        else if (auto *MDS = dyn_cast<MDString>(MD)) {
+          Metadata *Ops[] = {MDS};
+          MDN = MDNode::get(MF->getFunction().getContext(), Ops);
+        } else
           return false;
       }
       MIB.addMetadata(MDN);

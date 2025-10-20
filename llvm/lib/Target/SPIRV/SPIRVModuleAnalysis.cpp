@@ -1336,6 +1336,15 @@ static bool isBFloat16Type(const SPIRVType *TypeDef) {
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
 }
 
+static bool isFloat8Type(const SPIRVType *TypeDef) {
+  if (!TypeDef || TypeDef->getOpcode() != SPIRV::OpTypeFloat ||
+      TypeDef->getNumOperands() != 3 || TypeDef->getOperand(1).getImm() != 8)
+    return false;
+  uint32_t Encoding = TypeDef->getOperand(2).getImm();
+  return Encoding == SPIRV::FPEncoding::Float8E4M3EXT ||
+         Encoding == SPIRV::FPEncoding::Float8E5M2EXT;
+}
+
 void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::ModuleAnalysisInfo &MAI,
                           const SPIRVSubtarget &ST) {
@@ -1398,6 +1407,17 @@ void addInstrRequirements(const MachineInstr &MI,
       } else {
         Reqs.addCapability(SPIRV::Capability::Float16);
       }
+    } else if (BitWidth == 8) {
+      if (!isFloat8Type(&MI))
+        report_fatal_error("OpTypeFloat type with width 8 requires a Float8 "
+                           "encoding",
+                           false);
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_float8))
+        report_fatal_error("OpTypeFloat type with Float8 encoding requires the "
+                           "following SPIR-V extension: SPV_EXT_float8",
+                           false);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_float8);
+      Reqs.addCapability(SPIRV::Capability::Float8EXT);
     }
     break;
   }
@@ -1744,6 +1764,15 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVType *TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (isBFloat16Type(TypeDef))
       Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
+    if (isFloat8Type(TypeDef)) {
+      if (!ST.canUseExtension(SPIRV::Extension::SPV_EXT_float8))
+        report_fatal_error(
+            "OpTypeCooperativeMatrixKHR with Float8 component requires the "
+            "following SPIR-V extension: SPV_EXT_float8",
+            false);
+      Reqs.addExtension(SPIRV::Extension::SPV_EXT_float8);
+      Reqs.addCapability(SPIRV::Capability::Float8CooperativeMatrixEXT);
+    }
     break;
   }
   case SPIRV::OpArithmeticFenceEXT:
