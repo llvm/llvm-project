@@ -105,9 +105,7 @@ define <8 x i32> @byte_rotate_v8i32_3(<8 x i32> %a) nounwind {
 define <4 x i64> @byte_rotate_v4i64_1(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: byte_rotate_v4i64_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
-; CHECK-NEXT:    xvbsll.v $xr1, $xr1, 8
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvshuf4i.d $xr0, $xr1, 9
 ; CHECK-NEXT:    ret
     %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
     ret <4 x i64> %shuffle
@@ -116,9 +114,7 @@ define <4 x i64> @byte_rotate_v4i64_1(<4 x i64> %a, <4 x i64> %b) nounwind {
 define <4 x i64> @byte_rotate_v4i64_2(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; CHECK-LABEL: byte_rotate_v4i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvbsrl.v $xr1, $xr1, 8
-; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
-; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvshuf4i.d $xr0, $xr1, 3
 ; CHECK-NEXT:    ret
     %shuffle = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 5, i32 0, i32 7, i32 2>
     ret <4 x i64> %shuffle
@@ -127,7 +123,7 @@ define <4 x i64> @byte_rotate_v4i64_2(<4 x i64> %a, <4 x i64> %b) nounwind {
 define <4 x i64> @byte_rotate_v4i64_3(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: byte_rotate_v4i64_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 177
+; CHECK-NEXT:    xvshuf4i.d $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
     %shuffle = shufflevector <4 x i64> %a, <4 x i64> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
     ret <4 x i64> %shuffle
