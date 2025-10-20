@@ -41,7 +41,10 @@ def main(commit_sha: str, build_log_files: list[str]):
                 {"name": name, "message": failure_message}
             )
     advisor_response = requests.get(PREMERGE_ADVISOR_URL, json=explanation_request)
-    print(advisor_response.json)
+    if advisor_response.status_code == 200:
+        print(advisor_response.json())
+    else:
+        print(advisor_response.reason)
 
 
 if __name__ == "__main__":
