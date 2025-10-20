@@ -3476,6 +3476,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
       TODO(loc, "Unhandled loop directive (" +
                     llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
     break;
+                                        }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;

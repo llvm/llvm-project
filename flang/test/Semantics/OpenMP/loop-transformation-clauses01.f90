@@ -7,6 +7,7 @@ subroutine loop_transformation_construct1
   implicit none
   integer, parameter:: i = 5
   integer :: x
+  integer :: a
   integer :: v(i)
 
   !ERROR: At most one LOOPRANGE clause can appear on the FUSE directive
@@ -44,6 +45,20 @@ subroutine loop_transformation_construct1
   do x = 1, i
     v(x) = x * 2
   end do
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  !$omp end fuse
+
+  !ERROR: Must be a constant value
+  !$omp fuse looprange(a,2)
+  do x = 1, i
+    v(x) = x * 2
+  end do
+  !$omp end fuse
+
+  !ERROR: Must be a constant value
+  !$omp fuse looprange(1,a)
   do x = 1, i
     v(x) = x * 2
   end do
