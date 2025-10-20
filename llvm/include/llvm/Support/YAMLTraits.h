@@ -145,6 +145,7 @@ enum class QuotingType { None, Single, Double };
 ///        return StringRef();
 ///      }
 ///      static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
+///      static constexpr StringRef typeName = "string";
 ///    };
 template <typename T, typename Enable = void> struct ScalarTraits {
   // Must provide:
@@ -158,6 +159,9 @@ template <typename T, typename Enable = void> struct ScalarTraits {
   //
   // Function to determine if the value should be quoted.
   // static QuotingType mustQuote(StringRef);
+  //
+  // Optional, for GeneratingSchema:
+  // static constexpr StringRef typeName = "string";
 };
 
 /// This class should be specialized by type that requires custom conversion
@@ -175,6 +179,7 @@ template <typename T, typename Enable = void> struct ScalarTraits {
 ///        // return empty string on success, or error string
 ///        return StringRef();
 ///      }
+///      static constexpr StringRef typeName = "string";
 ///    };
 template <typename T> struct BlockScalarTraits {
   // Must provide:
@@ -189,6 +194,7 @@ template <typename T> struct BlockScalarTraits {
   // Optional:
   // static StringRef inputTag(T &Val, std::string Tag)
   // static void outputTag(const T &Val, raw_ostream &Out)
+  // static constexpr StringRef typeName = "string";
 };
 
 /// This class should be specialized by type that requires custom conversion
@@ -211,6 +217,7 @@ template <typename T> struct BlockScalarTraits {
 ///      static QuotingType mustQuote(const MyType &Value, StringRef) {
 ///        return QuotingType::Single;
 ///      }
+///      static constexpr StringRef typeName = "integer";
 ///    };
 template <typename T> struct TaggedScalarTraits {
   // Must provide:
@@ -226,6 +233,9 @@ template <typename T> struct TaggedScalarTraits {
   //
   // Function to determine if the value should be quoted.
   // static QuotingType mustQuote(const T &Value, StringRef Scalar);
+  //
+  // Optional:
+  // static constexpr StringRef typeName = "string";
 };
 
 /// This class should be specialized by any type that needs to be converted
@@ -440,6 +450,14 @@ template <class T> struct has_CustomMappingTraits {
 
   static constexpr bool value =
       is_detected<check, CustomMappingTraits<T>>::value;
+};
+
+// Test if typeName is defined on type T.
+template <typename T> struct has_TypeNameTraits {
+  template <class U>
+  using check = std::is_same<decltype(&U::typeName), StringRef>;
+
+  static constexpr bool value = is_detected<check, T>::value;
 };
 
 // Test if flow is defined on type T.
@@ -925,13 +943,19 @@ std::enable_if_t<has_ScalarTraits<T>::value, void> yamlize(IO &io, T &Val, bool,
     ScalarTraits<T>::output(Val, io.getContext(), Buffer);
     StringRef Str = Buffer.str();
     io.scalarString(Str, ScalarTraits<T>::mustQuote(Str));
-  } else {
+  } else if (io.getKind() == IOKind::Inputting) {
     StringRef Str;
     io.scalarString(Str, ScalarTraits<T>::mustQuote(Str));
     StringRef Result = ScalarTraits<T>::input(Str, io.getContext(), Val);
     if (!Result.empty()) {
       io.setError(Twine(Result));
     }
+  } else {
+    StringRef TypeName = "string";
+    if constexpr (has_TypeNameTraits<ScalarTraits<T>>::value) {
+      TypeName = ScalarTraits<T>::typeName;
+    }
+    io.scalarString(TypeName, QuotingType::None);
   }
 }
 
@@ -944,13 +968,19 @@ yamlize(IO &YamlIO, T &Val, bool, EmptyContext &Ctx) {
     BlockScalarTraits<T>::output(Val, YamlIO.getContext(), Buffer);
     StringRef Str(Storage);
     YamlIO.blockScalarString(Str);
-  } else {
+  } else if (YamlIO.getKind() == IOKind::Inputting) {
     StringRef Str;
     YamlIO.blockScalarString(Str);
     StringRef Result =
         BlockScalarTraits<T>::input(Str, YamlIO.getContext(), Val);
     if (!Result.empty())
       YamlIO.setError(Twine(Result));
+  } else {
+    StringRef TypeName = "string";
+    if constexpr (has_TypeNameTraits<ScalarTraits<T>>::value) {
+      TypeName = ScalarTraits<T>::typeName;
+    }
+    YamlIO.blockScalarString(TypeName);
   }
 }
 
@@ -966,7 +996,7 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
     StringRef ScalarStr(ScalarStorage);
     io.scalarString(ScalarStr,
                     TaggedScalarTraits<T>::mustQuote(Val, ScalarStr));
-  } else {
+  } else if (io.getKind() == IOKind::Inputting) {
     std::string Tag;
     io.scalarTag(Tag);
     StringRef Str;
@@ -976,6 +1006,12 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
     if (!Result.empty()) {
       io.setError(Twine(Result));
     }
+  } else {
+    StringRef TypeName = "string";
+    if constexpr (has_TypeNameTraits<ScalarTraits<T>>::value) {
+      TypeName = ScalarTraits<T>::typeName;
+    }
+    io.scalarString(TypeName, QuotingType::None);
   }
 }
 
@@ -1056,10 +1092,14 @@ yamlize(IO &io, T &Val, bool, EmptyContext &Ctx) {
     io.beginMapping();
     CustomMappingTraits<T>::output(io, Val);
     io.endMapping();
-  } else {
+  } else if (io.getKind() == IOKind::Inputting) {
     io.beginMapping();
     for (StringRef key : io.keys())
       CustomMappingTraits<T>::inputOne(io, key, Val);
+    io.endMapping();
+  } else {
+    io.beginMapping();
+    CustomMappingTraits<T>::inputOne(io, "additionalProperties", Val);
     io.endMapping();
   }
 }
@@ -1121,6 +1161,7 @@ template <> struct ScalarTraits<bool> {
   LLVM_ABI static void output(const bool &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, bool &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "boolean";
 };
 
 template <> struct ScalarTraits<StringRef> {
@@ -1139,60 +1180,70 @@ template <> struct ScalarTraits<uint8_t> {
   LLVM_ABI static void output(const uint8_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, uint8_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<uint16_t> {
   LLVM_ABI static void output(const uint16_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, uint16_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<uint32_t> {
   LLVM_ABI static void output(const uint32_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, uint32_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<uint64_t> {
   LLVM_ABI static void output(const uint64_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, uint64_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<int8_t> {
   LLVM_ABI static void output(const int8_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, int8_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<int16_t> {
   LLVM_ABI static void output(const int16_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, int16_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<int32_t> {
   LLVM_ABI static void output(const int32_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, int32_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<int64_t> {
   LLVM_ABI static void output(const int64_t &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, int64_t &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<float> {
   LLVM_ABI static void output(const float &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, float &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "number";
 };
 
 template <> struct ScalarTraits<double> {
   LLVM_ABI static void output(const double &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, double &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "number";
 };
 
 // For endian types, we use existing scalar Traits class for the underlying
@@ -1220,6 +1271,10 @@ struct ScalarTraits<support::detail::packed_endian_specific_integral<
   static QuotingType mustQuote(StringRef Str) {
     return ScalarTraits<value_type>::mustQuote(Str);
   }
+
+  static constexpr StringRef typeName = has_TypeNameTraits<value_type>::value
+                                            ? ScalarTraits<value_type>::typeName
+                                            : "string";
 };
 
 template <typename value_type, llvm::endianness endian, size_t alignment>
@@ -1652,24 +1707,28 @@ template <> struct ScalarTraits<Hex8> {
   LLVM_ABI static void output(const Hex8 &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, Hex8 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<Hex16> {
   LLVM_ABI static void output(const Hex16 &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, Hex16 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<Hex32> {
   LLVM_ABI static void output(const Hex32 &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, Hex32 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<Hex64> {
   LLVM_ABI static void output(const Hex64 &, void *, raw_ostream &);
   LLVM_ABI static StringRef input(StringRef, void *, Hex64 &);
   static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+  static constexpr StringRef typeName = "integer";
 };
 
 template <> struct ScalarTraits<VersionTuple> {

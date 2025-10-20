@@ -172,7 +172,7 @@ void GenerateSchema::endBitSetScalar() { endEnumScalar(); }
 void GenerateSchema::scalarString(StringRef &Val, QuotingType) {
   Schema *Top = getTopSchema();
   assert(Top);
-  TypeProperty *Type = createProperty<TypeProperty>("string");
+  TypeProperty *Type = createProperty<TypeProperty>(Val);
   Top->emplace_back(Type);
 }
 
@@ -223,7 +223,6 @@ json::Value GenerateSchema::PropertiesProperty::toJSON() const {
 json::Value GenerateSchema::AdditionalPropertiesProperty::toJSON() const {
   return Value->toJSON();
 }
-
 
 json::Value GenerateSchema::RequiredProperty::toJSON() const {
   json::Array JSONArray;

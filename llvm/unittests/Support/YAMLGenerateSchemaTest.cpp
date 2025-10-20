@@ -81,7 +81,7 @@ TEST(ObjectYAMLGenerateSchema, SimpleSchema) {
     ],
     "properties": {
       "age": {
-        "type": "string"
+        "type": "integer"
       },
       "babies": {
         "flowStyle": "block",
