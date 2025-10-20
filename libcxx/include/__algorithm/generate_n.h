@@ -12,6 +12,7 @@
 #include <__algorithm/for_each_n.h>
 #include <__config>
 #include <__functional/identity.h>
+#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
