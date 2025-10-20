@@ -4375,8 +4375,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
       vputils::getSCEVExprForVPValue(getPlanFor(MainLoopVF).getTripCount(), SE);
   assert(!isa<SCEVCouldNotCompute>(TC) && "Trip count SCEV must be computable");
   const SCEV *KnownMinTC;
-  bool ScalableTC = match(TC, m_scev_Mul(m_SCEV(KnownMinTC), m_SCEVVScale())) ||
-                    match(TC, m_scev_Mul(m_SCEVVScale(), m_SCEV(KnownMinTC)));
+  bool ScalableTC = match(TC, m_scev_c_Mul(m_SCEV(KnownMinTC), m_SCEVVScale()));
   // Use versions of TC and VF in which both are either scalable or fixed.
   if (ScalableTC == MainLoopVF.isScalable())
     RemainingIterations =
