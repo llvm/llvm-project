@@ -5,10 +5,10 @@ program test
   integer :: i
   type(team_type) :: team
 
-  ! CHECK: fir.call @_QMprifPprif_this_image_no_coarray
+  ! CHECK: mif.this_image : () -> i32 
   i = this_image()
 
-  ! CHECK: fir.call @_QMprifPprif_this_image_no_coarray
+  ! CHECK: mif.this_image team %[[TEAM:.*]] : ({{.*}}) -> i32
   i = this_image(TEAM=team)
 
 end program
