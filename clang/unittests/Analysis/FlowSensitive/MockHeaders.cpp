@@ -459,6 +459,10 @@ struct is_scalar
 template <>
 struct is_scalar<nullptr_t> : public true_type {};
 
+struct in_place_t {};
+
+constexpr in_place_t in_place;
+
 } // namespace std
 
 #endif // STD_TYPE_TRAITS_H
@@ -511,9 +515,8 @@ using remove_reference_t = typename std::remove_reference<T>::type;
 template <typename T>
 using decay_t = typename std::decay<T>::type;
 
-struct in_place_t {};
-
-constexpr in_place_t in_place;
+using std::in_place;
+using std::in_place_t;
 } // namespace absl
 
 #endif // ABSL_TYPE_TRAITS_H
@@ -588,9 +591,6 @@ static constexpr char StdOptionalHeader[] = R"(
 #include "std_utility.h"
 
 namespace std {
-
-struct in_place_t {};
-constexpr in_place_t in_place;
 
 struct nullopt_t {
   constexpr explicit nullopt_t() {}
