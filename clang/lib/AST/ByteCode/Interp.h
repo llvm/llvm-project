@@ -2258,6 +2258,8 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
     return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+  } else if (!Ptr.isBlockPointer()) {
+    return std::nullopt;
   }
 
   assert(Ptr.isBlockPointer());
