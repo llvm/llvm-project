@@ -2899,6 +2899,35 @@ static bool interp__builtin_ia32_test_op(
   return true;
 }
 
+static bool interp__builtin_ia32_movmsk_op(InterpState &S, CodePtr OpPC,
+                                           const CallExpr *Call) {
+  assert(Call->getNumArgs() == 1);
+
+  const Pointer &Source = S.Stk.pop<Pointer>();
+
+  unsigned SourceLen = Source.getNumElems();
+  QualType ElemQT = getElemType(Source);
+  OptPrimType ElemT = S.getContext().classify(ElemQT);
+  unsigned ResultLen =
+      S.getASTContext().getTypeSize(Call->getType()); // Always 32-bit integer.
+  APInt Result(ResultLen, 0);
+
+  for (unsigned I = 0; I != SourceLen; ++I) {
+    APInt Elem;
+    if (ElemQT->isIntegerType()) {
+      INT_TYPE_SWITCH_NO_BOOL(*ElemT, { Elem = Source.elem<T>(I).toAPSInt(); });
+    } else if (ElemQT->isRealFloatingType()) {
+      using T = PrimConv<PT_Float>::T;
+      Elem = Source.elem<T>(I).getAPFloat().bitcastToAPInt();
+    } else {
+      return false;
+    }
+    Result.setBitVal(I, Elem.isNegative());
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_elementwise_triop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<APInt(const APSInt &, const APSInt &, const APSInt &)>
@@ -3668,6 +3697,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return (llvm::APIntOps::mulsExtended(LHS, RHS).ashr(14) + 1)
               .extractBits(16, 1);
         });
+
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    return interp__builtin_ia32_movmsk_op(S, OpPC, Call);
+  }
 
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
