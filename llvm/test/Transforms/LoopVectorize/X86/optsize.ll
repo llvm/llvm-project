@@ -120,10 +120,10 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    [[VEC_IV:%.*]] = add <16 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; AUTOVF-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i32> [[VEC_IV]], splat (i32 202)
 ; AUTOVF-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[INDEX]]
-; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[TMP2]], i32 1, <16 x i1> [[TMP0]], <16 x i8> poison)
+; AUTOVF-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[TMP2]], <16 x i1> [[TMP0]], <16 x i8> poison)
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = select <16 x i1> [[TMP5]], <16 x i8> splat (i8 2), <16 x i8> splat (i8 1)
-; AUTOVF-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP3]], ptr [[TMP2]], i32 1, <16 x i1> [[TMP0]])
+; AUTOVF-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP3]], ptr align 1 [[TMP2]], <16 x i1> [[TMP0]])
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; AUTOVF-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 208
 ; AUTOVF-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
