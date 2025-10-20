@@ -183,7 +183,8 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
   }
 }
 
-bool Scope::AddCommonBlockUse(const SourceName &name, Attrs attrs, Symbol& cbUltimate) {
+bool Scope::AddCommonBlockUse(
+    const SourceName &name, Attrs attrs, Symbol &cbUltimate) {
   CHECK(cbUltimate.has<CommonBlockDetails>());
   // Make a symbol, but don't add it to the Scope, since it needs to
   // be added to the USE-associated COMMON blocks
