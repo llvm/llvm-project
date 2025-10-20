@@ -110,6 +110,26 @@ std::string genGlobAtBothSides(const std::vector<std::string> &Files) {
   return S;
 }
 
+std::string genGlobAtBothSidesAndMid(const std::vector<std::string> &Files) {
+  std::string S;
+  std::minstd_rand Rng(RNG_SEED);
+  for (std::string F : Files) {
+    std::uniform_int_distribution<> PosDistrib(0, F.size() - 1);
+    F[PosDistrib(Rng)] = '*';
+
+    std::uniform_int_distribution<> Ends(0, 1);
+    if (Ends(Rng)) {
+      F.back() = '*';
+      F.front() = '*';
+    }
+
+    S += "src:";
+    S += F;
+    S += "\n";
+  }
+  return S;
+}
+
 void BM_Make_(
     benchmark::State &state,
     std::string (*GenerateCaseList)(const std::vector<std::string> &Files)) {
@@ -171,6 +191,9 @@ BENCHMARK_CAPTURE(BM_Make_, Mid__, genGlobInMid)
 BENCHMARK_CAPTURE(BM_Make_, Both_, genGlobAtBothSides)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_Make_, Mix__, genGlobAtBothSidesAndMid)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
 BENCHMARK_CAPTURE(BM_True_, None_, genGlobNone)
     ->RangeMultiplier(MAX_LIST_MUL)
@@ -187,6 +210,9 @@ BENCHMARK_CAPTURE(BM_True_, Mid__, genGlobInMid)
 BENCHMARK_CAPTURE(BM_True_, Both_, genGlobAtBothSides)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_True_, Mix__, genGlobAtBothSidesAndMid)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
 BENCHMARK_CAPTURE(BM_False, None_, genGlobNone)
     ->RangeMultiplier(MAX_LIST_MUL)
@@ -201,6 +227,9 @@ BENCHMARK_CAPTURE(BM_False, Mid__, genGlobInMid)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 BENCHMARK_CAPTURE(BM_False, Both_, genGlobAtBothSides)
+    ->RangeMultiplier(MAX_LIST_MUL)
+    ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
+BENCHMARK_CAPTURE(BM_False, Mix__, genGlobAtBothSidesAndMid)
     ->RangeMultiplier(MAX_LIST_MUL)
     ->Range(MAX_LIST_MIN, MAX_LIST_MAX);
 
