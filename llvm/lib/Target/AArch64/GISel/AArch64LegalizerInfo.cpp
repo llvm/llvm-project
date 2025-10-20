@@ -835,14 +835,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(
           {{s32, s16}, {s64, s16}, {s64, s32}, {v4s32, v4s16}, {v2s64, v2s32}})
       .libcallFor({{s128, s64}, {s128, s32}, {s128, s16}})
-      .moreElementsToNextPow2(0)
-      .customIf([](const LegalityQuery &Q) {
-        LLT DstTy = Q.Types[0];
-        LLT SrcTy = Q.Types[1];
-        return SrcTy.isVector() && DstTy.isVector() &&
-               SrcTy.getScalarSizeInBits() == 16 &&
-               DstTy.getScalarSizeInBits() == 64;
-      })
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .scalarize(0);
@@ -1482,11 +1474,10 @@ bool AArch64LegalizerInfo::legalizeCustom(
     return legalizeICMP(MI, MRI, MIRBuilder);
   case TargetOpcode::G_BITCAST:
     return legalizeBitcast(MI, Helper);
-  case TargetOpcode::G_FPEXT:
   case TargetOpcode::G_FPTRUNC:
     // In order to vectorise f16 to f64 properly, we need to use f32 as an
     // intermediary
-    return legalizeFpextFptrunc(MI, MIRBuilder, MRI);
+    return legalizeFptrunc(MI, MIRBuilder, MRI);
   }
 
   llvm_unreachable("expected switch to return");
@@ -2414,7 +2405,7 @@ bool AArch64LegalizerInfo::legalizePrefetch(MachineInstr &MI,
   return true;
 }
 
-bool AArch64LegalizerInfo::legalizeFpextFptrunc(
+bool AArch64LegalizerInfo::legalizeFptrunc(
     MachineInstr &MI, MachineIRBuilder &MIRBuilder,
     MachineRegisterInfo &MRI) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -2430,11 +2421,6 @@ bool AArch64LegalizerInfo::legalizeFpextFptrunc(
   switch (MI.getOpcode()) {
   default:
     return false;
-  case TargetOpcode::G_FPEXT: {
-    Mid = MIRBuilder.buildFPExt(MidTy, Src);
-    Fin = MIRBuilder.buildFPExt(DstTy, Mid.getReg(0));
-    break;
-  }
   case TargetOpcode::G_FPTRUNC: {
     Mid = MIRBuilder.buildFPTrunc(MidTy, Src);
     Fin = MIRBuilder.buildFPTrunc(DstTy, Mid.getReg(0));
