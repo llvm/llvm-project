@@ -255,7 +255,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
   mlir::Value expected = builder.createLoad(loc, val1);
   mlir::Value desired = builder.createLoad(loc, val2);
 
-  auto cmpxchg = cir::AtomicCmpXchg::create(
+  auto cmpxchg = cir::AtomicCmpXchgOp::create(
       builder, loc, expected.getType(), builder.getBoolTy(), ptr.getPointer(),
       expected, desired,
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
@@ -404,7 +404,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_exchange:
-    opName = cir::AtomicXchg::getOperationName();
+    opName = cir::AtomicXchgOp::getOperationName();
     break;
 
   case AtomicExpr::AO__opencl_atomic_init:
@@ -718,9 +718,25 @@ void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
     return;
   }
 
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: aggregate type");
+  case cir::TEK_Aggregate: {
+    // Fix up the destination if the initializer isn't an expression
+    // of atomic type.
+    bool zeroed = false;
+    if (!init->getType()->isAtomicType()) {
+      zeroed = atomics.emitMemSetZeroIfNecessary();
+      dest = atomics.projectValue();
+    }
+
+    // Evaluate the expression directly into the destination.
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        dest, AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap,
+        zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);
+
+    emitAggExpr(init, slot);
     return;
+  }
   }
 
   llvm_unreachable("bad evaluation kind");

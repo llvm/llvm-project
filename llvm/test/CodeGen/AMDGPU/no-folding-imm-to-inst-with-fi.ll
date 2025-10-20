@@ -9,92 +9,65 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_load_b512 s[16:31], s[4:5], 0xe4
 ; CHECK-NEXT:    s_load_b512 s[0:15], s[4:5], 0xa4
 ; CHECK-NEXT:    s_mov_b64 s[34:35], src_private_base
-; CHECK-NEXT:    s_movk_i32 s33, 0x70
-; CHECK-NEXT:    s_movk_i32 s34, 0x60
-; CHECK-NEXT:    s_or_b32 s44, 0x80, s33
-; CHECK-NEXT:    s_mov_b32 s45, s35
-; CHECK-NEXT:    s_or_b32 s46, 0x80, s34
-; CHECK-NEXT:    s_mov_b32 s47, s35
-; CHECK-NEXT:    v_dual_mov_b32 v20, s44 :: v_dual_mov_b32 v21, s45
-; CHECK-NEXT:    v_dual_mov_b32 v22, s46 :: v_dual_mov_b32 v23, s47
 ; CHECK-NEXT:    s_movk_i32 s34, 0x80
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    v_dual_mov_b32 v34, s34 :: v_dual_mov_b32 v35, s35
+; CHECK-NEXT:    v_dual_mov_b32 v20, s34 :: v_dual_mov_b32 v21, s35
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v1, s41
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s42 :: v_dual_mov_b32 v3, s43
 ; CHECK-NEXT:    v_dual_mov_b32 v4, s36 :: v_dual_mov_b32 v5, s37
 ; CHECK-NEXT:    v_dual_mov_b32 v6, s38 :: v_dual_mov_b32 v7, s39
-; CHECK-NEXT:    scratch_store_b128 off, v[0:3], off offset:16 scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    v_dual_mov_b32 v0, s20 :: v_dual_mov_b32 v1, s21
-; CHECK-NEXT:    s_movk_i32 s20, 0x50
 ; CHECK-NEXT:    v_dual_mov_b32 v8, s28 :: v_dual_mov_b32 v9, s29
 ; CHECK-NEXT:    v_dual_mov_b32 v10, s30 :: v_dual_mov_b32 v11, s31
-; CHECK-NEXT:    s_wait_alu 0xfffe
-; CHECK-NEXT:    s_or_b32 s20, 0x80, s20
-; CHECK-NEXT:    s_mov_b32 s21, s35
 ; CHECK-NEXT:    v_dual_mov_b32 v12, s24 :: v_dual_mov_b32 v13, s25
 ; CHECK-NEXT:    v_dual_mov_b32 v14, s26 :: v_dual_mov_b32 v15, s27
-; CHECK-NEXT:    v_dual_mov_b32 v2, s22 :: v_dual_mov_b32 v3, s23
-; CHECK-NEXT:    s_wait_alu 0xfffe
-; CHECK-NEXT:    v_dual_mov_b32 v25, s21 :: v_dual_mov_b32 v24, s20
+; CHECK-NEXT:    v_dual_mov_b32 v16, s20 :: v_dual_mov_b32 v17, s21
+; CHECK-NEXT:    v_dual_mov_b32 v18, s22 :: v_dual_mov_b32 v19, s23
+; CHECK-NEXT:    scratch_store_b128 off, v[0:3], off offset:16 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_store_b128 off, v[4:7], off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[20:21], v[8:11] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[8:11] offset:112 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[22:23], v[12:15] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[12:15] offset:96 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[24:25], v[0:3] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[16:19] offset:80 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s16 :: v_dual_mov_b32 v1, s17
-; CHECK-NEXT:    s_or_b32 s16, 0x80, 64
-; CHECK-NEXT:    s_mov_b32 s17, s35
-; CHECK-NEXT:    v_dual_mov_b32 v4, s12 :: v_dual_mov_b32 v5, s13
-; CHECK-NEXT:    s_or_b32 s12, 0x80, 48
-; CHECK-NEXT:    s_mov_b32 s13, s35
-; CHECK-NEXT:    v_dual_mov_b32 v8, s8 :: v_dual_mov_b32 v9, s9
-; CHECK-NEXT:    s_or_b32 s8, 0x80, 32
-; CHECK-NEXT:    s_mov_b32 s9, s35
-; CHECK-NEXT:    v_dual_mov_b32 v12, s4 :: v_dual_mov_b32 v13, s5
-; CHECK-NEXT:    s_or_b32 s4, 0x80, 16
-; CHECK-NEXT:    s_mov_b32 s5, s35
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s18 :: v_dual_mov_b32 v3, s19
-; CHECK-NEXT:    s_wait_alu 0xfffe
-; CHECK-NEXT:    v_dual_mov_b32 v27, s17 :: v_dual_mov_b32 v26, s16
+; CHECK-NEXT:    v_dual_mov_b32 v4, s12 :: v_dual_mov_b32 v5, s13
 ; CHECK-NEXT:    v_dual_mov_b32 v6, s14 :: v_dual_mov_b32 v7, s15
-; CHECK-NEXT:    v_dual_mov_b32 v29, s13 :: v_dual_mov_b32 v28, s12
-; CHECK-NEXT:    v_dual_mov_b32 v31, s9 :: v_dual_mov_b32 v30, s8
-; CHECK-NEXT:    v_dual_mov_b32 v33, s5 :: v_dual_mov_b32 v32, s4
+; CHECK-NEXT:    v_dual_mov_b32 v8, s8 :: v_dual_mov_b32 v9, s9
 ; CHECK-NEXT:    v_dual_mov_b32 v10, s10 :: v_dual_mov_b32 v11, s11
+; CHECK-NEXT:    v_dual_mov_b32 v12, s4 :: v_dual_mov_b32 v13, s5
 ; CHECK-NEXT:    v_dual_mov_b32 v14, s6 :: v_dual_mov_b32 v15, s7
 ; CHECK-NEXT:    v_dual_mov_b32 v16, s0 :: v_dual_mov_b32 v17, s1
 ; CHECK-NEXT:    v_dual_mov_b32 v18, s2 :: v_dual_mov_b32 v19, s3
-; CHECK-NEXT:    flat_store_b128 v[26:27], v[0:3] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[0:3] offset:64 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[28:29], v[4:7] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[4:7] offset:48 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[30:31], v[8:11] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[8:11] offset:32 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[32:33], v[12:15] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[12:15] offset:16 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[34:35], v[16:19] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[20:21], v[16:19] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[22:23] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:96 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:112 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:64 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:80 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:32 scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:48 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[26:27] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[24:25] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[30:31] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[28:29] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[34:35] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[32:33] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[20:21] offset:16 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    s_endpgm
 bb:

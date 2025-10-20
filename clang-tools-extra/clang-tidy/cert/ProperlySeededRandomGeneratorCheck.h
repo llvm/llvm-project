@@ -33,7 +33,7 @@ private:
   void checkSeed(const ast_matchers::MatchFinder::MatchResult &Result,
                  const T *Func);
 
-  std::string RawDisallowedSeedTypes;
+  StringRef RawDisallowedSeedTypes;
   SmallVector<StringRef, 5> DisallowedSeedTypes;
 };
 

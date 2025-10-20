@@ -6,11 +6,13 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+conditional-cmv-fusion,+c,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=CMOV,CMOV-ZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
+; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-NOC %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+c -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND %s
+; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-NOZICOND,SFB-NOZICOND-C %s
 ; RUN: llc -mtriple=riscv64 -mattr=+short-forward-branch-opt,+zicond -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=SHORT_FORWARD,SFB-ZICOND %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli,+zca,+short-forward-branch-opt,+conditional-cmv-fusion -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 ; The conditional move optimization in sifive-p450 requires that only a
 ; single c.mv instruction appears in the branch shadow.
@@ -42,6 +44,14 @@ define signext i32 @test1(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; SHORT_FORWARD-NEXT:    xor a0, a0, a1
 ; SHORT_FORWARD-NEXT:  .LBB0_2:
 ; SHORT_FORWARD-NEXT:    ret
+;
+; RV32IXQCI-LABEL: test1:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    bnez a2, .LBB0_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB0_2:
+; RV32IXQCI-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = xor i32 %x, %y
   %b = select i1 %c, i32 %a, i32 %x
@@ -73,6 +83,14 @@ define signext i32 @test2(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; SHORT_FORWARD-NEXT:    xor a0, a0, a1
 ; SHORT_FORWARD-NEXT:  .LBB1_2:
 ; SHORT_FORWARD-NEXT:    ret
+;
+; RV32IXQCI-LABEL: test2:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    beqz a2, .LBB1_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB1_2:
+; RV32IXQCI-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = xor i32 %x, %y
   %b = select i1 %c, i32 %x, i32 %a
@@ -120,6 +138,19 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; SHORT_FORWARD-NEXT:  .LBB2_4:
 ; SHORT_FORWARD-NEXT:    addw a0, a0, a2
 ; SHORT_FORWARD-NEXT:    ret
+;
+; RV32IXQCI-LABEL: test3:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    beqz a4, .LBB2_2
+; RV32IXQCI-NEXT:  # %bb.1:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB2_2:
+; RV32IXQCI-NEXT:    beqz a4, .LBB2_4
+; RV32IXQCI-NEXT:  # %bb.3:
+; RV32IXQCI-NEXT:    xor a2, a2, a3
+; RV32IXQCI-NEXT:  .LBB2_4:
+; RV32IXQCI-NEXT:    add a0, a0, a2
+; RV32IXQCI-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = xor i32 %v, %w
   %b = select i1 %c, i32 %v, i32 %a
@@ -167,6 +198,13 @@ define signext i32 @test4(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; SFB-ZICOND-NEXT:    li a0, 3
 ; SFB-ZICOND-NEXT:    czero.nez a0, a0, a2
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: test4:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    mv a0, a2
+; RV32IXQCI-NEXT:    li a1, 3
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 0, a1, 0
+; RV32IXQCI-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %a = select i1 %c, i32 3, i32 0
   ret i32 %a
@@ -199,6 +237,15 @@ define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; SHORT_FORWARD-NEXT:    xori a0, a0, 43
 ; SHORT_FORWARD-NEXT:  .LBB4_2: # %entry
 ; SHORT_FORWARD-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_xor_1:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a1, a1, 1
+; RV32IXQCI-NEXT:    beqz a1, .LBB4_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    xori a0, a0, 43
+; RV32IXQCI-NEXT:  .LBB4_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp eq i8 %and, 0
@@ -236,6 +283,15 @@ define i16 @select_xor_1b(i16 %A, i8 %cond) {
 ; SHORT_FORWARD-NEXT:    xori a0, a0, 43
 ; SHORT_FORWARD-NEXT:  .LBB5_2: # %entry
 ; SHORT_FORWARD-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_xor_1b:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a1, a1, 1
+; RV32IXQCI-NEXT:    beqz a1, .LBB5_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    xori a0, a0, 43
+; RV32IXQCI-NEXT:  .LBB5_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp ne i8 %and, 1
@@ -263,6 +319,24 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB6_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_xor_2:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB6_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    xor a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB6_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_xor_2:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB6_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    xor a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB6_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_xor_2:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -271,6 +345,15 @@ define i32 @select_xor_2(i32 %A, i32 %B, i8 %cond) {
 ; SFB-ZICOND-NEXT:    xor a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB6_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_xor_2:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB6_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB6_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp eq i8 %and, 0
@@ -300,6 +383,24 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB7_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_xor_2b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB7_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    xor a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB7_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_xor_2b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB7_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    xor a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB7_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_xor_2b:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -308,6 +409,15 @@ define i32 @select_xor_2b(i32 %A, i32 %B, i8 %cond) {
 ; SFB-ZICOND-NEXT:    xor a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB7_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_xor_2b:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB7_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB7_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp ne i8 %and, 1
@@ -335,6 +445,24 @@ define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB8_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_or:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB8_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB8_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB8_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB8_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_or:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -343,6 +471,15 @@ define i32 @select_or(i32 %A, i32 %B, i8 %cond) {
 ; SFB-ZICOND-NEXT:    or a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB8_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_or:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB8_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    or a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB8_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp eq i8 %and, 0
@@ -372,6 +509,24 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; CMOV-NEXT:  .LBB9_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_or_b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB9_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB9_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB9_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB9_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_or_b:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -380,6 +535,15 @@ define i32 @select_or_b(i32 %A, i32 %B, i8 %cond) {
 ; SFB-ZICOND-NEXT:    or a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB9_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_or_b:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB9_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    or a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB9_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i8 %cond, 1
  %cmp10 = icmp ne i8 %and, 1
@@ -407,6 +571,24 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; CMOV-NEXT:  .LBB10_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_or_1:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB10_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB10_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_1:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB10_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB10_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_or_1:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -415,6 +597,15 @@ define i32 @select_or_1(i32 %A, i32 %B, i32 %cond) {
 ; SFB-ZICOND-NEXT:    or a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB10_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_or_1:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB10_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    or a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB10_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i32 %cond, 1
  %cmp10 = icmp eq i32 %and, 0
@@ -444,6 +635,24 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; CMOV-NEXT:  .LBB11_2: # %entry
 ; CMOV-NEXT:    ret
 ;
+; SFB-NOZICOND-NOC-LABEL: select_or_1b:
+; SFB-NOZICOND-NOC:       # %bb.0: # %entry
+; SFB-NOZICOND-NOC-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-NOC-NEXT:    beqz a2, .LBB11_2
+; SFB-NOZICOND-NOC-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-NOC-NEXT:    or a0, a1, a0
+; SFB-NOZICOND-NOC-NEXT:  .LBB11_2: # %entry
+; SFB-NOZICOND-NOC-NEXT:    ret
+;
+; SFB-NOZICOND-C-LABEL: select_or_1b:
+; SFB-NOZICOND-C:       # %bb.0: # %entry
+; SFB-NOZICOND-C-NEXT:    andi a2, a2, 1
+; SFB-NOZICOND-C-NEXT:    beqz a2, .LBB11_2
+; SFB-NOZICOND-C-NEXT:  # %bb.1: # %entry
+; SFB-NOZICOND-C-NEXT:    or a0, a0, a1
+; SFB-NOZICOND-C-NEXT:  .LBB11_2: # %entry
+; SFB-NOZICOND-C-NEXT:    ret
+;
 ; SFB-ZICOND-LABEL: select_or_1b:
 ; SFB-ZICOND:       # %bb.0: # %entry
 ; SFB-ZICOND-NEXT:    andi a2, a2, 1
@@ -452,6 +661,15 @@ define i32 @select_or_1b(i32 %A, i32 %B, i32 %cond) {
 ; SFB-ZICOND-NEXT:    or a0, a1, a0
 ; SFB-ZICOND-NEXT:  .LBB11_2: # %entry
 ; SFB-ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_or_1b:
+; RV32IXQCI:       # %bb.0: # %entry
+; RV32IXQCI-NEXT:    andi a2, a2, 1
+; RV32IXQCI-NEXT:    beqz a2, .LBB11_2
+; RV32IXQCI-NEXT:  # %bb.1: # %entry
+; RV32IXQCI-NEXT:    or a0, a0, a1
+; RV32IXQCI-NEXT:  .LBB11_2: # %entry
+; RV32IXQCI-NEXT:    ret
 entry:
  %and = and i32 %cond, 1
  %cmp10 = icmp ne i32 %and, 1

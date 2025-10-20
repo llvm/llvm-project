@@ -213,6 +213,7 @@ def build_fn_matchinfo :
 GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
+def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -694,6 +695,7 @@ def constant_fold_fabs : constant_fold_unary_fp_op_rule<G_FABS>;
 def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
+def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -712,6 +714,7 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_fsqrt,
   constant_fold_flog2,
   constant_fold_fptrunc,
+  constant_fold_fpext,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -1415,6 +1418,14 @@ def combine_minmax_nan: GICombineRule<
   (match (wip_match_opcode G_FMINNUM, G_FMAXNUM, G_FMINIMUM, G_FMAXIMUM):$root,
          [{ return Helper.matchCombineFMinMaxNaN(*${root}, ${info}); }]),
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${info}); }])>;
+
+// Combine multiple FDIVs with the same divisor into multiple FMULs by the
+// reciprocal.
+def fdiv_repeated_divison: GICombineRule<
+  (defs root:$root, mi_vector_matchinfo:$matchinfo),
+  (match (G_FDIV $dst, $src1, $src2):$root,
+         [{ return Helper.matchRepeatedFPDivisor(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyRepeatedFPDivisor(${matchinfo}); }])>;
 
 // Transform (add x, (sub y, x)) -> y
 // Transform (add (sub y, x), x) -> y
@@ -2139,7 +2150,8 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     constant_fold_cast_op, fabs_fneg_fold,
     mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    intrem_combines, intdiv_combines, sub_add_reg, select_to_minmax,
+    intrem_combines, intdiv_combines, fdiv_repeated_divison,
+    sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,

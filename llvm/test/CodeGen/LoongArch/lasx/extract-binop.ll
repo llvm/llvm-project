@@ -31,12 +31,18 @@ entry:
 }
 
 define i32 @extractelt_add_v8i32(ptr %p) {
-; CHECK-LABEL: extractelt_add_v8i32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvaddi.wu $xr0, $xr0, 13
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; CHECK-NEXT:    ret
+; LA32-LABEL: extractelt_add_v8i32:
+; LA32:       # %bb.0: # %entry
+; LA32-NEXT:    ld.w $a0, $a0, 8
+; LA32-NEXT:    addi.w $a0, $a0, 13
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: extractelt_add_v8i32:
+; LA64:       # %bb.0: # %entry
+; LA64-NEXT:    xvld $xr0, $a0, 0
+; LA64-NEXT:    xvaddi.wu $xr0, $xr0, 13
+; LA64-NEXT:    xvpickve2gr.w $a0, $xr0, 2
+; LA64-NEXT:    ret
 entry:
   %x = load <8 x i32>, ptr %p
   %add = add <8 x i32> %x, <i32 11, i32 12, i32 13, i32 14, i32 11, i32 12, i32 13, i32 14>
@@ -55,9 +61,8 @@ define i64 @extractelt_add_v4i64(ptr %p) {
 ;
 ; LA64-LABEL: extractelt_add_v4i64:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    xvaddi.du $xr0, $xr0, 12
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 1
+; LA64-NEXT:    ld.d $a0, $a0, 8
+; LA64-NEXT:    addi.d $a0, $a0, 12
 ; LA64-NEXT:    ret
 entry:
   %x = load <4 x i64>, ptr %p
@@ -69,12 +74,9 @@ entry:
 define float @extractelt_fadd_v8f32(ptr %p) {
 ; CHECK-LABEL: extractelt_fadd_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    lu12i.w $a0, 267520
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
-; CHECK-NEXT:    xvfadd.s $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 2
-; CHECK-NEXT:    # kill: def $f0 killed $f0 killed $xr0
+; CHECK-NEXT:    fld.s $fa0, $a0, 8
+; CHECK-NEXT:    vldi $vr1, -1238
+; CHECK-NEXT:    fadd.s $fa0, $fa0, $fa1
 ; CHECK-NEXT:    ret
 entry:
   %x = load <8 x float>, ptr %p
@@ -84,27 +86,12 @@ entry:
 }
 
 define double @extractelt_fadd_v4f64(ptr %p) {
-; LA32-LABEL: extractelt_fadd_v4f64:
-; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    xvld $xr0, $a0, 0
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI5_0)
-; LA32-NEXT:    xvfadd.d $xr0, $xr0, $xr1
-; LA32-NEXT:    xvpickve.d $xr0, $xr0, 1
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
-; LA32-NEXT:    ret
-;
-; LA64-LABEL: extractelt_fadd_v4f64:
-; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    xvld $xr0, $a0, 0
-; LA64-NEXT:    ori $a0, $zero, 0
-; LA64-NEXT:    lu32i.d $a0, -524288
-; LA64-NEXT:    lu52i.d $a0, $a0, 1026
-; LA64-NEXT:    xvreplgr2vr.d $xr1, $a0
-; LA64-NEXT:    xvfadd.d $xr0, $xr0, $xr1
-; LA64-NEXT:    xvpickve.d $xr0, $xr0, 1
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $xr0
-; LA64-NEXT:    ret
+; CHECK-LABEL: extractelt_fadd_v4f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fld.d $fa0, $a0, 8
+; CHECK-NEXT:    vldi $vr1, -984
+; CHECK-NEXT:    fadd.d $fa0, $fa0, $fa1
+; CHECK-NEXT:    ret
 entry:
   %x = load <4 x double>, ptr %p
   %add = fadd <4 x double> %x, <double 11.0, double 12.0, double 13.0, double 14.0>

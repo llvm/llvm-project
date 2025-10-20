@@ -20,9 +20,11 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -389,7 +391,8 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     // Load result or Store valye Type can be vector or scalar.
     Type valOrResTy;
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>)
-      valOrResTy = op.getResult().getType();
+      valOrResTy =
+          this->getTypeConverter()->convertType(op.getResult().getType());
     else
       valOrResTy = adaptor.getValue().getType();
     VectorType valOrResVecTy = dyn_cast<VectorType>(valOrResTy);
@@ -774,9 +777,7 @@ struct ConvertXeGPUToXeVMPass
       if (rank < 1 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
-      int64_t sum =
-          std::accumulate(type.getShape().begin(), type.getShape().end(),
-                          int64_t{1}, std::multiplies<int64_t>());
+      int64_t sum = llvm::product_of(type.getShape());
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
@@ -879,10 +880,30 @@ struct ConvertXeGPUToXeVMPass
       }
       return {};
     };
-    typeConverter.addSourceMaterialization(memrefMaterializationCast);
-    typeConverter.addSourceMaterialization(ui64MaterializationCast);
-    typeConverter.addSourceMaterialization(ui32MaterializationCast);
-    typeConverter.addSourceMaterialization(vectorMaterializationCast);
+
+    // If result type of original op is single element vector and lowered type
+    // is scalar. This materialization cast creates a single element vector by
+    // broadcasting the scalar value.
+    auto singleElementVectorMaterializationCast =
+        [](OpBuilder &builder, Type type, ValueRange inputs,
+           Location loc) -> Value {
+      if (inputs.size() != 1)
+        return {};
+      auto input = inputs.front();
+      if (input.getType().isIntOrIndexOrFloat()) {
+        // If the input is a scalar, and the target type is a vector of single
+        // element, create a single element vector by broadcasting.
+        if (auto vecTy = dyn_cast<VectorType>(type)) {
+          if (vecTy.getNumElements() == 1) {
+            return vector::BroadcastOp::create(builder, loc, vecTy, input)
+                .getResult();
+          }
+        }
+      }
+      return {};
+    };
+    typeConverter.addSourceMaterialization(
+        singleElementVectorMaterializationCast);
     typeConverter.addTargetMaterialization(memrefMaterializationCast);
     typeConverter.addTargetMaterialization(ui32MaterializationCast);
     typeConverter.addTargetMaterialization(ui64MaterializationCast);
