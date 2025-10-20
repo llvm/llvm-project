@@ -5343,7 +5343,7 @@ private:
             unsigned &OpCnt =
                 OrderedEntriesCount.try_emplace(TE, 0).first->getSecond();
             EdgeInfo EI(TE, U.getOperandNo());
-            if (!getScheduleCopyableData(EI, Op) && OpCnt < NumOps)
+            if (!getScheduleCopyableData(EI, Op))
               continue;
             // Found copyable operand - continue.
             ++OpCnt;
