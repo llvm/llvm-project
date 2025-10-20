@@ -86,6 +86,13 @@ public:
     CHECK(parent_ != this);
     return *parent_;
   }
+
+  mapType &commonBlocks() { return commonBlocks_; }
+  const mapType &commonBlocks() const { return commonBlocks_; }
+
+  mapType &commonBlockUses() { return commonBlockUses_; }
+  const mapType &commonBlockUses() const { return commonBlockUses_; }
+
   Kind kind() const { return kind_; }
   bool IsGlobal() const { return kind_ == Kind::Global; }
   bool IsIntrinsicModules() const { return kind_ == Kind::IntrinsicModules; }
@@ -186,11 +193,8 @@ public:
   // Cray pointers are saved as map of pointee name -> pointer symbol
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
-  mapType &commonBlocks() { return commonBlocks_; }
-  const mapType &commonBlocks() const { return commonBlocks_; }
   Symbol &MakeCommonBlock(SourceName, SourceName location);
   bool AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol);
-  mapType &commonBlockUses() { return commonBlockUses_; }
 
   // Find COMMON block that is declared in the current scope
   Symbol *FindCommonBlock(const SourceName &name) const {
