@@ -5721,40 +5721,8 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       return Cost;
   }
 
-  // FIXME:
-  // 1. Do cost modelling for USDOT.
-  // 2. Refactor the whole code here.
-  if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {
-    if (AccumLT.second.getScalarType() == MVT::i32 &&
-        InputLT.second.getScalarType() == MVT::i16) {
-      // i16 -> i32 is supported in SVE 2.1
-      if (ST->hasSVE2p1())
-        return Cost;
-      // umlalt + umlalb. Same goes for signed types.
-      return Cost + 1;
-    }
-    if (AccumLT.second.getScalarType() == MVT::i64 &&
-        InputLT.second.getScalarType() == MVT::i32)
-      return Cost + 1;
-  }
-  if (AccumLT.second.isFixedLengthVector() && ST->isNeonAvailable() &&
-      ST->hasDotProd() && !IsUSDot) {
-    // umull + umull2 + (2 * uaddw) + (2 * uaddw2). Same goes for signed types.
-    if (AccumLT.second.getScalarType() == MVT::i64 &&
-        InputLT.second.getScalarType() == MVT::i16)
-      return Cost + 5;
-    // umlal + umlal2. Same goes for signed types.
-    if ((AccumLT.second.getScalarType() == MVT::i32 &&
-         InputLT.second.getScalarType() == MVT::i16) ||
-        (AccumLT.second.getScalarType() == MVT::i64 &&
-         InputLT.second.getScalarType() == MVT::i32))
-      return Cost + 1;
-  }
-
-  // FIXME: This should be more expensive for NEON as we see fmov instructions
-  // with very low throughput.
   // Add additional cost for the extends that would need to be inserted.
-  return Cost + 4;
+  return Cost + 2;
 }
 
 InstructionCost
