@@ -6937,7 +6937,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
-      if (isa<VPPartialReductionRecipe>(&R))
+      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R);
+          VPR && VPR->isPartialReduction())
         return true;
 
       // The VPlan-based cost model can analyze if recipes are scalar
@@ -8056,11 +8057,15 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
       // If the PHI is used by a partial reduction, set the scale factor.
+      bool UseInLoopReduction = CM.isInLoopReduction(Phi);
+      bool UseOrderedReductions = CM.useOrderedReductions(RdxDesc);
       unsigned ScaleFactor =
-          getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
-      PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
-          CM.useOrderedReductions(RdxDesc), ScaleFactor);
+          (UseOrderedReductions || UseInLoopReduction)
+              ? 0
+              : getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
+      PhiRecipe =
+          new VPReductionPHIRecipe(Phi, RdxDesc.getRecurrenceKind(), *StartV,
+                                   UseOrderedReductions, ScaleFactor);
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
       // first-order recurrences. If there are no users of the intermediate
@@ -8128,7 +8133,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
   VPValue *Accumulator = Operands[1];
   VPRecipeBase *BinOpRecipe = BinOp->getDefiningRecipe();
   if (isa<VPReductionPHIRecipe>(BinOpRecipe) ||
-      isa<VPPartialReductionRecipe>(BinOpRecipe))
+      (isa<VPReductionRecipe>(BinOpRecipe) &&
+       cast<VPReductionRecipe>(BinOpRecipe)->isPartialReduction()))
     std::swap(BinOp, Accumulator);
 
   if (ScaleFactor !=
@@ -8153,12 +8159,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
            "Expected an ADD or SUB operation for predicated partial "
            "reductions (because the neutral element in the mask is zero)!");
     Cond = getBlockInMask(Builder.getInsertBlock());
-    VPValue *Zero =
-        Plan.getOrAddLiveIn(ConstantInt::get(Reduction->getType(), 0));
-    BinOp = Builder.createSelect(Cond, BinOp, Zero, Reduction->getDebugLoc());
   }
-  return new VPPartialReductionRecipe(ReductionOpcode, Accumulator, BinOp, Cond,
-                                      ScaleFactor, Reduction);
+
+  return new VPReductionRecipe(RecurKind::Add, FastMathFlags(), Reduction,
+                               Accumulator, BinOp, Cond, false, ScaleFactor);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8669,9 +8673,11 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       FastMathFlags FMFs = isa<FPMathOperator>(CurrentLinkI)
                                ? RdxDesc.getFastMathFlags()
                                : FastMathFlags();
+      bool UseOrderedReductions = PhiR->isOrdered();
+      unsigned VFScaleFactor = !UseOrderedReductions;
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
-          PhiR->isOrdered(), CurrentLinkI->getDebugLoc());
+          UseOrderedReductions, VFScaleFactor, CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
@@ -8706,8 +8712,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // Don't output selects for partial reductions because they have an output
     // with fewer lanes than the VF. So the operands of the select would have
     // different numbers of lanes. Partial reductions mask the input instead.
+    auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
-        !isa<VPPartialReductionRecipe>(OrigExitingVPV->getDefiningRecipe())) {
+        (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
