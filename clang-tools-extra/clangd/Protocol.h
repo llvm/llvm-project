@@ -1628,8 +1628,10 @@ struct CallHierarchyIncomingCall {
   /// This is relative to the caller denoted by `From`.
   std::vector<Range> fromRanges;
 
-  /// This caller might be a false positive.
-  /// We currently have no way of 100% confirming this.
+  /// For the case of being a virtual function we also return calls
+  /// to the base function. This caller might be a false positive.
+  /// We currently have no way of discerning this.
+  /// This is a clangd exntesion.
   bool mightNeverCall = false;
 };
 llvm::json::Value toJSON(const CallHierarchyIncomingCall &);

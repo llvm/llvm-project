@@ -153,7 +153,7 @@ private:
   static_assert(sizeof(RelationKind) == sizeof(uint8_t),
                 "RelationKind should be of same size as a uint8_t");
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>> Relations;
-  // Reverse relations, currently only for OverridenBy
+  // Reverse relations, currently only for OverriddenBy
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>>
       ReverseRelations;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
