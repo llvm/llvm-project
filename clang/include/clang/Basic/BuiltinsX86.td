@@ -334,8 +334,8 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, RequiredVectorWidth<128>]
   def dpps : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Constant char)">;
   def dppd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, "
                         "_Vector<2,double>, _Constant char)">;
-  def mpsadbw128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, _Vector<16, char>, _Constant char)">;
-  def phminposuw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>)">;
+  def mpsadbw128 : X86Builtin<"_Vector<16, char>(_Vector<16, char>, "
+                              "_Vector<16, char>, _Constant char)">;
 }
 
 let Features = "sse4.1",
@@ -358,6 +358,7 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVector
 
   def pmuldq128 : X86Builtin<"_Vector<2, long long int>(_Vector<4, int>, _Vector<4, int>)">;
   def packusdw128 : X86Builtin<"_Vector<8, short>(_Vector<4, int>, _Vector<4, int>)">;
+  def phminposuw128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>)">;
 
   def vec_ext_v16qi : X86Builtin<"char(_Vector<16, char>, _Constant int)">;
   def vec_set_v16qi : X86Builtin<"_Vector<16, char>(_Vector<16, char>, char, _Constant int)">;
