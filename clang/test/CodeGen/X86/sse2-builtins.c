@@ -852,6 +852,7 @@ __m128i test_mm_madd_epi16(__m128i A, __m128i B) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_madd_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_madd_epi16((__m128i)(__v8hi){1, 2, 3, 4, 5, 6, 7, 8}, (__m128i)(__v8hi){9, 10, 11, 12, 13, 14, 15, 16}), 29, 81, 149, 233));
 
 void test_mm_maskmoveu_si128(__m128i A, __m128i B, char* C) {
   // CHECK-LABEL: test_mm_maskmoveu_si128
@@ -955,12 +956,17 @@ int test_mm_movemask_epi8(__m128i A) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %{{.*}})
   return _mm_movemask_epi8(A);
 }
+TEST_CONSTEXPR(_mm_movemask_epi8((__m128i)(__v16qu){0x7F,0x80,0x01,0xFF,0x00,0xAA,0x55,0xC3,0x12,0x8E,0x00,0xFE,0x7E,0x81,0xFF,0x01}) == 0x6AAA);
+TEST_CONSTEXPR(_mm_movemask_epi8((__m128i)(__v4si){(int)0x80FF00AA,(int)0x7F0183E1,(int)0xDEADBEEF,(int)0xC0000001}) == 0x8F3D);
+TEST_CONSTEXPR(_mm_movemask_epi8((__m128i)(__v2du){0xFF00000000000080ULL,0x7F010203040506C3ULL}) == 0x181);
 
 int test_mm_movemask_pd(__m128d A) {
   // CHECK-LABEL: test_mm_movemask_pd
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %{{.*}})
   return _mm_movemask_pd(A);
 }
+TEST_CONSTEXPR(_mm_movemask_pd((__m128d)(__v2df){-12345.67890123, 4567.89012345}) == 0x1);
+TEST_CONSTEXPR(_mm_movemask_pd((__m128d)(__v2df){0.0000987654321, 09876.5432109876}) == 0x0);
 
 __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_mul_epu32

@@ -556,3 +556,11 @@ functions:
     arguments:
       - type: unsigned long accum
     guard: LIBC_COMPILER_HAS_FIXED_POINT
+  - name: rdivi
+    standards:
+      - stdc_ext
+    return_type: fract
+    arguments:
+      - type: int
+      - type: int
+    guard: LIBC_COMPILER_HAS_FIXED_POINT
