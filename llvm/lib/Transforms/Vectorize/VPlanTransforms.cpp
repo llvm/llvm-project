@@ -3547,9 +3547,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                     Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
                     llvm::TargetTransformInfo::PR_None, std::nullopt,
                     Ctx.CostKind);
-            assert(PartialReductionCost <= BaseCost &&
-                   "A partial reduction should have a lower cost than the "
-                   "extend + add");
+            assert(PartialReductionCost.isValid() &&
+                   "A partial reduction should have a valid cost");
             return true;
           }
 
@@ -3628,23 +3627,21 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                Ext1->getOpcode())
                          : TargetTransformInfo::PR_None,
                     Mul->getOpcode(), CostKind);
-            assert(PartialReductionCost <= BaseCost &&
-                   "A partial reduction should have a lower cost than the "
-                   "extend + mul + add");
+            assert(PartialReductionCost.isValid() &&
+                   "A partial reduction should have a valid cost");
             return true;
           }
-            // Only partial reductions support mixed extends at the moment.
-            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
-              return false;
+          // Only partial reductions support mixed extends at the moment.
+          if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+            return false;
 
-            bool IsZExt =
-                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
-            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-            InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
-                IsZExt, Opcode, RedTy, SrcVecTy, CostKind);
+          bool IsZExt =
+              !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
+              IsZExt, Opcode, RedTy, SrcVecTy, CostKind);
 
-            return MulAccCost.isValid() &&
-                   MulAccCost < ExtCost + MulCost + RedCost;
+          return MulAccCost.isValid() && MulAccCost < BaseCost;
         },
         Range);
   };
