@@ -234,7 +234,7 @@ public:
                              const Value *Stride, const SCEV *Base = nullptr) {
       bool IsConstantBase = false;
       bool IsZeroBase = false;
-      // When evaluating the efficiency of a rewrite, if the Basis's SCEV is
+      // When evaluating the efficiency of a rewrite, if the Base's SCEV is
       // not available, conservatively assume the base is not constant.
       if (auto *ConstBase = dyn_cast_or_null<SCEVConstant>(Base)) {
         IsConstantBase = true;
@@ -248,7 +248,7 @@ public:
       if (IsConstantBase && IsConstantStride)
         return ZeroInst;
 
-      // [(Base + Index) * Stride]
+      // (Base + Index) * Stride
       if (CandidateKind == Mul) {
         if (IsZeroStride)
           return ZeroInst;
@@ -303,16 +303,16 @@ public:
       // Base and Stride delta need context info to evaluate the register
       // pressure impact from variable delta.
       return getComputationEfficiency(CandidateKind, Index, Stride, Base) <=
-             getRewriteProfit(Delta, DeltaKind);
+             getRewriteEfficiency(Delta, DeltaKind);
     }
 
-    // Evaluate the rewrite profit of this candidate with its Basis
-    EfficiencyLevel getRewriteProfit() const {
-      return Basis ? getRewriteProfit(Delta, DeltaKind) : Unknown;
+    // Evaluate the rewrite efficiency of this candidate with its Basis
+    EfficiencyLevel getRewriteEfficiency() const {
+      return Basis ? getRewriteEfficiency(Delta, DeltaKind) : Unknown;
     }
 
-    // Evaluate the rewrite profit of this candidate with a given delta
-    EfficiencyLevel getRewriteProfit(const Value *Delta,
+    // Evaluate the rewrite efficiency of this candidate with a given delta
+    EfficiencyLevel getRewriteEfficiency(const Value *Delta,
                                      const DKind DeltaKind) const {
       switch (DeltaKind) {
       case BaseDelta: // [X + Delta]
@@ -888,12 +888,12 @@ auto StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const
     return nullptr;
 
   Candidate *BestC = nullptr;
-  unsigned BestProfit = 0;
+  EfficiencyLevel BestEfficiency = Unknown;
   for (Candidate *C : reverse(It->second))
     if (C->Basis) {
-      unsigned Profit = C->getRewriteProfit();
-      if (Profit > BestProfit) {
-        BestProfit = Profit;
+      auto Efficiency = C->getRewriteEfficiency();
+      if (Efficiency > BestEfficiency) {
+        BestEfficiency = Efficiency;
         BestC = C;
       }
     }
