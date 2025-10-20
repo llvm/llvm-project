@@ -183,8 +183,24 @@ Scope *Scope::FindSubmodule(const SourceName &name) const {
   }
 }
 
-bool Scope::AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol) {
-  return commonBlockUses_.emplace(name, cbSymbol).second;
+bool Scope::AddOrUpdateCommonBlockUse(const SourceName &name, Attrs attrs, Symbol& cbUltimate) {
+  CHECK(cbUltimate.has<CommonBlockDetails>());
+  if (Symbol *cb{FindCommonBlockUse(name)}) {
+    // We already stored UseDetails from the previous encounter with the
+    // same named COMMON block (perhaps it came from a different module).
+    // Ensure that we store USE association to the largest COMMON block,
+    // which is presumably is better defined.
+    Symbol &cbExistingUltimate{cb->GetUltimate()};
+    if (cbExistingUltimate.size() < cbUltimate.size()) {
+      cb->set_details(UseDetails{name, cbUltimate});
+    }
+    return true;
+  } else {
+    // Make a symbol, but don't add it to the Scope, since it needs to
+    // be added to the USE-associated COMMON blocks
+    Symbol &useCB{MakeSymbol(name, attrs, UseDetails{name, cbUltimate})};
+    return commonBlockUses_.emplace(name, useCB).second;
+  }
 }
 
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {

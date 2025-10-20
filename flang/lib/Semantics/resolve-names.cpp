@@ -3631,22 +3631,14 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
   // their USE association to the current scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
     if (!currScope().FindCommonBlockInVisibleScopes(name)) {
-      // Make a symbol, but don't add it to the Scope, since it needs to
-      // be added to the USE-associated COMMON blocks
-      Symbol &localCB{currScope().MakeSymbol(
-          name, symbol->attrs(), UseDetails{name, symbol->GetUltimate()})};
-      currScope().AddCommonBlockUse(name, localCB);
+      currScope().AddOrUpdateCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
     }
   }
   // Go through the list of USE-associated COMMON block symbols in the module
   // scope and add USE associations to their ultimate symbols to the current
   // scope's USE-associated COMMON blocks.
   for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
-    // Make a symbol, but don't add it to the Scope, since it needs to
-    // be added to the USE-associated COMMON blocks
-    Symbol &localCB{currScope().MakeSymbol(
-        name, symbol->attrs(), UseDetails{name, symbol->GetUltimate()})};
-    currScope().AddCommonBlockUse(name, localCB);
+    currScope().AddOrUpdateCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
   useModuleScope_ = nullptr;
 }

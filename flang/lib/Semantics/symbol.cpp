@@ -373,7 +373,16 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             },
             [&](const UseDetails &x) {
               const auto *use{this->detailsIf<UseDetails>()};
-              return use && use->symbol() == x.symbol();
+              if (!use) {
+                return false;
+              } else if (use->symbol().detailsIf<CommonBlockDetails>() &&
+                  x.symbol().detailsIf<CommonBlockDetails>()) {
+                // Allow to replace UseDetails, if they both refer to COMMON
+                // symbol with the same name.
+                return use->symbol().name() == x.symbol().name();
+              } else {
+                return use->symbol() == x.symbol();
+              }
             },
             [&](const HostAssocDetails &) { return has<HostAssocDetails>(); },
             [&](const UserReductionDetails &) {

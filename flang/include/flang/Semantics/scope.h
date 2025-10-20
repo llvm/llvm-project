@@ -194,7 +194,7 @@ public:
   const mapType &crayPointers() const { return crayPointers_; }
   void add_crayPointer(const SourceName &, Symbol &);
   Symbol &MakeCommonBlock(SourceName, SourceName location);
-  bool AddCommonBlockUse(const SourceName &name, Symbol &cbSymbol);
+  bool AddOrUpdateCommonBlockUse(const SourceName &name, Attrs attrs, Symbol& cbUltimate);
 
   // Find COMMON block that is declared in the current scope
   Symbol *FindCommonBlock(const SourceName &name) const {
