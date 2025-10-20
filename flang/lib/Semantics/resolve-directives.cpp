@@ -1731,8 +1731,8 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     const parser::Name *name) {
   if (name) {
-    if (Symbol *cb{
-            GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
+    if (Symbol *
+        cb{GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
       name->symbol = cb;
       return cb;
     }
