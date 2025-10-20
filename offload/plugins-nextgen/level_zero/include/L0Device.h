@@ -106,19 +106,10 @@ public:
   L0DeviceTLSTy() = default;
   ~L0DeviceTLSTy() {
     // assert all fields are nullptr on destruction
-    assert(CmdList == nullptr && "CmdList is not nullptr on destruction");
-    assert(CopyCmdList == nullptr &&
-           "CopyCmdList is not nullptr on destruction");
-    assert(LinkCopyCmdList == nullptr &&
-           "LinkCopyCmdList is not nullptr on destruction");
-    assert(CmdQueue == nullptr && "CmdQueue is not nullptr on destruction");
-    assert(CopyCmdQueue == nullptr &&
-           "CopyCmdQueue is not nullptr on destruction");
-    assert(LinkCopyCmdQueue == nullptr &&
-           "LinkCopyCmdQueue is not nullptr on destruction");
-    assert(ImmCmdList == nullptr && "ImmCmdList is not nullptr on destruction");
-    assert(ImmCopyCmdList == nullptr &&
-           "ImmCopyCmdList is not nullptr on destruction");
+    assert(!CmdList && !CopyCmdList && !LinkCopyCmdList && !CmdQueue &&
+           !CopyCmdQueue && !LinkCopyCmdQueue && !ImmCmdList &&
+           !ImmCopyCmdList &&
+           "L0DeviceTLSTy destroyed without clearing resources");
   }
 
   L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
@@ -179,28 +170,28 @@ public:
   }
 
   auto getImmCmdList() const { return ImmCmdList; }
-  void setImmCmdList(ze_command_list_handle_t _ImmCmdList) {
-    ImmCmdList = _ImmCmdList;
+  void setImmCmdList(ze_command_list_handle_t ImmCmdListIn) {
+    ImmCmdList = ImmCmdListIn;
   }
 
   auto getImmCopyCmdList() const { return ImmCopyCmdList; }
-  void setImmCopyCmdList(ze_command_list_handle_t _ImmCopyCmdList) {
-    ImmCopyCmdList = _ImmCopyCmdList;
+  void setImmCopyCmdList(ze_command_list_handle_t ImmCopyCmdListIn) {
+    ImmCopyCmdList = ImmCopyCmdListIn;
   }
 
   auto getCmdQueue() const { return CmdQueue; }
-  void setCmdQueue(ze_command_queue_handle_t _CmdQueue) {
-    CmdQueue = _CmdQueue;
+  void setCmdQueue(ze_command_queue_handle_t CmdQueueIn) {
+    CmdQueue = CmdQueueIn;
   }
 
   auto getCopyCmdQueue() const { return CopyCmdQueue; }
-  void setCopyCmdQueue(ze_command_queue_handle_t _CopyCmdQueue) {
-    CopyCmdQueue = _CopyCmdQueue;
+  void setCopyCmdQueue(ze_command_queue_handle_t CopyCmdQueueIn) {
+    CopyCmdQueue = CopyCmdQueueIn;
   }
 
   auto getLinkCopyCmdQueue() const { return LinkCopyCmdQueue; }
-  void setLinkCopyCmdQueue(ze_command_queue_handle_t _LinkCopyCmdQueue) {
-    LinkCopyCmdQueue = _LinkCopyCmdQueue;
+  void setLinkCopyCmdQueue(ze_command_queue_handle_t LinkCopyCmdQueueIn) {
+    LinkCopyCmdQueue = LinkCopyCmdQueueIn;
   }
 };
 
@@ -611,18 +602,17 @@ public:
   hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
-                            AsyncInfoWrapperTy &AsyncInfo) override{
+                            AsyncInfoWrapperTy &AsyncInfo) override {
     return Plugin::error(ErrorCode::UNIMPLEMENTED,
                          "enqueueHostCallImpl not implemented yet");
   }
 
-  /* Event routines are used to ensure ordering between dataTransfers. Instead
-   * of adding extra events in the queues, we make sure they're ordered by
-   * using the events from the data submission APIs so we don't need to support
-   * these routines.
-   * They still need to report succes to indicate the event are handled
-   * somewhere waitEvent and syncEvent should remain unimplemented
-   */
+  // Event routines are used to ensure ordering between dataTransfers. Instead
+  // of adding extra events in the queues, we make sure they're ordered by
+  // using the events from the data submission APIs so we don't need to support
+  // these routines.
+  // They still need to report succes to indicate the event are handled
+  // somewhere waitEvent and syncEvent should remain unimplemented
   Expected<bool> isEventCompleteImpl(void *EventPtr,
                                      AsyncInfoWrapperTy &) override {
     return true;

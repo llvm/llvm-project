@@ -27,6 +27,10 @@ struct TgtLoopDescTy {
   int64_t Lb = 0;     // The lower bound of the i-th loop
   int64_t Ub = 0;     // The upper bound of the i-th loop
   int64_t Stride = 0; // The stride of the i-th loop
+
+  bool operator==(const TgtLoopDescTy &other) const {
+    return Lb == other.Lb && Ub == other.Ub && Stride == other.Stride;
+  }
 };
 
 struct TgtNDRangeDescTy {
@@ -34,6 +38,14 @@ struct TgtNDRangeDescTy {
   int32_t DistributeDim = 0; // Dimensions lower than this one
                              // must end up in one WG
   TgtLoopDescTy Levels[3];   // Up to 3 loops
+
+  bool operator==(const TgtNDRangeDescTy &other) const {
+    return NumLoops == other.NumLoops && DistributeDim == other.DistributeDim &&
+           std::equal(Levels, Levels + 3, other.Levels);
+  }
+  bool operator!=(const TgtNDRangeDescTy &other) const {
+    return !(*this == other);
+  }
 };
 
 /// Kernel properties.
@@ -63,9 +75,9 @@ struct KernelPropertiesTy {
                         uint32_t *GroupSizesOut,
                         ze_group_count_t &GroupCountsOut,
                         bool &AllowCooperativeOut) const {
-    if (!LoopDescPtr && memcmp(&LoopDescInit, &LoopDesc, sizeof(LoopDesc)))
+    if (!LoopDescPtr && LoopDescInit != LoopDesc)
       return false;
-    if (LoopDescPtr && memcmp(LoopDescPtr, &LoopDesc, sizeof(LoopDesc)))
+    if (LoopDescPtr && *LoopDescPtr != LoopDesc)
       return false;
     if (NumTeamsIn != NumTeams || ThreadLimitIn != ThreadLimit)
       return false;
@@ -145,9 +157,7 @@ public:
                          "maxGroupSize not implemented yet");
   }
 
-  ze_kernel_handle_t getZeKernel() const {
-    return zeKernel;
-  }
+  ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 
   int32_t getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
                          int32_t ThreadLimit, uint32_t *GroupSizes,
