@@ -181,7 +181,7 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  auto launchCommands = arguments.launchCommands;
+  const std::vector<std::string> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();
