@@ -45,7 +45,7 @@ Value RegionBuilderHelper::buildUnaryFn(
     auto one = arith::ConstantOp::create(builder, arg.getLoc(),
                                          llvm::cast<TypedAttr>(oneAttr));
     return arith::DivFOp::create(builder, arg.getLoc(), one, arg);
-  }  
+  }
   case UnaryFn::round:
     return math::RoundOp::create(builder, arg.getLoc(), arg);
   case UnaryFn::sqrt:
@@ -59,7 +59,7 @@ Value RegionBuilderHelper::buildUnaryFn(
   case UnaryFn::erf:
     return math::ErfOp::create(builder, arg.getLoc(), arg);
   }
-  
+
   if (emitError) {
     emitError() << "unsupported unary function";
     return nullptr;
