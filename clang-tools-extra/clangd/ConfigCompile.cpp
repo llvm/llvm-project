@@ -131,7 +131,7 @@ struct FragmentCompiler {
       return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
-    llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
+    llvm::sys::path::make_absolute(FragmentDirectory, AbsPath);
     llvm::sys::path::native(AbsPath, Style);
     return AbsPath.str().str();
   }

@@ -579,7 +579,8 @@ TEST(CompilerInvocation, SplitSwarfSingleCrash) {
 
 TEST(ToolChainTest, UEFICallingConventionTest) {
   clang::CompilerInstance compiler;
-  compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  compiler.createDiagnostics();
 
   std::string TrStr = "x86_64-unknown-uefi";
   llvm::Triple Tr(TrStr);

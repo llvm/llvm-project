@@ -282,10 +282,11 @@ void dependencies::addReversePrefixMappingFileSystem(
   llvm::PrefixMapper ReverseMapper;
   ReverseMapper.addInverseRange(PrefixMapper.getMappings());
   ReverseMapper.sort();
-  std::unique_ptr<llvm::vfs::FileSystem> FS =
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
       llvm::vfs::createPrefixMappingFileSystem(
           std::move(ReverseMapper), &ScanInstance.getVirtualFileSystem());
 
+  ScanInstance.setVirtualFileSystem(FS);
   ScanInstance.getFileManager().setVirtualFileSystem(std::move(FS));
 }
 
