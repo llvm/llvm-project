@@ -106,7 +106,7 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    s_mov_b32 s13, s2
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_or_b64 s[8:9], s[8:9], s[12:13]
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_LU scope:SCOPE_SYS
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b32 s13, s[4:5], 0x30
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
