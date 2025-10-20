@@ -2734,15 +2734,15 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
     S.Diag(D.Loc, D.PD);
 }
 
+template <typename Iterator>
 void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
-    AnalysisDeclContext &AC,
-    SmallVector<clang::sema::PossiblyUnreachableDiag, 4> PUDs) {
+    AnalysisDeclContext &AC, std::pair<Iterator, Iterator> PUDs) {
 
-  if (PUDs.empty())
+  if (PUDs.first == PUDs.second)
     return;
 
-  for (const auto &D : PUDs) {
-    for (const Stmt *S : D.Stmts)
+  for (auto I = PUDs.first; I != PUDs.second; ++I) {
+    for (const Stmt *S : I->Stmts)
       AC.registerForcedBlockExpression(S);
   }
 
@@ -2750,7 +2750,8 @@ void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
     CFGReverseBlockReachabilityAnalysis *Analysis =
         AC.getCFGReachablityAnalysis();
 
-    for (const auto &D : PUDs) {
+    for (auto I = PUDs.first; I != PUDs.second; ++I) {
+      const auto &D = *I;
       if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
             const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
             if (Block && Analysis)
@@ -2762,14 +2763,14 @@ void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
       }
     }
   } else {
-    for (const auto &D : PUDs)
-      S.Diag(D.Loc, D.PD);
+    for (auto I = PUDs.first; I != PUDs.second; ++I)
+      S.Diag(I->Loc, I->PD);
   }
 }
 
 void sema::AnalysisBasedWarnings::RegisterVarDeclWarning(
     VarDecl *VD, clang::sema::PossiblyUnreachableDiag PUD) {
-  VarDeclPossiblyUnreachableDiags[VD].emplace_back(PUD);
+  VarDeclPossiblyUnreachableDiags.emplace(VD, PUD);
 }
 
 void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
@@ -2787,7 +2788,11 @@ void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  EmitPossiblyUnreachableDiags(AC, VarDeclPossiblyUnreachableDiags[VD]);
+  auto Range = VarDeclPossiblyUnreachableDiags.equal_range(VD);
+  auto SecondRange =
+      llvm::make_second_range(llvm::make_range(Range.first, Range.second));
+  EmitPossiblyUnreachableDiags(
+      AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
 }
 
 // An AST Visitor that calls a callback function on each callable DEFINITION
@@ -3001,7 +3006,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   // Emit delayed diagnostics.
-  EmitPossiblyUnreachableDiags(AC, fscope->PossiblyUnreachableDiags);
+  auto &PUDs = fscope->PossiblyUnreachableDiags;
+  EmitPossiblyUnreachableDiags(AC, std::make_pair(PUDs.begin(), PUDs.end()));
 
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {

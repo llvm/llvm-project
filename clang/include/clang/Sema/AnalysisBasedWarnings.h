@@ -61,7 +61,7 @@ private:
 
   enum VisitFlag { NotVisited = 0, Visited = 1, Pending = 2 };
   llvm::DenseMap<const FunctionDecl*, VisitFlag> VisitedFD;
-  llvm::MapVector<VarDecl *, SmallVector<PossiblyUnreachableDiag, 4>>
+  std::multimap<VarDecl *, PossiblyUnreachableDiag>
       VarDeclPossiblyUnreachableDiags;
 
   Policy PolicyOverrides;
@@ -127,9 +127,9 @@ public:
 
   void PrintStats() const;
 
-  void
-  EmitPossiblyUnreachableDiags(AnalysisDeclContext &AC,
-                               SmallVector<PossiblyUnreachableDiag, 4> PUDs);
+  template <typename Iterator>
+  void EmitPossiblyUnreachableDiags(AnalysisDeclContext &AC,
+                                    std::pair<Iterator, Iterator> PUDs);
 };
 
 } // namespace sema
