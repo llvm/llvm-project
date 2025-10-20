@@ -211,6 +211,16 @@ protected:
   getExtraInvalidatedValues(ValueList &Values,
                             RegionAndSymbolInvalidationTraits *ETraits) const {}
 
+  /// A state for looking up relevant Environment entries (arguments, return
+  /// value), dynamic type information and similar "stable" things.
+  /// WARNING: During the evaluation of a function call, several state
+  /// transitions happen, so this state can become partially obsolete!
+  ///
+  /// TODO: Instead of storing a complete state object in the CallEvent, only
+  /// store the relevant parts (such as argument/return SVals etc.) that aren't
+  /// allowed to become obsolete until the end of the call evaluation.
+  ProgramStateRef getState() const { return State; }
+
 public:
   CallEvent &operator=(const CallEvent &) = delete;
   virtual ~CallEvent() = default;
@@ -231,8 +241,11 @@ public:
   }
   void setForeign(bool B) const { Foreign = B; }
 
-  /// The state in which the call is being evaluated.
-  const ProgramStateRef &getState() const { return State; }
+  /// NOTE: There are plans for refactoring that would eliminate this method.
+  /// Prefer to use CheckerContext::getASTContext if possible!
+  const ASTContext &getASTContext() const {
+    return getState()->getStateManager().getContext();
+  }
 
   /// The context in which the call is being evaluated.
   const LocationContext *getLocationContext() const { return LCtx; }

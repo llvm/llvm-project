@@ -424,7 +424,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
            "suspicious usage of 'sizeof(array)/sizeof(...)';"
            " denominator differs from the size of array elements")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-    } else if (NumTy && DenomTy && Ctx.hasSameType(NumTy, DenomTy) &&
+    } else if (NumTy && DenomTy && ASTContext::hasSameType(NumTy, DenomTy) &&
                !NumTy->isDependentType()) {
       // Dependent type should not be compared.
       diag(E->getOperatorLoc(),
@@ -433,7 +433,7 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
     } else if (!WarnOnSizeOfPointer) {
       // When 'WarnOnSizeOfPointer' is enabled, these messages become redundant:
-      if (PointedTy && DenomTy && Ctx.hasSameType(PointedTy, DenomTy)) {
+      if (PointedTy && DenomTy && ASTContext::hasSameType(PointedTy, DenomTy)) {
         diag(E->getOperatorLoc(),
              "suspicious usage of 'sizeof(...)/sizeof(...)'; size of pointer "
              "is divided by size of pointed type")
@@ -462,8 +462,8 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *SizeOfExpr =
         Result.Nodes.getNodeAs<UnaryExprOrTypeTraitExpr>("sizeof-ptr-mul-expr");
 
-    if (Ctx.hasSameType(LPtrTy, RPtrTy) &&
-        Ctx.hasSameType(LPtrTy, SizeofArgTy)) {
+    if (ASTContext::hasSameType(LPtrTy, RPtrTy) &&
+        ASTContext::hasSameType(LPtrTy, SizeofArgTy)) {
       diag(SizeOfExpr->getBeginLoc(), "suspicious usage of 'sizeof(...)' in "
                                       "pointer arithmetic")
           << SizeOfExpr->getSourceRange() << E->getOperatorLoc()
@@ -477,8 +477,8 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
     const auto *SizeOfExpr =
         Result.Nodes.getNodeAs<UnaryExprOrTypeTraitExpr>("sizeof-ptr-div-expr");
 
-    if (Ctx.hasSameType(LPtrTy, RPtrTy) &&
-        Ctx.hasSameType(LPtrTy, SizeofArgTy)) {
+    if (ASTContext::hasSameType(LPtrTy, RPtrTy) &&
+        ASTContext::hasSameType(LPtrTy, SizeofArgTy)) {
       diag(SizeOfExpr->getBeginLoc(), "suspicious usage of 'sizeof(...)' in "
                                       "pointer arithmetic")
           << SizeOfExpr->getSourceRange() << E->getOperatorLoc()

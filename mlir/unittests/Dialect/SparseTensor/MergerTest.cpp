@@ -141,7 +141,7 @@ protected:
   }
 
 #define IMPL_BINOP_EXPR(OP, KIND)                                              \
-  LLVM_ATTRIBUTE_UNUSED ExprId OP##Expr(ExprId e0, ExprId e1) {                \
+  [[maybe_unused]] ExprId OP##Expr(ExprId e0, ExprId e1) {                     \
     return merger.addExp(KIND, e0, e1);                                        \
   }
   FOREVERY_BINOP(IMPL_BINOP_EXPR)

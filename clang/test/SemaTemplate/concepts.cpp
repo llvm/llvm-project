@@ -1514,6 +1514,31 @@ static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overl
 
 }
 
+namespace GH162092 {
+
+template <typename T>
+struct vector;
+
+template <typename T, typename U>
+concept C = __is_same_as(T, U);
+
+template<class T, auto Cpt>
+concept generic_range_value = requires {
+    Cpt.template operator()<int>();
+};
+
+
+template<generic_range_value<[]<
+   C<int>
+   >() {}> T>
+void x() {}
+
+void foo() {
+  x<vector<int>>();
+}
+
+}
+
 namespace GH162770 {
   enum e {};
   template<e> struct s {};

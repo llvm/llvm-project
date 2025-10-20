@@ -26876,6 +26876,8 @@ static SDValue combineTruncationShuffle(ShuffleVectorSDNode *SVN,
   // TODO: handle more extension/truncation cases as cases arise.
   if (EltSizeInBits != ExtSrcSizeInBits)
     return SDValue();
+  if (VT.getSizeInBits() != N00.getValueSizeInBits())
+    return SDValue();
 
   // We can remove *extend_vector_inreg only if the truncation happens at
   // the same scale as the extension.

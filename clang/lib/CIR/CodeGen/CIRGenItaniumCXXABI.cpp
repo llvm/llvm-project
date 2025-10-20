@@ -950,8 +950,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     break;
 
   case Type::Enum:
-    cgm.errorNYI("VTableClassNameForType: Enum");
-    break;
+    return "_ZTVN10__cxxabiv116__enum_type_infoE";
 
   case Type::Record: {
     const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())

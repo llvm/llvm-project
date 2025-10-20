@@ -64,7 +64,7 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return true;
 
   if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
-    const VPRegionBlock *RegionOfR = Rep->getParent()->getParent();
+    const VPRegionBlock *RegionOfR = Rep->getRegion();
     // Don't consider recipes in replicate regions as uniform yet; their first
     // lane cannot be accessed when executing the replicate region for other
     // lanes.
@@ -84,6 +84,12 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (PreservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
+  if (isa<VPPartialReductionRecipe>(VPV))
+    return false;
+  if (isa<VPReductionRecipe>(VPV))
+    return true;
+  if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
+    return Expr->isSingleScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
   return isa<VPExpandSCEVRecipe>(VPV);

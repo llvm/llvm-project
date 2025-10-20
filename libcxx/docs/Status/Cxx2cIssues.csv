@@ -149,5 +149,5 @@
 "`LWG3343 <https://wg21.link/LWG3343>`__","Ordering of calls to ``unlock()`` and ``notify_all()`` in Effects element of ``notify_all_at_thread_exit()`` should be reversed","Not Adopted Yet","|Complete|","16","`#105356 <https://github.com/llvm/llvm-project/issues/105356>`__",""
 "`LWG4139 <https://wg21.link/LWG4139>`__","§[time.zone.leap] recursive constraint in ``<=>``","Not Adopted Yet","|Complete|","20","`#118369 <https://github.com/llvm/llvm-project/issues/118369>`__",""
 "`LWG3456 <https://wg21.link/LWG3456>`__","Pattern used by ``std::from_chars`` is underspecified (option B)","Not Adopted Yet","|Complete|","20","`#118370 <https://github.com/llvm/llvm-project/issues/118370>`__",""
-"`LWG3882 <https://wg21.link/LWG3882>`__","``tuple`` relational operators have confused friendships","Not Adopted Yet","|Complete|","21","The comparsion operators are constrained harder than the proposed resolution. libstdc++ and MSVC STL do the same.",""
+"`LWG3882 <https://wg21.link/LWG3882>`__","``tuple`` relational operators have confused friendships","Not Adopted Yet","|Complete|","22","The comparsion operators are constrained harder than the proposed resolution. libstdc++ and MSVC STL do the same.",""
 "","","","","",""
