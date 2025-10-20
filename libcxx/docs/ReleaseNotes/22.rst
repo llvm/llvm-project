@@ -75,6 +75,8 @@ Improvements and New Features
 - The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
   resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
   ``std::join_view<std::vector<std::vector<int>>>`` iterators.
+- The ``std::generate`` algorithm has been optimized for segmented iterators, resulting in a performance improvement for
+  ``std::deque<short>`` and ``std::join_view<vector<vector<short>>>`` iterators.
 
 Deprecations and Removals
 -------------------------
