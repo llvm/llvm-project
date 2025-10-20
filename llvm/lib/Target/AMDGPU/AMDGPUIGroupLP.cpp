@@ -2637,14 +2637,14 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
     InvertedMask &= ~SchedGroupMask::ALU;
 
   // When given specific bits overrule the more general MEM type.
-  bool HasConcreteMemClassSpecified = (Mask & (SchedGroupMask::VMEM_READ |
-                                           SchedGroupMask::VMEM_WRITE |
-                                           SchedGroupMask::DS_READ |
-                                           SchedGroupMask::DS_WRITE)) !=
-                                     SchedGroupMask::NONE;
+  bool HasConcreteMemClassSpecified =
+      (Mask & (SchedGroupMask::VMEM_READ | SchedGroupMask::VMEM_WRITE |
+               SchedGroupMask::DS_READ | SchedGroupMask::DS_WRITE)) !=
+      SchedGroupMask::NONE;
 
   // VMEM implies VMEM_READ, VMEM_WRITE.
-  if (!HasConcreteMemClassSpecified && (InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
+  if (!HasConcreteMemClassSpecified &&
+      (InvertedMask & SchedGroupMask::VMEM) == SchedGroupMask::NONE)
     InvertedMask &= ~SchedGroupMask::VMEM_READ & ~SchedGroupMask::VMEM_WRITE;
   // VMEM_READ, VMEM_WRITE implies VMEM.
   else if ((InvertedMask & SchedGroupMask::VMEM_READ) == SchedGroupMask::NONE ||
