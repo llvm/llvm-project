@@ -889,7 +889,6 @@ spanstream format
 spanstream initializer_list
 spanstream ios
 spanstream iosfwd
-spanstream iostream
 spanstream istream
 spanstream limits
 spanstream optional
