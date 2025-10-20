@@ -315,7 +315,7 @@ struct ExecuteRegionForwardingEliminator
     if (yieldOps.size() != 1)
       return failure();
 
-    auto yieldOp = dyn_cast<scf::YieldOp>(yieldOps.front());
+    auto yieldOp = cast<scf::YieldOp>(yieldOps.front());
     auto yieldedValues = yieldOp.getOperands();
     // Check if all yielded values are from outside the region
     bool allExternal = true;
