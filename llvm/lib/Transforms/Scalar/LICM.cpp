@@ -116,8 +116,6 @@ STATISTIC(NumIntAssociationsHoisted,
 STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
-namespace llvm {
-
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
     DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
@@ -156,7 +154,7 @@ static cl::opt<unsigned> IntAssociationUpperLimit(
 // which may not be precise, since optimizeUses is capped. The result is
 // correct, but we may not get as "far up" as possible to get which access is
 // clobbering the one queried.
-cl::opt<unsigned> SetLicmMssaOptCap(
+cl::opt<unsigned> llvm::SetLicmMssaOptCap(
     "licm-mssa-optimization-cap", cl::init(100), cl::Hidden,
     cl::desc("Enable imprecision in LICM in pathological cases, in exchange "
              "for faster compile. Caps the MemorySSA clobbering calls."));
@@ -164,15 +162,15 @@ cl::opt<unsigned> SetLicmMssaOptCap(
 // Experimentally, memory promotion carries less importance than sinking and
 // hoisting. Limit when we do promotion when using MemorySSA, in order to save
 // compile time.
-cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap(
+cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
     "licm-mssa-max-acc-promotion", cl::init(250), cl::Hidden,
     cl::desc("[LICM & MemorySSA] When MSSA in LICM is disabled, this has no "
              "effect. When MSSA in LICM is enabled, then this is the maximum "
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
@@ -1120,11 +1118,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
-namespace {
 /// Return true if-and-only-if we know how to (mechanically) both hoist and
 /// sink a given instruction out of a loop.  Does not address legality
 /// concerns such as aliasing or speculation safety.
-bool isHoistableAndSinkableInst(Instruction &I) {
+static bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
           isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
@@ -1136,8 +1133,8 @@ bool isHoistableAndSinkableInst(Instruction &I) {
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
-bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
-                        const MemorySSAUpdater &MSSAU) {
+static bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
+                               const MemorySSAUpdater &MSSAU) {
   for (auto *BB : L->getBlocks())
     if (auto *Accs = MSSAU.getMemorySSA()->getBlockAccesses(BB)) {
       int NotAPhi = 0;
@@ -1150,7 +1147,6 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
       }
     }
   return true;
-}
 }
 
 static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,

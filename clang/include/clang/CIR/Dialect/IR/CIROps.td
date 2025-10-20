@@ -644,7 +644,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
-  "DoWhileOp", "WhileOp", "ForOp"
+  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -791,7 +791,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2476,6 +2476,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     Similarly, for global destructors both `global_dtor` and
     `global_dtor(<priority>)` are available.
 
+    The `inline(never)` keyword marks a function that should not be inlined.
+    The `inline(always)` keyword marks a function that should always be inlined.
+    The `inline(hint)` keyword suggests that the function should be inlined.
+
     Example:
 
     ```mlir
@@ -2510,6 +2514,7 @@ def CIR_FuncOp : CIR_Op<"func", [
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -4045,6 +4050,43 @@ def CIR_ExpectOp : CIR_Op<"expect", [
 }
 
 //===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
+  let summary = "Pointer subtraction arithmetic";
+  let description = [{
+    The cir.ptr_diff operation computes the difference between two pointers that
+    have the same element type.
+
+    The result reflects the ABI-defined size of the pointed-to type. For example,
+    subtracting two !cir.ptr<!u64i> values may yield 1, representing an 8-byte
+    difference. In contrast, for pointers to void or function types, a result of
+    8 corresponds to an 8-byte difference.
+
+    For pointers to types whose size are not aligned with the target data
+    layout, the size is generally rounded to the next power of 2 bits. For
+    example, subtracting two !cir.ptr<!s24i> values for the _BitInt(24) type may
+    yield 1, representing a 4-byte difference (as opposed to a 3-byte
+    difference).
+
+    Example:
+
+    ```mlir
+    %7 = cir.ptr_diff %0, %1 : !cir.ptr<!u64i> -> !u64i
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$lhs, CIR_PointerType:$rhs);
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  `:` qualified(type($lhs)) `->` qualified(type($result)) 
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
@@ -4323,6 +4365,89 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
   let assemblyFormat = [{
     $size `->` qualified(type($addr)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TryOp : CIR_Op<"try",[
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+]> {
+  let summary = "C++ try block";
+  let description = [{
+    Holds the lexical scope of `try {}`. Note that resources used on catch
+    clauses are usually allocated in the same parent as `cir.try`.
+
+    `synthetic`: use `cir.try` to represent try/catches not originally
+    present in the source code. For example, a synthetic `cir.try` region
+    is created around the constructor call when `operator new` is used
+    so that the memory allocated will be freed if the constructor throws
+    an exception.
+
+    `cleanup`: indicates that there are cleanups that must be performed
+    when exiting the try region via exception, even if the exception is not
+    caught.
+
+    Example:
+
+    ```mlir
+    cir.try {
+      cir.call exception @function() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+      ...
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    UnitAttr:$synthetic,
+    UnitAttr:$cleanup,
+    DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
+  );
+
+  let regions = (region
+    AnyRegion:$try_region,
+    VariadicRegion<AnyRegion>:$handler_regions
+  );
+
+  let assemblyFormat = [{
+    (`synthetic` $synthetic^)?
+    (`cleanup` $cleanup^)?
+    $try_region
+    custom<TryHandlerRegions>($handler_regions, $handler_types)
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins
+      "llvm::function_ref<void(mlir::OpBuilder &, "
+        "mlir::Location)>":$tryBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, "
+        "mlir::OperationState &)>":$handlersBuilder),
+    [{
+      assert(tryBuilder && "expected builder callback for 'cir.try' body");
+      assert(handlersBuilder
+        && "expected builder callback for 'handlers' body");
+
+      OpBuilder::InsertionGuard guard($_builder);
+
+      // Try body region
+      mlir::Region *tryBodyRegion = $_state.addRegion();
+
+      // Create try body region and set insertion point
+      $_builder.createBlock(tryBodyRegion);
+      tryBuilder($_builder, $_state.location);
+      handlersBuilder($_builder, $_state.location, $_state);
+    }]>
+  ];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//
