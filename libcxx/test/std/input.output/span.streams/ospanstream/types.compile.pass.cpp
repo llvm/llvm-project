@@ -72,11 +72,13 @@ void test() {
 #endif
 }
 
+// Default template arguments
+
+static_assert(std::is_same_v<std::basic_ospanstream<char>, std::basic_ospanstream<char, std::char_traits<char>>>);
+
 // Aliases
 
-static_assert(std::is_base_of_v<std::basic_ostream<char>, std::ospanstream>);
 static_assert(std::is_same_v<std::basic_ospanstream<char>, std::ospanstream>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_base_of_v<std::basic_ostream<wchar_t>, std::wospanstream>);
 static_assert(std::is_same_v<std::basic_ospanstream<wchar_t>, std::wospanstream>);
 #endif

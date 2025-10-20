@@ -71,11 +71,13 @@ void test() {
 #endif
 }
 
+// Default template arguments
+
+static_assert(std::is_same_v<std::basic_spanbuf<char>, std::basic_spanbuf<char, std::char_traits<char>>>);
+
 // Aliases
 
-static_assert(std::is_base_of_v<std::basic_streambuf<char>, std::spanbuf>);
 static_assert(std::is_same_v<std::basic_spanbuf<char>, std::spanbuf>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_base_of_v<std::basic_streambuf<wchar_t>, std::wspanbuf>);
 static_assert(std::is_same_v<std::basic_spanbuf<wchar_t>, std::wspanbuf>);
 #endif

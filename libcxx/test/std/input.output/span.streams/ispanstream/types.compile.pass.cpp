@@ -72,11 +72,13 @@ void test() {
 #endif
 }
 
+// Default template arguments
+
+static_assert(std::is_same_v<std::basic_ispanstream<char>, std::basic_ispanstream<char, std::char_traits<char>>>);
+
 // Aliases
 
-static_assert(std::is_base_of_v<std::basic_istream<char>, std::ispanstream>);
 static_assert(std::is_same_v<std::basic_ispanstream<char>, std::ispanstream>);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-static_assert(std::is_base_of_v<std::basic_istream<wchar_t>, std::wispanstream>);
 static_assert(std::is_same_v<std::basic_ispanstream<wchar_t>, std::wispanstream>);
 #endif
