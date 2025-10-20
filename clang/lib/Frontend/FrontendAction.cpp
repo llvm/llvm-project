@@ -985,6 +985,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
     CI.setFileManager(&AST->getFileManager());
     CI.setSourceManager(&AST->getSourceManager());
     CI.setPreprocessor(AST->getPreprocessorPtr());
