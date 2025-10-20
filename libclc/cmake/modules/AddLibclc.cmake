@@ -261,7 +261,7 @@ function(libclc_install)
 
   install(
     FILES ${files}
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+    DESTINATION ${LIBCLC_INSTALL_DIR}
   )
 endfunction()
 
