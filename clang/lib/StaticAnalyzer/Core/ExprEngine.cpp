@@ -1064,8 +1064,6 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
       SymReaper.markLive(MR);
   }
 
-  markAllDynamicExtentLive(CleanedState, SymReaper);
-
   getCheckerManager().runCheckersForLiveSymbols(CleanedState, SymReaper);
 
   // Create a state in which dead bindings are removed from the environment
@@ -1080,6 +1078,11 @@ void ExprEngine::removeDead(ExplodedNode *Pred, ExplodedNodeSet &Out,
   ExplodedNodeSet CheckedSet;
   getCheckerManager().runCheckersForDeadSymbols(CheckedSet, Pred, SymReaper,
                                                 DiagnosticStmt, *this, K);
+
+  // Extend lifetime of symbols used for dynamic extent while the parent region
+  // is live. In this way size information about memory allocations is not lost
+  // if the region remains live.
+  markAllDynamicExtentLive(CleanedState, SymReaper);
 
   // For each node in CheckedSet, generate CleanedNodes that have the
   // environment, the store, and the constraints cleaned up but have the
