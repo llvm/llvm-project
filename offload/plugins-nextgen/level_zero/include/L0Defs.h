@@ -25,12 +25,6 @@ enum class AllocOptionTy : int32_t {
   ALLOC_OPT_SLM = 4,
 };
 
-#ifndef EXTRACT_BITS
-// MSB=63, LSB=0
-#define EXTRACT_BITS(I64, HIGH, LOW)                                           \
-  (((uint64_t)I64) >> (LOW)) & (((uint64_t)1 << ((HIGH) - (LOW) + 1)) - 1)
-#endif
-
 namespace llvm::omp::target::plugin {
 
 /// Default alignmnet for allocation
@@ -57,10 +51,6 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
                                                     ErrFmt, Args..., Desc);
 }
-
-#define L0_UNIMPLEMENTED_ERR                                                   \
-  return Plugin::error(ErrorCode::UNIMPLEMENTED, "%s not implemented yet",     \
-                       __func__);
 
 } // namespace llvm::omp::target::plugin
 

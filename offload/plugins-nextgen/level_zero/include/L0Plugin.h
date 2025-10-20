@@ -46,8 +46,6 @@ private:
   /// L0 plugin global options
   static L0OptionsTy Options;
 
-  std::mutex GlobalMutex;
-
   /// Common pool of AsyncQueue
   AsyncQueuePoolTy AsyncQueuePool;
 
@@ -63,8 +61,6 @@ public:
   }
 
   static const auto &getOptions() { return Options; }
-
-  auto &getGlobalMutex() { return GlobalMutex; }
 
   struct DevicesRangeTy {
     using iterator = DeviceContainerTy::iterator;
@@ -122,9 +118,11 @@ public:
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override;
   GenericGlobalHandlerTy *createGlobalHandler() override;
-  uint16_t getMagicElfBits() const override;
-  Triple::ArchType getTripleArch() const override;
-  const char *getName() const override;
+
+  uint16_t getMagicElfBits() const override { return ELF::EM_INTELGT; }
+  Triple::ArchType getTripleArch() const override { return Triple::spirv64; }
+  const char *getName() const override { return GETNAME(TARGET_NAME); }
+
   Expected<bool> isELFCompatible(uint32_t DeviceId,
                                  StringRef Image) const override;
 

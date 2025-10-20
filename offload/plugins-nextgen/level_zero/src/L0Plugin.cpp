@@ -176,14 +176,6 @@ GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {
   return new L0GlobalHandlerTy();
 }
 
-uint16_t LevelZeroPluginTy::getMagicElfBits() const { return ELF::EM_INTELGT; }
-
-Triple::ArchType LevelZeroPluginTy::getTripleArch() const {
-  return Triple::spirv64;
-}
-
-const char *LevelZeroPluginTy::getName() const { return GETNAME(TARGET_NAME); }
-
 Error LevelZeroPluginTy::flushQueueImpl(omp_interop_val_t *Interop) {
   return Plugin::success();
 }

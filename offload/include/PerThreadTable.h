@@ -39,13 +39,13 @@ template <typename ObjectType> struct PerThread {
 
 private:
   PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThData = nullptr;
-    if (!ThData) {
-      ThData = std::make_shared<PerThreadData>();
+    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
+    if (!ThreadData) {
+      ThreadData = std::make_shared<PerThreadData>();
       std::lock_guard<std::mutex> Lock(Mtx);
-      ThreadDataList.push_back(ThData);
+      ThreadDataList.push_back(ThreadData);
     }
-    return *ThData;
+    return *ThreadData;
   }
 
 protected:

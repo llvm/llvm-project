@@ -612,7 +612,9 @@ public:
 
   Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
                             AsyncInfoWrapperTy &AsyncInfo) override{
-      L0_UNIMPLEMENTED_ERR}
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "enqueueHostCallImpl not implemented yet");
+  }
 
   /* Event routines are used to ensure ordering between dataTransfers. Instead
    * of adding extra events in the queues, we make sure they're ordered by

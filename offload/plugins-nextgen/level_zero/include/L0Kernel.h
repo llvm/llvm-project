@@ -140,8 +140,10 @@ public:
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
-                                  uint64_t DynamicMemSize) const override{
-      L0_UNIMPLEMENTED_ERR}
+                                  uint64_t DynamicMemSize) const override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "maxGroupSize not implemented yet");
+  }
 
   ze_kernel_handle_t getZeKernel() const {
     return zeKernel;
