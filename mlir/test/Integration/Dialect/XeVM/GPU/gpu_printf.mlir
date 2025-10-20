@@ -22,7 +22,8 @@ module @test attributes {gpu.container_module} {
     %c1 = arith.constant 1 : index
     %c11 = arith.constant 11 : i32
     %c4 = arith.constant 4.0 : f32
-    // CHECK: "Hello: 11"
+    // CHECK: Hello: 11
+    // CHECK: Hello: 4.000000
     gpu.launch_func @test_module::@test_printf blocks in (%c1, %c1, %c1) threads in (%c1, %c1, %c1) args(%c11 : i32, %c4 : f32)
     return
   }

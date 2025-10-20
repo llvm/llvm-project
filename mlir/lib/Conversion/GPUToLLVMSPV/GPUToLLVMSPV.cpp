@@ -476,7 +476,7 @@ struct GPUToLLVMSPVConversionPass final
     populateGpuMemorySpaceAttributeConversions(converter);
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/2,
                                                 LLVM::cconv::CConv::SPIR_FUNC,
-                                                "Z6printfPU3AS2Kcz");
+                                                "_Z6printfPU3AS2Kcz");
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
