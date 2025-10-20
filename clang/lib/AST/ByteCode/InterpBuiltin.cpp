@@ -2912,21 +2912,20 @@ static bool interp__builtin_ia32_movmsk_op(InterpState &S, CodePtr OpPC,
       S.getASTContext().getTypeSize(Call->getType()); // Always 32-bit integer.
   APInt Result(ResultLen, 0);
 
-    for (unsigned I = 0; I != SourceLen; ++I) {
-      APInt Elem;
-      if (ElemQT->isIntegerType()) {
-        INT_TYPE_SWITCH_NO_BOOL(*ElemT,
-                                { Elem = Source.elem<T>(I).toAPSInt(); });
-      } else if (ElemQT->isRealFloatingType()) {
-        using T = PrimConv<PT_Float>::T;
-        Elem = Source.elem<T>(I).getAPFloat().bitcastToAPInt();
-      } else {
-        return false;
-      }
-      Result.setBitVal(I, Elem.isNegative());
+  for (unsigned I = 0; I != SourceLen; ++I) {
+    APInt Elem;
+    if (ElemQT->isIntegerType()) {
+      INT_TYPE_SWITCH_NO_BOOL(*ElemT, { Elem = Source.elem<T>(I).toAPSInt(); });
+    } else if (ElemQT->isRealFloatingType()) {
+      using T = PrimConv<PT_Float>::T;
+      Elem = Source.elem<T>(I).getAPFloat().bitcastToAPInt();
+    } else {
+      return false;
     }
-    pushInteger(S, Result, Call->getType());
-    return true;
+    Result.setBitVal(I, Elem.isNegative());
+  }
+  pushInteger(S, Result, Call->getType());
+  return true;
 }
 
 static bool interp__builtin_elementwise_triop(
