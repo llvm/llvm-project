@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+zbs -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS,RV64ZBSNOZBB
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
 ; RUN: llc -mtriple=riscv64 -mattr=+zbs,+zbb -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS,RV64ZBSZBB
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBS
 
 define signext i32 @bclr_i32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64I-LABEL: bclr_i32:
@@ -121,20 +121,12 @@ define i64 @bclr_i64_mask_multiple(i64 %a, i64 %b, i64 %shamt) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
-; RV64ZBSNOZBB-LABEL: bclr_i64_mask_multiple:
-; RV64ZBSNOZBB:       # %bb.0:
-; RV64ZBSNOZBB-NEXT:    bclr a0, a0, a2
-; RV64ZBSNOZBB-NEXT:    bset a1, a1, a2
-; RV64ZBSNOZBB-NEXT:    add a0, a0, a1
-; RV64ZBSNOZBB-NEXT:    ret
-;
-; RV64ZBSZBB-LABEL: bclr_i64_mask_multiple:
-; RV64ZBSZBB:       # %bb.0:
-; RV64ZBSZBB-NEXT:    andi a3, a2, 63
-; RV64ZBSZBB-NEXT:    bclr a0, a0, a3
-; RV64ZBSZBB-NEXT:    bset a1, a1, a2
-; RV64ZBSZBB-NEXT:    add a0, a0, a1
-; RV64ZBSZBB-NEXT:    ret
+; RV64ZBS-LABEL: bclr_i64_mask_multiple:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bclr a0, a0, a2
+; RV64ZBS-NEXT:    bset a1, a1, a2
+; RV64ZBS-NEXT:    add a0, a0, a1
+; RV64ZBS-NEXT:    ret
   %shamt_masked = and i64 %shamt, 63
   %shl = shl nuw i64 1, %shamt_masked
   %neg = xor i64 %shl, -1

@@ -56,20 +56,12 @@ define i32 @bclr_i32_mask_multiple(i32 %a, i32 %b, i32 %shamt) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32ZBSNOZBB-LABEL: bclr_i32_mask_multiple:
-; RV32ZBSNOZBB:       # %bb.0:
-; RV32ZBSNOZBB-NEXT:    bclr a0, a0, a2
-; RV32ZBSNOZBB-NEXT:    bset a1, a1, a2
-; RV32ZBSNOZBB-NEXT:    add a0, a0, a1
-; RV32ZBSNOZBB-NEXT:    ret
-;
-; RV32ZBSZBB-LABEL: bclr_i32_mask_multiple:
-; RV32ZBSZBB:       # %bb.0:
-; RV32ZBSZBB-NEXT:    andi a3, a2, 63
-; RV32ZBSZBB-NEXT:    bclr a0, a0, a3
-; RV32ZBSZBB-NEXT:    bset a1, a1, a2
-; RV32ZBSZBB-NEXT:    add a0, a0, a1
-; RV32ZBSZBB-NEXT:    ret
+; RV32ZBS-LABEL: bclr_i32_mask_multiple:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bclr a0, a0, a2
+; RV32ZBS-NEXT:    bset a1, a1, a2
+; RV32ZBS-NEXT:    add a0, a0, a1
+; RV32ZBS-NEXT:    ret
   %shamt_masked = and i32 %shamt, 63
   %shl = shl nuw i32 1, %shamt_masked
   %neg = xor i32 %shl, -1
