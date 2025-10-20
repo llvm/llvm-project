@@ -3285,14 +3285,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_parityl:
   case Builtin::BI__builtin_parityll:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Val) -> APInt {
+        S, OpPC, Call, [](const APSInt &Val) {
           return APInt(Val.getBitWidth(), Val.popcount() % 2);
         });
   case Builtin::BI__builtin_clrsb:
   case Builtin::BI__builtin_clrsbl:
   case Builtin::BI__builtin_clrsbll:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call, [](const APSInt &Val) -> APInt {
+        S, OpPC, Call, [](const APSInt &Val) {
           return APInt(Val.getBitWidth(),
                        Val.getBitWidth() - Val.getSignificantBits());
         });
@@ -3301,8 +3301,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64:
     return interp__builtin_elementwise_int_unaryop(
-        S, OpPC, Call,
-        [](const APSInt &Val) -> APInt { return Val.reverseBits(); });
+        S, OpPC, Call, [](const APSInt &Val) { return Val.reverseBits(); });
 
   case Builtin::BI__builtin_classify_type:
     return interp__builtin_classify_type(S, OpPC, Frame, Call);
@@ -3620,6 +3619,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
+        });
+
+  case clang::X86::BI__builtin_ia32_pmulhrsw128:
+  case clang::X86::BI__builtin_ia32_pmulhrsw256:
+  case clang::X86::BI__builtin_ia32_pmulhrsw512:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return (llvm::APIntOps::mulsExtended(LHS, RHS).ashr(14) + 1)
+              .extractBits(16, 1);
         });
 
   case clang::X86::BI__builtin_ia32_pavgb128:
