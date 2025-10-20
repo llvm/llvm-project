@@ -29,10 +29,10 @@
 #ifndef MLIR_LINALG_REGION_BUILDER_HELPER_H
 #define MLIR_LINALG_REGION_BUILDER_HELPER_H
 
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -88,7 +88,7 @@ public:
   Value buildTypeFn(TypeFn typeFn, Type toType, Value operand,
                     function_ref<InFlightDiagnostic()> emitError = {});
 
-  // Create a `yieldOp` to yield `values` passed in arg.                      
+  // Create a `yieldOp` to yield `values` passed in arg.
   void yieldOutputs(ValueRange values);
 
   // Create a constant op with value parsed from string `value`.
