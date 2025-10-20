@@ -3117,41 +3117,41 @@ static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
   unsigned VectorLen = LHS.getNumElems();
   PrimType ElemT = LHS.getFieldDesc()->getPrimType();
 
-  for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      const APSInt &A = LHS.elem<T>(ElemNum).toAPSInt();
-      const APSInt &B = RHS.elem<T>(ElemNum).toAPSInt();
-      bool Result = false;
-      switch (Opcode.getExtValue() & 0x7) {
-      case 0x00: // _MM_CMPINT_EQ
-        Result = (A == B);
-        break;
-      case 0x01: // _MM_CMPINT_LT
-        Result = IsUnsigned ? A.ult(B) : A.slt(B);
-        break;
-      case 0x02: // _MM_CMPINT_LE
-        Result = IsUnsigned ? A.ule(B) : A.sle(B);
-        break;
-      case 0x03: // _MM_CMPINT_FALSE
-        Result = false;
-        break;
-      case 0x04: // _MM_CMPINT_NE
-        Result = (A != B);
-        break;
-      case 0x05: // _MM_CMPINT_NLT (>=)
-        Result = IsUnsigned ? A.uge(B) : A.sge(B);
-        break;
-      case 0x06: // _MM_CMPINT_NLE (>)
-        Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
-        break;
-      case 0x07: // _MM_CMPINT_TRUE
-        Result = true;
-        break;
-      }
+    for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        const APSInt &A = LHS.elem<T>(ElemNum).toAPSInt();
+        const APSInt &B = RHS.elem<T>(ElemNum).toAPSInt();
+        bool Result = false;
+        switch (Opcode.getExtValue() & 0x7) {
+        case 0x00: // _MM_CMPINT_EQ
+          Result = (A == B);
+          break;
+        case 0x01: // _MM_CMPINT_LT
+          Result = IsUnsigned ? A.ult(B) : A.slt(B);
+          break;
+        case 0x02: // _MM_CMPINT_LE
+          Result = IsUnsigned ? A.ule(B) : A.sle(B);
+          break;
+        case 0x03: // _MM_CMPINT_FALSE
+          Result = false;
+          break;
+        case 0x04: // _MM_CMPINT_NE
+          Result = (A != B);
+          break;
+        case 0x05: // _MM_CMPINT_NLT (>=)
+          Result = IsUnsigned ? A.uge(B) : A.sge(B);
+          break;
+        case 0x06: // _MM_CMPINT_NLE (>)
+          Result = IsUnsigned ? A.ugt(B) : A.sgt(B);
+          break;
+        case 0x07: // _MM_CMPINT_TRUE
+          Result = true;
+          break;
+        }
 
-      RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
-    });
-  }
+        RetMask.setBitVal(ElemNum, Mask[ElemNum] && Result);
+      });
+    }
 
   pushInteger(S, RetMask, Call->getType());
   return true;
