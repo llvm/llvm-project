@@ -9095,6 +9095,10 @@ Intrinsic::ID llvm::getInverseMinMaxIntrinsic(Intrinsic::ID MinMaxID) {
   case Intrinsic::minimum: return Intrinsic::maximum;
   case Intrinsic::maxnum: return Intrinsic::minnum;
   case Intrinsic::minnum: return Intrinsic::maxnum;
+  case Intrinsic::maximumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::minimumnum:
+    return Intrinsic::maximumnum;
   default: llvm_unreachable("Unexpected intrinsic");
   }
 }

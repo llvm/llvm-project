@@ -470,7 +470,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; DEFAULT-NEXT:    store i32 [[TMP22]], ptr [[E]], align 4, !alias.scope [[META15]], !noalias [[META17]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE37]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE37]]:
-; DEFAULT-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr [[TMP16]], i32 4, <4 x i1> [[TMP8]]), !alias.scope [[META19:![0-9]+]], !noalias [[META20:![0-9]+]]
+; DEFAULT-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[TMP16]], <4 x i1> [[TMP8]]), !alias.scope [[META19:![0-9]+]], !noalias [[META20:![0-9]+]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
@@ -601,7 +601,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP13:%.*]] = or <vscale x 2 x i16> [[BROADCAST_SPLAT]], splat (i16 1)
 ; PRED-NEXT:    [[TMP14:%.*]] = uitofp <vscale x 2 x i16> [[TMP13]] to <vscale x 2 x double>
-; PRED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP14]], ptr [[NEXT_GEP]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; PRED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP14]], ptr align 8 [[NEXT_GEP]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
 ; PRED-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
@@ -682,16 +682,17 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; COMMON-NEXT:    store i8 6, ptr [[TMP6]], align 1
 ; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
 ; COMMON:       [[PRED_STORE_CONTINUE12]]:
-; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[EXIT1:.*]]
+; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[EXIT:.*]]
 ; COMMON:       [[PRED_STORE_IF13]]:
 ; COMMON-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 7
 ; COMMON-NEXT:    store i8 7, ptr [[TMP7]], align 1
-; COMMON-NEXT:    br label %[[EXIT1]]
-; COMMON:       [[EXIT1]]:
+; COMMON-NEXT:    br label %[[EXIT]]
+; COMMON:       [[EXIT]]:
 ; COMMON-NEXT:    br label %[[SCALAR_PH:.*]]
 ; COMMON:       [[SCALAR_PH]]:
-; COMMON-NEXT:    br [[EXIT:label %.*]]
-; COMMON:       [[SCALAR_PH1:.*:]]
+; COMMON-NEXT:    br label %[[EXIT1:.*]]
+; COMMON:       [[EXIT1]]:
+; COMMON-NEXT:    ret void
 ;
 entry:
   br label %loop

@@ -236,7 +236,6 @@ jobs:
             **/crash_diagnostics/*
 
   windows:
-    runs-on: windows-2022
     needs: [ stage2 ]
     strategy:
       fail-fast: false
@@ -251,6 +250,8 @@ jobs:
         - { config: mingw-static, mingw: true }
         - { config: mingw-dll-i686, mingw: true }
         - { config: mingw-incomplete-sysroot, mingw: true }
+        - { config: mingw-static, mingw: true, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner != '' && matrix.runner || 'windows-2022' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - name: Install dependencies
@@ -263,7 +264,7 @@ jobs:
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
-          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-x86_64.zip
+          curl -LO https://github.com/mstorsjo/llvm-mingw/releases/download/20250709/llvm-mingw-20250709-ucrt-${{ matrix.runner == 'windows-11-arm' && 'aarch64' || 'x86_64' }}.zip
           powershell Expand-Archive llvm-mingw*.zip -DestinationPath .
           del llvm-mingw*.zip
           mv llvm-mingw* c:\llvm-mingw

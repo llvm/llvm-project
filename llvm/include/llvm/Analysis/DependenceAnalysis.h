@@ -160,7 +160,7 @@ public:
 
   /// getDVEntry - Returns the DV entry associated with a regular or a
   /// SameSD level
-  DVEntry getDVEntry(unsigned Level, bool isSameSD) const;
+  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const;
 
   /// getDirection - Returns the direction associated with a particular
   /// common or SameSD level.
@@ -234,7 +234,7 @@ public:
 
   /// dumpImp - For debugging purposes. Dumps a dependence to OS with or
   /// without considering the SameSD levels.
-  void dumpImp(raw_ostream &OS, bool SameSD = false) const;
+  void dumpImp(raw_ostream &OS, bool IsSameSD = false) const;
 
 protected:
   Instruction *Src, *Dst;
@@ -282,8 +282,8 @@ public:
 
   /// getDVEntry - Returns the DV entry associated with a regular or a
   /// SameSD level.
-  DVEntry getDVEntry(unsigned Level, bool isSameSD) const {
-    if (!isSameSD) {
+  DVEntry getDVEntry(unsigned Level, bool IsSameSD) const {
+    if (!IsSameSD) {
       assert(0 < Level && Level <= Levels && "Level out of range");
       return DV[Level - 1];
     } else {

@@ -46,6 +46,12 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
     return dest;
   }
 
+  void ensureDest(mlir::Location loc, QualType ty) {
+    if (!dest.isIgnored())
+      return;
+    dest = cgf.createAggTemp(ty, loc, "agg.tmp.ensured");
+  }
+
 public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot dest)
       : cgf(cgf), dest(dest) {}
@@ -96,10 +102,22 @@ public:
     Visit(die->getExpr());
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
-    assert(!cir::MissingFeatures::aggValueSlotDestructedFlag());
+    // Ensure that we have a slot, but if we already do, remember
+    // whether it was externally destructed.
+    bool wasExternallyDestructed = dest.isExternallyDestructed();
+    ensureDest(cgf.getLoc(e->getSourceRange()), e->getType());
+
+    // We're going to push a destructor if there isn't already one.
+    dest.setExternallyDestructed();
+
     Visit(e->getSubExpr());
+
+    // Push that destructor we promised.
+    if (!wasExternallyDestructed)
+      cgf.emitCXXTemporary(e->getTemporary(), e->getType(), dest.getAddress());
   }
   void VisitLambdaExpr(LambdaExpr *e);
+  void VisitExprWithCleanups(ExprWithCleanups *e);
 
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
@@ -240,11 +258,6 @@ public:
   void VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitCXXStdInitializerListExpr");
-  }
-
-  void VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitExprWithCleanups");
   }
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -586,6 +599,11 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
             curField->getType().isDestructedType())
       cgf.cgm.errorNYI(e->getSourceRange(), "lambda with destructed field");
   }
+}
+
+void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
+  CIRGenFunction::RunCleanupsScope cleanups(cgf);
+  Visit(e->getSubExpr());
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {

@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCGenericRTDyldMemoryManager.cpp
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
+  ExecutorResolutionGenerator.cpp
   ObjectFileInterface.cpp
   GetDylibInterface.cpp
   IndirectionUtils.cpp
@@ -55,6 +56,7 @@ add_llvm_component_library(LLVMOrcJIT
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
   SimpleRemoteEPC.cpp
+  SimpleRemoteMemoryMapper.cpp
   Speculation.cpp
   SpeculateAnalyses.cpp
   ExecutorProcessControl.cpp

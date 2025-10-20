@@ -97,6 +97,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
                  VOP3_Pseudo<OpName, P, pattern> {
   let AsmMatchConverter = "cvtVOP3Interp";
   let mayRaiseFPException = 0;
+  let VOP3_OPSEL = P.HasOpSel;
 }
 
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
@@ -119,16 +120,17 @@ def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let HasSrc0Mods = 0;
 }
 
-class getInterp16Asm <bit HasSrc2, bit HasOMod> {
+class getInterp16Asm <bit HasSrc2, bit HasOMod, bit OpSel> {
   string src2 = !if(HasSrc2, ", $src2_modifiers", "");
   string omod = !if(HasOMod, "$omod", "");
+  string opsel = !if(OpSel, "$op_sel", "");
   string ret =
-    " $vdst, $src0_modifiers, $attr$attrchan"#src2#"$high$clamp"#omod;
+    " $vdst, $src0_modifiers, $attr$attrchan"#src2#"$high$clamp"#omod#opsel;
 }
 
 class getInterp16Ins <bit HasSrc2, bit HasOMod,
-                      Operand Src0Mod, Operand Src2Mod> {
-  dag ret = !if(HasSrc2,
+                      Operand Src0Mod, Operand Src2Mod, bit OpSel> {
+  dag ret1 = !if(HasSrc2,
                 !if(HasOMod,
                     (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                          InterpAttr:$attr, InterpAttrChan:$attrchan,
@@ -143,19 +145,22 @@ class getInterp16Ins <bit HasSrc2, bit HasOMod,
                      InterpAttr:$attr, InterpAttrChan:$attrchan,
                      highmod:$high, Clamp0:$clamp, omod0:$omod)
             );
+  dag ret2 = !if(OpSel, (ins op_sel0:$op_sel), (ins));
+  dag ret = !con(ret1, ret2);
 }
 
-class VOP3_INTERP16 <list<ValueType> ArgVT> : VOPProfile<ArgVT> {
+class VOP3_INTERP16 <list<ValueType> ArgVT, bit OpSel = 0> : VOPProfile<ArgVT> {
   let IsSingle = 1;
   let HasOMod = !ne(DstVT.Value, f16.Value);
   let HasHigh = 1;
+  let HasOpSel = OpSel;
 
   let Src0Mod = FPVRegInputMods;
   let Src2Mod = FPVRegInputMods;
 
   let Outs64 = (outs DstRC.RegClass:$vdst);
-  let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod>.ret;
-  let Asm64 = getInterp16Asm<HasSrc2, HasOMod>.ret;
+  let Ins64 = getInterp16Ins<HasSrc2, HasOMod, Src0Mod, Src2Mod, OpSel>.ret;
+  let Asm64 = getInterp16Asm<HasSrc2, HasOMod, OpSel>.ret;
 }
 
 //===----------------------------------------------------------------------===//
@@ -480,7 +485,7 @@ let SubtargetPredicate = isGFX9Plus in {
 defm V_MAD_U16_gfx9   : VOP3Inst_t16 <"v_mad_u16_gfx9", VOP_I16_I16_I16_I16>;
 defm V_MAD_I16_gfx9   : VOP3Inst_t16 <"v_mad_i16_gfx9", VOP_I16_I16_I16_I16>;
 let OtherPredicates = [isNotGFX90APlus] in
-def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f16, f32, i32, f32]>>;
+def V_INTERP_P2_F16_opsel : VOP3Interp <"v_interp_p2_f16_opsel", VOP3_INTERP16<[f16, f32, i32, f32], /*OpSel*/ 1>>;
 } // End SubtargetPredicate = isGFX9Plus
 
 // This predicate should only apply to the selection pattern. The
@@ -2676,6 +2681,14 @@ multiclass VOP3Interp_F16_Real_gfx9<bits<10> op, string OpName, string AsmName> 
             }
 }
 
+multiclass VOP3Interp_F16_OpSel_Real_gfx9<bits<10> op, string OpName, string AsmName> {
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(OpName), SIEncodingFamily.GFX9>,
+            VOP3Interp_OpSel_gfx9 <op, !cast<VOP3_Pseudo>(OpName).Pfl> {
+              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(OpName);
+              let AsmString = AsmName # ps.AsmOperands;
+            }
+}
+
 multiclass VOP3_Real_gfx9<bits<10> op, string AsmName> {
   def _gfx9 : VOP3_Real<!cast<VOP_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX9>,
               VOP3e_vi <op, !cast<VOP_Pseudo>(NAME#"_e64").Pfl> {
@@ -2788,7 +2801,7 @@ defm V_MAD_U16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x204, "v_mad_u16">;
 defm V_MAD_I16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x205, "v_mad_i16">;
 defm V_FMA_F16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x206, "v_fma_f16">;
 defm V_DIV_FIXUP_F16_gfx9   : VOP3OpSel_F16_Real_gfx9 <0x207, "v_div_fixup_f16">;
-defm V_INTERP_P2_F16_gfx9   : VOP3Interp_F16_Real_gfx9 <0x277, "V_INTERP_P2_F16_gfx9", "v_interp_p2_f16">;
+defm V_INTERP_P2_F16_opsel  : VOP3Interp_F16_OpSel_Real_gfx9 <0x277, "V_INTERP_P2_F16_opsel", "v_interp_p2_f16">;
 
 defm V_ADD_I32         : VOP3_Real_vi <0x29c>;
 defm V_SUB_I32         : VOP3_Real_vi <0x29d>;
