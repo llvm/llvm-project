@@ -351,9 +351,8 @@ private:
   bool isValueFromInsideRegion(Value value,
                                ExecuteRegionOp executeRegionOp) const {
     // Check if the value is defined within the execute_region
-    if (Operation *defOp = value.getDefiningOp()) {
-      return executeRegionOp.getRegion().isAncestor(defOp->getParentRegion());
-    }
+    if (Operation *defOp = value.getDefiningOp())
+      return executeRegionOp.getRegion() = defOp->getParentRegion();
 
     // If it's a block argument, check if it's from within the region
     if (BlockArgument blockArg = dyn_cast<BlockArgument>(value)) {
