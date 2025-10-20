@@ -10,6 +10,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -709,7 +710,8 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,
@@ -982,7 +984,8 @@ void AccStructureChecker::Enter(const parser::AccClause::Reduction &reduction) {
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *name = getDesignatorNameIfDataRef(designator)) {
+              if (const auto *name =
+                      parser::GetDesignatorNameIfDataRef(designator)) {
                 if (name->symbol) {
                   if (const auto *type{name->symbol->GetType()}) {
                     if (type->IsNumeric(TypeCategory::Integer) &&

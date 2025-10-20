@@ -4699,6 +4699,58 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
                    getLLVMStyleWithColumns(10)));
 }
 
+TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::BLS_AlignFirstComment);
+  verifyFormat("Type name{// Comment\n"
+               "          value};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("Type name{ // Comment\n"
+               "           value\n"
+               "};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_FunctionCall;
+  verifyFormat("Type name{ // Comment\n"
+               "    value};",
+               Style);
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "    arg};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("T baz{{ // Comment\n"
+               "    arg}};",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "    arg});",
+               Style);
+}
+
 } // end namespace
 } // namespace test
 } // end namespace format

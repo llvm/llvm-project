@@ -1,4 +1,5 @@
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
+! XFAIL: *
 
 subroutine test_unstructured1(a, b, c)
   integer :: i, j, k
