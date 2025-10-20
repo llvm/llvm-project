@@ -1029,25 +1029,15 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::FRem:
       return !DisableFrem && FRemExpander::shouldExpandFremType(TLI, Ty);
     case Instruction::FPToUI:
-    case Instruction::FPToSI: {
+    case Instruction::FPToSI:
       return !DisableExpandLargeFp &&
              cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
                  MaxLegalFpConvertBitWidth;
-    }
-
     case Instruction::UIToFP:
-    case Instruction::SIToFP: {
-      if (DisableExpandLargeFp)
-        continue;
-
-      // TODO: This pass doesn't handle scalable vectors.
-      if (I.getOperand(0)->getType()->isScalableTy())
-        continue;
-
-      auto *IntTy =
-          cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
-      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
-    }
+    case Instruction::SIToFP:
+      return !DisableExpandLargeFp &&
+             cast<IntegerType>(I.getOperand(0)->getType()->getScalarType())
+                     ->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
     }
 
     return false;
