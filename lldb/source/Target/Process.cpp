@@ -1974,25 +1974,36 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  auto total_ranges_len = llvm::sum_of(
+      llvm::map_range(ranges, [](auto range) { return range.size; }));
+  // If the buffer is not large enough, this is a programmer error.
+  // In production builds, gracefully fail by returning empty chunks.
+  assert(buffer.size() >= total_ranges_len);
+  if (buffer.size() < total_ranges_len)
+    return llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>(ranges.size());
+
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
 
-  for (auto [addr, len] : ranges) {
-    // This is either a programmer error, or a protocol violation.
-    // In production builds, gracefully fail.
-    assert(buffer.size() >= len);
-    if (buffer.size() < len) {
-      results.push_back(buffer.take_front(0));
-      continue;
-    }
-
+  // While `buffer` has space, take the next requested range and read
+  // memory into a `buffer` chunk, then slice it to remove the used chunk.
+  for (auto [addr, range_len] : ranges) {
     Status status;
     size_t num_bytes_read =
-        ReadMemoryFromInferior(addr, buffer.data(), len, status);
+        ReadMemoryFromInferior(addr, buffer.data(), range_len, status);
     // FIXME: ReadMemoryFromInferior promises to return 0 in case of errors, but
     // it doesn't; it never checks for errors.
     if (status.Fail())
       num_bytes_read = 0;
+
+    assert(num_bytes_read <= range_len && "read more than requested bytes");
+    if (num_bytes_read > range_len) {
+      // In production builds, gracefully fail by returning an empty chunk.
+      results.emplace_back();
+      continue;
+    }
+
     results.push_back(buffer.take_front(num_bytes_read));
+    // Slice buffer to remove the used chunk.
     buffer = buffer.drop_front(num_bytes_read);
   }
 

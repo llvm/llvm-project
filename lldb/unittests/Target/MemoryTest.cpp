@@ -18,7 +18,6 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "gtest/gtest.h"
 #include <cstdint>
-#include <random>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -228,15 +227,15 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
                                                        // old cache
 }
 
-/// A process class that reads `lower_byte(address)` for each `address` it
-/// reads.
+/// A process class that, when asked to read memory from some address X, returns
+/// the least significant byte of X.
 class DummyReaderProcess : public Process {
 public:
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
     uint8_t *buffer = static_cast<uint8_t *>(buf);
     for (size_t addr = vm_addr; addr < vm_addr + size; addr++)
-      buffer[addr - vm_addr] = addr;
+      buffer[addr - vm_addr] = static_cast<uint8_t>(addr); // LSB of addr.
     return size;
   }
   // Boilerplate, nothing interesting below.
@@ -270,12 +269,11 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
 
   llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
 
-  // Read 8 ranges of 128 bytes, starting at random addresses
-  std::mt19937 rng(42);
-  std::uniform_int_distribution<addr_t> distribution(1, 100000);
-  llvm::SmallVector<Range<addr_t, size_t>> ranges;
-  for (unsigned i = 0; i < 1024; i += 128)
-    ranges.emplace_back(distribution(rng), 128);
+  // Read 8 ranges of 128 bytes with arbitrary base addresses.
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {
+      {0x12345, 128},      {0x11112222, 128}, {0x77777777, 128},
+      {0xffaabbccdd, 128}, {0x0, 128},        {0x4242424242, 128},
+      {0x17171717, 128},   {0x99999, 128}};
 
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
       process->ReadMemoryRanges(ranges, buffer);
