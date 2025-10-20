@@ -4,13 +4,7 @@
 define <vscale x 4 x i32> @insert_div() {
 ; CHECK-LABEL: insert_div:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #43691 // =0xaaab
-; CHECK-NEXT:    movi v0.4s, #9
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    movk w8, #43690, lsl #16
-; CHECK-NEXT:    mov z1.s, w8
-; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
-; CHECK-NEXT:    lsr z0.s, z0.s, #1
+; CHECK-NEXT:    mov z0.s, #3 // =0x3
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 9), i64 0)
@@ -21,8 +15,7 @@ entry:
 define <vscale x 4 x i32> @insert_mul() {
 ; CHECK-LABEL: insert_mul:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.4s, #1
-; CHECK-NEXT:    mul z0.s, z0.s, #7
+; CHECK-NEXT:    mov z0.s, #7 // =0x7
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 1), i64 0)
@@ -33,8 +26,7 @@ entry:
 define <vscale x 4 x i32> @insert_add() {
 ; CHECK-LABEL: insert_add:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.4s, #5
-; CHECK-NEXT:    add z0.s, z0.s, #11 // =0xb
+; CHECK-NEXT:    mov z0.s, #16 // =0x10
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 5), i64 0)
@@ -45,8 +37,7 @@ entry:
 define <vscale x 4 x i32> @insert_sub() {
 ; CHECK-LABEL: insert_sub:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.4s, #11
-; CHECK-NEXT:    sub z0.s, z0.s, #11 // =0xb
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 11), i64 0)

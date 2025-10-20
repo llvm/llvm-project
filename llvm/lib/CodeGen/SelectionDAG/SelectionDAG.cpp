@@ -7338,16 +7338,23 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
            Op.getValueType().getVectorElementCount() == NumElts;
   };
 
-  auto IsBuildVectorSplatVectorOrUndef = [](const SDValue &Op) {
+  // UNDEF: folds to undef
+  // BUILD_VECTOR: may have constant elements
+  // SPLAT_VECTOR: could be a splat of a constant
+  // INSERT_SUBVECTOR: could be inserting a constant splat into an undef vector
+  // - This pattern occurs when a fixed-length vector splat is inserted into
+  //   a scalable vector
+  auto VectorOpMayConstantFold = [](const SDValue &Op) {
     return Op.isUndef() || Op.getOpcode() == ISD::CONDCODE ||
            Op.getOpcode() == ISD::BUILD_VECTOR ||
-           Op.getOpcode() == ISD::SPLAT_VECTOR;
+           Op.getOpcode() == ISD::SPLAT_VECTOR ||
+           Op.getOpcode() == ISD::INSERT_SUBVECTOR;
   };
 
   // All operands must be vector types with the same number of elements as
   // the result type and must be either UNDEF or a build/splat vector
   // or UNDEF scalars.
-  if (!llvm::all_of(Ops, IsBuildVectorSplatVectorOrUndef) ||
+  if (!llvm::all_of(Ops, VectorOpMayConstantFold) ||
       !llvm::all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
@@ -7374,14 +7381,28 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // a combination of BUILD_VECTOR and SPLAT_VECTOR.
   unsigned NumVectorElts = NumElts.isScalable() ? 1 : NumElts.getFixedValue();
 
+  // Preprocess insert_subvector to avoid repeatedly matching the splat.
+  SmallVector<SDValue, 4> PreprocessedOps;
+  for (SDValue Op : Ops) {
+    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR) {
+      // match: `insert_subvector undef, (splat X), N2` as `splat X`
+      SDValue N0 = Op.getOperand(0);
+      auto* BV = dyn_cast<BuildVectorSDNode>(Op.getOperand(1));
+      if (!N0.isUndef() || !BV || !(Op = BV->getSplatValue()))
+          return SDValue();
+    }
+    PreprocessedOps.push_back(Op);
+  }
+
   // Constant fold each scalar lane separately.
   SmallVector<SDValue, 4> ScalarResults;
   for (unsigned I = 0; I != NumVectorElts; I++) {
     SmallVector<SDValue, 4> ScalarOps;
-    for (SDValue Op : Ops) {
+    for (SDValue Op : PreprocessedOps) {
       EVT InSVT = Op.getValueType().getScalarType();
       if (Op.getOpcode() != ISD::BUILD_VECTOR &&
-          Op.getOpcode() != ISD::SPLAT_VECTOR) {
+          Op.getOpcode() != ISD::SPLAT_VECTOR &&
+          Op.getOpcode() != ISD::INSERT_SUBVECTOR) {
         if (Op.isUndef())
           ScalarOps.push_back(getUNDEF(InSVT));
         else
@@ -7389,7 +7410,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         continue;
       }
 
-      SDValue ScalarOp =
+      // insert_subvector has been preprocessed, so if it was of the form
+      // `insert_subvector undef, (splat X), N2`, it has been replaced with the
+      // splat value (X).
+      SDValue ScalarOp = Op.getOpcode() == ISD::INSERT_SUBVECTOR ? Op :
           Op.getOperand(Op.getOpcode() == ISD::SPLAT_VECTOR ? 0 : I);
       EVT ScalarVT = ScalarOp.getValueType();
 
