@@ -19,7 +19,7 @@ config.parallelism_group = "clangd"
 
 if platform.system() == "Darwin":
     shlibpath_var = "DYLD_LIBRARY_PATH"
-elif platform.system() == "Windows":
+elif platform.system() == "Windows" or sys.platform == "cygwin":
     shlibpath_var = "PATH"
 else:
     shlibpath_var = "LD_LIBRARY_PATH"
