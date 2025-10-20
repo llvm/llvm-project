@@ -3128,6 +3128,38 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_pslldq_byteshift(InterpState &S, CodePtr OpPC,
+                                                 const CallExpr *Call,
+                                                 unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Shift = ImmAPS.getZExtValue();
+
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned NumElems = Src.getNumElems();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != NumElems; ++I) {
+      if (I < Shift) {
+        Dst.elem<T>(I) = T();
+      }
+      else {
+        Dst.elem<T>(I) = Src.elem<T>(I - Shift);
+      }
+    }
+  });
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
 static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call,
                                                  unsigned ID) {
@@ -3136,18 +3168,18 @@ static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
   uint64_t Shift = ImmAPS.getZExtValue();
 
-  const Pointer &Concat = S.Stk.pop<Pointer>();
-  if (!Concat.getFieldDesc()->isPrimitiveArray())
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
     return false;
 
-  unsigned NumElems = Concat.getNumElems();
+  unsigned NumElems = Src.getNumElems();
   const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = Concat.getFieldDesc()->getPrimType();
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
 
   TYPE_SWITCH(ElemT, {
     for (unsigned I = 0; I != NumElems; ++I) {
       if (I + Shift < NumElems)
-        Dst.elem<T>(I) = Concat.elem<T>(I + Shift);
+        Dst.elem<T>(I) = Src.elem<T>(I + Shift);
       else
         Dst.elem<T>(I) = T();
     }
@@ -4179,6 +4211,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vec_set_v4di:
     return interp__builtin_vec_set(S, OpPC, Call, BuiltinID);
 
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+    return interp__builtin_x86_pslldq_byteshift(S, OpPC, Call, BuiltinID);
+    
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
     return interp__builtin_x86_psrldq_byteshift(S, OpPC, Call, BuiltinID);
