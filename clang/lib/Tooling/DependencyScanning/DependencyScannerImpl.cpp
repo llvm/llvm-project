@@ -691,8 +691,6 @@ bool DependencyScanningAction::runInvocation(
 
   if (Service.getFormat() == ScanningOutputFormat::P1689)
     Action = std::make_unique<PreprocessOnlyAction>();
-  else if (ModuleName)
-    Action = std::make_unique<GetDependenciesByModuleNameAction>(*ModuleName);
   else
     Action = std::make_unique<ReadPCHAndPreprocessAction>();
 

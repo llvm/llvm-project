@@ -151,14 +151,6 @@ public:
       LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
-  /// Given a compilation context specified via the Clang driver command-line,
-  /// gather modular dependencies of module with the given name, and return the
-  /// information needed for explicit build.
-  llvm::Expected<TranslationUnitDeps> getModuleDependencies(
-      StringRef ModuleName, const std::vector<std::string> &CommandLine,
-      StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
-      LookupModuleOutputCallback LookupModuleOutput);
-
   /// The following three methods provide a new interface to perform
   /// by name dependency scan. The new interface's intention is to improve
   /// dependency scanning performance when a sequence of name is looked up

@@ -38,8 +38,7 @@ public:
       IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       std::optional<StringRef> ModuleName = std::nullopt)
       : Service(Service), WorkingDirectory(WorkingDirectory),
-        Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)),
-        ModuleName(ModuleName) {}
+        Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
   bool runInvocation(std::unique_ptr<CompilerInvocation> Invocation,
                      IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
@@ -69,7 +68,6 @@ private:
   DependencyConsumer &Consumer;
   DependencyActionController &Controller;
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
-  std::optional<StringRef> ModuleName;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;
@@ -185,7 +183,7 @@ class CompilerInstanceWithContext {
   // Compiler Instance
   std::unique_ptr<CompilerInstance> CIPtr;
 
-  //   // Source location offset.
+  // Source location offset.
   int32_t SrcLocOffset = 0;
 
 public:

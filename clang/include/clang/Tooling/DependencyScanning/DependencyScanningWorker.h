@@ -105,18 +105,6 @@ public:
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
 
   /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific module.
-  ///
-  /// \returns false if clang errors occurred (with diagnostics reported to
-  /// \c DiagConsumer), true otherwise.
-  bool computeDependencies(StringRef WorkingDirectory,
-                           const std::vector<std::string> &CommandLine,
-                           DependencyConsumer &DepConsumer,
-                           DependencyActionController &Controller,
-                           DiagnosticConsumer &DiagConsumer,
-                           StringRef ModuleName);
-
-  /// Run the dependency scanning tool for a given clang driver command-line
   /// for a specific translation unit via file system or memory buffer.
   ///
   /// \returns A \c StringError with the diagnostic output if clang errors
@@ -125,17 +113,6 @@ public:
       StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
-
-  /// Run the dependency scanning tool for a given clang driver command-line
-  /// for a specific module.
-  ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, success otherwise.
-  llvm::Error computeDependencies(StringRef WorkingDirectory,
-                                  const std::vector<std::string> &CommandLine,
-                                  DependencyConsumer &Consumer,
-                                  DependencyActionController &Controller,
-                                  StringRef ModuleName);
 
   /// The three method below implements a new interface for by name
   /// dependency scanning. They together enable the dependency scanning worker
@@ -189,8 +166,7 @@ private:
                         DependencyConsumer &Consumer,
                         DependencyActionController &Controller,
                         DiagnosticConsumer &DC,
-                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                        std::optional<StringRef> ModuleName);
+                        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 };
 
 } // end namespace dependencies
