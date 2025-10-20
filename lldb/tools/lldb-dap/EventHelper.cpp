@@ -70,7 +70,7 @@ void SendExtraCapabilities(DAP &dap) {
 
   // Only notify the client if supportedFeatures changed.
   if (!body.capabilities.supportedFeatures.empty())
-    dap.Send(protocol::Event{"capabilities", std::move(body)});
+    dap.Send(protocol::Event{0, "capabilities", std::move(body)});
 }
 
 // "ProcessEvent": {
@@ -281,7 +281,7 @@ void SendInvalidatedEvent(
     return;
   protocol::InvalidatedEventBody body;
   body.areas = areas;
-  dap.Send(protocol::Event{"invalidated", std::move(body)});
+  dap.Send(protocol::Event{0, "invalidated", std::move(body)});
 }
 
 void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
@@ -292,7 +292,7 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
   body.count = variable.GetByteSize();
   if (body.memoryReference == LLDB_INVALID_ADDRESS)
     return;
-  dap.Send(protocol::Event{"memory", std::move(body)});
+  dap.Send(protocol::Event{0, "memory", std::move(body)});
 }
 
 } // namespace lldb_dap

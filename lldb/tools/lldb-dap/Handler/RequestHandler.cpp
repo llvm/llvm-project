@@ -157,7 +157,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 void BaseRequestHandler::Run(const Request &request) {
   // If this request was cancelled, send a cancelled response.
   if (dap.IsCancelled(request)) {
-    Response cancelled{/*request_seq=*/request.seq,
+    Response cancelled{/*seq=*/0,
+                       /*request_seq=*/request.seq,
                        /*command=*/request.command,
                        /*success=*/false,
                        /*message=*/eResponseMessageCancelled,
