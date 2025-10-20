@@ -356,7 +356,7 @@ private:
 
     // If it's a block argument, check if it's from within the region
     if (BlockArgument blockArg = dyn_cast<BlockArgument>(value)) {
-      return executeRegionOp.getRegion().isAncestor(blockArg.getParentRegion());
+      return executeRegionOp.getRegion() == blockArg.getParentRegion());
     }
 
     return false; // Value is from outside the region
