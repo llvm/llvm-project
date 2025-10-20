@@ -425,3 +425,102 @@ loop:
 exit:
   ret void
 }
+
+define void @hoist_previous_value_and_operand_load(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 1>, [[VECTOR_PH]] ], [ [[BROADCAST_SPLAT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[BROADCAST_SPLAT]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3]] = or <4 x i32> [[TMP2]], splat (i32 3)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR1]], <4 x i32> [[TMP3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 337, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i32 [ [[TMP1]], [[SCALAR_PH]] ], [ [[LOAD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[FOR_1]], 3
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
+; CHECK-NEXT:    store i32 [[FOR_2]], ptr [[GEP]], align 4
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    [[LOAD]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i32 [ 1, %entry ], [ %load, %loop ]
+  %for.2 = phi i32 [ 0, %entry ], [ %or, %loop ]
+  %or = or i32 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i32 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  %load = load i32, ptr %dst
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @hoist_previous_value_and_operand_assume(ptr %dst) {
+; CHECK-LABEL: @hoist_previous_value_and_operand_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_1:%.*]] = phi i1 [ true, [[ENTRY]] ], [ [[TRUNC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR_2:%.*]] = phi i1 [ false, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OR]] = or i1 [[FOR_1]], true
+; CHECK-NEXT:    [[ADD]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i1 [[FOR_2]], ptr [[GEP]], align 1
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 337
+; CHECK-NEXT:    call void @llvm.assume(i1 [[FOR_1]])
+; CHECK-NEXT:    [[TRUNC]] = trunc i64 [[IV]] to i1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %add, %loop ]
+  %for.1 = phi i1 [ 1, %entry ], [ %trunc, %loop ]
+  %for.2 = phi i1 [ 0, %entry ], [ %or, %loop ]
+  %or = or i1 %for.1, 3
+  %add = add i64 %iv, 1
+  %gep = getelementptr inbounds i32, ptr %dst, i64 %iv
+  store i1 %for.2, ptr %gep
+  %icmp = icmp ult i64 %iv, 337
+  call void @llvm.assume(i1 %for.1)
+  %trunc = trunc i64 %iv to i1
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret void
+}
