@@ -475,8 +475,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       }
       break;
     case cir::TEK_Complex:
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "complex function return type");
+      emitComplexExprIntoLValue(rv, makeAddrLValue(returnValue, rv->getType()),
+                                /*isInit=*/true);
       break;
     case cir::TEK_Aggregate:
       assert(!cir::MissingFeatures::aggValueSlotGC());
