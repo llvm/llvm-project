@@ -1,6 +1,7 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 from mlir.ir import *
+import mlir.ir as ir
 import mlir.dialects.gpu as gpu
 import mlir.dialects.gpu.passes
 from mlir.passmanager import *
@@ -64,3 +65,95 @@ def testObjectAttr():
     # CHECK: #gpu.object<#nvvm.target, kernels = <[#gpu.kernel_metadata<"kernel", () -> ()>]>, "BC\C0\DE5\14\00\00\05\00\00\00b\0C0$MY\BEf">
     print(o)
     assert o.kernels == kernelTable
+
+
+# CHECK-LABEL: testGPUFuncOp
+@run
+def testGPUFuncOp():
+    assert gpu.GPUFuncOp.__doc__ is not None
+    module = Module.create()
+    with InsertionPoint(module.body):
+        gpu_module_name = StringAttr.get("gpu_module")
+        gpumodule = gpu.GPUModuleOp(gpu_module_name)
+        block = gpumodule.bodyRegion.blocks.append()
+
+        def builder(func: gpu.GPUFuncOp) -> None:
+            gpu.GlobalIdOp(gpu.Dimension.x)
+            gpu.ReturnOp([])
+
+        with InsertionPoint(block):
+            name = StringAttr.get("kernel0")
+            func_type = ir.FunctionType.get(inputs=[], results=[])
+            type_attr = TypeAttr.get(func_type)
+            func = gpu.GPUFuncOp(type_attr, name)
+            func.attributes["sym_name"] = name
+            func.attributes["gpu.kernel"] = UnitAttr.get()
+
+            try:
+                func.entry_block
+                assert False, "Expected RuntimeError"
+            except RuntimeError as e:
+                assert (
+                    str(e)
+                    == "Entry block does not exist for kernel0. Do you need to call the add_entry_block() method on this GPUFuncOp?"
+                )
+
+            block = func.add_entry_block()
+            with InsertionPoint(block):
+                builder(func)
+
+            try:
+                func.add_entry_block()
+                assert False, "Expected RuntimeError"
+            except RuntimeError as e:
+                assert str(e) == "Entry block already exists for kernel0"
+
+            func = gpu.GPUFuncOp(
+                func_type,
+                sym_name="kernel1",
+                kernel=True,
+                body_builder=builder,
+                known_block_size=[1, 2, 3],
+                known_grid_size=DenseI32ArrayAttr.get([4, 5, 6]),
+            )
+
+            assert func.name.value == "kernel1"
+            assert func.function_type.value == func_type
+            assert func.arg_attrs == None
+            assert func.res_attrs == None
+            assert func.arguments == []
+            assert func.entry_block == func.body.blocks[0]
+            assert func.is_kernel
+            assert func.known_block_size == DenseI32ArrayAttr.get(
+                [1, 2, 3]
+            ), func.known_block_size
+            assert func.known_grid_size == DenseI32ArrayAttr.get(
+                [4, 5, 6]
+            ), func.known_grid_size
+
+            func = gpu.GPUFuncOp(
+                func_type,
+                sym_name="non_kernel_func",
+                body_builder=builder,
+            )
+            assert not func.is_kernel
+            assert func.known_block_size is None
+            assert func.known_grid_size is None
+
+    print(module)
+
+    # CHECK: gpu.module @gpu_module
+    # CHECK: gpu.func @kernel0() kernel {
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }
+    # CHECK: gpu.func @kernel1() kernel attributes
+    # CHECK-SAME: known_block_size = array<i32: 1, 2, 3>
+    # CHECK-SAME: known_grid_size = array<i32: 4, 5, 6>
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }
+    # CHECK: gpu.func @non_kernel_func() {
+    # CHECK:   %[[VAL_0:.*]] = gpu.global_id  x
+    # CHECK:   gpu.return
+    # CHECK: }

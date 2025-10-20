@@ -210,7 +210,7 @@ declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 define <2 x i32> @non_speculatable(i1 %b) {
 ; CHECK-LABEL: @non_speculatable(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], ptr @g1, ptr @g2
-; CHECK-NEXT:    [[C:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr nonnull [[S]], i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
+; CHECK-NEXT:    [[C:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr nonnull align 64 [[S]], <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %s = select i1 %b, ptr @g1, ptr @g2

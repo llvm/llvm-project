@@ -105,6 +105,16 @@ unsigned DwarfVersionNum(StringRef ArgValue);
 const llvm::opt::Arg *getDwarfNArg(const llvm::opt::ArgList &Args);
 unsigned getDwarfVersion(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
+enum class DwarfFissionKind { None, Split, Single };
+
+DwarfFissionKind getDebugFissionKind(const Driver &D,
+                                     const llvm::opt::ArgList &Args,
+                                     llvm::opt::Arg *&Arg);
+
+bool checkDebugInfoOption(const llvm::opt::Arg *A,
+                          const llvm::opt::ArgList &Args, const Driver &D,
+                          const ToolChain &TC);
+
 void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
@@ -293,6 +303,11 @@ std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 
 // Render a frontend option corresponding to ComplexRangeKind.
 std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
+
+// Set the complex range and output a warning as needed.
+void setComplexRange(const Driver &D, StringRef NewOpt,
+                     LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
+                     LangOptions::ComplexRangeKind &Range);
 
 } // end namespace tools
 } // end namespace driver

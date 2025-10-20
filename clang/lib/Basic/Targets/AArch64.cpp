@@ -1568,6 +1568,7 @@ bool AArch64TargetInfo::validateAsmConstraint(
     if (const unsigned Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setOutputOperandBounds(0, 2);
       return true;
     }
   }

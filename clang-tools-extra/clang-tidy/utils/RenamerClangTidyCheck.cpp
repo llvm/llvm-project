@@ -331,7 +331,7 @@ public:
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 

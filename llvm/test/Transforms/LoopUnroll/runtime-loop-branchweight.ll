@@ -3,7 +3,7 @@
 ;; Check that the remainder loop is properly assigned a branch weight for its latch branch.
 ; CHECK-LABEL: @test(
 ; CHECK-LABEL: for.body:
-; CHECK: br i1 [[COND1:%.*]], label %for.end.loopexit.unr-lcssa.loopexit, label %for.body, !prof ![[#PROF:]], !llvm.loop ![[#LOOP:]]
+; CHECK: br i1 [[COND1:%.*]], label %for.end.loopexit.unr-lcssa, label %for.body, !prof ![[#PROF:]], !llvm.loop ![[#LOOP:]]
 ; CHECK-LABEL: for.body.epil:
 ; CHECK: br i1 [[COND2:%.*]], label  %for.body.epil, label %for.end.loopexit.epilog-lcssa, !prof ![[#PROF2:]], !llvm.loop ![[#LOOP2:]]
 ; CHECK: ![[#PROF]] = !{!"branch_weights", i32 1, i32 2499}

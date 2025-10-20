@@ -65,13 +65,19 @@ public:
   bool isTrivialMatchAll() const {
     if (!Prefix.empty())
       return false;
+    if (!Suffix.empty())
+      return false;
     if (SubGlobs.size() != 1)
       return false;
     return SubGlobs[0].getPat() == "*";
   }
 
+  StringRef prefix() const { return Prefix; }
+  StringRef suffix() const { return Suffix; }
+
 private:
   StringRef Prefix;
+  StringRef Suffix;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against

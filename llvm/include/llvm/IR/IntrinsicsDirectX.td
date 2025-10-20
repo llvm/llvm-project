@@ -77,6 +77,9 @@ def int_dx_resource_updatecounter
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i8_ty],
                             [IntrInaccessibleMemOrArgMemOnly]>;
 
+def int_dx_resource_getdimensions_x
+    : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty], [IntrReadMem]>;
+
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
@@ -133,6 +136,8 @@ def int_dx_frac  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
 def int_dx_degrees : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
 
 def int_dx_isinf : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+    [llvm_anyfloat_ty], [IntrNoMem]>;
+def int_dx_isnan : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
     [llvm_anyfloat_ty], [IntrNoMem]>;
 
 def int_dx_lerp : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty, LLVMMatchType<0>,LLVMMatchType<0>],

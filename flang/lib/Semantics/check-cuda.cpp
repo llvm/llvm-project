@@ -774,4 +774,33 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 }
 
+void CUDAChecker::Enter(const parser::PrintStmt &x) {
+  CHECK(context_.location());
+  const Scope &scope{context_.FindScope(*context_.location())};
+  const Scope &progUnit{GetProgramUnitContaining(scope)};
+  if (IsCUDADeviceContext(&progUnit) || deviceConstructDepth_ > 0) {
+    return;
+  }
+
+  auto &outputItemList{std::get<std::list<Fortran::parser::OutputItem>>(x.t)};
+  for (const auto &item : outputItemList) {
+    if (const auto *x{std::get_if<parser::Expr>(&item.u)}) {
+      if (const auto *expr{GetExpr(context_, *x)}) {
+        for (const Symbol &sym : CollectCudaSymbols(*expr)) {
+          if (const auto *details = sym.GetUltimate()
+                  .detailsIf<semantics::ObjectEntityDetails>()) {
+            if (details->cudaDataAttr() &&
+                (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+                    *details->cudaDataAttr() ==
+                        common::CUDADataAttr::Constant)) {
+              context_.Say(parser::FindSourceLocation(*x),
+                  "device data not allowed in I/O statements"_err_en_US);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 } // namespace Fortran::semantics

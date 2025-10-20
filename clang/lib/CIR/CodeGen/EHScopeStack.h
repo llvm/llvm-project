@@ -108,9 +108,6 @@ public:
     ///
     // \param flags cleanup kind.
     virtual void emit(CIRGenFunction &cgf) = 0;
-
-    // This is a placeholder until EHScope is implemented.
-    virtual size_t getSize() const = 0;
   };
 
 private:
@@ -174,6 +171,10 @@ public:
   stable_iterator stable_begin() const {
     return stable_iterator(endOfBuffer - startOfData);
   }
+
+  /// Turn a stable reference to a scope depth into a unstable pointer
+  /// to the EH stack.
+  iterator find(stable_iterator savePoint) const;
 
   /// Create a stable reference to the bottom of the EH stack.
   static stable_iterator stable_end() { return stable_iterator(0); }

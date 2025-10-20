@@ -431,6 +431,19 @@ bool ClauseProcessor::processNumTasks(
   return false;
 }
 
+bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
+                                   mlir::omp::SizesClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Sizes>()) {
+    result.sizes.reserve(clause->v.size());
+    for (const ExprTy &vv : clause->v)
+      result.sizes.push_back(fir::getBase(converter.genExprValue(vv, stmtCtx)));
+
+    return true;
+  }
+
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
@@ -1330,8 +1343,10 @@ bool ClauseProcessor::processMap(
                      const parser::CharBlock &source) {
     using Map = omp::clause::Map;
     mlir::Location clauseLocation = converter.genLocation(source);
-    const auto &[mapType, typeMods, refMod, mappers, iterator, objects] =
-        clause.t;
+    const auto &[mapType, typeMods, attachMod, refMod, mappers, iterator,
+                 objects] = clause.t;
+    if (attachMod)
+      TODO(currentLocation, "ATTACH modifier is not implemented yet");
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
     std::string mapperIdName = "__implicit_mapper";

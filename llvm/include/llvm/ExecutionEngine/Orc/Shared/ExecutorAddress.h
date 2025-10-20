@@ -272,6 +272,9 @@ struct ExecutorAddrRange {
   }
 
   bool contains(ExecutorAddr Addr) const { return Start <= Addr && Addr < End; }
+  bool contains(const ExecutorAddrRange &Other) {
+    return (Other.Start >= Start && Other.End <= End);
+  }
   bool overlaps(const ExecutorAddrRange &Other) {
     return !(Other.End <= Start || End <= Other.Start);
   }

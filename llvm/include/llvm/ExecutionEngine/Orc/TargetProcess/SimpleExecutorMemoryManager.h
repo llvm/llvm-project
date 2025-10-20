@@ -34,34 +34,65 @@ class LLVM_ABI SimpleExecutorMemoryManager : public ExecutorBootstrapService {
 public:
   virtual ~SimpleExecutorMemoryManager();
 
-  Expected<ExecutorAddr> allocate(uint64_t Size);
-  Error finalize(tpctypes::FinalizeRequest &FR);
-  Error deallocate(const std::vector<ExecutorAddr> &Bases);
+  Expected<ExecutorAddr> reserve(uint64_t Size);
+  Expected<ExecutorAddr> initialize(tpctypes::FinalizeRequest &FR);
+  Error deinitialize(const std::vector<ExecutorAddr> &InitKeys);
+  Error release(const std::vector<ExecutorAddr> &Bases);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
 private:
-  struct Allocation {
+  struct RegionInfo {
     size_t Size = 0;
-    std::vector<shared::WrapperFunctionCall> DeallocationActions;
+    std::vector<shared::WrapperFunctionCall> DeallocActions;
   };
 
-  using AllocationsMap = DenseMap<void *, Allocation>;
+  struct SlabInfo {
+    using RegionMap = std::map<ExecutorAddr, RegionInfo>;
+    size_t Size = 0;
+    RegionMap Regions;
+  };
 
-  Error deallocateImpl(void *Base, Allocation &A);
+  using SlabMap = std::map<void *, SlabInfo>;
+
+  /// Get a reference to the slab information for the slab containing the given
+  /// address.
+  Expected<SlabInfo &> getSlabInfo(ExecutorAddr A, StringRef Context);
+
+  /// Get a reference to the slab information for the slab *covering* the given
+  /// range. The given range must be a subrange of e(possibly equal to) the
+  /// range of the slab itself.
+  Expected<SlabInfo &> getSlabInfo(ExecutorAddrRange R, StringRef Context);
+
+  /// Create a RegionInfo for the given range, which must not overlap any
+  /// existing region.
+  Expected<RegionInfo &> createRegionInfo(ExecutorAddrRange R,
+                                          StringRef Context);
+
+  /// Get a reference to the region information for the given address. This
+  /// address must represent the start of an existing initialized region.
+  Expected<RegionInfo &> getRegionInfo(SlabInfo &Slab, ExecutorAddr A,
+                                       StringRef Context);
+
+  /// Get a reference to the region information for the given address. This
+  /// address must represent the start of an existing initialized region.
+  Expected<RegionInfo &> getRegionInfo(ExecutorAddr A, StringRef Context);
 
   static llvm::orc::shared::CWrapperFunctionResult
   reserveWrapper(const char *ArgData, size_t ArgSize);
 
   static llvm::orc::shared::CWrapperFunctionResult
-  finalizeWrapper(const char *ArgData, size_t ArgSize);
+  initializeWrapper(const char *ArgData, size_t ArgSize);
 
   static llvm::orc::shared::CWrapperFunctionResult
-  deallocateWrapper(const char *ArgData, size_t ArgSize);
+  deinitializeWrapper(const char *ArgData, size_t ArgSize);
+
+  static llvm::orc::shared::CWrapperFunctionResult
+  releaseWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;
-  AllocationsMap Allocations;
+  SlabMap Slabs;
 };
 
 } // end namespace rt_bootstrap

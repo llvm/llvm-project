@@ -1609,7 +1609,12 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     if (Sanitize.needsFuzzer() && !Args.hasArg(options::OPT_dynamiclib)) {
       AddLinkSanitizerLibArgs(Args, CmdArgs, "fuzzer", /*shared=*/false);
 
-        // Libfuzzer is written in C++ and requires libcxx.
+      // Libfuzzer is written in C++ and requires libcxx.
+      // Since darwin::Linker::ConstructJob already adds -lc++ for clang++
+      // by default if ShouldLinkCXXStdlib(Args), we only add the option if
+      // !ShouldLinkCXXStdlib(Args). This avoids duplicate library errors
+      // on Darwin.
+      if (!ShouldLinkCXXStdlib(Args))
         AddCXXStdlibLibArgs(Args, CmdArgs);
     }
     if (Sanitize.needsStatsRt()) {

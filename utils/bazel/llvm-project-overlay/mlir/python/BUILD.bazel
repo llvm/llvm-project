@@ -633,6 +633,34 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# OpenACC dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "OpenACCOpsPyGen",
+    tbl_outs = {"mlir/dialects/_acc_ops_gen.py": [
+        "-gen-python-op-bindings",
+        "-bind-dialect=acc",
+    ]},
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/OpenACCOps.td",
+    deps = [
+        "//mlir:BuiltinDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:OpenAccOpsTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+    ],
+)
+
+filegroup(
+    name = "OpenACCOpsPyFiles",
+    srcs = [
+        "mlir/dialects/openacc.py",
+        ":OpenACCOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # OpenMP dialect.
 ##---------------------------------------------------------------------------##
 

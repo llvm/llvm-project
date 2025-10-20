@@ -330,11 +330,8 @@ define amdgpu_kernel void @fptosi_v2f16_to_v2i16(
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.l, v0.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v1.l, v1.l
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cvt_i16_f16_e32 v0.h, v1.l
 ; GFX11-TRUE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;

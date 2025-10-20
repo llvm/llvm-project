@@ -253,8 +253,6 @@ subroutine assoc()
     lvar = associated(intPointerVar1, targetIntCoarray[1])
     !ERROR: 'neverdeclared' is not a procedure
     !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
-    !ERROR: 'neverdeclared' is not a procedure
-    !ERROR: Could not characterize intrinsic function actual argument 'badpointer'
     lvar = associated(badPointer)
   end subroutine test
 end subroutine assoc

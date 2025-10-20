@@ -14,10 +14,7 @@ import os
 import signal
 import sys
 
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 import cui
 

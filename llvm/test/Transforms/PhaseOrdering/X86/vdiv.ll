@@ -30,6 +30,7 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK6:%.*]] = icmp ult i32 [[N]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK6]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH1:.*]]
 ; CHECK:       [[VECTOR_PH1]]:
+; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 12
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 2147483632
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
@@ -67,7 +68,6 @@ define void @vdiv(ptr %x, ptr %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[N_VEC_REMAINING:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 12
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[FOR_BODY_PREHEADER9]], label %[[VEC_EPILOG_PH]]
 ; CHECK:       [[VEC_EPILOG_PH]]:

@@ -97,10 +97,8 @@ add_object_library(
                             # value other than 0 is dangerous. We know.
 )
 
-add_object_library(
+add_header_library(
   callonce
-  SRCS
-    callonce.cpp
   HDRS
     ../callonce.h
     callonce.h

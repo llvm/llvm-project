@@ -296,6 +296,7 @@ struct DeferredFile {
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
+#if LLVM_ENABLE_THREADS
 class SerialBackgroundWorkQueue {
   std::deque<std::function<void()>> queue;
   std::thread *running;
@@ -361,7 +362,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
     // Reference all file's mmap'd pages to load them into memory.
     for (const char *page = buff.data(), *end = page + buff.size();
          page < end && !pageInQueue.stopAllWork; page += pageSize) {
-      LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+      [[maybe_unused]] volatile char t = *page;
       (void)t;
     }
 #else
@@ -372,8 +373,7 @@ void multiThreadedPageInBackground(DeferredFiles &deferred) {
 #undef DEBUG_TYPE
 #endif
   };
-
-  if (llvm_is_multithreaded()) { // Create scope for waiting for the taskGroup
+  { // Create scope for waiting for the taskGroup
     std::atomic_size_t index = 0;
     llvm::parallel::TaskGroup taskGroup;
     for (int w = 0; w < config->readWorkers; w++)
@@ -400,6 +400,7 @@ static void multiThreadedPageIn(const DeferredFiles &deferred) {
     multiThreadedPageInBackground(files);
   });
 }
+#endif
 
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
                               DeferredFiles *archiveContents, StringRef path,
@@ -1440,6 +1441,7 @@ static void createFiles(const InputArgList &args) {
     }
   }
 
+#if LLVM_ENABLE_THREADS
   if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
@@ -1459,6 +1461,7 @@ static void createFiles(const InputArgList &args) {
 
     pageInQueue.stopAllWork = true;
   }
+#endif
 }
 
 static void gatherInputSections() {
@@ -1846,16 +1849,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
 
   if (auto *arg = args.getLastArg(OPT_read_workers)) {
-    if (llvm_is_multithreaded()) {
-      StringRef v(arg->getValue());
-      unsigned workers = 0;
-      if (!llvm::to_integer(v, workers, 0))
-        error(arg->getSpelling() +
-              ": expected a non-negative integer, but got '" + arg->getValue() +
-              "'");
-      config->readWorkers = workers;
-    } else
-      error(arg->getSpelling() + ": option unavailable");
+#if LLVM_ENABLE_THREADS
+    StringRef v(arg->getValue());
+    unsigned workers = 0;
+    if (!llvm::to_integer(v, workers, 0))
+      error(arg->getSpelling() +
+            ": expected a non-negative integer, but got '" + arg->getValue() +
+            "'");
+    config->readWorkers = workers;
+#else
+    warn(arg->getSpelling() +
+         ": option unavailable because lld was not built with thread support");
+#endif
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
@@ -2001,6 +2006,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->separateCstringLiteralSections =
       args.hasFlag(OPT_separate_cstring_literal_sections,
                    OPT_no_separate_cstring_literal_sections, false);
+  config->tailMergeStrings =
+      args.hasFlag(OPT_tail_merge_strings, OPT_no_tail_merge_strings, false);
 
   auto IncompatWithCGSort = [&](StringRef firstArgStr) {
     // Throw an error only if --call-graph-profile-sort is explicitly specified

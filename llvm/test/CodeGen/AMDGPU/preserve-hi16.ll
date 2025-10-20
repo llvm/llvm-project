@@ -929,9 +929,8 @@ define i32 @zext_fptrunc_fma_f16(float %x, float %y, float %z) {
 ; GFX11-TRUE16-LABEL: zext_fptrunc_fma_f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v1, v0, v1, v2
+; GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: zext_fptrunc_fma_f16:

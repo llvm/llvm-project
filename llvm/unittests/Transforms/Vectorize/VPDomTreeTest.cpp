@@ -45,8 +45,7 @@ TEST_F(VPDominatorTreeTest, DominanceNoRegionsTest) {
 
   VPBlockUtils::connectBlocks(R1, Plan.getScalarHeader());
 
-  VPDominatorTree VPDT;
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 
   EXPECT_TRUE(VPDT.dominates(VPBB1, VPBB4));
   EXPECT_FALSE(VPDT.dominates(VPBB4, VPBB1));
@@ -118,8 +117,7 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBlockUtils::connectBlocks(R1, R2);
 
     VPBlockUtils::connectBlocks(R2, Plan.getScalarHeader());
-    VPDominatorTree VPDT;
-    VPDT.recalculate(Plan);
+    VPDominatorTree VPDT(Plan);
 
     checkDomChildren(VPDT, R1, {R1BB1});
     checkDomChildren(VPDT, R1BB1, {R1BB2, R1BB4, R1BB3});
@@ -197,8 +195,7 @@ TEST_F(VPDominatorTreeTest, DominanceRegionsTest) {
     VPBlockUtils::connectBlocks(R1, VPBB2);
 
     VPBlockUtils::connectBlocks(VPBB2, Plan.getScalarHeader());
-    VPDominatorTree VPDT;
-    VPDT.recalculate(Plan);
+    VPDominatorTree VPDT(Plan);
 
     checkDomChildren(VPDT, VPBB1, {R1});
     checkDomChildren(VPDT, R1, {R1BB1});

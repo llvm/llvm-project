@@ -1971,6 +1971,464 @@ The last argument `i1 %unpack` is a compile-time constant which when set, indica
 For more information, refer to the
 `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st>`__.
 
+tcgen05.mma Intrinsics
+----------------------
+
+Overview
+^^^^^^^^
+
+`tcgen05.mma` operation of shape `M x N x K` perform matrix multiplication and
+accumulation of the form: `D =  A * B + D` where:
+
+  - the `A` matrix has shape `M x K`, in either `Tensor Memory` or `Shared Memory`
+  - the `B` matrix has shape `K x N`, in `Shared Memory` of the current CTA and, optionally in peer CTA
+  - the `D` matrix is of the shape `M x N`, in `Tensor Memory`
+
+Optionally an input predicate can be used to disable the input (`%enable_inp_d`)
+from the accumulator matrix and the following operation can be performed as `D = A * B`
+
+The matrix multiplication and accumulation operations are categorized into various
+kinds based on input types and the throughput of the multiplication operation.
+The following table shows the different kinds of MMA operations that are supported:
+
++------------+--------------------------------------------+
+| .kind      | Supported Input Types                      |
++============+============================================+
+| f16        | F16 and BF16                               |
++------------+--------------------------------------------+
+| tf32       | TF32                                       |
++------------+--------------------------------------------+
+| f8f6f4     | All combinations of F8, F6, and F4         |
++------------+--------------------------------------------+
+| i8         | Signed and Unsigned 8-bit Integers         |
++------------+--------------------------------------------+
+| mxf8f6f4   | MX-floating point formats                  |
++------------+--------------------------------------------+
+| mxf4       | MX-floating point formats (FP4)            |
++------------+--------------------------------------------+
+| mxf4nvf4   | MXF4 + custom NVIDIA 4-bit floating point  |
+|            | (with common scaling factor)               |
++------------+--------------------------------------------+
+
+`tcgen05.mma.sp` supports sparse variant of `A` with shape `M x K` stored in packed
+form as `M X (K / 2)` in memory. The `%spmetadata` specifies the mapping of the
+`K / 2` non-zero elements to the `K` elements before performing the MMA operation.
+
+`tcgen05.mma.block_scale` perform matrix multiplication with block scaling
+`D = (A * scale_A)  * (B * scale_B) + D` where scaling of input matrices from
+memory to form the matrix `A` and matrix `B` before performing the MMA operation.
+Scale factors for `A` and `B` matrices need to be duplicated to all 32 lane partitions
+of tensor memory. The shape of `%scale_a` and `%scale_b` matrices depend on the
+`.scale_vectorsize` described in `here <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-scale-valid-comb>`__
+
+The sparsity metadata (`%spmetadata`) as well as the block-scale inputs for `A / B`
+matrices (`%scale_a` and `%scale_b`) reside in Tensor Memory.
+
+To facilitate opportunistic re-use of `A / B` matrix data across a sequence of MMA
+operations, the `A/B` matrices are loaded into a collector buffer
+(`%collector_usage_a_op_flag`, `%collector_usage_b_buffer_flag`, and `%collector_usage_b_op_flag`).
+The flag value of the collector_usage flag in the intrinsic specifies the nature of the re-use
+
+There are three kinds of matrix descriptors used by the tcgen05 family of instructions:
+
++----------------------------+-----------------------------------------------------------------------------------------------------------+-------------+
+| Descriptor                 | Description                                                                                               | Size (bits) |
++============================+===========================================================================================================+=============+
+| Shared Memory Descriptor   | Describes properties of multiplicand matrix                                                               |             |
+|                            | in shared memory, including its location                                                                  |             |
+|                            | within the CTA's shared memory.                                                                           |     64      |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-shared-memory-descriptor>`__    |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+| Instruction Descriptor     | Describes shapes, types, and details of                                                                   |             |
+|                            | all matrices and the MMA operation.                                                                       |     32      |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__ |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+| Zero-Column Mask Descriptor| Generates a mask specifying which columns of                                                              |             |
+|                            | B matrix are zeroed in the MMA operation,                                                                 |             |
+|                            | regardless of values in shared memory.                                                                    |     64      |
+|                            | Total mask size = N bits                                                                                  |             |
+|                            | `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__      |             |
++----------------------------+-----------------------------------------------+-------------+---------------------------------------------+-------------+
+
+`tcgen05.mma` can be used for general matrix multiplication or for convolution operations.
+In case of convolutions, the `activations` can be stored in either matrix `A` or matrix `B`
+while the `weights` will be stored in the other matrix
+
+`tcgen05.mma` has an optional collector qualifier to specify when an `A` or `B` matrix
+is new to the sequence and should be loaded, unchanged within the sequence and,
+should be reused, or the last use in the sequence and should be discarded.
+The collector qualifier is used to give the TensorCore permission to reuse a
+previously loaded `A` or `B` matrix; however reuse is opportunistic in that the
+TensorCore may reload a matrix even when it has permission to reuse that matrix.
+Thus, the source memory of an A or B matrix must not be modified while the MMA
+instruction using those matrices has not completed - regardless of collector
+qualifier permissions.
+
+The `cta_group::1` specifies that the operation is performed on the Tensor Memory
+of the executing thread’s CTA only. The `cta_group::2` specifies that the MMA
+operation is performed on the Tensor Memory of the executing thread’s CTA and its peer CTA.
+
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory
+that should be not be updated with the resultant matrix D. Elements of the vector operand
+disable-output-lane forms a mask where each bit corresponds to a lane of the Tensor Memory,
+with least significant bit of the first element of the vector (leftmost in syntax)
+corresponding to the lane 0 of the Tensor Memory. If a bit in the mask is 1, then
+the corresponding lane in the Tensor Memory for the resultant matrix D will not be
+updated
+
+Intrinsic Design:
+^^^^^^^^^^^^^^^^^
+
+Given the broad feature set of `tcgen05.mma` instruction modeling these
+through intrinsics is highly complex, and the following table outlines the large
+number of intrinsics required to fully support the `tcgen05.mma` instruction set.
+
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| variant                            | Configuration                                                                                     | Total Variants |
++====================================+===================================================================================================+================+
+| tcgen05.mma.shared                 | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.tensor.ashift          | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.scale_d                | 2 (space) x 2 (sp) x 2 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.scale_d.tensor.ashift  | 2 (sp) x 2 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 16             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.disable_output_lane    | 2 (space) x 2 (sp) x 4 (kind) x 2 (cta_group) x 4 (collector_usage)                               | 128            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.disable_output_lane... | 2 (sp) x 4 (kind) x 2 (cta_group) x 2 (collector_usage)                                           | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4nvf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)                   | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.block_scale            | 2 (space) x 1 (mxf8f6f4) x 2 (cta_group) x 2 (scale_vec_size) x 4 (collector_usage)               | 32             |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| tcgen05.mma.ws                     | 2 (space) x 2 (sp) x 4 (kind) x 2 (zero_col_mask) x 4 (collector_usage_op) x 4 (collector_buffer) | 256            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+| Total                              |                                                                                                   | 816            |
++------------------------------------+---------------------------------------------------------------------------------------------------+----------------+
+
+
+To reduce the number of possible intrinsic variations, we've modeled the `tcgen05.mma`
+instructions using flag operands. We've added range checks to these flags to prevent
+invalid values. We also expanded some flags back into intrinsic modifiers to avoid
+supporting invalid combinations of features.
+
+
+'``llvm.nvvm.tcgen05.mma.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.mma.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i32 %kind_flag, i32 %cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; .scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; sp.scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, i32 %cta_group, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma` is an asynchronous intrinsic which initiates an `M x N x K` matrix
+multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`,
+the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form
+`D = A*B` is issued when the input predicate argument `%enable_inp_d` is false.
+The optional immediate argument `%scale_d_imm` can be specified to scale the input
+matrix `D` as follows: `D = A * B + D * (2 ^ - %scale_d_imm)`. The valid range of
+values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc
+is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions
+`nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing
+the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix and accumulate
+operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K/2)` and requires
+specifiying an additional `%spmetadata` argument
+
+`.ashift` shifts the rows of the A matrix down by one row, except for the last row
+in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for
+matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag`
+along with `.ashift`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%kind_flag` flag:
+
+============= ==========
+  `kind_flag`   value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%cta_group_flag` flag:
+
+================= ==========
+ `cta_group_flag`    value
+================= ==========
+     CG1               1
+     CG2               2
+================= ==========
+
+`%collector_usage_a_op_flag` flag:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+           DISCARD                 0
+           LASTUSE                 1
+           USE                     2
+           FILL                    3
+============================= ==========
+
+'``llvm.nvvm.tcgen05.mma.block_scale*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  ; mxf8f6f4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf8f6f4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; mxf4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+  ; mxf4nvf4
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block16(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.mxf4nvf4.block_scale.block32(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, ptr addrspace(6) %scale_a, ptr addrspace(6) %scale_b, i32 cta_group_flag, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+`nvvm.tcgen05.mma.block_scale` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = (A * scale_a)  * (B * scale_b) + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The matrices `A` and `B` are scaled with `%scale_A` and `%scale_B` matrices respectively before performing the matrix multiply and accumulate operation. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma.block_scale` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.block_scale` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%cta_group`:
+
+============= ==========
+ `cta_group`    value
+============= ==========
+     CG1          1
+     CG2          2
+============= ==========
+
+`%collector_usage_a_op_flag`:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
+'``llvm.nvvm.tcgen05.mma.disable_output_lane*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+  ; .sp.scale_d variants
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg1(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.shared.scale_d.disable_output_lane.cg2(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg1<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <4 x i32> %disable_output_lane_v4, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.sp.tensor.scale_d.disable_output_lane.cg2<.ashift>(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, ptr addrspace(6) %spmetadata, i1 %enable_inp_d, i64 %scale_d_imm, <8 x i32> %disable_output_lane_v8, i32 %kind_flag, i32 %collector_usage_a_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma.disable_output_lane` is an asynchronous intrinsic which initiates an `M x N x K` matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+The vector operand `%disable_output_lane` specifies the lane(s) in the Tensor Memory that should be not be updated with the resultant matrix `D`. Elements of the vector operand `%disable_output_lane` forms a mask where each bit corresponds to a lane of the Tensor Memory, with least significant bit of the first element of the vector corresponding to the `lane 0` of the Tensor Memory. If a bit in the mask is 1, then the corresponding lane in the Tensor Memory for the resultant matrix `D` will not be updated
+
+`nvvm.tcgen05.mma.disable_output_lane` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma.disable_output_lane` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+
+`.ashift` shifts the rows of the A matrix down by one row, except for the last row in the Tensor Memory. `.ashift` is only allowed with M = 128 or M = 256.
+
+The `%collector_usage_a_op_flag` flag specifies the usage of collector buffer for matrix `A`. It is illegal to specify either of `USE` or `FILL` for `%collector_usage_a_op_flag` along with `.ashift`
+
+For more information, refer to the `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%kind_flag`:
+
+============= ==========
+ `kind_flag`    value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%cta_group_flag`:
+
+================= ==========
+ `cta_group_flag`    value
+================= ==========
+        CG1           1
+        CG2           2
+================= ==========
+
+`%collector_usage_a_op_flag`:
+
+============================= ==========
+ `collector_usage_a_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
+
+'``llvm.nvvm.tcgen05.mma.ws*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  // tcgen05.mma.ws
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.tensor(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.shared.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.tensor.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+
+  ; .sp variants
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.shared(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.tensor(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.shared.zero_col_mask(ptr addrspace(6) %d, i64 %adesc, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+  declare void @llvm.nvvm.tcgen05.mma.ws.sp.tensor.zero_col_mask(ptr addrspace(6) %d, ptr addrspace(6) %atensor, i64 %bdesc, i32 %idesc, i1 %enable_inp_d, ptr addrspace(6) %spmetadata, i64 %zero_col_mask, i32 %kind_flag, i32 %collector_usage_b_buffer_flag, i32 %collector_usage_b_op_flag)
+
+Overview:
+"""""""""
+
+`nvvm.tcgen05.mma.ws` is an asynchronous intrinsic which initiates an `M x N x K` weight stationary convolution matrix multiply and accumulate operation, `D = A * B + D` where the `A` matrix is `M x K`, the `B` matrix is `K x N`, and the `D` matrix is `M x N`. The operation of the form `D = A*B` is issued when the input predicate argument `%enable_inp_d` is false. The optional immediate argument `%scale_d_imm` can be specified to scale the input matrix `D` as follows: `D = A*B+D * (2 ^ - %scale_d_imm)`. The valid range of values for argument `%scale_d_imm` is `[0, 15]`. The 32-bit register operand idesc is the instruction descriptor as described in `Instruction descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor>`__
+
+`nvvm.tcgen05.mma` has single thread semantics, unlike the collective instructions `nvvm.mma.sync` or the PTX `wgmma.mma_async` instruction. So, a single thread issuing the `nvvm.tcgen05.mma` will result in the initiation of the whole matrix multiply and accumulate operation
+
+When `.sp` is specifed, the dimension of A matrix is `M x (K / 2)` and requires specifiying an additional `%spmetadata` argument
+
+The operand `%zero_col_mask` is a 64-bit register which specifies the `Zero-Column Mask Descriptor <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor>`__. The zero-column mask descriptor is used to generate a mask that specifies which columns of `B` matrix will have zero value for the matrix multiply and accumulate operation regardless of the values present in the shared memory.
+
+The `%collector_usage_b_buffer_flag` and `%collector_usage_b_op_flag` together flag specifies the usage of collector buffer for Matrix `B`
+
+For more information, refer to the
+`PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-ws>`__
+
+The following tables describes the possible values of the flag arguments
+
+`%kind_flag`:
+
+============= ==========
+ `kind_flag`    value
+============= ==========
+     F16          0
+     TF32         1
+     F8F6F4       2
+     I8           3
+============= ==========
+
+`%collector_usage_b_buffer_flag`:
+
+================================ ==========
+ `collector_usage_b_buffer_flag`   value
+================================ ==========
+              B0                     0
+              B1                     1
+              B2                     2
+              B3                     3
+================================ ==========
+
+`%collector_usage_b_op_flag`:
+
+============================= ==========
+ `collector_usage_b_op_flag`    value
+============================= ==========
+     DISCARD                      0
+     LASTUSE                      1
+     USE                          2
+     FILL                         3
+============================= ==========
+
 Store Intrinsics
 ----------------
 

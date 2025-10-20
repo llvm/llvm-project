@@ -402,6 +402,26 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
     F->addFnAttr("amdgpu-max-num-workgroups", AttrVal.str());
   }
+
+  if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
+    auto GetExprVal = [&](const auto &E) {
+      return E ? E->EvaluateKnownConstInt(M.getContext()).getExtValue() : 1;
+    };
+    unsigned X = GetExprVal(Attr->getX());
+    unsigned Y = GetExprVal(Attr->getY());
+    unsigned Z = GetExprVal(Attr->getZ());
+    llvm::SmallString<32> AttrVal;
+    llvm::raw_svector_ostream OS(AttrVal);
+    OS << X << ',' << Y << ',' << Z;
+    F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
+  }
+
+  // OpenCL doesn't support cluster feature.
+  const TargetInfo &TTI = M.getContext().getTargetInfo();
+  if ((IsOpenCLKernel &&
+       TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters")) ||
+      FD->hasAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(

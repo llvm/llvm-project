@@ -17,7 +17,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %matmul [10, 20]
+    %a, %b, %c = transform.structured.fuse %matmul tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -69,7 +69,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -125,7 +125,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %mm1, %mm2 = transform.split_handle %matmuls
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %mm2 [10]
+    %a, %b = transform.structured.fuse %mm2 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -188,7 +188,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -248,7 +248,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20] interchange[1, 0]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20] interchange[1, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -307,7 +307,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -367,7 +367,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b, %c = transform.structured.fuse %generic [10, 20]
+    %a, %b, %c = transform.structured.fuse %generic tile_sizes [10, 20]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -423,7 +423,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %mm1, %mm2, %mm3 = transform.split_handle %matmuls
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %mm3 [10]
+    %a, %b = transform.structured.fuse %mm3 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -512,7 +512,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %generic1, %generic2, %generic3 = transform.split_handle %generics
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-    %a, %b = transform.structured.fuse %generic3 [10]
+    %a, %b = transform.structured.fuse %generic3 tile_sizes [10]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -568,7 +568,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     %pad = transform.structured.match ops{["tensor.pad"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.structured.fuse %pad [8]
+    %a, %b = transform.structured.fuse %pad tile_sizes [8]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -614,7 +614,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %matmul = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %b = transform.structured.fuse %matmul [0, 1, 0]
+    %a, %b = transform.structured.fuse %matmul tile_sizes [0, 1, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -652,7 +652,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
     %generic = transform.structured.match ops{["linalg.generic"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %a, %loops:4 = transform.structured.fuse %generic {tile_sizes = [1, 16, 16, 16], tile_interchange = [0, 1, 2, 3], apply_cleanup = false}
+    %a, %loops:4 = transform.structured.fuse %generic tile_sizes [1, 16, 16, 16] interchange [0, 1, 2, 3]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }

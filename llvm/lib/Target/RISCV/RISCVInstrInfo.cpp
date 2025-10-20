@@ -1023,6 +1023,37 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   Cond.push_back(LastInst.getOperand(1));
 }
 
+static unsigned getInverseXqcicmOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    llvm_unreachable("Unexpected Opcode");
+  case RISCV::QC_MVEQ:
+    return RISCV::QC_MVNE;
+  case RISCV::QC_MVNE:
+    return RISCV::QC_MVEQ;
+  case RISCV::QC_MVLT:
+    return RISCV::QC_MVGE;
+  case RISCV::QC_MVGE:
+    return RISCV::QC_MVLT;
+  case RISCV::QC_MVLTU:
+    return RISCV::QC_MVGEU;
+  case RISCV::QC_MVGEU:
+    return RISCV::QC_MVLTU;
+  case RISCV::QC_MVEQI:
+    return RISCV::QC_MVNEI;
+  case RISCV::QC_MVNEI:
+    return RISCV::QC_MVEQI;
+  case RISCV::QC_MVLTI:
+    return RISCV::QC_MVGEI;
+  case RISCV::QC_MVGEI:
+    return RISCV::QC_MVLTI;
+  case RISCV::QC_MVLTUI:
+    return RISCV::QC_MVGEUI;
+  case RISCV::QC_MVGEUI:
+    return RISCV::QC_MVLTUI;
+  }
+}
+
 unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   switch (SelectOpc) {
   default:
@@ -1134,7 +1165,7 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
   }
 }
 
-RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
+RISCVCC::CondCode RISCVCC::getInverseBranchCondition(RISCVCC::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unrecognized conditional branch");
@@ -1333,7 +1364,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
                                     /*AllowSpill=*/false);
-  if (TmpGPR != RISCV::NoRegister)
+  if (TmpGPR.isValid())
     RS->setRegUsed(TmpGPR);
   else {
     // The case when there is no scavenged register needs special handling.
@@ -1554,7 +1585,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
-  unsigned NewOpc = RISCVCC::getBrCond(getOppositeBranchCondition(CC));
+  unsigned NewOpc = RISCVCC::getBrCond(getInverseBranchCondition(CC));
 
   // Might be case 1.
   // Don't change 0 to 1 since we can use x0.
@@ -1801,7 +1832,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   // Add condition code, inverting if necessary.
   auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
   if (Invert)
-    CC = RISCVCC::getOppositeBranchCondition(CC);
+    CC = RISCVCC::getInverseBranchCondition(CC);
   NewMI.addImm(CC);
 
   // Copy the false register.
@@ -2974,6 +3005,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           else
             Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
           break;
+        case RISCVOp::OPERAND_XSFMM_VTYPE:
+          Ok = RISCVVType::isValidXSfmmVType(Imm);
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
@@ -2990,7 +3024,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "Invalid operand type for VL operand";
       return false;
     }
-    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
+    if (Op.isReg() && Op.getReg().isValid()) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
       if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
@@ -3639,6 +3673,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
     RISCVVType::printVType(Imm, OS);
     break;
   }
+  case RISCVOp::OPERAND_XSFMM_VTYPE: {
+    unsigned Imm = Op.getImm();
+    RISCVVType::printXSfmmVType(Imm, OS);
+    break;
+  }
   case RISCVOp::OPERAND_SEW:
   case RISCVOp::OPERAND_SEW_MASK: {
     unsigned Log2SEW = Op.getImm();
@@ -3736,11 +3775,13 @@ std::string RISCVInstrInfo::createMIROperandComment(
 
 #define CASE_VFMA_OPCODE_VV(OP)                                                \
   CASE_VFMA_OPCODE_LMULS_MF4(OP, VV, E16):                                     \
+  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VV, E16):                          \
   case CASE_VFMA_OPCODE_LMULS_MF2(OP, VV, E32):                                \
   case CASE_VFMA_OPCODE_LMULS_M1(OP, VV, E64)
 
 #define CASE_VFMA_SPLATS(OP)                                                   \
   CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16, E16):                                 \
+  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VFPR16, E16):                      \
   case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32, E32):                            \
   case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64, E64)
 // clang-format on
@@ -3762,6 +3803,24 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
       return false;
     // Operands 1 and 2 are commutable, if we switch the opcode.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_MVEQ:
+  case RISCV::QC_MVNE:
+  case RISCV::QC_MVLT:
+  case RISCV::QC_MVGE:
+  case RISCV::QC_MVLTU:
+  case RISCV::QC_MVGEU:
+  case RISCV::QC_MVEQI:
+  case RISCV::QC_MVNEI:
+  case RISCV::QC_MVLTI:
+  case RISCV::QC_MVGEI:
+  case RISCV::QC_MVLTUI:
+  case RISCV::QC_MVGEUI:
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 4);
   case RISCV::TH_MULA:
   case RISCV::TH_MULAW:
   case RISCV::TH_MULAH:
@@ -3946,11 +4005,13 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 
 #define CASE_VFMA_CHANGE_OPCODE_VV(OLDOP, NEWOP)                               \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VV, E16)                     \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VV, E16)         \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VV, E32)                     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VV, E64)
 
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16, E16)                 \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VFPR16, E16)     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32, E32)                 \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64, E64)
 // clang-format on
@@ -3974,11 +4035,33 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
+  case RISCV::QC_MVEQ:
+  case RISCV::QC_MVNE:
+  case RISCV::QC_MVLT:
+  case RISCV::QC_MVGE:
+  case RISCV::QC_MVLTU:
+  case RISCV::QC_MVGEU:
+  case RISCV::QC_MVEQI:
+  case RISCV::QC_MVNEI:
+  case RISCV::QC_MVLTI:
+  case RISCV::QC_MVGEI:
+  case RISCV::QC_MVLTUI:
+  case RISCV::QC_MVGEUI: {
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.setDesc(get(getInverseXqcicmOpcode(MI.getOpcode())));
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
+                                                   OpIdx2);
+  }
   case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
     auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
-    CC = RISCVCC::getOppositeBranchCondition(CC);
+    CC = RISCVCC::getInverseBranchCondition(CC);
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(3).setImm(CC);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
@@ -4390,6 +4473,20 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E32)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E32)                             \
+
+#define CASE_FP_WIDEOP_OPCODE_LMULS_ALT(OP)                                    \
+  CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF4, E16):                                  \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E16):                             \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M1, E16):                              \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M2, E16):                              \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M4, E16)
+
+#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(OP)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4, E16)                            \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E16)                            \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1, E16)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E16)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)
 // clang-format on
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
@@ -4399,6 +4496,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return nullptr;
+  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWADD_ALT_WV):
+  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWSUB_ALT_WV):
   case CASE_FP_WIDEOP_OPCODE_LMULS(FWADD_WV):
   case CASE_FP_WIDEOP_OPCODE_LMULS(FWSUB_WV): {
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
@@ -4415,6 +4514,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
       llvm_unreachable("Unexpected opcode");
     CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWADD_WV)
     CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWSUB_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWADD_ALT_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWSUB_ALT_WV)
     }
     // clang-format on
 
@@ -4515,24 +4616,23 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if (STI.hasShlAdd(3) &&
-             ((Amount % 3 == 0 && isPowerOf2_64(Amount / 3)) ||
-              (Amount % 5 == 0 && isPowerOf2_64(Amount / 5)) ||
-              (Amount % 9 == 0 && isPowerOf2_64(Amount / 9)))) {
+  } else if (int ShXAmount, ShiftAmount;
+             STI.hasShlAdd(3) &&
+             (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;
-    uint32_t ShiftAmount;
-    if (Amount % 9 == 0) {
-      Opc = RISCV::SH3ADD;
-      ShiftAmount = Log2_64(Amount / 9);
-    } else if (Amount % 5 == 0) {
-      Opc = RISCV::SH2ADD;
-      ShiftAmount = Log2_64(Amount / 5);
-    } else if (Amount % 3 == 0) {
+    switch (ShXAmount) {
+    case 1:
       Opc = RISCV::SH1ADD;
-      ShiftAmount = Log2_64(Amount / 3);
-    } else {
-      llvm_unreachable("implied by if-clause");
+      break;
+    case 2:
+      Opc = RISCV::SH2ADD;
+      break;
+    case 3:
+      Opc = RISCV::SH3ADD;
+      break;
+    default:
+      llvm_unreachable("unexpected result of isShifted359");
     }
     if (ShiftAmount)
       BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)
