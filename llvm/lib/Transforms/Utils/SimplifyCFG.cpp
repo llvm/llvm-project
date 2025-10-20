@@ -7593,17 +7593,18 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
 
   // A case is dead when its value is higher than the Constant.
   SmallVector<ConstantInt *, 4> DeadCases;
-  for (auto Case = SI->case_begin(), e = SI->case_end(); Case != e; Case++) {
-    if (Case->getCaseValue()->getValue().ugt(Constant->getValue())) {
-      DeadCases.push_back(Case->getCaseValue());
+  for (auto Case : SI->cases()) {
+    if (Case.getCaseValue()->getValue().ugt(Constant->getValue())) {
+      DeadCases.push_back(Case.getCaseValue());
     }
   }
 
-  for (ConstantInt *DeadCase : DeadCases) {
-    SwitchInst::CaseIt CaseI = SIW->findCaseValue(DeadCase);
-    CaseI->getCaseSuccessor()->removePredecessor(SIW->getParent());
-    SIW.removeCase(Case);
-    Updates.push_back({DominatorTree::Delete, BB, Case->getCaseSuccessor()});
+  for (ConstantInt *DeadCaseVal : DeadCases) {
+    SwitchInst::CaseIt DeadCase = SIW->findCaseValue(DeadCaseVal);
+    BasicBlock *DeadCaseBB = DeadCase->getCaseSuccessor();
+    DeadCaseBB->removePredecessor(SIW->getParent());
+    SIW.removeCase(DeadCase);
+    Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
 
   if (DTU)

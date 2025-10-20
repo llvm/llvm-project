@@ -53,6 +53,88 @@ unreachable:
   unreachable
 }
 
+define void @switch_replace_default_and_remove_dead_cases(i32 %x) {
+; CHECK-LABEL: define void @switch_replace_default_and_remove_dead_cases(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 3)
+; CHECK-NEXT:    switch i32 [[X]], label %[[COMMON_RET:.*]] [
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    call void @c()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+  %min = call i32 @llvm.umin.i32(i32 %x, i32 3)
+  switch i32 %min, label %unreachable [
+  i32 4, label %case4
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  ]
+
+case4:
+  call void @a()
+  ret void
+
+case1:
+  call void @b()
+  ret void
+
+case2:
+  call void @c()
+  ret void
+
+case3:
+  ret void
+
+unreachable:
+  unreachable
+}
+
+define void @switch_replace_default_when_holes(i32 %x) {
+; CHECK-LABEL: define void @switch_replace_default_when_holes(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 3)
+; CHECK-NEXT:    switch i32 [[X]], label %[[COMMON_RET:.*]] [
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    call void @c()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+  %min = call i32 @llvm.umin.i32(i32 %x, i32 3)
+  switch i32 %min, label %unreachable [
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  ]
+
+case1:
+  call void @b()
+  ret void
+
+case2:
+  call void @c()
+  ret void
+
+case3:
+  ret void
+
+unreachable:
+  unreachable
+}
 
 define void @do_not_switch_replace_default(i32 %x, i32 %y) {
 ; CHECK-LABEL: define void @do_not_switch_replace_default(
