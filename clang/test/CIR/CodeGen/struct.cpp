@@ -265,7 +265,7 @@ void bin_comma() {
 
 // CIR: cir.func{{.*}} @_Z9bin_commav()
 // CIR:   %[[A_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["a", init]
-// CIR:   %[[TMP_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["agg.tmp0"]
+// CIR:   %[[TMP_ADDR:.*]] = cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["agg.tmp.ensured"]
 // CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_CompleteS
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[TMP_ADDR]] : !rec_CompleteS, !cir.ptr<!rec_CompleteS>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_CompleteS

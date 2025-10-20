@@ -177,9 +177,10 @@ struct MissingFeatures {
   static bool atomicInfo() { return false; }
   static bool atomicInfoGetAtomicPointer() { return false; }
   static bool atomicInfoGetAtomicAddress() { return false; }
-  static bool atomicUseLibCall() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+  static bool atomicTypes() { return false; }
+  static bool atomicUseLibCall() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
