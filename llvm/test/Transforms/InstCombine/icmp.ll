@@ -6246,13 +6246,26 @@ entry:
 define i1 @uaddo_or(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @uaddo_or(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[OR]], [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %or = or i32 %y, %x
   %add = add i32 %y, %x
   %cmp = icmp ugt i32 %or, %add
+  ret i1 %cmp
+}
+
+; Transform x + y < (x | y) into x + y < x (equivalent to x > x + y)
+define i1 @uaddo_or_reverse(i32 %x, i32 %y) {
+; CHECK-LABEL: define i1 @uaddo_or_reverse(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %add = add i32 %y, %x
+  %or = or i32 %y, %x
+  %cmp = icmp ult i32 %add, %or
   ret i1 %cmp
 }

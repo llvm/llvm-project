@@ -7855,6 +7855,26 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       }
     }
 
+    // Transform (x | y) > x + y into x > x + y
+    Value *OrLHS, *OrRHS, *AddLHS, *AddRHS;
+    if (match(Op0, m_Or(m_Value(OrLHS), m_Value(OrRHS))) &&
+        match(Op1, m_Add(m_Value(AddLHS), m_Value(AddRHS))) &&
+        ((OrLHS == AddLHS && OrRHS == AddRHS) ||
+         (OrLHS == AddRHS && OrRHS == AddLHS))) {
+      // Replace (x | y) with x in the comparison
+      replaceOperand(I, 0, AddLHS);
+      return &I;
+    }
+
+    if (match(Op0, m_Add(m_Value(AddLHS), m_Value(AddRHS))) &&
+        match(Op1, m_Or(m_Value(OrLHS), m_Value(OrRHS))) &&
+        ((AddLHS == OrLHS && AddRHS == OrRHS) ||
+         (AddLHS == OrRHS && AddRHS == OrLHS))) {
+      // Replace (x | y) with x in the comparison
+      replaceOperand(I, 1, AddLHS);
+      return &I;
+    }
+
     Instruction *AddI = nullptr;
     if (match(&I, m_UAddWithOverflow(m_Value(X), m_Value(Y),
                                      m_Instruction(AddI))) &&
