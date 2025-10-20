@@ -729,6 +729,7 @@ public:
     case AMDGPU::S_MAX_I32:
     case AMDGPU::S_MAX_U32:
     case AMDGPU::S_ADDK_I32:
+    case AMDGPU::SI_PC_ADD_REL_OFFSET:
       return false;
     }
   }
