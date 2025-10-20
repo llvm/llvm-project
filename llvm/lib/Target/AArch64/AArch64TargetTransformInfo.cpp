@@ -1441,8 +1441,17 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
     return SVEIntrinsicInfo::defaultUndefOp().setMatchingIROpcode(
         Instruction::UDiv);
 
-  case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_and_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::And);
+  case Intrinsic::aarch64_sve_orr_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Or);
+  case Intrinsic::aarch64_sve_eor_z:
+    return SVEIntrinsicInfo::defaultZeroingOp().setMatchingIROpcode(
+        Instruction::Xor);
+
+  case Intrinsic::aarch64_sve_addqv:
   case Intrinsic::aarch64_sve_bic_z:
   case Intrinsic::aarch64_sve_brka_z:
   case Intrinsic::aarch64_sve_brkb_z:
@@ -1451,13 +1460,11 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
   case Intrinsic::aarch64_sve_brkpb_z:
   case Intrinsic::aarch64_sve_cntp:
   case Intrinsic::aarch64_sve_compact:
-  case Intrinsic::aarch64_sve_eor_z:
   case Intrinsic::aarch64_sve_eorv:
   case Intrinsic::aarch64_sve_eorqv:
   case Intrinsic::aarch64_sve_nand_z:
   case Intrinsic::aarch64_sve_nor_z:
   case Intrinsic::aarch64_sve_orn_z:
-  case Intrinsic::aarch64_sve_orr_z:
   case Intrinsic::aarch64_sve_orv:
   case Intrinsic::aarch64_sve_orqv:
   case Intrinsic::aarch64_sve_pnext:
@@ -1587,8 +1594,21 @@ static bool isAllActivePredicate(Value *Pred) {
     if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
         cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
       Pred = UncastedPred;
-  auto *C = dyn_cast<Constant>(Pred);
-  return (C && C->isAllOnesValue());
+
+  // Also look through just convert.to.svbool if the input is an all-true splat
+  Value *ConvertArg;
+  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                      m_Value(ConvertArg))))
+    Pred = ConvertArg;
+  // Check for splat(i1 true) pattern used by svptrue intrinsics
+  if (auto *C = dyn_cast<Constant>(Pred)) {
+    if (C->isAllOnesValue())
+      return true;
+    if (auto *SplatVal = C->getSplatValue())
+      if (auto *CI = dyn_cast<ConstantInt>(SplatVal))
+        return CI->isOne();
+  }
+  return false;
 }
 
 // Simplify `V` by only considering the operations that affect active lanes.
@@ -1623,6 +1643,22 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
     return &II;
   }
 
+  // For logical operations with all-true predicates, apply simplifications.
+  if (isAllActivePredicate(Pg)) {
+    if (Opc == Instruction::And) {
+      if (isAllActivePredicate(Op1))
+        return IC.replaceInstUsesWith(II, Op2);
+      if (isAllActivePredicate(Op2))
+        return IC.replaceInstUsesWith(II, Op1);
+    }
+    if (Opc == Instruction::Or) {
+      if (isAllActivePredicate(Op1))
+        return IC.replaceInstUsesWith(II, Op1);
+      if (isAllActivePredicate(Op2))
+        return IC.replaceInstUsesWith(II, Op2);
+    }
+  }
+
   // Only active lanes matter when simplifying the operation.
   Op1 = stripInactiveLanes(Op1, Pg);
   Op2 = stripInactiveLanes(Op2, Pg);
@@ -1642,6 +1678,15 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
 
   if (IInfo.inactiveLanesAreNotDefined())
     return IC.replaceInstUsesWith(II, SimpleII);
+
+  // For zeroing operations, if we have an all-true predicate and the result
+  // simplifies, we can just use the simplified result directly since there
+  // are no inactive lanes to worry about.
+  if (IInfo.inactiveLanesAreUnused() && isAllActivePredicate(Pg))
+    return IC.replaceInstUsesWith(II, SimpleII);
+
+  if (!IInfo.inactiveLanesTakenFromOperand())
+    return std::nullopt;
 
   Value *Inactive = II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom());
 
