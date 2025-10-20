@@ -119,8 +119,8 @@ func.func @scalable_no_linearize(%arg0: vector<[2]x[2]xf32>) -> vector<[2]x[2]xf
 
 // -----
 
-// CHECK-LABEL: func.func @0d_vector
-func.func @0d_vector() -> vector<f32> {
+// CHECK-LABEL: func.func @negative_0d_vector
+func.func @negative_0d_vector() -> vector<f32> {
 
   // CHECK: %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<f32>
   %0 = arith.constant dense<0.0> : vector<f32>
