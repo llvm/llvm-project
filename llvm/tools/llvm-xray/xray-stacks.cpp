@@ -107,6 +107,8 @@ static cl::opt<AggregationType> RequestedAggregation(
                    "of all callees.")),
     cl::sub(Stack), cl::init(AggregationType::TOTAL_TIME));
 
+namespace {
+
 /// A helper struct to work with formatv and XRayRecords. Makes it easier to
 /// use instrumentation map names or addresses in formatted output.
 struct format_xray_record : public FormatAdapter<XRayRecord> {
@@ -252,10 +254,9 @@ private:
 /// maintain an index of unique functions, and provide a means of iterating
 /// through all the instrumented call stacks which we know about.
 
-namespace {
 struct StackDuration {
-  llvm::SmallVector<int64_t, 4> TerminalDurations;
-  llvm::SmallVector<int64_t, 4> IntermediateDurations;
+  SmallVector<int64_t, 4> TerminalDurations;
+  SmallVector<int64_t, 4> IntermediateDurations;
 };
 } // namespace
 
@@ -310,6 +311,7 @@ std::size_t GetValueForStack(const StackTrieNode *Node) {
   return 0;
 }
 
+namespace {
 class StackTrie {
   // Avoid the magic number of 4 propagated through the code with an alias.
   // We use this SmallVector to track the root nodes in a call graph.
@@ -649,6 +651,7 @@ public:
     OS << "\n";
   }
 };
+} // namespace
 
 static std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
                                       const XRayRecord &Record,

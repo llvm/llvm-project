@@ -1159,6 +1159,9 @@ TYPE_PARSER( //
             construct<OmpDestroyClause>(Parser<OmpObject>{}))))) ||
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
                     parenthesized(Parser<OmpDeviceClause>{}))) ||
+    "DEVICE_SAFESYNC" >>
+        construct<OmpClause>(construct<OmpClause::DeviceSafesync>(
+            maybe(parenthesized(scalarLogicalConstantExpr)))) ||
     "DEVICE_TYPE" >> construct<OmpClause>(construct<OmpClause::DeviceType>(
                          parenthesized(Parser<OmpDeviceTypeClause>{}))) ||
     "DIST_SCHEDULE" >>

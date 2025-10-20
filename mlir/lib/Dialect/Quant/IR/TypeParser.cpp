@@ -157,7 +157,7 @@ static Type parseAnyType(DialectAsmParser &parser) {
 /// Checks if the given scale value is within the valid range of the expressed
 /// type. The `expressedType` argument is the floating-point type used for
 /// expressing the quantized values, and `scale` is the double value to check.
-LogicalResult
+static LogicalResult
 isScaleInExpressedTypeRange(function_ref<InFlightDiagnostic()> emitError,
                             Type expressedType, double scale) {
   auto floatType = cast<FloatType>(expressedType);
@@ -579,10 +579,10 @@ static void printUniformQuantizedPerAxisType(UniformQuantizedPerAxisType type,
 ///   would print:
 ///
 ///     {{1.0, 2.0}, {3.0:1, 4.0:9}}
-void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
-                                      ArrayRef<APInt> zeroPoints,
-                                      ArrayRef<int64_t> shape,
-                                      DialectAsmPrinter &out) {
+static void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
+                                             ArrayRef<APInt> zeroPoints,
+                                             ArrayRef<int64_t> shape,
+                                             DialectAsmPrinter &out) {
   int64_t rank = shape.size();
   SmallVector<unsigned, 4> counter(rank, 0);
   unsigned openBrackets = 0;

@@ -733,6 +733,11 @@ public:
     SourceLocExprScopeGuard sourceLocScope;
   };
 
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &cfg, const CXXDefaultArgExpr *e)
+        : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -1517,6 +1522,10 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.

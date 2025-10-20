@@ -601,6 +601,8 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.LLVM.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPILLVM
+    # Misnomer - this is only the LLVMIR translation target.
+    MLIRCAPITarget
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.Dialects.Quant.Pybind

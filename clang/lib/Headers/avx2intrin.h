@@ -1298,9 +1298,8 @@ _mm256_min_epu32(__m256i __a, __m256i __b) {
 /// \param __a
 ///    A 256-bit integer vector containing the source bytes.
 /// \returns The 32-bit integer mask.
-static __inline__ int __DEFAULT_FN_ATTRS256
-_mm256_movemask_epi8(__m256i __a)
-{
+static __inline__ int __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_movemask_epi8(__m256i __a) {
   return __builtin_ia32_pmovmskb256((__v32qi)__a);
 }
 

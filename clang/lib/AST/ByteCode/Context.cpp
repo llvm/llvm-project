@@ -566,9 +566,14 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
+  const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
+
+    if (!getASTContext().hasSameType(PD->getType(),
+                                     FuncProto->getParamType(ParamIndex)))
+      return nullptr;
 
     OptPrimType T = classify(PD->getType());
     PrimType PT = T.value_or(PT_Ptr);

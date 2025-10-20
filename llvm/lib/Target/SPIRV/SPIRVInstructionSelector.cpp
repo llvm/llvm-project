@@ -4350,15 +4350,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   if (hasInitializer(GlobalVar) && !Init)
     return true;
 
-  bool HasLnkTy = !GV->hasInternalLinkage() && !GV->hasPrivateLinkage() &&
-                  !GV->hasHiddenVisibility();
-  SPIRV::LinkageType::LinkageType LnkType =
-      GV->isDeclarationForLinker()
-          ? SPIRV::LinkageType::Import
-          : (GV->hasLinkOnceODRLinkage() &&
-                     STI.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr)
-                 ? SPIRV::LinkageType::LinkOnceODR
-                 : SPIRV::LinkageType::Export);
+  const std::optional<SPIRV::LinkageType::LinkageType> LnkType =
+      getSpirvLinkageTypeFor(STI, *GV);
 
   const unsigned AddrSpace = GV->getAddressSpace();
   SPIRV::StorageClass::StorageClass StorageClass =
@@ -4366,7 +4359,7 @@ bool SPIRVInstructionSelector::selectGlobalValue(
   SPIRVType *ResType = GR.getOrCreateSPIRVPointerType(GVType, I, StorageClass);
   Register Reg = GR.buildGlobalVariable(
       ResVReg, ResType, GlobalIdent, GV, StorageClass, Init,
-      GlobalVar->isConstant(), HasLnkTy, LnkType, MIRBuilder, true);
+      GlobalVar->isConstant(), LnkType, MIRBuilder, true);
   return Reg.isValid();
 }
 
@@ -4517,8 +4510,8 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, false,
-      SPIRV::LinkageType::Import, MIRBuilder, false);
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, MIRBuilder,
+      false);
 
   // Create new register for loading value.
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
@@ -4570,8 +4563,8 @@ bool SPIRVInstructionSelector::loadBuiltinInputID(
   // builtin variable.
   Register Variable = GR.buildGlobalVariable(
       NewRegister, PtrType, getLinkStringForBuiltIn(BuiltInValue), nullptr,
-      SPIRV::StorageClass::Input, nullptr, true, false,
-      SPIRV::LinkageType::Import, MIRBuilder, false);
+      SPIRV::StorageClass::Input, nullptr, true, std::nullopt, MIRBuilder,
+      false);
 
   // Load uint value from the global variable.
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))

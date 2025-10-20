@@ -1128,6 +1128,9 @@ struct FormParams {
   uint8_t getDwarfOffsetByteSize() const {
     return dwarf::getDwarfOffsetByteSize(Format);
   }
+  inline uint64_t getDwarfMaxOffset() const {
+    return (getDwarfOffsetByteSize() == 4) ? UINT32_MAX : UINT64_MAX;
+  }
 
   explicit operator bool() const { return Version && AddrSize; }
 };

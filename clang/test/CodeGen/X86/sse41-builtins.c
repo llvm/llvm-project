@@ -376,6 +376,16 @@ __m128i test_mm_minpos_epu16(__m128i x) {
   // CHECK: call <8 x i16> @llvm.x86.sse41.phminposuw(<8 x i16> %{{.*}})
   return _mm_minpos_epu16(x);
 }
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){0,0,0,0, 0,0,0,0}), 0,0,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){1,0,0,0, 0,0,0,0}), 0,1,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){65535,65535,65535,65535,65535,65535,65535,65535}), 65535,0,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){9,8,7,6,5,4,3,2}), 2,7,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){5,5,5,5,5,5,5,5}), 5,0,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){5,7,9,4,10,4,11,12}), 4,3,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){6,0,0,0,0,0,0,0}), 0,1,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){1000,2000,3000,4000,5000,6000,7000,1}), 1,7,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){1234,5678,42,9999,65535,0,4242,42}), 0,5,0,0, 0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_minpos_epu16((__m128i)(__v8hu){400,500,12,600,12,700,800,900}), 12,2,0,0, 0,0,0,0));
 
 __m128i test_mm_mpsadbw_epu8(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mpsadbw_epu8

@@ -482,9 +482,9 @@ bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
     return false;
 
   return llvm::StringSwitch<bool>(CPUName)
-      .Cases("mips2", "mips3", "mips4", "mips5", true)
-      .Cases("mips32", "mips32r2", "mips32r3", "mips32r5", true)
-      .Cases("mips64", "mips64r2", "mips64r3", "mips64r5", true)
+      .Cases({"mips2", "mips3", "mips4", "mips5"}, true)
+      .Cases({"mips32", "mips32r2", "mips32r3", "mips32r5"}, true)
+      .Cases({"mips64", "mips64r2", "mips64r3", "mips64r5"}, true)
       .Default(false);
 }
 

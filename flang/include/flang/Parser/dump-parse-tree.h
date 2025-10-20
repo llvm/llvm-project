@@ -559,6 +559,7 @@ public:
   NODE(OmpDeviceClause, Modifier)
   NODE(parser, OmpDeviceModifier)
   NODE_ENUM(OmpDeviceModifier, Value)
+  NODE(parser, OmpDeviceSafesyncClause)
   NODE(parser, OmpDeviceTypeClause)
   NODE_ENUM(OmpDeviceTypeClause, DeviceTypeDescription)
   NODE(parser, OmpDirectiveName)

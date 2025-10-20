@@ -822,6 +822,10 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
     return LValue();
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
@@ -866,6 +870,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }

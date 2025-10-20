@@ -14,12 +14,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <functional>
 
+using namespace llvm;
+
 namespace llvm {
 class PassBuilder;
 }
 
-extern "C" int optMain(int argc, char **argv,
-                       llvm::ArrayRef<std::function<void(llvm::PassBuilder &)>>
-                           PassBuilderCallbacks);
+extern "C" int
+optMain(int argc, char **argv,
+        ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks);
 
 int main(int argc, char **argv) { return optMain(argc, argv, {}); }

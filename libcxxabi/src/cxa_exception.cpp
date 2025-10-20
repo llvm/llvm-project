@@ -192,7 +192,9 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
         std::terminate();
     __cxa_exception *exception_header =
         static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
-    ::memset(exception_header, 0, actual_size);
+    // We warn on memset to a non-trivially castable type. We might want to
+    // change that diagnostic to not fire on a trivially obvious zero fill.
+    ::memset(static_cast<void*>(exception_header), 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
 

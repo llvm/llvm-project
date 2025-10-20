@@ -723,6 +723,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 }
 
 static UnsignedEPStat PathRunningTime("PathRunningTime");
+static UnsignedEPStat SyntaxRunningTime("SyntaxRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -761,6 +762,8 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
       SyntaxCheckTimer->stopTimer();
       llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
       CheckerEndTime -= CheckerStartTime;
+      FunctionSummaries.findOrInsertSummary(D)->second.SyntaxRunningTime =
+          std::lround(CheckerEndTime.getWallTime() * 1000);
       DisplayTime(CheckerEndTime);
       if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
         AnalyzerTimers->clear();
@@ -792,11 +795,23 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   if (!CFG)
     return;
 
+  CFGSize.set(CFG->size());
+
+  auto *DeclContext = Mgr->getAnalysisDeclContext(D);
   // See if the LiveVariables analysis scales.
-  if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
+  if (!DeclContext->getAnalysis<RelaxedLiveVariables>())
     return;
 
-  CFGSize.set(CFG->size());
+  // DeclContext declaration is the redeclaration of D that has a body.
+  const Decl *DefDecl = DeclContext->getDecl();
+
+  // Get the SyntaxRunningTime from the function summary, because it is computed
+  // during the AM_Syntax analysis, which is done at a different point in time
+  // and in different order, but always before AM_Path.
+  if (const auto *Summary = FunctionSummaries.findSummary(DefDecl);
+      Summary && Summary->SyntaxRunningTime.has_value()) {
+    SyntaxRunningTime.set(*Summary->SyntaxRunningTime);
+  }
 
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 

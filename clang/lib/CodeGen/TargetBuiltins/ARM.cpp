@@ -2037,7 +2037,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vld1q_x3_v:
   case NEON::BI__builtin_neon_vld1_x4_v:
   case NEON::BI__builtin_neon_vld1q_x4_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(LLVMIntrinsic, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld1xN");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
@@ -2263,11 +2263,11 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     // in AArch64 it comes last. We may want to stick to one or another.
     if (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_be ||
         Arch == llvm::Triple::aarch64_32) {
-      llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+      llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
       return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "");
     }
-    llvm::Type *Tys[2] = {UnqualPtrTy, VTy};
+    llvm::Type *Tys[2] = {DefaultPtrTy, VTy};
     return EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Tys), Ops, "");
   }
   case NEON::BI__builtin_neon_vsubhn_v: {
@@ -2858,7 +2858,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(
         BuiltinID == clang::ARM::BI__builtin_arm_ldaex ? Intrinsic::arm_ldaex
                                                        : Intrinsic::arm_ldrex,
-        UnqualPtrTy);
+        DefaultPtrTy);
     CallInst *Val = Builder.CreateCall(F, LoadAddr, "ldrex");
     Val->addParamAttr(
         0, Attribute::get(getLLVMContext(), Attribute::ElementType, IntTy));
@@ -5225,7 +5225,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(BuiltinID == clang::AArch64::BI__builtin_arm_ldaex
                              ? Intrinsic::aarch64_ldaxr
                              : Intrinsic::aarch64_ldxr,
-                         UnqualPtrTy);
+                         DefaultPtrTy);
     CallInst *Val = Builder.CreateCall(F, LoadAddr, "ldxr");
     Val->addParamAttr(
         0, Attribute::get(getLLVMContext(), Attribute::ElementType, IntTy));
@@ -7482,42 +7482,42 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
   case NEON::BI__builtin_neon_vld2_v:
   case NEON::BI__builtin_neon_vld2q_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld2, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld2");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld3_v:
   case NEON::BI__builtin_neon_vld3q_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld3, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld3");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld4_v:
   case NEON::BI__builtin_neon_vld4q_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld4, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld4");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld2_dup_v:
   case NEON::BI__builtin_neon_vld2q_dup_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld2r, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld2");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld3_dup_v:
   case NEON::BI__builtin_neon_vld3q_dup_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld3r, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld3");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
   case NEON::BI__builtin_neon_vld4_dup_v:
   case NEON::BI__builtin_neon_vld4q_dup_v: {
-    llvm::Type *Tys[2] = {VTy, UnqualPtrTy};
+    llvm::Type *Tys[2] = {VTy, DefaultPtrTy};
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_ld4r, Tys);
     Ops[1] = Builder.CreateCall(F, Ops[1], "vld4");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
