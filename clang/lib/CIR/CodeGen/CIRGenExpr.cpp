@@ -2394,6 +2394,180 @@ LValue CIRGenFunction::emitPredefinedLValue(const PredefinedExpr *e) {
   return emitStringLiteralLValue(sl, gvName);
 }
 
+LValue CIRGenFunction::emitOpaqueValueLValue(const OpaqueValueExpr *e) {
+  assert(OpaqueValueMappingData::shouldBindAsLValue(e));
+  return getOrCreateOpaqueLValueMapping(e);
+}
+
+namespace {
+// Handle the case where the condition is a constant evaluatable simple integer,
+// which means we don't have to separately handle the true/false blocks.
+std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
+    CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
+  const Expr *condExpr = e->getCond();
+  llvm::APSInt condExprVal;
+  if (!cgf.constantFoldsToSimpleInteger(condExpr, condExprVal))
+    return std::nullopt;
+
+  const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
+  if (!condExprVal.getBoolValue())
+    std::swap(live, dead);
+
+  if (cgf.containsLabel(dead))
+    return std::nullopt;
+
+  // If the true case is live, we need to track its region.
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::pgoUse());
+  // If a throw expression we emit it and return an undefined lvalue
+  // because it can't be used.
+  if (auto *throwExpr = dyn_cast<CXXThrowExpr>(live->IgnoreParens())) {
+    cgf.emitCXXThrowExpr(throwExpr);
+    // Return an undefined lvalue - the throw terminates execution
+    // so this value will never actually be used
+    mlir::Type elemTy = cgf.convertType(dead->getType());
+    mlir::Value undefPtr =
+        cgf.getBuilder().getNullPtr(cgf.getBuilder().getPointerTo(elemTy),
+                                    cgf.getLoc(throwExpr->getSourceRange()));
+    return cgf.makeAddrLValue(Address(undefPtr, elemTy, CharUnits::One()),
+                              dead->getType());
+  }
+  return cgf.emitLValue(live);
+}
+
+/// Emit the operand of a glvalue conditional operator. This is either a glvalue
+/// or a (possibly-parenthesized) throw-expression. If this is a throw, no
+/// LValue is returned and the current block has been terminated.
+static std::optional<LValue> emitLValueOrThrowExpression(CIRGenFunction &cgf,
+                                                         const Expr *operand) {
+  if (auto *throwExpr = dyn_cast<CXXThrowExpr>(operand->IgnoreParens())) {
+    cgf.emitCXXThrowExpr(throwExpr);
+    return std::nullopt;
+  }
+
+  return cgf.emitLValue(operand);
+}
+} // namespace
+
+// Create and generate the 3 blocks for a conditional operator.
+// Leaves the 'current block' in the continuation basic block.
+template <typename FuncTy>
+CIRGenFunction::ConditionalInfo
+CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
+                                      const FuncTy &branchGenFunc) {
+  ConditionalInfo info;
+  ConditionalEvaluation eval(*this);
+  mlir::Location loc = getLoc(e->getSourceRange());
+  CIRGenBuilderTy &builder = getBuilder();
+
+  mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
+  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
+  mlir::Type yieldTy{};
+
+  auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
+                        const Expr *expr, std::optional<LValue> &resultLV) {
+    CIRGenFunction::LexicalScope lexScope{*this, loc, b.getInsertionBlock()};
+    curLexScope->setAsTernary();
+
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+    eval.beginEvaluation();
+    resultLV = branchGenFunc(*this, expr);
+    mlir::Value resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
+    eval.endEvaluation();
+
+    if (resultPtr) {
+      yieldTy = resultPtr.getType();
+      cir::YieldOp::create(b, loc, resultPtr);
+    } else {
+      // If LHS or RHS is a void expression we need
+      // to patch arms as to properly match yield types.
+      // If the current block's terminator is an UnreachableOp (from a throw),
+      // we don't need a yield
+      if (builder.getInsertionBlock()->mightHaveTerminator()) {
+        mlir::Operation *terminator =
+            builder.getInsertionBlock()->getTerminator();
+        if (isa_and_nonnull<cir::UnreachableOp>(terminator))
+          insertPoints.push_back(b.saveInsertionPoint());
+      }
+    }
+  };
+
+  info.result = cir::TernaryOp::create(
+                    builder, loc, condV,
+                    /*trueBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      emitBranch(b, loc, e->getTrueExpr(), info.lhs);
+                    },
+                    /*falseBuilder=*/
+                    [&](mlir::OpBuilder &b, mlir::Location loc) {
+                      emitBranch(b, loc, e->getFalseExpr(), info.rhs);
+                    })
+                    .getResult();
+
+  // If both arms are void, so be it.
+  if (!yieldTy)
+    yieldTy = VoidTy;
+
+  // Insert required yields.
+  for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(toInsert);
+
+    // Block does not return: build empty yield.
+    if (!yieldTy) {
+      cir::YieldOp::create(builder, loc);
+    } else { // Block returns: set null yield value.
+      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+      cir::YieldOp::create(builder, loc, op0);
+    }
+  }
+
+  return info;
+}
+
+LValue CIRGenFunction::emitConditionalOperatorLValue(
+    const AbstractConditionalOperator *expr) {
+  if (!expr->isGLValue()) {
+    // ?: here should be an aggregate.
+    assert(hasAggregateEvaluationKind(expr->getType()) &&
+           "Unexpected conditional operator!");
+    return emitAggExprToLValue(expr);
+  }
+
+  OpaqueValueMapping binding(*this, expr);
+  if (std::optional<LValue> res =
+          handleConditionalOperatorLValueSimpleCase(*this, expr))
+    return *res;
+
+  ConditionalInfo info =
+      emitConditionalBlocks(expr, [](CIRGenFunction &cgf, const Expr *e) {
+        return emitLValueOrThrowExpression(cgf, e);
+      });
+
+  if ((info.lhs && !info.lhs->isSimple()) ||
+      (info.rhs && !info.rhs->isSimple())) {
+    cgm.errorNYI(expr->getSourceRange(),
+                 "unsupported conditional operator with non-simple lvalue");
+    return LValue();
+  }
+
+  if (info.lhs && info.rhs) {
+    Address lhsAddr = info.lhs->getAddress();
+    Address rhsAddr = info.rhs->getAddress();
+    Address result(info.result, lhsAddr.getElementType(),
+                   std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
+    AlignmentSource alignSource =
+        std::max(info.lhs->getBaseInfo().getAlignmentSource(),
+                 info.rhs->getBaseInfo().getAlignmentSource());
+    assert(!cir::MissingFeatures::opTBAA());
+    return makeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource));
+  }
+
+  assert((info.lhs || info.rhs) &&
+         "both operands of glvalue conditional are throw-expressions?");
+  return info.lhs ? *info.lhs : *info.rhs;
+}
+
 /// An LValue is a candidate for having its loads and stores be made atomic if
 /// we are operating under /volatile:ms *and* the LValue itself is volatile and
 /// performing such an operation can be performed without a libcall.
