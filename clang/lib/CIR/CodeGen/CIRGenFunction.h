@@ -858,6 +858,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// returns true if aggregate type has a volatile member.
+  bool hasVolatileMember(QualType t) {
+    if (const auto *rd = t->getAsRecordDecl())
+      return rd->hasVolatileMember();
+    return false;
+  }
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
@@ -1082,6 +1089,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
+                   QualType type);
+
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
 
@@ -1136,14 +1146,16 @@ public:
   ///        occupied by some other object. More efficient code can often be
   ///        generated if not.
   void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
-                         AggValueSlot::Overlap_t mayOverlap);
+                         AggValueSlot::Overlap_t mayOverlap,
+                         bool isVolatile = false);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e,
-                     AggValueSlot aggSlot = AggValueSlot::ignored());
+                     AggValueSlot aggSlot = AggValueSlot::ignored(),
+                     bool ignoreResult = false);
 
   /// Emits the code necessary to evaluate an arbitrary expression into the
   /// given memory location.
