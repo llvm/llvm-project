@@ -61665,7 +61665,7 @@ static bool isGRClass(const TargetRegisterClass &RC) {
          RC.hasSuperClassEq(&X86::GR16RegClass) ||
          RC.hasSuperClassEq(&X86::GR32RegClass) ||
          RC.hasSuperClassEq(&X86::GR64RegClass) ||
-         RC.hasSuperClassEq(&X86::LOW32_ADDR_ACCESS_RBPRegClass);
+         RC.hasSuperClassEq(&X86::LOW32_ADDR_ACCESSRegClass);
 }
 
 /// Check if \p RC is a vector register class.
