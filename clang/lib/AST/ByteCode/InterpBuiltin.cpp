@@ -3148,8 +3148,7 @@ static bool interp__builtin_x86_pslldq_byteshift(InterpState &S, CodePtr OpPC,
     for (unsigned I = 0; I != NumElems; ++I) {
       if (I < Shift) {
         Dst.elem<T>(I) = T();
-      }
-      else {
+      } else {
         Dst.elem<T>(I) = Src.elem<T>(I - Shift);
       }
     }
@@ -4214,7 +4213,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
     return interp__builtin_x86_pslldq_byteshift(S, OpPC, Call, BuiltinID);
-    
+
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
     return interp__builtin_x86_psrldq_byteshift(S, OpPC, Call, BuiltinID);
