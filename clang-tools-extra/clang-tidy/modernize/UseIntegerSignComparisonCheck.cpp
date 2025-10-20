@@ -152,6 +152,8 @@ void UseIntegerSignComparisonCheck::check(
   if (const auto *RHSCast = llvm::dyn_cast<ExplicitCastExpr>(RHS)) {
     SubExprRHS = RHSCast->getSubExpr();
     R2.setEnd(SubExprRHS->getBeginLoc().getLocWithOffset(-1));
+    R3.setBegin(Lexer::getLocForEndOfToken(
+        SubExprRHS->getEndLoc(), 0, *Result.SourceManager, getLangOpts()));
   }
   DiagnosticBuilder Diag =
       diag(BinaryOp->getBeginLoc(),
