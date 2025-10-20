@@ -53,7 +53,7 @@
 /mlir/include/mlir/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 /mlir/lib/Interfaces/DestinationStyleOpInterface.* @matthias-springer
 
-# AMDGPU and ROCDL dialects in MLIR
+# AMDGPU and ROCDL dialects in MLIR.
 /mlir/include/mlir/Dialect/AMDGPU @krzysz00
 /mlir/lib/Dialect/AMDGPU @krzysz00
 /mlir/lib/Conversion/*AMDGPU* @krzysz00
