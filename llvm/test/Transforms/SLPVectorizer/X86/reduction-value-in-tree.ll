@@ -6,7 +6,7 @@ define void @test() {
 ; CHECK-NEXT:    br i1 false, label [[PH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i8 @llvm.vector.reduce.and.v8i8(<8 x i8> zeroinitializer)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = and i8 0, [[TMP0]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = and i8 [[TMP0]], 0
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = and i8 [[OP_RDX]], 0
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
