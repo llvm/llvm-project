@@ -7185,19 +7185,6 @@ private:
           Mapper(Mapper), VarRef(VarRef), ForDeviceAddr(ForDeviceAddr) {}
   };
 
-  /// If use_device_ptr or use_device_addr is used on a decl which is a struct
-  /// member and there is no map information about it, then emission of that
-  /// entry is deferred until the whole struct has been processed.
-  struct DeferredDevicePtrEntryTy {
-    const Expr *IE = nullptr;
-    const ValueDecl *VD = nullptr;
-    bool ForDeviceAddr = false;
-
-    DeferredDevicePtrEntryTy(const Expr *IE, const ValueDecl *VD,
-                             bool ForDeviceAddr)
-        : IE(IE), VD(VD), ForDeviceAddr(ForDeviceAddr) {}
-  };
-
   /// The target directive from where the mappable clauses were extracted. It
   /// is either a executable directive or a user-defined mapper directive.
   llvm::PointerUnion<const OMPExecutableDirective *,
@@ -8775,13 +8762,10 @@ private:
     // Look at the use_device_ptr and use_device_addr clauses information and
     // mark the existing map entries as such. If there is no map information for
     // an entry in the use_device_ptr and use_device_addr list, we create one
-    // with map type 'alloc' and zero size section. It is the user fault if that
-    // was not mapped before. If there is no map information and the pointer is
-    // a struct member, then we defer the emission of that entry until the whole
-    // struct has been processed.
-    llvm::MapVector<CanonicalDeclPtr<const Decl>,
-                    SmallVector<DeferredDevicePtrEntryTy, 4>>
-        DeferredInfo;
+    // with map type 'return_param' and zero size section. It is the user's
+    // fault if that was not mapped before. If there is no map information, then
+    // we defer the emission of that entry until all the maps for the same VD
+    // have been handled.
     MapCombinedInfoTy UseDeviceDataCombinedInfo;
 
     auto &&UseDeviceDataCombinedInfoGen =
@@ -8805,13 +8789,10 @@ private:
             CodeGenFunction &CGF, const Expr *IE, const ValueDecl *VD,
             OMPClauseMappableExprCommon::MappableExprComponentListRef
                 Components,
-            bool IsImplicit, bool IsDevAddr,
-            bool IEIsAttachPtrForDevAddr = false) {
+            bool IsDevAddr, bool IEIsAttachPtrForDevAddr = false) {
           // We didn't find any match in our map information - generate a zero
           // size array section - if the pointer is a struct member we defer
           // this action until the whole struct has been processed.
-          // TODO: Check for any reason to still add a map for member fields.
-          // The following seems to be working fine.
           llvm::Value *Ptr;
           if (IsDevAddr && !IEIsAttachPtrForDevAddr) {
             if (IE->isGLValue())
@@ -8925,8 +8906,7 @@ private:
                            /*DesiredAttachPtrExpr=*/UDPOperandExpr,
                            /*IsDevAddr=*/false))
           continue;
-        MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
-                   /*IsDevAddr=*/false);
+        MapInfoGen(CGF, IE, VD, Components, /*IsDevAddr=*/false);
       }
     }
 
@@ -8971,7 +8951,7 @@ private:
                            /*DesiredAttachPtrExpr=*/UDAAttachPtrExpr,
                            /*IsDevAddr=*/true))
           continue;
-        MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
+        MapInfoGen(CGF, IE, VD, Components,
                    /*IsDevAddr=*/true,
                    /*IEIsAttachPtrForDevAddr=*/UDAAttachPtrExpr != nullptr);
       }
@@ -9005,9 +8985,6 @@ private:
                         [this](const auto &LHS, const auto &RHS) {
                           return AttachPtrComparator(LHS.first, RHS.first);
                         });
-
-      std::optional<size_t> MemberOfValueForFirstCombinedEntry = std::nullopt;
-      bool IsFirstGroup = true;
 
       // And finally, process them all in order, grouping those with
       // equivalent attach-ptr exprs together.
@@ -9096,16 +9073,11 @@ private:
         // individual members mapped. Emit an extra combined entry.
         if (PartialStruct.Base.isValid()) {
           GroupUnionCurInfo.NonContigInfo.Dims.push_back(0);
-          std::optional<size_t> CombinedEntryIndex = emitCombinedEntry(
+          emitCombinedEntry(
               CurInfo, GroupUnionCurInfo.Types, PartialStruct, AttachInfo,
               /*IsMapThis*/ !VD, OMPBuilder, VD,
               /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size(),
               /*NotTargetParam=*/true);
-          // Track the first group's combined entry's final-index for deferred
-          // entries to reference.
-          if (IsFirstGroup && CombinedEntryIndex.has_value())
-            MemberOfValueForFirstCombinedEntry =
-                CombinedInfo.BasePointers.size() + *CombinedEntryIndex;
         }
 
         // Append this group's results to the overall CurInfo in the correct
@@ -9113,76 +9085,12 @@ private:
         CurInfo.append(GroupUnionCurInfo);
         if (AttachInfo.isValid())
           emitAttachEntry(CGF, CurInfo, AttachInfo);
-
-        IsFirstGroup = false;
-      }
-
-      // Append any pending zero-length pointers which are struct members and
-      // used with use_device_ptr or use_device_addr.
-      // FIXME: This is now redundant as we are not populating DeferredInfo
-      // anymore. Remove unless we find a legitimate need of populating
-      // using DefferedInfo during the review process.
-      auto CI = DeferredInfo.find(Data.first);
-      if (CI != DeferredInfo.end()) {
-        size_t DeferredStartIdx = CurInfo.Types.size();
-        for (const DeferredDevicePtrEntryTy &L : CI->second) {
-          llvm::Value *BasePtr;
-          llvm::Value *Ptr;
-          if (L.ForDeviceAddr) {
-            if (L.IE->isGLValue())
-              Ptr = this->CGF.EmitLValue(L.IE).getPointer(CGF);
-            else
-              Ptr = this->CGF.EmitScalarExpr(L.IE);
-            BasePtr = Ptr;
-            // Entry is RETURN_PARAM. Also, set the placeholder value
-            // MEMBER_OF=FFFF so that the entry is later updated with the
-            // correct value of MEMBER_OF.
-            CurInfo.Types.push_back(
-                OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM |
-                OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
-          } else {
-            BasePtr = this->CGF.EmitLValue(L.IE).getPointer(CGF);
-            Ptr = this->CGF.EmitLoadOfScalar(this->CGF.EmitLValue(L.IE),
-                                             L.IE->getExprLoc());
-            // Entry is PTR_AND_OBJ and RETURN_PARAM. Also, set the
-            // placeholder value MEMBER_OF=FFFF so that the entry is later
-            // updated with the correct value of MEMBER_OF.
-            CurInfo.Types.push_back(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ |
-                OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM |
-                OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
-          }
-          CurInfo.Exprs.push_back(L.VD);
-          CurInfo.BasePointers.emplace_back(BasePtr);
-          CurInfo.DevicePtrDecls.emplace_back(L.VD);
-          CurInfo.DevicePointers.emplace_back(
-              L.ForDeviceAddr ? DeviceInfoTy::Address : DeviceInfoTy::Pointer);
-          CurInfo.Pointers.push_back(Ptr);
-          CurInfo.Sizes.push_back(
-              llvm::Constant::getNullValue(this->CGF.Int64Ty));
-          CurInfo.Mappers.push_back(nullptr);
-        }
-
-        // Correct the MEMBER_OF flags for the deferred entries we just added.
-        if (MemberOfValueForFirstCombinedEntry.has_value() &&
-            DeferredStartIdx < CurInfo.Types.size()) {
-          // Use the tracked combined entry index from the first group
-          // Note that this assumes that the entries for use_device_ptr/addr
-          // should belong to the CombinedEntry emitted when handling the first
-          // "group". e.g. Even if we have `map(this->sp->a, this->sp->b)`, the
-          // CombinedEntry created for those, with `this->sp` as the attach-ptr,
-          // would not be the first attach-entry.
-          OpenMPOffloadMappingFlags MemberOfFlag =
-              OMPBuilder.getMemberOfFlag(*MemberOfValueForFirstCombinedEntry);
-          for (size_t I = DeferredStartIdx; I < CurInfo.Types.size(); ++I)
-            OMPBuilder.setCorrectMemberOfFlag(CurInfo.Types[I], MemberOfFlag);
-        }
       }
 
       // We need to append the results of this capture to what we already have.
       CombinedInfo.append(CurInfo);
     }
-    // Append data for use_device_ptr clauses.
+    // Append data for use_device_ptr/addr clauses.
     CombinedInfo.append(UseDeviceDataCombinedInfo);
   }
 
@@ -9270,25 +9178,24 @@ public:
   /// \p PartialStruct contains attach base-pointer information.
   /// \returns The index of the combined entry if one was added, std::nullopt
   /// otherwise.
-  std::optional<size_t> emitCombinedEntry(
-      MapCombinedInfoTy &CombinedInfo, MapFlagsArrayTy &CurTypes,
-      const StructRangeInfoTy &PartialStruct, AttachInfoTy &AttachInfo,
-      bool IsMapThis, llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
-      unsigned OffsetForMemberOfFlag, bool NotTargetParams) const {
+  void emitCombinedEntry(MapCombinedInfoTy &CombinedInfo,
+                         MapFlagsArrayTy &CurTypes,
+                         const StructRangeInfoTy &PartialStruct,
+                         AttachInfoTy &AttachInfo, bool IsMapThis,
+                         llvm::OpenMPIRBuilder &OMPBuilder, const ValueDecl *VD,
+                         unsigned OffsetForMemberOfFlag,
+                         bool NotTargetParams) const {
     if (CurTypes.size() == 1 &&
         ((CurTypes.back() & OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
          OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) &&
         !PartialStruct.IsArraySection)
-      return std::nullopt;
-
+      return;
     Address LBAddr = PartialStruct.LowestElem.second;
     Address HBAddr = PartialStruct.HighestElem.second;
     if (PartialStruct.HasCompleteRecord) {
       LBAddr = PartialStruct.LB;
       HBAddr = PartialStruct.LB;
     }
-    // Capture the index where the combined entry will be inserted
-    size_t CombinedEntryIndex = CombinedInfo.BasePointers.size();
     CombinedInfo.Exprs.push_back(VD);
     // Base is the base of the struct
     CombinedInfo.BasePointers.push_back(PartialStruct.Base.emitRawPointer(CGF));
@@ -9387,8 +9294,6 @@ public:
     // &ps,    &ps->a, sizeof(void*),          ATTACH // Use combined-entry's LB
     if (AttachInfo.isValid())
       AttachInfo.AttachPteeAddr = LBAddr;
-
-    return CombinedEntryIndex;
   }
 
   /// Generate all the base pointers, section pointers, sizes, map types, and
@@ -9807,10 +9712,10 @@ public:
           // entry.
           if (PartialStruct.Base.isValid()) {
             CurCaptureVarInfo.append(PartialStruct.PreliminaryMapData);
-            (void)emitCombinedEntry(
+            emitCombinedEntry(
                 CurCaptureVarInfo, CurInfoForComponentLists.Types,
                 PartialStruct, AttachInfo, Cap->capturesThis(), OMPBuilder,
-                nullptr, OffsetForMemberOfFlag,
+                /*VD=*/nullptr, OffsetForMemberOfFlag,
                 /*NotTargetParams*/ !IsEligibleForTargetParamFlag);
           }
 
