@@ -55,7 +55,7 @@ namespace clang::tidy {
 
 #if CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS
 namespace custom {
-void (*RegisterCustomChecks)(const ClangTidyOptions &O,
+void (*RegisterCustomChecks)(const ClangTidyOptions &o,
                              ClangTidyCheckFactories &Factories) = nullptr;
 } // namespace custom
 #endif

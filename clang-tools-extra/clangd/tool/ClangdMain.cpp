@@ -995,11 +995,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.PreambleParseForwardingFunctions = PreambleParseForwardingFunctions;
   Opts.ImportInsertions = ImportInsertions;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
-  Opts.TweakFilter = [&](const Tweak &T) {
-    if (T.hidden() && !HiddenFeatures)
+  Opts.TweakFilter = [&](const Tweak &t) {
+    if (t.hidden() && !HiddenFeatures)
       return false;
     if (TweakList.getNumOccurrences())
-      return llvm::is_contained(TweakList, T.id());
+      return llvm::is_contained(TweakList, t.id());
     return true;
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
