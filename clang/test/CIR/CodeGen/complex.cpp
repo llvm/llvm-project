@@ -1429,3 +1429,42 @@ void imag_on_scalar_bool() {
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
 // OGCG: store i8 0, ptr %[[B_ADDR]], align 1
+
+void function_with_complex_default_arg(
+    float _Complex a = __builtin_complex(1.0f, 2.2f)) {}
+
+// CIR: %[[ARG_0_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: cir.store %{{.*}}, %[[ARG_0_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[ARG_0_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+// OGCG: %[[ARG_0_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: store <2 x float> %{{.*}}, ptr %[[ARG_0_ADDR]], align 4
+
+void calling_function_with_default_arg() {
+  function_with_complex_default_arg();
+}
+
+// CIR: %[[DEFAULT_ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[DEFAULT_ARG_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CIR: cir.store{{.*}} %[[DEFAULT_ARG_VAL]], %[[DEFAULT_ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[TMP_DEFAULT_ARG:.*]] = cir.load{{.*}} %[[DEFAULT_ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.call @_Z33function_with_complex_default_argCf(%[[TMP_DEFAULT_ARG]]) : (!cir.complex<!cir.float>) -> ()
+
+// TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
+
+// LLVM: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 0x40019999A0000000 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: %[[TMP_DEFAULT_ARG:.*]] = load { float, float }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } %[[TMP_DEFAULT_ARG]])
+
+// OGCG: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, align 4
+// OGCG: %[[DEFAULT_ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 0
+// OGCG: %[[DEFAULT_ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 1
+// OGCG: store float 1.000000e+00, ptr %[[DEFAULT_ARG_REAL_PTR]], align 4
+// OGCG: store float 0x40019999A0000000, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
+// OGCG: %[[TMP_DEFAULT_ARG:.*]] = load <2 x float>, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// OGCG: call void @_Z33function_with_complex_default_argCf(<2 x float> {{.*}} %[[TMP_DEFAULT_ARG]])
