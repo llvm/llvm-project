@@ -1290,6 +1290,11 @@ public:
     return ScalarEpilogueStatus == CM_ScalarEpilogueAllowed;
   }
 
+  bool preferPredicatedEpilogue() const {
+    return ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate ||
+           ScalarEpilogueStatus == CM_ScalarEpilogueNotAllowedUsePredicate;
+  }
+
   /// Returns the TailFoldingStyle that is best for the current loop.
   TailFoldingStyle getTailFoldingStyle(bool IVUpdateMayOverflow = true) const {
     if (!ChosenTailFoldingStyle)
@@ -4531,7 +4536,12 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   // 3. We don't interleave if we think that we will spill registers to memory
   // due to the increased register pressure.
 
-  if (!CM.isScalarEpilogueAllowed() && !CM.useWideActiveLaneMask())
+  // Only interleave tail-folded loops if wide lane masks requested, as the
+  // overhead of multiple instructions to calculate the predicate is likely
+  // not beneficial. If a scalar epilogue is not allowed for any other reason,
+  // do not interleave.
+  if (!CM.isScalarEpilogueAllowed() &&
+      !(CM.preferPredicatedEpilogue() && CM.useWideActiveLaneMask()))
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
@@ -9008,7 +9018,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
   };
 
   // 4) if the TTI hook indicates this is profitable, request predication.
-  TailFoldingInfo TFI(TLI, &LVL, IAI, EnableWideActiveLaneMask);
+  TailFoldingInfo TFI(TLI, &LVL, IAI);
   if (TTI->preferPredicateOverEpilogue(&TFI))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
