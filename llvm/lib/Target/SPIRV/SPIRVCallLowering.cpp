@@ -479,18 +479,9 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
-  } else if (!F.hasLocalLinkage() &&
-             F.getVisibility() != GlobalValue::HiddenVisibility) {
-    SPIRV::LinkageType::LinkageType LnkTy =
-        F.isDeclaration()
-            ? SPIRV::LinkageType::Import
-            : (F.getLinkage() == GlobalValue::LinkOnceODRLinkage &&
-                       ST->canUseExtension(
-                           SPIRV::Extension::SPV_KHR_linkonce_odr)
-                   ? SPIRV::LinkageType::LinkOnceODR
-                   : SPIRV::LinkageType::Export);
+  } else if (const auto LnkTy = getSpirvLinkageTypeFor(*ST, F)) {
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getName());
+                    {static_cast<uint32_t>(*LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration
