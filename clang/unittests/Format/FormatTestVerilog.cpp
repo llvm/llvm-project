@@ -1287,7 +1287,7 @@ TEST_F(FormatTestVerilog, StringLiteral) {
                getStyleWithColumns(getDefaultStyle(), 32));
   // Space around braces should be correct.
   auto Style = getStyleWithColumns(getDefaultStyle(), 24);
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat(R"(x({ "xxxxxxxxxxxxxxxx ",
     "xxxx" });)",
                R"(x("xxxxxxxxxxxxxxxx xxxx");)", Style);
