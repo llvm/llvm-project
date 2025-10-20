@@ -1138,7 +1138,6 @@ TEST(ProtocolTypesTest, ExceptionBreakMode) {
     json::Value const serialized = toJSON(value);
     ASSERT_EQ(serialized.kind(), llvm::json::Value::Kind::String);
     EXPECT_EQ(serialized.getAsString(), expected);
-
   }
 }
 
