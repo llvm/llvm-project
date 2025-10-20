@@ -62,6 +62,7 @@
 //      CUDA: @.fatbin_image = internal constant [0 x i8] zeroinitializer, section ".nv_fatbin"
 // CUDA-NEXT: @.fatbin_wrapper = internal constant %fatbin_wrapper { i32 1180844977, i32 1, ptr @.fatbin_image, ptr null }, section ".nvFatBinSegment", align 8
 // CUDA-NEXT: @.cuda.binary_handle = internal global ptr null
+// CUDA-NEXT: @.nv_inited_managed_rt = internal global i8 0
 
 // CUDA: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.cuda.fatbin_reg, ptr null }]
 
@@ -71,7 +72,16 @@
 // CUDA-NEXT:   store ptr %0, ptr @.cuda.binary_handle, align 8
 // CUDA-NEXT:   call void @.cuda.globals_reg(ptr %0)
 // CUDA-NEXT:   call void @__cudaRegisterFatBinaryEnd(ptr %0)
-// CUDA-NEXT:   %1 = call i32 @atexit(ptr @.cuda.fatbin_unreg)
+// CUDA-NEXT:   %1 = load i8, ptr @.nv_inited_managed_rt, align 1
+// CUDA-NEXT:   %2 = icmp ne i8 %1, 0
+// CUDA-NEXT:   br i1 %2, label %if.then, label %if.end
+
+//      CUDA: if.then:
+// CUDA-NEXT:   %3 = call i8 @__cudaInitModule(ptr %0)
+// CUDA-NEXT:   br label %if.end
+
+//      CUDA: if.end:
+// CUDA-NEXT:   %4 = call i32 @atexit(ptr @.cuda.fatbin_unreg)
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 //
@@ -135,7 +145,8 @@
 // CUDA-NEXT:   br label %if.end
 //
 //      CUDA: sw.managed:
-// CUDA-NEXT:   call void @__cudaRegisterManagedVar(ptr %0, ptr %aux_addr, ptr %addr, ptr %name, i64 %size, i32 %9)
+// CUDA-NEXT:   call void @__cudaRegisterManagedVar(ptr %0, ptr %aux_addr, ptr %name, ptr %name, i32 %extern, i64 %size, i32 %constant, i32 0)
+// CUDA-NEXT:   store i8 1, ptr @.nv_inited_managed_rt, align 1
 // CUDA-NEXT:   br label %if.end
 //
 //      CUDA: sw.surface:
