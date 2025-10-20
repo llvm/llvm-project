@@ -19,6 +19,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -116,6 +117,15 @@ struct detector<std::void_t<Op<Args...>>, Op, Args...> {
 ///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
+
+struct identity_cxx20 // NOLINT(readability-identifier-naming)
+{
+  using is_transparent = void;
+
+  template <typename T> constexpr T &&operator()(T &&self) const noexcept {
+    return std::forward<T>(self);
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //     Features from C++23
