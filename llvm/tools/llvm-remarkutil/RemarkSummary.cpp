@@ -29,7 +29,7 @@ using namespace llvm::remarkutil;
 namespace summary {
 
 static cl::SubCommand
-    SummarySub("summary", "Summarize Remarks using different strategies.");
+    SummarySub("summary", "Summarize remarks using different strategies.");
 
 INPUT_FORMAT_COMMAND_LINE_OPTIONS(SummarySub)
 OUTPUT_FORMAT_COMMAND_LINE_OPTIONS(SummarySub)
@@ -59,29 +59,39 @@ static cl::opt<bool> EnableInlineSummaryOpt(
     "inline-callees", cl::desc("Summarize per-callee inling statistics"),
     cl::cat(SummaryStrategyCat), cl::init(false), cl::sub(SummarySub));
 
+/// An interface to implement different strategies for creating remark
+/// summaries. Override this class to develop new strategies.
 class SummaryStrategy {
 public:
   virtual ~SummaryStrategy() = default;
+
+  /// Strategy should return true if it wants to process the remark \p R.
   virtual bool filter(Remark &R) = 0;
+
+  /// Hook to process the remark \p R (i.e. collect the necessary data for
+  /// producing summary remarks). This will only be called with remarks
+  /// accepted by filter(). Can return an error if \p R is malformed or
+  /// unexpected.
   virtual Error process(Remark &R) = 0;
+
+  /// Hook to emit new remarks based on the collected data.
   virtual void emit(RemarkSerializer &Serializer) = 0;
 };
 
+/// Check if any summary strategy options are explicitly enabled.
 static bool isAnyStrategyRequested() {
-  bool Requested = false;
   StringMap<cl::Option *> Opts = cl::getRegisteredOptions(SummarySub);
   for (auto &[_, Opt] : Opts) {
     if (!is_contained(Opt->Categories, &SummaryStrategyCat))
       continue;
     if (!Opt->getNumOccurrences())
       continue;
-    Requested = true;
-    break;
+    return true;
   }
-  return Requested;
+  return false;
 }
 
-class InlineSummary : public SummaryStrategy {
+class InlineCalleeSummary : public SummaryStrategy {
   struct CallsiteCost {
     int Cost = 0;
     int Threshold = 0;
@@ -133,8 +143,8 @@ class InlineSummary : public SummaryStrategy {
     Argument *ThresholdArg = R.getArgByKey("Threshold");
     if (!CostArg || !ThresholdArg)
       return Error::success();
-    auto CostVal = CostArg->getValAsSignedInt();
-    auto ThresholdVal = ThresholdArg->getValAsSignedInt();
+    auto CostVal = CostArg->getValAsInt<int>();
+    auto ThresholdVal = ThresholdArg->getValAsInt<int>();
     if (!CostVal || !ThresholdVal)
       return malformed();
     Callee.updateCost({*CostVal, *ThresholdVal, R.Loc});
@@ -203,7 +213,7 @@ static Error trySummary() {
   bool UseDefaultStrategies = !isAnyStrategyRequested();
   SmallVector<std::unique_ptr<SummaryStrategy>> Strategies;
   if (EnableInlineSummaryOpt || UseDefaultStrategies)
-    Strategies.push_back(std::make_unique<InlineSummary>());
+    Strategies.push_back(std::make_unique<InlineCalleeSummary>());
 
   auto MaybeRemark = Parser.next();
   for (; MaybeRemark; MaybeRemark = Parser.next()) {

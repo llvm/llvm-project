@@ -789,6 +789,10 @@ public:
         std::forward<Args>(args)...);
   }
 
+  const std::vector<std::unique_ptr<Method>> &getMethods() const {
+    return methods;
+  }
+
   /// Add a new field to the class. Class fields added this way are always
   /// private.
   template <typename TypeT, typename NameT>

@@ -54,7 +54,6 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueJumps = false;
   bool UseNewValueStores = false;
   bool UseSmallData = false;
-  bool UseUnsafeMath = false;
   bool UseZRegOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
@@ -234,7 +233,6 @@ public:
   bool useNewValueJumps() const { return UseNewValueJumps; }
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
-  bool useUnsafeMath() const { return UseUnsafeMath; }
   bool useZRegOps() const { return UseZRegOps; }
   bool useCabac() const { return UseCabac; }
 

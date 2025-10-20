@@ -41,7 +41,7 @@ template <typename T> class ArrayRef;
 
 class MD5 {
 public:
-  struct MD5Result : public std::array<uint8_t, 16> {
+  struct MD5Result : std::array<uint8_t, 16> {
     LLVM_ABI SmallString<32> digest() const;
 
     uint64_t low() const {
@@ -57,7 +57,7 @@ public:
     }
     std::pair<uint64_t, uint64_t> words() const {
       using namespace support;
-      return std::make_pair(high(), low());
+      return {high(), low()};
     }
   };
 

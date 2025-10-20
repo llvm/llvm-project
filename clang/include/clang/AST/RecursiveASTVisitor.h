@@ -1710,7 +1710,7 @@ DEF_TRAVERSE_DECL(FriendDecl, {
     // it will not be in the parent context:
     if (auto *TT = D->getFriendType()->getType()->getAs<TagType>();
         TT && TT->isTagOwned())
-      TRY_TO(TraverseDecl(TT->getOriginalDecl()));
+      TRY_TO(TraverseDecl(TT->getDecl()));
   } else {
     TRY_TO(TraverseDecl(D->getFriendDecl()));
   }
@@ -3177,6 +3177,9 @@ DEF_TRAVERSE_STMT(OMPUnrollDirective,
 DEF_TRAVERSE_STMT(OMPReverseDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPFuseDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3495,6 +3498,14 @@ bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPLoopRangeClause(
+    OMPLoopRangeClause *C) {
+  TRY_TO(TraverseStmt(C->getFirst()));
+  TRY_TO(TraverseStmt(C->getCount()));
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
   TRY_TO(TraverseStmt(C->getFactor()));
   return true;
@@ -3583,7 +3594,8 @@ bool RecursiveASTVisitor<Derived>::VisitOMPOrderedClause(OMPOrderedClause *C) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *) {
+bool RecursiveASTVisitor<Derived>::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  TRY_TO(TraverseStmt(C->getCondition()));
   return true;
 }
 

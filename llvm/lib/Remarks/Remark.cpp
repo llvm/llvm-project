@@ -34,24 +34,6 @@ Argument *Remark::getArgByKey(StringRef Key) {
   return &*It;
 }
 
-/// Returns the value of a specified key parsed from StringRef.
-std::optional<int> Argument::getValAsInt() const {
-  APInt KeyVal;
-  if (Val.getAsInteger(10, KeyVal))
-    return std::nullopt;
-  return KeyVal.getSExtValue();
-}
-
-std::optional<int> Argument::getValAsSignedInt() const {
-  StringRef Str = Val;
-  int Res;
-  if (Str.consumeInteger(10, Res) || !Str.empty())
-    return std::nullopt;
-  return Res;
-}
-
-bool Argument::isValInt() const { return getValAsInt().has_value(); }
-
 void RemarkLocation::print(raw_ostream &OS) const {
   OS << "{ "
      << "File: " << SourceFilePath << ", Line: " << SourceLine

@@ -639,6 +639,43 @@ static DecodeStatus DecodeCCOutOperand(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeVpredNOperand(MCInst &Inst,
+                                        const MCDisassembler *Decoder) {
+  const auto *D = static_cast<const ARMDisassembler *>(Decoder);
+  unsigned VCC = D->VPTBlock.getVPTPred();
+  MCRegister CondReg = VCC == ARMVCC::None ? ARM::NoRegister : ARM::P0;
+
+  Inst.addOperand(MCOperand::createImm(VCC));             // $cond
+  Inst.addOperand(MCOperand::createReg(CondReg));         // $cond_reg
+  Inst.addOperand(MCOperand::createReg(ARM::NoRegister)); // $tp_reg
+
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeVpredROperand(MCInst &Inst,
+                                        const MCDisassembler *Decoder) {
+  const auto *D = static_cast<const ARMDisassembler *>(Decoder);
+  unsigned VCC = D->VPTBlock.getVPTPred();
+  MCRegister CondReg = VCC == ARMVCC::None ? ARM::NoRegister : ARM::P0;
+
+  Inst.addOperand(MCOperand::createImm(VCC));             // $cond
+  Inst.addOperand(MCOperand::createReg(CondReg));         // $cond_reg
+  Inst.addOperand(MCOperand::createReg(ARM::NoRegister)); // $tp_reg
+
+  // The last sub-operand ($inactive) is tied to an output operand.
+  // The output operand has already been decoded, so just copy it.
+  const MCInstrDesc &MCID = D->MCII->get(Inst.getOpcode());
+  unsigned InactiveOpIdx = Inst.getNumOperands();
+  int TiedOpIdx = MCID.getOperandConstraint(InactiveOpIdx, MCOI::TIED_TO);
+  assert(TiedOpIdx >= 0 &&
+         "Inactive register in vpred_r is not tied to an output!");
+
+  // Make a copy of the operand to ensure it is not invalidated when MI grows.
+  Inst.addOperand(MCOperand(Inst.getOperand(TiedOpIdx))); // $inactive
+
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus DecodeSORegImmOperand(MCInst &Inst, unsigned Val,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder) {
@@ -2777,6 +2814,7 @@ static DecodeStatus DecodeMVEModImmInstruction(MCInst &Inst, unsigned Insn,
 
   Inst.addOperand(MCOperand::createImm(imm));
 
+  Check(S, DecodeVpredROperand(Inst, Decoder));
   return S;
 }
 
@@ -2802,6 +2840,7 @@ static DecodeStatus DecodeMVEVADCInstruction(MCInst &Inst, unsigned Insn,
   if (!fieldFromInstruction(Insn, 12, 1)) // I bit clear => need input FPSCR
     Inst.addOperand(MCOperand::createReg(ARM::FPSCR_NZCV));
 
+  Check(S, DecodeVpredROperand(Inst, Decoder));
   return S;
 }
 
@@ -5466,30 +5505,6 @@ static DecodeStatus DecodeVPTMaskOperand(MCInst &Inst, unsigned Val,
   return S;
 }
 
-static DecodeStatus DecodeVpredROperand(MCInst &Inst, unsigned RegNo,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder) {
-  // The vpred_r operand type includes an MQPR register field derived
-  // from the encoding. But we don't actually want to add an operand
-  // to the MCInst at this stage, because AddThumbPredicate will do it
-  // later, and will infer the register number from the TIED_TO
-  // constraint. So this is a deliberately empty decoder method that
-  // will inhibit the auto-generated disassembly code from adding an
-  // operand at all.
-  return MCDisassembler::Success;
-}
-
-[[maybe_unused]] static DecodeStatus
-DecodeVpredNOperand(MCInst &Inst, unsigned RegNo, uint64_t Address,
-                    const MCDisassembler *Decoder) {
-  // Similar to above, we want to ensure that no operands are added for the
-  // vpred operands. (This is marked "maybe_unused" for the moment; because
-  // DecoderEmitter currently (wrongly) omits operands with no instruction bits,
-  // the decoder doesn't actually call it yet. That will be addressed in a
-  // future change.)
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus
 DecodeRestrictedIPredicateOperand(MCInst &Inst, unsigned Val, uint64_t Address,
                                   const MCDisassembler *Decoder) {
@@ -5668,6 +5683,7 @@ DecodeMVE_MEM_pre(MCInst &Inst, unsigned Val, uint64_t Address,
   if (!Check(S, AddrDecoder(Inst, addr, Address, Decoder)))
     return MCDisassembler::Fail;
 
+  Check(S, DecodeVpredNOperand(Inst, Decoder));
   return S;
 }
 
@@ -5871,7 +5887,7 @@ static DecodeStatus DecodeMVEVCVTt1fp(MCInst &Inst, unsigned Insn,
     return MCDisassembler::Fail;
   if (!Check(S, DecodeVCVTImmOperand(Inst, imm6, Address, Decoder)))
     return MCDisassembler::Fail;
-
+  Check(S, DecodeVpredROperand(Inst, Decoder));
   return S;
 }
 
@@ -5906,6 +5922,7 @@ static DecodeStatus DecodeMVEVCMP(MCInst &Inst, unsigned Insn, uint64_t Address,
   if (!Check(S, predicate_decoder(Inst, fc, Address, Decoder)))
     return MCDisassembler::Fail;
 
+  Check(S, DecodeVpredNOperand(Inst, Decoder));
   return S;
 }
 
@@ -5916,6 +5933,7 @@ static DecodeStatus DecodeMveVCTP(MCInst &Inst, unsigned Insn, uint64_t Address,
   unsigned Rn = fieldFromInstruction(Insn, 16, 4);
   if (!Check(S, DecoderGPRRegisterClass(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
+  Check(S, DecodeVpredNOperand(Inst, Decoder));
   return S;
 }
 
@@ -5925,6 +5943,7 @@ static DecodeStatus DecodeMVEVPNOT(MCInst &Inst, unsigned Insn,
   DecodeStatus S = MCDisassembler::Success;
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
+  Check(S, DecodeVpredNOperand(Inst, Decoder));
   return S;
 }
 
@@ -6199,15 +6218,13 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
       (isVectorPredicable(MI) && ITBlock.instrInITBlock()))
     S = SoftFail;
 
-  // If we're in an IT/VPT block, base the predicate on that.  Otherwise,
+  // If we're in an IT block, base the predicate on that.  Otherwise,
   // assume a predicate of AL.
   unsigned CC = ARMCC::AL;
-  unsigned VCC = ARMVCC::None;
   if (ITBlock.instrInITBlock()) {
     CC = ITBlock.getITCC();
     ITBlock.advanceITState();
   } else if (VPTBlock.instrInVPTBlock()) {
-    VCC = VPTBlock.getVPTPred();
     VPTBlock.advanceVPTState();
   }
 
@@ -6227,34 +6244,6 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     else
       MI.insert(CCI, MCOperand::createReg(ARM::CPSR));
   } else if (CC != ARMCC::AL) {
-    Check(S, SoftFail);
-  }
-
-  MCInst::iterator VCCI = MI.begin();
-  unsigned VCCPos;
-  for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
-    if (ARM::isVpred(MCID.operands()[VCCPos].OperandType) || VCCI == MI.end())
-      break;
-  }
-
-  if (isVectorPredicable(MI)) {
-    VCCI = MI.insert(VCCI, MCOperand::createImm(VCC));
-    ++VCCI;
-    if (VCC == ARMVCC::None)
-      VCCI = MI.insert(VCCI, MCOperand::createReg(0));
-    else
-      VCCI = MI.insert(VCCI, MCOperand::createReg(ARM::P0));
-    ++VCCI;
-    VCCI = MI.insert(VCCI, MCOperand::createReg(0));
-    ++VCCI;
-    if (MCID.operands()[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
-      int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
-      assert(TiedOp >= 0 &&
-             "Inactive register in vpred_r is not tied to an output!");
-      // Copy the operand to ensure it's not invalidated when MI grows.
-      MI.insert(VCCI, MCOperand(MI.getOperand(TiedOp)));
-    }
-  } else if (VCC != ARMVCC::None) {
     Check(S, SoftFail);
   }
 

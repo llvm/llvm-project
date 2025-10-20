@@ -1043,7 +1043,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
 // which covers only simple operations and ensure the configuration is able to
 // compile.
 TEST(ScudoCombinedTest, BasicTrustyConfig) {
-  using AllocatorT = scudo::Allocator<scudo::TrustyConfig>;
+  using AllocatorT = TestAllocator<scudo::TrustyConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   for (scudo::uptr ClassId = 1U;
@@ -1107,7 +1107,7 @@ struct TestQuarantineConfig {
 
 // Verify that the quarantine exists by default.
 TEST(ScudoCombinedTest, QuarantineEnabled) {
-  using AllocatorT = scudo::Allocator<TestQuarantineConfig>;
+  using AllocatorT = TestAllocator<TestQuarantineConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;
@@ -1132,7 +1132,7 @@ struct TestQuarantineDisabledConfig : TestQuarantineConfig {
 };
 
 TEST(ScudoCombinedTest, QuarantineDisabled) {
-  using AllocatorT = scudo::Allocator<TestQuarantineDisabledConfig>;
+  using AllocatorT = TestAllocator<TestQuarantineDisabledConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;
@@ -1154,7 +1154,7 @@ TEST(ScudoCombinedTest, QuarantineDisabled) {
 
 // Verify that no special quarantine blocks appear in iterateOverChunks.
 TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
-  using AllocatorT = scudo::Allocator<TestQuarantineConfig>;
+  using AllocatorT = TestAllocator<TestQuarantineConfig>;
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   // Do a bunch of allocations and deallocations. At the end there should

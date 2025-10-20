@@ -57,7 +57,7 @@ SetupIORedirection(const std::vector<std::optional<std::string>> &stdio,
   size_t n = std::max(stdio.size(), static_cast<size_t>(3));
   for (size_t i = 0; i < n; i++) {
     std::optional<std::string> path;
-    if (stdio.size() < i)
+    if (stdio.size() <= i)
       path = stdio.back();
     else
       path = stdio[i];
@@ -107,7 +107,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file.m_path, debugger_pid,
+      arguments.cwd, comm_file.m_path, debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -181,7 +181,7 @@ void BaseRequestHandler::Run(const Request &request) {
 
 llvm::Error BaseRequestHandler::LaunchProcess(
     const protocol::LaunchRequestArguments &arguments) const {
-  auto launchCommands = arguments.launchCommands;
+  const std::vector<std::string> &launchCommands = arguments.launchCommands;
 
   // Instantiate a launch info instance for the target.
   auto launch_info = dap.target.GetLaunchInfo();

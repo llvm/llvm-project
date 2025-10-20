@@ -56,12 +56,16 @@ struct Argument {
 
   /// Implement operator<< on Argument.
   LLVM_ABI void print(raw_ostream &OS) const;
-  /// Return the value of argument as int.
-  LLVM_ABI std::optional<int> getValAsInt() const;
-  /// Return the value of argument as signed int.
-  LLVM_ABI std::optional<int> getValAsSignedInt() const;
-  /// Check if the argument value can be parsed as int.
-  LLVM_ABI bool isValInt() const;
+
+  /// Return the value of argument as an integer of type T.
+  template <typename T>
+  std::optional<T> getValAsInt(unsigned Radix = 10) const {
+    StringRef Str = Val;
+    T Res;
+    if (Str.consumeInteger<T>(Radix, Res) || !Str.empty())
+      return std::nullopt;
+    return Res;
+  }
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
