@@ -120,8 +120,8 @@ AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
                          bool EndStatementAtEOF) {
-  // Null terminator must be part of the actual buffer. It must reside at
-  // `Buf.end()`. It must be safe to dereference `Buf.end()`.
+  // Buffer must be NULL-terminated. NULL terminator must reside at `Buf.end()`.
+  // It must be safe to dereference `Buf.end()`.
   assert(*Buf.end() == '\0' &&
          "Buffer provided to AsmLexer lacks null terminator.");
 
