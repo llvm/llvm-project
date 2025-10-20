@@ -151,6 +151,12 @@ ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow() {
                            ofClass(smartPointerClassWithGetOrValue()))));
 }
 
+ast_matchers::StatementMatcher isPointerLikeConstructor() {
+  using namespace ast_matchers;
+  return cxxConstructExpr(hasType(hasCanonicalType(
+      qualType(hasDeclaration(cxxRecordDecl(pointerClass()))))));
+}
+
 ast_matchers::StatementMatcher isPointerLikeOperatorStar() {
   return cxxOperatorCallExpr(
       hasOverloadedOperatorName("*"),

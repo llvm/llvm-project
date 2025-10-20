@@ -226,7 +226,10 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
         Globals[PIdx] = NewGlobal;
         // All pointers pointing to the previous extern decl now point to the
         // new decl.
-        RedeclBlock->movePointersTo(NewGlobal->block());
+        // A previous iteration might've already fixed up the pointers for this
+        // global.
+        if (RedeclBlock != NewGlobal->block())
+          RedeclBlock->movePointersTo(NewGlobal->block());
       }
     }
     PIdx = *Idx;

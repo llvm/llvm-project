@@ -3198,6 +3198,33 @@ TEST_P(UncheckedStatusOrAccessModelTest, SmartPtrLikeFromReference) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, UniquePtr) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto sor_up = Make<std::unique_ptr<STATUSOR_INT>>();
+          if (sor_up->ok()) sor_up->value();
+        }
+      )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, UniquePtrReset) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto sor_up = Make<std::unique_ptr<STATUSOR_INT>>();
+          if (sor_up->ok()) {
+            sor_up.reset(Make<STATUSOR_INT*>());
+            sor_up->value();  // [[unsafe]]
+          }
+        }
+      )cc");
+}
+
 } // namespace
 
 std::string

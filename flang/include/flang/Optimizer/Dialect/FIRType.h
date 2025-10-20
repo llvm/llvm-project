@@ -53,6 +53,9 @@ public:
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
 
+  // Get the element type or the fir.array
+  mlir::Type getElementOrSequenceType() const;
+
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 

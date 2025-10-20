@@ -147,6 +147,8 @@ public:
     if (Error)
       FAIL() << llvm::toString(std::move(Error));
   }
+
+  ~UncheckedStatusOrAccessModelTestExecutor() override = default;
 };
 
 class UncheckedStatusOrAccessModelTest

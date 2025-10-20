@@ -212,6 +212,16 @@ static auto isStatusConstructor() {
   return cxxConstructExpr(hasType(statusType()));
 }
 
+static auto isNonConstMemberCall() {
+  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
+}
+
+static auto isNonConstMemberOperatorCall() {
+  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  return cxxOperatorCallExpr(callee(cxxMethodDecl(unless(isConst()))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -609,6 +619,42 @@ static void transferStatusConstructor(const CXXConstructExpr *Expr,
     initializeStatus(StatusLoc, State.Env);
 }
 
+static void transferStatusOrReturningCall(const CallExpr* Expr,
+                                          LatticeTransferState& State) {
+  RecordStorageLocation* StatusOrLoc =
+      Expr->isPRValue() ? &State.Env.getResultObjectLocation(*Expr)
+                        : State.Env.get<RecordStorageLocation>(*Expr);
+  if (StatusOrLoc != nullptr &&
+      State.Env.getValue(locForOk(locForStatus(*StatusOrLoc))) == nullptr)
+    initializeStatusOr(*StatusOrLoc, State.Env);
+}
+
+static void handleNonConstMemberCall(const CallExpr* Expr,
+                                     RecordStorageLocation* RecordLoc,
+                                     const MatchFinder::MatchResult& Result,
+                                     LatticeTransferState& State) {
+  if (RecordLoc == nullptr) return;
+  State.Lattice.clearConstMethodReturnValues(*RecordLoc);
+  State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
+
+  if (isStatusOrType(Expr->getType()))
+    transferStatusOrReturningCall(Expr, State);
+}
+static void transferNonConstMemberCall(const CXXMemberCallExpr* Expr,
+                                       const MatchFinder::MatchResult& Result,
+                                       LatticeTransferState& State) {
+  handleNonConstMemberCall(Expr, getImplicitObjectLocation(*Expr, State.Env),
+                           Result, State);
+}
+
+static void transferNonConstMemberOperatorCall(
+    const CXXOperatorCallExpr* Expr, const MatchFinder::MatchResult& Result,
+    LatticeTransferState& State) {
+  auto* RecordLoc = cast_or_null<RecordStorageLocation>(
+      State.Env.getStorageLocation(*Expr->getArg(0)));
+  handleNonConstMemberCall(Expr, RecordLoc, Result, State);
+}
+
 static RecordStorageLocation *
 getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
   if (!E.isPRValue())
@@ -730,6 +776,10 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                   maybeInitLocForCtor(T, Loc, State.Env);
                 });
           })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
+                                        transferNonConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isNonConstMemberOperatorCall(),
+                                          transferNonConstMemberOperatorCall)
       .Build();
 }
 

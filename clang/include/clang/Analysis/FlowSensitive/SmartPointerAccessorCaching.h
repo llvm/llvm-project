@@ -58,6 +58,7 @@ namespace clang::dataflow {
 /// for `std::optional`, we assume the (Matcher, TransferFunction) case
 /// with custom handling is ordered early so that these generic cases
 /// do not trigger.
+ast_matchers::StatementMatcher isPointerLikeConstructor();
 ast_matchers::StatementMatcher isSmartPointerLikeConstructor();
 ast_matchers::StatementMatcher isPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar();
@@ -166,6 +167,8 @@ void transferSmartPointerLikeCachedDeref(
   State.Env.setStorageLocation(*DerefExpr, LocForValue);
 }
 
+// This was introduced after the QualType was added to InitializeLoc, so
+// we don't provide a compatibility wrapper.
 template <typename LatticeT>
 void transferSmartPointerLikeConstructor(
     const CXXConstructExpr *ConstructOperator,
