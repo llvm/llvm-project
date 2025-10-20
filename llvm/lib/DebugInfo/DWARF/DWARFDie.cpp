@@ -107,6 +107,27 @@ static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {
   return D.getAttributeValueAsReferencedDie(F).resolveTypeUnitReference();
 }
 
+static llvm::StringRef
+prettyLanguageVersionString(const DWARFAttribute &AttrValue,
+                            const DWARFDie &Die) {
+  assert(AttrValue.Attr == DW_AT_language_version);
+
+  auto NameForm = Die.find(DW_AT_language_name);
+  if (!NameForm)
+    return {};
+
+  auto LName = NameForm->getAsUnsignedConstant();
+  if (!LName)
+    return {};
+
+  auto LVersion = AttrValue.Value.getAsUnsignedConstant();
+  if (!LVersion)
+    return {};
+
+  return llvm::dwarf::LanguageDescription(
+      static_cast<SourceLanguageName>(*LName), *LVersion);
+}
+
 static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
                           const DWARFAttribute &AttrValue, unsigned Indent,
                           DIDumpOptions DumpOpts) {
@@ -143,7 +164,9 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
         }
       }
     }
-  } else if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
+  } else if (Attr == llvm::dwarf::DW_AT_language_version && !DumpOpts.Verbose)
+    Name = prettyLanguageVersionString(AttrValue, Die);
+  else if (std::optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
 
   if (!Name.empty())
