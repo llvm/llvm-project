@@ -117,9 +117,24 @@ luti6 { z0.b - z3.b }, zt0, { z1 - z1 }
 // CHECK-NEXT: luti6 { z0.b - z3.b }, zt0, { z1 - z1 }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+luti6 { z0.b - z5.b }, zt0, { z7 - z11 }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid number of vectors
+// CHECK-NEXT: luti6 { z0.b - z5.b }, zt0, { z7 - z11 }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 luti6 { z0.b - z3.b }, zt1, { z1 - z3 }
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid lookup table, expected zt0
 // CHECK-NEXT: luti6 { z0.b - z3.b }, zt1, { z1 - z3 }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+luti6 { z4.b, z8.b, z12.b, z16.b}, zt0, { z2 - z5 }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: luti6 { z4.b, z8.b, z12.b, z16.b}, zt0, { z2 - z5 }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+luti6 { z17.b, z21.b, z25.b, z29.b}, zt0, { z2 - z5 }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: luti6 { z17.b, z21.b, z25.b, z29.b}, zt0, { z2 - z5 }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
