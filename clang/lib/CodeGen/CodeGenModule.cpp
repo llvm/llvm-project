@@ -4065,8 +4065,40 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
-  if (Global->hasAttr<AliasAttr>())
+  if (Global->hasAttr<AliasAttr>()) {
+    if (LangOpts.OpenMPIsTargetDevice || LangOpts.CUDA) {
+      const auto *AA = Global->getAttr<AliasAttr>();
+      assert(AA && "Not an alias?");
+      GlobalDecl AliaseeGD;
+      if (!lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD)) {
+        if (LangOpts.CUDA)
+          // Failed to find aliasee on device side, skip emitting
+          return;
+      } else {
+        const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+        if (LangOpts.OpenMPIsTargetDevice) {
+          if (!AliaseeDecl ||
+              !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
+                  AliaseeDecl))
+            // Not a target declaration, skip emitting
+            return;
+        } else {
+          // HIP/CUDA
+          const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+          const bool AliaseeHasDeviceAttr =
+              AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+          if (LangOpts.CUDAIsDevice) {
+            if (!HasDeviceAttr || !AliaseeHasDeviceAttr)
+              return;
+          } else if (HasDeviceAttr && AliaseeHasDeviceAttr) {
+            // Alias is only on device side, skip emitting on host side
+            return;
+          }
+        }
+      }
+    }
     return EmitAliasDefinition(GD);
+  }
 
   // IFunc like an alias whose value is resolved at runtime by calling resolver.
   if (Global->hasAttr<IFuncAttr>())
