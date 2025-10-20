@@ -741,8 +741,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
 
@@ -873,8 +874,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return E;
@@ -1017,8 +1019,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = CE;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return CE;
@@ -1222,10 +1225,10 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
-static const ExprResult
-SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
-                                        const ConceptSpecializationExpr *CSE,
-                                        UnsignedOrNone SubstIndex) {
+static ExprResult
+SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
+                                         const ConceptSpecializationExpr *CSE,
+                                         UnsignedOrNone SubstIndex) {
 
   // [C++2c] [temp.constr.normal]
   // Otherwise, to form CE, any non-dependent concept template argument Ai
@@ -1260,7 +1263,7 @@ bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
-  ExprResult Res = SubstituteConceptsInConstrainExpression(
+  ExprResult Res = SubstituteConceptsInConstraintExpression(
       *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
   if (!Res.isUsable())
     return true;
@@ -2302,7 +2305,7 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
 
       ExprResult Res =
-          SubstituteConceptsInConstrainExpression(S, D, CSE, SubstIndex);
+          SubstituteConceptsInConstraintExpression(S, D, CSE, SubstIndex);
       if (!Res.isUsable())
         return nullptr;
 
