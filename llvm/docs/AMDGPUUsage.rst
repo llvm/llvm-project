@@ -488,21 +488,21 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
 
      **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
      -----------------------------------------------------------------------------------------------------------------------
-     ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 890M
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1151``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1151``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 8060S
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 860M
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -883,6 +883,8 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer                    7               N/A         N/A              160     0
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
+     *reserved for downstream use*         10
+     *reserved for downstream use*         11
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
