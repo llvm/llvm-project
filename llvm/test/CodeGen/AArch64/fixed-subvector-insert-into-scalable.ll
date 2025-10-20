@@ -7,7 +7,7 @@ define <vscale x 4 x i32> @insert_div() {
 ; CHECK-NEXT:    mov z0.s, #3 // =0x3
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 9), i64 0)
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 9), i64 0)
   %div = udiv <vscale x 4 x i32> %0, splat (i32 3)
   ret <vscale x 4 x i32> %div
 }
@@ -18,7 +18,7 @@ define <vscale x 4 x i32> @insert_mul() {
 ; CHECK-NEXT:    mov z0.s, #7 // =0x7
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 1), i64 0)
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 1), i64 0)
   %mul = mul <vscale x 4 x i32> %0, splat (i32 7)
   ret <vscale x 4 x i32> %mul
 }
@@ -29,7 +29,7 @@ define <vscale x 4 x i32> @insert_add() {
 ; CHECK-NEXT:    mov z0.s, #16 // =0x10
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 5), i64 0)
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 5), i64 0)
   %add = add <vscale x 4 x i32> %0, splat (i32 11)
   ret <vscale x 4 x i32> %add
 }
@@ -40,7 +40,7 @@ define <vscale x 4 x i32> @insert_sub() {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 11), i64 0)
+  %0 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 11), i64 0)
   %sub = add <vscale x 4 x i32> %0, splat (i32 -11)
   ret <vscale x 4 x i32> %sub
 }
