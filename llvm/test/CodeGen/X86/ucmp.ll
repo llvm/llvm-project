@@ -113,25 +113,25 @@ define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 16(%ebp), %esi
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %edx
 ; X86-NEXT:    movl 28(%ebp), %ecx
 ; X86-NEXT:    cmpl %eax, 24(%ebp)
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sbbl %edx, %eax
-; X86-NEXT:    movl 16(%ebp), %ebx
 ; X86-NEXT:    movl 32(%ebp), %eax
-; X86-NEXT:    sbbl %ebx, %eax
+; X86-NEXT:    sbbl %esi, %eax
 ; X86-NEXT:    movl 20(%ebp), %ecx
-; X86-NEXT:    movl 36(%ebp), %esi
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl 36(%ebp), %edi
+; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    sbbl %ecx, %eax
 ; X86-NEXT:    setb %al
-; X86-NEXT:    movl 8(%ebp), %edi
-; X86-NEXT:    cmpl 24(%ebp), %edi
+; X86-NEXT:    movl 8(%ebp), %ebx
+; X86-NEXT:    cmpl 24(%ebp), %ebx
 ; X86-NEXT:    sbbl 28(%ebp), %edx
-; X86-NEXT:    sbbl 32(%ebp), %ebx
-; X86-NEXT:    sbbl %esi, %ecx
+; X86-NEXT:    sbbl 32(%ebp), %esi
+; X86-NEXT:    sbbl %edi, %ecx
 ; X86-NEXT:    sbbb $0, %al
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
@@ -1889,12 +1889,8 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    pushq %r13
 ; SSE2-NEXT:    pushq %r12
 ; SSE2-NEXT:    pushq %rbx
-; SSE2-NEXT:    subq $96, %rsp
-; SSE2-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NEXT:    subq $88, %rsp
 ; SSE2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE2-NEXT:    andl $127, %eax
-; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE2-NEXT:    andl $127, %eax
 ; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -1964,6 +1960,9 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE2-NEXT:    andl $127, %eax
 ; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; SSE2-NEXT:    andl $127, %eax
+; SSE2-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; SSE2-NEXT:    andl $127, %ebx
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r14
@@ -1979,29 +1978,28 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    andl $127, %edx
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; SSE2-NEXT:    andl $127, %r11d
-; SSE2-NEXT:    movq %r8, %rcx
-; SSE2-NEXT:    andl $127, %ecx
+; SSE2-NEXT:    movq %r8, %rsi
+; SSE2-NEXT:    andl $127, %esi
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE2-NEXT:    andl $127, %eax
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r8
-; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; SSE2-NEXT:    cmpq %rsi, %r8
+; SSE2-NEXT:    cmpq %rcx, %r8
 ; SSE2-NEXT:    movq %rax, %r10
-; SSE2-NEXT:    sbbq %rcx, %r10
+; SSE2-NEXT:    sbbq %rsi, %r10
 ; SSE2-NEXT:    setb %r10b
-; SSE2-NEXT:    cmpq %r8, %rsi
-; SSE2-NEXT:    sbbq %rax, %rcx
-; SSE2-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; SSE2-NEXT:    cmpq %r8, %rcx
+; SSE2-NEXT:    sbbq %rax, %rsi
 ; SSE2-NEXT:    sbbb $0, %r10b
 ; SSE2-NEXT:    movb %r10b, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r10 # 8-byte Reload
-; SSE2-NEXT:    cmpq %r10, %rax
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; SSE2-NEXT:    cmpq %rax, %rsi
 ; SSE2-NEXT:    movq %r11, %rcx
 ; SSE2-NEXT:    sbbq %rdx, %rcx
 ; SSE2-NEXT:    setb %cl
-; SSE2-NEXT:    cmpq %rax, %r10
+; SSE2-NEXT:    cmpq %rsi, %rax
 ; SSE2-NEXT:    sbbq %r11, %rdx
+; SSE2-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE2-NEXT:    sbbb $0, %cl
 ; SSE2-NEXT:    movb %cl, {{[-0-9]+}}(%r{{[sb]}}p) # 1-byte Spill
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -2103,9 +2101,9 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r8
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE2-NEXT:    cmpq %r8, %r10
-; SSE2-NEXT:    movq (%rsp), %rbx # 8-byte Reload
+; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; SSE2-NEXT:    movq %rbx, %rsi
-; SSE2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; SSE2-NEXT:    movq (%rsp), %rax # 8-byte Reload
 ; SSE2-NEXT:    sbbq %rax, %rsi
 ; SSE2-NEXT:    setb %sil
 ; SSE2-NEXT:    cmpq %r10, %r8
@@ -2238,7 +2236,7 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    orq %rax, %rdx
 ; SSE2-NEXT:    movq %r12, %rax
 ; SSE2-NEXT:    movl %edx, (%r12)
-; SSE2-NEXT:    addq $96, %rsp
+; SSE2-NEXT:    addq $88, %rsp
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    popq %r12
 ; SSE2-NEXT:    popq %r13

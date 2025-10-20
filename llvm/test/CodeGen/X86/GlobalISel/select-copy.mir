@@ -201,8 +201,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edx
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr16 = COPY [[COPY]].sub_16bit
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:low32_addr_access_rbp = IMPLICIT_DEF
-    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access_rbp = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:low32_addr_access = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:low32_addr_access = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_16bit
     ; CHECK-NEXT: $eax = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: RET 0, implicit $eax
     %0(s32) = COPY $edx
