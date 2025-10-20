@@ -172,7 +172,7 @@ void GenerateSchema::endBitSetScalar() { endEnumScalar(); }
 void GenerateSchema::scalarString(StringRef &Val, QuotingType) {
   Schema *Top = getTopSchema();
   assert(Top);
-  TypeProperty *Type = createProperty<TypeProperty>("string");
+  TypeProperty *Type = createProperty<TypeProperty>(Val);
   Top->emplace_back(Type);
 }
 
