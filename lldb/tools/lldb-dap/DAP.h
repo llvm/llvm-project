@@ -460,6 +460,7 @@ private:
   /// Event threads.
   /// @{
   void EventThread();
+  void HandleThreadEvent(const lldb::SBEvent &event);
   void ProgressEventThread();
 
   std::thread event_thread;

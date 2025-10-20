@@ -1368,6 +1368,12 @@ void DAP::EventThread() {
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(
       listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+
+  // listen for thread events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBThread::GetBroadcasterClassName(),
+      lldb::SBThread::eBroadcastBitStackChanged);
+
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -1503,6 +1509,9 @@ void DAP::EventThread() {
             SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
+
+      } else if (lldb::SBThread::EventIsThreadEvent(event)) {
+        HandleThreadEvent(event);
       } else if (event_mask & lldb::eBroadcastBitError ||
                  event_mask & lldb::eBroadcastBitWarning) {
         lldb::SBStructuredData data =
@@ -1519,6 +1528,16 @@ void DAP::EventThread() {
         }
       }
     }
+  }
+}
+
+void DAP::HandleThreadEvent(const lldb::SBEvent &event) {
+  uint32_t event_type = event.GetType();
+
+  if (event_type & lldb::SBThread::eBroadcastBitStackChanged) {
+    const lldb::SBThread evt_thread = lldb::SBThread::GetThreadFromEvent(event);
+    SendInvalidatedEvent(*this, {InvalidatedEventBody::eAreaStacks},
+                         evt_thread.GetThreadID());
   }
 }
 
