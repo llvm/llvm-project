@@ -96,7 +96,21 @@ const std::string &CIndexer::getClangResourcesPath() {
   if (!ResourcesPath.empty())
     return ResourcesPath;
 
-  SmallString<128> LibClangPath;
+  if (CachedLibClangPath.empty())
+    getLibClangPath();
+
+  // Cache our result.
+  ResourcesPath = driver::Driver::GetResourcesPath(CachedLibClangPath);
+  return ResourcesPath;
+}
+
+const std::string &CIndexer::getLibClangPath()
+{
+  // Did we already compute the path?
+  if (!CachedLibClangPath.empty())
+    return CachedLibClangPath;
+
+  SmallString<128> ResultPath;
 
   // Find the location where this library lives (libclang.dylib).
 #ifdef _WIN32
@@ -106,9 +120,9 @@ const std::string &CIndexer::getClangResourcesPath() {
                sizeof(mbi));
   GetModuleFileNameA((HINSTANCE)mbi.AllocationBase, path, MAX_PATH);
 
-  LibClangPath += path;
+  ResultPath += path;
 #elif defined(_AIX)
-  getClangResourcesPathImplAIX(LibClangPath);
+  getClangResourcesPathImplAIX(ResultPath);
 #else
   bool PathFound = false;
 #if defined(CLANG_HAVE_DLFCN_H) && defined(CLANG_HAVE_DLADDR)
@@ -116,7 +130,7 @@ const std::string &CIndexer::getClangResourcesPath() {
   // This silly cast below avoids a C++ warning.
   if (dladdr((void *)(uintptr_t)clang_createTranslationUnit, &info) != 0) {
     // We now have the CIndex directory, locate clang relative to it.
-    LibClangPath += info.dli_fname;
+    ResultPath += info.dli_fname;
     PathFound = true;
   }
 #endif
@@ -126,19 +140,18 @@ const std::string &CIndexer::getClangResourcesPath() {
       // If we can't get the path using dladdr, try to get the main executable
       // path. This may be needed when we're statically linking libclang with
       // musl libc, for example.
-      LibClangPath += Path;
+      ResultPath += Path;
     } else {
       // It's rather unlikely we end up here. But it could happen, so report an
       // error instead of crashing.
-      llvm::report_fatal_error("could not locate Clang resource path");
+      llvm::report_fatal_error("could not locate libclang path");
     }
   }
 
 #endif
 
-  // Cache our result.
-  ResourcesPath = driver::Driver::GetResourcesPath(LibClangPath);
-  return ResourcesPath;
+  CachedLibClangPath = std::string(ResultPath);
+  return CachedLibClangPath;
 }
 
 StringRef CIndexer::getClangToolchainPath() {
