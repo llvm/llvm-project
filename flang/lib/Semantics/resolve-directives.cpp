@@ -893,7 +893,7 @@ public:
           common::visitors{
               [&](const parser::Designator &designator) {
                 if (const auto *name{
-                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                        parser::GetDesignatorNameIfDataRef(designator)}) {
                   if (name->symbol) {
                     name->symbol->set(
                         ompFlag.value_or(Symbol::Flag::OmpMapStorage));
@@ -1759,7 +1759,7 @@ void AccAttributeVisitor::ResolveAccObject(
       common::visitors{
           [&](const parser::Designator &designator) {
             if (const auto *name{
-                    semantics::getDesignatorNameIfDataRef(designator)}) {
+                    parser::GetDesignatorNameIfDataRef(designator)}) {
               if (auto *symbol{ResolveAcc(*name, accFlag, currScope())}) {
                 AddToContextObjectWithDSA(*symbol, accFlag);
                 if (dataSharingAttributeFlags.test(accFlag)) {
@@ -3065,7 +3065,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
   unsigned version{context_.langOptions().OpenMPVersion};
   llvm::omp::Directive directive{GetContext().directive};
 
-  const auto *name{semantics::getDesignatorNameIfDataRef(designator)};
+  const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
   if (!name) {
     // Array sections to be changed to substrings as needed
     if (AnalyzeExpr(context_, designator)) {
