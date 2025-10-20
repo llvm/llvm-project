@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-darwin -target-feature +neon -Wvector-conversion -fsyntax-only -ffreestanding -verify %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple arm64-apple-darwin -target-feature +neon -Wvector-conversion -fsyntax-only -ffreestanding -verify %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

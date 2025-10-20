@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple loongarch64 -target-feature +lasx -verify %s
-// RUN: not %clang_cc1 -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple loongarch64 -target-feature +lasx -verify %s
+// RUN: not %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple loongarch64 -DFEATURE_CHECK -emit-llvm %s -o /dev/null 2>&1 \
 // RUN:   | FileCheck %s
 
 typedef signed char v32i8 __attribute__((vector_size(32), aligned(32)));

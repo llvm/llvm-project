@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=1 -mvscale-max=1 %s
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=2 -mvscale-max=2 %s
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=4 -mvscale-max=4 %s
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=8 -mvscale-max=8 %s
-// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=16 -mvscale-max=16 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=1 -mvscale-max=1 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=2 -mvscale-max=2 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=4 -mvscale-max=4 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=8 -mvscale-max=8 %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple riscv64-none-linux-gnu -target-feature +f -target-feature +d -target-feature +zve64d -ffreestanding -fsyntax-only -verify -mvscale-min=16 -mvscale-max=16 %s
 
 #include <stdint.h>
 

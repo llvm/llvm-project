@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=x86_64-apple-darwin -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple=x86_64-apple-darwin -fsyntax-only -verify %s
 
 typedef long long __m128i __attribute__((__vector_size__(16)));
 typedef float __m128 __attribute__((__vector_size__(16)));

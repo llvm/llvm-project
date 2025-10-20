@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -verify -emit-llvm -o - %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +neon -target-feature +outline-atomics -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +neon -verify -emit-llvm -o - %s
+// RUN: %clang_cc1 -Wno-deprecate-lax-vec-conv-all -triple aarch64-none-linux-gnu -target-feature +neon -target-feature +outline-atomics -verify -emit-llvm -o - %s
 // REQUIRES: aarch64-registered-target
 
 // Test that functions with the correct target attributes can use the correct NEON intrinsics.
