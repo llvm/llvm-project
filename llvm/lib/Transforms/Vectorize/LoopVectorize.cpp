@@ -4206,6 +4206,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
             break;
+          case VPInstruction::AnyOf:
+            if (!VPI->getUnderlyingValue())
+              C += VPI->cost(VF, CostCtx);
+            break;
           default:
             break;
           }
