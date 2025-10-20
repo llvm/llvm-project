@@ -11,6 +11,7 @@
 
 #include <__algorithm/for_each_n.h>
 #include <__config>
+#include <__functional/identity.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,9 +23,9 @@ template <class _OutputIterator, class _Size, class _Generator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
 generate_n(_OutputIterator __first, _Size __orig_n, _Generator __gen) {
   using __iter_ref = decltype(*__first);
-  return std::for_each_n(__first, __orig_n, [&](__iter_ref __element) {
-    std::forward<__iter_ref>(__element) = __gen();
-  });
+  __identity __proj;
+  auto __f = [&](__iter_ref __element) { std::forward<__iter_ref>(__element) = __gen(); };
+  return std::__for_each_n(__first, __orig_n, __f, __proj);
 }
 
 _LIBCPP_END_NAMESPACE_STD
