@@ -23,9 +23,9 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
   gridDim.y = gridY;
   gridDim.z = gridZ;
   dim3 blockDim;
-  blockDim.x = blockX;
-  blockDim.y = blockY;
-  blockDim.z = blockZ;
+  blockDim.x = blockX > 1024 ? 1024 : blockX;
+  blockDim.y = blockY > 1024 ? 1024 : blockY;
+  blockDim.z = blockZ > 64 ? 64 : blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
@@ -88,9 +88,9 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
   config.gridDim.x = gridX;
   config.gridDim.y = gridY;
   config.gridDim.z = gridZ;
-  config.blockDim.x = blockX;
-  config.blockDim.y = blockY;
-  config.blockDim.z = blockZ;
+  config.blockDim.x = blockX > 1024 ? 1024 : blockX;
+  config.blockDim.y = blockY > 1024 ? 1024 : blockY;
+  config.blockDim.z = blockZ > 64 ? 64 : blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
@@ -165,9 +165,9 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
   gridDim.y = gridY;
   gridDim.z = gridZ;
   dim3 blockDim;
-  blockDim.x = blockX;
-  blockDim.y = blockY;
-  blockDim.z = blockZ;
+  blockDim.x = blockX > 1024 ? 1024 : blockX;
+  blockDim.y = blockY > 1024 ? 1024 : blockY;
+  blockDim.z = blockZ > 64 ? 64 : blockZ;
   unsigned nbNegGridDim{0};
   if (gridX < 0) {
     ++nbNegGridDim;
