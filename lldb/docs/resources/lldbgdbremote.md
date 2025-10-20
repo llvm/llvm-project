@@ -2167,7 +2167,7 @@ following keys and values:
          be outside the watchpoint that was triggered, the remote
          stub should determine which watchpoint was triggered and
          report an address from within its range.
-      2. Wwatchpoint hardware register index number.
+      2. Watchpoint hardware register index number.
       3. Actual watchpoint trap address, which may be outside
          the range of any watched region of memory. On MIPS, an addr
          outside a watched range means lldb should disable the wp,
