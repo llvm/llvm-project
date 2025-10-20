@@ -20569,16 +20569,15 @@ void Sema::MarkDeclarationsReferencedInExpr(Expr *E,
 /// Emit a diagnostic when statements are reachable.
 bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
                            const PartialDiagnostic &PD) {
+  VarDecl *Decl = ExprEvalContexts.back().DeclForInitializer;
   // The initializer of a constexpr variable or of the first declaration of a
   // static data member is not syntactically a constant evaluated constant,
   // but nonetheless is always required to be a constant expression, so we
   // can skip diagnosing.
-  if (auto *VD = dyn_cast_or_null<VarDecl>(
-          ExprEvalContexts.back().DeclForInitializer)) {
-    if (VD->isConstexpr() ||
-        (VD->isStaticDataMember() && VD->isFirstDecl() && !VD->isInline()))
-      return false;
-  }
+  if (Decl &&
+      (Decl->isConstexpr() || (Decl->isStaticDataMember() &&
+                               Decl->isFirstDecl() && !Decl->isInline())))
+    return false;
 
   if (Stmts.empty()) {
     Diag(Loc, PD);
@@ -20594,13 +20593,10 @@ bool Sema::DiagIfReachable(SourceLocation Loc, ArrayRef<const Stmt *> Stmts,
   // For non-constexpr file-scope variables with reachability context (non-empty
   // Stmts), build a CFG for the initializer and check whether the context in
   // question is reachable.
-  if (auto *VD = dyn_cast_or_null<VarDecl>(
-          ExprEvalContexts.back().DeclForInitializer)) {
-    if (VD->isFileVarDecl()) {
-      AnalysisWarnings.RegisterVarDeclWarning(
-          VD, sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
-      return true;
-    }
+  if (Decl && Decl->isFileVarDecl()) {
+    AnalysisWarnings.registerVarDeclWarning(
+        Decl, sema::PossiblyUnreachableDiag(PD, Loc, Stmts));
+    return true;
   }
 
   Diag(Loc, PD);

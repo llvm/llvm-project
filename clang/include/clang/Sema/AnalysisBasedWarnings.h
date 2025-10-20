@@ -113,9 +113,9 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
-  void RegisterVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
+  void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
 
-  void IssueWarningsForRegisteredVarDecl(VarDecl *VD);
+  void issueWarningsForRegisteredVarDecl(VarDecl *VD);
 
   // Gets the default policy which is in effect at the given source location.
   Policy getPolicyInEffectAt(SourceLocation Loc);
@@ -126,10 +126,6 @@ public:
   Policy &getPolicyOverrides() { return PolicyOverrides; }
 
   void PrintStats() const;
-
-  template <typename Iterator>
-  void EmitPossiblyUnreachableDiags(AnalysisDeclContext &AC,
-                                    std::pair<Iterator, Iterator> PUDs);
 };
 
 } // namespace sema

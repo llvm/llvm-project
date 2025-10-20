@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -13752,15 +13753,10 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 }
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
-  // RAII helper to ensure DeclForInitializer is cleared on all exit paths
-  struct ClearDeclForInitializer {
-    Sema &S;
-    ClearDeclForInitializer(Sema &S) : S(S) {}
-    ~ClearDeclForInitializer() {
-      if (!S.ExprEvalContexts.empty())
-        S.ExprEvalContexts.back().DeclForInitializer = nullptr;
-    }
-  } Clearer(*this);
+  auto ResetDeclForInitializer = llvm::make_scope_exit([this]() {
+    if (this->ExprEvalContexts.empty())
+      this->ExprEvalContexts.back().DeclForInitializer = nullptr;
+  });
 
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
@@ -15089,7 +15085,7 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
 
   // Emit any deferred warnings for the variable's initializer, even if the
   // variable is invalid
-  AnalysisWarnings.IssueWarningsForRegisteredVarDecl(VD);
+  AnalysisWarnings.issueWarningsForRegisteredVarDecl(VD);
 
   // Apply an implicit SectionAttr if '#pragma clang section bss|data|rodata' is active
   if (VD->hasGlobalStorage() && VD->isThisDeclarationADefinition() &&

@@ -590,11 +590,9 @@ ExprResult Parser::ParseInitializer(Decl *DeclForInitializer) {
   // constexpr) should emit runtime warnings.
   if (DeclForInitializer && !Actions.ExprEvalContexts.empty()) {
     if (auto *VD = dyn_cast<VarDecl>(DeclForInitializer);
-        VD && VD->isFileVarDecl()) {
-      if (!VD->getType()->isReferenceType() || VD->isConstexpr()) {
-        Actions.ExprEvalContexts.back().DeclForInitializer = VD;
-      }
-    }
+        VD && VD->isFileVarDecl() &&
+        (!VD->getType()->isReferenceType() || VD->isConstexpr()))
+      Actions.ExprEvalContexts.back().DeclForInitializer = VD;
   }
 
   ExprResult init;

@@ -2735,8 +2735,8 @@ static void flushDiagnostics(Sema &S, const sema::FunctionScopeInfo *fscope) {
 }
 
 template <typename Iterator>
-void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
-    AnalysisDeclContext &AC, std::pair<Iterator, Iterator> PUDs) {
+static void emitPossiblyUnreachableDiags(Sema &S, AnalysisDeclContext &AC,
+                                         std::pair<Iterator, Iterator> PUDs) {
 
   if (PUDs.first == PUDs.second)
     return;
@@ -2768,12 +2768,12 @@ void sema::AnalysisBasedWarnings::EmitPossiblyUnreachableDiags(
   }
 }
 
-void sema::AnalysisBasedWarnings::RegisterVarDeclWarning(
+void sema::AnalysisBasedWarnings::registerVarDeclWarning(
     VarDecl *VD, clang::sema::PossiblyUnreachableDiag PUD) {
   VarDeclPossiblyUnreachableDiags.emplace(VD, PUD);
 }
 
-void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
+void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
     VarDecl *VD) {
   if (!llvm::is_contained(VarDeclPossiblyUnreachableDiags, VD))
     return;
@@ -2791,8 +2791,8 @@ void sema::AnalysisBasedWarnings::IssueWarningsForRegisteredVarDecl(
   auto Range = VarDeclPossiblyUnreachableDiags.equal_range(VD);
   auto SecondRange =
       llvm::make_second_range(llvm::make_range(Range.first, Range.second));
-  EmitPossiblyUnreachableDiags(
-      AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
+  emitPossiblyUnreachableDiags(
+      S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
 }
 
 // An AST Visitor that calls a callback function on each callable DEFINITION
@@ -3007,7 +3007,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // Emit delayed diagnostics.
   auto &PUDs = fscope->PossiblyUnreachableDiags;
-  EmitPossiblyUnreachableDiags(AC, std::make_pair(PUDs.begin(), PUDs.end()));
+  emitPossiblyUnreachableDiags(S, AC, std::make_pair(PUDs.begin(), PUDs.end()));
 
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {

@@ -6473,7 +6473,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
     Var->setTemplateSpecializationKind(OldVar->getTemplateSpecializationKind(),
                                        OldVar->getPointOfInstantiation());
     // Emit any deferred warnings for the variable's initializer
-    AnalysisWarnings.IssueWarningsForRegisteredVarDecl(Var);
+    AnalysisWarnings.issueWarningsForRegisteredVarDecl(Var);
   }
 
   // This variable may have local implicit instantiations that need to be
