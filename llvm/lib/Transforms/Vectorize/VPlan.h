@@ -407,6 +407,10 @@ public:
   VPBasicBlock *getParent() { return Parent; }
   const VPBasicBlock *getParent() const { return Parent; }
 
+  /// \return the VPRegionBlock which the recipe belongs to.
+  VPRegionBlock *getRegion();
+  const VPRegionBlock *getRegion() const;
+
   /// The method which generates the output IR instructions that correspond to
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
@@ -1003,6 +1007,11 @@ public:
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
+    /// Extracts all lanes from its (non-scalable) vector operand. This is an
+    /// abstract VPInstruction whose single defined VPValue represents VF
+    /// scalars extracted from a vector, to be replaced by VF ExtractElement
+    /// VPInstructions.
+    Unpack,
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
@@ -2711,6 +2720,15 @@ public:
     return R && classof(R);
   }
 
+  static inline bool classof(const VPValue *VPV) {
+    const VPRecipeBase *R = VPV->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
+
   /// Generate the reduction in the loop.
   void execute(VPTransformState &State) override;
 
@@ -3096,6 +3114,9 @@ public:
   /// Returns true if this expression contains recipes that may have side
   /// effects.
   bool mayHaveSideEffects() const;
+
+  /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
@@ -4074,6 +4095,14 @@ public:
     return const_cast<VPRegionBlock *>(this)->getCanonicalIV();
   }
 };
+
+inline VPRegionBlock *VPRecipeBase::getRegion() {
+  return getParent()->getParent();
+}
+
+inline const VPRegionBlock *VPRecipeBase::getRegion() const {
+  return getParent()->getParent();
+}
 
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and

@@ -276,6 +276,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-not-null-terminated-result
   <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
+  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows and
   a crash caused by certain value-dependent expressions.
 
 - Improved :doc:`bugprone-reserved-identifier
@@ -362,6 +363,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
