@@ -175,12 +175,7 @@ private:
   mutable std::mutex m_collection_mutex;
   /// These are used if we're preserving breakpoints in this list:
   const bool m_preserving_bkpts = false;
-  struct RefCountedBPSP {
-    RefCountedBPSP(lldb::BreakpointSP in_bp_sp) : ref_cnt(1), bp_sp(in_bp_sp) {}
-    uint64_t ref_cnt;
-    lldb::BreakpointSP bp_sp;
-  };
-  std::map<lldb::break_id_t, RefCountedBPSP> m_preserved_bps;
+  std::map<std::pair<lldb::break_id_t, lldb::break_id_t>, lldb::BreakpointSP> m_preserved_bps;
 
 public:
   typedef llvm::iterator_range<collection::const_iterator>

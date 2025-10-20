@@ -30,13 +30,14 @@ void BreakpointLocationCollection::Add(const BreakpointLocationSP &bp_loc) {
   if (!old_bp_loc.get()) {
     m_break_loc_collection.push_back(bp_loc);
     if (m_preserving_bkpts) {
+      lldb::break_id_t bp_loc_id = bp_loc->GetID();
       Breakpoint &bkpt = bp_loc->GetBreakpoint();
       lldb::break_id_t bp_id = bkpt.GetID();
-      auto entry = m_preserved_bps.find(bp_id);
+      std::pair<lldb::break_id_t, lldb::break_id_t> key 
+          = std::make_pair(bp_id, bp_loc_id);
+      auto entry = m_preserved_bps.find(key);
       if (entry == m_preserved_bps.end())
-        m_preserved_bps.emplace(bp_id, RefCountedBPSP(bkpt.shared_from_this()));
-      else
-        entry->second.ref_cnt++;
+        m_preserved_bps.emplace(key, bkpt.shared_from_this());
     }
   }
 }
@@ -47,10 +48,12 @@ bool BreakpointLocationCollection::Remove(lldb::break_id_t bp_id,
   collection::iterator pos = GetIDPairIterator(bp_id, bp_loc_id); // Predicate
   if (pos != m_break_loc_collection.end()) {
     if (m_preserving_bkpts) {
-      auto entry = m_preserved_bps.find(bp_id);
-      assert(entry != m_preserved_bps.end() &&
-             "Breakpoint added to base but not preserving map.");
-      if (--entry->second.ref_cnt == 0)
+      std::pair<lldb::break_id_t, lldb::break_id_t> key 
+          = std::make_pair(bp_id, bp_loc_id);
+      auto entry = m_preserved_bps.find(key);
+      if (entry == m_preserved_bps.end())
+        assert(0 && "Breakpoint added to collection but not preserving map.");
+      else
         m_preserved_bps.erase(entry);
     }
     m_break_loc_collection.erase(pos);
