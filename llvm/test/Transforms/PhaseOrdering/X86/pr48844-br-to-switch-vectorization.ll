@@ -72,10 +72,10 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[TMP17:%.*]] = or <8 x i1> [[TMP9]], [[TMP13]]
 ; AVX2-NEXT:    [[TMP18:%.*]] = or <8 x i1> [[TMP10]], [[TMP14]]
 ; AVX2-NEXT:    [[TMP19:%.*]] = or <8 x i1> [[TMP11]], [[TMP15]]
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[NEXT_GEP]], i32 4, <8 x i1> [[TMP16]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP5]], i32 4, <8 x i1> [[TMP17]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP6]], i32 4, <8 x i1> [[TMP18]])
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[TMP7]], i32 4, <8 x i1> [[TMP19]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[NEXT_GEP]], <8 x i1> [[TMP16]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP5]], <8 x i1> [[TMP17]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP6]], <8 x i1> [[TMP18]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[TMP7]], <8 x i1> [[TMP19]])
 ; AVX2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; AVX2-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; AVX2-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -86,7 +86,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[TMP26:%.*]] = shl i64 [[N_VEC]], 2
 ; AVX2-NEXT:    [[IND_END11:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP26]]
 ; AVX2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp eq i64 [[N_VEC_REMAINING]], 0
-; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[BB12_PREHEADER1]], label [[BB12_PREHEADER11]]
+; AVX2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[BB12_PREHEADER1]], label [[BB12_PREHEADER11]], !prof [[PROF3:![0-9]+]]
 ; AVX2:       vec.epilog.ph:
 ; AVX2-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; AVX2-NEXT:    [[N_VEC10:%.*]] = and i64 [[TMP3]], 9223372036854775800
@@ -101,10 +101,10 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2-NEXT:    [[TMP22:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD15]], splat (i32 -12)
 ; AVX2-NEXT:    [[TMP23:%.*]] = icmp eq <8 x i32> [[WIDE_LOAD15]], splat (i32 13)
 ; AVX2-NEXT:    [[TMP24:%.*]] = or <8 x i1> [[TMP22]], [[TMP23]]
-; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr [[NEXT_GEP14]], i32 4, <8 x i1> [[TMP24]])
+; AVX2-NEXT:    tail call void @llvm.masked.store.v8i32.p0(<8 x i32> splat (i32 42), ptr align 4 [[NEXT_GEP14]], <8 x i1> [[TMP24]])
 ; AVX2-NEXT:    [[INDEX_NEXT16]] = add nuw i64 [[INDEX12]], 8
 ; AVX2-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT16]], [[N_VEC10]]
-; AVX2-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[BB12]], !llvm.loop [[LOOP3:![0-9]+]]
+; AVX2-NEXT:    br i1 [[TMP25]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[BB12]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX2:       vec.epilog.middle.block:
 ; AVX2-NEXT:    [[CMP_N17:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC10]]
 ; AVX2-NEXT:    br i1 [[CMP_N17]], label [[EXIT]], label [[BB12_PREHEADER1]]
@@ -124,7 +124,7 @@ define dso_local void @test(ptr %start, ptr %end) #0 {
 ; AVX2:       latch:
 ; AVX2-NEXT:    [[PTR_NEXT]] = getelementptr inbounds nuw i8, ptr [[PTR2]], i64 4
 ; AVX2-NEXT:    [[I11_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
-; AVX2-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB13]], !llvm.loop [[LOOP4:![0-9]+]]
+; AVX2-NEXT:    br i1 [[I11_NOT]], label [[EXIT]], label [[BB13]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AVX2:       exit:
 ; AVX2-NEXT:    ret void
 ;

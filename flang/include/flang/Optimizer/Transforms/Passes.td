@@ -580,4 +580,9 @@ def OptimizeArrayRepacking
   }];
 }
 
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

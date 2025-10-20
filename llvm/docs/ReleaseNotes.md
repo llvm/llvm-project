@@ -62,6 +62,10 @@ Changes to the LLVM IR
 * The `ptrtoaddr` instruction was introduced. This instruction returns the
   address component of a pointer type variable but unlike `ptrtoint` does not
   capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
+  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
+  Instead, the `align` attribute should be placed on the pointer (or vector of
+  pointers) argument.
 
 Changes to LLVM infrastructure
 ------------------------------

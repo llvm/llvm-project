@@ -6,7 +6,7 @@ define void @test(ptr %output) {
 ; CHECK-SAME: ptr [[OUTPUT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ARRAYIDX_2_I:%.*]] = getelementptr i8, ptr [[OUTPUT]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[OUTPUT]], i32 4, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[OUTPUT]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> <i32 -1, i32 0>, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>

@@ -191,7 +191,7 @@ define void @interleave_nxi8_factor2_masked_store_splatmask(ptr %ptr, <vscale x 
 ; CHECK-NEXT:    [[INTERLEAVE:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[L]], <vscale x 16 x i8> [[R]])
 ; CHECK-NEXT:    [[MASK_INS:%.*]] = insertelement <vscale x 32 x i1> poison, i1 [[MASK]], i64 0
 ; CHECK-NEXT:    [[MASK_SPLAT:%.*]] = shufflevector <vscale x 32 x i1> [[MASK_INS]], <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVE]], ptr [[PTR]], i32 1, <vscale x 32 x i1> [[MASK_SPLAT]])
+; CHECK-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVE]], ptr align 1 [[PTR]], <vscale x 32 x i1> [[MASK_SPLAT]])
 ; CHECK-NEXT:    ret void
 ;
   %interleave = tail call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> %l, <vscale x 16 x i8> %r)

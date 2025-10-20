@@ -69,7 +69,8 @@ int main(int argc, char **argv) {
       "  - Sampled profile collected from the binary:\n"
       "    - perf data or pre-aggregated profile data (instrumentation profile "
       "not supported)\n"
-      "    - perf data can have basic (IP) or branch-stack (LBR) samples\n\n"
+      "    - perf data can have basic (IP) or branch-stack (brstack) "
+      "samples\n\n"
 
       "  Outputs:\n"
       "  - Heatmaps: colored ASCII (requires a color-capable terminal or a"

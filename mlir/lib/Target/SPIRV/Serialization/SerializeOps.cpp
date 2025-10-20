@@ -311,6 +311,14 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
     op.addEntryBlock();
     if (failed(processFuncParameter(op)))
       return failure();
+
+    // Erasing the body of the function destroys arguments, so we need to remove
+    // them from the map to avoid problems when processing invalid values used
+    // as keys. We have already serialized function arguments so we probably can
+    // remove them from the map as external function will not have any uses.
+    for (Value arg : op.getArguments())
+      valueIDMap.erase(arg);
+
     // Don't need to process the added block, there is nothing to process,
     // the fake body was added just to get the arguments, remove the body,
     // since it's use is done.

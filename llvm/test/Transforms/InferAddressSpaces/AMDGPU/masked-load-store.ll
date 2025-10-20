@@ -4,7 +4,7 @@
 define <32 x i32> @masked_load_v32i32_global_to_flat(ptr addrspace(1) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define <32 x i32> @masked_load_v32i32_global_to_flat(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p1(ptr addrspace(1) [[PTR]], i32 8, <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
+; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p1(ptr addrspace(1) align 8 [[PTR]], <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <32 x i32> [[LOAD]]
 ;
   %cast = addrspacecast ptr addrspace(1) %ptr to ptr
@@ -14,7 +14,7 @@ define <32 x i32> @masked_load_v32i32_global_to_flat(ptr addrspace(1) %ptr, <32 
 define <32 x i32> @masked_load_v32i32_local_to_flat(ptr addrspace(3) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define <32 x i32> @masked_load_v32i32_local_to_flat(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p3(ptr addrspace(3) [[PTR]], i32 8, <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
+; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p3(ptr addrspace(3) align 8 [[PTR]], <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <32 x i32> [[LOAD]]
 ;
   %cast = addrspacecast ptr addrspace(3) %ptr to ptr
@@ -25,7 +25,7 @@ define <32 x i32> @masked_load_v32i32_local_to_flat(ptr addrspace(3) %ptr, <32 x
 define <32 x i32> @masked_load_v32i32_private_to_flat(ptr addrspace(5) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define <32 x i32> @masked_load_v32i32_private_to_flat(
 ; CHECK-SAME: ptr addrspace(5) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p5(ptr addrspace(5) [[PTR]], i32 8, <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
+; CHECK-NEXT:    [[LOAD:%.*]] = call <32 x i32> @llvm.masked.load.v32i32.p5(ptr addrspace(5) align 8 [[PTR]], <32 x i1> [[MASK]], <32 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <32 x i32> [[LOAD]]
 ;
   %cast = addrspacecast ptr addrspace(5) %ptr to ptr
@@ -36,7 +36,7 @@ define <32 x i32> @masked_load_v32i32_private_to_flat(ptr addrspace(5) %ptr, <32
 define void  @masked_store_v32i32_global_to_flat(ptr addrspace(1) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define void @masked_store_v32i32_global_to_flat(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    tail call void @llvm.masked.store.v32i32.p1(<32 x i32> zeroinitializer, ptr addrspace(1) [[PTR]], i32 128, <32 x i1> [[MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v32i32.p1(<32 x i32> zeroinitializer, ptr addrspace(1) align 128 [[PTR]], <32 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(1) %ptr to ptr
@@ -47,7 +47,7 @@ define void  @masked_store_v32i32_global_to_flat(ptr addrspace(1) %ptr, <32 x i1
 define void  @masked_store_v32i32_local_to_flat(ptr addrspace(3) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define void @masked_store_v32i32_local_to_flat(
 ; CHECK-SAME: ptr addrspace(3) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    tail call void @llvm.masked.store.v32i32.p3(<32 x i32> zeroinitializer, ptr addrspace(3) [[PTR]], i32 128, <32 x i1> [[MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v32i32.p3(<32 x i32> zeroinitializer, ptr addrspace(3) align 128 [[PTR]], <32 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(3) %ptr to ptr
@@ -58,7 +58,7 @@ define void  @masked_store_v32i32_local_to_flat(ptr addrspace(3) %ptr, <32 x i1>
 define void  @masked_store_v32i32_private_to_flat(ptr addrspace(5) %ptr, <32 x i1> %mask) {
 ; CHECK-LABEL: define void @masked_store_v32i32_private_to_flat(
 ; CHECK-SAME: ptr addrspace(5) [[PTR:%.*]], <32 x i1> [[MASK:%.*]]) {
-; CHECK-NEXT:    tail call void @llvm.masked.store.v32i32.p5(<32 x i32> zeroinitializer, ptr addrspace(5) [[PTR]], i32 128, <32 x i1> [[MASK]])
+; CHECK-NEXT:    call void @llvm.masked.store.v32i32.p5(<32 x i32> zeroinitializer, ptr addrspace(5) align 128 [[PTR]], <32 x i1> [[MASK]])
 ; CHECK-NEXT:    ret void
 ;
   %cast = addrspacecast ptr addrspace(5) %ptr to ptr

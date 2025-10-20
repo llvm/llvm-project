@@ -2025,10 +2025,10 @@ def : Pat<(v4i32(fp_to_uint v4f64:$vj)),
               sub_128)>;
 
 // abs
-def : Pat<(abs v32i8:$xj), (XVMAX_B v32i8:$xj, (XVNEG_B v32i8:$xj))>;
-def : Pat<(abs v16i16:$xj), (XVMAX_H v16i16:$xj, (XVNEG_H v16i16:$xj))>;
-def : Pat<(abs v8i32:$xj), (XVMAX_W v8i32:$xj, (XVNEG_W v8i32:$xj))>;
-def : Pat<(abs v4i64:$xj), (XVMAX_D v4i64:$xj, (XVNEG_D v4i64:$xj))>;
+def : Pat<(abs v32i8:$xj), (XVSIGNCOV_B v32i8:$xj, v32i8:$xj)>;
+def : Pat<(abs v16i16:$xj), (XVSIGNCOV_H v16i16:$xj, v16i16:$xj)>;
+def : Pat<(abs v8i32:$xj), (XVSIGNCOV_W v8i32:$xj, v8i32:$xj)>;
+def : Pat<(abs v4i64:$xj), (XVSIGNCOV_D v4i64:$xj, v4i64:$xj)>;
 
 // XVABSD_{B/H/W/D}[U]
 defm : PatXrXr<abds, "XVABSD">;

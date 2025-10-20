@@ -19,6 +19,7 @@ add_flang_library(flangFrontend
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
+  MIFDialect
 
   LINK_LIBS
   CUFDialect
@@ -41,6 +42,7 @@ add_flang_library(flangFrontend
   FIROpenACCSupport
   FIROpenMPSupport
   FlangOpenMPTransforms
+  MIFDialect
 
   LINK_COMPONENTS
   Passes

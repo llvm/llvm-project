@@ -169,9 +169,9 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
   }
   case Intrinsic::masked_load: {
     Ptr = II->getOperand(0);
-    Alignment = cast<ConstantInt>(II->getArgOperand(1))->getAlignValue();
+    Alignment = II->getParamAlign(0).valueOrOne();
 
-    if (!isa<UndefValue>(II->getOperand(3)))
+    if (!isa<UndefValue>(II->getOperand(2)))
       return false;
 
     assert(Mask && "masked.load needs a mask!");
@@ -183,7 +183,7 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
   }
   case Intrinsic::masked_store: {
     Ptr = II->getOperand(1);
-    Alignment = cast<ConstantInt>(II->getArgOperand(2))->getAlignValue();
+    Alignment = II->getParamAlign(1).valueOrOne();
 
     assert(Mask && "masked.store needs a mask!");
 

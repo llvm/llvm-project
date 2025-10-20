@@ -612,7 +612,7 @@ v128_t test_f64x2_const_splat(void) {
   return wasm_f64x2_const_splat(42);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i8x16_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i8x16_splat(
 // CHECK-SAME: i8 noundef signext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
@@ -624,7 +624,7 @@ v128_t test_i8x16_splat(int8_t a) {
   return wasm_i8x16_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u8x16_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u8x16_splat(
 // CHECK-SAME: i8 noundef zeroext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
@@ -682,7 +682,7 @@ v128_t test_u8x16_replace_lane(v128_t a, uint8_t b) {
   return wasm_u8x16_replace_lane(a, 15, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i16x8_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i16x8_splat(
 // CHECK-SAME: i16 noundef signext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
@@ -694,7 +694,7 @@ v128_t test_i16x8_splat(int16_t a) {
   return wasm_i16x8_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u16x8_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u16x8_splat(
 // CHECK-SAME: i16 noundef zeroext [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
@@ -752,7 +752,7 @@ v128_t test_u16x8_replace_lane(v128_t a, uint16_t b) {
   return wasm_u16x8_replace_lane(a, 7, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i32x4_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i32x4_splat(
 // CHECK-SAME: i32 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
@@ -763,7 +763,7 @@ v128_t test_i32x4_splat(int32_t a) {
   return wasm_i32x4_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u32x4_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u32x4_splat(
 // CHECK-SAME: i32 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
@@ -814,7 +814,7 @@ v128_t test_u32x4_replace_lane(v128_t a, uint32_t b) {
   return wasm_u32x4_replace_lane(a, 3, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_i64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_i64x2_splat(
 // CHECK-SAME: i64 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 [[A]], i64 0
@@ -826,7 +826,7 @@ v128_t test_i64x2_splat(int64_t a) {
   return wasm_i64x2_splat(a);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_u64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_u64x2_splat(
 // CHECK-SAME: i64 noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 [[A]], i64 0
@@ -919,7 +919,7 @@ v128_t test_f32x4_replace_lane(v128_t a, float b) {
   return wasm_f32x4_replace_lane(a, 3, b);
 }
 
-// CHECK-LABEL: define hidden <4 x i32> @test_f64x2_splat(
+// CHECK-LABEL: define hidden noundef <4 x i32> @test_f64x2_splat(
 // CHECK-SAME: double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0

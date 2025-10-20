@@ -156,7 +156,7 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-VF4IC1:        [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, %vector.ph ], [ [[VEC_SEL:%.*]], %vector.body ]
 ; CHECK-VF4IC1:        [[VEC_LOAD:%.*]] = load <vscale x 4 x i32>
 ; CHECK-VF4IC1:        [[MASK:%.*]] = icmp sgt <vscale x 4 x i32> [[VEC_LOAD]], splat (i32 35)
-; CHECK-VF4IC1:        [[MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr {{%.*}}, i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> poison)
+; CHECK-VF4IC1:        [[MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 {{%.*}}, <vscale x 4 x i1> [[MASK]], <vscale x 4 x i32> poison)
 ; CHECK-VF4IC1-NEXT:   [[VEC_ICMP:%.*]] = icmp eq <vscale x 4 x i32> [[MASKED_LOAD]], splat (i32 2)
 ; CHECK-VF4IC1-NEXT:   [[VEC_SEL_TMP:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[VEC_ICMP]]
 ; CHECK-VF4IC1:        [[VEC_SEL:%.*]] = select <vscale x 4 x i1> [[MASK]], <vscale x 4 x i1> [[VEC_SEL_TMP]], <vscale x 4 x i1> [[VEC_PHI]]

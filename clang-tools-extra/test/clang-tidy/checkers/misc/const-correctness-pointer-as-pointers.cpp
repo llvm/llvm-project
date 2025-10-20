@@ -48,6 +48,11 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void *return_non_const() {
+  void *const a = nullptr;
+  return a;
+}
+
 void function_pointer_basic() {
   void (*const fp)() = nullptr;
   fp();

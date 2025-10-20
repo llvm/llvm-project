@@ -45,25 +45,20 @@ static bool tryToImproveAlign(
   switch (II->getIntrinsicID()) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_store: {
-    int AlignOpIdx = II->getIntrinsicID() == Intrinsic::masked_load ? 1 : 2;
-    Value *PtrOp = II->getIntrinsicID() == Intrinsic::masked_load
-                       ? II->getArgOperand(0)
-                       : II->getArgOperand(1);
+    unsigned PtrOpIdx = II->getIntrinsicID() == Intrinsic::masked_load ? 0 : 1;
+    Value *PtrOp = II->getArgOperand(PtrOpIdx);
     Type *Type = II->getIntrinsicID() == Intrinsic::masked_load
                      ? II->getType()
                      : II->getArgOperand(0)->getType();
 
-    Align OldAlign =
-        cast<ConstantInt>(II->getArgOperand(AlignOpIdx))->getAlignValue();
+    Align OldAlign = II->getParamAlign(PtrOpIdx).valueOrOne();
     Align PrefAlign = DL.getPrefTypeAlign(Type);
     Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
-    if (NewAlign <= OldAlign ||
-        NewAlign.value() > std::numeric_limits<uint32_t>().max())
+    if (NewAlign <= OldAlign)
       return false;
 
-    Value *V =
-        ConstantInt::get(Type::getInt32Ty(II->getContext()), NewAlign.value());
-    II->setOperand(AlignOpIdx, V);
+    II->addParamAttr(PtrOpIdx,
+                     Attribute::getWithAlignment(II->getContext(), NewAlign));
     return true;
   }
   default:

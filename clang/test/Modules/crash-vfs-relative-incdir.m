@@ -53,4 +53,4 @@
 
 // RUN: cd %t
 // RUN: chmod 755 crash-vfs-*.sh
-// RUN: ./crash-vfs-*.sh
+// RUN: bash ./crash-vfs-*.sh

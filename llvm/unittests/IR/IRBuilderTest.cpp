@@ -201,7 +201,6 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
 
   Args.clear();
   Args.push_back(UndefValue::get(PtrToVecTy));
-  Args.push_back(UndefValue::get(Builder.getInt32Ty()));
   Args.push_back(UndefValue::get(PredTy));
   Args.push_back(UndefValue::get(VecTy));
 

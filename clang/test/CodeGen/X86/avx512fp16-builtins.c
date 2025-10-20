@@ -1505,13 +1505,13 @@ __m128h test_mm_load_sh(void const *A) {
 
 __m128h test_mm_mask_load_sh(__m128h __A, __mmask8 __U, const void *__W) {
   // CHECK-LABEL: test_mm_mask_load_sh
-  // CHECK: @llvm.masked.load.v8f16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
+  // CHECK: @llvm.masked.load.v8f16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
   return _mm_mask_load_sh(__A, __U, __W);
 }
 
 __m128h test_mm_maskz_load_sh(__mmask8 __U, const void *__W) {
   // CHECK-LABEL: test_mm_maskz_load_sh
-  // CHECK: @llvm.masked.load.v8f16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
+  // CHECK: @llvm.masked.load.v8f16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x half> %{{.*}})
   return _mm_maskz_load_sh(__U, __W);
 }
 
@@ -1560,7 +1560,7 @@ void test_mm_store_sh(void *A, __m128h B) {
 
 void test_mm_mask_store_sh(void *__P, __mmask8 __U, __m128h __A) {
   // CHECK-LABEL: test_mm_mask_store_sh
-  // CHECK: call void @llvm.masked.store.v8f16.p0(<8 x half> %{{.*}}, ptr %{{.*}}, i32 1, <8 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.store.v8f16.p0(<8 x half> %{{.*}}, ptr align 1 %{{.*}}, <8 x i1> %{{.*}})
   _mm_mask_store_sh(__P, __U, __A);
 }
 

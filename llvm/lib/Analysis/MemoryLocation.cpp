@@ -245,7 +245,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       assert(ArgIdx == 0 && "Invalid argument index");
 
       auto *Ty = cast<VectorType>(II->getType());
-      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(1), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(
@@ -255,7 +255,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       assert(ArgIdx == 1 && "Invalid argument index");
 
       auto *Ty = cast<VectorType>(II->getArgOperand(0)->getType());
-      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(3), Ty))
+      if (auto KnownType = getKnownTypeFromMaskedOp(II->getOperand(2), Ty))
         return MemoryLocation(Arg, DL.getTypeStoreSize(*KnownType), AATags);
 
       return MemoryLocation(

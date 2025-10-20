@@ -122,7 +122,7 @@ uint32x4_t test_vld1q_u32(const uint32_t *base)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x half> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x half> zeroinitializer)
 // CHECK-NEXT:    ret <8 x half> [[TMP2]]
 //
 float16x8_t test_vld1q_z_f16(const float16_t *base, mve_pred16_t p)
@@ -138,7 +138,7 @@ float16x8_t test_vld1q_z_f16(const float16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x float> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x float> zeroinitializer)
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 float32x4_t test_vld1q_z_f32(const float32_t *base, mve_pred16_t p)
@@ -154,7 +154,7 @@ float32x4_t test_vld1q_z_f32(const float32_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 int8x16_t test_vld1q_z_s8(const int8_t *base, mve_pred16_t p)
@@ -170,7 +170,7 @@ int8x16_t test_vld1q_z_s8(const int8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 int16x8_t test_vld1q_z_s16(const int16_t *base, mve_pred16_t p)
@@ -186,7 +186,7 @@ int16x8_t test_vld1q_z_s16(const int16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 int32x4_t test_vld1q_z_s32(const int32_t *base, mve_pred16_t p)
@@ -202,7 +202,7 @@ int32x4_t test_vld1q_z_s32(const int32_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 uint8x16_t test_vld1q_z_u8(const uint8_t *base, mve_pred16_t p)
@@ -218,7 +218,7 @@ uint8x16_t test_vld1q_z_u8(const uint8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 uint16x8_t test_vld1q_z_u16(const uint16_t *base, mve_pred16_t p)
@@ -234,7 +234,7 @@ uint16x8_t test_vld1q_z_u16(const uint16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 uint32x4_t test_vld1q_z_u32(const uint32_t *base, mve_pred16_t p)
@@ -314,7 +314,7 @@ uint32x4_t test_vldrbq_u32(const uint8_t *base)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 int8x16_t test_vldrbq_z_s8(const int8_t *base, mve_pred16_t p)
@@ -326,7 +326,7 @@ int8x16_t test_vldrbq_z_s8(const int8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr [[BASE:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr align 1 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i8> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i8> [[TMP2]] to <8 x i16>
 // CHECK-NEXT:    ret <8 x i16> [[TMP3]]
 //
@@ -339,7 +339,7 @@ int16x8_t test_vldrbq_z_s16(const int8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr [[BASE:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i8> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -352,7 +352,7 @@ int32x4_t test_vldrbq_z_s32(const int8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]], <16 x i8> zeroinitializer)
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 uint8x16_t test_vldrbq_z_u8(const uint8_t *base, mve_pred16_t p)
@@ -364,7 +364,7 @@ uint8x16_t test_vldrbq_z_u8(const uint8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr [[BASE:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr align 1 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i8> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP2]] to <8 x i16>
 // CHECK-NEXT:    ret <8 x i16> [[TMP3]]
 //
@@ -377,7 +377,7 @@ uint16x8_t test_vldrbq_z_u16(const uint8_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr [[BASE:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x i8> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr align 1 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i8> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -442,7 +442,7 @@ uint32x4_t test_vldrhq_u32(const uint16_t *base)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x half> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x half> @llvm.masked.load.v8f16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x half> zeroinitializer)
 // CHECK-NEXT:    ret <8 x half> [[TMP2]]
 //
 float16x8_t test_vldrhq_z_f16(const float16_t *base, mve_pred16_t p)
@@ -454,7 +454,7 @@ float16x8_t test_vldrhq_z_f16(const float16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 int16x8_t test_vldrhq_z_s16(const int16_t *base, mve_pred16_t p)
@@ -466,7 +466,7 @@ int16x8_t test_vldrhq_z_s16(const int16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[BASE:%.*]], i32 2, <4 x i1> [[TMP1]], <4 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i16> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -479,7 +479,7 @@ int32x4_t test_vldrhq_z_s32(const int16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]], <8 x i16> zeroinitializer)
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 uint16x8_t test_vldrhq_z_u16(const uint16_t *base, mve_pred16_t p)
@@ -491,7 +491,7 @@ uint16x8_t test_vldrhq_z_u16(const uint16_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[BASE:%.*]], i32 2, <4 x i1> [[TMP1]], <4 x i16> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i16> zeroinitializer)
 // CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -534,7 +534,7 @@ uint32x4_t test_vldrwq_u32(const uint32_t *base)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x float> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x float> zeroinitializer)
 // CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 float32x4_t test_vldrwq_z_f32(const float32_t *base, mve_pred16_t p)
@@ -546,7 +546,7 @@ float32x4_t test_vldrwq_z_f32(const float32_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 int32x4_t test_vldrwq_z_s32(const int32_t *base, mve_pred16_t p)
@@ -558,7 +558,7 @@ int32x4_t test_vldrwq_z_s32(const int32_t *base, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]], <4 x i32> zeroinitializer)
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 uint32x4_t test_vldrwq_z_u32(const uint32_t *base, mve_pred16_t p)
@@ -682,7 +682,7 @@ void test_vst1q_u32(uint32_t *base, uint32x4_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8f16.p0(<8 x half> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8f16.p0(<8 x half> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_f16(float16_t *base, float16x8_t value, mve_pred16_t p)
@@ -698,7 +698,7 @@ void test_vst1q_p_f16(float16_t *base, float16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_f32(float32_t *base, float32x4_t value, mve_pred16_t p)
@@ -714,7 +714,7 @@ void test_vst1q_p_f32(float32_t *base, float32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_s8(int8_t *base, int8x16_t value, mve_pred16_t p)
@@ -730,7 +730,7 @@ void test_vst1q_p_s8(int8_t *base, int8x16_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_s16(int16_t *base, int16x8_t value, mve_pred16_t p)
@@ -746,7 +746,7 @@ void test_vst1q_p_s16(int16_t *base, int16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)
@@ -762,7 +762,7 @@ void test_vst1q_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_u8(uint8_t *base, uint8x16_t value, mve_pred16_t p)
@@ -778,7 +778,7 @@ void test_vst1q_p_u8(uint8_t *base, uint8x16_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_u16(uint16_t *base, uint16x8_t value, mve_pred16_t p)
@@ -794,7 +794,7 @@ void test_vst1q_p_u16(uint16_t *base, uint16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vst1q_p_u32(uint32_t *base, uint32x4_t value, mve_pred16_t p)
@@ -898,7 +898,7 @@ void test_vstrbq_u32(uint8_t *base, uint32x4_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_s8(int8_t *base, int8x16_t value, mve_pred16_t p)
@@ -915,7 +915,7 @@ void test_vstrbq_p_s8(int8_t *base, int8x16_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <8 x i16> [[VALUE:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP0]], ptr [[BASE:%.*]], i32 1, <8 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP0]], ptr align 1 [[BASE:%.*]], <8 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_s16(int8_t *base, int16x8_t value, mve_pred16_t p)
@@ -932,7 +932,7 @@ void test_vstrbq_p_s16(int8_t *base, int16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[VALUE:%.*]] to <4 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> [[TMP0]], ptr [[BASE:%.*]], i32 1, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> [[TMP0]], ptr align 1 [[BASE:%.*]], <4 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_s32(int8_t *base, int32x4_t value, mve_pred16_t p)
@@ -948,7 +948,7 @@ void test_vstrbq_p_s32(int8_t *base, int32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 1, <16 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[VALUE:%.*]], ptr align 1 [[BASE:%.*]], <16 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_u8(uint8_t *base, uint8x16_t value, mve_pred16_t p)
@@ -965,7 +965,7 @@ void test_vstrbq_p_u8(uint8_t *base, uint8x16_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <8 x i16> [[VALUE:%.*]] to <8 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP0]], ptr [[BASE:%.*]], i32 1, <8 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i8.p0(<8 x i8> [[TMP0]], ptr align 1 [[BASE:%.*]], <8 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_u16(uint8_t *base, uint16x8_t value, mve_pred16_t p)
@@ -982,7 +982,7 @@ void test_vstrbq_p_u16(uint8_t *base, uint16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[VALUE:%.*]] to <4 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> [[TMP0]], ptr [[BASE:%.*]], i32 1, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i8.p0(<4 x i8> [[TMP0]], ptr align 1 [[BASE:%.*]], <4 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrbq_p_u32(uint8_t *base, uint32x4_t value, mve_pred16_t p)
@@ -1070,7 +1070,7 @@ void test_vstrhq_u32(uint16_t *base, uint32x4_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8f16.p0(<8 x half> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8f16.p0(<8 x half> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrhq_p_f16(float16_t *base, float16x8_t value, mve_pred16_t p)
@@ -1086,7 +1086,7 @@ void test_vstrhq_p_f16(float16_t *base, float16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrhq_p_s16(int16_t *base, int16x8_t value, mve_pred16_t p)
@@ -1103,7 +1103,7 @@ void test_vstrhq_p_s16(int16_t *base, int16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[VALUE:%.*]] to <4 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> [[TMP0]], ptr [[BASE:%.*]], i32 2, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> [[TMP0]], ptr align 2 [[BASE:%.*]], <4 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrhq_p_s32(int16_t *base, int32x4_t value, mve_pred16_t p)
@@ -1119,7 +1119,7 @@ void test_vstrhq_p_s32(int16_t *base, int32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 2, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[VALUE:%.*]], ptr align 2 [[BASE:%.*]], <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrhq_p_u16(uint16_t *base, uint16x8_t value, mve_pred16_t p)
@@ -1136,7 +1136,7 @@ void test_vstrhq_p_u16(uint16_t *base, uint16x8_t value, mve_pred16_t p)
 // CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[VALUE:%.*]] to <4 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP1]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> [[TMP0]], ptr [[BASE:%.*]], i32 2, <4 x i1> [[TMP2]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i16.p0(<4 x i16> [[TMP0]], ptr align 2 [[BASE:%.*]], <4 x i1> [[TMP2]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrhq_p_u32(uint16_t *base, uint32x4_t value, mve_pred16_t p)
@@ -1194,7 +1194,7 @@ void test_vstrwq_u32(uint32_t *base, uint32x4_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4f32.p0(<4 x float> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_p_f32(float32_t *base, float32x4_t value, mve_pred16_t p)
@@ -1210,7 +1210,7 @@ void test_vstrwq_p_f32(float32_t *base, float32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)
@@ -1226,7 +1226,7 @@ void test_vstrwq_p_s32(int32_t *base, int32x4_t value, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr [[BASE:%.*]], i32 4, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VALUE:%.*]], ptr align 4 [[BASE:%.*]], <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret void
 //
 void test_vstrwq_p_u32(uint32_t *base, uint32x4_t value, mve_pred16_t p)

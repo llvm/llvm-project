@@ -4501,24 +4501,24 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Value *V = foldSelectIntoAddConstant(SI, Builder))
     return replaceInstUsesWith(SI, V);
 
-  // select(mask, mload(,,mask,0), 0) -> mload(,,mask,0)
+  // select(mask, mload(ptr,mask,0), 0) -> mload(ptr,mask,0)
   // Load inst is intentionally not checked for hasOneUse()
   if (match(FalseVal, m_Zero()) &&
-      (match(TrueVal, m_MaskedLoad(m_Value(), m_Value(), m_Specific(CondVal),
+      (match(TrueVal, m_MaskedLoad(m_Value(), m_Specific(CondVal),
                                    m_CombineOr(m_Undef(), m_Zero()))) ||
-       match(TrueVal, m_MaskedGather(m_Value(), m_Value(), m_Specific(CondVal),
+       match(TrueVal, m_MaskedGather(m_Value(), m_Specific(CondVal),
                                      m_CombineOr(m_Undef(), m_Zero()))))) {
     auto *MaskedInst = cast<IntrinsicInst>(TrueVal);
-    if (isa<UndefValue>(MaskedInst->getArgOperand(3)))
-      MaskedInst->setArgOperand(3, FalseVal /* Zero */);
+    if (isa<UndefValue>(MaskedInst->getArgOperand(2)))
+      MaskedInst->setArgOperand(2, FalseVal /* Zero */);
     return replaceInstUsesWith(SI, MaskedInst);
   }
 
   Value *Mask;
   if (match(TrueVal, m_Zero()) &&
-      (match(FalseVal, m_MaskedLoad(m_Value(), m_Value(), m_Value(Mask),
+      (match(FalseVal, m_MaskedLoad(m_Value(), m_Value(Mask),
                                     m_CombineOr(m_Undef(), m_Zero()))) ||
-       match(FalseVal, m_MaskedGather(m_Value(), m_Value(), m_Value(Mask),
+       match(FalseVal, m_MaskedGather(m_Value(), m_Value(Mask),
                                       m_CombineOr(m_Undef(), m_Zero())))) &&
       (CondVal->getType() == Mask->getType())) {
     // We can remove the select by ensuring the load zeros all lanes the
@@ -4531,8 +4531,8 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     if (CanMergeSelectIntoLoad) {
       auto *MaskedInst = cast<IntrinsicInst>(FalseVal);
-      if (isa<UndefValue>(MaskedInst->getArgOperand(3)))
-        MaskedInst->setArgOperand(3, TrueVal /* Zero */);
+      if (isa<UndefValue>(MaskedInst->getArgOperand(2)))
+        MaskedInst->setArgOperand(2, TrueVal /* Zero */);
       return replaceInstUsesWith(SI, MaskedInst);
     }
   }
@@ -4671,14 +4671,13 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   }
 
   Value *MaskedLoadPtr;
-  const APInt *MaskedLoadAlignment;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_APInt(MaskedLoadAlignment),
                                            m_Specific(CondVal), m_Value()))))
     return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(TrueVal->getType(), MaskedLoadPtr,
-                                     Align(MaskedLoadAlignment->getZExtValue()),
-                                     CondVal, FalseVal));
+        SI, Builder.CreateMaskedLoad(
+                TrueVal->getType(), MaskedLoadPtr,
+                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
+                CondVal, FalseVal));
 
   return nullptr;
 }
