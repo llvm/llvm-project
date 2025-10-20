@@ -98,6 +98,16 @@ TEST_P(olGetDeviceInfoTest, SuccessProductName) {
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
 }
 
+TEST_P(olGetDeviceInfoTest, SuccessUID) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_UID, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> UID;
+  UID.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_UID, Size, UID.data()));
+  ASSERT_EQ(std::strlen(UID.data()), Size - 1);
+}
+
 TEST_P(olGetDeviceInfoTest, HostProductName) {
   size_t Size = 0;
   ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_PRODUCT_NAME, &Size));
@@ -107,6 +117,16 @@ TEST_P(olGetDeviceInfoTest, HostProductName) {
   ASSERT_SUCCESS(
       olGetDeviceInfo(Host, OL_DEVICE_INFO_PRODUCT_NAME, Size, Name.data()));
   ASSERT_EQ(std::strlen(Name.data()), Size - 1);
+}
+
+TEST_P(olGetDeviceInfoTest, HostUID) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_UID, &Size));
+  ASSERT_GT(Size, 0ul);
+  std::vector<char> UID;
+  UID.resize(Size);
+  ASSERT_SUCCESS(olGetDeviceInfo(Host, OL_DEVICE_INFO_UID, Size, UID.data()));
+  ASSERT_EQ(std::strlen(UID.data()), Size - 1);
 }
 
 TEST_P(olGetDeviceInfoTest, SuccessVendor) {

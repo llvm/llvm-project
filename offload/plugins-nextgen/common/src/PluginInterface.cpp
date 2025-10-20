@@ -715,6 +715,9 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {
+  DeviceUid = std::string(Plugin.getName()) + "-" +
+              std::to_string(static_cast<uint64_t>(DeviceId));
+
 #ifdef OMPT_SUPPORT
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
@@ -1524,11 +1527,18 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
+Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
+  Expected<InfoTreeNode> Info = obtainInfoImpl();
+  if (Info)
+    Info->add("UID", DeviceUid, "", DeviceInfo::UID);
+  return Info;
+}
+
 Error GenericDeviceTy::printInfo() {
-  auto Info = obtainInfoImpl();
+  Expected<InfoTreeNode> Info = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (auto Err = Info.takeError())
+  if (Error Err = Info.takeError())
     return Err;
 
   // Print all info entries.
