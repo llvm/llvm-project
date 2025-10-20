@@ -175,7 +175,8 @@ private:
   mutable std::mutex m_collection_mutex;
   /// These are used if we're preserving breakpoints in this list:
   const bool m_preserving_bkpts = false;
-  std::map<std::pair<lldb::break_id_t, lldb::break_id_t>, lldb::BreakpointSP> m_preserved_bps;
+  std::map<std::pair<lldb::break_id_t, lldb::break_id_t>, lldb::BreakpointSP>
+      m_preserved_bps;
 
 public:
   typedef llvm::iterator_range<collection::const_iterator>
