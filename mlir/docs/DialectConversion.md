@@ -190,7 +190,8 @@ struct MyConversionPattern : public ConversionPattern {
 ```
 
 Example:
-```
+
+```mlir
 %0 = "test.foo"() : () -> i1  // matched by pattern A
 "test.bar"(%0) : (i1) -> ()   // matched by pattern B
 ```
@@ -255,7 +256,7 @@ Delaying certain IR modifications has two benefits: (1) pattern rollback is
 simpler because fewer IR modifications must be rolled back, (2) pointers of
 erased operations / blocks are preserved upon rollback, and (3) patterns can
 still access/traverse the original IR to some degree. However, additional
-bookkeeping in the form of complex internal C++ data structures is requires to
+bookkeeping in the form of complex internal C++ data structures is required to
 support pattern rollback. Running in rollback mode has a significant toll on
 compilation time, is error-prone and makes debugging conversion passes more
 complicated. Therefore, programmers are encouraged to run in no-rollback mode
