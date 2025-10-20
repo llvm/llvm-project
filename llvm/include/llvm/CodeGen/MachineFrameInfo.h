@@ -501,8 +501,12 @@ public:
            StackID == TargetStackID::ScalablePredicateVector;
   }
 
-  bool isScalableStackID(int ObjectIdx) const {
+  bool hasScalableStackID(int ObjectIdx) const {
     uint8_t StackID = getStackID(ObjectIdx);
+    return isScalableStackID(StackID);
+  }
+
+  bool isScalableStackID(uint8_t StackID) const {
     return StackID == TargetStackID::ScalableVector ||
            StackID == TargetStackID::ScalablePredicateVector;
   }

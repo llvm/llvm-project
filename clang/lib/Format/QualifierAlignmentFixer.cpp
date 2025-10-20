@@ -508,7 +508,7 @@ const FormatToken *LeftRightQualifierAlignmentFixer::analyzeLeft(
 
     // Don't change declarations such as
     // `foo(struct Foo const a);` -> `foo(struct Foo const a);`
-    if (!Previous || !Previous->isOneOf(tok::kw_struct, tok::kw_class)) {
+    if (!Previous || Previous->isNoneOf(tok::kw_struct, tok::kw_class)) {
       insertQualifierBefore(SourceMgr, Fixes, TypeToken, Qualifier);
       removeToken(SourceMgr, Fixes, Tok);
     }

@@ -1622,12 +1622,12 @@ static void generateCollapsedIndexingRegion(
   }
 }
 
-void collapseOperandsAndResults(LinalgOp op,
-                                const CollapsingInfo &collapsingInfo,
-                                RewriterBase &rewriter,
-                                SmallVectorImpl<Value> &inputOperands,
-                                SmallVectorImpl<Value> &outputOperands,
-                                SmallVectorImpl<Type> &resultTypes) {
+static void collapseOperandsAndResults(LinalgOp op,
+                                       const CollapsingInfo &collapsingInfo,
+                                       RewriterBase &rewriter,
+                                       SmallVectorImpl<Value> &inputOperands,
+                                       SmallVectorImpl<Value> &outputOperands,
+                                       SmallVectorImpl<Type> &resultTypes) {
   Location loc = op->getLoc();
   inputOperands =
       llvm::map_to_vector(op.getDpsInputOperands(), [&](OpOperand *opOperand) {
@@ -1651,8 +1651,8 @@ void collapseOperandsAndResults(LinalgOp op,
 
 /// Clone a `LinalgOp` to a collapsed version of same name
 template <typename OpTy>
-OpTy cloneToCollapsedOp(RewriterBase &rewriter, OpTy origOp,
-                        const CollapsingInfo &collapsingInfo) {
+static OpTy cloneToCollapsedOp(RewriterBase &rewriter, OpTy origOp,
+                               const CollapsingInfo &collapsingInfo) {
   return nullptr;
 }
 
@@ -1699,8 +1699,9 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
-LinalgOp createCollapsedOp(LinalgOp op, const CollapsingInfo &collapsingInfo,
-                           RewriterBase &rewriter) {
+static LinalgOp createCollapsedOp(LinalgOp op,
+                                  const CollapsingInfo &collapsingInfo,
+                                  RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
   } else {

@@ -72,5 +72,206 @@ define <4 x float> @request_no_agpr(<8 x half> %arg0, <8 x half> %arg1, <4 x flo
   ret <4 x float> %result
 }
 
+; Make sure this selects the VGPR form, if AGPRs available, but not
+; enough.
+define amdgpu_kernel void @not_enough_agprs(ptr addrspace(1) %arg) #2 {
+; HEURRC-LABEL: not_enough_agprs:
+; HEURRC:       ; %bb.0: ; %bb
+; HEURRC-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
+; HEURRC-NEXT:    v_mov_b32_e32 v33, 1.0
+; HEURRC-NEXT:    v_mov_b32_e32 v34, 2.0
+; HEURRC-NEXT:    v_mov_b32_e32 v32, 0
+; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
+; HEURRC-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
+; HEURRC-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
+; HEURRC-NEXT:    s_waitcnt lgkmcnt(0)
+; HEURRC-NEXT:    v_mov_b32_e32 v0, s16
+; HEURRC-NEXT:    v_mov_b32_e32 v1, s17
+; HEURRC-NEXT:    v_mov_b32_e32 v2, s18
+; HEURRC-NEXT:    v_mov_b32_e32 v3, s19
+; HEURRC-NEXT:    v_mov_b32_e32 v4, s20
+; HEURRC-NEXT:    v_mov_b32_e32 v5, s21
+; HEURRC-NEXT:    v_mov_b32_e32 v6, s22
+; HEURRC-NEXT:    v_mov_b32_e32 v7, s23
+; HEURRC-NEXT:    v_mov_b32_e32 v8, s24
+; HEURRC-NEXT:    v_mov_b32_e32 v9, s25
+; HEURRC-NEXT:    v_mov_b32_e32 v10, s26
+; HEURRC-NEXT:    v_mov_b32_e32 v11, s27
+; HEURRC-NEXT:    v_mov_b32_e32 v12, s28
+; HEURRC-NEXT:    v_mov_b32_e32 v13, s29
+; HEURRC-NEXT:    v_mov_b32_e32 v14, s30
+; HEURRC-NEXT:    v_mov_b32_e32 v15, s31
+; HEURRC-NEXT:    v_mov_b32_e32 v16, s0
+; HEURRC-NEXT:    v_mov_b32_e32 v17, s1
+; HEURRC-NEXT:    v_mov_b32_e32 v18, s2
+; HEURRC-NEXT:    v_mov_b32_e32 v19, s3
+; HEURRC-NEXT:    v_mov_b32_e32 v20, s4
+; HEURRC-NEXT:    v_mov_b32_e32 v21, s5
+; HEURRC-NEXT:    v_mov_b32_e32 v22, s6
+; HEURRC-NEXT:    v_mov_b32_e32 v23, s7
+; HEURRC-NEXT:    v_mov_b32_e32 v24, s8
+; HEURRC-NEXT:    v_mov_b32_e32 v25, s9
+; HEURRC-NEXT:    v_mov_b32_e32 v26, s10
+; HEURRC-NEXT:    v_mov_b32_e32 v27, s11
+; HEURRC-NEXT:    v_mov_b32_e32 v28, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v29, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v30, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v31, s15
+; HEURRC-NEXT:    s_nop 1
+; HEURRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
+; HEURRC-NEXT:    s_nop 15
+; HEURRC-NEXT:    s_nop 1
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[24:27], s[34:35] offset:96
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[28:31], s[34:35] offset:112
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[16:19], s[34:35] offset:64
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[20:23], s[34:35] offset:80
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[8:11], s[34:35] offset:32
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[12:15], s[34:35] offset:48
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[0:3], s[34:35]
+; HEURRC-NEXT:    global_store_dwordx4 v32, v[4:7], s[34:35] offset:16
+; HEURRC-NEXT:    s_endpgm
+;
+; VGPRRC-LABEL: not_enough_agprs:
+; VGPRRC:       ; %bb.0: ; %bb
+; VGPRRC-NEXT:    s_load_dwordx2 s[34:35], s[4:5], 0x24
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, 1.0
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, 2.0
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, 0
+; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
+; VGPRRC-NEXT:    s_load_dwordx16 s[16:31], s[34:35], 0x0
+; VGPRRC-NEXT:    s_load_dwordx16 s[0:15], s[34:35], 0x40
+; VGPRRC-NEXT:    s_waitcnt lgkmcnt(0)
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, s16
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, s17
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, s18
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, s19
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, s20
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, s21
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, s22
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, s23
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, s24
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, s25
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, s26
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, s27
+; VGPRRC-NEXT:    v_mov_b32_e32 v12, s28
+; VGPRRC-NEXT:    v_mov_b32_e32 v13, s29
+; VGPRRC-NEXT:    v_mov_b32_e32 v14, s30
+; VGPRRC-NEXT:    v_mov_b32_e32 v15, s31
+; VGPRRC-NEXT:    v_mov_b32_e32 v16, s0
+; VGPRRC-NEXT:    v_mov_b32_e32 v17, s1
+; VGPRRC-NEXT:    v_mov_b32_e32 v18, s2
+; VGPRRC-NEXT:    v_mov_b32_e32 v19, s3
+; VGPRRC-NEXT:    v_mov_b32_e32 v20, s4
+; VGPRRC-NEXT:    v_mov_b32_e32 v21, s5
+; VGPRRC-NEXT:    v_mov_b32_e32 v22, s6
+; VGPRRC-NEXT:    v_mov_b32_e32 v23, s7
+; VGPRRC-NEXT:    v_mov_b32_e32 v24, s8
+; VGPRRC-NEXT:    v_mov_b32_e32 v25, s9
+; VGPRRC-NEXT:    v_mov_b32_e32 v26, s10
+; VGPRRC-NEXT:    v_mov_b32_e32 v27, s11
+; VGPRRC-NEXT:    v_mov_b32_e32 v28, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v29, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v30, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v31, s15
+; VGPRRC-NEXT:    s_nop 1
+; VGPRRC-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v33, v34, v[0:31] cbsz:1 abid:2 blgp:3
+; VGPRRC-NEXT:    s_nop 15
+; VGPRRC-NEXT:    s_nop 1
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[24:27], s[34:35] offset:96
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[28:31], s[34:35] offset:112
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[16:19], s[34:35] offset:64
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[20:23], s[34:35] offset:80
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[8:11], s[34:35] offset:32
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[12:15], s[34:35] offset:48
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[0:3], s[34:35]
+; VGPRRC-NEXT:    global_store_dwordx4 v32, v[4:7], s[34:35] offset:16
+; VGPRRC-NEXT:    s_endpgm
+bb:
+  %in.1 = load <32 x float>, ptr addrspace(1) %arg, align 128
+  %mai.1 = call <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float 1.000000e+00, float 2.000000e+00, <32 x float> %in.1, i32 1, i32 2, i32 3)
+  store <32 x float> %mai.1, ptr addrspace(1) %arg, align 128
+  ret void
+}
+
+define <16 x float> @mfma_scale_respect_flag(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2, i32 %scale0, i32 %scale1) #2 {
+; HEURRC-LABEL: mfma_scale_respect_flag:
+; HEURRC:       ; %bb.0:
+; HEURRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HEURRC-NEXT:    scratch_load_dword a15, off, s32
+; HEURRC-NEXT:    scratch_load_dword v31, off, s32 offset:8
+; HEURRC-NEXT:    scratch_load_dword v32, off, s32 offset:4
+; HEURRC-NEXT:    v_accvgpr_write_b32 a0, v16
+; HEURRC-NEXT:    v_accvgpr_write_b32 a1, v17
+; HEURRC-NEXT:    v_accvgpr_write_b32 a2, v18
+; HEURRC-NEXT:    v_accvgpr_write_b32 a3, v19
+; HEURRC-NEXT:    v_accvgpr_write_b32 a4, v20
+; HEURRC-NEXT:    v_accvgpr_write_b32 a5, v21
+; HEURRC-NEXT:    v_accvgpr_write_b32 a6, v22
+; HEURRC-NEXT:    v_accvgpr_write_b32 a7, v23
+; HEURRC-NEXT:    v_accvgpr_write_b32 a8, v24
+; HEURRC-NEXT:    v_accvgpr_write_b32 a9, v25
+; HEURRC-NEXT:    v_accvgpr_write_b32 a10, v26
+; HEURRC-NEXT:    v_accvgpr_write_b32 a11, v27
+; HEURRC-NEXT:    v_accvgpr_write_b32 a12, v28
+; HEURRC-NEXT:    v_accvgpr_write_b32 a13, v29
+; HEURRC-NEXT:    v_accvgpr_write_b32 a14, v30
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
+; HEURRC-NEXT:    s_nop 0
+; HEURRC-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 a[0:15], v[0:7], v[8:15], a[0:15], v32, v31 op_sel_hi:[0,0,0]
+; HEURRC-NEXT:    s_nop 15
+; HEURRC-NEXT:    s_nop 3
+; HEURRC-NEXT:    v_accvgpr_read_b32 v0, a0
+; HEURRC-NEXT:    v_accvgpr_read_b32 v1, a1
+; HEURRC-NEXT:    v_accvgpr_read_b32 v2, a2
+; HEURRC-NEXT:    v_accvgpr_read_b32 v3, a3
+; HEURRC-NEXT:    v_accvgpr_read_b32 v4, a4
+; HEURRC-NEXT:    v_accvgpr_read_b32 v5, a5
+; HEURRC-NEXT:    v_accvgpr_read_b32 v6, a6
+; HEURRC-NEXT:    v_accvgpr_read_b32 v7, a7
+; HEURRC-NEXT:    v_accvgpr_read_b32 v8, a8
+; HEURRC-NEXT:    v_accvgpr_read_b32 v9, a9
+; HEURRC-NEXT:    v_accvgpr_read_b32 v10, a10
+; HEURRC-NEXT:    v_accvgpr_read_b32 v11, a11
+; HEURRC-NEXT:    v_accvgpr_read_b32 v12, a12
+; HEURRC-NEXT:    v_accvgpr_read_b32 v13, a13
+; HEURRC-NEXT:    v_accvgpr_read_b32 v14, a14
+; HEURRC-NEXT:    v_accvgpr_read_b32 v15, a15
+; HEURRC-NEXT:    s_setpc_b64 s[30:31]
+;
+; VGPRRC-LABEL: mfma_scale_respect_flag:
+; VGPRRC:       ; %bb.0:
+; VGPRRC-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VGPRRC-NEXT:    scratch_load_dword v31, off, s32
+; VGPRRC-NEXT:    scratch_load_dword v32, off, s32 offset:8
+; VGPRRC-NEXT:    scratch_load_dword v33, off, s32 offset:4
+; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
+; VGPRRC-NEXT:    v_mfma_scale_f32_32x32x64_f8f6f4 v[16:31], v[0:7], v[8:15], v[16:31], v33, v32 op_sel_hi:[0,0,0]
+; VGPRRC-NEXT:    s_nop 15
+; VGPRRC-NEXT:    s_nop 3
+; VGPRRC-NEXT:    v_mov_b32_e32 v0, v16
+; VGPRRC-NEXT:    v_mov_b32_e32 v1, v17
+; VGPRRC-NEXT:    v_mov_b32_e32 v2, v18
+; VGPRRC-NEXT:    v_mov_b32_e32 v3, v19
+; VGPRRC-NEXT:    v_mov_b32_e32 v4, v20
+; VGPRRC-NEXT:    v_mov_b32_e32 v5, v21
+; VGPRRC-NEXT:    v_mov_b32_e32 v6, v22
+; VGPRRC-NEXT:    v_mov_b32_e32 v7, v23
+; VGPRRC-NEXT:    v_mov_b32_e32 v8, v24
+; VGPRRC-NEXT:    v_mov_b32_e32 v9, v25
+; VGPRRC-NEXT:    v_mov_b32_e32 v10, v26
+; VGPRRC-NEXT:    v_mov_b32_e32 v11, v27
+; VGPRRC-NEXT:    v_mov_b32_e32 v12, v28
+; VGPRRC-NEXT:    v_mov_b32_e32 v13, v29
+; VGPRRC-NEXT:    v_mov_b32_e32 v14, v30
+; VGPRRC-NEXT:    v_mov_b32_e32 v15, v31
+; VGPRRC-NEXT:    s_setpc_b64 s[30:31]
+  %result = call <16 x float> @llvm.amdgcn.mfma.scale.f32.32x32x64.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <16 x float> %arg2,
+                                                                                      i32 0, ; cbsz
+                                                                                      i32 0, ; blgp
+                                                                                      i32 0, i32 %scale0, i32 0, i32 %scale1)
+  ret <16 x float> %result
+}
+
 attributes #0 = { "amdgpu-agpr-alloc"="32,256" }
 attributes #1 = { "amdgpu-agpr-alloc"="0,0" }
+attributes #2 = { nounwind "amdgpu-agpr-alloc"="20" }

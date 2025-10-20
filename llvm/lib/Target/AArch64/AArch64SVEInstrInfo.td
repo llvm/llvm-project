@@ -265,7 +265,7 @@ def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>
 ]>;
 
-def AArch64asrd_m1 : SDNode<"AArch64ISD::SRAD_MERGE_OP1", SDT_AArch64Arith_Imm>;
+def AArch64asrd_m1 : SDNode<"AArch64ISD::ASRD_MERGE_OP1", SDT_AArch64Arith_Imm>;
 def AArch64urshri_p_node : SDNode<"AArch64ISD::URSHR_I_PRED", SDT_AArch64Arith_Imm>;
 
 def AArch64urshri_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
@@ -1010,6 +1010,36 @@ let Predicates = [HasSVE_or_SME] in {
   defm SEL_ZPZZ   : sve_int_sel_vvv<"sel", vselect>;
 
   defm SPLICE_ZPZ : sve_int_perm_splice<"splice", AArch64splice>;
+
+  // mul x (splat -1) -> neg x
+  def : Pat<(nxv16i8 (AArch64mul_m1 nxv16i1:$Op1, nxv16i8:$Op2, (nxv16i8 (splat_vector (i32 -1))))),
+      (NEG_ZPmZ_B $Op2, $Op1, $Op2)>;
+  def : Pat<(nxv8i16 (AArch64mul_m1 nxv8i1:$Op1, nxv8i16:$Op2, (nxv8i16 (splat_vector (i32 -1))))),
+      (NEG_ZPmZ_H $Op2, $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (AArch64mul_m1 nxv4i1:$Op1, nxv4i32:$Op2, (nxv4i32 (splat_vector (i32 -1))))),
+      (NEG_ZPmZ_S $Op2, $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (AArch64mul_m1 nxv2i1:$Op1, nxv2i64:$Op2, (nxv2i64 (splat_vector (i64 -1))))),
+      (NEG_ZPmZ_D $Op2, $Op1, $Op2)>;
+
+  let AddedComplexity = 5 in {
+    def : Pat<(nxv16i8 (AArch64mul_p nxv16i1:$Op1, nxv16i8:$Op2, (nxv16i8 (splat_vector (i32 -1))))),
+        (NEG_ZPmZ_B_UNDEF $Op2, $Op1, $Op2)>;
+    def : Pat<(nxv8i16 (AArch64mul_p nxv8i1:$Op1, nxv8i16:$Op2, (nxv8i16 (splat_vector (i32 -1))))),
+        (NEG_ZPmZ_H_UNDEF $Op2, $Op1, $Op2)>;
+    def : Pat<(nxv4i32 (AArch64mul_p nxv4i1:$Op1, nxv4i32:$Op2, (nxv4i32 (splat_vector (i32 -1))))),
+        (NEG_ZPmZ_S_UNDEF $Op2, $Op1, $Op2)>;
+    def : Pat<(nxv2i64 (AArch64mul_p nxv2i1:$Op1, nxv2i64:$Op2, (nxv2i64 (splat_vector (i64 -1))))),
+        (NEG_ZPmZ_D_UNDEF $Op2, $Op1, $Op2)>;
+  }
+
+  def : Pat<(nxv16i8 (AArch64mul_m1 nxv16i1:$Op1, (nxv16i8 (splat_vector (i32 -1))), nxv16i8:$Op2)),
+        (NEG_ZPmZ_B (DUP_ZI_B -1, 0), $Op1, $Op2)>;
+  def : Pat<(nxv8i16 (AArch64mul_m1 nxv8i1:$Op1, (nxv8i16 (splat_vector (i32 -1))), nxv8i16:$Op2)),
+        (NEG_ZPmZ_H (DUP_ZI_H -1, 0), $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (AArch64mul_m1 nxv4i1:$Op1, (nxv4i32 (splat_vector (i32 -1))), nxv4i32:$Op2)),
+        (NEG_ZPmZ_S (DUP_ZI_S -1, 0), $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (AArch64mul_m1 nxv2i1:$Op1, (nxv2i64 (splat_vector (i64 -1))), nxv2i64:$Op2)),
+        (NEG_ZPmZ_D (DUP_ZI_D -1, 0), $Op1, $Op2)>;
 } // End HasSVE_or_SME
 
 // COMPACT - word and doubleword
