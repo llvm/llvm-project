@@ -79,10 +79,6 @@ public:
     return DevicesRangeTy(L0Devices.begin(), L0Devices.end());
   }
 
-  /// Clean-up routine to be invoked by the destructor or
-  /// LevelZeroPluginTy::deinit.
-  void closeRTL();
-
   /// Find L0 devices and initialize device properties.
   /// Returns number of devices reported to omptarget.
   int32_t findDevices();

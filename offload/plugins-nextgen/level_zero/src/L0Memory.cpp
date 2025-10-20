@@ -16,6 +16,21 @@
 
 namespace llvm::omp::target::plugin {
 
+#if LIBOMPTARGET_DEBUG
+static const char * AllocKindToStr(int32_t Kind) {
+  switch (Kind) {
+  case TARGET_ALLOC_DEVICE:
+    return "DEVICE";
+  case TARGET_ALLOC_HOST:
+    return "HOST";
+  case TARGET_ALLOC_SHARED:
+    return "SHARED";
+  default:
+    return "DEFAULT";
+  }
+}
+#endif
+
 void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   if (isFull())
     return nullptr;
@@ -101,7 +116,7 @@ MemAllocatorTy::MemPoolTy::MemPoolTy(int32_t Kind, MemAllocatorTy *_Allocator,
     AllocMax = 2 * AllocMin;
     DP("Warning: Adjusting pool's AllocMax to %zu for %s due to device "
        "requirements.\n",
-       AllocMax, ALLOC_KIND_TO_STR(AllocKind));
+       AllocMax, AllocKindToStr(AllocKind));
   }
   assert(AllocMin < AllocMax &&
          "Invalid parameters while initializing memory pool");
@@ -133,7 +148,7 @@ MemAllocatorTy::MemPoolTy::MemPoolTy(int32_t Kind, MemAllocatorTy *_Allocator,
   DP("Initialized %s pool for device " DPxMOD ": AllocUnit = %zu, "
      "AllocMax = %zu, "
      "Capacity = %" PRIu32 ", PoolSizeMax = %zu\n",
-     ALLOC_KIND_TO_STR(AllocKind), DPxPTR(Device), AllocUnit, AllocMax,
+     AllocKindToStr(AllocKind), DPxPTR(Device), AllocUnit, AllocMax,
      BlockCapacity, PoolSizeMax);
 }
 
@@ -195,7 +210,7 @@ void MemAllocatorTy::MemPoolTy::printUsage() {
     }
   }
 
-  DP("MemPool usage for %s, device " DPxMOD "\n", ALLOC_KIND_TO_STR(AllocKind),
+  DP("MemPool usage for %s, device " DPxMOD "\n", AllocKindToStr(AllocKind),
      DPxPTR(Allocator->Device));
 
   if (HasPoolAlloc) {
@@ -281,7 +296,7 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
       PoolSize += BlockSize;
     DP("New block allocation for %s pool: base = " DPxMOD
        ", size = %zu, pool size = %zu\n",
-       ALLOC_KIND_TO_STR(AllocKind), DPxPTR(Base), BlockSize, PoolSize);
+       AllocKindToStr(AllocKind), DPxPTR(Base), BlockSize, PoolSize);
     BucketStats[BucketId].first++;
   } else {
     BucketStats[BucketId].second++;
@@ -400,13 +415,16 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
 }
 
 /// Release resources and report statistics if requested
-void MemAllocatorTy::deinit() {
+Error MemAllocatorTy::deinit() {
+  if (!L0Context)
+      return Plugin::success();
+
   std::lock_guard<std::mutex> Lock(Mtx);
   // Release RTL-owned memory
   for (auto *M : MemOwned) {
-    auto Err = dealloc_locked(M);
+    auto Err = deallocLocked(M);
     if (Err)
-      consumeError(std::move(Err));
+      return Err;
   }
   // Release resources used in the pool
   Pools.clear();
@@ -416,7 +434,7 @@ void MemAllocatorTy::deinit() {
   if (getDebugLevel() > 0) {
     for (auto &Stat : Stats) {
       DP("Memory usage for %s, device " DPxMOD "\n",
-         ALLOC_KIND_TO_STR(Stat.first), DPxPTR(Device));
+         AllocKindToStr(Stat.first), DPxPTR(Device));
       const auto &ST = Stat.second;
       if (ST.NumAllocs[0] == 0 && ST.NumAllocs[1] == 0) {
         DP("-- Not used\n");
@@ -434,6 +452,7 @@ void MemAllocatorTy::deinit() {
 
   // mark as deinitialized
   L0Context = nullptr;
+  return Plugin::success();
 }
 
 /// Allocate memory with the specified information
@@ -505,7 +524,7 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
 }
 
 /// Deallocate memory
-Error MemAllocatorTy::dealloc_locked(void *Ptr) {
+Error MemAllocatorTy::deallocLocked(void *Ptr) {
   MemAllocInfoTy Info;
   if (!AllocInfo.remove(Ptr, &Info)) {
     return Plugin::error(ErrorCode::BACKEND_FAILURE,

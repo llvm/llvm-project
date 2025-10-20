@@ -92,15 +92,11 @@ int32_t LevelZeroPluginTy::findDevices() {
 
   llvm::SmallVector<DeviceInfoTy> DevicesToAdd;
 
-  // helper lambda
-  auto addDevice = [&DevicesToAdd](auto &zeDevice, auto *Driver, int32_t RootId,
-                                   int32_t SubId = -1, int32_t CCSId = -1) {
-    DevicesToAdd.push_back({{zeDevice, RootId, SubId, CCSId}, Driver});
-  };
   for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
     const auto zeDevice = RootDevices[RootId].zeDevice;
     auto *RootDriver = RootDevices[RootId].Driver;
-    addDevice(zeDevice, RootDriver, RootId);
+    DevicesToAdd.push_back(
+        {{zeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
   }
   NumDevices = DevicesToAdd.size();
   auto DeviceId = 0;
@@ -141,18 +137,6 @@ int32_t LevelZeroPluginTy::findDevices() {
   return getNumRootDevices();
 }
 
-/// Clean-up routine to be invoked by the destructor or
-/// LevelZeroPluginTy::deinit.
-void LevelZeroPluginTy::closeRTL() {
-
-  ContextTLSTable.clear();
-  DeviceTLSTable.clear();
-  ThreadTLSTable.clear();
-  ContextList.clear();
-
-  DP("Plugin closed successfully\n");
-}
-
 Expected<int32_t> LevelZeroPluginTy::initImpl() {
   DP("Level0 NG plugin initialization\n");
   // process options before anything else
@@ -162,7 +146,11 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 
 Error LevelZeroPluginTy::deinitImpl() {
   DP("Deinit Level0 plugin!\n");
-  closeRTL();
+  ContextTLSTable.clear();
+  DeviceTLSTable.clear();
+  ThreadTLSTable.clear();
+  ContextList.clear();
+  DP("Level0 plugin deinitialized successfully\n");
   return Plugin::success();
 }
 

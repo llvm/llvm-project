@@ -308,7 +308,7 @@ public:
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override {
     Programs.clear();
-    return Plugin::success();
+    return MemAllocator.deinit();
   }
 
   auto getZeDevice() const { return zeDevice; }

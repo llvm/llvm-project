@@ -27,14 +27,6 @@ namespace llvm::omp::target::plugin {
 
 class L0DeviceTy;
 
-#define ALLOC_KIND_TO_STR(Kind)                                                \
-  (Kind == TARGET_ALLOC_HOST                                                   \
-       ? "host memory"                                                         \
-       : (Kind == TARGET_ALLOC_SHARED                                          \
-              ? "shared memory"                                                \
-              : (Kind == TARGET_ALLOC_DEVICE ? "device memory"                 \
-                                             : "unknown memory")))
-
 // forward declarations
 struct L0OptionsTy;
 class L0DeviceTy;
@@ -85,10 +77,10 @@ struct MemAllocInfoTy {
 
   MemAllocInfoTy() = default;
 
-  MemAllocInfoTy(void *_Base, size_t _Size, int32_t _Kind, bool _InPool,
-                 bool _ImplicitArg)
-      : Base(_Base), Size(_Size), Kind(_Kind), InPool(_InPool),
-        ImplicitArg(_ImplicitArg) {}
+  MemAllocInfoTy(void *Base, size_t Size, int32_t Kind, bool InPool,
+                 bool ImplicitArg)
+      : Base(Base), Size(Size), Kind(Kind), InPool(InPool),
+        ImplicitArg(ImplicitArg) {}
 };
 
 /// Responsible for all activities involving memory allocation/deallocation.
@@ -130,7 +122,7 @@ class MemAllocatorTy {
       /// Number of slots in use
       uint32_t NumUsedSlots = 0;
       /// Cached available slot returned by the last dealloc() call
-      uint32_t FreeSlot = UINT32_MAX;
+      uint32_t FreeSlot = std::numeric_limits<uint32_t>::max();
       /// Marker for the currently used slots
       std::vector<bool> UsedSlots;
 
@@ -286,7 +278,7 @@ class MemAllocatorTy {
   /// Whether the device supports large memory allocation
   bool SupportsLargeMem = false;
   /// Cached max alloc size supported by device
-  uint64_t MaxAllocSize = INT64_MAX;
+  uint64_t MaxAllocSize;
   /// Map from allocation kind to memory statistics
   std::unordered_map<int32_t, MemStatTy> Stats;
   /// Map from allocation kind to memory pool
@@ -305,22 +297,20 @@ class MemAllocatorTy {
   bool IsHostMem = false;
   // Internal deallocation function to be called when already
   // hondling the Mtx lock
-  Error dealloc_locked(void *Ptr);
+  Error deallocLocked(void *Ptr);
 
 public:
-  MemAllocatorTy() = default;
+  MemAllocatorTy() : MaxAllocSize(std::numeric_limits<uint64_t>::max()) {}
 
   MemAllocatorTy(const MemAllocatorTy &) = delete;
   MemAllocatorTy(MemAllocatorTy &&) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
 
+  ~MemAllocatorTy() {}
+
   /// Release resources and report statistics if requested
-  ~MemAllocatorTy() {
-    if (L0Context)
-      deinit(); // Release resources
-  }
-  void deinit();
+  Error deinit();
 
   /// Allocator only supports host memory
   bool supportsHostMem() { return IsHostMem; }
@@ -342,7 +332,7 @@ public:
   /// Deallocate memory
   Error dealloc(void *Ptr) {
     std::lock_guard<std::mutex> Lock(Mtx);
-    return dealloc_locked(Ptr);
+    return deallocLocked(Ptr);
   }
 
   /// Check if the given memory location and offset belongs to any allocated
@@ -561,7 +551,8 @@ public:
     if (NeedToGrow)
       Ret = addBuffers();
     else
-      Ret = (void *)((uintptr_t)Buffers.back() + (Offset % AllocSize));
+      Ret = reinterpret_cast<void *>(
+          reinterpret_cast<uintptr_t>(Buffers.back()) + (Offset % AllocSize));
 
     if (!Ret)
       return nullptr;
