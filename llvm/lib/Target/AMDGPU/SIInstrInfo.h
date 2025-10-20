@@ -710,26 +710,45 @@ public:
   }
 
   static bool setsSCCifResultIsNonZero(const MachineInstr &MI) {
-    if (!MI.findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
-      return false;
-    // Compares have no result
-    if (MI.isCompare())
-      return false;
     switch (MI.getOpcode()) {
-    default:
+    case AMDGPU::S_ABS_I32:
+    case AMDGPU::S_ABSDIFF_I32:
+    case AMDGPU::S_ASHR_I32:
+    case AMDGPU::S_ASHR_I64:
+    case AMDGPU::S_LSHL_B32:
+    case AMDGPU::S_LSHL_B64:
+    case AMDGPU::S_LSHR_B32:
+    case AMDGPU::S_LSHR_B64:
+    case AMDGPU::S_AND_B32:
+    case AMDGPU::S_AND_B64:
+    case AMDGPU::S_OR_B32:
+    case AMDGPU::S_OR_B64:
+    case AMDGPU::S_XOR_B32:
+    case AMDGPU::S_XOR_B64:
+    case AMDGPU::S_NOT_B32:
+    case AMDGPU::S_NOT_B64:
+    case AMDGPU::S_NAND_B32:
+    case AMDGPU::S_NAND_B64:
+    case AMDGPU::S_NOR_B32:
+    case AMDGPU::S_NOR_B64:
+    case AMDGPU::S_XNOR_B32:
+    case AMDGPU::S_XNOR_B64:
+    case AMDGPU::S_ANDN2_B32:
+    case AMDGPU::S_ANDN2_B64:
+    case AMDGPU::S_ORN2_B32:
+    case AMDGPU::S_ORN2_B64:
+    case AMDGPU::S_BFE_I32:
+    case AMDGPU::S_BFE_I64:
+    case AMDGPU::S_BFE_U32:
+    case AMDGPU::S_BFE_U64:
+    case AMDGPU::S_BCNT0_I32_B32:
+    case AMDGPU::S_BCNT0_I32_B64:
+    case AMDGPU::S_BCNT1_I32_B32:
+    case AMDGPU::S_BCNT1_I32_B64:
+    case AMDGPU::S_QUADMASK_B32:
+    case AMDGPU::S_QUADMASK_B64:
       return true;
-    case AMDGPU::S_ADD_I32:
-    case AMDGPU::S_ADD_U32:
-    case AMDGPU::S_ADDC_U32:
-    case AMDGPU::S_SUB_I32:
-    case AMDGPU::S_SUB_U32:
-    case AMDGPU::S_SUBB_U32:
-    case AMDGPU::S_MIN_I32:
-    case AMDGPU::S_MIN_U32:
-    case AMDGPU::S_MAX_I32:
-    case AMDGPU::S_MAX_U32:
-    case AMDGPU::S_ADDK_I32:
-    case AMDGPU::SI_PC_ADD_REL_OFFSET:
+    default:
       return false;
     }
   }
