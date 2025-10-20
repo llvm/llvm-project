@@ -1284,46 +1284,10 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
 #define REMAT_DEBUG(X) LLVM_DEBUG(dbgs() << REMAT_PREFIX; X;)
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void PreRARematStage::printTargetRegions(bool PrintAll) const {
-  if (PrintAll) {
-    for (auto [I, Target] : enumerate(RPTargets))
-      dbgs() << REMAT_PREFIX << "  [" << I << "] " << Target << '\n';
-    return;
-  }
-  if (TargetRegions.none()) {
-    dbgs() << REMAT_PREFIX << "No target regions\n";
-    return;
-  }
-  dbgs() << REMAT_PREFIX << "Target regions:\n";
-  for (unsigned I : TargetRegions.set_bits())
-    dbgs() << REMAT_PREFIX << "  [" << I << "] " << RPTargets[I] << '\n';
-}
-
-void PreRARematStage::RematReg::print() const {
-  dbgs() << REMAT_PREFIX << "  [" << DefRegion << "] " << *DefMI;
-  dbgs() << REMAT_PREFIX << "    -> used in [" << UseRegion << "] " << *UseMI;
-  dbgs() << REMAT_PREFIX << "    Guaranteed RP reduction in:";
-  for (unsigned I : Live.set_bits()) {
-    if (isUnusedLiveThrough(I))
-      dbgs() << " [" << I << "]";
-  }
-  dbgs() << '\n';
-  dbgs() << REMAT_PREFIX << "    Possible RP reduction in:";
-  for (unsigned I : Live.set_bits()) {
-    if (!isUnusedLiveThrough(I))
-      dbgs() << " [" << I << "]";
-  }
-  dbgs() << '\n';
-}
-
-void PreRARematStage::ScoredRemat::print() const {
-  ScoreTy ShiftScore = Score;
-  ScoreTy RegionImpact = ShiftScore & ((1 << RegionImpactWidth) - 1);
-  ShiftScore >>= RegionImpactWidth;
-  ScoreTy FreqDiff = ShiftScore & ((1 << FreqDiffWidth) - 1);
-  ShiftScore >>= FreqDiffWidth;
-  ScoreTy MaxFreq = ShiftScore;
-  dbgs() << '(' << MaxFreq << ", " << FreqDiff << ", " << RegionImpact << ')';
+Printable PreRARematStage::ScoredRemat::print() const {
+  return Printable([&](raw_ostream &OS) {
+    OS << '(' << MaxFreq << ", " << FreqDiff << ", " << RegionImpact << ')';
+  });
 }
 #endif
 
@@ -1354,6 +1318,38 @@ bool PreRARematStage::initGCNSchedStage() {
     RegionBB.push_back(ParentMBB);
   }
 
+#ifndef NDEBUG
+  auto PrintTargetRegions = [&]() -> void {
+    if (TargetRegions.none()) {
+      dbgs() << REMAT_PREFIX << "No target regions\n";
+      return;
+    }
+    dbgs() << REMAT_PREFIX << "Target regions:\n";
+    for (unsigned I : TargetRegions.set_bits())
+      dbgs() << REMAT_PREFIX << "  [" << I << "] " << RPTargets[I] << '\n';
+  };
+  auto PrintRematReg = [&](const RematReg &Remat) -> Printable {
+    return Printable([&, Remat](raw_ostream &OS) {
+      // Concatenate all region numbers in which the register is unused and
+      // live-through.
+      std::string UnusedLTRegions;
+      for (unsigned I = 0; I < NumRegions; ++I) {
+        if (Remat.isUnusedLiveThrough(I)) {
+          if (!UnusedLTRegions.empty())
+            UnusedLTRegions += ",";
+          UnusedLTRegions += std::to_string(I);
+        }
+      }
+      if (!UnusedLTRegions.empty())
+        UnusedLTRegions = "- " + UnusedLTRegions + " -";
+      OS << "[" << Remat.DefRegion << " -" << UnusedLTRegions << "> "
+         << Remat.UseRegion << "] ";
+      Remat.DefMI->print(OS, /*IsStandalone=*/true, /*SkipOpers=*/false,
+                         /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
+    });
+  };
+#endif
+
   // Set an objective for the stage based on current RP in each region.
   REMAT_DEBUG({
     dbgs() << "Analyzing ";
@@ -1372,22 +1368,19 @@ bool PreRARematStage::initGCNSchedStage() {
       dbgs() << "reduce spilling (minimum target occupancy is "
              << MFI.getMinWavesPerEU() << ")\n";
     }
-    printTargetRegions(/*PrintAll=*/TargetRegions.none());
+    PrintTargetRegions();
   });
 
   if (!collectRematRegs(MIRegion)) {
     REMAT_DEBUG(dbgs() << "No rematerializable registers\n");
     return false;
   }
+  const ScoredRemat::FreqInfo FreqInfo(MF, DAG);
   REMAT_DEBUG({
     dbgs() << "Rematerializable registers:\n";
     for (const RematReg &Remat : RematRegs)
-      Remat.print();
-  });
-
-  const ScoredRemat::FreqInfo FreqInfo(MF, DAG);
-  REMAT_DEBUG({
-    dbgs() << "Region frequencies\n";
+      dbgs() << REMAT_PREFIX << "  " << PrintRematReg(Remat) << '\n';
+    dbgs() << REMAT_PREFIX << "Region frequencies\n";
     for (auto [I, Freq] : enumerate(FreqInfo.Regions)) {
       dbgs() << REMAT_PREFIX << "  [" << I << "] ";
       if (Freq)
@@ -1409,52 +1402,53 @@ bool PreRARematStage::initGCNSchedStage() {
 #endif
   BitVector RecomputeRP(NumRegions);
   do {
+    assert(!ScoredRemats.empty() && "no more remat candidates");
+
     // (Re-)Score and (re-)sort all remats in increasing score order.
     for (ScoredRemat &Remat : ScoredRemats)
       Remat.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     sort(ScoredRemats);
 
     REMAT_DEBUG({
-      dbgs() << "==== ROUND " << RoundNum << " ====\n";
-      for (const ScoredRemat &SRemat : ScoredRemats) {
-        dbgs() << REMAT_PREFIX;
-        SRemat.print();
-        dbgs() << " | " << *SRemat.Remat->DefMI;
+      dbgs() << "==== ROUND " << RoundNum << " ====\n"
+             << REMAT_PREFIX
+             << "Candidates with non-null score, in rematerialization order:\n";
+      for (const ScoredRemat &RematDecision : reverse(ScoredRemats)) {
+        if (RematDecision.hasNullScore())
+          break;
+        dbgs() << REMAT_PREFIX << "  " << RematDecision.print() << " | "
+               << *RematDecision.Remat->DefMI;
       }
-      printTargetRegions();
+      PrintTargetRegions();
     });
 
     RecomputeRP.reset();
-    int RematIdx = ScoredRemats.size() - 1;
+    unsigned RematIdx = ScoredRemats.size();
 
     // Rematerialize registers in decreasing score order until we estimate
     // that all RP targets are satisfied or until rematerialization candidates
     // are no longer useful to decrease RP.
-    for (; RematIdx >= 0 && TargetRegions.any(); --RematIdx) {
-      const RematReg &Remat = *ScoredRemats[RematIdx].Remat;
-      // Stop on null score. Since scores monotonically decrease as we
-      // rematerialize, we know there is nothing useful left to do in such
-      // cases.
-      if (ScoredRemats[RematIdx].hasNullScore()) {
-        REMAT_DEBUG(dbgs() << "*** Stop on null score | " << *Remat.DefMI);
-        RematIdx = -1;
+    for (; RematIdx && TargetRegions.any(); --RematIdx) {
+      const ScoredRemat &Candidate = ScoredRemats[RematIdx - 1];
+      // Stop rematerializing on encountering a null score. Since scores
+      // monotonically decrease as we rematerialize, we know there is nothing
+      // useful left to do in such cases, even if we were to re-score.
+      if (Candidate.hasNullScore()) {
+        RematIdx = 0;
         break;
       }
 
+      const RematReg &Remat = *Candidate.Remat;
       // When previous rematerializations in this round have already satisfied
       // RP targets in all regions this rematerialization can impact, we have a
       // good indication that our scores have diverged significantly from
       // reality, in which case we interrupt this round and re-score. This also
       // ensures that every rematerialization we perform is possibly impactful
       // in at least one target region.
-      if (!Remat.maybeBeneficial(TargetRegions, RPTargets)) {
-        REMAT_DEBUG(dbgs() << "*** Stop round on stale score | "
-                           << *Remat.DefMI);
+      if (!Remat.maybeBeneficial(TargetRegions, RPTargets))
         break;
-      }
 
-      REMAT_DEBUG(dbgs() << "*** REMAT [" << Remat.DefRegion << " -> "
-                         << Remat.UseRegion << "] | " << *Remat.DefMI);
+      REMAT_DEBUG(dbgs() << "** REMAT " << PrintRematReg(Remat) << '\n';);
       // Every rematerialization we do here is likely to move the instruction
       // into a higher frequency region, increasing the total sum latency of the
       // instruction itself. This is acceptable if we are eliminating a spill in
@@ -1471,14 +1465,18 @@ bool PreRARematStage::initGCNSchedStage() {
     ++RoundNum;
 #endif
     REMAT_DEBUG({
-      if (!TargetRegions.any())
-        dbgs() << "*** Stop round on all targets achieved\n";
-      else if (RematIdx == -1)
-        dbgs() << "*** Stop round on exhausted remat opportunities\n";
+      if (!TargetRegions.any()) {
+        dbgs() << "** Interrupt round on all targets achieved\n";
+      } else if (RematIdx) {
+        dbgs() << "** Interrupt round on stale score for "
+               << *ScoredRemats[RematIdx - 1].Remat->DefMI;
+      } else {
+        dbgs() << "** Stop on exhausted rematerialization candidates\n";
+      }
     });
 
     // Peel off registers we already rematerialized from the vector's tail.
-    ScoredRemats.truncate(RematIdx + 1);
+    ScoredRemats.truncate(RematIdx);
   } while ((updateAndVerifyRPTargets(RecomputeRP) || TargetRegions.any()) &&
            !ScoredRemats.empty());
   if (RescheduleRegions.none())
@@ -2211,20 +2209,11 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
   if (!MinFreq)
     return;
 
-  // Normalize to minimum observed frequency to avoid overflows when adding up
-  // frequencies.
+  // Normalize to minimum observed frequency to avoid underflows/overflows when
+  // combining frequencies.
   for (uint64_t &Freq : Regions)
     Freq /= MinFreq;
   MaxFreq /= MinFreq;
-
-  // Compute the scaling factor for scoring frequency differences.
-  const uint64_t MaxDiff = MaxFreq - 1;
-  const uint64_t MaxReprFreqValue = (1 << FreqDiffWidth) - 1;
-  RescaleIsDenom = (2 * MaxDiff) & ~MaxReprFreqValue;
-  if (RescaleIsDenom)
-    RescaleFactor = (2 * MaxDiff) >> FreqDiffWidth;
-  else
-    RescaleFactor = MaxDiff ? MaxReprFreqValue / (2 * MaxDiff) : 1;
 }
 
 PreRARematStage::ScoredRemat::ScoredRemat(const RematReg *Remat,
@@ -2247,7 +2236,7 @@ unsigned PreRARematStage::ScoredRemat::getNumRegs(
   return divideCeil(RegSize, 32);
 }
 
-uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
+int64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
   // Get frequencies of defining and using regions. A rematerialization from the
   // least frequent region to the most frequent region will yield the greatest
   // latency penalty and therefore should get minimum score. Reciprocally, a
@@ -2259,36 +2248,22 @@ uint64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
   uint64_t UseOrMax = Freq.Regions[Remat->UseRegion];
   if (!UseOrMax)
     UseOrMax = Freq.MaxFreq;
-
-  // Maximum difference in frequency between defining and using regions.
-  const uint64_t MaxDiff = Freq.MaxFreq - 1;
-  // The difference between defining and using frequency is in the range
-  // [-MaxDiff, MaxDiff], shift it to [0,2 x MaxDiff] to stay in the positive
-  // range, then rescale to the representable range in the final score.
-  const uint64_t FreqDiff = (MaxDiff + (DefOrOne - UseOrMax));
-  if (Freq.RescaleIsDenom)
-    return FreqDiff / Freq.RescaleFactor;
-  return FreqDiff * Freq.RescaleFactor;
+  return DefOrOne - UseOrMax;
 }
 
 void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
                                           ArrayRef<GCNRPTarget> RPTargets,
                                           const FreqInfo &FreqInfo,
                                           bool ReduceSpill) {
-  setNullScore();
-  if (!Remat->maybeBeneficial(TargetRegions, RPTargets))
-    return;
-
-  Register Reg = Remat->getReg();
-  uint64_t MaxFreq = 0;
-  ScoreTy NumBenefitingRegions = 0;
+  MaxFreq = 0;
+  RegionImpact = 0;
   for (unsigned I : TargetRegions.set_bits()) {
-    if (!Remat->Live[I] || !RPTargets[I].isSaveBeneficial(Reg))
+    if (!Remat->Live[I] || !RPTargets[I].isSaveBeneficial(Remat->getReg()))
       continue;
     bool UnusedLT = Remat->isUnusedLiveThrough(I);
 
     // Regions in which RP is guaranteed to decrease have more weight.
-    NumBenefitingRegions += UnusedLT ? 2 : 1;
+    RegionImpact += UnusedLT ? 2 : 1;
 
     if (ReduceSpill) {
       uint64_t Freq = FreqInfo.Regions[I];
@@ -2300,9 +2275,6 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
       MaxFreq = std::max(MaxFreq, Freq);
     }
   }
-  setMaxFreqScore(MaxFreq);
-  setFreqDiffScore(FreqDiff);
-  setRegionImpactScore(NumBenefitingRegions * NumRegs);
 }
 
 void PreRARematStage::rematerialize(const RematReg &Remat,

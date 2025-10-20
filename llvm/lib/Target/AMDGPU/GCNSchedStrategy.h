@@ -505,15 +505,11 @@ private:
     /// specific to the rematerialization process.
     void insertMI(unsigned RegionIdx, MachineInstr *RematMI,
                   GCNScheduleDAGMILive &DAG) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void print() const;
-#endif
   };
 
-  /// A scored rematerializable register. Higher scores indicate more beneficial
-  /// rematerializations. A null score indicate the rematerialization is
-  /// not helpful to reduce RP in target regions.
+  /// A scored rematerialization candidate. Higher scores indicate more
+  /// beneficial rematerializations. A null score indicate the rematerialization
+  /// is not helpful to reduce RP in target regions.
   struct ScoredRemat {
     /// The rematerializable register under consideration.
     const RematReg *Remat;
@@ -525,13 +521,6 @@ private:
       SmallVector<uint64_t> Regions;
       /// Maximum observed frequency, normalized to minimum observed frequency.
       uint64_t MaxFreq = 0;
-      /// Rescaling factor for scoring frequency differences in the range [0, 2
-      /// * (MaxFreq - 1)].
-      uint64_t RescaleFactor = 0;
-      /// Whether the rescaling factor should be used as a denominator (when the
-      /// maximum frequency is "big") or as a nominator (when the maximum
-      /// frequency is "small").
-      bool RescaleIsDenom = false;
 
       FreqInfo(MachineFunction &MF, const GCNScheduleDAGMILive &DAG);
     };
@@ -546,76 +535,54 @@ private:
     void update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
                 const FreqInfo &Freq, bool ReduceSpill);
 
-    /// Returns whether the current score is null.
-    bool hasNullScore() const { return !Score; }
+    /// Returns whether the current score is null, indicating the
+    /// rematerialization is useless.
+    bool hasNullScore() const { return !MaxFreq && !RegionImpact; }
 
+    /// For each pair of candidates the most important scoring component with
+    /// non-equal values determine the result of the comparison (higher is
+    /// better).
     bool operator<(const ScoredRemat &O) const {
-      // Break ties using pointer to rematerializable register. Since
-      // rematerializations are collected in instruction order, registers
-      // appearing earlier have a "higher score" than those appearing later.
-      if (Score == O.Score)
-        return Remat > O.Remat;
-      return Score < O.Score;
+      if (hasNullScore())
+        return true;
+      if (O.hasNullScore())
+        return false;
+      if (MaxFreq != O.MaxFreq)
+        return MaxFreq < O.MaxFreq;
+      if (FreqDiff != O.FreqDiff)
+        return FreqDiff < O.FreqDiff;
+      if (RegionImpact != O.RegionImpact)
+        return RegionImpact < O.RegionImpact;
+      // Break ties using pointer to rematerializable register.
+      return Remat > O.Remat;
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    void print() const;
+    Printable print() const;
 #endif
 
   private:
-    /// Bitwidths for score components.
-    static constexpr unsigned MaxFreqWidth = 32, FreqDiffWidth = 16,
-                              RegionImpactWidth = 16;
-
     /// Number of 32-bit registers this rematerialization covers.
     const unsigned NumRegs;
-    /// Frequency difference between defining and using regions, normalized to
-    /// the maximum possible difference and rescaled to the representable range
-    /// in the score.
-    const uint64_t FreqDiff;
 
-    using ScoreTy = uint64_t;
-    /// Rematerialization score. Scoring components are mapped to bit ranges in
-    /// the score.
-    ///
-    /// [63:32] : maximum frequency in benefiting target region (spilling only)
-    /// [31:16] : frequency difference between defining and using region
-    /// [15: 0] : number of benefiting regions times register size
-    ScoreTy Score = 0;
+    // The three members below are the scoring components, top to bottom from
+    // most important to least important when comparing candidates.
 
-    void setNullScore() { Score = 0; }
-
-    void setMaxFreqScore(ScoreTy MaxFreq) {
-      MaxFreq = std::min(
-          static_cast<ScoreTy>(std::numeric_limits<uint32_t>::max()), MaxFreq);
-      MaxFreq <<= FreqDiffWidth + RegionImpactWidth;
-
-      ScoreTy Mask = ((ScoreTy)1 << (FreqDiffWidth + RegionImpactWidth)) - 1;
-      Score = MaxFreq | (Score & Mask);
-    }
-
-    void setFreqDiffScore(ScoreTy FreqDiff) {
-      FreqDiff = std::min(
-          static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()), FreqDiff);
-      FreqDiff <<= RegionImpactWidth;
-
-      ScoreTy Mask = ((ScoreTy)1 << (FreqDiffWidth)) - 1;
-      Mask <<= RegionImpactWidth;
-      Score = FreqDiff | (Score & ~Mask);
-    }
-
-    void setRegionImpactScore(ScoreTy RegionImpact) {
-      RegionImpact =
-          std::min(static_cast<ScoreTy>(std::numeric_limits<uint16_t>::max()),
-                   RegionImpact);
-
-      ScoreTy Mask = ((ScoreTy)1 << (RegionImpactWidth)) - 1;
-      Score = RegionImpact | (Score & ~Mask);
-    }
+    /// Frequency of impacted target region with highest known frequency. This
+    /// only matters when the stage is trying to reduce spilling, so it is
+    /// always 0 when it is not.
+    uint64_t MaxFreq;
+    /// Frequency difference between defining and using regions. Negative values
+    /// indicate we are rematerializing to higher frequency regions; positive
+    /// values indicate the contrary.
+    const int64_t FreqDiff;
+    /// Expected number of target regions impacted by the rematerialization,
+    /// scaled by the size of the register being rematerialized.
+    unsigned RegionImpact;
 
     unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;
 
-    uint64_t getFreqDiff(const FreqInfo &Freq) const;
+    int64_t getFreqDiff(const FreqInfo &Freq) const;
   };
 
   /// Holds enough information to rollback a rematerialization decision post
@@ -694,9 +661,6 @@ private:
   /// stage to their pre-stage values.
   void finalizeGCNSchedStage() override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void printTargetRegions(bool PrintAll = false) const;
-#endif
 public:
   bool initGCNSchedStage() override;
 
