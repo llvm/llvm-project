@@ -1504,8 +1504,8 @@ HexagonTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
 HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
                                              const HexagonSubtarget &ST)
-    : TargetLowering(TM), HTM(static_cast<const HexagonTargetMachine&>(TM)),
-      Subtarget(ST) {
+    : TargetLowering(TM, ST),
+      HTM(static_cast<const HexagonTargetMachine &>(TM)), Subtarget(ST) {
   auto &HRI = *Subtarget.getRegisterInfo();
 
   setPrefLoopAlignment(Align(16));

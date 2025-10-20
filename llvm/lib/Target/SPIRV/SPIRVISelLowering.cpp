@@ -24,6 +24,10 @@
 
 using namespace llvm;
 
+SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
+                                         const SPIRVSubtarget &ST)
+    : TargetLowering(TM, ST), STI(ST) {}
+
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
 static bool typesLogicallyMatch(const SPIRVType *Ty1, const SPIRVType *Ty2,

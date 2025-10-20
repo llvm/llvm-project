@@ -41,8 +41,9 @@ using namespace llvm;
 using namespace llvm::SDPatternMatch;
 
 /// NOTE: The TargetMachine owns TLOF.
-TargetLowering::TargetLowering(const TargetMachine &tm)
-    : TargetLoweringBase(tm) {}
+TargetLowering::TargetLowering(const TargetMachine &tm,
+                               const TargetSubtargetInfo &sti)
+    : TargetLoweringBase(tm, sti) {}
 
 // Define the virtual destructor out-of-line for build efficiency.
 TargetLowering::~TargetLowering() = default;
