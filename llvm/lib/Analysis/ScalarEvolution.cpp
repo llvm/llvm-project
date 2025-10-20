@@ -15528,7 +15528,8 @@ static bool collectDivisibilityInformation(
   const SCEV *Multiple =
       SE.getMulExpr(SE.getUDivExpr(URemLHS, URemRHS), URemRHS);
   DivInfo[URemLHS] = Multiple;
-  Multiples[URemLHS] = cast<SCEVConstant>(URemRHS)->getAPInt();
+  if (auto *C = dyn_cast<SCEVConstant>(URemRHS))
+    Multiples[URemLHS] = C->getAPInt();
   return true;
 }
 
@@ -15543,7 +15544,7 @@ static bool isDivisibilityGuard(const SCEV *LHS, const SCEV *RHS,
 // recursively. This is done by aligning up/down the constant value to the
 // Divisor.
 static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
-                                                 const SCEV *Divisor,
+                                                 APInt Divisor,
                                                  ScalarEvolution &SE) {
   // Return true if \p Expr is a MinMax SCEV expression with a non-negative
   // constant operand. If so, return in \p SCTy the SCEV type and in \p RHS
@@ -15574,10 +15575,8 @@ static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
   auto IsMin = isa<SCEVSMinExpr>(MinMaxExpr) || isa<SCEVUMinExpr>(MinMaxExpr);
   assert(SE.isKnownNonNegative(MinMaxLHS) && "Expected non-negative operand!");
   auto *DivisibleExpr =
-      IsMin ? getPreviousSCEVDivisibleByDivisor(
-                  MinMaxLHS, cast<SCEVConstant>(Divisor)->getAPInt(), SE)
-            : getNextSCEVDivisibleByDivisor(
-                  MinMaxLHS, cast<SCEVConstant>(Divisor)->getAPInt(), SE);
+      IsMin ? getPreviousSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE)
+            : getNextSCEVDivisibleByDivisor(MinMaxLHS, Divisor, SE);
   SmallVector<const SCEV *> Ops = {
       applyDivisibilityOnMinMaxExpr(MinMaxRHS, Divisor, SE), DivisibleExpr};
   return SE.getMinMaxExpr(SCTy, Ops);
@@ -15635,6 +15634,12 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     // Do not apply information for constants or if RHS contains an AddRec.
     if (isa<SCEVConstant>(LHS) || SE.containsAddRecurrence(RHS))
       return;
+
+    // If RHS is SCEVUnknown, make sure the information is applied to it.
+    if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
+      std::swap(LHS, RHS);
+      Predicate = CmpInst::getSwappedPredicate(Predicate);
+    }
 
     // Puts rewrite rule \p From -> \p To into the rewrite map. Also if \p From
     // and \p FromRewritten are the same (i.e. there has been no rewrite
@@ -15867,10 +15872,6 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
         if (isa<SCEVConstant>(LHS)) {
           std::swap(LHS, RHS);
           Predicate = CmpInst::getSwappedPredicate(Predicate);
-        } else if (!isa<SCEVUnknown>(LHS) && isa<SCEVUnknown>(RHS)) {
-          // If RHS is SCEVUnknown, make sure the information is applied to it.
-          std::swap(LHS, RHS);
-          Predicate = CmpInst::getSwappedPredicate(Predicate);
         }
         GuardsToProcess.emplace_back(Predicate, LHS, RHS);
         continue;
@@ -15900,11 +15901,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
 
   // Apply divisibility information last. This ensures it is applied to the
   // outermost expression after other rewrites for the given value.
-  for (const auto &[K, V] : Multiples) {
-    const SCEV *DivisorSCEV = SE.getConstant(V);
+  for (const auto &[K, Divisor] : Multiples) {
+    const SCEV *DivisorSCEV = SE.getConstant(Divisor);
     Guards.RewriteMap[K] =
         SE.getMulExpr(SE.getUDivExpr(applyDivisibilityOnMinMaxExpr(
-                                         Guards.rewrite(K), DivisorSCEV, SE),
+                                         Guards.rewrite(K), Divisor, SE),
                                      DivisorSCEV),
                       DivisorSCEV);
     ExprsToRewrite.push_back(K);
