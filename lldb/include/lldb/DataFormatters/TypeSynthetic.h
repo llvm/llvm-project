@@ -29,8 +29,7 @@ protected:
   ValueObject &m_backend;
 
 public:
-  SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend) {}
+  SyntheticChildrenFrontEnd(ValueObject &backend) : m_backend(backend) {}
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
