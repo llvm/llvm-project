@@ -191,8 +191,10 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
   // - From: is the source address of the sampled branch operation.
   // - To: is the target address of the sampled branch operation.
   // - TraceTo could be either
-  //    - A 'Type = Trace::BR_ONLY', which means the trace only contains branch data.
-  //    - Or an address, when the trace contains information about the previous branch.
+  //    - A 'Type = Trace::BR_ONLY', which means the trace only contains branch
+  //    data.
+  //    - Or an address, when the trace contains information about the previous
+  //    branch.
   //
   // When FEAT_SPE_PBT is present, Arm SPE emits two records per sample:
   // - the current branch (Spe.From/Spe.To), and
@@ -207,26 +209,29 @@ TEST_F(PerfSpeEventsTestHelper, SpeBranchesWithBrstackAndPbt) {
   // the current branch (Spe.From), but there cannot be between current
   // branch's (Spe.From/Spe.To).
   //
-  // PBT records only the target address (PBT.To), meaning we have no information as the
-  // branch source (PBT.From=0x0), branch type, and the prediction bit.
+  // PBT records only the target address (PBT.To), meaning we have no
+  // information as the branch source (PBT.From=0x0), branch type, and the
+  // prediction bit.
   //
   // Consider the trace pair:
-  // {{Spe.From, Spe.To, Type}, {TK, MP}}, {{PBT.From, PBT.To, TraceTo}, {TK, MP}}
+  // {{Spe.From, Spe.To, Type}, {TK, MP}},
+  //   {{PBT.From, PBT.To, TraceTo}, {TK, MP}}
   // {{0xd456, 0xd789, Trace::BR_ONLY}, {2, 2}}, {{0x0, 0xd123, 0xd456}, {2, 0}}
   //
-  // The first entry is the Spe record, which represents a trace from 0xd456 (Spe.From) to
-  // 0xd789 (Spe.To). Type = Trace::BR_ONLY, as Bolt processes the current branch event first.
-  // At this point we have no information about the previous trace (PBT).
-  // This entry has a TakenCount = 2, as we have two samples for (0xd456, 0xd789)
-  // in our input. It also has MispredsCount = 2, as 'M' misprediction flag appears
-  // in both cases.
+  // The first entry is the Spe record, which represents a trace from 0xd456
+  // (Spe.From) to 0xd789 (Spe.To). Type = Trace::BR_ONLY, as Bolt processes the
+  // current branch event first. At this point we have no information about the
+  // previous trace (PBT). This entry has a TakenCount = 2, as we have two
+  // samples for (0xd456, 0xd789) in our input. It also has MispredsCount = 2,
+  // as 'M' misprediction flag appears in both cases.
   //
   // The second entry is the PBT record. TakenCount = 2 because the
   // (PBT.From = 0x0, PBT.To = 0xd123) branch target appears twice in the input,
   // and MispredsCount = 0 because prediction data is absent. There is no branch
   // source information, so the PBT.From field is zero (0x0). TraceTo = 0xd456
-  // connect the flow to the previous taken branch at 0xd123 (PBT.To) to the current
-  // source branch at 0xd456 (Spe.From), which then continues to 0xd789 (Spe.To).
+  // connect the flow from the previous taken branch at 0xd123 (PBT.To) to the
+  // current source branch at 0xd456 (Spe.From), which then continues to 0xd789
+  // (Spe.To).
   std::vector<std::pair<Trace, TakenBranchInfo>> ExpectedSamples = {
       {{0xa002, 0xa003, Trace::BR_ONLY}, {1, 0}},
       {{0x0, 0xa001, 0xa002}, {1, 0}},
