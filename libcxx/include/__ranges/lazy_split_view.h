@@ -76,6 +76,7 @@ class lazy_split_view : public view_interface<lazy_split_view<_View, _Pattern>> 
       _If<!forward_range<_View>, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
 
+private:
   template <bool>
   struct __outer_iterator;
   template <bool>
