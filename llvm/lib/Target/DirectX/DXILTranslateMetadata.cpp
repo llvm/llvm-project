@@ -36,26 +36,6 @@ using namespace llvm;
 using namespace llvm::dxil;
 
 namespace {
-/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
-/// for TranslateMetadata pass
-class DiagnosticInfoTranslateMD : public DiagnosticInfo {
-private:
-  const Twine &Msg;
-  const Module &Mod;
-
-public:
-  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
-  /// the message to show. Note that this class does not copy this message, so
-  /// this reference must be valid for the whole life time of the diagnostic.
-  DiagnosticInfoTranslateMD(const Module &M,
-                            const Twine &Msg LLVM_LIFETIME_BOUND,
-                            DiagnosticSeverity Severity = DS_Error)
-      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
-
-  void print(DiagnosticPrinter &DP) const override {
-    DP << Mod.getName() << ": " << Msg << '\n';
-  }
-};
 
 enum class EntryPropsTag {
   ShaderFlags = 0,
@@ -389,9 +369,6 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
     uint64_t CombinedMask = ShaderFlags.getCombinedFlags();
     EntryFnMDNodes.emplace_back(
         emitTopLevelLibraryNode(M, ResourceMD, CombinedMask));
-  } else if (MMDI.EntryPropertyVec.size() > 1) {
-    M.getContext().diagnose(DiagnosticInfoTranslateMD(
-        M, "Non-library shader: One and only one entry expected"));
   }
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
@@ -400,20 +377,9 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
 
     // If ShaderProfile is Library, mask is already consolidated in the
     // top-level library node. Hence it is not emitted.
-    uint64_t EntryShaderFlags = 0;
-    if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
-      EntryShaderFlags = EntrySFMask;
-      if (EntryProp.ShaderStage != MMDI.ShaderProfile) {
-        M.getContext().diagnose(DiagnosticInfoTranslateMD(
-            M,
-            "Shader stage '" +
-                Twine(getShortShaderStage(EntryProp.ShaderStage) +
-                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
-                      "' different from specified target profile '" +
-                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
-                            "'"))));
-      }
-    }
+    uint64_t EntryShaderFlags =
+        MMDI.ShaderProfile == Triple::EnvironmentType::Library ? 0
+                                                               : EntrySFMask;
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
                                             EntryShaderFlags,
                                             MMDI.ShaderProfile));
