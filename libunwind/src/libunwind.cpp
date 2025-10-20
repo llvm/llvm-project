@@ -129,22 +129,24 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
 
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
       {
-        // It is only valid to set the IP within the current function.
-        // This is important for ptrauth, otherwise the IP cannot be correctly
-        // signed.
-        // We re-sign to a more usable form and then use it directly.
-        union {
-          unw_word_t opaque_value;
-          unw_word_t
+        // It is only valid to set the IP within the current function. This is
+        // important for ptrauth, otherwise the IP cannot be correctly signed.
+        // The current signature of `value` is via the schema:
+        //   __ptrauth(ptrauth_key_return_address, <<sp>>, 0)
+        // For this to be generally usable we manually re-sign it to the
+        // directly supported schema:
+        //   __ptrauth(ptrauth_key_return_address, 1, 0)
+        unw_word_t
               __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1,
                                                  0) authenticated_value;
-        } u;
-        u.opaque_value = (uint64_t)ptrauth_auth_and_resign(
+        unw_word_t opaque_value = (uint64_t)ptrauth_auth_and_resign(
             (void *)value, ptrauth_key_return_address, sp,
-            ptrauth_key_return_address, &u.opaque_value);
-
-        if (u.authenticated_value < info.start_ip ||
-            u.authenticated_value > info.end_ip)
+            ptrauth_key_return_address, &authenticated_value);
+        memmove(reinterpret_cast<void *>(&authenticated_value),
+                reinterpret_cast<void *>(&opaque_value),
+                sizeof(authenticated_value));
+        if (authenticated_value < info.start_ip ||
+            authenticated_value > info.end_ip)
           _LIBUNWIND_ABORT("PC vs frame info mismatch");
 
         // PC should have been signed with the sp, so we verify that
