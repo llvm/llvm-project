@@ -808,12 +808,6 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
             results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
         results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
                                   initialState);
-        // When calculating the value of the PC, it is assumed that the CFI
-        // instruction is placed before the signing instruction, however it is
-        // placed after. Because of this, we need to take into account the CFI
-        // instruction is one instruction call later than expected, and reduce
-        // the PC value by 4 bytes to compensate.
-        results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset - 0x4;
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_negate_ra_state_with_pc(pc=0x%" PRIx64 ")\n",
             static_cast<uint64_t>(results->ptrAuthDiversifier));
