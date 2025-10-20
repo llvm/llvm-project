@@ -22,16 +22,17 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
-static cl::opt<bolt::PLTCall::OptType>
-    PLT("plt", cl::desc("optimize PLT calls (requires linking with -znow)"),
-        cl::init(bolt::PLTCall::OT_NONE),
-        cl::values(clEnumValN(bolt::PLTCall::OT_NONE, "none",
-                              "do not optimize PLT calls"),
-                   clEnumValN(bolt::PLTCall::OT_HOT, "hot",
-                              "optimize executed (hot) PLT calls"),
-                   clEnumValN(bolt::PLTCall::OT_ALL, "all",
-                              "optimize all PLT calls")),
-        cl::ZeroOrMore, cl::cat(BoltOptCategory));
+static cl::opt<bolt::PLTCall::OptType> PLT(
+    "plt",
+    cl::desc(
+        "optimize PLT calls (sets DF_BIND_NOW/DF_1_NOW in the output binary)"),
+    cl::init(bolt::PLTCall::OT_NONE),
+    cl::values(
+        clEnumValN(bolt::PLTCall::OT_NONE, "none", "do not optimize PLT calls"),
+        clEnumValN(bolt::PLTCall::OT_HOT, "hot",
+                   "optimize executed (hot) PLT calls"),
+        clEnumValN(bolt::PLTCall::OT_ALL, "all", "optimize all PLT calls")),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
