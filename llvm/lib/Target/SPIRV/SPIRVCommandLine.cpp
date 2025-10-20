@@ -149,7 +149,6 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_tensor_float32_conversion",
          SPIRV::Extension::Extension::SPV_INTEL_tensor_float32_conversion},
         {"SPV_KHR_bfloat16", SPIRV::Extension::Extension::SPV_KHR_bfloat16},
-        {"SPV_EXT_float8", SPIRV::Extension::Extension::SPV_EXT_float8},
         {"SPV_EXT_relaxed_printf_string_address_space",
          SPIRV::Extension::Extension::
              SPV_EXT_relaxed_printf_string_address_space},

@@ -18,21 +18,13 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
 
 using namespace llvm;
-
-namespace llvm {
-void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
-                       SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
-                       MachineRegisterInfo &MRI);
-}
 
 namespace {
 class SPIRVPreLegalizer : public MachineFunctionPass {
@@ -357,89 +349,6 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         MachineInstr *Def = Op.isReg() ? MRI.getVRegDef(Op.getReg()) : nullptr;
         if (Def)
           SpvType = propagateSPIRVType(Def, GR, MRI, MIB);
-        break;
-      }
-      case TargetOpcode::G_INTRINSIC: {
-        auto *GI = dyn_cast<GIntrinsic>(MI);
-        if (!GI)
-          break;
-        if (GI->getIntrinsicID() != Intrinsic::arbitrary_fp_convert)
-          break;
-
-        unsigned IntrinsicIdx = MI->getNumExplicitDefs();
-        if (IntrinsicIdx >= MI->getNumOperands())
-          break;
-        unsigned ValueIdx = IntrinsicIdx + 1;
-        if (ValueIdx + 3 >= MI->getNumOperands())
-          break;
-
-        auto GetStringFromMD = [&](unsigned OperandIdx)
-            -> std::optional<StringRef> {
-          const MachineOperand &OpMO = MI->getOperand(OperandIdx);
-          if (!OpMO.isMetadata())
-            return std::nullopt;
-          const MDNode *MD = OpMO.getMetadata();
-          if (!MD || MD->getNumOperands() != 1)
-            return std::nullopt;
-          if (auto *Str = dyn_cast<MDString>(MD->getOperand(0)))
-            return Str->getString();
-          return std::nullopt;
-        };
-
-        std::optional<StringRef> ResultInterp = GetStringFromMD(ValueIdx + 1);
-        if (!ResultInterp)
-          break;
-
-        LLT ResLLT = MRI.getType(Reg);
-        if (!ResLLT.isValid())
-          break;
-
-        unsigned NumElements = ResLLT.isVector() ? ResLLT.getNumElements() : 1;
-        unsigned Width = ResLLT.getScalarSizeInBits();
-        LLVMContext &Ctx = MIB.getMF().getFunction().getContext();
-
-        Type *ScalarTy = nullptr;
-        if (*ResultInterp == "none") {
-          switch (Width) {
-          case 16:
-            ScalarTy = Type::getHalfTy(Ctx);
-            break;
-          case 32:
-            ScalarTy = Type::getFloatTy(Ctx);
-            break;
-          case 64:
-            ScalarTy = Type::getDoubleTy(Ctx);
-            break;
-          default:
-            ScalarTy = Type::getIntNTy(Ctx, Width);
-            break;
-          }
-        } else if (*ResultInterp == "signed" || *ResultInterp == "unsigned") {
-          ScalarTy = Type::getIntNTy(Ctx, Width);
-        } else {
-          // For target-specific interpretations (e.g., "spv.E4M3EXT"), use the
-          // width from the result LLT to determine the appropriate LLVM type.
-          // FP8 types (width 8) are represented as i8 in LLVM.
-          if (Width == 8)
-            ScalarTy = Type::getInt8Ty(Ctx);
-          else
-            ScalarTy = Type::getIntNTy(Ctx, Width);
-        }
-
-        if (!ScalarTy)
-          break;
-
-        Type *ResTy = ScalarTy;
-        if (NumElements > 1)
-          ResTy = FixedVectorType::get(ScalarTy, NumElements);
-
-        SPIRVType *AssignedType = GR->getOrCreateSPIRVType(
-            ResTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
-        GR->assignSPIRVTypeToVReg(AssignedType, Reg, MIB.getMF());
-        if (!MRI.getType(Reg).isValid())
-          MRI.setType(Reg, ResLLT);
-        MRI.setRegClass(Reg, &SPIRV::iIDRegClass);
-        SpvType = AssignedType;
         break;
       }
       default:

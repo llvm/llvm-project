@@ -387,7 +387,6 @@ defm SPV_INTEL_tensor_float32_conversion : ExtensionOperand<125, [EnvOpenCL]>;
 defm SPV_KHR_bfloat16 : ExtensionOperand<126, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_predicated_io : ExtensionOperand<127, [EnvOpenCL]>;
 defm SPV_KHR_maximal_reconvergence : ExtensionOperand<128, [EnvVulkan]>;
-defm SPV_EXT_float8 : ExtensionOperand<127, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -604,9 +603,6 @@ defm TensorFloat32RoundingINTEL : CapabilityOperand<6425, 0, 0, [SPV_INTEL_tenso
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR]>;
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
-defm Float8EXT : CapabilityOperand<4212, 0, 0, [SPV_EXT_float8], []>;
-defm Float8CooperativeMatrixEXT : CapabilityOperand<4213, 0, 0, [SPV_EXT_float8],
-                                             [Float8EXT, CooperativeMatrixKHR]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1356,8 +1352,6 @@ defm AlignmentId : DecorationOperand<46, 0, 0, [], [Kernel]>;
 defm MaxByteOffsetId : DecorationOperand<47, 0, 0, [], [Addresses]>;
 defm NoSignedWrap : DecorationOperand<4469, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
 defm NoUnsignedWrap : DecorationOperand<4470, 0x10400, 0, [SPV_KHR_no_integer_wrap_decoration], []>;
-defm SaturatedToLargestFloat8NormalConversionEXT
-    : DecorationOperand<4216, 0, 0, [SPV_EXT_float8], [Float8EXT]>;
 defm ExplicitInterpAMD : DecorationOperand<4999, 0, 0, [], []>;
 defm OverrideCoverageNV : DecorationOperand<5248, 0, 0, [], [SampleMaskOverrideCoverageNV]>;
 defm PassthroughNV : DecorationOperand<5250, 0, 0, [], [GeometryShaderPassthroughNV]>;
@@ -2041,8 +2035,6 @@ multiclass FPEncodingOperand<bits<32> value, list<Extension> reqExtensions>{
 }
 
 defm BFloat16KHR : FPEncodingOperand<0, [SPV_KHR_bfloat16]>;
-defm Float8E4M3EXT : FPEncodingOperand<4214, [SPV_EXT_float8]>;
-defm Float8E5M2EXT : FPEncodingOperand<4215, [SPV_EXT_float8]>;
 
 def PackedVectorFormats : GenericEnum, Operand<i32> {
   let FilterClass = "PackedVectorFormats";

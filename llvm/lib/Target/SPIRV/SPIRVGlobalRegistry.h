@@ -40,9 +40,6 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
-  DenseMap<std::pair<unsigned, unsigned>, SPIRVType *>
-      FloatTypesWithEncoding;
-
   // map a Function to its definition (as a machine instruction operand)
   DenseMap<const Function *, const MachineOperand *> FunctionToInstr;
   DenseMap<const MachineInstr *, const Function *> FunctionToInstrRev;
@@ -415,10 +412,6 @@ public:
 
   // Return the number of bits SPIR-V pointers and size_t variables require.
   unsigned getPointerSize() const { return PointerSize; }
-
-  SPIRVType *getOrCreateOpTypeFloatWithEncoding(
-      uint32_t Width, MachineIRBuilder &MIRBuilder,
-      SPIRV::FPEncoding::FPEncoding FPEncode);
 
   // Returns true if two types are defined and are compatible in a sense of
   // OpBitcast instruction
