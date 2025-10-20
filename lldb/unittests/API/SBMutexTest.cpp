@@ -45,6 +45,7 @@ TEST_F(SBMutexTest, LockTest) {
 
     f = std::async(std::launch::async, [&]() {
       ASSERT_TRUE(locked);
+      EXPECT_FALSE(lock.try_lock());
       target.BreakpointCreateByName("foo", "bar");
       ASSERT_FALSE(locked);
     });
