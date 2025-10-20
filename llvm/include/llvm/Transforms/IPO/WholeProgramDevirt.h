@@ -226,10 +226,6 @@ struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
   bool UseCommandLine = false;
-  // True if ExportSummary was built locally from the module rather than
-  // provided externally to the pass (e.g., during LTO). Default value is false
-  // unless explicitly set when the Summary is explicitly built.
-  bool HasLocalSummary = false;
   WholeProgramDevirtPass()
       : ExportSummary(nullptr), ImportSummary(nullptr), UseCommandLine(true) {}
   WholeProgramDevirtPass(ModuleSummaryIndex *ExportSummary,
