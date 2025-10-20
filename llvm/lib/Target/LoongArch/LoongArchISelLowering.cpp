@@ -2103,6 +2103,12 @@ static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                             SDValue V1, SelectionDAG &DAG,
                             const LoongArchSubtarget &Subtarget) {
+  // Before selecting XVPERMI_D, always try to widen vectors to gain more
+  // optimization opportunities.
+  if (SDValue NewShuffle = widenShuffleMask(
+          DL, Mask, VT, V1, DAG.getUNDEF(V1.getValueType()), DAG))
+    return NewShuffle;
+
   // Only consider XVPERMI_D.
   if (Mask.size() != 4 || (VT != MVT::v4i64 && VT != MVT::v4f64))
     return SDValue();
