@@ -2717,12 +2717,19 @@ genACC(Fortran::lower::AbstractConverter &converter,
   const auto &loopDirective =
       std::get<Fortran::parser::AccLoopDirective>(beginLoopDirective.t);
 
-  bool needEarlyExitHandling = false;
-  if (eval.lowerAsUnstructured())
-    needEarlyExitHandling = hasEarlyReturn(eval);
-
   mlir::Location currentLocation =
       converter.genLocation(beginLoopDirective.source);
+  bool needEarlyExitHandling = false;
+  if (eval.lowerAsUnstructured()) {
+    needEarlyExitHandling = hasEarlyReturn(eval);
+    // If the loop is lowered in an unstructured fashion, lowering generates
+    // explicit control flow that duplicates the looping semantics of the
+    // loops.
+    if (!needEarlyExitHandling)
+      TODO(currentLocation,
+           "loop with early exit inside OpenACC loop construct");
+  }
+
   Fortran::lower::StatementContext stmtCtx;
 
   assert(loopDirective.v == llvm::acc::ACCD_loop &&
@@ -3520,6 +3527,10 @@ genACC(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation =
       converter.genLocation(beginCombinedDirective.source);
   Fortran::lower::StatementContext stmtCtx;
+
+  if (eval.lowerAsUnstructured())
+    TODO(currentLocation,
+         "loop with early exit inside OpenACC combined construct");
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     createComputeOp<mlir::acc::KernelsOp>(
