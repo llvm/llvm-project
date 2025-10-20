@@ -24,7 +24,7 @@ elif platform.system() == "Windows" or sys.platform == "cygwin":
 else:
     shlibpath_var = "LD_LIBRARY_PATH"
 config.environment[shlibpath_var] = os.path.pathsep.join(
-    ("@SHLIBDIR@", "@LLVM_LIBS_DIR@", config.environment.get(shlibpath_var, ""))
+    (config.shlibdir, config.llvm_libs_dir, config.environment.get(shlibpath_var, ""))
 )
 
 # It is not realistically possible to account for all options that could
