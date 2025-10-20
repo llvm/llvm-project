@@ -75,6 +75,9 @@ public:
                    CanBeDistributed);
   }
 
+  /// Validate the ActionCache contents.
+  virtual Error validate() const = 0;
+
   virtual ~ActionCache() = default;
 
 protected:
@@ -96,6 +99,13 @@ private:
 
 /// Create an action cache in memory.
 std::unique_ptr<ActionCache> createInMemoryActionCache();
+
+/// Get a reasonable default on-disk path for a persistent ActionCache for the
+/// current user.
+std::string getDefaultOnDiskActionCachePath();
+
+/// Create an action cache on disk.
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path);
 
 } // end namespace llvm::cas
 

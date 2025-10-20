@@ -8,13 +8,20 @@
 
 #include "CASTestConfig.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace llvm::cas;
 
+namespace llvm::unittest::cas {
+void MockEnv::anchor() {}
+MockEnv::~MockEnv() {}
+} // namespace llvm::unittest::cas
+
 static CASTestingEnv createInMemory(int I) {
-  return CASTestingEnv{createInMemoryCAS(), createInMemoryActionCache()};
+  return CASTestingEnv{createInMemoryCAS(), createInMemoryActionCache(),
+                       nullptr, std::nullopt};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
@@ -22,7 +29,7 @@ INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
 
 #if LLVM_ENABLE_ONDISK_CAS
 namespace llvm::cas::ondisk {
-extern void setMaxMappingSize(uint64_t Size);
+void setMaxMappingSize(uint64_t Size);
 } // namespace llvm::cas::ondisk
 
 void setMaxOnDiskCASMappingSize() {
@@ -30,6 +37,18 @@ void setMaxOnDiskCASMappingSize() {
   std::call_once(
       Flag, [] { llvm::cas::ondisk::setMaxMappingSize(100 * 1024 * 1024); });
 }
+
+CASTestingEnv createOnDisk(int I) {
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+  std::unique_ptr<ObjectStore> CAS;
+  EXPECT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
+  std::unique_ptr<ActionCache> Cache;
+  EXPECT_THAT_ERROR(createOnDiskActionCache(Temp.path()).moveInto(Cache),
+                    Succeeded());
+  return CASTestingEnv{std::move(CAS), std::move(Cache), nullptr,
+                       std::move(Temp)};
+}
+INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
 #else
 void setMaxOnDiskCASMappingSize() {}
 #endif /* LLVM_ENABLE_ONDISK_CAS */
