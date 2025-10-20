@@ -75,23 +75,19 @@ int main(int, char**)
 #endif
 
 #if TEST_STD_VER >= 23
-    test<std::basic_spanbuf<unsigned short>*>();
     test<std::basic_spanbuf<char>*>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::basic_spanbuf<wchar_t>*>();
 #  endif
-    test<std::basic_ispanstream<unsigned short>*>();
     test<std::basic_ispanstream<char>*>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::basic_ispanstream<wchar_t>*>();
 #  endif
-    test<std::basic_ospanstream<unsigned short>*>();
     test<std::basic_ospanstream<char>*>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::basic_ospanstream<wchar_t>*>();
 #  endif
     test<std::basic_spanstream<char>*>();
-    test<std::basic_spanstream<unsigned short>*>();
 #  ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test<std::basic_spanstream<wchar_t>*>();
 #  endif

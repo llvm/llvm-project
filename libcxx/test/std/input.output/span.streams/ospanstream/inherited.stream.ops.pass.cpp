@@ -16,6 +16,7 @@
 
 //   Test stream operations inherited from `basic_ostream`
 
+#include <algorithm>
 #include <cassert>
 #include <span>
 #include <spanstream>
@@ -25,7 +26,6 @@
 #include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-#include "../helper_functions.h"
 #include "../helper_macros.h"
 #include "../helper_types.h"
 
@@ -45,7 +45,7 @@ void test() {
 
   // Create a std::span test value
   CharT arr[arrSize]{};
-  initialize_array_from_string_view(arr, sv);
+  std::ranges::copy(sv, arr);
   std::span<CharT> sp{arr};
 
   // `std::span` + Mode: default (`out`)

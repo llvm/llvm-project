@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _Traits = char_traits<_CharT>>
 class basic_spanbuf;
@@ -41,8 +41,20 @@ using wospanstream = basic_ospanstream<wchar_t>;
 using wspanstream  = basic_spanstream<wchar_t>;
 #  endif
 
-#endif // _LIBCPP_STD_VER >= 23
+template <class _CharT, class _Traits>
+class _LIBCPP_PREFERRED_NAME(spanbuf) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wspanbuf)) basic_spanbuf;
+template <class _CharT, class _Traits>
+class _LIBCPP_PREFERRED_NAME(ispanstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wispanstream)) basic_ispanstream;
+template <class _CharT, class _Traits>
+class _LIBCPP_PREFERRED_NAME(ospanstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wospanstream)) basic_ospanstream;
+template <class _CharT, class _Traits>
+class _LIBCPP_PREFERRED_NAME(spanstream)
+    _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wspanstream)) basic_spanstream;
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FWD_SPANSTREAM_H

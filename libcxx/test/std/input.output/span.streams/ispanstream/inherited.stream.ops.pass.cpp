@@ -16,6 +16,7 @@
 
 //   Test stream operations inherited from `basic_istream`
 
+#include <algorithm>
 #include <cassert>
 #include <span>
 #include <spanstream>
@@ -24,7 +25,6 @@
 #include "constexpr_char_traits.h"
 #include "test_macros.h"
 
-#include "../helper_functions.h"
 #include "../helper_macros.h"
 #include "../helper_types.h"
 
@@ -80,7 +80,7 @@ void test() {
   {
     // Create a std::span test value
     CharT arr[30UZ]{};
-    initialize_array_from_string_view(arr, sv);
+    std::ranges::copy(sv, arr);
 
     std::span<CharT> sp{arr};
 
@@ -99,7 +99,7 @@ void test() {
   {
     // Create a "Read Only Sequence" test value
     CharT arr[30UZ]{};
-    initialize_array_from_string_view(arr, sv);
+    std::ranges::copy(sv, arr);
 
     ReadOnlySpan<CharT, 30UZ> ros{arr};
     assert(ros.size() == 30UZ);
