@@ -13,79 +13,41 @@
 @h = global %struct.a zeroinitializer, align 1
 
 define void @withdbg() {
-; MDEP-LABEL: define void @withdbg() {
-; MDEP-NEXT:  [[ENTRY:.*:]]
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
-; MDEP-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
-; MDEP-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
-; MDEP-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
-; MDEP:       [[LOR_RHS]]:
-; MDEP-NEXT:      #dbg_declare(ptr undef, [[META4:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
-; MDEP-NEXT:      #dbg_declare(ptr undef, [[META10:![0-9]+]], !DIExpression(), [[META14]])
-; MDEP-NEXT:      #dbg_declare(ptr undef, [[META11:![0-9]+]], !DIExpression(), [[META14]])
-; MDEP-NEXT:      #dbg_declare(ptr undef, [[META12:![0-9]+]], !DIExpression(), [[META14]])
-; MDEP-NEXT:      #dbg_declare(ptr undef, [[META13:![0-9]+]], !DIExpression(), [[META14]])
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    br label %[[LOR_END]]
-; MDEP:       [[LOR_END]]:
-; MDEP-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
-; MDEP-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
-; MDEP-NEXT:    ret void
-;
-; MSSA-LABEL: define void @withdbg() {
-; MSSA-NEXT:  [[ENTRY:.*:]]
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
-; MSSA-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
-; MSSA:       [[LOR_RHS]]:
-; MSSA-NEXT:      #dbg_declare(ptr undef, [[META4:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
-; MSSA-NEXT:      #dbg_declare(ptr undef, [[META10:![0-9]+]], !DIExpression(), [[META14]])
-; MSSA-NEXT:      #dbg_declare(ptr undef, [[META11:![0-9]+]], !DIExpression(), [[META14]])
-; MSSA-NEXT:      #dbg_declare(ptr undef, [[META12:![0-9]+]], !DIExpression(), [[META14]])
-; MSSA-NEXT:      #dbg_declare(ptr undef, [[META13:![0-9]+]], !DIExpression(), [[META14]])
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[FVALUE:%.*]] = load i16, ptr @f, align 1
-; MSSA-NEXT:    [[MVALUE:%.*]] = load ptr, ptr @m, align 1
-; MSSA-NEXT:    br label %[[LOR_END]]
-; MSSA:       [[LOR_END]]:
-; MSSA-NEXT:    [[TMP11:%.*]] = load i16, ptr @f, align 1
-; MSSA-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11]] to i32
-; MSSA-NEXT:    [[TMP12:%.*]] = load ptr, ptr @m, align 1
-; MSSA-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12]], align 1
-; MSSA-NEXT:    ret void
+; CHECK-LABEL: define void @withdbg() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
+; CHECK-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
+; CHECK-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+; CHECK:       [[LOR_RHS]]:
+; CHECK-NEXT:      #dbg_declare(ptr undef, [[META4:![0-9]+]], !DIExpression(), [[META14:![0-9]+]])
+; CHECK-NEXT:      #dbg_declare(ptr undef, [[META10:![0-9]+]], !DIExpression(), [[META14]])
+; CHECK-NEXT:      #dbg_declare(ptr undef, [[META11:![0-9]+]], !DIExpression(), [[META14]])
+; CHECK-NEXT:      #dbg_declare(ptr undef, [[META12:![0-9]+]], !DIExpression(), [[META14]])
+; CHECK-NEXT:      #dbg_declare(ptr undef, [[META13:![0-9]+]], !DIExpression(), [[META14]])
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    br label %[[LOR_END]]
+; CHECK:       [[LOR_END]]:
+; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
+; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -130,69 +92,36 @@ lor.end:                                          ; preds = %lor.rhs, %entry
 }
 
 define void @lessdbg() {
-; MDEP-LABEL: define void @lessdbg() {
-; MDEP-NEXT:  [[ENTRY:.*:]]
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
-; MDEP-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
-; MDEP-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
-; MDEP-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
-; MDEP:       [[LOR_RHS]]:
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
-; MDEP-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MDEP-NEXT:    br label %[[LOR_END]]
-; MDEP:       [[LOR_END]]:
-; MDEP-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
-; MDEP-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
-; MDEP-NEXT:    ret void
-;
-; MSSA-LABEL: define void @lessdbg() {
-; MSSA-NEXT:  [[ENTRY:.*:]]
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
-; MSSA-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
-; MSSA:       [[LOR_RHS]]:
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
-; MSSA-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
-; MSSA-NEXT:    [[FVALUE:%.*]] = load i16, ptr @f, align 1
-; MSSA-NEXT:    [[MVALUE:%.*]] = load ptr, ptr @m, align 1
-; MSSA-NEXT:    br label %[[LOR_END]]
-; MSSA:       [[LOR_END]]:
-; MSSA-NEXT:    [[TMP11:%.*]] = load i16, ptr @f, align 1
-; MSSA-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11]] to i32
-; MSSA-NEXT:    [[TMP12:%.*]] = load ptr, ptr @m, align 1
-; MSSA-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12]], align 1
-; MSSA-NEXT:    ret void
+; CHECK-LABEL: define void @lessdbg() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_I:%.*]] = alloca i16, align 1
+; CHECK-NEXT:    [[TMP11_PRE:%.*]] = load i16, ptr @f, align 1
+; CHECK-NEXT:    [[TMP12_PRE:%.*]] = load ptr, ptr @m, align 1
+; CHECK-NEXT:    br i1 true, label %[[LOR_END:.*]], label %[[LOR_RHS:.*]]
+; CHECK:       [[LOR_RHS]]:
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_1_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_2_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_3_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_4_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_5_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_6_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_7_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I:%.*]] = load volatile i16, ptr @h, align 1
+; CHECK-NEXT:    store i16 [[AGG_TMP_ENSURED_SROA_0_0_COPYLOAD_8_I]], ptr [[AGG_TMP_ENSURED_SROA_0_I]], align 1
+; CHECK-NEXT:    br label %[[LOR_END]]
+; CHECK:       [[LOR_END]]:
+; CHECK-NEXT:    [[CONV_I_I6:%.*]] = sext i16 [[TMP11_PRE]] to i32
+; CHECK-NEXT:    store i32 [[CONV_I_I6]], ptr [[TMP12_PRE]], align 1
+; CHECK-NEXT:    ret void
 ;
 
 entry:
@@ -253,33 +182,20 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !49 = !DILocalVariable(name: "d", scope: !41, file: !1, line: 15, type: !5)
 !50 = !DILocalVariable(name: "u", scope: !41, file: !1, line: 16, type: !5)
 ;.
-; MDEP: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-; MDEP: [[META1]] = !DIFile(filename: "{{.*}}bbi-78272.c", directory: {{.*}})
-; MDEP: [[META4]] = !DILocalVariable(name: "t", scope: [[META5:![0-9]+]], file: [[META1]], line: 15, type: [[META8:![0-9]+]])
-; MDEP: [[META5]] = distinct !DISubprogram(name: "x", scope: [[META1]], file: [[META1]], line: 14, type: [[META6:![0-9]+]], scopeLine: 14, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
-; MDEP: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
-; MDEP: [[META7]] = !{[[META8]]}
-; MDEP: [[META8]] = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
-; MDEP: [[META9]] = !{[[META4]], [[META10]], [[META11]], [[META12]], [[META13]]}
-; MDEP: [[META10]] = !DILocalVariable(name: "c", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MDEP: [[META11]] = !DILocalVariable(name: "v", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MDEP: [[META12]] = !DILocalVariable(name: "d", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MDEP: [[META13]] = !DILocalVariable(name: "u", scope: [[META5]], file: [[META1]], line: 16, type: [[META8]])
-; MDEP: [[META14]] = !DILocation(line: 15, column: 7, scope: [[META5]])
-;.
-; MSSA: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-; MSSA: [[META1]] = !DIFile(filename: "{{.*}}bbi-78272.c", directory: {{.*}})
-; MSSA: [[META4]] = !DILocalVariable(name: "t", scope: [[META5:![0-9]+]], file: [[META1]], line: 15, type: [[META8:![0-9]+]])
-; MSSA: [[META5]] = distinct !DISubprogram(name: "x", scope: [[META1]], file: [[META1]], line: 14, type: [[META6:![0-9]+]], scopeLine: 14, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
-; MSSA: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
-; MSSA: [[META7]] = !{[[META8]]}
-; MSSA: [[META8]] = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
-; MSSA: [[META9]] = !{[[META4]], [[META10]], [[META11]], [[META12]], [[META13]]}
-; MSSA: [[META10]] = !DILocalVariable(name: "c", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MSSA: [[META11]] = !DILocalVariable(name: "v", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MSSA: [[META12]] = !DILocalVariable(name: "d", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
-; MSSA: [[META13]] = !DILocalVariable(name: "u", scope: [[META5]], file: [[META1]], line: 16, type: [[META8]])
-; MSSA: [[META14]] = !DILocation(line: 15, column: 7, scope: [[META5]])
+; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}bbi-78272.c", directory: {{.*}})
+; CHECK: [[META4]] = !DILocalVariable(name: "t", scope: [[META5:![0-9]+]], file: [[META1]], line: 15, type: [[META8:![0-9]+]])
+; CHECK: [[META5]] = distinct !DISubprogram(name: "x", scope: [[META1]], file: [[META1]], line: 14, type: [[META6:![0-9]+]], scopeLine: 14, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META9:![0-9]+]])
+; CHECK: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
+; CHECK: [[META7]] = !{[[META8]]}
+; CHECK: [[META8]] = !DIBasicType(name: "int", size: 16, encoding: DW_ATE_signed)
+; CHECK: [[META9]] = !{[[META4]], [[META10]], [[META11]], [[META12]], [[META13]]}
+; CHECK: [[META10]] = !DILocalVariable(name: "c", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
+; CHECK: [[META11]] = !DILocalVariable(name: "v", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
+; CHECK: [[META12]] = !DILocalVariable(name: "d", scope: [[META5]], file: [[META1]], line: 15, type: [[META8]])
+; CHECK: [[META13]] = !DILocalVariable(name: "u", scope: [[META5]], file: [[META1]], line: 16, type: [[META8]])
+; CHECK: [[META14]] = !DILocation(line: 15, column: 7, scope: [[META5]])
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK: {{.*}}
+; MDEP: {{.*}}
+; MSSA: {{.*}}
