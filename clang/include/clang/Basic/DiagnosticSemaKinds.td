@@ -2419,7 +2419,7 @@ def err_init_conversion_failed : Error<
   "return object|statement expression result|an "
   "exception object|a member subobject|an array element|a new value|a value|a "
   "base class|a constructor delegation|a vector element|a matrix element|a "
-  "block element|a complex element|a lambda capture|a compound"
+  "block element|a block element|a complex element|a lambda capture|a compound"
   " literal initializer|a related result|a parameter of CF audited function|a "
   "structured binding|a member subobject}0 "
   "%diff{of type $ with an %select{rvalue|lvalue}2 of type $|"
