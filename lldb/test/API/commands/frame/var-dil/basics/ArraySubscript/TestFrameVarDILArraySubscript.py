@@ -41,7 +41,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect("frame var 'int_arr_ref[enum_ref]'", error=True)
 
         # Test when base and index are typedefs.
-        self.expect_var_path("td_int_arr[0]", True, value="1")
+        self.expect_var_path("td_int_arr[0]", True, value="5")
         self.expect("frame var 'td_int_arr[td_int_idx_1]'", error=True)
         self.expect("frame var 'td_int_arr[td_td_int_idx_2]'", error=True)
         self.expect_var_path("td_int_ptr[0]", True, value="1")

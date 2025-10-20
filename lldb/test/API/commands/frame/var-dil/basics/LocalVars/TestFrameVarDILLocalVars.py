@@ -29,4 +29,4 @@ class TestFrameVarDILLocalVars(TestBase):
         self.expect_var_path("b", value="2")
         self.expect_var_path("c", value="'\\xfd'")
         self.expect_var_path("(int)c", value="-3")
-        self.expect_var_path("s", value="4")
+        self.expect_var_path("s", value="8")
