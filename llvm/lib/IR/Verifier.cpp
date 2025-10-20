@@ -6236,13 +6236,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
           Call);
 
-    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(1));
-    Value *Mask = Call.getArgOperand(2);
-    Value *PassThru = Call.getArgOperand(3);
+    Value *Mask = Call.getArgOperand(1);
+    Value *PassThru = Call.getArgOperand(2);
     Check(Mask->getType()->isVectorTy(), "masked_load: mask must be vector",
           Call);
-    Check(Alignment->getValue().isPowerOf2(),
-          "masked_load: alignment must be a power of 2", Call);
     Check(PassThru->getType() == Call.getType(),
           "masked_load: pass through and return type must match", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
@@ -6252,30 +6249,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::masked_store: {
     Value *Val = Call.getArgOperand(0);
-    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(2));
-    Value *Mask = Call.getArgOperand(3);
+    Value *Mask = Call.getArgOperand(2);
     Check(Mask->getType()->isVectorTy(), "masked_store: mask must be vector",
           Call);
-    Check(Alignment->getValue().isPowerOf2(),
-          "masked_store: alignment must be a power of 2", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
               cast<VectorType>(Val->getType())->getElementCount(),
           "masked_store: vector mask must be same length as value", Call);
-    break;
-  }
-
-  case Intrinsic::masked_gather: {
-    const APInt &Alignment =
-        cast<ConstantInt>(Call.getArgOperand(1))->getValue();
-    Check(Alignment.isZero() || Alignment.isPowerOf2(),
-          "masked_gather: alignment must be 0 or a power of 2", Call);
-    break;
-  }
-  case Intrinsic::masked_scatter: {
-    const APInt &Alignment =
-        cast<ConstantInt>(Call.getArgOperand(2))->getValue();
-    Check(Alignment.isZero() || Alignment.isPowerOf2(),
-          "masked_scatter: alignment must be 0 or a power of 2", Call);
     break;
   }
 

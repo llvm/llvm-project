@@ -106,7 +106,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
             return false;
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
-              {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
+              drop_end(Ingredient.operands()), CI->getType(),
               CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
@@ -356,8 +356,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(),
-      make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
+      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe);
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
@@ -939,7 +938,7 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
       continue;
     if (!isDeadRecipe(*R))
       continue;
-    WorkList.append(R->op_begin(), R->op_end());
+    append_range(WorkList, R->operands());
     R->eraseFromParent();
   }
 }
