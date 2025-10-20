@@ -1009,6 +1009,8 @@ protected:
   friend class SBValue;
   friend class SBVariablesOptions;
 
+  friend class SBModuleSpec;
+
   friend class lldb_private::python::SWIGBridge;
 
   // Constructors are private, use static Target::Create function to create an

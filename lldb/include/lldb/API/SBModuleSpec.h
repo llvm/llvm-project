@@ -87,6 +87,10 @@ public:
 
   bool GetDescription(lldb::SBStream &description);
 
+  lldb::SBTarget GetTarget();
+
+  void SetTarget(lldb::SBTarget target);
+
 private:
   friend class SBModuleSpecList;
   friend class SBModule;

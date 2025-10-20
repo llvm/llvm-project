@@ -1143,16 +1143,14 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Get module search paths from the target if available.
   lldb::TargetSP target_sp = module_spec.GetTargetSP();
   FileSpecList module_search_paths;
-  FileSpecList *module_search_paths_ptr = nullptr;
-  if (target_sp && target_sp->IsValid()) {
+  if (target_sp) {
     module_search_paths = target_sp->GetExecutableSearchPaths();
-    module_search_paths_ptr = &module_search_paths;
   }
 
-  if (module_search_paths_ptr) {
-    const auto num_directories = module_search_paths_ptr->GetSize();
+  if (!module_search_paths.IsEmpty()) {
+    const auto num_directories = module_search_paths.GetSize();
     for (size_t idx = 0; idx < num_directories; ++idx) {
-      auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
+      auto search_path_spec = module_search_paths.GetFileSpecAtIndex(idx);
       FileSystem::Instance().Resolve(search_path_spec);
       namespace fs = llvm::sys::fs;
       if (!FileSystem::Instance().IsDirectory(search_path_spec))
