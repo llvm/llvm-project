@@ -88,7 +88,7 @@ public:
   Value buildTypeFn(TypeFn typeFn, Type toType, Value operand,
                     function_ref<InFlightDiagnostic()> emitError = {});
 
-  // Create a `yieldOp` to yield `values` passed in arg.
+  // Create a `yieldOp` to yield `values` passed in as arg.
   void yieldOutputs(ValueRange values);
 
   // Create a constant op with value parsed from string `value`.
