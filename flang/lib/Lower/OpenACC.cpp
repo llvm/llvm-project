@@ -327,7 +327,8 @@ genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   mlir::acc::AtomicReadOp::create(firOpBuilder, loc, fromAddress, toAddress,
-                                  mlir::TypeAttr::get(elementType));
+                                  mlir::TypeAttr::get(elementType),
+                                  /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.write operation which is created in existing
@@ -347,7 +348,8 @@ genAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
   rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
   firOpBuilder.restoreInsertionPoint(insertionPoint);
 
-  mlir::acc::AtomicWriteOp::create(firOpBuilder, loc, lhsAddr, rhsExpr);
+  mlir::acc::AtomicWriteOp::create(firOpBuilder, loc, lhsAddr, rhsExpr,
+                                   /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.update operation which is created in existing
@@ -463,7 +465,8 @@ static inline void genAtomicUpdateStatement(
 
   mlir::Operation *atomicUpdateOp = nullptr;
   atomicUpdateOp =
-      mlir::acc::AtomicUpdateOp::create(firOpBuilder, currentLocation, lhsAddr);
+      mlir::acc::AtomicUpdateOp::create(firOpBuilder, currentLocation, lhsAddr,
+                                        /*ifCond=*/mlir::Value{});
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
   llvm::SmallVector<mlir::Location> locs = {currentLocation};
@@ -588,7 +591,9 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
 
   mlir::Operation *atomicCaptureOp = nullptr;
-  atomicCaptureOp = mlir::acc::AtomicCaptureOp::create(firOpBuilder, loc);
+  atomicCaptureOp =
+      mlir::acc::AtomicCaptureOp::create(firOpBuilder, loc,
+                                         /*ifCond=*/mlir::Value{});
 
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
@@ -2712,12 +2717,19 @@ genACC(Fortran::lower::AbstractConverter &converter,
   const auto &loopDirective =
       std::get<Fortran::parser::AccLoopDirective>(beginLoopDirective.t);
 
-  bool needEarlyExitHandling = false;
-  if (eval.lowerAsUnstructured())
-    needEarlyExitHandling = hasEarlyReturn(eval);
-
   mlir::Location currentLocation =
       converter.genLocation(beginLoopDirective.source);
+  bool needEarlyExitHandling = false;
+  if (eval.lowerAsUnstructured()) {
+    needEarlyExitHandling = hasEarlyReturn(eval);
+    // If the loop is lowered in an unstructured fashion, lowering generates
+    // explicit control flow that duplicates the looping semantics of the
+    // loops.
+    if (!needEarlyExitHandling)
+      TODO(currentLocation,
+           "loop with early exit inside OpenACC loop construct");
+  }
+
   Fortran::lower::StatementContext stmtCtx;
 
   assert(loopDirective.v == llvm::acc::ACCD_loop &&
@@ -3515,6 +3527,10 @@ genACC(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation =
       converter.genLocation(beginCombinedDirective.source);
   Fortran::lower::StatementContext stmtCtx;
+
+  if (eval.lowerAsUnstructured())
+    TODO(currentLocation,
+         "loop with early exit inside OpenACC combined construct");
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     createComputeOp<mlir::acc::KernelsOp>(
