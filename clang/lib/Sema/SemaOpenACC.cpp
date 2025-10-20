@@ -3000,7 +3000,7 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     break;
   case OpenACCReductionOperator::And:
     BinOp = BinaryOperatorKind::BO_LAnd;
-      break;
+    break;
   case OpenACCReductionOperator::Or:
     BinOp = BinaryOperatorKind::BO_LOr;
     break;
