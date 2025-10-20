@@ -928,9 +928,13 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
     // Attempt to canonicalize/optimize the instruction now its arguments have
     // been mutated.  This may convert MI from a non-copy to a copy instruction.
-    if (TII->simplifyInstruction(MI)) {
+    bool AlteredTerminators = false;
+    if (TII->simplifyInstruction(MI, AlteredTerminators)) {
       Changed = true;
-      LLVM_DEBUG(dbgs() << "MCP: After simplifyInstruction: " << MI);
+      if (AlteredTerminators)
+        break;
+      else
+        LLVM_DEBUG(dbgs() << "MCP: After simplifyInstruction: " << MI);
     }
 
     CopyOperands = isCopyInstr(MI, *TII, UseCopyInstr);

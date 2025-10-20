@@ -401,6 +401,9 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
+  bool simplifyInstruction(MachineInstr &MI,
+                           bool &AlteredTerminators) const override;
+
   std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 

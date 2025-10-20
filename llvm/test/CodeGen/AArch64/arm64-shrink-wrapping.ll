@@ -735,22 +735,15 @@ define void @infiniteloop() {
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
-; ENABLE-NEXT:    cbnz wzr, LBB10_3
-; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    sub x19, sp, #16
 ; ENABLE-NEXT:    mov sp, x19
 ; ENABLE-NEXT:    mov w20, wzr
-; ENABLE-NEXT:  LBB10_2: ; %for.body
+; ENABLE-NEXT:  LBB10_1: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    bl _something
 ; ENABLE-NEXT:    add w20, w0, w20
 ; ENABLE-NEXT:    str w20, [x19]
-; ENABLE-NEXT:    b LBB10_2
-; ENABLE-NEXT:  LBB10_3: ; %if.end
-; ENABLE-NEXT:    sub sp, x29, #16
-; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; ENABLE-NEXT:    ret
+; ENABLE-NEXT:    b LBB10_1
 ;
 ; DISABLE-LABEL: infiniteloop:
 ; DISABLE:       ; %bb.0: ; %entry
@@ -762,22 +755,15 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    .cfi_offset w19, -24
 ; DISABLE-NEXT:    .cfi_offset w20, -32
-; DISABLE-NEXT:    cbnz wzr, LBB10_3
-; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    sub x19, sp, #16
 ; DISABLE-NEXT:    mov sp, x19
 ; DISABLE-NEXT:    mov w20, wzr
-; DISABLE-NEXT:  LBB10_2: ; %for.body
+; DISABLE-NEXT:  LBB10_1: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    bl _something
 ; DISABLE-NEXT:    add w20, w0, w20
 ; DISABLE-NEXT:    str w20, [x19]
-; DISABLE-NEXT:    b LBB10_2
-; DISABLE-NEXT:  LBB10_3: ; %if.end
-; DISABLE-NEXT:    sub sp, x29, #16
-; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; DISABLE-NEXT:    ret
+; DISABLE-NEXT:    b LBB10_1
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -808,12 +794,10 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    .cfi_offset w29, -16
 ; ENABLE-NEXT:    .cfi_offset w19, -24
 ; ENABLE-NEXT:    .cfi_offset w20, -32
-; ENABLE-NEXT:    cbnz wzr, LBB11_3
-; ENABLE-NEXT:  ; %bb.1: ; %if.then
 ; ENABLE-NEXT:    sub x8, sp, #16
 ; ENABLE-NEXT:    mov sp, x8
 ; ENABLE-NEXT:    mov w9, wzr
-; ENABLE-NEXT:  LBB11_2: ; %for.body
+; ENABLE-NEXT:  LBB11_1: ; %for.body
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ; InlineAsm Start
 ; ENABLE-NEXT:    mov x10, #0 ; =0x0
@@ -824,12 +808,7 @@ define void @infiniteloop2() {
 ; ENABLE-NEXT:    ; InlineAsm Start
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    ; InlineAsm End
-; ENABLE-NEXT:    b LBB11_2
-; ENABLE-NEXT:  LBB11_3: ; %if.end
-; ENABLE-NEXT:    sub sp, x29, #16
-; ENABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; ENABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; ENABLE-NEXT:    ret
+; ENABLE-NEXT:    b LBB11_1
 ;
 ; DISABLE-LABEL: infiniteloop2:
 ; DISABLE:       ; %bb.0: ; %entry
@@ -841,12 +820,10 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    .cfi_offset w29, -16
 ; DISABLE-NEXT:    .cfi_offset w19, -24
 ; DISABLE-NEXT:    .cfi_offset w20, -32
-; DISABLE-NEXT:    cbnz wzr, LBB11_3
-; DISABLE-NEXT:  ; %bb.1: ; %if.then
 ; DISABLE-NEXT:    sub x8, sp, #16
 ; DISABLE-NEXT:    mov sp, x8
 ; DISABLE-NEXT:    mov w9, wzr
-; DISABLE-NEXT:  LBB11_2: ; %for.body
+; DISABLE-NEXT:  LBB11_1: ; %for.body
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ; InlineAsm Start
 ; DISABLE-NEXT:    mov x10, #0 ; =0x0
@@ -857,12 +834,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    ; InlineAsm Start
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    ; InlineAsm End
-; DISABLE-NEXT:    b LBB11_2
-; DISABLE-NEXT:  LBB11_3: ; %if.end
-; DISABLE-NEXT:    sub sp, x29, #16
-; DISABLE-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
-; DISABLE-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
-; DISABLE-NEXT:    ret
+; DISABLE-NEXT:    b LBB11_1
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -893,51 +865,43 @@ if.end:
 define void @infiniteloop3() {
 ; ENABLE-LABEL: infiniteloop3:
 ; ENABLE:       ; %bb.0: ; %entry
-; ENABLE-NEXT:    cbnz wzr, LBB12_5
-; ENABLE-NEXT:  ; %bb.1: ; %loop2a.preheader
 ; ENABLE-NEXT:    mov x8, xzr
 ; ENABLE-NEXT:    mov x9, xzr
 ; ENABLE-NEXT:    mov x11, xzr
-; ENABLE-NEXT:    b LBB12_3
-; ENABLE-NEXT:  LBB12_2: ; %loop2b
-; ENABLE-NEXT:    ; in Loop: Header=BB12_3 Depth=1
+; ENABLE-NEXT:    b LBB12_2
+; ENABLE-NEXT:  LBB12_1: ; %loop2b
+; ENABLE-NEXT:    ; in Loop: Header=BB12_2 Depth=1
 ; ENABLE-NEXT:    str x10, [x11]
 ; ENABLE-NEXT:    mov x11, x10
-; ENABLE-NEXT:  LBB12_3: ; %loop1
+; ENABLE-NEXT:  LBB12_2: ; %loop1
 ; ENABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    mov x10, x9
 ; ENABLE-NEXT:    ldr x9, [x8]
-; ENABLE-NEXT:    cbnz x8, LBB12_2
-; ENABLE-NEXT:  ; %bb.4: ; in Loop: Header=BB12_3 Depth=1
+; ENABLE-NEXT:    cbnz x8, LBB12_1
+; ENABLE-NEXT:  ; %bb.3: ; in Loop: Header=BB12_2 Depth=1
 ; ENABLE-NEXT:    mov x8, x10
 ; ENABLE-NEXT:    mov x11, x10
-; ENABLE-NEXT:    b LBB12_3
-; ENABLE-NEXT:  LBB12_5: ; %end
-; ENABLE-NEXT:    ret
+; ENABLE-NEXT:    b LBB12_2
 ;
 ; DISABLE-LABEL: infiniteloop3:
 ; DISABLE:       ; %bb.0: ; %entry
-; DISABLE-NEXT:    cbnz wzr, LBB12_5
-; DISABLE-NEXT:  ; %bb.1: ; %loop2a.preheader
 ; DISABLE-NEXT:    mov x8, xzr
 ; DISABLE-NEXT:    mov x9, xzr
 ; DISABLE-NEXT:    mov x11, xzr
-; DISABLE-NEXT:    b LBB12_3
-; DISABLE-NEXT:  LBB12_2: ; %loop2b
-; DISABLE-NEXT:    ; in Loop: Header=BB12_3 Depth=1
+; DISABLE-NEXT:    b LBB12_2
+; DISABLE-NEXT:  LBB12_1: ; %loop2b
+; DISABLE-NEXT:    ; in Loop: Header=BB12_2 Depth=1
 ; DISABLE-NEXT:    str x10, [x11]
 ; DISABLE-NEXT:    mov x11, x10
-; DISABLE-NEXT:  LBB12_3: ; %loop1
+; DISABLE-NEXT:  LBB12_2: ; %loop1
 ; DISABLE-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    mov x10, x9
 ; DISABLE-NEXT:    ldr x9, [x8]
-; DISABLE-NEXT:    cbnz x8, LBB12_2
-; DISABLE-NEXT:  ; %bb.4: ; in Loop: Header=BB12_3 Depth=1
+; DISABLE-NEXT:    cbnz x8, LBB12_1
+; DISABLE-NEXT:  ; %bb.3: ; in Loop: Header=BB12_2 Depth=1
 ; DISABLE-NEXT:    mov x8, x10
 ; DISABLE-NEXT:    mov x11, x10
-; DISABLE-NEXT:    b LBB12_3
-; DISABLE-NEXT:  LBB12_5: ; %end
-; DISABLE-NEXT:    ret
+; DISABLE-NEXT:    b LBB12_2
 entry:
   br i1 undef, label %loop2a, label %body
 
