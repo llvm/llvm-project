@@ -4174,7 +4174,7 @@ class InitListTransformer {
               E, RowIdx, ColIdx, E->getEndLoc());
           if (ElExpr.isInvalid())
             return false;
-          if (!buildInitializerListImpl(ElExpr.get()))
+          if (!castInitializer(ElExpr.get()))
             return false;
           ElExpr.get()->setType(ElemTy);
         }
