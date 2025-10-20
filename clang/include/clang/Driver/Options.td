@@ -5657,6 +5657,9 @@ def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
   HelpText<"Omit frame pointer setup for leaf functions">;
+def mno_reserve_frame_pointer_reg : Flag<["-"], "mno-reserve-frame-pointer-reg">, Group<m_Group>;
+def mreserve_frame_pointer_reg : Flag<["-"], "mreserve-frame-pointer-reg">, Group<m_Group>,
+  HelpText<"Reserve the frame pointer register even if the function doesn't have a frame">;
 def moslib_EQ : Joined<["-"], "moslib=">, Group<m_Group>;
 def mpascal_strings : Flag<["-"], "mpascal-strings">, Alias<fpascal_strings>;
 def mred_zone : Flag<["-"], "mred-zone">, Group<m_Group>;

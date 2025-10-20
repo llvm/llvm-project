@@ -235,25 +235,26 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   //  * It's not useful to have frame records without reserving the frame
   //    pointer.
   //
-  // | Non-leaf | Leaf | Reserved In Non-Leaf  | Reserved In Leaf |
-  // |----------|------|-----------------------|------------------|
-  // | N        | N    | N                     | N                |
-  // FramePointerKind::None | N        | N    | N                     | Y |
-  // Invalid | N        | N    | Y                     | N                |
-  // Invalid | N        | N    | Y                     | Y                |
-  // FramePointerKind::Reserved | N        | Y    | N                     | N |
-  // Invalid | N        | Y    | N                     | Y                |
-  // Invalid | N        | Y    | Y                     | N                |
-  // Invalid | N        | Y    | Y                     | Y                |
-  // Invalid | Y        | N    | N                     | N                |
-  // Invalid | Y        | N    | N                     | Y                |
-  // Invalid | Y        | N    | Y                     | N                |
-  // FramePointerKind::NonLeafNoReserve | Y        | N    | Y | Y |
-  // FramePointerKind::NonLeaf | Y        | Y    | N                     | N |
-  // Invalid | Y        | Y    | N                     | Y                |
-  // Invalid | Y        | Y    | Y                     | N                |
-  // Invalid | Y        | Y    | Y                     | Y                |
-  // FramePointerKind::All
+  // | Frame Setup     | Reg Reserved    |
+  // |-----------------|-----------------|
+  // | Non-leaf | Leaf | Non-Leaf | Leaf |
+  // |----------|------|----------|------|
+  // | N        | N    | N        | N    | FramePointerKind::None
+  // | N        | N    | N        | Y    | Invalid
+  // | N        | N    | Y        | N    | Invalid
+  // | N        | N    | Y        | Y    | FramePointerKind::Reserved
+  // | N        | Y    | N        | N    | Invalid
+  // | N        | Y    | N        | Y    | Invalid
+  // | N        | Y    | Y        | N    | Invalid
+  // | N        | Y    | Y        | Y    | Invalid
+  // | Y        | N    | N        | N    | Invalid
+  // | Y        | N    | N        | Y    | Invalid
+  // | Y        | N    | Y        | N    | FramePointerKind::NonLeafNoReserve
+  // | Y        | N    | Y        | Y    | FramePointerKind::NonLeaf
+  // | Y        | Y    | N        | N    | Invalid
+  // | Y        | Y    | N        | Y    | Invalid
+  // | Y        | Y    | Y        | N    | Invalid
+  // | Y        | Y    | Y        | Y    | FramePointerKind::All
   //
   // The FramePointerKind::Reserved case is currently only reachable for Arm,
   // which has the -mframe-chain= option which can (in combination with
@@ -273,7 +274,12 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
       clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
       clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
-  bool FPRegReserved = mustMaintainValidFrameChain(Args, Triple);
+  bool FPRegReserved =
+      Args.hasFlag(clang::driver::options::OPT_mreserve_frame_pointer_reg,
+                   clang::driver::options::OPT_mno_reserve_frame_pointer_reg,
+                   false);
+  
+  FPRegReserved |= mustMaintainValidFrameChain(Args, Triple);
 
   if (EnableFP) {
     if (EnableLeafFP)
