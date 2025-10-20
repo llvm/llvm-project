@@ -285,6 +285,7 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
         checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
     ME |= FnME;
     RecursiveArgME |= FnRecursiveArgME;
+    // Reached bottom of the lattice, we will not be able to improve the result.
     if (ME == MemoryEffects::unknown())
       return;
   }

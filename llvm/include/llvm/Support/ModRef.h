@@ -158,18 +158,6 @@ public:
     return MemoryEffectsBase(Location::Other, MR);
   }
 
-  /// Checks if only target-specific memory locations are set.
-  /// Ignores standard locations like ArgMem or InaccessibleMem.
-  /// Needed because `Data` may be non-zero by default unless explicitly
-  /// cleared.
-  bool onlyAccessTargetMemoryLocation() {
-    MemoryEffectsBase ME = *this;
-    for (unsigned I = static_cast<int>(LocationEnum::FirstTarget);
-         I <=  static_cast<int>(LocationEnum::Last); I++)
-      ME = ME.getWithoutLoc(static_cast<IRMemLocation>(I));
-    return ME.doesNotAccessMemory();
-  }
-
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
