@@ -37,6 +37,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Create a new user with id 1001 as that is the user id that
+# Github Actions uses to perform the checkout action.
+RUN useradd gha -u 1001 -m -s /bin/bash
+RUN adduser gha sudo
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 FROM base AS ci-container-code-format
 ARG LLVM_VERSION
@@ -51,6 +56,8 @@ ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
 RUN pip install -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
+USER gha
+WORKDIR /home/gha
 
 
 FROM base AS ci-container-code-lint
@@ -80,3 +87,5 @@ RUN apt-get update && \
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
 RUN pip install -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
+USER gha
+WORKDIR /home/gha
