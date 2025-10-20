@@ -95,7 +95,10 @@ public:
                                          clang::GlobalDecl gd, Address thisAddr,
                                          mlir::Type ty,
                                          SourceLocation loc) override;
-
+  mlir::Value emitVirtualDestructorCall(CIRGenFunction &cgf,
+                                        const CXXDestructorDecl *dtor,
+                                        CXXDtorType dtorType, Address thisAddr,
+                                        DeleteOrMemberCallExpr e) override;
   mlir::Value getVTableAddressPoint(BaseSubobject base,
                                     const CXXRecordDecl *vtableClass) override;
   mlir::Value getVTableAddressPointInStructorWithVTT(
@@ -463,6 +466,29 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   if (vtContext.isRelativeLayout()) {
     cgm.errorNYI(rd->getSourceRange(), "vtableRelativeLayout");
   }
+}
+
+mlir::Value CIRGenItaniumCXXABI::emitVirtualDestructorCall(
+    CIRGenFunction &cgf, const CXXDestructorDecl *dtor, CXXDtorType dtorType,
+    Address thisAddr, DeleteOrMemberCallExpr expr) {
+  auto *callExpr = dyn_cast<const CXXMemberCallExpr *>(expr);
+  auto *delExpr = dyn_cast<const CXXDeleteExpr *>(expr);
+  assert((callExpr != nullptr) ^ (delExpr != nullptr));
+  assert(callExpr == nullptr || callExpr->arg_begin() == callExpr->arg_end());
+  assert(dtorType == Dtor_Deleting || dtorType == Dtor_Complete);
+
+  GlobalDecl globalDecl(dtor, dtorType);
+  const CIRGenFunctionInfo *fnInfo =
+      &cgm.getTypes().arrangeCXXStructorDeclaration(globalDecl);
+  const cir::FuncType &fnTy = cgm.getTypes().getFunctionType(*fnInfo);
+  auto callee = CIRGenCallee::forVirtual(callExpr, globalDecl, thisAddr, fnTy);
+
+  QualType thisTy =
+      callExpr ? callExpr->getObjectType() : delExpr->getDestroyedType();
+
+  cgf.emitCXXDestructorCall(globalDecl, callee, thisAddr.emitRawPointer(),
+                            thisTy, nullptr, QualType(), nullptr);
+  return nullptr;
 }
 
 void CIRGenItaniumCXXABI::emitVirtualInheritanceTables(
@@ -913,8 +939,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Atomic:
   // FIXME: GCC treats block pointers as fundamental types?!
   case Type::BlockPointer:
-    cgm.errorNYI("VTableClassNameForType: __fundamental_type_info");
-    break;
+    return "_ZTVN10__cxxabiv123__fundamental_type_infoE";
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:

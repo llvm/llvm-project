@@ -309,6 +309,17 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   return success();
 }
 
+LogicalResult ConvertF32x2ToF4x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
+    return emitOpError("Only ")
+           << mlir::Float4E2M1FNType::get(ctx)
+           << " type is supported for conversions from f32x2 to f4x2.";
+
+  return success();
+}
+
 LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
@@ -1593,6 +1604,39 @@ mlir::NVVM::IDArgPair CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+mlir::NVVM::IDArgPair CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkGlobalToSharedClusterOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  // Fill the Intrinsic Args: dst, mbar, src, size.
+  args.push_back(mt.lookupValue(thisOp.getDstMem()));
+  args.push_back(mt.lookupValue(thisOp.getMbar()));
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getSize()));
+
+  // Multicast mask, if available.
+  mlir::Value multicastMask = thisOp.getMulticastMask();
+  const bool hasMulticastMask = static_cast<bool>(multicastMask);
+  llvm::Value *i16Unused = llvm::ConstantInt::get(builder.getInt16Ty(), 0);
+  args.push_back(hasMulticastMask ? mt.lookupValue(multicastMask) : i16Unused);
+
+  // Cache hint, if available.
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  llvm::Value *i64Unused = llvm::ConstantInt::get(builder.getInt64Ty(), 0);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Unused);
+
+  // Flag arguments for multicast and cachehint.
+  args.push_back(builder.getInt1(hasMulticastMask));
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  llvm::Intrinsic::ID id =
+      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster;
+
+  return {id, std::move(args)};
+}
+
 mlir::NVVM::IDArgPair CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkSharedCTAToGlobalOp>(op);
@@ -2014,6 +2058,23 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
+NVVM::IDArgPair
+ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
+                                            LLVM::ModuleTranslation &mt,
+                                            llvm::IRBuilderBase &builder) {
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getA()));
+  args.push_back(mt.lookupValue(op.getB()));
+
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId =
+      hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
+              : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
+
+  return {intId, std::move(args)};
+}
+
 #define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
@@ -2271,6 +2332,32 @@ static void nvvmInferResultRanges(Operation *op, Value result,
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
   }
+}
+
+/// Verify the range attribute satisfies LLVM ConstantRange constructor
+/// requirements for NVVM SpecialRangeableRegisterOp.
+static LogicalResult
+verifyConstantRangeAttr(Operation *op,
+                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+  if (!rangeAttr)
+    return success();
+
+  const llvm::APInt &lower = rangeAttr->getLower();
+  const llvm::APInt &upper = rangeAttr->getUpper();
+
+  // Check LLVM ConstantRange constructor condition
+  if (lower == upper && !lower.isMaxValue() && !lower.isMinValue()) {
+    unsigned bitWidth = lower.getBitWidth();
+    llvm::APInt minVal = llvm::APInt::getMinValue(bitWidth);
+    llvm::APInt maxVal = llvm::APInt::getMaxValue(bitWidth);
+    return op->emitOpError(
+               "invalid range attribute: Lower == Upper, but they aren't min (")
+           << llvm::toString(minVal, 10, false) << ") or max ("
+           << llvm::toString(maxVal, 10, false)
+           << ") value! This is an invalid constant range.";
+  }
+
+  return success();
 }
 
 static llvm::Value *getAsPackedI32(llvm::Value *arg,

@@ -1313,7 +1313,7 @@ public:
 
   /// Assuming this is an IEEE-754 NaN value, quiet its signaling bit.
   /// This preserves the sign and payload bits.
-  APFloat makeQuiet() const {
+  [[nodiscard]] APFloat makeQuiet() const {
     APFloat Result(*this);
     Result.getIEEE().makeQuiet();
     return Result;
