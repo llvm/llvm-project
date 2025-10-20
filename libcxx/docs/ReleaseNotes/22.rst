@@ -44,6 +44,7 @@ Implemented Papers
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
 - P3060R3: Add ``std::views::indices(n)`` (`Github <https://llvm.org/PR148175>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
+- P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
 
 Improvements and New Features
@@ -71,6 +72,9 @@ Improvements and New Features
 - The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
   ``std::join_view`` iterators), reducing the complexity from ``O(n)`` to ``O(n / segment_size)``. Benchmarks show
   performance improvements of over 1600x in favorable cases with large segment sizes (e.g., 1024).
+- The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
+  resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
+  ``std::join_view<std::vector<std::vector<int>>>`` iterators.
 
 Deprecations and Removals
 -------------------------
