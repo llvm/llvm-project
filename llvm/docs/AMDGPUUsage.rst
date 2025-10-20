@@ -883,6 +883,8 @@ supported for the ``amdgcn`` target.
      Buffer Fat Pointer                    7               N/A         N/A              160     0
      Buffer Resource                       8               N/A         V#               128     0x00000000000000000000000000000000
      Buffer Strided Pointer (experimental) 9               *TODO*
+     *reserved for downstream use*         10
+     *reserved for downstream use*         11
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -6509,6 +6511,13 @@ operations.
 
 ``buffer/global/flat_load/store/atomic`` instructions to global memory are
 termed vector memory operations.
+
+``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
+are LDS DMA loads. They interact with caches as if the loaded data were
+being loaded to registers and not to LDS, and so therefore support the same
+cache modifiers. They cannot be performed atomically. They implement volatile
+(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
+from the global address space.
 
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread

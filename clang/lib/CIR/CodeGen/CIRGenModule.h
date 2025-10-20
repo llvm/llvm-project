@@ -429,6 +429,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set extra attributes (inline, etc.) for a function.
+  void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
+                                             cir::FuncOp f);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);

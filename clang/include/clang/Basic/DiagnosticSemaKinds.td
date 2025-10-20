@@ -13070,6 +13070,12 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
+def err_cluster_attr_not_supported : Error<
+  "%0 is not supported for this GPU architecture">;
+
+def err_cluster_dims_too_large : Error<
+  "cluster does not support more than %0 thread blocks; %1 provided">;
+
 // VTable pointer authentication errors
 def err_non_polymorphic_vtable_pointer_auth : Error<
   "cannot set vtable pointer authentication on monomorphic type %0">;
@@ -13670,6 +13676,9 @@ def err_acc_reduction_recipe_no_op
             "not have a valid operation available">;
 def note_acc_reduction_recipe_noop_field
     : Note<"while forming combiner for compound type %0">;
+def note_acc_reduction_combiner_forming
+    : Note<"while forming %select{|binary operator '%1'|conditional "
+           "operator|final assignment operator}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

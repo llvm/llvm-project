@@ -58,6 +58,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Runtime/iostat-consts.h"
 #include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/runtime-type-info.h"
@@ -3352,7 +3353,7 @@ private:
                 &var.u)) {
           const Fortran::parser::Designator &designator = iDesignator->value();
           if (const auto *name =
-                  Fortran::semantics::getDesignatorNameIfDataRef(designator)) {
+                  Fortran::parser::GetDesignatorNameIfDataRef(designator)) {
             auto val = getSymbolAddress(*name->symbol);
             reduceOperands.push_back(val);
           }
@@ -6076,7 +6077,7 @@ private:
         if (resTy != wrappedSymTy) {
           // check size of the pointed to type so we can't overflow by writing
           // double precision to a single precision allocation, etc
-          LLVM_ATTRIBUTE_UNUSED auto getBitWidth = [this](mlir::Type ty) {
+          [[maybe_unused]] auto getBitWidth = [this](mlir::Type ty) {
             // 15.6.2.6.3: differering result types should be integer, real,
             // complex or logical
             if (auto cmplx = mlir::dyn_cast_or_null<mlir::ComplexType>(ty))
