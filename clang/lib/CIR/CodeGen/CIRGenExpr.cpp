@@ -2405,34 +2405,34 @@ namespace {
 std::optional<LValue> handleConditionalOperatorLValueSimpleCase(
     CIRGenFunction &cgf, const AbstractConditionalOperator *e) {
   const Expr *condExpr = e->getCond();
-  llvm::APSInt condExprInt;
-  if (cgf.constantFoldsToSimpleInteger(condExpr, condExprInt)) {
-    bool condExprBool = condExprInt.getBoolValue();
-    const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
-    if (!condExprBool)
-      std::swap(live, dead);
+  llvm::APSInt condExprVal;
+  if (!cgf.constantFoldsToSimpleInteger(condExpr, condExprVal))
+    return std::nullopt;
 
-    if (!cgf.containsLabel(dead)) {
-      // If the true case is live, we need to track its region.
-      assert(!cir::MissingFeatures::incrementProfileCounter());
-      assert(!cir::MissingFeatures::pgoUse());
-      // If a throw expression we emit it and return an undefined lvalue
-      // because it can't be used.
-      if (auto *throwExpr = dyn_cast<CXXThrowExpr>(live->IgnoreParens())) {
-        cgf.emitCXXThrowExpr(throwExpr);
-        // Return an undefined lvalue - the throw terminates execution
-        // so this value will never actually be used
-        mlir::Type elemTy = cgf.convertType(dead->getType());
-        mlir::Type ptrTy = cir::PointerType::get(elemTy);
-        mlir::Value undefPtr = cgf.getBuilder().getNullValue(
-            ptrTy, cgf.getLoc(throwExpr->getSourceRange()));
-        return cgf.makeAddrLValue(Address(undefPtr, elemTy, CharUnits::One()),
-                                  dead->getType());
-      }
-      return cgf.emitLValue(live);
-    }
+  const Expr *live = e->getTrueExpr(), *dead = e->getFalseExpr();
+  if (!condExprVal.getBoolValue())
+    std::swap(live, dead);
+
+  if (cgf.containsLabel(dead))
+    return std::nullopt;
+
+  // If the true case is live, we need to track its region.
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::pgoUse());
+  // If a throw expression we emit it and return an undefined lvalue
+  // because it can't be used.
+  if (auto *throwExpr = dyn_cast<CXXThrowExpr>(live->IgnoreParens())) {
+    cgf.emitCXXThrowExpr(throwExpr);
+    // Return an undefined lvalue - the throw terminates execution
+    // so this value will never actually be used
+    mlir::Type elemTy = cgf.convertType(dead->getType());
+    mlir::Value undefPtr =
+        cgf.getBuilder().getNullPtr(cgf.getBuilder().getPointerTo(elemTy),
+                                    cgf.getLoc(throwExpr->getSourceRange()));
+    return cgf.makeAddrLValue(Address(undefPtr, elemTy, CharUnits::One()),
+                              dead->getType());
   }
-  return std::nullopt;
+  return cgf.emitLValue(live);
 }
 
 /// Emit the operand of a glvalue conditional operator. This is either a glvalue
@@ -2463,28 +2463,6 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
   mlir::Value condV = emitOpOnBoolExpr(loc, e->getCond());
   SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
   mlir::Type yieldTy{};
-
-  auto patchVoidOrThrowSites = [&] {
-    if (insertPoints.empty())
-      return;
-    // If both arms are void, so be it.
-    if (!yieldTy)
-      yieldTy = VoidTy;
-
-    // Insert required yields.
-    for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
-      mlir::OpBuilder::InsertionGuard guard(builder);
-      builder.restoreInsertionPoint(toInsert);
-
-      // Block does not return: build empty yield.
-      if (mlir::isa<cir::VoidType>(yieldTy)) {
-        cir::YieldOp::create(builder, loc);
-      } else { // Block returns: set null yield value.
-        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
-        cir::YieldOp::create(builder, loc, op0);
-      }
-    }
-  };
 
   auto emitBranch = [&](mlir::OpBuilder &b, mlir::Location loc,
                         const Expr *expr, std::optional<LValue> &resultLV) {
@@ -2523,9 +2501,26 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
                     /*falseBuilder=*/
                     [&](mlir::OpBuilder &b, mlir::Location loc) {
                       emitBranch(b, loc, e->getFalseExpr(), info.rhs);
-                      patchVoidOrThrowSites();
                     })
                     .getResult();
+
+  // If both arms are void, so be it.
+  if (!yieldTy)
+    yieldTy = VoidTy;
+
+  // Insert required yields.
+  for (mlir::OpBuilder::InsertPoint &toInsert : insertPoints) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(toInsert);
+
+    // Block does not return: build empty yield.
+    if (!yieldTy) {
+      cir::YieldOp::create(builder, loc);
+    } else { // Block returns: set null yield value.
+      mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+      cir::YieldOp::create(builder, loc, op0);
+    }
+  }
 
   return info;
 }

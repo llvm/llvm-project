@@ -1978,10 +1978,10 @@ void cir::TernaryOp::build(
   result.addOperands(cond);
   OpBuilder::InsertionGuard guard(builder);
   Region *trueRegion = result.addRegion();
-  Block *trueBlock = builder.createBlock(trueRegion);
+  builder.createBlock(trueRegion);
   trueBuilder(builder, result.location);
   Region *falseRegion = result.addRegion();
-  Block *falseBlock = builder.createBlock(falseRegion);
+  builder.createBlock(falseRegion);
   falseBuilder(builder, result.location);
 
   // Get result type from whichever branch has a yield (the other may have

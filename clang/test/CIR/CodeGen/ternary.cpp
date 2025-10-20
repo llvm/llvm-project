@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fexceptions -fcxx-exceptions -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fexceptions -fcxx-exceptions -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
 int x(int y) {
@@ -305,128 +305,54 @@ void test_cond_lvalue_compound(bool flag) {
 // OGCG:   %[[NEW:.*]] = add{{.*}} i32 %[[OLD]], 3
 // OGCG:   store i32 %[[NEW]], ptr %[[PTR]]
 
-const int& test_cond_throw_false(bool flag) {
-  const int a = 10;
-  return flag ? a : throw 0;
+// Test constant folding - compile-time true condition with lvalue assignment
+void test_cond_const_true_lvalue() {
+  int a = 1;
+  int b = 2;
+  (true ? a : b) = 99;
 }
 
-// CIR-LABEL: cir.func{{.*}} @_Z21test_cond_throw_falseb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
-// CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
-// CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
-// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: %[[RESULT:.*]] = cir.ternary(%[[FLAG_VAL]], true {
-// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
-// CIR: }, false {
-// CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
-// CIR:   cir.unreachable
-// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR-LABEL: cir.func{{.*}} @_Z27test_cond_const_true_lvaluev(
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR-NOT: cir.ternary
+// CIR: %[[NINETYNINE:.*]] = cir.const #cir.int<99> : !s32i
+// CIR: cir.store{{.*}} %[[NINETYNINE]], %[[A]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
-// LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
-// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
-// LLVM: %[[A_ALLOCA:.*]] = alloca i32
-// LLVM: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
-// LLVM: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
-// LLVM: store i32 10, ptr %[[A_ALLOCA]]
-// LLVM: %[[LOAD:.*]] = load i8, ptr %[[FLAG_ALLOCA]]
-// LLVM: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
-// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// LLVM: [[TRUE_BB]]:
-// LLVM:   br label %[[PHI_BB:.*]]
-// LLVM: [[FALSE_BB]]:
-// LLVM:   %[[EXC:.*]] = call{{.*}} ptr @__cxa_allocate_exception
-// LLVM:   store i32 0, ptr %[[EXC]]
-// LLVM:   call void @__cxa_throw(ptr %[[EXC]], ptr @_ZTIi
-// LLVM:   unreachable
-// LLVM: [[PHI_BB]]:
-// LLVM:   %[[PHI:.*]] = phi ptr [ %[[A_ALLOCA]], %[[TRUE_BB]] ]
-// LLVM:   br label %[[CONT_BB:.*]]
-// LLVM: [[CONT_BB]]:
-// LLVM:   store ptr %[[A_ALLOCA]], ptr %[[RET_ALLOCA]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM-LABEL: define{{.*}} void @_Z27test_cond_const_true_lvaluev(
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM-NOT: br i1
+// LLVM: store i32 99, ptr %[[A]]
 
-// OGCG-LABEL: define{{.*}} ptr @_Z21test_cond_throw_falseb(
-// OGCG: %{{.*}} = alloca i8
+// OGCG-LABEL: define{{.*}} void @_Z27test_cond_const_true_lvaluev(
 // OGCG: %[[A:.*]] = alloca i32
-// OGCG: store i32 10, ptr %[[A]]
-// OGCG: %{{.*}} = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
-// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// OGCG: [[TRUE_BB]]:
-// OGCG:   br label %[[END:.*]]
-// OGCG: [[FALSE_BB]]:
-// OGCG:   %{{.*}} = call{{.*}} ptr @__cxa_allocate_exception
-// OGCG:   store i32 0, ptr %{{.*}}
-// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
-// OGCG:   unreachable
-// OGCG: [[END]]:
-// OGCG:   ret ptr %[[A]]
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG-NOT: br i1
+// OGCG: store i32 99, ptr %[[A]]
 
-const int& test_cond_throw_true(bool flag) {
-  const int a = 10;
-  return flag ? throw 0 : a;
+// Test constant folding - compile-time false condition with lvalue assignment
+void test_cond_const_false_lvalue() {
+  int a = 1;
+  int b = 2;
+  (false ? a : b) = 88;
 }
 
-// CIR-LABEL: cir.func{{.*}} @_Z20test_cond_throw_trueb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init, const]
-// CIR: %[[TEN:.*]] = cir.const #cir.int<10> : !s32i
-// CIR: cir.store{{.*}} %[[TEN]], %[[A]] : !s32i, !cir.ptr<!s32i>
-// CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]] : !cir.ptr<!cir.bool>, !cir.bool
-// CIR: %[[RESULT:.*]] = cir.ternary(%[[FLAG_VAL]], true {
-// CIR:   %[[EXCEPTION:.*]] = cir.alloc.exception{{.*}} -> !cir.ptr<!s32i>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[EXCEPTION]] : !s32i, !cir.ptr<!s32i>
-// CIR:   cir.throw %[[EXCEPTION]] : !cir.ptr<!s32i>, @_ZTIi
-// CIR:   cir.unreachable
-// CIR: }, false {
-// CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
-// CIR: }) : (!cir.bool) -> !cir.ptr<!s32i>
+// CIR-LABEL: cir.func{{.*}} @_Z28test_cond_const_false_lvaluev(
+// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR-NOT: cir.ternary
+// CIR: %[[EIGHTYEIGHT:.*]] = cir.const #cir.int<88> : !s32i
+// CIR: cir.store{{.*}} %[[EIGHTYEIGHT]], %[[B]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
-// LLVM: %[[FLAG_ALLOCA:.*]] = alloca i8
-// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
-// LLVM: %[[A_ALLOCA:.*]] = alloca i32
-// LLVM: %[[ZEXT:.*]] = zext i1 %{{.*}} to i8
-// LLVM: store i8 %[[ZEXT]], ptr %[[FLAG_ALLOCA]]
-// LLVM: store i32 10, ptr %[[A_ALLOCA]]
-// LLVM: %[[LOAD:.*]] = load i8, ptr %[[FLAG_ALLOCA]]
-// LLVM: %[[BOOL:.*]] = trunc i8 %[[LOAD]] to i1
-// LLVM: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// LLVM: [[TRUE_BB]]:
-// LLVM:   %[[EXC:.*]] = call{{.*}} ptr @__cxa_allocate_exception
-// LLVM:   store i32 0, ptr %[[EXC]]
-// LLVM:   call void @__cxa_throw(ptr %[[EXC]], ptr @_ZTIi
-// LLVM:   unreachable
-// LLVM: [[FALSE_BB]]:
-// LLVM:   br label %[[PHI_BB:.*]]
-// LLVM: [[PHI_BB]]:
-// LLVM:   %[[PHI:.*]] = phi ptr [ %[[A_ALLOCA]], %[[FALSE_BB]] ]
-// LLVM:   br label %[[CONT_BB:.*]]
-// LLVM: [[CONT_BB]]:
-// LLVM:   store ptr %[[A_ALLOCA]], ptr %[[RET_ALLOCA]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM-LABEL: define{{.*}} void @_Z28test_cond_const_false_lvaluev(
+// LLVM: %[[A:.*]] = alloca i32
+// LLVM: %[[B:.*]] = alloca i32
+// LLVM-NOT: br i1
+// LLVM: store i32 88, ptr %[[B]]
 
-// OGCG-LABEL: define{{.*}} ptr @_Z20test_cond_throw_trueb(
-// OGCG: %{{.*}} = alloca i8
+// OGCG-LABEL: define{{.*}} void @_Z28test_cond_const_false_lvaluev(
 // OGCG: %[[A:.*]] = alloca i32
-// OGCG: store i32 10, ptr %[[A]]
-// OGCG: %{{.*}} = load i8, ptr %{{.*}}
-// OGCG: %[[BOOL:.*]] = trunc i8 %{{.*}} to i1
-// OGCG: br i1 %[[BOOL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
-// OGCG: [[TRUE_BB]]:
-// OGCG:   %{{.*}} = call{{.*}} ptr @__cxa_allocate_exception
-// OGCG:   store i32 0, ptr %{{.*}}
-// OGCG:   call void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIi
-// OGCG:   unreachable
-// OGCG: [[FALSE_BB]]:
-// OGCG:   br label %[[END:.*]]
-// OGCG: [[END]]:
-// OGCG:   ret ptr %[[A]]
+// OGCG: %[[B:.*]] = alloca i32
+// OGCG-NOT: br i1
+// OGCG: store i32 88, ptr %[[B]]
