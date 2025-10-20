@@ -204,50 +204,41 @@ declare i32 @foo(i32, i32, i32, i32, i32, i32)
 define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, double %8, double %9, double %10, double %11, double %12, double %13, double %14, double %15, i8 %stackarg0, i16 %stackarg1, i32 %stackarg2, i64 %stackarg3, half %stackarg4, bfloat %stackarg5, float %stackarg6, double %stackarg7, ptr %p) nounwind {
 ; CHECK-LABEL: remat_load:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -256
-; CHECK-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s2, 224(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s3, 216(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s4, 208(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s5, 200(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s6, 192(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s7, 184(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s8, 176(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s9, 168(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s10, 160(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s11, 152(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs0, 144(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs1, 136(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs2, 128(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs3, 120(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs4, 112(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs5, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs6, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs7, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs8, 80(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs9, 72(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs10, 64(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fsd fs11, 56(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    fld fa5, 312(sp)
-; CHECK-NEXT:    fsd fa5, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    flw fa4, 304(sp)
-; CHECK-NEXT:    fsw fa4, 44(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    flh fa3, 296(sp)
-; CHECK-NEXT:    fsh fa3, 42(sp) # 2-byte Folded Spill
-; CHECK-NEXT:    flh fa2, 288(sp)
-; CHECK-NEXT:    fsh fa2, 40(sp) # 2-byte Folded Spill
-; CHECK-NEXT:    ld a0, 320(sp)
-; CHECK-NEXT:    sd a0, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lbu a4, 256(sp)
-; CHECK-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lh a3, 264(sp)
-; CHECK-NEXT:    sd a3, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    lw a2, 272(sp)
-; CHECK-NEXT:    sd a2, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    ld a1, 280(sp)
-; CHECK-NEXT:    sd a1, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -208
+; CHECK-NEXT:    sd ra, 200(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 192(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 184(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 176(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 168(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 160(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 152(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 144(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 136(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 128(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs1, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs2, 80(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs3, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs4, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs5, 56(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs6, 48(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs7, 40(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs8, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs9, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs10, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fsd fs11, 8(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    fld fa5, 264(sp)
+; CHECK-NEXT:    flw fa4, 256(sp)
+; CHECK-NEXT:    flh fa3, 248(sp)
+; CHECK-NEXT:    flh fa2, 240(sp)
+; CHECK-NEXT:    ld a0, 272(sp)
+; CHECK-NEXT:    lbu a4, 208(sp)
+; CHECK-NEXT:    lh a3, 216(sp)
+; CHECK-NEXT:    lw a2, 224(sp)
+; CHECK-NEXT:    ld a1, 232(sp)
 ; CHECK-NEXT:    sb a4, 0(a0)
 ; CHECK-NEXT:    sh a3, 0(a0)
 ; CHECK-NEXT:    sw a2, 0(a0)
@@ -258,49 +249,49 @@ define void @remat_load(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, 
 ; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ld a0, 0(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a1, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a0, 272(sp)
+; CHECK-NEXT:    lbu a1, 208(sp)
 ; CHECK-NEXT:    sb a1, 0(a0)
-; CHECK-NEXT:    ld a1, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lh a1, 216(sp)
 ; CHECK-NEXT:    sh a1, 0(a0)
-; CHECK-NEXT:    ld a1, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lw a1, 224(sp)
 ; CHECK-NEXT:    sw a1, 0(a0)
-; CHECK-NEXT:    ld a1, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld a1, 232(sp)
 ; CHECK-NEXT:    sd a1, 0(a0)
-; CHECK-NEXT:    flh fa5, 40(sp) # 2-byte Folded Reload
+; CHECK-NEXT:    flh fa5, 240(sp)
 ; CHECK-NEXT:    fsh fa5, 0(a0)
-; CHECK-NEXT:    flh fa5, 42(sp) # 2-byte Folded Reload
+; CHECK-NEXT:    flh fa5, 248(sp)
 ; CHECK-NEXT:    fsh fa5, 0(a0)
-; CHECK-NEXT:    flw fa5, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    flw fa5, 256(sp)
 ; CHECK-NEXT:    fsw fa5, 0(a0)
-; CHECK-NEXT:    fld fa5, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fa5, 264(sp)
 ; CHECK-NEXT:    fsd fa5, 0(a0)
-; CHECK-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s2, 224(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s3, 216(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s4, 208(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s5, 200(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s6, 192(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s7, 184(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s8, 176(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s9, 168(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s10, 160(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s11, 152(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs0, 144(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs1, 136(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs2, 128(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs3, 120(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs4, 112(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs5, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs6, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs7, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs8, 80(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs9, 72(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs10, 64(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    fld fs11, 56(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 256
+; CHECK-NEXT:    ld ra, 200(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 192(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 184(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 176(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 168(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 160(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 152(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 144(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 136(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 128(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs1, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs2, 80(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs3, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs4, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs5, 56(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs6, 48(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs7, 40(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs8, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs9, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs10, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    fld fs11, 8(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 208
 ; CHECK-NEXT:    ret
 entry:
   ; Force loading the stack arguments to create their live interval
