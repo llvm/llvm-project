@@ -21,14 +21,33 @@
 #define LLVM_ADT_INDEXEDMAP_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/identity.h"
 #include <cassert>
+#include <type_traits>
 
 namespace llvm {
 
-template <typename T, typename ToIndexT = identity<unsigned>> class IndexedMap {
-  using IndexT = typename ToIndexT::argument_type;
+namespace detail {
+// Helper to compute the IndexT for IndexedMap.
+template <typename ToIndexT, typename = void> struct DeduceIndexType {
+  using type =
+      std::conditional_t<std::is_same_v<ToIndexT, llvm::identity_cxx20>,
+                         unsigned, void>;
+};
+
+template <typename ToIndexT>
+struct DeduceIndexType<ToIndexT,
+                       std::void_t<typename ToIndexT::argument_type>> {
+  using type = typename ToIndexT::argument_type;
+};
+} // namespace detail
+
+template <typename T, typename ToIndexT = llvm::identity_cxx20,
+          typename IndexT = typename detail::DeduceIndexType<ToIndexT>::type>
+class IndexedMap {
+  static_assert(!std::is_same_v<IndexT, void>,
+                "Could not deduce index type from the provided functor.");
   // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
   // can grow very large and SmallVector grows more efficiently as long as T
   // is trivially copyable.
