@@ -336,40 +336,25 @@ define i32 @PR40483_sub6(ptr, i32) nounwind {
 define i32 @sbb_merge_add1(i32 %a0) nounwind {
 ; X86-LABEL: sbb_merge_add1:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    subl $42, %edi
+; X86-NEXT:    cmpl $42, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    addl $-42, %esi
-; X86-NEXT:    xorl %edi, %esi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
+; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sbb_merge_add1:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl %edi, %ebx
-; X64-NEXT:    xorl %edi, %edi
-; X64-NEXT:    movl %ebx, %ebp
-; X64-NEXT:    subl $42, %ebp
-; X64-NEXT:    setb %dil
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl $42, %edi
+; X64-NEXT:    setb %al
+; X64-NEXT:    movl %eax, %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    addl $-42, %ebx
-; X64-NEXT:    xorl %ebp, %ebx
-; X64-NEXT:    movl %ebx, %eax
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %rbp
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %sbb = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %a0, i32 42)
   %borrow = extractvalue { i8, i32 } %sbb, 0
@@ -385,15 +370,15 @@ define i32 @sbb_merge_add2(i32 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl $42, %edi
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    subl %esi, %edi
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    setb %al
+; X86-NEXT:    movl %edi, %esi
+; X86-NEXT:    negl %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll use@PLT
 ; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    addl $-42, %esi
 ; X86-NEXT:    xorl %edi, %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
@@ -405,13 +390,14 @@ define i32 @sbb_merge_add2(i32 %a0) nounwind {
 ; X64-NEXT:    pushq %rbp
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movl %edi, %ebx
 ; X64-NEXT:    movl $42, %ebp
-; X64-NEXT:    xorl %edi, %edi
-; X64-NEXT:    subl %ebx, %ebp
-; X64-NEXT:    setb %dil
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    subl %edi, %ebp
+; X64-NEXT:    setb %al
+; X64-NEXT:    movl %ebp, %ebx
+; X64-NEXT:    negl %ebx
+; X64-NEXT:    movl %eax, %edi
 ; X64-NEXT:    callq use@PLT
-; X64-NEXT:    addl $-42, %ebx
 ; X64-NEXT:    xorl %ebp, %ebx
 ; X64-NEXT:    movl %ebx, %eax
 ; X64-NEXT:    addq $8, %rsp

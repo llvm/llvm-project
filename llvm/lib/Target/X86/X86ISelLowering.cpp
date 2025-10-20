@@ -57616,10 +57616,10 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   }
 
   // Fold any similar generic ADD/SUB opcodes to reuse this node.
-  auto MatchGeneric = [&](SDValue N0, SDValue N1, bool Negate) {
+  auto MatchGeneric = [&](unsigned Opc, SDValue N0, SDValue N1, bool Negate) {
     SDValue Ops[] = {N0, N1};
     SDVTList VTs = DAG.getVTList(N->getValueType(0));
-    if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops)) {
+    if (SDNode *GenericAddSub = DAG.getNodeIfExists(Opc, VTs, Ops)) {
       SDValue Op(N, 0);
       if (Negate) {
         // Bail if this is only used by a user of the x86 add/sub.
@@ -57631,8 +57631,25 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       DCI.CombineTo(GenericAddSub, Op);
     }
   };
-  MatchGeneric(LHS, RHS, false);
-  MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());
+  MatchGeneric(GenericOpc, LHS, RHS, false);
+  MatchGeneric(GenericOpc, RHS, LHS, X86ISD::SUB == N->getOpcode());
+
+  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(RHS)) {
+    SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
+    if (X86ISD::SUB == N->getOpcode()) {
+      // With LHS - C, fold LHS + (-C)
+      MatchGeneric(ISD::ADD, LHS, NegC, false);
+    } else {
+      // With -(LHS + C), fold (-C) - LHS
+      MatchGeneric(ISD::SUB, NegC, LHS, true);
+    }
+  } else if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(LHS)) {
+    SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
+    if (X86ISD::SUB == N->getOpcode()) {
+      // With -(C - RHS), fold RHS + (-C)
+      MatchGeneric(ISD::ADD, RHS, NegC, true);
+    }
+  }
 
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
   // EFLAGS result doesn't change.
