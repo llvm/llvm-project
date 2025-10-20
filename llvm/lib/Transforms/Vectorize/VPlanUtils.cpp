@@ -146,7 +146,7 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
   if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
     return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPReductionRecipe>(R))
-    return RR->getVFScaleFactor();
+    return RR->getVFScaleFactor().value_or(1);
   assert(
       (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
                                      VPInstruction::ReductionStartVector) &&

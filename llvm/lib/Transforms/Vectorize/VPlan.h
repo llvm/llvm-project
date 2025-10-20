@@ -2678,7 +2678,6 @@ class LLVM_ABI_FOR_TEST VPReductionRecipe : public VPRecipeWithIRFlags {
   bool IsConditional = false;
   /// The scaling factor, relative to the VF, that this recipe's output is
   /// divided by.
-  /// For outer-loop reductions this is equal to 1.
   /// For in-loop reductions this is equal to 0, to specify that this is equal
   /// to the VF (which may not be known yet).
   /// For partial-reductions this is equal to another scalar value.
@@ -2763,8 +2762,11 @@ public:
   VPValue *getCondOp() const {
     return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
   }
-  /// Get the factor that the VF of this recipe's output should be scaled by.
-  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+  /// Get the factor that the VF of this recipe's output should be scaled by, or
+  /// null if it isn't scaled.
+  std::optional<unsigned> getVFScaleFactor() const {
+    return VFScaleFactor > 1 ? std::make_optional(VFScaleFactor) : std::nullopt;
+  }
 };
 
 /// A recipe to represent inloop reduction operations with vector-predication
