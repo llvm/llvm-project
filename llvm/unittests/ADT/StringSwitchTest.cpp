@@ -159,7 +159,7 @@ TEST(StringSwitchTest, Cases) {
     return llvm::StringSwitch<OSType>(S)
         .Cases(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
                OSType::Windows)
-        .Cases("linux", "unix", "*nix", "posix", OSType::Linux)
+        .Cases({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .Cases({"macos", "osx"}, OSType::MacOS)
         .Default(OSType::Unknown);
   };
@@ -191,7 +191,7 @@ TEST(StringSwitchTest, CasesLower) {
     return llvm::StringSwitch<OSType>(S)
         .CasesLower(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
                     OSType::Windows)
-        .CasesLower("linux", "unix", "*nix", "posix", OSType::Linux)
+        .CasesLower({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .CasesLower({"macos", "osx"}, OSType::MacOS)
         .Default(OSType::Unknown);
   };
@@ -230,13 +230,13 @@ TEST(StringSwitchTest, CasesCopies) {
 
   // Check that evaluating multiple cases does not cause unnecessary copies.
   unsigned NumCopies = 0;
-  llvm::StringSwitch<Copyable, void>("baz").Cases("foo", "bar", "baz", "qux",
+  llvm::StringSwitch<Copyable, void>("baz").Cases({"foo", "bar", "baz", "qux"},
                                                   Copyable{NumCopies});
   EXPECT_EQ(NumCopies, 1u);
 
   NumCopies = 0;
   llvm::StringSwitch<Copyable, void>("baz").CasesLower(
-      "Foo", "Bar", "Baz", "Qux", Copyable{NumCopies});
+      {"Foo", "Bar", "Baz", "Qux"}, Copyable{NumCopies});
   EXPECT_EQ(NumCopies, 1u);
 }
 

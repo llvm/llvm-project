@@ -409,6 +409,10 @@ int test_mm_movemask_pi8(__m64 a) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.pmovmskb.128(
   return _mm_movemask_pi8(a);
 }
+TEST_CONSTEXPR(_mm_movemask_pi8((__m64)((__v8qu){0x7F,0x80,0x01,0xFF,0x00,0xAA,0x55,0xC3})) == 0xAA);
+TEST_CONSTEXPR(_mm_movemask_pi8((__m64)((__v2si){(int)0x80FF00AA,(int)0x7F0183E1})) == 0x3D);
+TEST_CONSTEXPR(_mm_movemask_pi8((__m64)((__v1di){(long long)0xE110837A00924DB0ULL})) == 0xA5);
+
 
 __m64 test_mm_mul_su32(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mul_su32
@@ -438,6 +442,7 @@ __m64 test_mm_mulhrs_pi16(__m64 a, __m64 b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(
   return _mm_mulhrs_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_mulhrs_pi16((__m64)(__v4hi){+100, +200, -300, -400}, (__m64)(__v4hi){+30000, -20000, +10000, -5000}), +92, -122, -92, +61));
 
 __m64 test_mm_mullo_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mullo_pi16
