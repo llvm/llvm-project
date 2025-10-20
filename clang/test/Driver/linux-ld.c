@@ -711,7 +711,7 @@
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_riscv64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-RISCV64 %s
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv64-suse-linux -rtlib=platform --unwindlib=platform \
+// RUN:     --target=riscv64-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/opensuse_tumbleweed_riscv64_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-OPENSUSE-TW-RISCV64 %s
 // CHECK-OPENSUSE-TW-RISCV64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
