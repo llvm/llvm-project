@@ -497,9 +497,6 @@ let Features = "avx", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in
   def dpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
   def cmppd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Constant char)">;
   def cmpps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant char)">;
-  def vextractf128_pd256 : X86Builtin<"_Vector<2, double>(_Vector<4, double>, _Constant int)">;
-  def vextractf128_ps256 : X86Builtin<"_Vector<4, float>(_Vector<8, float>, _Constant int)">;
-  def vextractf128_si256 : X86Builtin<"_Vector<4, int>(_Vector<8, int>, _Constant int)">;
   def cvtpd2ps256 : X86Builtin<"_Vector<4, float>(_Vector<4, double>)">;
   def cvtps2dq256 : X86Builtin<"_Vector<8, int>(_Vector<8, float>)">;
   def cvttpd2dq256 : X86Builtin<"_Vector<4, int>(_Vector<4, double>)">;
@@ -520,6 +517,9 @@ let Features = "avx", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWid
   def blendps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Constant int)">;
   def blendvpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Vector<4, double>)">;
   def blendvps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Vector<8, float>)">;
+  def vextractf128_pd256 : X86Builtin<"_Vector<2, double>(_Vector<4, double>, _Constant int)">;
+  def vextractf128_ps256 : X86Builtin<"_Vector<4, float>(_Vector<8, float>, _Constant int)">;
+  def vextractf128_si256 : X86Builtin<"_Vector<4, int>(_Vector<8, int>, _Constant int)">;
   def vinsertf128_pd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<2, double>, _Constant int)">;
   def vinsertf128_ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<4, float>, _Constant int)">;
   def vinsertf128_si256 : X86Builtin<"_Vector<8, int>(_Vector<8, int>, _Vector<4, int>, _Constant int)">;
@@ -622,7 +622,6 @@ let Features = "avx2", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def permvarsf256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, int>)">;
   def permti256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
   def permdi256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Constant int)">;
-  def extract128i256 : X86Builtin<"_Vector<2, long long int>(_Vector<4, long long int>, _Constant int)">;
 }
 
 
@@ -690,6 +689,7 @@ let Features = "avx2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
   def psrlv4si : X86Builtin<"_Vector<4, int>(_Vector<4, int>, _Vector<4, int>)">;
   def psllv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
   def psrlv2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, _Vector<2, long long int>)">;
+  def extract128i256 : X86Builtin<"_Vector<2, long long int>(_Vector<4, long long int>, _Constant int)">;
 }
 
 let Features = "avx2", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
@@ -1091,7 +1091,7 @@ let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256
   def alignq256 : X86Builtin<"_Vector<4, long long int>(_Vector<4, long long int>, _Vector<4, long long int>, _Constant int)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def extractf64x4_mask : X86Builtin<"_Vector<4, double>(_Vector<8, double>, _Constant int, _Vector<4, double>, unsigned char)">;
   def extractf32x4_mask : X86Builtin<"_Vector<4, float>(_Vector<16, float>, _Constant int, _Vector<4, float>, unsigned char)">;
 }
@@ -2956,24 +2956,24 @@ let Features = "avx512vl", Attributes = [NoThrow, RequiredVectorWidth<256>] in {
   def pmovqw256mem_mask : X86Builtin<"void(_Vector<8, short *>, _Vector<4, long long int>, unsigned char)">;
 }
 
-let Features = "avx512dq", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512dq", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def extractf32x8_mask : X86Builtin<"_Vector<8, float>(_Vector<16, float>, _Constant int, _Vector<8, float>, unsigned char)">;
   def extractf64x2_512_mask : X86Builtin<"_Vector<2, double>(_Vector<8, double>, _Constant int, _Vector<2, double>, unsigned char)">;
   def extracti32x8_mask : X86Builtin<"_Vector<8, int>(_Vector<16, int>, _Constant int, _Vector<8, int>, unsigned char)">;
   def extracti64x2_512_mask : X86Builtin<"_Vector<2, long long int>(_Vector<8, long long int>, _Constant int, _Vector<2, long long int>, unsigned char)">;
 }
 
-let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>] in {
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def extracti32x4_mask : X86Builtin<"_Vector<4, int>(_Vector<16, int>, _Constant int, _Vector<4, int>, unsigned char)">;
   def extracti64x4_mask : X86Builtin<"_Vector<4, long long int>(_Vector<8, long long int>, _Constant int, _Vector<4, long long int>, unsigned char)">;
 }
 
-let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512dq,avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def extractf64x2_256_mask : X86Builtin<"_Vector<2, double>(_Vector<4, double>, _Constant int, _Vector<2, double>, unsigned char)">;
   def extracti64x2_256_mask : X86Builtin<"_Vector<2, long long int>(_Vector<4, long long int>, _Constant int, _Vector<2, long long int>, unsigned char)">;
 }
 
-let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "avx512vl", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<256>] in {
   def extractf32x4_256_mask : X86Builtin<"_Vector<4, float>(_Vector<8, float>, _Constant int, _Vector<4, float>, unsigned char)">;
   def extracti32x4_256_mask : X86Builtin<"_Vector<4, int>(_Vector<8, int>, _Constant int, _Vector<4, int>, unsigned char)">;
 }

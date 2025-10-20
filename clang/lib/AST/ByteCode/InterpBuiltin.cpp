@@ -2991,6 +2991,82 @@ static bool interp__builtin_elementwise_triop(
   return true;
 }
 
+static bool interp__builtin_x86_extract_vector(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call,
+                                               unsigned ID) {
+  assert(Call->getNumArgs() == 2);
+
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  uint64_t Index = ImmAPS.getZExtValue();
+
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  if (!Src.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  if (!Dst.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned SrcElems = Src.getNumElems();
+  unsigned DstElems = Dst.getNumElems();
+
+  unsigned NumLanes = SrcElems / DstElems;
+  unsigned Lane = static_cast<unsigned>(Index % NumLanes);
+  unsigned ExtractPos = Lane * DstElems;
+
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != DstElems; ++I) {
+      Dst.elem<T>(I) = Src.elem<T>(ExtractPos + I);
+    }
+  });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
+static bool interp__builtin_x86_extract_vector_masked(InterpState &S,
+                                                      CodePtr OpPC,
+                                                      const CallExpr *Call,
+                                                      unsigned ID) {
+  assert(Call->getNumArgs() == 4);
+
+  APSInt MaskAPS = popToAPSInt(S, Call->getArg(3));
+  const Pointer &Merge = S.Stk.pop<Pointer>();
+  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
+  const Pointer &Src = S.Stk.pop<Pointer>();
+
+  if (!Src.getFieldDesc()->isPrimitiveArray() ||
+      !Merge.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  if (!Dst.getFieldDesc()->isPrimitiveArray())
+    return false;
+
+  unsigned SrcElems = Src.getNumElems();
+  unsigned DstElems = Dst.getNumElems();
+
+  unsigned NumLanes = SrcElems / DstElems;
+  unsigned Lane = static_cast<unsigned>(ImmAPS.getZExtValue() % NumLanes);
+  unsigned Base = Lane * DstElems;
+
+  PrimType ElemT = Src.getFieldDesc()->getPrimType();
+
+  TYPE_SWITCH(ElemT, {
+    for (unsigned I = 0; I != DstElems; ++I) {
+      if (MaskAPS[I])
+        Dst.elem<T>(I) = Src.elem<T>(Base + I);
+      else
+        Dst.elem<T>(I) = Merge.elem<T>(I);
+    }
+  });
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_x86_insert_subvector(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call,
                                                  unsigned ID) {
@@ -3688,6 +3764,25 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
           return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
         });
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256:
+    return interp__builtin_x86_extract_vector(S, OpPC, Call, BuiltinID);
+
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask:
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+    return interp__builtin_x86_extract_vector_masked(S, OpPC, Call, BuiltinID);
 
   case clang::X86::BI__builtin_ia32_pmulhrsw128:
   case clang::X86::BI__builtin_ia32_pmulhrsw256:
