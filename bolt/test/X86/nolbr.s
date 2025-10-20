@@ -17,7 +17,7 @@
 # CHECK-FDATA-NEXT: 1 _start [[#]] 1
 
 # CHECK-BOLT: BOLT-INFO: pre-processing profile using branch profile reader
-# CHECK-BOLT: BOLT-INFO: operating with basic samples profiling data (no LBR).
+# CHECK-BOLT: BOLT-INFO: operating with basic samples profiling data (no brstack).
 # CHECK-BOLT: BOLT-INFO: 1 out of 1 functions in the binary (100.0%) have non-empty execution profile
 
   .globl _start
