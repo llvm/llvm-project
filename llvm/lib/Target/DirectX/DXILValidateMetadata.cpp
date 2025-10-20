@@ -10,6 +10,7 @@
 #include "DXILTranslateMetadata.h"
 #include "DirectX.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -43,14 +44,43 @@ public:
   }
 };
 
+static bool reportError(Module &M, Twine Message,
+                        DiagnosticSeverity Severity = DS_Error) {
+  M.getContext().diagnose(DiagnosticInfoValidateMD(M, Message, Severity));
+  return true;
+}
+
 } // namespace
 
 static void validateInstructionMetadata(Module &M) {
   llvm::errs() << "hello from new pass!\n";
 }
 
+static void validateGlobalMetadata(Module &M,
+                                   const dxil::ModuleMetadataInfo &MMDI) {
+  if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+    if (1 < MMDI.EntryPropertyVec.size())
+      reportError(M, "Non-library shader: One and only one entry expected");
+
+    for (const dxil::EntryProperties &EntryProp : MMDI.EntryPropertyVec)
+      if (EntryProp.ShaderStage != MMDI.ShaderProfile)
+        reportError(
+            M,
+            "Shader stage '" +
+                Twine(Twine(Triple::getEnvironmentTypeName(
+                          EntryProp.ShaderStage)) +
+                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
+                      "' different from specified target profile '" +
+                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
+                            "'")));
+  }
+}
+
 PreservedAnalyses DXILValidateMetadata::run(Module &M,
                                             ModuleAnalysisManager &MAM) {
+
+  const dxil::ModuleMetadataInfo MMDI = MAM.getResult<DXILMetadataAnalysis>(M);
+  validateGlobalMetadata(M, MMDI);
   validateInstructionMetadata(M);
 
   return PreservedAnalyses::all();
@@ -65,12 +95,15 @@ public:
   StringRef getPassName() const override { return "DXIL Validate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILTranslateMetadataLegacy>();
     AU.setPreservesAll();
   }
 
   bool runOnModule(Module &M) override {
-    validateInstructionMetadata();
+    dxil::ModuleMetadataInfo MMDI =
+        getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+    validateGlobalMetadata(M, MMDI);
     return true;
   }
 };
@@ -85,6 +118,7 @@ ModulePass *llvm::createDXILValidateMetadataLegacyPass() {
 
 INITIALIZE_PASS_BEGIN(DXILValidateMetadataLegacy, "dxil-validate-metadata",
                       "DXIL Validate Metadata", false, false)
+INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILTranslateMetadataLegacy)
 INITIALIZE_PASS_END(DXILValidateMetadataLegacy, "dxil-validate-metadata",
                     "DXIL validate Metadata", false, false)
