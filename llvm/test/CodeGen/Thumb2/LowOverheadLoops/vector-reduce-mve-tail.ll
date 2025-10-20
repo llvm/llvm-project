@@ -25,8 +25,8 @@ define i32 @vec_mul_reduce_add(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[N]], %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP7]])
 ; CHECK-NEXT:    [[TMP9]] = sub i32 [[TMP7]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV2]], i32 4, <4 x i1> [[TMP8]], <4 x i32> undef)
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[LSR_IV]], i32 4, <4 x i1> [[TMP8]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV2]], <4 x i1> [[TMP8]], <4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD13:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[LSR_IV]], <4 x i1> [[TMP8]], <4 x i32> undef)
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nsw <4 x i32> [[WIDE_MASKED_LOAD13]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP11]] = add nsw <4 x i32> [[TMP10]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i32, ptr [[LSR_IV]], i32 4
