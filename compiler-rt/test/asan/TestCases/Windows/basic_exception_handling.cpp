@@ -7,13 +7,14 @@
 // This code is based on the repro in https://github.com/google/sanitizers/issues/749
 #include <cstdio>
 #include <exception>
+#include <stdexcept>
 
-void throwInFunction() { throw std::exception("test2"); }
+void throwInFunction() { throw std::runtime_error("test2"); }
 
 int main() {
   // case 1: direct throw
   try {
-    throw std::exception("test1");
+    throw std::runtime_error("test1");
   } catch (const std::exception &ex) {
     puts(ex.what());
     // CHECK: test1

@@ -543,16 +543,16 @@ llvm.func @get_active_lane_mask(%base: i64, %n: i64) -> (vector<7xi1>) {
 
 // CHECK-LABEL: @masked_load_store_intrinsics
 llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
-  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison)
+  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
   %a = llvm.intr.masked.load %A, %mask { alignment = 1: i32} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
-  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison), !nontemporal !1
+  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison), !nontemporal !1
   %b = llvm.intr.masked.load %A, %mask { alignment = 1: i32, nontemporal} :
     (!llvm.ptr, vector<7xi1>) -> vector<7xf32>
-  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  // CHECK: call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %c = llvm.intr.masked.load %A, %mask, %a { alignment = 1: i32} :
     (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
-  // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr %0, i32 {{.*}}, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}})
   llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
@@ -560,13 +560,13 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
 
 // CHECK-LABEL: @masked_gather_scatter_intrinsics
 llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: vector<7xi1>) {
-  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> poison)
+  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> poison)
   %a = llvm.intr.masked.gather %M, %mask { alignment = 1: i32} :
       (vector<7 x !llvm.ptr>, vector<7xi1>) -> vector<7xf32>
-  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  // CHECK: call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %b = llvm.intr.masked.gather %M, %mask, %a { alignment = 1: i32} :
       (vector<7 x !llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
-  // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> %{{.*}}, i32 1, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %{{.*}}, <7 x ptr> align 1 %{{.*}}, <7 x i1> %{{.*}})
   llvm.intr.masked.scatter %b, %M, %mask { alignment = 1: i32} :
       vector<7xf32>, vector<7xi1> into vector<7 x !llvm.ptr>
   llvm.return
@@ -1335,10 +1335,10 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare <48 x float> @llvm.matrix.column.major.load.v48f32.i64(ptr captures(none), i64, i1 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare void @llvm.matrix.column.major.store.v48f32.i64(<48 x float>, ptr writeonly captures(none), i64, i1 immarg, i32 immarg, i32 immarg)
 // CHECK-DAG: declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64, i64)
-// CHECK-DAG: declare <7 x float> @llvm.masked.load.v7f32.p0(ptr captures(none), i32 immarg, <7 x i1>, <7 x float>)
-// CHECK-DAG: declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr captures(none), i32 immarg, <7 x i1>)
-// CHECK-DAG: declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, i32 immarg, <7 x i1>, <7 x float>)
-// CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.load.v7f32.p0(ptr captures(none), <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr captures(none), <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr captures(none), <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr captures(none), <7 x i1>)
 // CHECK-DAG: declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
