@@ -2471,6 +2471,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
+    if (Subtarget->hasStdExtP()) {
+      if (((VT == MVT::v4i16 || VT == MVT::v8i8) && SrcVT == MVT::i64) ||
+          ((SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8) && VT == MVT::i64)) {
+        ReplaceUses(SDValue(Node, 0), Node->getOperand(0));
+        CurDAG->RemoveDeadNode(Node);
+      }
+      return;
+    }
     break;
   }
   case ISD::INSERT_SUBVECTOR:

@@ -1458,6 +1458,12 @@ let Predicates = [HasStdExtP, IsRV32] in {
 
 def SDT_RISCVPLI : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def riscv_pli : RVSDNode<"PLI", SDT_RISCVPLI>;
+def SDT_RISCVPASUB
+    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>]>;
+def riscv_pasub : RVSDNode<"PASUB", SDT_RISCVPASUB>;
+def SDT_RISCVPASUBU
+    : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>]>;
+def riscv_pasubu : RVSDNode<"PASUBU", SDT_RISCVPASUBU>;
 let Predicates = [HasStdExtP, IsRV64] in {
   // Basic arithmetic patterns for v4i16 (16-bit elements in 64-bit GPR)
   def: Pat<(v4i16 (add (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))), (!cast<Instruction>("PADD_H") GPR:$rs1, GPR:$rs2)>;
@@ -1498,6 +1504,19 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def: Pat<(v2i32 (riscv_pli simm10:$imm10)), (PLI_W simm10:$imm10)>;
   def: Pat<(v4i16 (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
   def: Pat<(v8i8 (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
+
+  def: Pat<(v8i8 (riscv_pasub (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+           (PASUB_B (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))>;
+  def: Pat<(v4i16 (riscv_pasub (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+           (PASUB_H (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))>;
+  def: Pat<(v2i32 (riscv_pasub (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+           (PASUB_W (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))>;
+  def: Pat<(v8i8 (riscv_pasubu (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))),
+           (PASUBU_B (v8i8 GPR:$rs1), (v8i8 GPR:$rs2))>;
+  def: Pat<(v4i16 (riscv_pasubu (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
+           (PASUBU_H (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))>;
+  def: Pat<(v2i32 (riscv_pasubu (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))),
+           (PASUBU_W (v2i32 GPR:$rs1), (v2i32 GPR:$rs2))>;
 
   // Load/Store patterns for v4i16 and v8i8 (use regular GPR load/store since they're in GPRs)
   def : StPat<store, SD, GPR, v4i16>;
@@ -1549,6 +1568,16 @@ let Predicates = [HasStdExtP] in {
   
   def: Pat<(v2i16 (riscv_pli simm10:$imm10)), (PLI_H simm10:$imm10)>;
   def: Pat<(v4i8 (riscv_pli simm8_unsigned:$imm8)), (PLI_B simm8_unsigned:$imm8)>;
+
+  def: Pat<(v4i8 (riscv_pasub (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+           (PASUB_B (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))>;
+  def: Pat<(v2i16 (riscv_pasub (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+           (PASUB_H (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))>;
+  def: Pat<(v4i8 (riscv_pasubu (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))),
+           (PASUBU_B (v4i8 GPR:$rs1), (v4i8 GPR:$rs2))>;
+  def: Pat<(v2i16 (riscv_pasubu (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))),
+           (PASUBU_H (v2i16 GPR:$rs1), (v2i16 GPR:$rs2))>;
+
   // Load/Store patterns for v2i16 and v4i8 (use regular GPR load/store since they're in GPRs)
   def : StPat<store, SW, GPR, v2i16>;
   def : LdPat<load, LW, v2i16>;
