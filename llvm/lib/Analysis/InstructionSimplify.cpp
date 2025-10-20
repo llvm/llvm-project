@@ -5440,9 +5440,10 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 
   // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
   Value *Ptr, *X;
-  if (CastOpc == Instruction::PtrToInt &&
-      match(Op, m_PtrAdd(m_Value(Ptr),
-                         m_Sub(m_Value(X), m_PtrToInt(m_Deferred(Ptr))))) &&
+  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+      match(Op,
+            m_PtrAdd(m_Value(Ptr),
+                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
 
@@ -6987,8 +6988,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
-    Value *MaskArg = Args[2];
-    Value *PassthruArg = Args[3];
+    Value *MaskArg = Args[1];
+    Value *PassthruArg = Args[2];
     // If the mask is all zeros or undef, the "passthru" argument is the result.
     if (maskIsAllZeroOrUndef(MaskArg))
       return PassthruArg;
