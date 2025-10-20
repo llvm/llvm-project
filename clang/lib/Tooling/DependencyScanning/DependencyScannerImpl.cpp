@@ -799,6 +799,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
     return llvm::make_error<llvm::StringError>(
         "Prebuilt module scanning failed", llvm::inconvertibleErrorCode());
 
+  PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
   OutputOpts = takeDependencyOutputOptionsFrom(CI);
 
   CI.createTarget();
@@ -813,22 +814,20 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   auto &CI = *CIPtr;
   CompilerInvocation Inv(*Invocation);
 
-  auto Opts = std::make_unique<DependencyOutputOptions>(*OutputOpts);
-  auto MDC = std::make_shared<ModuleDepCollector>(
-      Worker.Service, std::move(Opts), CI, Consumer, Controller, Inv,
-      PrebuiltModuleVFSMap, StableDirs);
-
   CI.clearDependencyCollectors();
-  CI.addDependencyCollector(MDC);
-
-  std::unique_ptr<FrontendAction> Action =
-      std::make_unique<GetDependenciesByModuleNameAction>(ModuleName);
-  auto InputFile = CI.getFrontendOpts().Inputs.begin();
+  auto MDC = initializeScanInstanceDependencyCollector(
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
+      Worker.Service, *Invocation, Controller, PrebuiltModuleASTMap,
+      StableDirs);
 
   if (!SrcLocOffset) {
+    // When SrcLocOffset is zero, we are at the beginning of the fake source
+    // file. In this case, we call BeginSourceFile to initialize.
+    std::unique_ptr<FrontendAction> Action =
+        std::make_unique<GetDependenciesByModuleNameAction>(ModuleName);
+    auto InputFile = CI.getFrontendOpts().Inputs.begin();
+
     Action->BeginSourceFile(CI, *InputFile);
-  } else {
-    CI.getPreprocessor().removePPCallbacks();
   }
 
   Preprocessor &PP = CI.getPreprocessor();
@@ -836,9 +835,14 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
   SourceLocation IDLocation = FileStart.getLocWithOffset(SrcLocOffset);
-  if (!SrcLocOffset)
+  if (!SrcLocOffset) {
+    // We need to call EnterSourceFile when SrcLocOffset is zero to initialize
+    // the preprocessor.
     PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
-  else {
+  } else {
+    // When SrcLocOffset is non-zero, the preprocessor has already been
+    // initialized through a previous call of computeDependencies. We want to
+    // preserve the PP's state, hence we do not call EnterSourceFile again.
     auto DCs = CI.getDependencyCollectors();
     for (auto &DC : DCs) {
       DC->attachToPreprocessor(PP);
@@ -878,6 +882,8 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   //   if (!ID.empty())
   //     Consumer.handleIncludeTreeID(std::move(ID));
 
+  // Remove the PPCallbacks since they are going out of scope.
+  CI.getPreprocessor().removePPCallbacks();
   return llvm::Error::success();
 }
 
