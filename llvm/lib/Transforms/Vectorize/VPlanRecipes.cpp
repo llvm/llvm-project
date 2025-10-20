@@ -306,6 +306,8 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   // If the partial reduction is predicated, a select will be operand 1.
   // If it isn't predicated and the mul isn't operating on a constant, then it
   // should have been turned into a VPExpressionRecipe.
+  // FIXME: Replace the entire function with this once all partial reduction
+  // variants are bundled into VPExpressionRecipe.
   if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
       !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
     auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
