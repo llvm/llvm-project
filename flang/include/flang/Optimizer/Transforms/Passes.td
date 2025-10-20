@@ -246,6 +246,10 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            "int32_t",
            /*default=*/"0",
            "dwarf version">,
+    Option<"splitDwarfFile", "split-dwarf-file",
+           "std::string", /*default=*/"std::string{}",
+           "Name of the split dwarf file">
+
   ];
 }
 
@@ -574,6 +578,11 @@ def OptimizeArrayRepacking
     then this pass erases such operations. The corresponding
     fir.unpack_array operations are also removed.
   }];
+}
+
+def MIFOpConversion : Pass<"mif-convert", "mlir::ModuleOp"> {
+  let summary = "Convert some MIF operations to runtime calls";
+  let dependentDialects = ["fir::FIROpsDialect", "mlir::LLVM::LLVMDialect"];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

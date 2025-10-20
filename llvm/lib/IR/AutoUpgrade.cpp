@@ -594,6 +594,42 @@ static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return false; // No other 'x86.avx512.*'.
   }
 
+  if (Name.consume_front("avx2.vpdpb")) {
+    // Added in 21.1
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("ssd.128", Intrinsic::x86_avx2_vpdpbssd_128)
+             .Case("ssd.256", Intrinsic::x86_avx2_vpdpbssd_256)
+             .Case("ssds.128", Intrinsic::x86_avx2_vpdpbssds_128)
+             .Case("ssds.256", Intrinsic::x86_avx2_vpdpbssds_256)
+             .Case("sud.128", Intrinsic::x86_avx2_vpdpbsud_128)
+             .Case("sud.256", Intrinsic::x86_avx2_vpdpbsud_256)
+             .Case("suds.128", Intrinsic::x86_avx2_vpdpbsuds_128)
+             .Case("suds.256", Intrinsic::x86_avx2_vpdpbsuds_256)
+             .Case("uud.128", Intrinsic::x86_avx2_vpdpbuud_128)
+             .Case("uud.256", Intrinsic::x86_avx2_vpdpbuud_256)
+             .Case("uuds.128", Intrinsic::x86_avx2_vpdpbuuds_128)
+             .Case("uuds.256", Intrinsic::x86_avx2_vpdpbuuds_256)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx2.*'
+  }
+
+  if (Name.consume_front("avx10.vpdpb")) {
+    // Added in 21.1
+    ID = StringSwitch<Intrinsic::ID>(Name)
+             .Case("ssd.512", Intrinsic::x86_avx10_vpdpbssd_512)
+             .Case("ssds.512", Intrinsic::x86_avx10_vpdpbssds_512)
+             .Case("sud.512", Intrinsic::x86_avx10_vpdpbsud_512)
+             .Case("suds.512", Intrinsic::x86_avx10_vpdpbsuds_512)
+             .Case("uud.512", Intrinsic::x86_avx10_vpdpbuud_512)
+             .Case("uuds.512", Intrinsic::x86_avx10_vpdpbuuds_512)
+             .Default(Intrinsic::not_intrinsic);
+    if (ID != Intrinsic::not_intrinsic)
+      return upgradeX86MultiplyAddBytes(F, ID, NewFn);
+    return false; // No other 'x86.avx10.*'
+  }
+
   if (Name.consume_front("avx512bf16.")) {
     // Added in 9.0
     ID = StringSwitch<Intrinsic::ID>(Name)
@@ -1388,6 +1424,28 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       };
       NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                                 Intrinsic::memset, ParamTypes);
+      return true;
+    }
+
+    unsigned MaskedID =
+        StringSwitch<unsigned>(Name)
+            .StartsWith("masked.load", Intrinsic::masked_load)
+            .StartsWith("masked.gather", Intrinsic::masked_gather)
+            .StartsWith("masked.store", Intrinsic::masked_store)
+            .StartsWith("masked.scatter", Intrinsic::masked_scatter)
+            .Default(0);
+    if (MaskedID && F->arg_size() == 4) {
+      rename(F);
+      if (MaskedID == Intrinsic::masked_load ||
+          MaskedID == Intrinsic::masked_gather) {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), MaskedID,
+            {F->getReturnType(), F->getArg(0)->getType()});
+        return true;
+      }
+      NewFn = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), MaskedID,
+          {F->getArg(0)->getType(), F->getArg(1)->getType()});
       return true;
     }
     break;
@@ -5195,6 +5253,54 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_gather:
+  case Intrinsic::masked_store:
+  case Intrinsic::masked_scatter: {
+    if (CI->arg_size() != 4) {
+      DefaultCase();
+      return;
+    }
+
+    const DataLayout &DL = CI->getDataLayout();
+    switch (NewFn->getIntrinsicID()) {
+    case Intrinsic::masked_load:
+      NewCall = Builder.CreateMaskedLoad(
+          CI->getType(), CI->getArgOperand(0),
+          cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue(),
+          CI->getArgOperand(2), CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_gather:
+      NewCall = Builder.CreateMaskedGather(
+          CI->getType(), CI->getArgOperand(0),
+          DL.getValueOrABITypeAlignment(
+              cast<ConstantInt>(CI->getArgOperand(1))->getMaybeAlignValue(),
+              CI->getType()->getScalarType()),
+          CI->getArgOperand(2), CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_store:
+      NewCall = Builder.CreateMaskedStore(
+          CI->getArgOperand(0), CI->getArgOperand(1),
+          cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue(),
+          CI->getArgOperand(3));
+      break;
+    case Intrinsic::masked_scatter:
+      NewCall = Builder.CreateMaskedScatter(
+          CI->getArgOperand(0), CI->getArgOperand(1),
+          DL.getValueOrABITypeAlignment(
+              cast<ConstantInt>(CI->getArgOperand(2))->getMaybeAlignValue(),
+              CI->getArgOperand(0)->getType()->getScalarType()),
+          CI->getArgOperand(3));
+      break;
+    default:
+      llvm_unreachable("Unexpected intrinsic ID");
+    }
+    // Previous metadata is still valid.
+    NewCall->copyMetadata(*CI);
+    NewCall->setTailCallKind(cast<CallInst>(CI)->getTailCallKind());
+    break;
+  }
+
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     if (CI->arg_size() != 2) {
@@ -5224,7 +5330,25 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::x86_avx512_vpdpbusd_512:
   case Intrinsic::x86_avx512_vpdpbusds_128:
   case Intrinsic::x86_avx512_vpdpbusds_256:
-  case Intrinsic::x86_avx512_vpdpbusds_512: {
+  case Intrinsic::x86_avx512_vpdpbusds_512:
+  case Intrinsic::x86_avx2_vpdpbssd_128:
+  case Intrinsic::x86_avx2_vpdpbssd_256:
+  case Intrinsic::x86_avx10_vpdpbssd_512:
+  case Intrinsic::x86_avx2_vpdpbssds_128:
+  case Intrinsic::x86_avx2_vpdpbssds_256:
+  case Intrinsic::x86_avx10_vpdpbssds_512:
+  case Intrinsic::x86_avx2_vpdpbsud_128:
+  case Intrinsic::x86_avx2_vpdpbsud_256:
+  case Intrinsic::x86_avx10_vpdpbsud_512:
+  case Intrinsic::x86_avx2_vpdpbsuds_128:
+  case Intrinsic::x86_avx2_vpdpbsuds_256:
+  case Intrinsic::x86_avx10_vpdpbsuds_512:
+  case Intrinsic::x86_avx2_vpdpbuud_128:
+  case Intrinsic::x86_avx2_vpdpbuud_256:
+  case Intrinsic::x86_avx10_vpdpbuud_512:
+  case Intrinsic::x86_avx2_vpdpbuuds_128:
+  case Intrinsic::x86_avx2_vpdpbuuds_256:
+  case Intrinsic::x86_avx10_vpdpbuuds_512: {
     unsigned NumElts = CI->getType()->getPrimitiveSizeInBits() / 8;
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -5987,8 +6111,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
   // The only data layout upgrades needed for pre-GCN, SPIR or SPIRV are setting
   // the address space of globals to 1. This does not apply to SPIRV Logical.
-  if (((T.isAMDGPU() && !T.isAMDGCN()) ||
-       (T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical()))) &&
+  if ((T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical())) &&
       !DL.contains("-G") && !DL.starts_with("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
@@ -6001,35 +6124,43 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
     return DL.str();
   }
 
+  // AMDGPU data layout upgrades.
   std::string Res = DL.str();
-  // AMDGCN data layout upgrades.
-  if (T.isAMDGCN()) {
+  if (T.isAMDGPU()) {
     // Define address spaces for constants.
     if (!DL.contains("-G") && !DL.starts_with("G"))
       Res.append(Res.empty() ? "G1" : "-G1");
 
-    // Add missing non-integral declarations.
-    // This goes before adding new address spaces to prevent incoherent string
-    // values.
-    if (!DL.contains("-ni") && !DL.starts_with("ni"))
-      Res.append("-ni:7:8:9");
-    // Update ni:7 to ni:7:8:9.
-    if (DL.ends_with("ni:7"))
-      Res.append(":8:9");
-    if (DL.ends_with("ni:7:8"))
-      Res.append(":9");
+    // AMDGCN data layout upgrades.
+    if (T.isAMDGCN()) {
 
-    // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
-    // resources) An empty data layout has already been upgraded to G1 by now.
-    if (!DL.contains("-p7") && !DL.starts_with("p7"))
-      Res.append("-p7:160:256:256:32");
-    if (!DL.contains("-p8") && !DL.starts_with("p8"))
-      Res.append("-p8:128:128:128:48");
-    constexpr StringRef OldP8("-p8:128:128-");
-    if (DL.contains(OldP8))
-      Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
-    if (!DL.contains("-p9") && !DL.starts_with("p9"))
-      Res.append("-p9:192:256:256:32");
+      // Add missing non-integral declarations.
+      // This goes before adding new address spaces to prevent incoherent string
+      // values.
+      if (!DL.contains("-ni") && !DL.starts_with("ni"))
+        Res.append("-ni:7:8:9");
+      // Update ni:7 to ni:7:8:9.
+      if (DL.ends_with("ni:7"))
+        Res.append(":8:9");
+      if (DL.ends_with("ni:7:8"))
+        Res.append(":9");
+
+      // Add sizing for address spaces 7 and 8 (fat raw buffers and buffer
+      // resources) An empty data layout has already been upgraded to G1 by now.
+      if (!DL.contains("-p7") && !DL.starts_with("p7"))
+        Res.append("-p7:160:256:256:32");
+      if (!DL.contains("-p8") && !DL.starts_with("p8"))
+        Res.append("-p8:128:128:128:48");
+      constexpr StringRef OldP8("-p8:128:128-");
+      if (DL.contains(OldP8))
+        Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
+      if (!DL.contains("-p9") && !DL.starts_with("p9"))
+        Res.append("-p9:192:256:256:32");
+    }
+
+    // Upgrade the ELF mangling mode.
+    if (!DL.contains("m:e"))
+      Res = Res.empty() ? "m:e" : "m:e-" + Res;
 
     return Res;
   }

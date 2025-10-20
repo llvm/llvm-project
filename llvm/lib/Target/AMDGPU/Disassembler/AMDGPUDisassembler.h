@@ -41,10 +41,10 @@ private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
   const MCAsmInfo &MAI;
+  const unsigned HwModeRegClass;
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
-  mutable uint32_t Literal;
-  mutable uint64_t Literal64;
+  mutable uint64_t Literal;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
   unsigned CodeObjectVersion;
@@ -143,9 +143,8 @@ public:
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
   MCOperand decodeMandatoryLiteral64Constant(uint64_t Imm) const;
   MCOperand decodeLiteralConstant(const MCInstrDesc &Desc,
-                                  const MCOperandInfo &OpDesc,
-                                  bool ExtendFP64) const;
-  MCOperand decodeLiteral64Constant(const MCInst &Inst) const;
+                                  const MCOperandInfo &OpDesc) const;
+  MCOperand decodeLiteral64Constant() const;
 
   MCOperand decodeSrcOp(const MCInst &Inst, unsigned Width, unsigned Val) const;
 
