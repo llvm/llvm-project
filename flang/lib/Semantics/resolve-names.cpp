@@ -1494,7 +1494,7 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name{
-                      semantics::getDesignatorNameIfDataRef(designator)}) {
+                      parser::GetDesignatorNameIfDataRef(designator)}) {
                 Symbol *prev{currScope().FindSymbol(name->source)};
                 if (prev != name->symbol) {
                   name->symbol = prev;
@@ -1648,7 +1648,7 @@ public:
           common::visitors{
               [&](const parser::Designator &designator) {
                 if (const auto *name{
-                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                        parser::GetDesignatorNameIfDataRef(designator)}) {
                   specPartState_.declareTargetNames.insert(name->source);
                 }
               },
@@ -2016,7 +2016,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
     if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{getDesignatorNameIfDataRef(*desg)}) {
+      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
             SayWithDecl(*name, *symbol,

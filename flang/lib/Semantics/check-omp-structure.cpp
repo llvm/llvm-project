@@ -2617,7 +2617,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   auto getNameFromArg{[](const parser::OmpArgument &arg) {
     if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
       if (auto *designator{omp::GetDesignatorFromObj(*object)}) {
-        return getDesignatorNameIfDataRef(*designator);
+        return parser::GetDesignatorNameIfDataRef(*designator);
       }
     }
     return static_cast<const parser::Name *>(nullptr);
