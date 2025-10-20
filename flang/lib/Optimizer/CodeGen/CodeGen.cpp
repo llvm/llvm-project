@@ -176,6 +176,19 @@ struct AddrOfOpConversion : public fir::FIROpConversion<fir::AddrOfOp> {
   llvm::LogicalResult
   matchAndRewrite(fir::AddrOfOp addr, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
+
+    if (auto gpuMod = addr->getParentOfType<mlir::gpu::GPUModuleOp>()) {
+      auto global = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
+      replaceWithAddrOfOrASCast(
+          rewriter, addr->getLoc(),
+          global ? global.getAddrSpace() : getGlobalAddressSpace(rewriter),
+          getProgramAddressSpace(rewriter),
+          global ? global.getSymName()
+                 : addr.getSymbol().getRootReference().getValue(),
+          convertType(addr.getType()), addr);
+      return mlir::success();
+    }
+
     auto global = addr->getParentOfType<mlir::ModuleOp>()
                       .lookupSymbol<mlir::LLVM::GlobalOp>(addr.getSymbol());
     replaceWithAddrOfOrASCast(
@@ -3229,6 +3242,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       g.setAddrSpace(
           static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Shared));
 
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Constant)
+      g.setAddrSpace(
+          static_cast<unsigned>(mlir::NVVM::NVVMMemorySpace::Constant));
+
     rewriter.eraseOp(global);
     return mlir::success();
   }
@@ -3348,7 +3366,7 @@ struct DoConcurrentSpecifierOpConversion : public fir::FIROpConversion<OpTy> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 #ifdef EXPENSIVE_CHECKS
     auto uses = mlir::SymbolTable::getSymbolUses(
-        specifier, specifier->getParentOfType<mlir::ModuleOp>());
+        specifier, specifier->template getParentOfType<mlir::ModuleOp>());
 
     // `fir.local|fir.declare_reduction` ops are not supposed to have any uses
     // at this point (i.e. during lowering to LLVM). In case of serialization,

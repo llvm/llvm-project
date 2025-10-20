@@ -689,10 +689,14 @@ static void buildFrameDebugInfo(Function &F, coro::Shape &Shape,
   DISubprogram *DIS = F.getSubprogram();
   // If there is no DISubprogram for F, it implies the function is compiled
   // without debug info. So we also don't generate debug info for the frame.
-  if (!DIS || !DIS->getUnit() ||
-      !dwarf::isCPlusPlus(
-          (dwarf::SourceLanguage)DIS->getUnit()->getSourceLanguage()) ||
-      DIS->getUnit()->getEmissionKind() != DICompileUnit::DebugEmissionKind::FullDebug)
+
+  if (!DIS || !DIS->getUnit())
+    return;
+
+  if (!dwarf::isCPlusPlus(static_cast<llvm::dwarf::SourceLanguage>(
+          DIS->getUnit()->getSourceLanguage().getUnversionedName())) ||
+      DIS->getUnit()->getEmissionKind() !=
+          DICompileUnit::DebugEmissionKind::FullDebug)
     return;
 
   assert(Shape.ABI == coro::ABI::Switch &&

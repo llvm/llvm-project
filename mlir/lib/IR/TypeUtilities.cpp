@@ -104,8 +104,8 @@ LogicalResult mlir::verifyCompatibleShapes(TypeRange types1, TypeRange types2) {
 LogicalResult mlir::verifyCompatibleDims(ArrayRef<int64_t> dims) {
   if (dims.empty())
     return success();
-  auto staticDim = std::accumulate(
-      dims.begin(), dims.end(), dims.front(), [](auto fold, auto dim) {
+  auto staticDim =
+      llvm::accumulate(dims, dims.front(), [](auto fold, auto dim) {
         return ShapedType::isDynamic(dim) ? fold : dim;
       });
   return success(llvm::all_of(dims, [&](auto dim) {

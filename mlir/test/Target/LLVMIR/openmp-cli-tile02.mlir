@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s --enable-var-scope
 
 
 llvm.func @tile_2d_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %ts1: i32, %ts2: i32) -> () {
@@ -19,172 +19,166 @@ llvm.func @tile_2d_loop(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %ts1: i32, %t
 }
 
 
-// CHECK: ; ModuleID = 'LLVMDialectModule'
-// CHECK-NEXT: source_filename = "LLVMDialectModule"
+// CHECK-LABEL: define void @tile_2d_loop(
+// CHECK-SAME:      ptr %[[TMP0:.+]], i32 %[[TMP1:.+]], i32 %[[TMP2:.+]], i32 %[[TMP3:.+]], i32 %[[TMP4:.+]]) {
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_PREHEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: define void @tile_2d_loop(ptr %0, i32 %1, i32 %2, i32 %3, i32 %4) {
-// CHECK-NEXT:   br label %omp_omp.loop.preheader
+// CHECK-NEXT:  [[OMP_OMP_LOOP_PREHEADER]]:
+// CHECK-NEXT:    %[[TMP6:.+]] = udiv i32 %[[TMP1:.+]], %[[TMP3:.+]]
+// CHECK-NEXT:    %[[TMP7:.+]] = urem i32 %[[TMP1:.+]], %[[TMP3:.+]]
+// CHECK-NEXT:    %[[TMP8:.+]] = icmp ne i32 %[[TMP7:.+]], 0
+// CHECK-NEXT:    %[[TMP9:.+]] = zext i1 %[[TMP8:.+]] to i32
+// CHECK-NEXT:    %[[OMP_FLOOR0_TRIPCOUNT:.+]] = add nuw i32 %[[TMP6:.+]], %[[TMP9:.+]]
+// CHECK-NEXT:    %[[TMP10:.+]] = udiv i32 %[[TMP2:.+]], %[[TMP4:.+]]
+// CHECK-NEXT:    %[[TMP11:.+]] = urem i32 %[[TMP2:.+]], %[[TMP4:.+]]
+// CHECK-NEXT:    %[[TMP12:.+]] = icmp ne i32 %[[TMP11:.+]], 0
+// CHECK-NEXT:    %[[TMP13:.+]] = zext i1 %[[TMP12:.+]] to i32
+// CHECK-NEXT:    %[[OMP_FLOOR1_TRIPCOUNT:.+]] = add nuw i32 %[[TMP10:.+]], %[[TMP13:.+]]
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_PREHEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.preheader:                           ; preds = %5
-// CHECK-NEXT:   %6 = udiv i32 %1, %3
-// CHECK-NEXT:   %7 = urem i32 %1, %3
-// CHECK-NEXT:   %8 = icmp ne i32 %7, 0
-// CHECK-NEXT:   %9 = zext i1 %8 to i32
-// CHECK-NEXT:   %omp_floor0.tripcount = add nuw i32 %6, %9
-// CHECK-NEXT:   %10 = udiv i32 %2, %4
-// CHECK-NEXT:   %11 = urem i32 %2, %4
-// CHECK-NEXT:   %12 = icmp ne i32 %11, 0
-// CHECK-NEXT:   %13 = zext i1 %12 to i32
-// CHECK-NEXT:   %omp_floor1.tripcount = add nuw i32 %10, %13
-// CHECK-NEXT:   br label %omp_floor0.preheader
+// CHECK-NEXT:  [[OMP_OMP_LOOP_HEADER:.+]]:
+// CHECK-NEXT:    %[[OMP_OMP_LOOP_IV:.+]] = phi i32 [ %[[OMP_OMP_LOOP_NEXT:.+]], %[[OMP_OMP_LOOP_INC:.+]] ]
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_COND:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.header:                              ; preds = %omp_omp.loop.inc
-// CHECK-NEXT:   %omp_omp.loop.iv = phi i32 [ %omp_omp.loop.next, %omp_omp.loop.inc ]
-// CHECK-NEXT:   br label %omp_omp.loop.cond
+// CHECK-NEXT:  [[OMP_OMP_LOOP_COND]]:
+// CHECK-NEXT:    %[[OMP_OMP_LOOP_CMP:.+]] = icmp ult i32 %[[TMP19:.+]], %[[TMP1:.+]]
+// CHECK-NEXT:    br i1 %[[OMP_OMP_LOOP_CMP:.+]], label %[[OMP_OMP_LOOP_BODY:.+]], label %[[OMP_OMP_LOOP_EXIT:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.cond:                                ; preds = %omp_omp.loop.header
-// CHECK-NEXT:   %omp_omp.loop.cmp = icmp ult i32 %19, %1
-// CHECK-NEXT:   br i1 %omp_omp.loop.cmp, label %omp_omp.loop.body, label %omp_omp.loop.exit
+// CHECK-NEXT:  [[OMP_OMP_LOOP_BODY]]:
+// CHECK-NEXT:    br label %[[OMP_LOOP_REGION:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.body:                                ; preds = %omp_tile1.body, %omp_omp.loop.cond
-// CHECK-NEXT:   br label %omp.loop.region
+// CHECK-NEXT:  [[OMP_LOOP_REGION]]:
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_PREHEADER1:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp.loop.region:                                  ; preds = %omp_omp.loop.body
-// CHECK-NEXT:   br label %omp_omp.loop.preheader1
+// CHECK-NEXT:  [[OMP_OMP_LOOP_PREHEADER1]]:
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_BODY4:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.preheader1:                          ; preds = %omp.loop.region
-// CHECK-NEXT:   br label %omp_omp.loop.body4
+// CHECK-NEXT:  [[OMP_FLOOR0_PREHEADER]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.preheader:                             ; preds = %omp_omp.loop.preheader
-// CHECK-NEXT:   br label %omp_floor0.header
+// CHECK-NEXT:  [[OMP_FLOOR0_HEADER]]:
+// CHECK-NEXT:    %[[OMP_FLOOR0_IV:.+]] = phi i32 [ 0, %[[OMP_FLOOR0_PREHEADER:.+]] ], [ %[[OMP_FLOOR0_NEXT:.+]], %[[OMP_FLOOR0_INC:.+]] ]
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_COND:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.header:                                ; preds = %omp_floor0.inc, %omp_floor0.preheader
-// CHECK-NEXT:   %omp_floor0.iv = phi i32 [ 0, %omp_floor0.preheader ], [ %omp_floor0.next, %omp_floor0.inc ]
-// CHECK-NEXT:   br label %omp_floor0.cond
+// CHECK-NEXT:  [[OMP_FLOOR0_COND]]:
+// CHECK-NEXT:    %[[OMP_FLOOR0_CMP:.+]] = icmp ult i32 %[[OMP_FLOOR0_IV:.+]], %[[OMP_FLOOR0_TRIPCOUNT:.+]]
+// CHECK-NEXT:    br i1 %[[OMP_FLOOR0_CMP:.+]], label %[[OMP_FLOOR0_BODY:.+]], label %[[OMP_FLOOR0_EXIT:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.cond:                                  ; preds = %omp_floor0.header
-// CHECK-NEXT:   %omp_floor0.cmp = icmp ult i32 %omp_floor0.iv, %omp_floor0.tripcount
-// CHECK-NEXT:   br i1 %omp_floor0.cmp, label %omp_floor0.body, label %omp_floor0.exit
+// CHECK-NEXT:  [[OMP_FLOOR0_BODY]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_PREHEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.body:                                  ; preds = %omp_floor0.cond
-// CHECK-NEXT:   br label %omp_floor1.preheader
+// CHECK-NEXT:  [[OMP_FLOOR1_PREHEADER]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.preheader:                             ; preds = %omp_floor0.body
-// CHECK-NEXT:   br label %omp_floor1.header
+// CHECK-NEXT:  [[OMP_FLOOR1_HEADER]]:
+// CHECK-NEXT:    %[[OMP_FLOOR1_IV:.+]] = phi i32 [ 0, %[[OMP_FLOOR1_PREHEADER:.+]] ], [ %[[OMP_FLOOR1_NEXT:.+]], %[[OMP_FLOOR1_INC:.+]] ]
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_COND:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.header:                                ; preds = %omp_floor1.inc, %omp_floor1.preheader
-// CHECK-NEXT:   %omp_floor1.iv = phi i32 [ 0, %omp_floor1.preheader ], [ %omp_floor1.next, %omp_floor1.inc ]
-// CHECK-NEXT:   br label %omp_floor1.cond
+// CHECK-NEXT:  [[OMP_FLOOR1_COND]]:
+// CHECK-NEXT:    %[[OMP_FLOOR1_CMP:.+]] = icmp ult i32 %[[OMP_FLOOR1_IV:.+]], %[[OMP_FLOOR1_TRIPCOUNT:.+]]
+// CHECK-NEXT:    br i1 %[[OMP_FLOOR1_CMP:.+]], label %[[OMP_FLOOR1_BODY:.+]], label %[[OMP_FLOOR1_EXIT:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.cond:                                  ; preds = %omp_floor1.header
-// CHECK-NEXT:   %omp_floor1.cmp = icmp ult i32 %omp_floor1.iv, %omp_floor1.tripcount
-// CHECK-NEXT:   br i1 %omp_floor1.cmp, label %omp_floor1.body, label %omp_floor1.exit
+// CHECK-NEXT:  [[OMP_FLOOR1_BODY]]:
+// CHECK-NEXT:    %[[TMP14:.+]] = icmp eq i32 %[[OMP_FLOOR0_IV:.+]], %[[TMP6:.+]]
+// CHECK-NEXT:    %[[TMP15:.+]] = select i1 %[[TMP14:.+]], i32 %[[TMP7:.+]], i32 %[[TMP3:.+]]
+// CHECK-NEXT:    %[[TMP16:.+]] = icmp eq i32 %[[OMP_FLOOR1_IV:.+]], %[[TMP10:.+]]
+// CHECK-NEXT:    %[[TMP17:.+]] = select i1 %[[TMP16:.+]], i32 %[[TMP11:.+]], i32 %[[TMP4:.+]]
+// CHECK-NEXT:    br label %[[OMP_TILE0_PREHEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.body:                                  ; preds = %omp_floor1.cond
-// CHECK-NEXT:   %14 = icmp eq i32 %omp_floor0.iv, %6
-// CHECK-NEXT:   %15 = select i1 %14, i32 %7, i32 %3
-// CHECK-NEXT:   %16 = icmp eq i32 %omp_floor1.iv, %10
-// CHECK-NEXT:   %17 = select i1 %16, i32 %11, i32 %4
-// CHECK-NEXT:   br label %omp_tile0.preheader
+// CHECK-NEXT:  [[OMP_TILE0_PREHEADER]]:
+// CHECK-NEXT:    br label %[[OMP_TILE0_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.preheader:                              ; preds = %omp_floor1.body
-// CHECK-NEXT:   br label %omp_tile0.header
+// CHECK-NEXT:  [[OMP_TILE0_HEADER]]:
+// CHECK-NEXT:    %[[OMP_TILE0_IV:.+]] = phi i32 [ 0, %[[OMP_TILE0_PREHEADER:.+]] ], [ %[[OMP_TILE0_NEXT:.+]], %[[OMP_TILE0_INC:.+]] ]
+// CHECK-NEXT:    br label %[[OMP_TILE0_COND:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.header:                                 ; preds = %omp_tile0.inc, %omp_tile0.preheader
-// CHECK-NEXT:   %omp_tile0.iv = phi i32 [ 0, %omp_tile0.preheader ], [ %omp_tile0.next, %omp_tile0.inc ]
-// CHECK-NEXT:   br label %omp_tile0.cond
+// CHECK-NEXT:  [[OMP_TILE0_COND]]:
+// CHECK-NEXT:    %[[OMP_TILE0_CMP:.+]] = icmp ult i32 %[[OMP_TILE0_IV:.+]], %[[TMP15:.+]]
+// CHECK-NEXT:    br i1 %[[OMP_TILE0_CMP:.+]], label %[[OMP_TILE0_BODY:.+]], label %[[OMP_TILE0_EXIT:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.cond:                                   ; preds = %omp_tile0.header
-// CHECK-NEXT:   %omp_tile0.cmp = icmp ult i32 %omp_tile0.iv, %15
-// CHECK-NEXT:   br i1 %omp_tile0.cmp, label %omp_tile0.body, label %omp_tile0.exit
+// CHECK-NEXT:  [[OMP_TILE0_BODY]]:
+// CHECK-NEXT:    br label %[[OMP_TILE1_PREHEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.body:                                   ; preds = %omp_tile0.cond
-// CHECK-NEXT:   br label %omp_tile1.preheader
+// CHECK-NEXT:  [[OMP_TILE1_PREHEADER]]:
+// CHECK-NEXT:    br label %[[OMP_TILE1_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.preheader:                              ; preds = %omp_tile0.body
-// CHECK-NEXT:   br label %omp_tile1.header
+// CHECK-NEXT:  [[OMP_TILE1_HEADER]]:
+// CHECK-NEXT:    %[[OMP_TILE1_IV:.+]] = phi i32 [ 0, %[[OMP_TILE1_PREHEADER:.+]] ], [ %[[OMP_TILE1_NEXT:.+]], %[[OMP_TILE1_INC:.+]] ]
+// CHECK-NEXT:    br label %[[OMP_TILE1_COND:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.header:                                 ; preds = %omp_tile1.inc, %omp_tile1.preheader
-// CHECK-NEXT:   %omp_tile1.iv = phi i32 [ 0, %omp_tile1.preheader ], [ %omp_tile1.next, %omp_tile1.inc ]
-// CHECK-NEXT:   br label %omp_tile1.cond
+// CHECK-NEXT:  [[OMP_TILE1_COND]]:
+// CHECK-NEXT:    %[[OMP_TILE1_CMP:.+]] = icmp ult i32 %[[OMP_TILE1_IV:.+]], %[[TMP17:.+]]
+// CHECK-NEXT:    br i1 %[[OMP_TILE1_CMP:.+]], label %[[OMP_TILE1_BODY:.+]], label %[[OMP_TILE1_EXIT:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.cond:                                   ; preds = %omp_tile1.header
-// CHECK-NEXT:   %omp_tile1.cmp = icmp ult i32 %omp_tile1.iv, %17
-// CHECK-NEXT:   br i1 %omp_tile1.cmp, label %omp_tile1.body, label %omp_tile1.exit
+// CHECK-NEXT:  [[OMP_TILE1_BODY]]:
+// CHECK-NEXT:    %[[TMP18:.+]] = mul nuw i32 %[[TMP3:.+]], %[[OMP_FLOOR0_IV:.+]]
+// CHECK-NEXT:    %[[TMP19:.+]] = add nuw i32 %[[TMP18:.+]], %[[OMP_TILE0_IV:.+]]
+// CHECK-NEXT:    %[[TMP20:.+]] = mul nuw i32 %[[TMP4:.+]], %[[OMP_FLOOR1_IV:.+]]
+// CHECK-NEXT:    %[[TMP21:.+]] = add nuw i32 %[[TMP20:.+]], %[[OMP_TILE1_IV:.+]]
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_BODY:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.body:                                   ; preds = %omp_tile1.cond
-// CHECK-NEXT:   %18 = mul nuw i32 %3, %omp_floor0.iv
-// CHECK-NEXT:   %19 = add nuw i32 %18, %omp_tile0.iv
-// CHECK-NEXT:   %20 = mul nuw i32 %4, %omp_floor1.iv
-// CHECK-NEXT:   %21 = add nuw i32 %20, %omp_tile1.iv
-// CHECK-NEXT:   br label %omp_omp.loop.body
+// CHECK-NEXT:  [[OMP_OMP_LOOP_BODY4]]:
+// CHECK-NEXT:    br label %[[OMP_LOOP_REGION12:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.body4:                               ; preds = %omp_omp.loop.preheader1
-// CHECK-NEXT:   br label %omp.loop.region12
+// CHECK-NEXT:  [[OMP_LOOP_REGION12]]:
+// CHECK-NEXT:    %[[TMP22:.+]] = add i32 %[[TMP19:.+]], %[[TMP21:.+]]
+// CHECK-NEXT:    %[[TMP23:.+]] = getelementptr inbounds float, ptr %[[TMP0:.+]], i32 %[[TMP22:.+]]
+// CHECK-NEXT:    store float 4.200000e+01, ptr %[[TMP23:.+]], align 4
+// CHECK-NEXT:    br label %[[OMP_REGION_CONT11:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp.loop.region12:                                ; preds = %omp_omp.loop.body4
-// CHECK-NEXT:   %22 = add i32 %19, %21
-// CHECK-NEXT:   %23 = getelementptr inbounds float, ptr %0, i32 %22
-// CHECK-NEXT:   store float 4.200000e+01, ptr %23, align 4
-// CHECK-NEXT:   br label %omp.region.cont11
+// CHECK-NEXT:  [[OMP_REGION_CONT11]]:
+// CHECK-NEXT:    br label %[[OMP_TILE1_INC:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp.region.cont11:                                ; preds = %omp.loop.region12
-// CHECK-NEXT:   br label %omp_tile1.inc
+// CHECK-NEXT:  [[OMP_TILE1_INC]]:
+// CHECK-NEXT:    %[[OMP_TILE1_NEXT:.+]] = add nuw i32 %[[OMP_TILE1_IV:.+]], 1
+// CHECK-NEXT:    br label %[[OMP_TILE1_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.inc:                                    ; preds = %omp.region.cont11
-// CHECK-NEXT:   %omp_tile1.next = add nuw i32 %omp_tile1.iv, 1
-// CHECK-NEXT:   br label %omp_tile1.header
+// CHECK-NEXT:  [[OMP_TILE1_EXIT]]:
+// CHECK-NEXT:    br label %[[OMP_TILE1_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.exit:                                   ; preds = %omp_tile1.cond
-// CHECK-NEXT:   br label %omp_tile1.after
+// CHECK-NEXT:  [[OMP_TILE1_AFTER]]:
+// CHECK-NEXT:    br label %[[OMP_TILE0_INC:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile1.after:                                  ; preds = %omp_tile1.exit
-// CHECK-NEXT:   br label %omp_tile0.inc
+// CHECK-NEXT:  [[OMP_TILE0_INC]]:
+// CHECK-NEXT:    %[[OMP_TILE0_NEXT:.+]] = add nuw i32 %[[OMP_TILE0_IV:.+]], 1
+// CHECK-NEXT:    br label %[[OMP_TILE0_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.inc:                                    ; preds = %omp_tile1.after
-// CHECK-NEXT:   %omp_tile0.next = add nuw i32 %omp_tile0.iv, 1
-// CHECK-NEXT:   br label %omp_tile0.header
+// CHECK-NEXT:  [[OMP_TILE0_EXIT]]:
+// CHECK-NEXT:    br label %[[OMP_TILE0_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.exit:                                   ; preds = %omp_tile0.cond
-// CHECK-NEXT:   br label %omp_tile0.after
+// CHECK-NEXT:  [[OMP_TILE0_AFTER]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_INC:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_tile0.after:                                  ; preds = %omp_tile0.exit
-// CHECK-NEXT:   br label %omp_floor1.inc
+// CHECK-NEXT:  [[OMP_FLOOR1_INC]]:
+// CHECK-NEXT:    %[[OMP_FLOOR1_NEXT:.+]] = add nuw i32 %[[OMP_FLOOR1_IV:.+]], 1
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.inc:                                   ; preds = %omp_tile0.after
-// CHECK-NEXT:   %omp_floor1.next = add nuw i32 %omp_floor1.iv, 1
-// CHECK-NEXT:   br label %omp_floor1.header
+// CHECK-NEXT:  [[OMP_FLOOR1_EXIT]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR1_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.exit:                                  ; preds = %omp_floor1.cond
-// CHECK-NEXT:   br label %omp_floor1.after
+// CHECK-NEXT:  [[OMP_FLOOR1_AFTER]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_INC:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor1.after:                                 ; preds = %omp_floor1.exit
-// CHECK-NEXT:   br label %omp_floor0.inc
+// CHECK-NEXT:  [[OMP_FLOOR0_INC]]:
+// CHECK-NEXT:    %[[OMP_FLOOR0_NEXT:.+]] = add nuw i32 %[[OMP_FLOOR0_IV:.+]], 1
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.inc:                                   ; preds = %omp_floor1.after
-// CHECK-NEXT:   %omp_floor0.next = add nuw i32 %omp_floor0.iv, 1
-// CHECK-NEXT:   br label %omp_floor0.header
+// CHECK-NEXT:  [[OMP_FLOOR0_EXIT]]:
+// CHECK-NEXT:    br label %[[OMP_FLOOR0_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.exit:                                  ; preds = %omp_floor0.cond
-// CHECK-NEXT:   br label %omp_floor0.after
+// CHECK-NEXT:  [[OMP_FLOOR0_AFTER]]:
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_floor0.after:                                 ; preds = %omp_floor0.exit
-// CHECK-NEXT:   br label %omp_omp.loop.after
+// CHECK-NEXT:  [[OMP_REGION_CONT:.+]]:
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_INC:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp.region.cont:                                  ; No predecessors!
-// CHECK-NEXT:   br label %omp_omp.loop.inc
+// CHECK-NEXT:  [[OMP_OMP_LOOP_INC]]:
+// CHECK-NEXT:    %[[OMP_OMP_LOOP_NEXT:.+]] = add nuw i32 %[[TMP19:.+]], 1
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_HEADER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.inc:                                 ; preds = %omp.region.cont
-// CHECK-NEXT:   %omp_omp.loop.next = add nuw i32 %19, 1
-// CHECK-NEXT:   br label %omp_omp.loop.header
+// CHECK-NEXT:  [[OMP_OMP_LOOP_EXIT]]:
+// CHECK-NEXT:    br label %[[OMP_OMP_LOOP_AFTER:.+]]
 // CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.exit:                                ; preds = %omp_omp.loop.cond
-// CHECK-NEXT:   br label %omp_omp.loop.after
-// CHECK-EMPTY:
-// CHECK-NEXT: omp_omp.loop.after:                               ; preds = %omp_floor0.after, %omp_omp.loop.exit
-// CHECK-NEXT:   ret void
-// CHECK-NEXT: }
-// CHECK-EMPTY:
-// CHECK-NEXT: !llvm.module.flags = !{!0}
-// CHECK-EMPTY:
-// CHECK-NEXT: !0 = !{i32 2, !"Debug Info Version", i32 3}
+// CHECK-NEXT:  [[OMP_OMP_LOOP_AFTER]]:
+// CHECK-NEXT:    ret void
+// CHECK-NEXT:  }

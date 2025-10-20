@@ -246,7 +246,7 @@ public:
 
   // Rewrite all uses of the original variable in `BBName`
   //  with the linear variable in-place
-  void rewriteInPlace(llvm::IRBuilderBase &builder, std::string BBName,
+  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
                       size_t varIndex) {
     llvm::SmallVector<llvm::User *> users;
     for (llvm::User *user : linearOrigVal[varIndex]->users())
@@ -4716,10 +4716,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
             info.HasNoWait = updateDataOp.getNowait();
             return success();
           })
-          .Default([&](Operation *op) {
-            llvm_unreachable("unexpected operation");
-            return failure();
-          });
+          .DefaultUnreachable("unexpected operation");
 
   if (failed(result))
     return failure();
@@ -5312,9 +5309,7 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
             (void)found;
             assert(found && "unsupported host_eval use");
           })
-          .Default([](Operation *) {
-            llvm_unreachable("unsupported host_eval use");
-          });
+          .DefaultUnreachable("unsupported host_eval use");
     }
   }
 }

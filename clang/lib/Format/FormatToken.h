@@ -30,9 +30,10 @@ namespace format {
   TYPE(ArraySubscriptLSquare)                                                  \
   TYPE(AttributeColon)                                                         \
   TYPE(AttributeLParen)                                                        \
+  TYPE(AttributeLSquare)                                                       \
   TYPE(AttributeMacro)                                                         \
   TYPE(AttributeRParen)                                                        \
-  TYPE(AttributeSquare)                                                        \
+  TYPE(AttributeRSquare)                                                       \
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
@@ -127,9 +128,17 @@ namespace format {
   TYPE(ObjCBlockLParen)                                                        \
   TYPE(ObjCDecl)                                                               \
   TYPE(ObjCForIn)                                                              \
+  /* The square brackets surrounding a method call, the colon separating the   \
+   * method or parameter name and the argument inside the square brackets, and \
+   * the colon separating the method or parameter name and the type inside the \
+   * method declaration. */                                                    \
   TYPE(ObjCMethodExpr)                                                         \
+  /* The '+' or '-' at the start of the line. */                               \
   TYPE(ObjCMethodSpecifier)                                                    \
   TYPE(ObjCProperty)                                                           \
+  /* The parentheses following '@selector' and the colon following the method  \
+   * or parameter name inside the parentheses. */                              \
+  TYPE(ObjCSelector)                                                           \
   TYPE(ObjCStringLiteral)                                                      \
   TYPE(OverloadedOperator)                                                     \
   TYPE(OverloadedOperatorLParen)                                               \
@@ -146,6 +155,9 @@ namespace format {
   TYPE(RequiresExpression)                                                     \
   TYPE(RequiresExpressionLBrace)                                               \
   TYPE(RequiresExpressionLParen)                                               \
+  /* The hash key in languages that have hash literals, not including the      \
+   * field name in the C++ struct literal. Also the method or parameter name   \
+   * in the Objective-C method declaration or call. */                         \
   TYPE(SelectorName)                                                           \
   TYPE(StartOfName)                                                            \
   TYPE(StatementAttributeLikeMacro)                                            \

@@ -59,7 +59,7 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
     Constraints += MachineClobbers;
   }
 
-  llvm::Type *PtrType = CGF.UnqualPtrTy;
+  llvm::Type *PtrType = CGF.DefaultPtrTy;
   llvm::FunctionType *FTy = llvm::FunctionType::get(RetType, {PtrType}, false);
 
   llvm::InlineAsm *IA =

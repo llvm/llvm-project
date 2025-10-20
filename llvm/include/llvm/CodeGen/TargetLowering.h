@@ -847,8 +847,7 @@ public:
   /// This is usually true on most targets. But some targets, like Thumb1,
   /// have immediate shift instructions, but no immediate "and" instruction;
   /// this makes the fold unprofitable.
-  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                                 CombineLevel Level) const {
+  virtual bool shouldFoldConstantShiftPairToMask(const SDNode *N) const {
     return true;
   }
 
@@ -4651,23 +4650,6 @@ public:
   virtual bool splitValueIntoRegisterParts(
       SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
       unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
-    return false;
-  }
-
-  /// Allows the target to handle physreg-carried dependency
-  /// in target-specific way. Used from the ScheduleDAGSDNodes to decide whether
-  /// to add the edge to the dependency graph.
-  /// Def - input: Selection DAG node defininfg physical register
-  /// User - input: Selection DAG node using physical register
-  /// Op - input: Number of User operand
-  /// PhysReg - inout: set to the physical register if the edge is
-  /// necessary, unchanged otherwise
-  /// Cost - inout: physical register copy cost.
-  /// Returns 'true' is the edge is necessary, 'false' otherwise
-  virtual bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
-                                         const TargetRegisterInfo *TRI,
-                                         const TargetInstrInfo *TII,
-                                         MCRegister &PhysReg, int &Cost) const {
     return false;
   }
 

@@ -307,9 +307,9 @@ public:
   bool Merge(const Message &);
   bool operator==(const Message &that) const;
   bool operator!=(const Message &that) const { return !(*this == that); }
+  bool AtSameLocation(const Message &) const;
 
 private:
-  bool AtSameLocation(const Message &) const;
   std::variant<ProvenanceRange, CharBlock> location_;
   std::variant<MessageFixedText, MessageFormattedText, MessageExpectedText>
       text_;
