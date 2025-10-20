@@ -13,6 +13,10 @@
 
 namespace std {
 
+void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
+  __cxa_decrement_exception_refcount(__ptr);
+}
+
 exception_ptr::~exception_ptr() noexcept { __cxa_decrement_exception_refcount(__ptr_); }
 
 exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {

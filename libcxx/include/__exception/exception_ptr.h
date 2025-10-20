@@ -60,6 +60,9 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
+  static void __do_decrement_refcount(void* __ptr) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI static void __decrement_refcount(void* __ptr) _NOEXCEPT { if (__ptr) __do_decrement_refcount(__ptr); }
+
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
   template <class _Ep>
@@ -75,7 +78,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
   exception_ptr(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&&) _NOEXCEPT;
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&&) _NOEXCEPT;
   ~exception_ptr() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __ptr_ != nullptr; }
@@ -91,6 +96,17 @@ public:
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr::exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
+  __other.__ptr_ = nullptr;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) _NOEXCEPT {
+  __decrement_refcount(__ptr_);
+  __ptr_         = __other.__ptr_;
+  __other.__ptr_ = nullptr;
+  return *this;
+}
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
