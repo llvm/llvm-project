@@ -438,43 +438,6 @@ let Predicates = [HasStdExtZvfbfmin] in {
                   FRM_DYN,
                   fvti.AVL, fvti.Log2SEW, TA_MA)>;
   }
-
-  foreach fvti = AllBF16Vectors in {
-    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
-                                    (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (vselect (fvti.Mask VMV0:$vm),
-                                    (SplatFPOp (fvti.Scalar fpimm0)),
-                                    fvti.RegClass:$rs2)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   (fvti.Vector (IMPLICIT_DEF)),
-                   fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm), fvti.AVL, fvti.Log2SEW)>;
-
-    def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
-                                            (SplatFPOp (SelectScalarFPAsInt (XLenVT GPR:$imm))),
-                                            fvti.RegClass:$rs2,
-                                            fvti.RegClass:$passthru,
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
-                   fvti.RegClass:$passthru, fvti.RegClass:$rs2, GPR:$imm, (fvti.Mask VMV0:$vm),
-                   GPR:$vl, fvti.Log2SEW)>;
-
-
-    def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
-                                            (SplatFPOp (fvti.Scalar fpimm0)),
-                                            fvti.RegClass:$rs2,
-                                            fvti.RegClass:$passthru,
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
-                   fvti.RegClass:$passthru, fvti.RegClass:$rs2, 0, (fvti.Mask VMV0:$vm),
-                   GPR:$vl, fvti.Log2SEW)>;
-  }
 }
 
 let Predicates = [HasStdExtZvfbfwma] in {
