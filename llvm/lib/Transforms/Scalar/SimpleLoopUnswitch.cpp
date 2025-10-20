@@ -331,7 +331,7 @@ static void buildPartialUnswitchConditionalBranch(
 static void buildPartialInvariantUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> ToDuplicate, bool Direction,
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, Loop &L,
-    MemorySSAUpdater *MSSAU) {
+    MemorySSAUpdater *MSSAU, const BranchInst &OriginalBranch) {
   ValueToValueMapTy VMap;
   for (auto *Val : reverse(ToDuplicate)) {
     Instruction *Inst = cast<Instruction>(Val);
@@ -371,8 +371,17 @@ static void buildPartialInvariantUnswitchConditionalBranch(
   IRBuilder<> IRB(&BB);
   IRB.SetCurrentDebugLocation(DebugLoc::getCompilerGenerated());
   Value *Cond = VMap[ToDuplicate[0]];
-  IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
-                   Direction ? &NormalSucc : &UnswitchedSucc);
+  auto *ProfData =
+      !ProfcheckDisableMetadataFixes &&
+              ToDuplicate[0] == skipTrivialSelect(OriginalBranch.getCondition())
+          ? OriginalBranch.getMetadata(LLVMContext::MD_prof)
+          : nullptr;
+  auto *BR =
+      IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
+                       Direction ? &NormalSucc : &UnswitchedSucc, ProfData);
+  if (!ProfData)
+    setExplicitlyUnknownBranchWeightsIfProfiled(
+        *BR, *BR->getParent()->getParent(), DEBUG_TYPE);
 }
 
 /// Rewrite the PHI nodes in an unswitched loop exit basic block.
@@ -2509,7 +2518,7 @@ static void unswitchNontrivialInvariants(
     // the branch in the split block.
     if (PartiallyInvariant)
       buildPartialInvariantUnswitchConditionalBranch(
-          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU);
+          *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH, L, MSSAU, *BI);
     else {
       buildPartialUnswitchConditionalBranch(
           *SplitBB, Invariants, Direction, *ClonedPH, *LoopPH,
