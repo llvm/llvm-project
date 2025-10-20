@@ -60,7 +60,7 @@ void printLine(llvm::raw_ostream &OS, const UnwrappedLine &Line,
     OS << "\n";
 }
 
-LLVM_ATTRIBUTE_UNUSED static void printDebugInfo(const UnwrappedLine &Line) {
+[[maybe_unused]] static void printDebugInfo(const UnwrappedLine &Line) {
   printLine(llvm::dbgs(), Line);
 }
 

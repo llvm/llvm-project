@@ -515,6 +515,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
+  case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1246,6 +1247,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::VScale:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1290,7 +1292,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
-    return Op == getOperand(0);
+    // WidePtrAdd supports scalar and vector base addresses.
+    return false;
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
@@ -1416,6 +1419,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::Unpack:
+    O << "unpack";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -2352,7 +2358,7 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
     return false;
   auto *StepC = dyn_cast<ConstantInt>(getStepValue()->getLiveInIRValue());
   auto *StartC = dyn_cast<ConstantInt>(getStartValue()->getLiveInIRValue());
-  auto *CanIV = getParent()->getParent()->getCanonicalIV();
+  auto *CanIV = getRegion()->getCanonicalIV();
   return StartC && StartC->isZero() && StepC && StepC->isOne() &&
          getScalarType() == CanIV->getScalarType();
 }
@@ -2888,6 +2894,13 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
+bool VPExpressionRecipe::isSingleScalar() const {
+  // Cannot use vputils::isSingleScalar(), because all external operands
+  // of the expression will be live-ins while bundled.
+  return isa<VPReductionRecipe>(ExpressionRecipes.back()) &&
+         !isa<VPPartialReductionRecipe>(ExpressionRecipes.back());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -3076,7 +3089,7 @@ static void scalarizeInstruction(const Instruction *Instr,
     State.AC->registerAssumption(II);
 
   assert(
-      (RepRecipe->getParent()->getParent() ||
+      (RepRecipe->getRegion() ||
        !RepRecipe->getParent()->getPlan()->getVectorLoopRegion() ||
        all_of(RepRecipe->operands(),
               [](VPValue *Op) { return Op->isDefinedOutsideLoopRegions(); })) &&
@@ -3268,7 +3281,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                                               to_vector(operands()), VF);
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
-    if (!getParent()->getParent()->isReplicator())
+    if (!getRegion()->isReplicator())
       return ScalarCost;
 
     // Account for the phi nodes that we will create.
@@ -3284,7 +3297,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Store: {
     // TODO: See getMemInstScalarizationCost for how to handle replicating and
     // predicated cases.
-    const VPRegionBlock *ParentRegion = getParent()->getParent();
+    const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator())
       break;
 
