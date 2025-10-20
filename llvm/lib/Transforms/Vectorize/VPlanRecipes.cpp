@@ -302,13 +302,20 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode;
   VPValue *Op = getVecOp();
-  VPRecipeBase *OpR = Op->getDefiningRecipe();
-
-  // If the partial reduction is predicated, a select will be operand 1
-  if (match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
-    OpR = Op->getDefiningRecipe();
+  uint64_t MulConst;
+  // If the partial reduction is predicated, a select will be operand 1.
+  // If it isn't predicated and the mul isn't operating on a constant, then it
+  // should have been turned into a VPExpressionRecipe.
+  if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
+      !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+    auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
+    auto *InputType = Ctx.Types.inferScalarType(getVecOp());
+    return Ctx.TTI.getPartialReductionCost(getOpcode(), InputType, InputType,
+                                           PhiType, VF, TTI::PR_None,
+                                           TTI::PR_None, {}, Ctx.CostKind);
   }
 
+  VPRecipeBase *OpR = Op->getDefiningRecipe();
   Type *InputTypeA = nullptr, *InputTypeB = nullptr;
   TTI::PartialReductionExtendKind ExtAType = TTI::PR_None,
                                   ExtBType = TTI::PR_None;
@@ -331,8 +338,6 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
   auto HandleWiden = [&](VPWidenRecipe *Widen) {
     if (match(Widen, m_Sub(m_ZeroInt(), m_VPValue(Op)))) {
       Widen = dyn_cast<VPWidenRecipe>(Op->getDefiningRecipe());
-      if (!Widen)
-        return;
     }
     Opcode = Widen->getOpcode();
     VPRecipeBase *ExtAR = Widen->getOperand(0)->getDefiningRecipe();
@@ -353,20 +358,19 @@ VPPartialReductionRecipe::computeCost(ElementCount VF,
     }
   };
 
-  if (isa_and_nonnull<VPWidenCastRecipe>(OpR)) {
+  if (isa<VPWidenCastRecipe>(OpR)) {
     InputTypeA = Ctx.Types.inferScalarType(OpR->getOperand(0));
     ExtAType = GetExtendKind(OpR);
-  } else if (isa_and_nonnull<VPReductionPHIRecipe>(OpR)) {
+  } else if (isa<VPReductionPHIRecipe>(OpR)) {
     auto RedPhiOp1R = getOperand(1)->getDefiningRecipe();
-    if (isa_and_nonnull<VPWidenCastRecipe>(RedPhiOp1R)) {
+    if (isa<VPWidenCastRecipe>(RedPhiOp1R)) {
       InputTypeA = Ctx.Types.inferScalarType(RedPhiOp1R->getOperand(0));
       ExtAType = GetExtendKind(RedPhiOp1R);
-    } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(RedPhiOp1R))
+    } else if (auto Widen = dyn_cast<VPWidenRecipe>(RedPhiOp1R))
       HandleWiden(Widen);
-  } else if (auto Widen = dyn_cast_if_present<VPWidenRecipe>(OpR)) {
+  } else if (auto Widen = dyn_cast<VPWidenRecipe>(OpR)) {
     HandleWiden(Widen);
-  } else if (auto Reduction =
-                 dyn_cast_if_present<VPPartialReductionRecipe>(OpR)) {
+  } else if (auto Reduction = dyn_cast<VPPartialReductionRecipe>(OpR)) {
     return Reduction->computeCost(VF, Ctx);
   }
   auto *PhiType = Ctx.Types.inferScalarType(getOperand(1));

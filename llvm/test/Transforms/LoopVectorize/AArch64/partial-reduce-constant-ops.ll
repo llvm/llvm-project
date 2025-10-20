@@ -482,7 +482,6 @@ define i64 @partial_reduction_mul_two_users(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i32> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -490,6 +489,7 @@ define i64 @partial_reduction_mul_two_users(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP4]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i32> [[TMP2]] to <8 x i64>
 ; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i64> @llvm.vector.partial.reduce.add.v4i64.v8i64(<4 x i64> [[VEC_PHI]], <8 x i64> [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <8 x i16> [[BROADCAST_SPLAT2]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i32> [[TMP5]] to <8 x i64>
