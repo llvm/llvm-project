@@ -314,23 +314,23 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   }
 
   // Older builtins had an enum argument for the memory scope.
-  const char *ssn = nullptr;
+  const char *SSN = nullptr;
   int scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
   switch (scope) {
   case AtomicScopeGenericModel::System: // __MEMORY_SCOPE_SYSTEM
     SSID = llvm::SyncScope::System;
     break;
   case AtomicScopeGenericModel::Device: // __MEMORY_SCOPE_DEVICE
-    ssn = getTarget().getTriple().isSPIRV() ? "device" : "agent";
+    SSN = getTarget().getTriple().isSPIRV() ? "device" : "agent";
     break;
   case AtomicScopeGenericModel::Workgroup: // __MEMORY_SCOPE_WRKGRP
-    ssn = "workgroup";
+    SSN = "workgroup";
     break;
   case AtomicScopeGenericModel::Cluster: // __MEMORY_SCOPE_CLUSTR
-    ssn = getTarget().getTriple().isSPIRV() ? "workgroup" : "cluster";
+    SSN = getTarget().getTriple().isSPIRV() ? "workgroup" : "cluster";
     break;
   case AtomicScopeGenericModel::Wavefront: // __MEMORY_SCOPE_WVFRNT
-    ssn = getTarget().getTriple().isSPIRV() ? "subgroup" : "wavefront";
+    SSN = getTarget().getTriple().isSPIRV() ? "subgroup" : "wavefront";
     break;
   case AtomicScopeGenericModel::Single: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
@@ -339,8 +339,8 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
     SSID = llvm::SyncScope::System;
     break;
   }
-  if (ssn)
-    SSID = getLLVMContext().getOrInsertSyncScopeID(ssn);
+  if (SSN)
+    SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
 llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
