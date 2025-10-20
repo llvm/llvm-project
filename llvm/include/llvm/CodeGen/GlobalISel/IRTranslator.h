@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/CodeGen.h"
 #include <memory>
 #include <utility>
@@ -87,19 +88,27 @@ private:
     inline const_vreg_iterator vregs_end() const { return ValToVRegs.end(); }
 
     VRegListT *getVRegs(const Value &V) {
+      if (auto *H = probeHotV(V)) return H;
       auto It = ValToVRegs.find(&V);
-      if (It != ValToVRegs.end())
+      if (It != ValToVRegs.end()) {
+        pushHotV(V, It->second);
         return It->second;
-
-      return insertVRegs(V);
+      }
+      auto *P = insertVRegs(V);
+      pushHotV(V, P);
+      return P;
     }
 
     OffsetListT *getOffsets(const Value &V) {
+      if (auto *H = probeHotT(V)) return H;
       auto It = TypeToOffsets.find(V.getType());
-      if (It != TypeToOffsets.end())
+      if (It != TypeToOffsets.end()) {
+        pushHotT(V, It->second);
         return It->second;
-
-      return insertOffsets(V);
+      }
+      auto *P = insertOffsets(V);
+      pushHotT(V, P);
+      return P;
     }
 
     const_vreg_iterator findVRegs(const Value &V) const {
@@ -113,9 +122,52 @@ private:
       TypeToOffsets.clear();
       VRegAlloc.DestroyAll();
       OffsetAlloc.DestroyAll();
+      // Clear the small hot caches.
+      for (unsigned i=0;i<HotN;++i){ HotVRegs[i]={}; HotOffsets[i]={}; }
+      HotVHead = HotTHead = 0;
     }
 
   private:
+    // --- Tiny ring-buffer hot cache (reduces DenseMap probes on hot paths). ---
+    static constexpr unsigned HotN = 8;
+    struct HotEntryV {
+      const Value *Key = nullptr;
+      VRegListT *Val = nullptr;
+    };
+    struct HotEntryT {
+      const Type *Key = nullptr;
+      OffsetListT *Val = nullptr;
+    };
+    HotEntryV HotVRegs[HotN];
+    HotEntryT HotOffsets[HotN];
+    unsigned HotVHead = 0, HotTHead = 0;
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    VRegListT *probeHotV(const Value &V) const {
+      // A small linear scan is fine (HotN is tiny).
+      for (unsigned i = 0; i < HotN; ++i)
+        if (HotVRegs[i].Key == &V) return HotVRegs[i].Val;
+      return nullptr;
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    void pushHotV(const Value &V, VRegListT *Ptr) {
+      HotVRegs[HotVHead] = {&V, Ptr};
+      HotVHead = (HotVHead + 1) % HotN;
+    }
+
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    OffsetListT *probeHotT(const Value &V) const {
+      const Type *Ty = V.getType();
+      for (unsigned i = 0; i < HotN; ++i)
+        if (HotOffsets[i].Key == Ty) return HotOffsets[i].Val;
+      return nullptr;
+    }
+    LLVM_ATTRIBUTE_ALWAYS_INLINE
+    void pushHotT(const Value &V, OffsetListT *Ptr) {
+      HotOffsets[HotTHead] = {V.getType(), Ptr};
+      HotTHead = (HotTHead + 1) % HotN;
+    }
+
     VRegListT *insertVRegs(const Value &V) {
       assert(!ValToVRegs.contains(&V) && "Value already exists");
 
@@ -162,6 +214,16 @@ private:
   /// Record of what frame index has been allocated to specified allocas for
   /// this function.
   DenseMap<const AllocaInst *, int> FrameIndices;
+
+  /// Tiny ring buffer cache for frequently accessed FrameIndices.
+  /// Avoids DenseMap lookup when there are repeated queries for the same allocas.
+  static constexpr unsigned FIHotN = 8;
+  struct FIHot {
+    const AllocaInst *AI = nullptr;
+    int FI = 0;
+  };
+  FIHot FIHotCache[FIHotN];
+  unsigned FIHotHead = 0;
 
   SwiftErrorValueTracking SwiftError;
 
