@@ -45,6 +45,26 @@ struct NoSizeView : std::ranges::view_base {
   constexpr auto end() const { return buffer + 8; }
 };
 
+struct IntSizeView : std::ranges::view_base {
+  using iterator = forward_iterator<int*>;
+
+  constexpr IntSizeView() {}
+  constexpr auto begin() const { return iterator{buffer}; }
+  constexpr auto end() const { return iterator{buffer + 9}; }
+  constexpr int size () const { return 9; }
+};
+
+struct UnsignedSizeView : std::ranges::view_base {
+  using iterator = forward_iterator<int*>;
+
+  constexpr UnsignedSizeView() {}
+  constexpr auto begin() const { return iterator{buffer}; }
+  constexpr auto end() const { return iterator{buffer + 9}; }
+  constexpr unsigned int size () const { return 9; }
+};
+
+
+
 constexpr bool test() {
   {
     // single range
@@ -88,6 +108,16 @@ constexpr bool test() {
     static_assert(!std::ranges::sized_range<decltype(v)>);
     static_assert(!std::ranges::sized_range<decltype(std::as_const(v))>);
   }
+
+  {
+    //two ranges with different size type
+    std::ranges::concat_view v(UnsignedSizeView(), IntSizeView());
+    assert(v.size() == 18);
+    // common type between size_t and int should be size_t
+    ASSERT_SAME_TYPE(decltype(v.size()), unsigned int);
+  }
+
+
 
   return true;
 }
