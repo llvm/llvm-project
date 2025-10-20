@@ -3134,7 +3134,9 @@ bool VPReplicateRecipe::shouldPack() const {
 
 /// Returns a SCEV expression for \p Ptr if it is a pointer computation for
 /// which the legacy cost model computes a SCEV expression when computing the
-/// address cost. Otherwise return nullptr.
+/// address cost. Computing SCEVs for VPValues is incomplete and returns
+/// SCEVCouldNotCompute in cases the legacy cost model can compute SCEVs. In
+/// those cases we fall back to the legacy cost model. Otherwise return nullptr.
 static const SCEV *getAddressAccessSCEV(const VPValue *Ptr, ScalarEvolution &SE,
                                         const Loop *L) {
   auto *PtrR = Ptr->getDefiningRecipe();
