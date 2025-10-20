@@ -317,19 +317,7 @@ define void @test_v4_v4m(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
@@ -369,19 +357,7 @@ define void @test_v2_v4m(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
@@ -421,19 +397,7 @@ define void @test_v2_v4(ptr noalias %a, ptr readonly %b) #3 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[GEP]], align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i64 @foo(i64 [[LOAD]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i64 [[CALL]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;

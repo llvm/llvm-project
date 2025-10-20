@@ -103,7 +103,9 @@ declare i32 @sleep()
 
 define internal ptr @_Z3barv() #0 !dbg !15 {
 entry:
-  %call = call ptr @_Znam(i64 0), !memprof !2, !callsite !7
+  ;; Use an ambiguous attribute for this allocation, which is now added to such
+  ;; allocations during matching. It should not affect cloning.
+  %call = call ptr @_Znam(i64 0) #1, !memprof !2, !callsite !7
   ret ptr null
 }
 
@@ -125,6 +127,7 @@ entry:
 uselistorder ptr @_Z3foov, { 1, 0 }
 
 attributes #0 = { noinline optnone }
+attributes #1 = { "memprof"="ambiguous" }
 
 !llvm.dbg.cu = !{!13}
 !llvm.module.flags = !{!20, !21}

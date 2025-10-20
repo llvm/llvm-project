@@ -45,7 +45,8 @@ define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr n
 ; AVX512-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo1(
 ; FVW2-NEXT:  entry:
@@ -70,7 +71,8 @@ define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr n
 ; FVW2-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -137,7 +139,8 @@ define void @foo2(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr n
 ; AVX512-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo2(
 ; FVW2-NEXT:  entry:
@@ -182,7 +185,8 @@ define void @foo2(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr n
 ; FVW2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -250,7 +254,8 @@ define void @foo3(ptr noalias %in, ptr noalias %out, ptr noalias %trigger) {
 ; AVX512-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo3(
 ; FVW2-NEXT:  entry:
@@ -295,7 +300,8 @@ define void @foo3(ptr noalias %in, ptr noalias %out, ptr noalias %trigger) {
 ; FVW2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -350,7 +356,8 @@ define void @foo2_addrspace(ptr addrspace(1) noalias %in, ptr addrspace(1) noali
 ; AVX512-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo2_addrspace(
 ; FVW2-NEXT:  entry:
@@ -395,7 +402,8 @@ define void @foo2_addrspace(ptr addrspace(1) noalias %in, ptr addrspace(1) noali
 ; FVW2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -449,7 +457,8 @@ define void @foo2_addrspace2(ptr addrspace(1) noalias %in, ptr addrspace(0) noal
 ; AVX512-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo2_addrspace2(
 ; FVW2-NEXT:  entry:
@@ -494,7 +503,8 @@ define void @foo2_addrspace2(ptr addrspace(1) noalias %in, ptr addrspace(0) noal
 ; FVW2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -548,7 +558,8 @@ define void @foo2_addrspace3(ptr addrspace(0) noalias %in, ptr addrspace(1) noal
 ; AVX512-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; AVX512:       middle.block:
 ; AVX512-NEXT:    br label [[FOR_END:%.*]]
-; AVX512:       scalar.ph:
+; AVX512:       for.end:
+; AVX512-NEXT:    ret void
 ;
 ; FVW2-LABEL: @foo2_addrspace3(
 ; FVW2-NEXT:  entry:
@@ -593,7 +604,8 @@ define void @foo2_addrspace3(ptr addrspace(0) noalias %in, ptr addrspace(1) noal
 ; FVW2-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; FVW2:       middle.block:
 ; FVW2-NEXT:    br label [[FOR_END:%.*]]
-; FVW2:       scalar.ph:
+; FVW2:       for.end:
+; FVW2-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -774,16 +786,16 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; FVW2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[IDXPROM]]
 ; FVW2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP21]], align 4, !alias.scope [[META8:![0-9]+]]
 ; FVW2-NEXT:    [[TMP23:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 0
-; FVW2-NEXT:    store float [[TMP23]], ptr [[TMP19]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META13:![0-9]+]]
 ; FVW2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i32 1
+; FVW2-NEXT:    store float [[TMP23]], ptr [[TMP19]], align 4, !alias.scope [[META11:![0-9]+]], !noalias [[META13:![0-9]+]]
 ; FVW2-NEXT:    store float [[TMP24]], ptr [[TMP20]], align 4, !alias.scope [[META11]], !noalias [[META13]]
 ; FVW2-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x float>, ptr [[TMP16]], align 4, !alias.scope [[META15:![0-9]+]]
-; FVW2-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, ptr [[TMP19]], i64 1
-; FVW2-NEXT:    [[TMP27:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i64 1
 ; FVW2-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[WIDE_LOAD10]], i32 0
-; FVW2-NEXT:    store float [[TMP28]], ptr [[TMP26]], align 4, !alias.scope [[META11]], !noalias [[META13]]
 ; FVW2-NEXT:    [[TMP29:%.*]] = extractelement <2 x float> [[WIDE_LOAD10]], i32 1
-; FVW2-NEXT:    store float [[TMP29]], ptr [[TMP27]], align 4, !alias.scope [[META11]], !noalias [[META13]]
+; FVW2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[TMP19]], i64 1
+; FVW2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i64 1
+; FVW2-NEXT:    store float [[TMP28]], ptr [[TMP25]], align 4, !alias.scope [[META11]], !noalias [[META13]]
+; FVW2-NEXT:    store float [[TMP29]], ptr [[TMP22]], align 4, !alias.scope [[META11]], !noalias [[META13]]
 ; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; FVW2-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; FVW2-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]

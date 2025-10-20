@@ -844,16 +844,16 @@ private:
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+          class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class        = enable_if_t<__is_allocator_v<_Alloc>>>
-vector(_InputIterator, _InputIterator) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+vector(_InputIterator, _InputIterator) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
           class = enable_if_t<__is_allocator_v<_Alloc>>>
-vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 #endif
 
 #if _LIBCPP_STD_VER >= 23
