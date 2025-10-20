@@ -396,8 +396,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("--create");
   CmdArgs.push_back(*TempFileOrErr);
   for (const auto &[File, Arch] : InputFiles)
-    CmdArgs.push_back(
-        Args.MakeArgString("--image=profile=" + Arch + ",file=" + File));
+    CmdArgs.push_back(Args.MakeArgString(
+        "--image3=kind=elf,sm=" + Arch.drop_front(3) + ",file=" + File));
 
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
@@ -1295,12 +1295,18 @@ int main(int Argc, char **Argv) {
 
   parallel::strategy = hardware_concurrency(1);
   if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
-    unsigned Threads = 0;
-    if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
-      reportError(createStringError("%s: expected a positive integer, got '%s'",
-                                    Arg->getSpelling().data(),
-                                    Arg->getValue()));
-    parallel::strategy = hardware_concurrency(Threads);
+    StringRef Val = Arg->getValue();
+    if (Val.equals_insensitive("jobserver"))
+      parallel::strategy = jobserver_concurrency();
+    else {
+      unsigned Threads = 0;
+      if (!llvm::to_integer(Val, Threads) || Threads == 0)
+        reportError(createStringError(
+            "%s: expected a positive integer or 'jobserver', got '%s'",
+            Arg->getSpelling().data(), Val.data()));
+      else
+        parallel::strategy = hardware_concurrency(Threads);
+    }
   }
 
   if (Args.hasArg(OPT_wrapper_time_trace_eq)) {

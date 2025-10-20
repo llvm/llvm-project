@@ -151,10 +151,12 @@ constexpr unsigned SmallSCCSize = 32;
 using CallStackTy =
     llvm::SmallVector<CallGraphNode::CallRecord, SmallCallStackSize>;
 
+} // namespace
+
 // In given SCC, find *some* call stack that will be cyclic.
 // This will only find *one* such stack, it might not be the smallest one,
 // and there may be other loops.
-CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
+static CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
   // We'll need to be able to performantly look up whether some CallGraphNode
   // is in SCC or not, so cache all the SCC elements in a set.
   const ImmutableSmallSet<CallGraphNode *, SmallSCCSize> SCCElts(SCC);
@@ -189,8 +191,6 @@ CallStackTy pathfindSomeCycle(ArrayRef<CallGraphNode *> SCC) {
 
   return CallStack;
 }
-
-} // namespace
 
 void NoRecursionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(translationUnitDecl().bind("TUDecl"), this);

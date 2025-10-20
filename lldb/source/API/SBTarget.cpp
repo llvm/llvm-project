@@ -1633,6 +1633,14 @@ const char *SBTarget::GetLabel() const {
   return nullptr;
 }
 
+lldb::user_id_t SBTarget::GetGloballyUniqueID() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return target_sp->GetGloballyUniqueID();
+  return LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID;
+}
+
 SBError SBTarget::SetLabel(const char *label) {
   LLDB_INSTRUMENT_VA(this, label);
 

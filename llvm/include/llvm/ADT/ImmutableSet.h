@@ -21,7 +21,9 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Signals.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -929,8 +931,7 @@ struct ImutProfileInfo<T*> {
 /// ImutContainerInfo - Generic definition of comparison operations for
 ///   elements of immutable containers that defaults to using
 ///   std::equal_to<> and std::less<> to perform comparison of elements.
-template <typename T>
-struct ImutContainerInfo : public ImutProfileInfo<T> {
+template <typename T> struct ImutContainerInfo : ImutProfileInfo<T> {
   using value_type = typename ImutProfileInfo<T>::value_type;
   using value_type_ref = typename ImutProfileInfo<T>::value_type_ref;
   using key_type = value_type;
@@ -955,8 +956,7 @@ struct ImutContainerInfo : public ImutProfileInfo<T> {
 /// ImutContainerInfo - Specialization for pointer values to treat pointers
 ///  as references to unique objects.  Pointers are thus compared by
 ///  their addresses.
-template <typename T>
-struct ImutContainerInfo<T*> : public ImutProfileInfo<T*> {
+template <typename T> struct ImutContainerInfo<T *> : ImutProfileInfo<T *> {
   using value_type = typename ImutProfileInfo<T*>::value_type;
   using value_type_ref = typename ImutProfileInfo<T*>::value_type_ref;
   using key_type = value_type;
