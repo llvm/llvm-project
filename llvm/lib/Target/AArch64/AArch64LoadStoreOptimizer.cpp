@@ -1386,6 +1386,17 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
       if (MOP.isReg() && MOP.isKill())
         DefinedInBB.addReg(MOP.getReg());
 
+  // Copy over any implicit-def operands. This is like MI.copyImplicitOps, but
+  // only copies implicit defs.
+  auto CopyImplicitOps = [&](MachineBasicBlock::iterator MI) {
+    for (const MachineOperand &MO :
+         llvm::drop_begin(MI->operands(), MI->getDesc().getNumOperands()))
+      if (MO.isReg() && MO.isImplicit() && MO.isDef())
+        MIB.add(MO);
+  };
+  CopyImplicitOps(I);
+  CopyImplicitOps(Paired);
+
   // Erase the old instructions.
   I->eraseFromParent();
   Paired->eraseFromParent();
