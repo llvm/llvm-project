@@ -4,7 +4,7 @@ define <4 x i32> @load(ptr nocapture readonly %a0) !dbg !8 {
 ; CHECK-LABEL: define <4 x i32> @load(
 ; CHECK-SAME: ptr readonly captures(none) [[A0:%.*]]) !dbg [[DBG8:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[A0]], i32 16, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> undef), !dbg [[DBG19:![0-9]+]], !tbaa [[CHAR_TBAA20:![0-9]+]]
+; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[A0]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> undef), !dbg [[DBG19:![0-9]+]], !tbaa [[CHAR_TBAA20:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x i32> [[V0]], !dbg [[DBG23:![0-9]+]]
 ;
 entry:
@@ -16,7 +16,7 @@ define void @store(<4 x i32> %a0, ptr nocapture %a1) !dbg !24 {
 ; CHECK-LABEL: define void @store(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], ptr captures(none) [[A1:%.*]]) !dbg [[DBG24:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[A0]], ptr [[A1]], i32 16, <4 x i1> <i1 false, i1 true, i1 false, i1 true>), !dbg [[DBG30:![0-9]+]], !tbaa [[CHAR_TBAA20]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[A0]], ptr align 16 [[A1]], <4 x i1> <i1 false, i1 true, i1 false, i1 true>), !dbg [[DBG30:![0-9]+]], !tbaa [[CHAR_TBAA20]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG31:![0-9]+]]
 ;
 entry:
@@ -28,7 +28,7 @@ define <4 x i32> @gather(<4 x ptr> %a0) !dbg !32 {
 ; CHECK-LABEL: define <4 x i32> @gather(
 ; CHECK-SAME: <4 x ptr> [[A0:%.*]]) !dbg [[DBG32:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[A0]], i32 16, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> undef), !dbg [[DBG35:![0-9]+]], !tbaa [[CHAR_TBAA20]]
+; CHECK-NEXT:    [[V0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 16 [[A0]], <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> undef), !dbg [[DBG35:![0-9]+]], !tbaa [[CHAR_TBAA20]]
 ; CHECK-NEXT:    ret <4 x i32> [[V0]], !dbg [[DBG36:![0-9]+]]
 ;
 entry:
@@ -40,7 +40,7 @@ define void @scatter(<4 x i32> %a0, <4 x ptr> %a1) !dbg !37 {
 ; CHECK-LABEL: define void @scatter(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x ptr> [[A1:%.*]]) !dbg [[DBG37:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[A0]], <4 x ptr> [[A1]], i32 16, <4 x i1> <i1 false, i1 true, i1 true, i1 true>), !dbg [[DBG41:![0-9]+]], !tbaa [[CHAR_TBAA20]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[A0]], <4 x ptr> align 16 [[A1]], <4 x i1> <i1 false, i1 true, i1 true, i1 true>), !dbg [[DBG41:![0-9]+]], !tbaa [[CHAR_TBAA20]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG42:![0-9]+]]
 ;
 entry:
