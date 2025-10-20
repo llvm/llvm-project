@@ -1133,8 +1133,8 @@ end program rename_proc
 - **Standard:**  GNU extension
 - **Class:**     function
 - **Syntax:**    result = `SECNDS(refTime)`
-- **Arguments:**
-
+- **Arguments:** 
+ 
 | ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
 |-----------|--------|---------------|-------------------------|------------------------------------------|
 | `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=4), required  | Reference time in seconds since midnight |
@@ -1157,16 +1157,16 @@ END PROGRAM example_secnds
 since midnight minus a user-supplied reference time `refTime`. Uses `REAL(KIND=8)` for higher precision.
 
 #### Usage and Info
-- **Standard:** PGI extension
-- **Class:**     function
-- **Syntax:**    result = `DSECNDS(refTime)`
-- **Arguments:**
+- **Standard:** PGI extension  
+- **Class:**     function  
+- **Syntax:**    result = `DSECNDS(refTime)`  
+- **Arguments:** 
 
 | ARGUMENT  | INTENT |      TYPE     |          KIND           |           Description                    |
 |-----------|--------|---------------|-------------------------|------------------------------------------|
 | `refTime` | `IN`   | `REAL, scalar`| REAL(KIND=8), required  | Reference time in seconds since midnight |
 
-- **Return Value:** REAL(KIND=8), scalar — seconds elapsed since `refTime`.
+- **Return Value:** REAL(KIND=8), scalar — seconds elapsed since `refTime`.  
 - **Purity:** Impure
 
 #### Example
