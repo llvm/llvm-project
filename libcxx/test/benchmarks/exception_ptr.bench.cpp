@@ -32,6 +32,7 @@ static bool exception_ptr_moves_copies_swap(std::exception_ptr p1) {
   return is_null && is_equal;
 }
 
+// Benchmark copies, moves and comparisons of a non-null exception_ptr.
 void bm_nonnull_exception_ptr(benchmark::State& state) {
   std::exception_ptr excptr = std::make_exception_ptr(42);
   for (auto _ : state) {
@@ -41,23 +42,22 @@ void bm_nonnull_exception_ptr(benchmark::State& state) {
 }
 BENCHMARK(bm_nonnull_exception_ptr);
 
+// Benchmark copies, moves and comparisons of a nullptr exception_ptr
+// where the compiler cannot prove that the exception_ptr is always
+// a nullptr and needs to emit runtime checks.
 void bm_null_exception_ptr(benchmark::State& state) {
   std::exception_ptr excptr;
   for (auto _ : state) {
-    // All of the `exception_ptr_noops` are no-ops but the optimizer
-    // cannot optimize them away, because the `DoNotOptimize` calls
-    // prevent the optimizer from doing so.
     benchmark::DoNotOptimize(excptr);
     benchmark::DoNotOptimize(exception_ptr_moves_copies_swap(excptr));
   }
 }
 BENCHMARK(bm_null_exception_ptr);
 
+// Benchmark copies, moves and comparisons of a nullptr exception_ptr
+// where the compiler can proof that the exception_ptr is always a nullptr.
 void bm_optimized_null_exception_ptr(benchmark::State& state) {
   for (auto _ : state) {
-    // All of the `exception_ptr_noops` are no-ops because
-    // the exception_ptr is empty. Hence, the compiler should
-    // be able to optimize them very aggressively.
     benchmark::DoNotOptimize(exception_ptr_moves_copies_swap(std::exception_ptr{nullptr}));
   }
 }
