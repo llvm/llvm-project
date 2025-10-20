@@ -2427,11 +2427,13 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           uint64_t OrigStmtSeq = StmtSeq.get();
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
+          const uint64_t InvalidOffset =
+              Unit.getOrigUnit().getFormParams().getDwarfMaxOffset();
           // Check whether we have an output sequence for the StmtSeq offset.
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
@@ -2441,7 +2443,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
 
