@@ -3464,10 +3464,7 @@ static int order_main() {
   return 0;
 }
 
-int llvm_profdata_main(int argc, char **argvNonConst,
-                       const llvm::ToolContext &) {
-  const char **argv = const_cast<const char **>(argvNonConst);
-
+int main(int argc, const char *argv[]) {
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {

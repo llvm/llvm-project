@@ -400,7 +400,7 @@ LogicalResult spirv::CompositeConstructOp::verify() {
       return emitOpError("operand element type mismatch: expected to be ")
              << resultType.getElementType() << ", but provided " << elementType;
   }
-  unsigned totalCount = std::accumulate(sizes.begin(), sizes.end(), 0);
+  unsigned totalCount = llvm::sum_of(sizes);
   if (totalCount != cType.getNumElements())
     return emitOpError("has incorrect number of operands: expected ")
            << cType.getNumElements() << ", but provided " << totalCount;

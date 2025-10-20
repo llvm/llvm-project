@@ -154,6 +154,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitWhileStmt(cast<WhileStmt>(*s));
   case Stmt::DoStmtClass:
     return emitDoStmt(cast<DoStmt>(*s));
+  case Stmt::CXXTryStmtClass:
+    return emitCXXTryStmt(cast<CXXTryStmt>(*s));
   case Stmt::CXXForRangeStmtClass:
     return emitCXXForRangeStmt(cast<CXXForRangeStmt>(*s), attr);
   case Stmt::OpenACCComputeConstructClass:
@@ -199,7 +201,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::CoroutineBodyStmtClass:
     return emitCoroutineBody(cast<CoroutineBodyStmt>(*s));
   case Stmt::CoreturnStmtClass:
-  case Stmt::CXXTryStmtClass:
   case Stmt::IndirectGotoStmtClass:
   case Stmt::OMPParallelDirectiveClass:
   case Stmt::OMPTaskwaitDirectiveClass:
@@ -474,8 +475,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       }
       break;
     case cir::TEK_Complex:
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "complex function return type");
+      emitComplexExprIntoLValue(rv, makeAddrLValue(returnValue, rv->getType()),
+                                /*isInit=*/true);
       break;
     case cir::TEK_Aggregate:
       assert(!cir::MissingFeatures::aggValueSlotGC());
@@ -535,7 +536,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   mlir::Block *currBlock = builder.getBlock();
   mlir::Block *labelBlock = currBlock;
 
-  if (!currBlock->empty()) {
+  if (!currBlock->empty() || currBlock->isEntryBlock()) {
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       labelBlock = builder.createBlock(builder.getBlock()->getParent());

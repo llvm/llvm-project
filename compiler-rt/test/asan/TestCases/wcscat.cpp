@@ -9,11 +9,13 @@
 int main() {
   const wchar_t *start = L"X means ";
   const wchar_t *append = L"dog";
-  wchar_t goodDst[12];
+  wchar_t goodArray[12];
+  wchar_t *volatile goodDst = goodArray;
   wcscpy(goodDst, start);
   wcscat(goodDst, append);
 
-  wchar_t badDst[9];
+  wchar_t badArray[9];
+  wchar_t *volatile badDst = badArray;
   wcscpy(badDst, start);
   fprintf(stderr, "Good so far.\n");
   // CHECK-DAG: Good so far.

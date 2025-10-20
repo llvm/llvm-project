@@ -574,7 +574,7 @@ bool ClangUserExpression::TryParse(
 
   m_parser = std::make_unique<ClangExpressionParser>(
       exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
-      m_include_directories, m_filename);
+      diagnostic_manager, m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -818,7 +818,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   }
 
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               false);
+                               false, diagnostic_manager);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we

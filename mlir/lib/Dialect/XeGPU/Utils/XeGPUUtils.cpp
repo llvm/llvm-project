@@ -52,8 +52,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
   // compute sgSize by multiply elements of laneLayout
   // e.g. for 2D layout, sgSize = laneLayout[0] * laneLayout[1]
   // e.g. for 1D layout, sgSize = laneLayout[0]
-  auto sgSize = std::accumulate(laneLayout.begin(), laneLayout.end(), 1,
-                                std::multiplies<int64_t>());
+  int64_t sgSize = llvm::product_of(laneLayout);
 
   // Case 1: regular loads/stores
   auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();

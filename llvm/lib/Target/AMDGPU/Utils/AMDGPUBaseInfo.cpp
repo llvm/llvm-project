@@ -1569,12 +1569,7 @@ static bool isValidRegPrefix(char C) {
   return C == 'v' || C == 's' || C == 'a';
 }
 
-std::tuple<char, unsigned, unsigned>
-parseAsmConstraintPhysReg(StringRef Constraint) {
-  StringRef RegName = Constraint;
-  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
-    return {};
-
+std::tuple<char, unsigned, unsigned> parseAsmPhysRegName(StringRef RegName) {
   char Kind = RegName.front();
   if (!isValidRegPrefix(Kind))
     return {};
@@ -1599,6 +1594,14 @@ parseAsmConstraintPhysReg(StringRef Constraint) {
   }
 
   return {};
+}
+
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint) {
+  StringRef RegName = Constraint;
+  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
+    return {};
+  return parseAsmPhysRegName(RegName);
 }
 
 std::pair<unsigned, unsigned>
@@ -2927,13 +2930,6 @@ unsigned getRegBitWidth(const MCRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 
-unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,
-                           unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
-  unsigned RCID = Desc.operands()[OpNo].RegClass;
-  return getRegBitWidth(RCID) / 8;
-}
-
 bool isInlinableLiteral64(int64_t Literal, bool HasInv2Pi) {
   if (isInlinableIntLiteral(Literal))
     return true;
@@ -3149,7 +3145,7 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   return isUInt<32>(Val) || isInt<32>(Val);
 }
 
-int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
+int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   switch (Type) {
   default:
     break;
@@ -3172,7 +3168,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
-    return Hi_32(Imm);
+    return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
 }
@@ -3499,14 +3495,18 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   return false;
 }
 
-bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
+bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                             const MCSubtargetInfo &ST) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);
     if (Idx == -1)
       continue;
 
-    if (OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64RegClassID ||
-        OpDesc.operands()[Idx].RegClass == AMDGPU::VReg_64_Align2RegClassID)
+    const MCOperandInfo &OpInfo = OpDesc.operands()[Idx];
+    int16_t RegClass = MII.getOpRegClassID(
+        OpInfo, ST.getHwMode(MCSubtargetInfo::HwMode_RegInfo));
+    if (RegClass == AMDGPU::VReg_64RegClassID ||
+        RegClass == AMDGPU::VReg_64_Align2RegClassID)
       return true;
   }
 
@@ -3533,14 +3533,15 @@ bool isDPALU_DPP32BitOpc(unsigned Opc) {
   }
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCInstrInfo &MII,
+                 const MCSubtargetInfo &ST) {
   if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
     return false;
 
   if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
     return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
 
-  return hasAny64BitVGPROperands(OpDesc);
+  return hasAny64BitVGPROperands(OpDesc, MII, ST);
 }
 
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
