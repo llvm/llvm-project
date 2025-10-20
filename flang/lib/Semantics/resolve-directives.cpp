@@ -1730,13 +1730,12 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     const parser::Name *name) {
-  if (!name) {
-    return nullptr;
-  }
-  if (auto *cb{
-          GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
-    name->symbol = cb;
-    return cb;
+  if (name) {
+    if (Symbol *cb{
+            GetContext().scope.FindCommonBlockInVisibleScopes(name->source)}) {
+      name->symbol = cb;
+      return cb;
+    }
   }
   return nullptr;
 }
