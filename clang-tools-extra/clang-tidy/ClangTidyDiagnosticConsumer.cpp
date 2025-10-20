@@ -238,9 +238,8 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
-  CheckFilter = std::make_unique<CachedGlobList>(*getOptions().Checks);
-  WarningAsErrorFilter =
-      std::make_unique<CachedGlobList>(*getOptions().WarningsAsErrors);
+  CheckFilter = {*getOptions().Checks};
+  WarningAsErrorFilter = {*getOptions().WarningsAsErrors};
   if (!parseFileExtensions(*getOptions().HeaderFileExtensions,
                            HeaderFileExtensions))
     this->configurationDiag("Invalid header file extensions");
@@ -284,13 +283,11 @@ ClangTidyContext::getProfileStorageParams() const {
 }
 
 bool ClangTidyContext::isCheckEnabled(StringRef CheckName) const {
-  assert(CheckFilter != nullptr);
-  return CheckFilter->contains(CheckName);
+  return CheckFilter.contains(CheckName);
 }
 
 bool ClangTidyContext::treatAsError(StringRef CheckName) const {
-  assert(WarningAsErrorFilter != nullptr);
-  return WarningAsErrorFilter->contains(CheckName);
+  return WarningAsErrorFilter.contains(CheckName);
 }
 
 std::string ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
