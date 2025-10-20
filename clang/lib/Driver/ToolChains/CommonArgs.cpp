@@ -274,11 +274,10 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
       clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
       clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
-  bool FPRegReserved =
-      Args.hasFlag(clang::driver::options::OPT_mreserve_frame_pointer_reg,
-                   clang::driver::options::OPT_mno_reserve_frame_pointer_reg,
-                   false);
-  
+  bool FPRegReserved = Args.hasFlag(
+      clang::driver::options::OPT_mreserve_frame_pointer_reg,
+      clang::driver::options::OPT_mno_reserve_frame_pointer_reg, false);
+
   FPRegReserved |= mustMaintainValidFrameChain(Args, Triple);
 
   if (EnableFP) {
