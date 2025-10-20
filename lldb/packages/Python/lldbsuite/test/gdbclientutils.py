@@ -126,7 +126,7 @@ class MockGDBServerResponder:
 
     RESPONSE_DISCONNECT = SpecialResponse.RESPONSE_DISCONNECT
     RESPONSE_NONE = SpecialResponse.RESPONSE_NONE
-    type Response = Union[str, SpecialResponse]
+    Response = Union[str, SpecialResponse]
 
     def __init__(self):
         self.packetLog = PacketLog()
