@@ -43,6 +43,26 @@ b:
   ret void
 }
 
+define void @ifThen_ptrtoaddr(ptr %arg) {
+; CHECK-LABEL: define void @ifThen_ptrtoaddr(
+; CHECK-SAME: ptr [[ARG:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = ptrtoaddr ptr [[ARG]] to i64
+; CHECK-NEXT:    br i1 true, label %[[A:.*]], label %[[B:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[B]]
+; CHECK:       [[B]]:
+; CHECK-NEXT:    ret void
+;
+  br i1 true, label %a, label %b
+
+a:
+  %x = ptrtoaddr ptr %arg to i64
+  br label %b
+
+b:
+  ret void
+}
+
 define void @ifThen_inttoptr(i64 %arg) {
 ; CHECK-LABEL: define void @ifThen_inttoptr(
 ; CHECK-SAME: i64 [[ARG:%.*]]) {
