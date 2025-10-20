@@ -327,7 +327,8 @@ genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   mlir::acc::AtomicReadOp::create(firOpBuilder, loc, fromAddress, toAddress,
-                                  mlir::TypeAttr::get(elementType));
+                                  mlir::TypeAttr::get(elementType),
+                                  /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.write operation which is created in existing
@@ -347,7 +348,8 @@ genAtomicWriteStatement(Fortran::lower::AbstractConverter &converter,
   rhsExpr = firOpBuilder.createConvert(loc, varType, rhsExpr);
   firOpBuilder.restoreInsertionPoint(insertionPoint);
 
-  mlir::acc::AtomicWriteOp::create(firOpBuilder, loc, lhsAddr, rhsExpr);
+  mlir::acc::AtomicWriteOp::create(firOpBuilder, loc, lhsAddr, rhsExpr,
+                                   /*ifCond=*/mlir::Value{});
 }
 
 /// Used to generate atomic.update operation which is created in existing
@@ -463,7 +465,8 @@ static inline void genAtomicUpdateStatement(
 
   mlir::Operation *atomicUpdateOp = nullptr;
   atomicUpdateOp =
-      mlir::acc::AtomicUpdateOp::create(firOpBuilder, currentLocation, lhsAddr);
+      mlir::acc::AtomicUpdateOp::create(firOpBuilder, currentLocation, lhsAddr,
+                                        /*ifCond=*/mlir::Value{});
 
   llvm::SmallVector<mlir::Type> varTys = {varType};
   llvm::SmallVector<mlir::Location> locs = {currentLocation};
@@ -588,7 +591,9 @@ void genAtomicCapture(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
 
   mlir::Operation *atomicCaptureOp = nullptr;
-  atomicCaptureOp = mlir::acc::AtomicCaptureOp::create(firOpBuilder, loc);
+  atomicCaptureOp =
+      mlir::acc::AtomicCaptureOp::create(firOpBuilder, loc,
+                                         /*ifCond=*/mlir::Value{});
 
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
