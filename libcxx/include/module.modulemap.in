@@ -2115,7 +2115,6 @@ module std [system] {
     module ignore                   { header "__tuple/ignore.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
-    module tuple_like_ext           { header "__tuple/tuple_like_ext.h" }
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }

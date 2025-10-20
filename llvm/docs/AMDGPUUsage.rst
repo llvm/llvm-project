@@ -6512,6 +6512,13 @@ operations.
 ``buffer/global/flat_load/store/atomic`` instructions to global memory are
 termed vector memory operations.
 
+``global_load_lds`` or ``buffer/global_load`` instructions with the `lds` flag
+are LDS DMA loads. They interact with caches as if the loaded data were
+being loaded to registers and not to LDS, and so therefore support the same
+cache modifiers. They cannot be performed atomically. They implement volatile
+(via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
+from the global address space.
+
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
 is accessing the memory, atomic memory orderings are not meaningful, and all
