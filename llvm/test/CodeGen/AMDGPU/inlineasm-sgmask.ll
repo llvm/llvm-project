@@ -1,15 +1,12 @@
 ; RUN: llc -mcpu=gfx942 < %s | FileCheck %s
-; CHECK-LABEL: test_mfma
-; CHECK: v_add_f32_e32
-; CHECK-NEXT: ;;#ASMSTART
-; CHECK-NEXT: v_mfma_f64
-; CHECK-NEXT: ;;#ASMEND
-; CHECK: v_add_f32_e32
 ; ModuleID = '<stdin>'
 target triple = "amdgcn-amd-amdhsa"
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_valu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
+; CHECK-LABEL: test_valu
+; CHECK: s_mul_i32
+; CHECK: ASMSTART
 entry:
   %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %mul = shl i32 %0, 6
@@ -45,7 +42,54 @@ if.end:                                           ; preds = %if.then, %entry
 }
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
+define protected amdgpu_kernel void @test_salu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
+; CHECK-LABEL: test_salu
+; CHECK: %bb.1
+; CHECK-NEXT: s_load
+; CHECK-NEXT: s_load
+; CHECK-NEXT: s_waitcnt
+; CHECK-NEXT: ASMSTART
+entry:
+  %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
+  %mul = shl i32 %0, 6
+  %1 = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %add = add i32 %mul, %1
+  %cmp = icmp slt i32 %add, %length
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %idx.ext = sext i32 %add to i64
+  %add.ptr = getelementptr inbounds float, ptr addrspace(1) %to.coerce, i64 %idx.ext
+  %mul4 = shl nsw i32 %add, 2
+  %idx.ext5 = sext i32 %mul4 to i64
+  %add.ptr6 = getelementptr inbounds float, ptr addrspace(1) %from.coerce, i64 %idx.ext5
+  %2 = load <4 x float>, ptr addrspace(1) %add.ptr6, align 16
+  %3 = extractelement <4 x float> %2, i64 3
+  %4 = extractelement <4 x float> %2, i64 0
+  %5 = fadd contract float %3, %4
+  %6 = extractelement <4 x float> %2, i64 1
+  %7 = extractelement <4 x float> %2, i64 2
+  %add7 = fadd contract float %6, %7
+  %add8 = fadd contract float %5, %add7
+  store float %add8, ptr addrspace(1) %add.ptr, align 4
+  %mul9 = tail call noundef i32 asm "s_mul_i32, $0, $1, 3", "=s,s"(i32 %k) #3
+  store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
+  tail call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 1, i32 0)
+  tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 10, i32 0)
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  ret void
+}
+
+; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_mfma(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
+; CHECK-LABEL: test_mfma
+; CHECK: v_add_f32_e32
+; CHECK-NEXT: ;;#ASMSTART
+; CHECK-NEXT: v_mfma_f64
+; CHECK-NEXT: ;;#ASMEND
+; CHECK: v_add_f32_e32
 entry:
   %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %mul = shl i32 %0, 6
@@ -88,6 +132,10 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; Function Attrs: convergent mustprogress norecurse nounwind
 define protected amdgpu_kernel void @test_ds(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %length) local_unnamed_addr #0 {
+; CHECK-LABEL: test_ds
+; CHECK-DAG: v_lshl_add_u64
+; CHECK-DAG: v_add_f32_e32
+; CHECK-NEXT: ASMSTART
 entry:
   %0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %mul = shl i32 %0, 6
