@@ -60,12 +60,12 @@ AST_MATCHER_P(CoawaitExpr, awaitable, ast_matchers::internal::Matcher<Expr>,
     return InnerMatcher.matches(*E, Finder, Builder);
   return false;
 }
+} // namespace
 
-auto typeWithNameIn(const std::vector<StringRef> &Names) {
+static auto typeWithNameIn(const std::vector<StringRef> &Names) {
   return hasType(
       hasCanonicalType(hasDeclaration(namedDecl(hasAnyName(Names)))));
 }
-} // namespace
 
 CoroutineHostileRAIICheck::CoroutineHostileRAIICheck(StringRef Name,
                                                      ClangTidyContext *Context)
