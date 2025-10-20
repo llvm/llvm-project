@@ -733,6 +733,11 @@ public:
     SourceLocExprScopeGuard sourceLocScope;
   };
 
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &cfg, const CXXDefaultArgExpr *e)
+        : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -1313,10 +1318,10 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
-  void emitNewArrayInitializer(const CXXNewExpr *E, QualType ElementType,
-                               mlir::Type ElementTy, Address BeginPtr,
-                               mlir::Value NumElements,
-                               mlir::Value AllocSizeWithoutCookie);
+  void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
+                               mlir::Type elementTy, Address beginPtr,
+                               mlir::Value numElements,
+                               mlir::Value allocSizeWithoutCookie);
 
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
@@ -1517,6 +1522,10 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.
