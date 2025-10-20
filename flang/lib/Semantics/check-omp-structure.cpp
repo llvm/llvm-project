@@ -1535,6 +1535,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
           [&](auto &&s) {
             using TypeS = llvm::remove_cvref_t<decltype(s)>;
             if constexpr ( //
+                std::is_same_v<TypeS, parser::OmpClause::DeviceSafesync> ||
                 std::is_same_v<TypeS, parser::OmpClause::DynamicAllocators> ||
                 std::is_same_v<TypeS, parser::OmpClause::ReverseOffload> ||
                 std::is_same_v<TypeS, parser::OmpClause::SelfMaps> ||
@@ -5192,6 +5193,10 @@ const parser::Name *OmpStructureChecker::GetObjectName(
 void OmpStructureChecker::Enter(
     const parser::OmpClause::AtomicDefaultMemOrder &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_atomic_default_mem_order);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::DeviceSafesync &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_device_safesync);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {

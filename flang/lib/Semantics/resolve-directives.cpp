@@ -586,6 +586,7 @@ public:
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
                 if constexpr ( //
+                    std::is_same_v<TypeS, OmpClause::DeviceSafesync> ||
                     std::is_same_v<TypeS, OmpClause::DynamicAllocators> ||
                     std::is_same_v<TypeS, OmpClause::ReverseOffload> ||
                     std::is_same_v<TypeS, OmpClause::SelfMaps> ||

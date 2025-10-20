@@ -740,6 +740,18 @@ Device make(const parser::OmpClause::Device &inp,
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
 }
 
+DeviceSafesync make(const parser::OmpClause::DeviceSafesync &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpDeviceSafesyncClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDeviceSafesyncClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DeviceSafesync{/*Required=*/std::move(maybeRequired)};
+}
+
 DeviceType make(const parser::OmpClause::DeviceType &inp,
                 semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDeviceTypeClause
