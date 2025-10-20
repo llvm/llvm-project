@@ -27,6 +27,7 @@
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
@@ -306,20 +307,25 @@ struct ExecuteRegionForwardingEliminator
     SmallVector<Operation *> yieldOps;
     for (Block &block : op.getRegion()) {
       if (auto yield = dyn_cast<scf::YieldOp>(block.getTerminator())) {
-        if (yield.getResults().empty())
+        if (yield.getOperands().empty())
           continue;
         yieldOps.push_back(yield.getOperation());
       }
     }
 
-    if (yieldOps.size() != 1)
+    if (yieldOps.empty())
       return failure();
 
-    auto yieldOp = cast<scf::YieldOp>(yieldOps.front());
-    auto yieldedValues = yieldOp.getOperands();
+    // Check if all yield operations have the same operands.
+    auto yieldOpsOperands = yieldOps[0]->getOperands();
+    for (auto *yieldOp : yieldOps) {
+      if (yieldOp->getOperands() != yieldOpsOperands)
+        return failure();
+    }
+
     // Check if all yielded values are from outside the region
     bool allExternal = true;
-    for (Value yieldedValue : yieldedValues) {
+    for (Value yieldedValue : yieldOpsOperands) {
       if (isValueFromInsideRegion(yieldedValue, op)) {
         allExternal = false;
         break;
@@ -337,13 +343,16 @@ struct ExecuteRegionForwardingEliminator
     // Move the region content to the new operation
     newOp.getRegion().takeBody(op.getRegion());
 
-    // Replace the yield operation with a new yield operation with no results.
-    rewriter.setInsertionPoint(yieldOp);
-    rewriter.eraseOp(yieldOp);
-    rewriter.create<scf::YieldOp>(yieldOp.getLoc());
+    // Replace all yield operations with a new yield operation with no results.
+    // scf.execute_region must have at least one yield operation.
+    for (auto *yieldOp : yieldOps) {
+      rewriter.setInsertionPoint(yieldOp);
+      rewriter.eraseOp(yieldOp);
+      rewriter.create<scf::YieldOp>(yieldOp->getLoc());
+    }
 
     // Replace the old operation with the external values directly.
-    rewriter.replaceOp(op, yieldedValues);
+    rewriter.replaceOp(op, yieldOpsOperands);
     return success();
   }
 
@@ -352,12 +361,11 @@ private:
                                ExecuteRegionOp executeRegionOp) const {
     // Check if the value is defined within the execute_region
     if (Operation *defOp = value.getDefiningOp())
-      return executeRegionOp.getRegion() = defOp->getParentRegion();
+      return &executeRegionOp.getRegion() == defOp->getParentRegion();
 
     // If it's a block argument, check if it's from within the region
-    if (BlockArgument blockArg = dyn_cast<BlockArgument>(value)) {
-      return executeRegionOp.getRegion() == blockArg.getParentRegion());
-    }
+    if (BlockArgument blockArg = dyn_cast<BlockArgument>(value))
+      return &executeRegionOp.getRegion() == blockArg.getParentRegion();
 
     return false; // Value is from outside the region
   }
@@ -367,17 +375,6 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner,
               ExecuteRegionForwardingEliminator>(context);
-}
-
-void ExecuteRegionOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  if (!getNoInline())
-    return;
-  // In case there is attribute no_inline we want the region not to be inlined
-  // into the parent operation.
-  effects.emplace_back(MemoryEffects::Write::get(),
-                       SideEffects::DefaultResource::get());
 }
 
 void ExecuteRegionOp::getSuccessorRegions(
