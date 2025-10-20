@@ -3481,30 +3481,6 @@ def : GCNPat<
 >;
 } // End True16Predicate
 
-let True16Predicate = UseRealTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_t16_e64 0, (i16 CONST.FP16_NEG_ONE), $src_mods, $src, 0/*Clamp*/, /*omod*/0, /*opsel*/0)
->;
-} // End True16Predicate
-
-let True16Predicate = UseFakeTrue16Insts in {
-def : GCNPat<
-  (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
->;
-
-def : GCNPat<
-  (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
->;
-} // End True16Predicate
-
 def : GCNPat<
   (fcanonicalize (v2f16 (VOP3PMods v2f16:$src, i32:$src_mods))),
   (V_PK_MUL_F16 0, (i32 CONST.FP16_ONE), $src_mods, $src, DSTCLAMP.NONE)
