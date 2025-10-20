@@ -1954,7 +1954,6 @@ spanstream functional
 spanstream initializer_list
 spanstream ios
 spanstream iosfwd
-spanstream iostream
 spanstream istream
 spanstream iterator
 spanstream limits
