@@ -200,7 +200,7 @@ Consensus and Time Limits
 
 Discussions remain open until a clear consensus emerges, meaning no sustained objections have been raised after reasonable discussion.
 
-To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the chair (or moderator) may:
+To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the moderator (typically the person who started the thread) may take one of the following actions:
 
 * **Summarize the apparent consensus** and close the discussion, or
 * **Postpone the topic** to the next sync-up meeting if the outcome remains unclear, or
