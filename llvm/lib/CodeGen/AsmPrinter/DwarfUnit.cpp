@@ -766,8 +766,17 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
     addUInt(Buffer, dwarf::DW_AT_encoding, dwarf::DW_FORM_data1,
             BTy->getEncoding());
 
-  uint64_t Size = BTy->getSizeInBits() >> 3;
-  addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, Size);
+  uint64_t SizeInBytes = divideCeil(BTy->getSizeInBits(), 8);
+  addUInt(Buffer, dwarf::DW_AT_byte_size, std::nullopt, SizeInBytes);
+  if (BTy->getTag() == dwarf::Tag::DW_TAG_base_type) {
+    // DW_TAG_base_type:
+    // If the value of an object of the given type does not fully occupy the
+    // storage described by a byte size attribute, the base type entry may also
+    // have a DW_AT_bit_size [...] attribute.
+    if (uint64_t SizeInBits = BTy->getSizeInBits();
+        SizeInBits && SizeInBits % 8)
+      addUInt(Buffer, dwarf::DW_AT_bit_size, std::nullopt, SizeInBits);
+  }
 
   if (BTy->isBigEndian())
     addUInt(Buffer, dwarf::DW_AT_endianity, std::nullopt, dwarf::DW_END_big);

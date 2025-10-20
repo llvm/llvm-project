@@ -1795,6 +1795,11 @@ void DwarfCompileUnit::createBaseTypeDIEs() {
     // Round up to smallest number of bytes that contains this number of bits.
     addUInt(Die, dwarf::DW_AT_byte_size, std::nullopt,
             divideCeil(Btr.BitSize, 8));
+    // If the value of an object of the given type does not fully occupy the
+    // storage described by a byte size attribute, the base type entry may also
+    // have a DW_AT_bit_size [...] attribute.
+    if (Btr.BitSize && (Btr.BitSize % 8))
+      addUInt(Die, dwarf::DW_AT_bit_size, std::nullopt, Btr.BitSize);
 
     Btr.Die = &Die;
   }

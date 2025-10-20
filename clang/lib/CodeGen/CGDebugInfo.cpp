@@ -1152,9 +1152,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BitIntType *Ty) {
   llvm::dwarf::TypeKind Encoding = Ty->isUnsigned()
                                        ? llvm::dwarf::DW_ATE_unsigned
                                        : llvm::dwarf::DW_ATE_signed;
-
-  return DBuilder.createBasicType(Name, CGM.getContext().getTypeSize(Ty),
-                                  Encoding);
+  return DBuilder.createBasicType(Name, Ty->getNumBits(), Encoding);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const ComplexType *Ty) {
