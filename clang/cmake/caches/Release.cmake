@@ -55,7 +55,7 @@ set(LLVM_RELEASE_ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
 # link with system libc++ which can cause some incompatibilities.
 # See https://github.com/llvm/llvm-project/issues/77653
 # Because of these problems, this option will default to OFF.
-set(LLVM_RELEASE_LINK_LOCAL_RUNTIMES OFF CACHE BOOL "")
+set(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES OFF CACHE BOOL "")
 
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
@@ -71,7 +71,7 @@ set(STAGE1_PROJECTS "clang")
 # Need to build compiler-rt in order to use PGO for later stages.
 set(STAGE1_RUNTIMES "compiler-rt")
 # Build all runtimes so we can statically link them into the stage2 compiler.
-if(LLVM_RELEASE_LINK_LOCAL_RUNTIMES)
+if(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES)
   list(APPEND STAGE1_RUNTIMES "libcxx;libcxxabi;libunwind")
 endif()
 
@@ -135,7 +135,7 @@ set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" 
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)
 endif()
-if(LLVM_RELEASE_LINK_LOCAL_RUNTIMES)
+if(LLVM_RELEASE_ENABLE_LINK_LOCAL_RUNTIMES)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
   set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
   set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
