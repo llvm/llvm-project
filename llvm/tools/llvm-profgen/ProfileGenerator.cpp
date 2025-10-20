@@ -454,56 +454,57 @@ bool ProfileGeneratorBase::collectFunctionsFromRawProfile(
   for (const auto &CI : *SampleCounters) {
     if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
       for (auto StackAddr : CtxKey->Context) {
-        uint64_t inc = Binary->addressIsCode(StackAddr) ? 1 : 0;
-        TotalStkAddr += inc;
+        uint64_t Inc = Binary->addressIsCode(StackAddr) ? 1 : 0;
+        TotalStkAddr += Inc;
         if (FuncRange *FRange = Binary->findFuncRange(StackAddr))
           ProfiledFunctions.insert(FRange->Func);
         else
-          ErrStkAddr += inc;
+          ErrStkAddr += Inc;
       }
     }
 
     for (auto Item : CI.second.RangeCounter) {
       uint64_t StartAddress = Item.first.first;
-      uint64_t inc = Binary->addressIsCode(StartAddress) ? 1 : 0;
-      TotalFuncRange += inc;
+      uint64_t Inc = Binary->addressIsCode(StartAddress) ? Item.second : 0;
+      TotalFuncRange += Inc;
       if (FuncRange *FRange = Binary->findFuncRange(StartAddress))
         ProfiledFunctions.insert(FRange->Func);
       else
-        ErrFuncRange += inc;
+        ErrFuncRange += Inc;
     }
 
     for (auto Item : CI.second.BranchCounter) {
       uint64_t SourceAddress = Item.first.first;
       uint64_t TargetAddress = Item.first.second;
-      uint64_t srcinc = Binary->addressIsCode(SourceAddress) ? 1 : 0;
-      uint64_t tgtinc = Binary->addressIsCode(TargetAddress) ? 1 : 0;
-      TotalSrc += srcinc;
+      uint64_t SrcInc = Binary->addressIsCode(SourceAddress) ? Item.second : 0;
+      uint64_t TgtInc = Binary->addressIsCode(TargetAddress) ? Item.second : 0;
+      TotalSrc += SrcInc;
       if (FuncRange *FRange = Binary->findFuncRange(SourceAddress))
         ProfiledFunctions.insert(FRange->Func);
       else
-        ErrSrc += srcinc;
-      TotalTgt += tgtinc;
+        ErrSrc += SrcInc;
+      TotalTgt += TgtInc;
       if (FuncRange *FRange = Binary->findFuncRange(TargetAddress))
         ProfiledFunctions.insert(FRange->Func);
       else
-        ErrTgt += tgtinc;
+        ErrTgt += TgtInc;
     }
   }
 
   if (ErrStkAddr)
-    WithColor::warning() << "Cannot find Stack Address from DWARF Info: "
-                         << ErrStkAddr << "/" << TotalStkAddr << " missing\n";
+    emitWarningSummary(
+        ErrStkAddr, TotalStkAddr,
+        "of stack address samples do not belong to any function");
   if (ErrFuncRange)
-    WithColor::warning() << "Cannot find Function Range from DWARF Info: "
-                         << ErrFuncRange << "/" << TotalFuncRange
-                         << " missing\n";
+    emitWarningSummary(
+        ErrFuncRange, TotalFuncRange,
+        "of function range samples do not belong to any function");
   if (ErrSrc)
-    WithColor::warning() << "Cannot find LBR Source Addr from DWARF Info: "
-                         << ErrSrc << "/" << TotalSrc << " missing\n";
+    emitWarningSummary(ErrSrc, TotalSrc,
+                       "of LBR source samples do not belong to any function");
   if (ErrTgt)
-    WithColor::warning() << "Cannot find LBR Target Addr from DWARF Info: "
-                         << ErrTgt << "/" << TotalTgt << " missing\n";
+    emitWarningSummary(ErrTgt, TotalTgt,
+                       "of LBR target samples do not belong to any function");
   return true;
 }
 

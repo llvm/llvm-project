@@ -834,8 +834,8 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     if (Size == 0 || Type != SymbolRef::ST_Function)
       continue;
 
-    SmallVector<StringRef> Suffixes(
-        {".destroy", ".resume", ".llvm.", ".cold", ".warm"});
+    const char *Suffixes[] = {".destroy", ".resume", ".llvm.",
+                              ".cold",    ".warm",   nullptr};
     const StringRef SymName =
         FunctionSamples::getCanonicalFnName(Name, Suffixes);
 
