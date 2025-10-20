@@ -3270,6 +3270,9 @@ struct FormatStyle {
              Hex == R.Hex && HexMinDigits == R.HexMinDigits &&
              HexMaxDigitsNoSeparator == R.HexMaxDigitsNoSeparator;
     }
+    bool operator!=(const IntegerLiteralSeparatorStyle &R) const {
+      return !operator==(R);
+    }
   };
 
   /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
