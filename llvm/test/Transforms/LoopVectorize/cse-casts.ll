@@ -351,44 +351,29 @@ exit:
   ret void
 }
 
-define void @simplified_cast_preserves_irflag_type(ptr %p, ptr %q, ptr %r) {
+define void @simplified_cast_preserves_irflag_type(ptr noalias %p, ptr noalias %q, ptr noalias %r) {
 ; CHECK-LABEL: define void @simplified_cast_preserves_irflag_type(
-; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]]) {
+; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[R:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 2
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[R]], i64 2
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[P]], i64 1
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[R]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND03:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND14:%.*]] = icmp ult ptr [[P]], [[SCEVGEP]]
-; CHECK-NEXT:    [[FOUND_CONFLICT5:%.*]] = and i1 [[BOUND03]], [[BOUND14]]
-; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
-; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[R]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[P]], [[SCEVGEP1]]
-; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
-; CHECK-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX9]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1, !alias.scope [[META4:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
-; CHECK-NEXT:    store i16 [[TMP2]], ptr [[Q]], align 2, !alias.scope [[META7:![0-9]+]], !noalias [[META9:![0-9]+]]
-; CHECK-NEXT:    store i16 [[TMP2]], ptr [[R]], align 2, !alias.scope [[META11:![0-9]+]], !noalias [[META4]]
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[Q]], align 2
+; CHECK-NEXT:    store i16 [[TMP2]], ptr [[R]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], -9223372036854775808
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br [[EXIT:label %.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
