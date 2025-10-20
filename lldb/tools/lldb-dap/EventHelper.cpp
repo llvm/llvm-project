@@ -276,11 +276,16 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
 }
 
 void SendInvalidatedEvent(
-    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas) {
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
+    lldb::tid_t tid) {
   if (!dap.clientFeatures.contains(protocol::eClientFeatureInvalidatedEvent))
     return;
   protocol::InvalidatedEventBody body;
   body.areas = areas;
+
+  if (tid != LLDB_INVALID_THREAD_ID)
+    body.threadId = tid;
+
   dap.Send(protocol::Event{"invalidated", std::move(body)});
 }
 

@@ -220,6 +220,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonPeepholePass(PR);
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
+  initializeHexagonQFPOptimizerPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -386,6 +387,7 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
+    addPass(createHexagonQFPOptimizer());
   }
 
   return false;

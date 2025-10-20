@@ -241,9 +241,9 @@ auto nulloptTypeDecl() {
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
-  return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t",
-                               "bsl::in_place_t"));
+  return namedDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
+                              "base::in_place_t", "folly::in_place_t",
+                              "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {

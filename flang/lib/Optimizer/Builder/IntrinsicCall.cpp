@@ -3516,11 +3516,23 @@ static mlir::Value getAddrFromBox(fir::FirOpBuilder &builder,
   return addr;
 }
 
+static void clocDeviceArgRewrite(fir::ExtendedValue arg) {
+  // Special case for device address in c_loc.
+  if (auto emboxOp = mlir::dyn_cast_or_null<fir::EmboxOp>(
+          fir::getBase(arg).getDefiningOp()))
+    if (auto declareOp = mlir::dyn_cast_or_null<hlfir::DeclareOp>(
+            emboxOp.getMemref().getDefiningOp()))
+      if (declareOp.getDataAttr() &&
+          declareOp.getDataAttr() == cuf::DataAttribute::Device)
+        emboxOp.getMemrefMutable().assign(declareOp.getMemref());
+}
+
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
                  bool isFunc = false, bool isDevLoc = false) {
   assert(args.size() == 1);
+  clocDeviceArgRewrite(args[0]);
   mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
   mlir::Value resAddr;
   if (isDevLoc)
