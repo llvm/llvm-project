@@ -209,7 +209,7 @@ private:
     /// virtual base.
     llvm::PointerIntPair<const CXXBaseSpecifier *, 1> Base;
 
-    /// When Kind == EK_ArrayElement, EK_VectorElement, or EK_MatrixElement,
+    /// When Kind == EK_ArrayElement, EK_VectorElement, EK_MatrixElement,
     /// or EK_ComplexElement, the index of the array or vector element being
     /// initialized.
     unsigned Index;
