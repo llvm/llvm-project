@@ -7425,14 +7425,18 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
     if (!DSym)
       return;
     DbgObj = DSym;
-    if (UseDbg) {
+    if (UseDbg || PrintLines) {
       // Setup the DIContext
       diContext = DWARFContext::create(*DbgObj);
     }
   }
 
-  SourcePrinter SP(DbgObj, TheTarget->getName());
-  LiveElementPrinter LEP(*MRI, *STI);
+  std::optional<SourcePrinter> SP;
+  std::optional<LiveElementPrinter> LEP;
+  if (PrintSource || PrintLines) {
+    SP.emplace(DbgObj, TheTarget->getName());
+    LEP.emplace(*MRI, *STI);
+  }
 
   if (FilterSections.empty())
     outs() << "(" << DisSegName << "," << DisSectName << ") section\n";
@@ -7615,7 +7619,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
         if (PrintSource || PrintLines) {
           formatted_raw_ostream FOS(outs());
-          SP.printSourceLine(FOS, {PC, SectIdx}, Filename, LEP);
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
         }
 
         if (LeadingAddr) {
@@ -7711,7 +7715,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
         if (PrintSource || PrintLines) {
           formatted_raw_ostream FOS(outs());
-          SP.printSourceLine(FOS, {PC, SectIdx}, Filename, LEP);
+          SP->printSourceLine(FOS, {PC, SectIdx}, Filename, *LEP);
         }
 
         if (DumpAndSkipDataInCode(PC, Bytes.data() + Index, Dices, InstSize))
