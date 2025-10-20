@@ -222,8 +222,7 @@ declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
 
 define i32 @vec_to_scalar_select_scalar(i1 %b) {
 ; CHECK-LABEL: @vec_to_scalar_select_scalar(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[S]])
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 3, i32 7
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, <2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>

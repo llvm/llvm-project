@@ -3026,6 +3026,31 @@ join:
   ret i32 %umax
 }
 
+define i32 @cross_lane_intrinsic_over_phi(i1 %c, i1 %c2, <4 x i32> %a) {
+; CHECK-LABEL: @cross_lane_intrinsic_over_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[A:%.*]])
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP0]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi <4 x i32> [ %a, %if ], [ zeroinitializer, %entry ]
+  call void @may_exit()
+  %sum = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %phi)
+  ret i32 %sum
+}
+
 define i32 @multiple_intrinsics_with_multiple_phi_uses(i1 %c, i32 %arg) {
 ; CHECK-LABEL: @multiple_intrinsics_with_multiple_phi_uses(
 ; CHECK-NEXT:  entry:
