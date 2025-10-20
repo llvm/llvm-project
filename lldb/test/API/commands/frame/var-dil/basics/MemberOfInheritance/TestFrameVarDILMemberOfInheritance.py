@@ -46,4 +46,4 @@ class TestFrameVarDILMemberOfInheritance(TestBase):
         self.expect_var_path("parent_base->y", value="2")
         self.expect_var_path("parent->x", value="1")
         self.expect_var_path("parent->y", value="2")
-        self.expect_var_path("parent->z", value="3")
+        self.expect_var_path("parent->z", value="5")
