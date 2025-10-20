@@ -7,7 +7,6 @@ define protected amdgpu_kernel void @sched_barrier_m0(ptr addrspace(3) noalias %
 ; GCN: Applying IGroupLPDAGMutation...
 ; GCN-NEXT: Applying IGroupLPDAGMutation...
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 0) #1
@@ -25,7 +24,6 @@ define protected amdgpu_kernel void @sched_barrier_m1(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 1
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 1008
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 1) #1
@@ -43,7 +41,6 @@ define protected amdgpu_kernel void @sched_barrier_m2(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 2
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2044
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 2) #1
@@ -61,7 +58,6 @@ define protected amdgpu_kernel void @sched_barrier_m4(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 4
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2042
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 4) #1
@@ -79,7 +75,6 @@ define protected amdgpu_kernel void @sched_barrier_m8(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 8
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2038
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 8) #1
@@ -97,7 +92,6 @@ define protected amdgpu_kernel void @sched_barrier_m1024(ptr addrspace(3) noalia
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 1024
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 1022
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 1024) #1
@@ -115,7 +109,6 @@ define protected amdgpu_kernel void @sched_barrier_m3(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 3
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2044
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 3) #1
@@ -133,7 +126,6 @@ define protected amdgpu_kernel void @sched_barrier_m5(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 5
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2042
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 5) #1
@@ -151,7 +143,6 @@ define protected amdgpu_kernel void @sched_barrier_m7(ptr addrspace(3) noalias %
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 7
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2040
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 7) #1
@@ -169,7 +160,6 @@ define protected amdgpu_kernel void @sched_barrier_m15(ptr addrspace(3) noalias 
 ; GCN-NEXT: Building SchedGroup for SchedBarrier with Mask: 15
 ; GCN-NEXT: After Inverting, SchedGroup Mask: 2032
 entry:
-  ; we need salu, valu, mfma, trans instructions here.
   %arrayidx = getelementptr inbounds float, ptr addrspace(3) %ind, i64 0
   %1 = load float, ptr addrspace(3) %arrayidx, align 4
   call void @llvm.amdgcn.sched.barrier(i32 15) #1
