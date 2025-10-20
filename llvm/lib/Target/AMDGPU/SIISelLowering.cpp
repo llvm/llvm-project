@@ -9146,10 +9146,10 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   bool IsGFX11Plus = AMDGPU::isGFX11Plus(*Subtarget);
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
 
-  SmallVector<EVT, 2> OrigResultTypes(Op->values());
-  SmallVector<EVT, 2> ResultTypes = (BaseOpcode->NoReturn && BaseOpcode->Atomic)
-                                        ? SmallVector<EVT, 1>{MVT::Other}
-                                        : OrigResultTypes;
+  SmallVector<EVT, 3> ResultTypes(Op->values());
+  SmallVector<EVT, 3> OrigResultTypes(Op->values());
+  if (BaseOpcode->NoReturn && BaseOpcode->Atomic)
+    ResultTypes.erase(&ResultTypes[0]);
 
   bool IsD16 = false;
   bool IsG16 = false;

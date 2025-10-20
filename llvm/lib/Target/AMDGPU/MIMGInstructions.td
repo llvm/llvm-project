@@ -1131,8 +1131,8 @@ multiclass MIMG_Atomic_Base <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP
 
 multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
                         string renamed = ""> {
-  defm "" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, 0, renamed>;
-  defm "_NORTN" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, 1, renamed>;
+  defm "" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, /*noRtn=*/0, renamed>;
+  defm "_NORTN" : MIMG_Atomic_Base <op, asm, isCmpSwap, isFP, /*noRtn=*/1, renamed>;
 }
 
 multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
