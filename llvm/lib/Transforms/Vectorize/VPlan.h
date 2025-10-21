@@ -4421,22 +4421,24 @@ public:
     return VPB;
   }
 
-  /// Create a new replicate VPRegionBlock with \p Entry, \p Exiting and \p
-  /// Name. The returned block is owned by the VPlan and deleted once the VPlan
-  /// is destroyed.
-  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                       const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
+  /// Create a new loop region with \p Name and entry and exiting blocks set
+  /// to \p Entry and \p Exiting respectively, if set. The returned block is
+  /// owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(const std::string &Name = "",
+                                  VPBlockBase *Entry = nullptr,
+                                  VPBlockBase *Exiting = nullptr) {
+    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
+                      : new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with canonical IV information and \p Name,
-  /// with entry and exiting blocks set to nullptr. The returned block is owned
-  /// by the VPlan and deleted once the VPlan is destroyed.
-  VPRegionBlock *createLoopRegion(Type *CanIVTy, DebugLoc DL,
-                                  const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(CanIVTy, DL, nullptr, nullptr, Name);
+  /// Create a new replicate region with \p Entry, \p Exiting and \p Name. The
+  /// returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                       const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, true);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

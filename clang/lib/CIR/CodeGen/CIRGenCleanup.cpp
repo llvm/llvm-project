@@ -108,6 +108,13 @@ void EHScopeStack::popCleanup() {
   assert(!cir::MissingFeatures::ehCleanupBranchFixups());
 }
 
+EHCatchScope *EHScopeStack::pushCatch(unsigned numHandlers) {
+  char *buffer = allocate(EHCatchScope::getSizeForNumHandlers(numHandlers));
+  assert(!cir::MissingFeatures::innermostEHScope());
+  EHCatchScope *scope = new (buffer) EHCatchScope(numHandlers);
+  return scope;
+}
+
 static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup) {
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
