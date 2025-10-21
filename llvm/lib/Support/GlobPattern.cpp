@@ -13,6 +13,7 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -133,36 +134,46 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
 }
 
 static StringRef maxPlainSubstring(StringRef S) {
-  StringRef R;
+  StringRef Best;
   while (!S.empty()) {
     size_t PrefixSize = S.find_first_of("?*[{\\");
     if (PrefixSize == std::string::npos)
       PrefixSize = S.size();
 
-    if (R.size() < PrefixSize)
-      R = S.take_front(PrefixSize);
+    if (Best.size() < PrefixSize)
+      Best = S.take_front(PrefixSize);
+
     S = S.drop_front(PrefixSize);
+
+    // It's impossible, as the first and last characters of the input string
+    // must be Glob special characters, otherwise the would be parts of
+    // the prefix or the suffix.
+    assert(!S.empty());
 
     switch (S.front()) {
     case '\\':
       S = S.drop_front(2);
       break;
     case '[': {
+      // Drop '[' and the first character which can be ']'.
+      S = S.drop_front(2);
       size_t EndBracket = S.find_first_of("]");
-      if (EndBracket == std::string::npos)
-        return R; // Incorrect, but let SubGlobPattern::create handle it.
+      // Should not be possible, SubGlobPattern::create should fail on invalid
+      // pattern before we get here.
+      assert(EndBracket != std::string::npos);
       S = S.drop_front(EndBracket + 1);
       break;
     }
     case '{':
       // TODO: implement.
-      return {};
+      // Fallback to what ever is best for now.
+      return Best;
     default:
       S = S.drop_front(1);
     }
   }
 
-  return R;
+  return Best;
 }
 
 Expected<GlobPattern>

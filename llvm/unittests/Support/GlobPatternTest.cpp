@@ -370,6 +370,10 @@ TEST_F(GlobPatternTest, Substr) {
   ASSERT_TRUE((bool)Pat);
   EXPECT_EQ("bcd", Pat->longest_substr());
 
+  Pat = GlobPattern::create("a*bc[d]efg*h");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("efg", Pat->longest_substr());
+
   Pat = GlobPattern::create("a*bcde\\fg*h");
   ASSERT_TRUE((bool)Pat);
   EXPECT_EQ("bcde", Pat->longest_substr());
@@ -384,7 +388,7 @@ TEST_F(GlobPatternTest, Substr) {
 
   Pat = GlobPattern::create("a*bcdef{g}*h");
   ASSERT_TRUE((bool)Pat);
-  EXPECT_EQ("", Pat->longest_substr());
+  EXPECT_EQ("bcdef", Pat->longest_substr());
 }
 
 TEST_F(GlobPatternTest, Pathological) {

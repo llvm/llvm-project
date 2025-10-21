@@ -79,7 +79,7 @@ public:
   StringRef prefix() const { return Pattern.take_front(PrefixSize); }
   // Returns plain suffix of the pattern.
   StringRef suffix() const { return Pattern.take_back(SuffixSize); }
-  // Returns the longest plain substring of the pattern between of prefix and
+  // Returns the longest plain substring of the pattern between prefix and
   // suffix.
   StringRef longest_substr() const;
 
