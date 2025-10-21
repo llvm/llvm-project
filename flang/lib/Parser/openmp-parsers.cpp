@@ -1835,8 +1835,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
 
-TYPE_PARSER(construct<OpenMPCriticalConstruct>(
-    OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical}))
+TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
+    OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
 
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
@@ -1911,12 +1911,12 @@ TYPE_PARSER(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
-TYPE_PARSER(construct<OpenMPAssumeConstruct>(
-    sourced(OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
+TYPE_PARSER(sourced(construct<OpenMPAssumeConstruct>(
+    OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
 
 // Block Construct
 #define MakeBlockConstruct(dir) \
-  construct<OmpBlockConstruct>(OmpBlockConstructParser{dir})
+  sourced(construct<OmpBlockConstruct>(OmpBlockConstructParser{dir}))
 TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_masked) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_master) ||
