@@ -252,7 +252,7 @@ jobs:
         dotnet tool install --global wix
 
     - name: Install libxml2 for Windows
-      if: runners.os == 'Windows'
+      if: runner.os == 'Windows'
       run: |
         # Build libxml2 for windows
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
