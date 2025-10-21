@@ -43,7 +43,6 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstddef>
@@ -367,7 +366,7 @@ public:
   /// the descriptor map onto the base address map.
   mlir::omp::MapInfoOp genBaseAddrMap(mlir::Value descriptor,
                                       mlir::OperandRange bounds,
-                                      int64_t mapType,
+                                      mlir::omp::ClauseMapFlags mapType,
                                       fir::FirOpBuilder &builder) {
     mlir::Location loc = descriptor.getLoc();
     mlir::Value baseAddrAddr = fir::BoxOffsetOp::create(
@@ -385,9 +384,7 @@ public:
     return mlir::omp::MapInfoOp::create(
         builder, loc, baseAddrAddr.getType(), descriptor,
         mlir::TypeAttr::get(underlyingVarType),
-        builder.getIntegerAttr(
-            builder.getIntegerType(64, false),
-            llvm::to_underlying(llvm::omp::OpenMPOffloadMappingFlags(mapType))),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
@@ -452,17 +449,15 @@ public:
   /// descriptor tag to it as it's used differently to a regular mapping
   /// and some of the runtime descriptor behaviour at the moment can cause
   /// issues.
-  unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
+  mlir::omp::ClauseMapFlags getDescriptorMapType(mlir::omp::ClauseMapFlags mapTypeFlag,
                                      mlir::Operation *target) {
-    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
+    using mapFlags = mlir::omp::ClauseMapFlags;
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
-                              mlir::omp::TargetUpdateOp>(target)) {
-      mapFlags flags = mapFlags(mapTypeFlag);
-      return llvm::to_underlying(flags);
-    }
+                              mlir::omp::TargetUpdateOp>(target))
+      return mapTypeFlag;
 
-    mapFlags flags = mapFlags::OMP_MAP_TO | mapFlags::OMP_MAP_DESCRIPTOR |
-                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+    mapFlags flags = mapFlags::to | mapFlags::descriptor |
+                     (mapTypeFlag & mapFlags::implicit);
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the addres
     // of the descriptor for a given object at one place in the code may
@@ -472,16 +467,15 @@ public:
     // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
     // the descriptor at once, these are mutually exclusive and when
     // both are applied the runtime will fail to map.
-    flags |= ((mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_CLOSE) ==
-              mapFlags::OMP_MAP_CLOSE)
-                 ? mapFlags::OMP_MAP_CLOSE
-                 : mapFlags::OMP_MAP_ALWAYS;
+    flags |= ((mapTypeFlag & mapFlags::close) == mapFlags::close)
+                 ? mapFlags::close
+                 : mapFlags::always;
     // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
     // to ensure device-local placement where required by tests relying on USM +
     // close semantics.
     if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
-      flags |= mapFlags::OMP_MAP_CLOSE;
-    return llvm::to_underlying(flags);
+      flags |= mapFlags::close;
+    return flags;
   }
 
   /// Check if the mapOp is present in the HasDeviceAddr clause on
@@ -531,11 +525,6 @@ public:
     mlir::Value boxAddr = fir::BoxOffsetOp::create(
         builder, loc, op.getVarPtr(), fir::BoxFieldAttr::base_addr);
 
-    uint64_t mapTypeToImplicit = static_cast<
-        std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
-
     mlir::ArrayAttr newMembersAttr;
     llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
     newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
@@ -544,8 +533,9 @@ public:
     mlir::omp::MapInfoOp memberMapInfoOp = mlir::omp::MapInfoOp::create(
         builder, op.getLoc(), varPtr.getType(), varPtr,
         mlir::TypeAttr::get(boxCharType.getEleTy()),
-        builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
-                               mapTypeToImplicit),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+            mlir::omp::ClauseMapFlags::to |
+            mlir::omp::ClauseMapFlags::implicit),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/boxAddr,
@@ -606,12 +596,9 @@ public:
     mlir::ArrayAttr newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
     // Force CLOSE in USM paths so the pointer gets device-local placement
     // when required by tests relying on USM + close semantics.
-    uint64_t mapTypeVal =
-        op.getMapType() |
-        llvm::to_underlying(
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-    mlir::IntegerAttr mapTypeAttr = builder.getIntegerAttr(
-        builder.getIntegerType(64, /*isSigned=*/false), mapTypeVal);
+    mlir::omp::ClauseMapFlagsAttr mapTypeAttr =
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+            op.getMapType() | mlir::omp::ClauseMapFlags::close);
 
     mlir::omp::MapInfoOp memberMap = mlir::omp::MapInfoOp::create(
         builder, loc, coord.getType(), coord,
@@ -718,8 +705,8 @@ public:
     mlir::omp::MapInfoOp newDescParentMapOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-        builder.getIntegerAttr(builder.getIntegerType(64, false),
-                               getDescriptorMapType(op.getMapType(), target)),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+            getDescriptorMapType(op.getMapType(), target)),
         op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
         newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
@@ -920,12 +907,9 @@ public:
         builder.create<mlir::omp::MapInfoOp>(
             op->getLoc(), op.getResult().getType(), op.getVarPtr(),
             op.getVarTypeAttr(),
-            builder.getIntegerAttr(
-                builder.getIntegerType(64, false),
-                llvm::to_underlying(
-                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
-                    llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR)),
+            builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+                mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::always |
+                mlir::omp::ClauseMapFlags::descriptor),
             op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
             mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
             /*bounds=*/mlir::SmallVector<mlir::Value>{},
@@ -1264,9 +1248,8 @@ public:
         // we need to change this check for early return OR live with
         // over-mapping.
         bool hasImplicitMap =
-            (llvm::omp::OpenMPOffloadMappingFlags(op.getMapType()) &
-             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
-            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+            (op.getMapType() & mlir::omp::ClauseMapFlags::implicit) ==
+            mlir::omp::ClauseMapFlags::implicit;
         if (hasImplicitMap)
           return;
 

@@ -45,7 +45,6 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -945,8 +944,7 @@ getDefaultmapIfPresent(const DefaultMapsTy &defaultMaps, mlir::Type varType) {
   return DefMap::ImplicitBehavior::Default;
 }
 
-static std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                 mlir::omp::VariableCaptureKind>
+static std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
 getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           lower::AbstractConverter &converter,
                           const DefaultMapsTy &defaultMaps, mlir::Type varType,
@@ -967,8 +965,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     return size <= ptrSize && align <= ptrAlign;
   };
 
-  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
 
   auto implicitBehaviour = getDefaultmapIfPresent(defaultMaps, varType);
   if (implicitBehaviour == DefMap::ImplicitBehavior::Default) {
@@ -989,8 +986,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       // a map clause with a map-type of tofrom
       if (declareTargetOp.getDeclareTargetDeviceType() !=
           mlir::omp::DeclareTargetDeviceType::nohost) {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
+        mapFlag |= mlir::omp::ClauseMapFlags::from;
       }
     } else if (fir::isa_trivial(varType) || fir::isa_char(varType)) {
       // Scalars behave as if they were "firstprivate".
@@ -999,18 +996,18 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       if (isLiteralType(varType)) {
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       } else {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
       }
     } else if (!fir::isa_builtin_cptr_type(varType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
     }
     return std::make_pair(mapFlag, captureKind);
   }
 
   switch (implicitBehaviour) {
   case DefMap::ImplicitBehavior::Alloc:
-    return std::make_pair(llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+    return std::make_pair(mlir::omp::ClauseMapFlags::storage,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
@@ -1019,26 +1016,22 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
               "behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Present:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::present,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::To:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::to,
                           (fir::isa_trivial(varType) || fir::isa_char(varType))
                               ? mlir::omp::VariableCaptureKind::ByCopy
                               : mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Tofrom:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                     mlir::omp::ClauseMapFlags::to,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
@@ -1047,9 +1040,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     break;
   }
 
-  return std::make_pair(mapFlag |=
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+  return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                   mlir::omp::ClauseMapFlags::to,
                         mlir::omp::VariableCaptureKind::ByRef);
 }
 
@@ -2623,18 +2615,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
         eleType = refType.getElementType();
 
-      std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                mlir::omp::VariableCaptureKind>
+      std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
           mapFlagAndKind = getImplicitMapTypeAndKind(
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, converter.getCurrentLocation(), baseOp,
           /*varPtrPtr=*/mlir::Value{}, name.str(), bounds, /*members=*/{},
-          /*membersIndex=*/mlir::ArrayAttr{},
-          static_cast<
-              std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-              std::get<0>(mapFlagAndKind)),
+          /*membersIndex=*/mlir::ArrayAttr{}, std::get<0>(mapFlagAndKind),
           std::get<1>(mapFlagAndKind), baseOp.getType(),
           /*partialMap=*/false, mapperId);
 
