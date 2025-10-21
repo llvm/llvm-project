@@ -9842,7 +9842,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
-  unsigned UserIC = LVL.isSafeForAnyVectorWidth() ? Hints.getInterleave() : 1;
+  unsigned UserIC = Hints.getInterleave();
+  if (UserIC > 1 && !LVL.isSafeForAnyVectorWidth())
+    UserIC = 1;
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
