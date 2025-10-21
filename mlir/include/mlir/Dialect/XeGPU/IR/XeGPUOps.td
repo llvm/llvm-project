@@ -261,6 +261,21 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
         : !xegpu.tensor_desc<8x16xf16>
     ```
 
+    The operation may take optional offsets for the tensor descriptor.
+    The number of offsets must be greater or equal to the rank of the tensor descriptor
+    and less than the rank of the source memref. The offsets are applied to the innermost
+    dimension of the source memref.
+
+    Examples:
+    ```mlir
+      %tdesc = xegpu.create_nd_tdesc %0: memref<2x8x32x32xf32> -> TensorDesc<8x16xf32>
+      // memref[0, 0, %off0, %off1]
+      xegpu.prefetch_nd %tdesc[%off0, %off1] : !xegpu.tensor_desc<8x16xf16>
+      // memref[0, %off0, %off1, %off2]
+      xegpu.prefetch_nd %tdesc[%off0, %off1, %off2] : !xegpu.tensor_desc<8x16xf16>
+      // memref[%off0, %off1, %off2, %off3]
+      xegpu.prefetch_nd %tdesc[%off0, %off1, %off2] : !xegpu.tensor_desc<8x16xf16>
+    ```
   }];
 
   let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
@@ -350,6 +365,21 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
         : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
     ```
 
+    The operation may take optional offsets for the tensor descriptor.
+    The number of offsets must be greater or equal to the rank of the tensor descriptor
+    and less than the rank of the source memref. The offsets are applied to the innermost
+    dimension of the source memref.
+
+    Examples:
+    ```mlir
+      %1 = xegpu.create_nd_tdesc %0: memref<2x8x32x32xf32> -> TensorDesc<8x16xf32>
+      // memref[0, 0, %off0, %off1]
+      xegpu.load_nd %1[%off0, %off1] : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
+      // memref[0, %off0, %off1, %off2]
+      xegpu.load_nd %1[%off0, %off1, %off2] : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
+      // memref[%off0, %off1, %off2, %off3]
+      xegpu.load_nd %1[%off0, %off1, %off2, %off3] : !xegpu.tensor_desc<8x16xf32> -> vector<8xf32>
+    ```
 
   }];
 
@@ -445,6 +475,21 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
                              : vector<8xf16>, !xegpu.tensor_desc<8x16xf16>
     ```
 
+    The operation may take optional offsets for the tensor descriptor.
+    The number of offsets must be greater or equal to the rank of the tensor descriptor
+    and less than the rank of the source memref. The offsets are applied to the innermost
+    dimension of the source memref.
+
+    Examples:
+    ```mlir
+      %2 = xegpu.create_nd_tdesc %0: memref<2x8x32x32xf32> -> TensorDesc<8x16xf32>
+      // memref[0, 0, %off0, %off1]
+      xegpu.store_nd %3, %2[%off0, %off1] : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+      // memref[0, %off0, %off1, %off2]
+      xegpu.store_nd %3, %2[%off0, %off1, %off2] : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+      // memref[%off0, %off1, %off2, %off3]
+      xegpu.store_nd %3, %2[%off0, %off1, %off2, %off3] : vector<8x16xf16>, !xegpu.tensor_desc<8x16xf16>
+    ```
 
   }];
 
