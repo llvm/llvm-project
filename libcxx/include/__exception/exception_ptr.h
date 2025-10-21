@@ -16,6 +16,7 @@
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
+#include <__utility/move.h>
 #include <cstdlib>
 #include <typeinfo>
 
@@ -60,9 +61,6 @@ _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   void* __ptr_;
 
-  static void __do_decrement_refcount(void* __ptr) _NOEXCEPT;
-  _LIBCPP_HIDE_FROM_ABI static void __decrement_refcount(void* __ptr) _NOEXCEPT { if (__ptr) __do_decrement_refcount(__ptr); }
-
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
   template <class _Ep>
@@ -93,6 +91,12 @@ public:
     return !(__x == __y);
   }
 
+  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
+    void* __tmp = __x.__ptr_;
+    __x.__ptr_  = __y.__ptr_;
+    __y.__ptr_  = __tmp;
+  }
+
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
@@ -102,9 +106,8 @@ _LIBCPP_HIDE_FROM_ABI inline exception_ptr::exception_ptr(exception_ptr&& __othe
 }
 
 _LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) _NOEXCEPT {
-  __decrement_refcount(__ptr_);
-  __ptr_         = __other.__ptr_;
-  __other.__ptr_ = nullptr;
+  exception_ptr __tmp(std::move(__other));
+  swap(__tmp, *this);
   return *this;
 }
 
