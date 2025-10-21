@@ -14,6 +14,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
@@ -242,6 +243,15 @@ static opt<bool>
                 cat(DwarfDumpCategory));
 static alias ShowParentsAlias("p", desc("Alias for --show-parents."),
                               aliasopt(ShowParents), cl::NotHidden);
+
+static list<std::string>
+    ChildTags("child-tags",
+              desc("When --show-children is specified, show only DIEs with the "
+                   "specified DWARF tags."),
+              value_desc("list of DWARF tags"), cat(DwarfDumpCategory));
+static alias TagsAlias("t", desc("Alias for --child-tags."),
+                       aliasopt(ChildTags), cl::NotHidden);
+
 static opt<bool>
     ShowForm("show-form",
              desc("Show DWARF form types after the DWARF attribute types."),
@@ -330,6 +340,13 @@ static cl::extrahelp
 /// @}
 //===----------------------------------------------------------------------===//
 
+static llvm::SmallVector<unsigned>
+makeTagVector(const list<std::string> &TagStrings) {
+  return llvm::map_to_vector(TagStrings, [](const std::string &Tag) {
+    return llvm::dwarf::getTag(Tag);
+  });
+}
+
 static void error(Error Err) {
   if (!Err)
     return;
@@ -356,6 +373,7 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.ShowAddresses = !Diff;
   DumpOpts.ShowChildren = ShowChildren;
   DumpOpts.ShowParents = ShowParents;
+  DumpOpts.ChildTagsFilter = makeTagVector(ChildTags);
   DumpOpts.ShowForm = ShowForm;
   DumpOpts.SummarizeTypes = SummarizeTypes;
   DumpOpts.Verbose = Verbose;
@@ -898,6 +916,12 @@ int main(int argc, char **argv) {
   if (!ShowChildren && !Verify && !OffsetRequested && Name.empty() &&
       Find.empty() && !FindAllApple)
     ShowChildren = true;
+
+  if (!ShowChildren && !ChildTags.empty()) {
+    WithColor::error()
+        << "incompatible arguments: --child-tags requires --show-children";
+    return 1;
+  }
 
   // Defaults to a.out if no filenames specified.
   if (InputFilenames.empty())
