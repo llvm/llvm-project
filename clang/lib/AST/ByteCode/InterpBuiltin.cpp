@@ -8,9 +8,10 @@
 #include "../ExprConstShared.h"
 #include "Boolean.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
+#include "InterpHelpers.h"
 #include "PrimType.h"
+#include "Program.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
@@ -2041,10 +2042,16 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
   }
 
   if (ID == Builtin::BIstrchr || ID == Builtin::BI__builtin_strchr) {
+    int64_t DesiredTrunc;
+    if (S.getASTContext().CharTy->isSignedIntegerType())
+      DesiredTrunc =
+          Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue();
+    else
+      DesiredTrunc =
+          Desired.trunc(S.getASTContext().getCharWidth()).getZExtValue();
     // strchr compares directly to the passed integer, and therefore
     // always fails if given an int that is not a char.
-    if (Desired !=
-        Desired.trunc(S.getASTContext().getCharWidth()).getSExtValue()) {
+    if (Desired != DesiredTrunc) {
       S.Stk.push<Pointer>();
       return true;
     }
