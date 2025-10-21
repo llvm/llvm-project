@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntervalMap.h"
@@ -19040,6 +19041,8 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
 static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                const TargetLowering &TLI) {
   // We can fold the fpto[us]i -> [us]itofp pattern into a single ftrunc.
+  // Additionally, if there are clamps ([us]min or [us]max) around
+  // the fpto[us]i, we can fold those into fminnum/fmaxnum around the ftrunc.
   // If NoSignedZerosFPMath is enabled, this is a direct replacement.
   // Otherwise, for strict math, we must handle edge cases:
   // 1. For unsigned conversions, use FABS to handle negative cases. Take -0.0
@@ -19051,28 +19054,68 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
     return SDValue();
 
-  // fptosi/fptoui round towards zero, so converting from FP to integer and
-  // back is the same as an 'ftrunc': [us]itofp (fpto[us]i X) --> ftrunc X
-  SDValue N0 = N->getOperand(0);
-  if (N->getOpcode() == ISD::SINT_TO_FP && N0.getOpcode() == ISD::FP_TO_SINT &&
-      N0.getOperand(0).getValueType() == VT) {
-    if (DAG.getTarget().Options.NoSignedZerosFPMath)
-      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+  bool IsUnsigned = N->getOpcode() == ISD::UINT_TO_FP;
+  bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP;
+  assert(IsSigned || IsUnsigned);
+
+  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath;
+  // For signed conversions: The optimization changes signed zero behavior.
+  if (IsSigned && !IsSignedZeroSafe)
+    return SDValue();
+  // For unsigned conversions, we need FABS to canonicalize -0.0 to +0.0
+  // (unless NoSignedZerosFPMath is set).
+  if (IsUnsigned && !IsSignedZeroSafe && !TLI.isFAbsFree(VT))
+    return SDValue();
+
+  // Collect potential clamp operations (innermost to outermost) and peel.
+  struct ClampOp {
+    unsigned Opcode;
+    SDValue Constant;
+  };
+  SmallVector<ClampOp, 2> Clamps;
+  unsigned MinOp = IsUnsigned ? ISD::UMIN : ISD::SMIN;
+  unsigned MaxOp = IsUnsigned ? ISD::UMAX : ISD::SMAX;
+  SDValue IntVal = N->getOperand(0);
+  constexpr unsigned MaxClampLevels = 2;
+  for (unsigned Level = 0; Level < MaxClampLevels; ++Level) {
+    if (!IntVal.hasOneUse() ||
+        (IntVal.getOpcode() != MinOp && IntVal.getOpcode() != MaxOp))
+      break;
+    unsigned FPClampOp =
+        (IntVal.getOpcode() == MinOp) ? ISD::FMINNUM : ISD::FMAXNUM;
+    if (!TLI.isOperationLegal(FPClampOp, VT))
+      return SDValue();
+    auto *IntConstNode = dyn_cast<ConstantSDNode>(IntVal.getOperand(1));
+    if (!IntConstNode)
+      return SDValue();
+    APFloat FPConst(VT.getFltSemantics());
+    APInt IntConst = IntConstNode->getAPIntValue();
+    FPConst.convertFromAPInt(IntConst, IsSigned, APFloat::rmNearestTiesToEven);
+    // Verify roundtrip exactness.
+    APSInt RoundTrip(IntConst.getBitWidth(), IsUnsigned);
+    bool IsExact;
+    if (FPConst.convertToInteger(RoundTrip, APFloat::rmTowardZero, &IsExact) !=
+            APFloat::opOK ||
+        !IsExact || static_cast<const APInt &>(RoundTrip) != IntConst)
+      return SDValue();
+    Clamps.push_back({FPClampOp, DAG.getConstantFP(FPConst, DL, VT)});
+    IntVal = IntVal.getOperand(0);
   }
 
-  if (N->getOpcode() == ISD::UINT_TO_FP && N0.getOpcode() == ISD::FP_TO_UINT &&
-      N0.getOperand(0).getValueType() == VT) {
-    if (DAG.getTarget().Options.NoSignedZerosFPMath)
-      return DAG.getNode(ISD::FTRUNC, DL, VT, N0.getOperand(0));
+  // Check that the sequence ends with a FPTo[us]i of the right type.
+  unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
+  if (IntVal.getOpcode() != FPToIntOp ||
+      IntVal.getOperand(0).getValueType() != VT)
+    return SDValue();
 
-    // Strict math: use FABS to handle negative inputs correctly.
-    if (TLI.isFAbsFree(VT)) {
-      SDValue Abs = DAG.getNode(ISD::FABS, DL, VT, N0.getOperand(0));
-      return DAG.getNode(ISD::FTRUNC, DL, VT, Abs);
-    }
-  }
-
-  return SDValue();
+  SDValue Result = IntVal.getOperand(0);
+  if (IsUnsigned && !IsSignedZeroSafe && TLI.isFAbsFree(VT))
+    Result = DAG.getNode(ISD::FABS, DL, VT, Result);
+  Result = DAG.getNode(ISD::FTRUNC, DL, VT, Result);
+  // Apply clamps, if any, in reverse order (innermost first).
+  for (auto I = Clamps.rbegin(), E = Clamps.rend(); I != E; ++I)
+    Result = DAG.getNode(I->Opcode, DL, VT, Result, I->Constant);
+  return Result;
 }
 
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
