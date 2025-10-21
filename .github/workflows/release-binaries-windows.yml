@@ -12,7 +12,7 @@ jobs:
     runs-on: depot-windows-2022-16
     if: github.repository_owner == 'llvm'
     steps:
-      - Name: Setup crlf
+      - name: Setup crlf
         run: |
           git config --global core.autocrlf false
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
