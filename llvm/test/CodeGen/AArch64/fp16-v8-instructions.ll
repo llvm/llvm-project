@@ -176,45 +176,15 @@ define <8 x half> @s_to_h(<8 x float> %a) {
 }
 
 define <8 x half> @d_to_h(<8 x double> %a) {
-; CHECK-CVT-SD-LABEL: d_to_h:
-; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-CVT-SD-NEXT:    fcvtxn v2.2s, v2.2d
-; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-CVT-SD-NEXT:    fcvtxn2 v2.4s, v3.2d
-; CHECK-CVT-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-CVT-SD-NEXT:    fcvtn2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: d_to_h:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-FP16-SD-NEXT:    fcvtxn v2.2s, v2.2d
-; CHECK-FP16-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-FP16-SD-NEXT:    fcvtxn2 v2.4s, v3.2d
-; CHECK-FP16-SD-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-FP16-SD-NEXT:    fcvtn2 v0.8h, v2.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: d_to_h:
-; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-CVT-GI-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-CVT-GI-NEXT:    fcvtxn v1.2s, v2.2d
-; CHECK-CVT-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-CVT-GI-NEXT:    fcvtxn2 v1.4s, v3.2d
-; CHECK-CVT-GI-NEXT:    fcvtn2 v0.8h, v1.4s
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: d_to_h:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-FP16-GI-NEXT:    fcvtxn2 v0.4s, v1.2d
-; CHECK-FP16-GI-NEXT:    fcvtxn v1.2s, v2.2d
-; CHECK-FP16-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-FP16-GI-NEXT:    fcvtxn2 v1.4s, v3.2d
-; CHECK-FP16-GI-NEXT:    fcvtn2 v0.8h, v1.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: d_to_h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtxn v0.2s, v0.2d
+; CHECK-NEXT:    fcvtxn v2.2s, v2.2d
+; CHECK-NEXT:    fcvtxn2 v0.4s, v1.2d
+; CHECK-NEXT:    fcvtxn2 v2.4s, v3.2d
+; CHECK-NEXT:    fcvtn v0.4h, v0.4s
+; CHECK-NEXT:    fcvtn2 v0.8h, v2.4s
+; CHECK-NEXT:    ret
   %1 = fptrunc <8 x double> %a to <8 x half>
   ret <8 x half> %1
 }
