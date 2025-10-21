@@ -554,8 +554,18 @@ define i64 @orr_32_eor_64() nounwind {
 ; Tests for EOR / EON with MOVN.
 ;==--------------------------------------------------------------------------==
 
-define i64 @movn_0_eon() {
-; CHECK-LABEL: movn_0_eon:
+define i64 @movn_0_eon_lsl_17() {
+; CHECK-LABEL: movn_0_eon_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-4370 // =0xffffffffffffeeee
+; CHECK-NEXT:    movk x0, #8738, lsl #16
+; CHECK-NEXT:    movk x0, #65534, lsl #32
+; CHECK-NEXT:    ret
+  ret i64 u0xfffffffe2222eeee
+}
+
+define i64 @movn_0_eon_lsl_32() {
+; CHECK-LABEL: movn_0_eon_lsl_32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #-43691 // =0xffffffffffff5555
 ; CHECK-NEXT:    eon x0, x0, x0, lsl #32
@@ -563,8 +573,28 @@ define i64 @movn_0_eon() {
   ret i64 u0xffff55550000aaaa
 }
 
-define i64 @movn_1_eon() {
-; CHECK-LABEL: movn_1_eon:
+define i64 @movn_0_eon_lsl_47() {
+; CHECK-LABEL: movn_0_eon_lsl_47:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #61166 // =0xeeee
+; CHECK-NEXT:    movk x0, #32768, lsl #32
+; CHECK-NEXT:    movk x0, #34952, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x888880000000eeee
+}
+
+define i64 @movn_1_eon_lsl_17() {
+; CHECK-LABEL: movn_1_eon_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #286261248 // =0x11100000
+; CHECK-NEXT:    movk x0, #8739, lsl #32
+; CHECK-NEXT:    movk x0, #65534, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0xfffe222311100000
+}
+
+define i64 @movn_1_eon_lsl_32() {
+; CHECK-LABEL: movn_1_eon_lsl_32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #-2863267841 // =0xffffffff5555ffff
 ; CHECK-NEXT:    eon x0, x0, x0, lsl #32
@@ -572,8 +602,28 @@ define i64 @movn_1_eon() {
   ret i64 u0x5555ffffaaaa0000
 }
 
-define i64 @movn_0_eor() {
-; CHECK-LABEL: movn_0_eor:
+define i64 @movn_1_eon_lsl_46() {
+; CHECK-LABEL: movn_1_eon_lsl_46:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #4008509440 // =0xeeed0000
+; CHECK-NEXT:    movk x0, #49152, lsl #32
+; CHECK-NEXT:    movk x0, #49151, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0xbfffc000eeed0000
+}
+
+define i64 @movn_0_eor_lsl_17() {
+; CHECK-LABEL: movn_0_eor_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #4369 // =0x1111
+; CHECK-NEXT:    movk x0, #56797, lsl #16
+; CHECK-NEXT:    movk x0, #1, lsl #32
+; CHECK-NEXT:    ret
+  ret i64 u0x00000001dddd1111
+}
+
+define i64 @movn_0_eor_lsl_32() {
+; CHECK-LABEL: movn_0_eor_lsl_32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #-43691 // =0xffffffffffff5555
 ; CHECK-NEXT:    eor x0, x0, x0, lsl #32
@@ -581,8 +631,28 @@ define i64 @movn_0_eor() {
   ret i64 u0x0000aaaaffff5555
 }
 
-define i64 @movn_1_eor() {
-; CHECK-LABEL: movn_1_eor:
+define i64 @movn_0_eor_lsl_47() {
+; CHECK-LABEL: movn_0_eor_lsl_47:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-61167 // =0xffffffffffff1111
+; CHECK-NEXT:    movk x0, #32767, lsl #32
+; CHECK-NEXT:    movk x0, #30583, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x77777fffffff1111
+}
+
+define i64 @movn_1_eor_lsl_17() {
+; CHECK-LABEL: movn_1_eor_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-286261249 // =0xffffffffeeefffff
+; CHECK-NEXT:    movk x0, #56796, lsl #32
+; CHECK-NEXT:    movk x0, #1, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x0001dddceeefffff
+}
+
+define i64 @movn_1_eor_lsl_32() {
+; CHECK-LABEL: movn_1_eor_lsl_32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #-2863267841 // =0xffffffff5555ffff
 ; CHECK-NEXT:    eor x0, x0, x0, lsl #32
@@ -590,12 +660,66 @@ define i64 @movn_1_eor() {
   ret i64 u0xaaaa00005555ffff
 }
 
-define i64 @movn_movk_eor() {
-; CHECK-LABEL: movn_movk_eor:
+define i64 @movn_1_eor_lsl_46() {
+; CHECK-LABEL: movn_1_eor_lsl_46:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #-4008509441
+; CHECK-NEXT:    movk x0, #16383, lsl #32
+; CHECK-NEXT:    movk x0, #16384, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x40003fff1112ffff
+}
+
+define i64 @movn_movk_eon_lsl_17() {
+; CHECK-LABEL: movn_movk_eon_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #43399 // =0xa987
+; CHECK-NEXT:    movk x0, #16699, lsl #16
+; CHECK-NEXT:    movk x0, #9320, lsl #32
+; CHECK-NEXT:    movk x0, #65534, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0xfffe2468413ba987
+}
+
+define i64 @movn_movk_eon_lsl_47() {
+; CHECK-LABEL: movn_movk_eon_lsl_47:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #61166 // =0xeeee
+; CHECK-NEXT:    movk x0, #21554, lsl #16
+; CHECK-NEXT:    movk x0, #32768, lsl #32
+; CHECK-NEXT:    movk x0, #34952, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x888880005432eeee
+}
+
+define i64 @movn_movk_eor_lsl_17() {
+; CHECK-LABEL: movn_movk_eor_lsl_17:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #22136 // =0x5678
+; CHECK-NEXT:    movk x0, #48836, lsl #16
+; CHECK-NEXT:    movk x0, #56215, lsl #32
+; CHECK-NEXT:    movk x0, #1, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x0001db97bec45678
+}
+
+define i64 @movn_movk_eor_lsl_32() {
+; CHECK-LABEL: movn_movk_eor_lsl_32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x0, #-21846 // =0xffffffffffffaaaa
 ; CHECK-NEXT:    movk x0, #52428, lsl #16
 ; CHECK-NEXT:    eor x0, x0, x0, lsl #32
 ; CHECK-NEXT:    ret
   ret i64 u0x33335555ccccaaaa
+}
+
+define i64 @movn_movk_eor_lsl_47() {
+; CHECK-LABEL: movn_movk_eor_lsl_47:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x0, #4369 // =0x1111
+; CHECK-NEXT:    movk x0, #43981, lsl #16
+; CHECK-NEXT:    movk x0, #32767, lsl #32
+; CHECK-NEXT:    movk x0, #30583, lsl #48
+; CHECK-NEXT:    ret
+  ret i64 u0x77777fffabcd1111
 }
