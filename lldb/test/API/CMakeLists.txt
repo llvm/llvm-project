@@ -74,6 +74,15 @@ else()
   endif()
 endif()
 
+find_program(LLDB_DIRNAME_PATH dirname)
+if(LLDB_DIRNAME_PATH)
+  message(STATUS "Found dirname: ${LLDB_DIRNAME_PATH}")
+else()
+  message(STATUS "Did not find 'dirname'.")
+  message(WARNING
+        "Many LLDB API tests require the 'dirname' tool. Please provide it in Path.")
+endif()
+
 if (TARGET clang)
   set(LLDB_DEFAULT_TEST_COMPILER "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 else()
