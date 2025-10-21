@@ -240,7 +240,8 @@ private:
   getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
     std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
     if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription, /*PrintOnExit=*/true);
+      GroupEntry.first =
+          new TimerGroup(GroupName, GroupDescription, /*PrintOnExit=*/true);
 
     return GroupEntry;
   }
