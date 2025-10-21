@@ -151,6 +151,18 @@ public:
 /// A cleanup scope which generates the cleanup blocks lazily.
 class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
     : public EHScope {
+  /// The nearest normal cleanup scope enclosing this one.
+  EHScopeStack::stable_iterator enclosingNormal;
+
+  /// The dual entry/exit block along the normal edge.  This is lazily
+  /// created if needed before the cleanup is popped.
+  mlir::Block *normalBlock = nullptr;
+
+  /// The number of fixups required by enclosing scopes (not including
+  /// this one).  If this is the top cleanup scope, all the fixups
+  /// from this index onwards belong to this scope.
+  unsigned fixupDepth = 0;
+
 public:
   /// Gets the size required for a lazy cleanup scope with the given
   /// cleanup-data requirements.
@@ -162,7 +174,10 @@ public:
     return sizeof(EHCleanupScope) + cleanupBits.cleanupSize;
   }
 
-  EHCleanupScope(unsigned cleanupSize) : EHScope(EHScope::Cleanup) {
+  EHCleanupScope(unsigned cleanupSize, unsigned fixupDepth,
+                 EHScopeStack::stable_iterator enclosingNormal)
+      : EHScope(EHScope::Cleanup), enclosingNormal(enclosingNormal),
+        fixupDepth(fixupDepth) {
     // TODO(cir): When exception handling is upstreamed, isNormalCleanup and
     // isEHCleanup will be arguments to the constructor.
     cleanupBits.isNormalCleanup = true;
@@ -180,10 +195,18 @@ public:
   // Objects of EHCleanupScope are not destructed. Use destroy().
   ~EHCleanupScope() = delete;
 
+  mlir::Block *getNormalBlock() const { return normalBlock; }
+  void setNormalBlock(mlir::Block *bb) { normalBlock = bb; }
+
   bool isNormalCleanup() const { return cleanupBits.isNormalCleanup; }
 
   bool isActive() const { return cleanupBits.isActive; }
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
+
+  unsigned getFixupDepth() const { return fixupDepth; }
+  EHScopeStack::stable_iterator getEnclosingNormalCleanup() const {
+    return enclosingNormal;
+  }
 
   size_t getCleanupSize() const { return cleanupBits.cleanupSize; }
   void *getCleanupBuffer() { return this + 1; }
