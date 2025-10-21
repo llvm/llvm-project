@@ -17,7 +17,7 @@
 namespace llvm::omp::target::plugin {
 
 #if LIBOMPTARGET_DEBUG
-static const char * AllocKindToStr(int32_t Kind) {
+static const char *AllocKindToStr(int32_t Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     return "DEVICE";
@@ -336,6 +336,7 @@ void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base, size_t Size,
     }
   }
   assert(Valid && "Invalid overlapping memory allocation");
+  assert(Kind >= 0 && Kind < MaxKind && "Invalid target allocation kind");
   if (ImplicitArg)
     NumImplicitArgs[Kind]++;
 }
@@ -367,8 +368,7 @@ void MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
                     std::forward_as_tuple(Kind, this, Option));
     }
     if (getDebugLevel() > 0)
-      Stats.emplace(std::piecewise_construct, std::forward_as_tuple(Kind),
-                    std::tuple<>{});
+      Stats.try_emplace(Kind);
   }
   ReductionPool = std::make_unique<MemPoolTy>(this, Option);
   CounterPool = std::make_unique<MemPoolTy>(this);
@@ -387,8 +387,7 @@ void MemAllocatorTy::initHostPool(L0ContextTy &Driver,
                   std::forward_as_tuple(TARGET_ALLOC_HOST, this, Option));
   }
   if (getDebugLevel() > 0)
-    Stats.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(TARGET_ALLOC_HOST), std::tuple<>{});
+    Stats.try_emplace(TARGET_ALLOC_HOST);
 }
 
 void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
@@ -417,7 +416,7 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
 /// Release resources and report statistics if requested
 Error MemAllocatorTy::deinit() {
   if (!L0Context)
-      return Plugin::success();
+    return Plugin::success();
 
   std::lock_guard<std::mutex> Lock(Mtx);
   // Release RTL-owned memory
@@ -433,8 +432,8 @@ Error MemAllocatorTy::deinit() {
   // Report memory usage if requested
   if (getDebugLevel() > 0) {
     for (auto &Stat : Stats) {
-      DP("Memory usage for %s, device " DPxMOD "\n",
-         AllocKindToStr(Stat.first), DPxPTR(Device));
+      DP("Memory usage for %s, device " DPxMOD "\n", AllocKindToStr(Stat.first),
+         DPxPTR(Device));
       const auto &ST = Stat.second;
       if (ST.NumAllocs[0] == 0 && ST.NumAllocs[1] == 0) {
         DP("-- Not used\n");

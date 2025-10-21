@@ -83,7 +83,7 @@ public:
     EventPool.deinit();
     auto Err = HostMemAllocator.deinit();
     if (Err)
-     consumeError(std::move(Err));
+      consumeError(std::move(Err));
     if (zeContext)
       CALL_ZE_RET_VOID(zeContextDestroy, zeContext);
   }

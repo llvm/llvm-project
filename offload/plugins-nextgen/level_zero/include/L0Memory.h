@@ -97,6 +97,10 @@ class MemAllocatorTy {
     size_t PeakUse[2] = {0, 0};   // Peak bytes used
     size_t NumAllocs[2] = {0, 0}; // Number of allocations
     MemStatTy() = default;
+
+    MemStatTy(const MemStatTy &) = default;
+    MemStatTy(MemStatTy &&) = default;
+    ~MemStatTy() = default;
   };
 
   /// Memory pool which enables reuse of already allocated blocks
@@ -230,10 +234,11 @@ class MemAllocatorTy {
 
   /// Allocation information maintained in the plugin
   class MemAllocInfoMapTy {
+    constexpr static int32_t MaxKind = TARGET_ALLOC_LAST + 1;
     /// Map from allocated pointer to allocation information
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments
-    std::map<int32_t, uint32_t> NumImplicitArgs;
+    std::array<uint32_t, MaxKind> NumImplicitArgs;
 
   public:
     /// Add allocation information to the map
@@ -268,7 +273,10 @@ class MemAllocatorTy {
 
     /// Returns the number of implicit arguments for the specified allocation
     /// kind.
-    size_t getNumImplicitArgs(int32_t Kind) { return NumImplicitArgs[Kind]; }
+    size_t getNumImplicitArgs(int32_t Kind) {
+      assert(Kind >= 0 && Kind < MaxKind && "Invalid target allocation kind");
+      return NumImplicitArgs[Kind];
+    }
   }; // MemAllocInfoMapTy
 
   /// L0 context to use
@@ -280,7 +288,7 @@ class MemAllocatorTy {
   /// Cached max alloc size supported by device
   uint64_t MaxAllocSize;
   /// Map from allocation kind to memory statistics
-  std::unordered_map<int32_t, MemStatTy> Stats;
+  llvm::DenseMap<int32_t, MemStatTy> Stats;
   /// Map from allocation kind to memory pool
   std::unordered_map<int32_t, MemPoolTy> Pools;
   /// Memory pool dedicated to reduction scratch space
