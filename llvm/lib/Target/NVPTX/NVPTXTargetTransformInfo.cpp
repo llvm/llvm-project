@@ -610,12 +610,9 @@ bool NVPTXTTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
   if (!VTy)
     return false;
 
-  auto *ScalarTy = VTy->getScalarType();
-  if ((ScalarTy->getScalarSizeInBits() == 32 && VTy->getNumElements() == 8) ||
-      (ScalarTy->getScalarSizeInBits() == 64 && VTy->getNumElements() == 4))
-    return true;
-
-  return false;
+  auto *ElemTy = VTy->getScalarType();
+  return (ElemTy->getScalarSizeInBits() == 32 && VTy->getNumElements() == 8) ||
+         (ElemTy->getScalarSizeInBits() == 64 && VTy->getNumElements() == 4);
 }
 
 bool NVPTXTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,

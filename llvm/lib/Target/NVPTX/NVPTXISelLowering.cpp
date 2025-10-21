@@ -3140,10 +3140,9 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   assert(Mask.getValueType().getVectorNumElements() ==
              ValVT.getVectorNumElements() &&
          "Mask size must be the same as the vector size");
-  for (unsigned I : llvm::seq(ValVT.getVectorNumElements())) {
-    assert(isa<ConstantSDNode>(Mask.getOperand(I)) &&
-           "Mask elements must be constants");
-    if (Mask->getConstantOperandVal(I) == 0) {
+  for (auto [I, Op] : enumerate(Mask->ops())) {
+    // Mask elements must be constants.
+    if (Op.getNode()->getAsZExtVal() == 0) {
       // Append a sentinel register 0 to the Ops vector to represent a masked
       // off element, this will be handled in tablegen
       Ops.push_back(DAG.getRegister(MCRegister::NoRegister,
@@ -3411,7 +3410,7 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
                       MachinePointerInfo(SV));
 }
 
-static std::tuple<MemSDNode *, uint32_t>
+static std::pair<MemSDNode *, uint32_t>
 convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
   SDValue Chain = N->getOperand(0);
   SDValue BasePtr = N->getOperand(1);
@@ -3436,16 +3435,14 @@ convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
   uint32_t ElementSizeInBytes = ElementSizeInBits / 8;
   uint32_t ElementMask = (1u << ElementSizeInBytes) - 1u;
 
-  for (unsigned I :
-       llvm::reverse(llvm::seq<unsigned>(0, ResVT.getVectorNumElements()))) {
-    assert(isa<ConstantSDNode>(Mask.getOperand(I)) &&
-           "Mask elements must be constants");
-    // We technically only want to do this shift for every iteration *but* the
-    // first, but in the first iteration NewMask is 0, so this shift is a
-    // no-op.
+  for (SDValue Op : llvm::reverse(Mask->ops())) {
+    // We technically only want to do this shift for every
+    // iteration *but* the first, but in the first iteration NewMask is 0, so
+    // this shift is a no-op.
     UsedBytesMask <<= ElementSizeInBytes;
 
-    if (Mask->getConstantOperandVal(I) != 0)
+    // Mask elements must be constants.
+    if (Op->getAsZExtVal() != 0)
       UsedBytesMask |= ElementMask;
   }
 
@@ -3491,11 +3488,8 @@ replaceLoadVector(SDNode *N, SelectionDAG &DAG, const NVPTXSubtarget &STI) {
 
   // If we have a masked load, convert it to a normal load now
   std::optional<uint32_t> UsedBytesMask = std::nullopt;
-  if (LD->getOpcode() == ISD::MLOAD) {
-    auto Result = convertMLOADToLoadWithUsedBytesMask(LD, DAG);
-    LD = std::get<0>(Result);
-    UsedBytesMask = std::get<1>(Result);
-  }
+  if (LD->getOpcode() == ISD::MLOAD)
+    std::tie(LD, UsedBytesMask) = convertMLOADToLoadWithUsedBytesMask(LD, DAG);
 
   // Since LoadV2 is a target node, we cannot rely on DAG type legalization.
   // Therefore, we must ensure the type is legal.  For i1 and i8, we set the
