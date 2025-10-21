@@ -808,6 +808,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
             results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
         results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
                                   initialState);
+        results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset;
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_negate_ra_state_with_pc(pc=0x%" PRIx64 ")\n",
             static_cast<uint64_t>(results->ptrAuthDiversifier));
