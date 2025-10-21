@@ -1028,9 +1028,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitImplicitValueInitExpr");
-    return {};
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {

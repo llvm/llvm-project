@@ -11,6 +11,7 @@ import subprocess
 import signal
 import sys
 import threading
+import warnings
 import time
 from typing import (
     Any,
@@ -383,6 +384,10 @@ class DebugCommunication(object):
         """Process received packets, updating the session state."""
         with self._recv_condition:
             for packet in self._recv_packets:
+                if packet and ("seq" not in packet or packet["seq"] == 0):
+                    warnings.warn(
+                        f"received a malformed packet, expected 'seq != 0' for {packet!r}"
+                    )
                 # Handle events that may modify any stateful properties of
                 # the DAP session.
                 if packet and packet["type"] == "event":
@@ -576,6 +581,7 @@ class DebugCommunication(object):
             # If we exited, then we are done
             if stopped_event["event"] == "exited":
                 break
+
             # Otherwise we stopped and there might be one or more 'stopped'
             # events for each thread that stopped with a reason, so keep
             # checking for more 'stopped' events and return all of them
