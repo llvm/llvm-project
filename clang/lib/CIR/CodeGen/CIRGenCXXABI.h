@@ -15,6 +15,7 @@
 #define LLVM_CLANG_LIB_CIR_CIRGENCXXABI_H
 
 #include "CIRGenCall.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
@@ -154,6 +155,8 @@ public:
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
+
+  virtual CatchTypeInfo getCatchAllTypeInfo();
 
   /// Get the implicit (second) parameter that comes after the "this" pointer,
   /// or nullptr if there is isn't one.

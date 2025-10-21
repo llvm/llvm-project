@@ -30,3 +30,90 @@ void empty_try_block_with_catch_with_int_exception() {
 
 // OGCG: define{{.*}} void @_Z45empty_try_block_with_catch_with_int_exceptionv()
 // OGCG:   ret void
+
+void try_catch_with_empty_catch_all() {
+  int a = 1;
+  try {
+    return;
+    ++a;
+  } catch (...) {
+  }
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i
+// CIR: cir.scope {
+// CIR:   cir.try {
+// CIR:     cir.return
+// CIR:   ^bb1:  // no predecessors
+// CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR:     %[[RESULT:.*]] = cir.unary(inc, %[[TMP_A]]) nsw : !s32i, !s32i
+// CIR:     cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:     cir.yield
+// CIR:   }
+// CIR: }
+
+// LLVM:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[BB_2:.*]]
+// LLVM: [[BB_2]]:
+// LLVM:   br label %[[BB_3:.*]]
+// LLVM: [[BB_3]]:
+// LLVM:   ret void
+// LLVM: [[BB_4:.*]]:
+// LLVM:   %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[RESULT:.*]] = add nsw i32 %[[TMP_A]], 1
+// LLVM:   store i32 %[[RESULT]], ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[BB_7:.*]]
+// LLVM: [[BB_7]]:
+// LLVM:   br label %[[BB_8:.*]]
+// LLVM: [[BB_8]]:
+// LLVM:   ret void
+
+// OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
+// OGCG: store i32 1, ptr %[[A_ADDR]], align 4
+// OGCG: ret void
+
+void try_catch_with_empty_catch_all_2() {
+  int a = 1;
+  try {
+    ++a;
+    return;
+  } catch (...) {
+  }
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store{{.*}} %[[CONST_1]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.scope {
+// CIR:   cir.try {
+// CIR:     %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!s32i>, !s32i
+// CIR:     %[[RESULT:.*]] = cir.unary(inc, %[[TMP_A]]) nsw : !s32i, !s32i
+// CIR:     cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:     cir.return
+// CIR:   }
+// CIR: }
+
+// LLVM:   %[[A_ADDR]] = alloca i32, i64 1, align 4
+// LLVM:   store i32 1, ptr %[[A_ADDR]], align 4
+// LLVM:   br label %[[BB_2:.*]]
+// LLVM: [[BB_2]]:
+// LLVM:   br label %[[BB_3:.*]]
+// LLVM: [[BB_3]]:
+// LLVM:   %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[RESULT:.*]] = add nsw i32 %[[TMP_A:.*]], 1
+// LLVM:   store i32 %[[RESULT]], ptr %[[A_ADDR]], align 4
+// LLVM:   ret void
+// LLVM: [[BB_6:.*]]:
+// LLVM:   br label %[[BB_7:.*]]
+// LLVM: [[BB_7]]:
+// LLVM:   ret void
+
+// OGCG: %[[A_ADDR:.*]] = alloca i32, align 4
+// OGCG: store i32 1, ptr %[[A_ADDR]], align 4
+// OGCG: %[[TMP_A:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// OGCG: %[[RESULT:.*]] = add nsw i32 %[[TMP_A]], 1
+// OGCG: store i32 %[[RESULT]], ptr %[[A_ADDR]], align 4
+// OGCG: ret void

@@ -17,13 +17,30 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
+
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT) &&                       \
+    defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
+
+#include "src/__support/math/sincosf_float_eval.h"
+
+namespace LIBC_NAMESPACE_DECL {
+
+LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
+  return math::sincosf_float_eval::sincosf_eval</*IS_SIN*/ true>(x);
+}
+
+} // namespace LIBC_NAMESPACE_DECL
+
+#else // !LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
+
 #include "src/__support/math/sincosf_utils.h"
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #include "src/__support/math/range_reduction_fma.h"
-#else
+#else // !LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #include "src/__support/math/range_reduction.h"
-#endif
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -162,3 +179,4 @@ LLVM_LIBC_FUNCTION(float, sinf, (float x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT

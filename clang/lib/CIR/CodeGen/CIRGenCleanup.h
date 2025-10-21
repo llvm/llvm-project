@@ -20,6 +20,13 @@
 
 namespace clang::CIRGen {
 
+/// The MS C++ ABI needs a pointer to RTTI data plus some flags to describe the
+/// type of a catch handler, so we use this wrapper.
+struct CatchTypeInfo {
+  mlir::TypedAttr rtti;
+  unsigned flags;
+};
+
 /// A protected scope for zero-cost EH handling.
 class EHScope {
   class CommonBitFields {
@@ -29,6 +36,12 @@ class EHScope {
   enum { NumCommonBits = 3 };
 
 protected:
+  class CatchBitFields {
+    friend class EHCatchScope;
+    unsigned : NumCommonBits;
+    unsigned numHandlers : 32 - NumCommonBits;
+  };
+
   class CleanupBitFields {
     friend class EHCleanupScope;
     unsigned : NumCommonBits;
@@ -58,6 +71,7 @@ protected:
 
   union {
     CommonBitFields commonBits;
+    CatchBitFields catchBits;
     CleanupBitFields cleanupBits;
   };
 
@@ -67,6 +81,71 @@ public:
   EHScope(Kind kind) { commonBits.kind = kind; }
 
   Kind getKind() const { return static_cast<Kind>(commonBits.kind); }
+
+  bool mayThrow() const {
+    // Traditional LLVM codegen also checks for `!block->use_empty()`, but
+    // in CIRGen the block content is not important, just used as a way to
+    // signal `hasEHBranches`.
+    assert(!cir::MissingFeatures::ehstackBranches());
+    return false;
+  }
+};
+
+/// A scope which attempts to handle some, possibly all, types of
+/// exceptions.
+///
+/// Objective C \@finally blocks are represented using a cleanup scope
+/// after the catch scope.
+
+class EHCatchScope : public EHScope {
+  // In effect, we have a flexible array member
+  //   Handler Handlers[0];
+  // But that's only standard in C99, not C++, so we have to do
+  // annoying pointer arithmetic instead.
+
+public:
+  struct Handler {
+    /// A type info value, or null MLIR attribute for a catch-all
+    CatchTypeInfo type;
+
+    /// The catch handler for this type.
+    mlir::Region *region;
+  };
+
+private:
+  friend class EHScopeStack;
+
+  Handler *getHandlers() { return reinterpret_cast<Handler *>(this + 1); }
+
+public:
+  static size_t getSizeForNumHandlers(unsigned n) {
+    return sizeof(EHCatchScope) + n * sizeof(Handler);
+  }
+
+  EHCatchScope(unsigned numHandlers) : EHScope(Catch) {
+    catchBits.numHandlers = numHandlers;
+    assert(catchBits.numHandlers == numHandlers && "NumHandlers overflow?");
+  }
+
+  unsigned getNumHandlers() const { return catchBits.numHandlers; }
+
+  void setHandler(unsigned i, CatchTypeInfo type, mlir::Region *region) {
+    assert(i < getNumHandlers());
+    getHandlers()[i].type = type;
+    getHandlers()[i].region = region;
+  }
+
+  // Clear all handler blocks.
+  // FIXME: it's better to always call clearHandlerBlocks in DTOR and have a
+  // 'takeHandler' or some such function which removes ownership from the
+  // EHCatchScope object if the handlers should live longer than EHCatchScope.
+  void clearHandlerBlocks() {
+    // The blocks are owned by TryOp, nothing to delete.
+  }
+
+  static bool classof(const EHScope *scope) {
+    return scope->getKind() == Catch;
+  }
 };
 
 /// A cleanup scope which generates the cleanup blocks lazily.
@@ -145,6 +224,14 @@ EHScopeStack::find(stable_iterator savePoint) const {
   assert(savePoint.size <= stable_begin().size &&
          "finding savepoint after pop");
   return iterator(endOfBuffer - savePoint.size);
+}
+
+inline void EHScopeStack::popCatch() {
+  assert(!empty() && "popping exception stack when not empty");
+
+  EHCatchScope &scope = llvm::cast<EHCatchScope>(*begin());
+  assert(!cir::MissingFeatures::innermostEHScope());
+  deallocate(EHCatchScope::getSizeForNumHandlers(scope.getNumHandlers()));
 }
 
 } // namespace clang::CIRGen

@@ -172,6 +172,11 @@ static cl::opt<bool>
                       cl::desc("Print MIR2Vec vocabulary contents"),
                       cl::init(false));
 
+static cl::opt<bool>
+    PrintMIR2Vec("print-mir2vec", cl::Hidden,
+                 cl::desc("Print MIR2Vec embeddings for functions"),
+                 cl::init(false));
+
 static cl::list<std::string> IncludeDirs("I", cl::desc("include search path"));
 
 static cl::opt<bool> RemarksWithHotness(
@@ -775,6 +780,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
         PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
       }
 
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
+      }
+
       PM.add(createFreeMachineFunctionPass());
     } else {
       if (Target->addPassesToEmitFile(PM, *OS, DwoOut ? &DwoOut->os() : nullptr,
@@ -787,6 +797,11 @@ static int compileModule(char **argv, LLVMContext &Context) {
       // Add MIR2Vec vocabulary printer if requested
       if (PrintMIR2VecVocab) {
         PM.add(createMIR2VecVocabPrinterLegacyPass(errs()));
+      }
+
+      // Add MIR2Vec printer if requested
+      if (PrintMIR2Vec) {
+        PM.add(createMIR2VecPrinterLegacyPass(errs()));
       }
     }
 

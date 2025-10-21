@@ -2,6 +2,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-unknown-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -14,6 +18,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-X86_64 %s
+// RUN: %clang -### %s --target=arm-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK,CHECK-ARMV8A %s
 // RUN: %clang -### %s --target=aarch64-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \
@@ -24,6 +32,7 @@
 // RUN:     | FileCheck -check-prefixes=CHECK,CHECK-RISCV64 %s
 // CHECK: "-cc1"
 // CHECK-X86_64: "-triple" "x86_64-unknown-fuchsia"
+// CHECK-ARMV8A: "-triple" "thumbv8a-unknown-fuchsia"
 // CHECK-AARCH64: "-triple" "aarch64-unknown-fuchsia"
 // CHECK-RISCV64: "-triple" "riscv64-unknown-fuchsia"
 // CHECK: "-funwind-tables=2"

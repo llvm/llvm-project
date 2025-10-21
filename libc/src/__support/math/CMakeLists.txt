@@ -926,6 +926,7 @@ add_header_library(
   sincosf_utils
   HDRS
     sincosf_utils.h
+    sincosf_float_eval.h
   DEPENDS
     .range_reduction
     libc.src.__support.FPUtil.fp_bits
