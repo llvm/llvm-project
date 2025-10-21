@@ -1672,6 +1672,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.useRVVForFixedLengthVectors())
     setTargetDAGCombine(ISD::BITCAST);
 
+  setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
+
   // Disable strict node mutation.
   IsStrictFPEnabled = true;
   EnableExtLdPromotion = true;
@@ -12647,10 +12649,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
       Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
       // Reassemble the low and high pieces reversed.
-      // FIXME: This is a CONCAT_VECTORS.
-      SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0);
-      return DAG.getInsertSubvector(DL, Res, Lo,
-                                    LoVT.getVectorMinNumElements());
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Hi, Lo);
     }
 
     // Just promote the int type to i16 which will double the LMUL.
@@ -24045,18 +24044,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  std::pair<Register, const TargetRegisterClass *> Res =
-      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-
-  // If we picked one of the Zfinx register classes, remap it to the GPR class.
-  // FIXME: When Zfinx is supported in CodeGen this will need to take the
-  // Subtarget into account.
-  if (Res.second == &RISCV::GPRF16RegClass ||
-      Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRPairRegClass)
-    return std::make_pair(Res.first, &RISCV::GPRRegClass);
-
-  return Res;
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
 InlineAsm::ConstraintCode
@@ -24828,7 +24816,8 @@ bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // instruction, as it is usually smaller than the alternative sequence.
   // TODO: Add vector division?
   bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
-  return OptSize && !VT.isVector();
+  return OptSize && !VT.isVector() &&
+         VT.getSizeInBits() <= getMaxDivRemBitWidthSupported();
 }
 
 bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {

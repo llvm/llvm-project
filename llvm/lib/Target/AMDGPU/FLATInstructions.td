@@ -3711,6 +3711,12 @@ defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "globa
 defm GLOBAL_LOAD_TR4_B64              : VFLAT_Real_AllAddr_gfx1250<0x073>;
 defm GLOBAL_LOAD_TR6_B96              : VFLAT_Real_AllAddr_gfx1250<0x074>;
 
+// Additional aliases for global load transpose instructions.
+def : MnemonicAlias<"global_load_b128_tr_b16", "global_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"global_load_b64_tr_b8", "global_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"global_load_b64_tr_b4", "global_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"global_load_b96_tr_b6", "global_load_tr6_b96">, Requires<[isGFX125xOnly]>;
+
 defm FLAT_ATOMIC_ADD_F64              : VFLAT_Real_Atomics_gfx1250<0x055>;
 defm FLAT_ATOMIC_MIN_F64              : VFLAT_Real_Atomics_gfx1250<0x05b, "flat_atomic_min_num_f64">;
 defm FLAT_ATOMIC_MAX_F64              : VFLAT_Real_Atomics_gfx1250<0x05c, "flat_atomic_max_num_f64">;
