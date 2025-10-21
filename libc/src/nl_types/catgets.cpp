@@ -17,8 +17,8 @@ LLVM_LIBC_FUNCTION(char *, catgets,
                    ([[maybe_unused]] nl_catd catalog,
                     [[maybe_unused]] int set_number,
                     [[maybe_unused]] int message_number, const char *message)) {
-  // Message catalogs are not implemented.
-  // Return backup message regardless of input.
+  // TODO: Add implementation for message catalogs. For now, return backup
+  // message regardless of input.
   return const_cast<char *>(message);
 }
 

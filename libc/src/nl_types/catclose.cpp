@@ -14,7 +14,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, catclose, ([[maybe_unused]] nl_catd catalog)) {
-  // Message catalogs are not implemented. Return error regardless of input.
+  // TODO: Add implementation for message catalogs. For now, return error
+  // regardless of input.
   return -1;
 }
 
