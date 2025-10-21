@@ -29,6 +29,29 @@ enum PrimType : uint8_t;
 using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 using InitMapPtr = std::optional<std::pair<bool, std::shared_ptr<InitMap>>>;
 
+struct ArraySize {
+  unsigned Size;
+  unsigned Capacity;
+  ArraySize(unsigned S, unsigned C) : Size(S), Capacity(C) {
+    assert(Size <= Capacity);
+  }
+  bool hasFiller() const { return Capacity != Size; }
+
+  static bool shouldUseFiller(unsigned S, unsigned C) {
+    return (C - S) >= 2;
+    // return C >= 32 && (C - S) >= 16;
+    // return (C - S) >= 5;
+  }
+
+  static ArraySize getNextSize(unsigned S, unsigned C) {
+    // llvm::errs() << S << " / " << C << '\n';
+
+    unsigned S2 = std::min(S * 2, C);
+
+    return ArraySize(S2, C);
+  }
+};
+
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
@@ -120,7 +143,7 @@ static_assert(sizeof(GlobalInlineDescriptor) != sizeof(InlineDescriptor), "");
 
 /// Describes a memory block created by an allocation site.
 struct Descriptor final {
-private:
+public:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
   const Type *SourceType = nullptr;
@@ -128,6 +151,7 @@ private:
   const unsigned ElemSize;
   /// Size of the storage, in host bytes.
   const unsigned Size;
+  const unsigned Capacity;
   /// Size of the metadata.
   const unsigned MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
@@ -181,6 +205,9 @@ public:
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
              bool IsConst, bool IsTemporary, bool IsMutable);
 
+  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, ArraySize ArrSize,
+             bool IsConst, bool IsTemporary, bool IsMutable);
+
   /// Allocates a descriptor for an array of primitives of unknown size.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
              bool IsTemporary, UnknownSize);
@@ -188,6 +215,10 @@ public:
   /// Allocates a descriptor for an array of composites.
   Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
              MetadataSize MD, unsigned NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable);
+
+  Descriptor(const DeclTy &D, const Type *SourceTy, const Descriptor *Elem,
+             MetadataSize MD, ArraySize ArrSize, bool IsConst, bool IsTemporary,
              bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
@@ -240,7 +271,7 @@ public:
 
   /// Returns the allocated size, including metadata.
   unsigned getAllocSize() const { return AllocSize; }
-  /// returns the size of an element when the structure is viewed as an array.
+  /// Returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize() const { return ElemSize; }
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
@@ -249,6 +280,15 @@ public:
   unsigned getNumElems() const {
     return Size == UnknownSizeMark ? 0 : (getSize() / getElemSize());
   }
+
+  unsigned getNumElemsWithoutFiller() const {
+    assert(!isUnknownSizeArray());
+    unsigned N = getNumElems();
+    return N - (N != Capacity);
+  }
+  bool hasArrayFiller() const { return getNumElems() != Capacity; }
+
+  void moveArrayData(const Block *From, Block *To) const;
 
   /// Checks if the descriptor is of an array of primitives.
   bool isPrimitiveArray() const { return IsArray && !ElemDesc; }
@@ -284,12 +324,15 @@ private:
   using T = uint64_t;
   /// Bits stored in a single field.
   static constexpr uint64_t PER_FIELD = sizeof(T) * CHAR_BIT;
+#ifndef NDEBUG
+  unsigned NumFields;
+#endif
 
 public:
   /// Initializes the map with no fields set.
   explicit InitMap(unsigned N);
 
-private:
+public:
   friend class Pointer;
 
   /// Returns a pointer to storage.

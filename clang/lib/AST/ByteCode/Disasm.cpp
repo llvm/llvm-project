@@ -393,11 +393,17 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
   }
 
   // Print a few interesting bits about the descriptor.
-  if (isPrimitiveArray())
-    OS << " primitive-array";
-  else if (isCompositeArray())
-    OS << " composite-array";
-  else if (isUnion())
+  if (isPrimitiveArray()) {
+    OS << " primitive-array(" << getNumElemsWithoutFiller() << "/" << Capacity
+       << ")";
+    if (hasArrayFiller())
+      OS << " has-filler";
+  } else if (isCompositeArray()) {
+    OS << " composite-array(" << getNumElemsWithoutFiller() << "/" << Capacity
+       << ")";
+    if (hasArrayFiller())
+      OS << " has-filler";
+  } else if (isUnion())
     OS << " union";
   else if (isRecord())
     OS << " record";
@@ -484,8 +490,6 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS << " (" << F->getName() << ")";
   }
   OS << "\n";
-  OS.indent(Spaces) << "This: " << getThis() << "\n";
-  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
@@ -561,6 +565,26 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dummy: " << isDummy() << '\n';
   OS << "  Dynamic: " << isDynamic() << "\n";
+}
+
+LLVM_DUMP_METHOD void Block::dumpContents() const {
+  llvm::raw_ostream &OS = llvm::errs();
+  const Descriptor *Desc = getDescriptor();
+  assert(Desc);
+
+  Desc->dump(OS);
+  OS << ' ';
+  if (Desc->isPrimitiveArray()) {
+    PrimType ElemT = Desc->getPrimType();
+    Pointer BasePtr = Pointer(const_cast<Block *>(this));
+    for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
+      TYPE_SWITCH(ElemT, { OS << BasePtr.elem<T>(I); });
+      OS << ' ';
+    }
+    OS << '\n';
+  } else {
+    assert(false && "Unimplemented content type in Block::dumpContents()");
+  }
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

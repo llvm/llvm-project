@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -262,7 +263,7 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
                             IsTemporary, /*IsMutable=*/false, IsVolatile);
   else
     Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
-                            IsTemporary, /*IsMutable=*/false, IsVolatile);
+                            IsTemporary, /*IsMutable=*/false, IsVolatile, Init);
 
   if (!Desc)
     return std::nullopt;
@@ -281,6 +282,23 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
   Globals.push_back(G);
 
   return I;
+}
+
+void Program::reallocGlobal(Block *Prev, const Descriptor *NewDesc) {
+  assert(Prev->getDescriptor()->IsArray);
+  assert(NewDesc->IsArray);
+
+  auto *G = new (Allocator, NewDesc->getAllocSize())
+      Global(Ctx.getEvalID(), Prev->getDeclID(), NewDesc, true, false, false);
+  G->block()->invokeCtor();
+
+  auto [_, PrevIndex] =
+      *GlobalIndices.find(Prev->getDescriptor()->getSource().getOpaqueValue());
+
+  Prev->moveArrayData(G->block());
+
+  Globals[PrevIndex] = G;
+  Prev->movePointersTo(G->block());
 }
 
 Function *Program::getFunction(const FunctionDecl *F) {
@@ -394,6 +412,17 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   return R;
 }
 
+static unsigned getNumInits(const Expr *E, unsigned Capacity) {
+  unsigned N = Capacity;
+  if (const auto *ILE = dyn_cast_if_present<InitListExpr>(E))
+    N = ILE->getNumInitsWithEmbedExpanded();
+  if (const auto *PE = dyn_cast_if_present<ParenListExpr>(E))
+    N = PE->getNumExprs();
+  if (ArraySize::shouldUseFiller(N, Capacity))
+    return N;
+  return Capacity;
+}
+
 Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       Descriptor::MetadataSize MDSize,
                                       bool IsConst, bool IsTemporary,
@@ -413,27 +442,37 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     QualType ElemTy = ArrayType->getElementType();
     // Array of well-known bounds.
     if (const auto *CAT = dyn_cast<ConstantArrayType>(ArrayType)) {
+      size_t Capacity = CAT->getZExtSize();
+      size_t Size = getNumInits(Init, Capacity);
       size_t NumElems = CAT->getZExtSize();
+
+      if (const auto *VD =
+              dyn_cast_if_present<ValueDecl>(D.dyn_cast<const Decl *>())) {
+        if (!Context::shouldBeGloballyIndexed(VD))
+          Size = Capacity;
+      }
+
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
           return {};
         }
-        return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
-                                  IsMutable);
+        return allocateDescriptor(D, *T, MDSize, ArraySize(Size, Capacity),
+                                  IsConst, IsTemporary, IsMutable);
       }
-        // Arrays of composites. In this case, the array is a list of pointers,
-        // followed by the actual elements.
-        const Descriptor *ElemDesc = createDescriptor(
-            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
-        if (!ElemDesc)
-          return nullptr;
-        unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
-        if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
-          return {};
-        return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
-                                  IsTemporary, IsMutable);
+
+      // Arrays of composites.
+      const Descriptor *ElemDesc = createDescriptor(
+          D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
+      if (!ElemDesc)
+        return nullptr;
+      unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
+      if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
+        return {};
+      return allocateDescriptor(D, Ty, ElemDesc, MDSize,
+                                ArraySize(Size, Capacity), IsConst, IsTemporary,
+                                IsMutable);
     }
 
     // Array of unknown bounds - cannot be accessed and pointer arithmetic

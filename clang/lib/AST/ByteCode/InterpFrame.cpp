@@ -81,7 +81,7 @@ void InterpFrame::destroyScopes() {
     return;
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
-      S.deallocate(localBlock(Local.Offset));
+      S.deallocate(localBlock(Local.Offset, false));
     }
   }
 }
@@ -190,6 +190,33 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
       OS << ", ";
   }
   OS << ")";
+}
+
+void InterpFrame::reallocLocal(Block *Prev, const Descriptor *NewDesc) {
+  // llvm::errs() << __PRETTY_FUNCTION__ << '\n';
+  // llvm::errs() << "Prev: " << Prev << '\n';
+  // this->dump();
+
+  unsigned Offset = ((char *)Prev) - Locals.get() + sizeof(Block);
+
+  // First, we need a new block for the new descriptor.
+  Block *B = new (S.allocate(sizeof(Block) + NewDesc->getAllocSize()))
+      Block(Prev->getEvalID(), Prev->getDeclID(), NewDesc, false, false, false);
+  B->invokeCtor();
+
+  // llvm::errs() << "Reallocated LOCAL in InterpFrame: "<< Prev << " -> " << B
+  // << '\n';
+
+  // Pointer(B).initializeAllElements();
+
+  Prev->moveArrayData(B);
+  Prev->movePointersTo(B);
+
+  assert(!Prev->hasPointers());
+
+  ReallocatedLocals[Offset] = B;
+  // llvm::errs() << " !!!!!!!!!!!! " << Offset << " should now point to " << B
+  // << '\n';
 }
 
 SourceRange InterpFrame::getCallRange() const {

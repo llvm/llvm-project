@@ -42,27 +42,27 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
 
   if (ElemType->isRecordType()) {
     const Record *R = BasePtr.getElemRecord();
-    for (size_t I = 0; I != NumElems; ++I) {
+    for (size_t I = 0; I != BasePtr.getNumAllocatedElems(); ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckFieldsInitialized(S, Loc, ElemPtr, R);
     }
   } else if (const auto *ElemCAT = dyn_cast<ConstantArrayType>(ElemType)) {
-    for (size_t I = 0; I != NumElems; ++I) {
+
+    for (size_t I = 0; I != BasePtr.getNumAllocatedElems(); ++I) {
       Pointer ElemPtr = BasePtr.atIndex(I).narrow();
       Result &= CheckArrayInitialized(S, Loc, ElemPtr, ElemCAT);
     }
   } else {
     // Primitive arrays.
     if (S.getContext().canClassify(ElemType)) {
-      if (BasePtr.allElementsInitialized()) {
+      if (BasePtr.allElementsInitialized())
         return true;
-      } else {
-        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-        return false;
-      }
+
+      DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+      return false;
     }
 
-    for (size_t I = 0; I != NumElems; ++I) {
+    for (size_t I = 0; I != BasePtr.getNumAllocatedElems(); ++I) {
       if (!BasePtr.isElementInitialized(I)) {
         DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
         Result = false;

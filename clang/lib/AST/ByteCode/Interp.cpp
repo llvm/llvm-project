@@ -1597,6 +1597,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!Func->isFullyCompiled())
     compileFunction(S, Func);
 
+  // Func->dump();
+
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
 
