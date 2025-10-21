@@ -31,14 +31,16 @@
 #include <list>
 #include <map>
 
-template <typename T>
-static Fortran::semantics::Scope *GetScope(
-    Fortran::semantics::SemanticsContext &context, const T &x) {
-  std::optional<Fortran::parser::CharBlock> source{GetLastSource(x)};
-  return source ? &context.FindScope(*source) : nullptr;
-}
-
 namespace Fortran::semantics {
+
+template <typename T>
+static Scope *GetScope(SemanticsContext &context, const T &x) {
+  if (auto source{GetLastSource(x)}) {
+    return &context.FindScope(*source);
+  } else {
+    return nullptr;
+  }
+}
 
 template <typename T> class DirectiveAttributeVisitor {
 public:
@@ -361,7 +363,7 @@ private:
   void ResolveAccObject(const parser::AccObject &, Symbol::Flag);
   Symbol *ResolveAcc(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveAcc(Symbol &, Symbol::Flag, Scope &);
-  Symbol *ResolveName(const parser::Name &, bool parentScope = false);
+  Symbol *ResolveName(const parser::Name &);
   Symbol *ResolveFctName(const parser::Name &);
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
@@ -1257,31 +1259,22 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCStandaloneConstruct &x) {
   return true;
 }
 
-Symbol *AccAttributeVisitor::ResolveName(
-    const parser::Name &name, bool parentScope) {
-  Symbol *prev{currScope().FindSymbol(name.source)};
-  // Check in parent scope if asked for.
-  if (!prev && parentScope) {
-    prev = currScope().parent().FindSymbol(name.source);
-  }
-  if (prev != name.symbol) {
-    name.symbol = prev;
-  }
-  return prev;
+Symbol *AccAttributeVisitor::ResolveName(const parser::Name &name) {
+  return name.symbol;
 }
 
 Symbol *AccAttributeVisitor::ResolveFctName(const parser::Name &name) {
   Symbol *prev{currScope().FindSymbol(name.source)};
-  if (!prev || (prev && prev->IsFuncResult())) {
+  if (prev && prev->IsFuncResult()) {
     prev = currScope().parent().FindSymbol(name.source);
-    if (!prev) {
-      prev = &context_.globalScope().MakeSymbol(
-          name.source, Attrs{}, ProcEntityDetails{});
-    }
   }
-  if (prev != name.symbol) {
-    name.symbol = prev;
+  if (!prev) {
+    prev = &*context_.globalScope()
+                 .try_emplace(name.source, ProcEntityDetails{})
+                 .first->second;
   }
+  CHECK(!name.symbol || name.symbol == prev);
+  name.symbol = prev;
   return prev;
 }
 
@@ -1388,9 +1381,8 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCRoutineConstruct &x) {
   } else {
     PushContext(verbatim.source, llvm::acc::Directive::ACCD_routine);
   }
-  const auto &optName{std::get<std::optional<parser::Name>>(x.t)};
-  if (optName) {
-    if (Symbol *sym = ResolveFctName(*optName)) {
+  if (const auto &optName{std::get<std::optional<parser::Name>>(x.t)}) {
+    if (Symbol * sym{ResolveFctName(*optName)}) {
       Symbol &ultimate{sym->GetUltimate()};
       AddRoutineInfoToSymbol(ultimate, x);
     } else {
@@ -1425,7 +1417,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   case llvm::acc::Directive::ACCD_kernels_loop:
   case llvm::acc::Directive::ACCD_parallel_loop:
   case llvm::acc::Directive::ACCD_serial_loop:
-    PushContext(combinedDir.source, combinedDir.v);
+    PushContext(x.source, combinedDir.v);
     break;
   default:
     break;
@@ -1706,26 +1698,27 @@ void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {
   }
 }
 
-// For OpenACC constructs, check all the data-refs within the constructs
-// and adjust the symbol for each Name if necessary
 void AccAttributeVisitor::Post(const parser::Name &name) {
-  auto *symbol{name.symbol};
-  if (symbol && WithinConstruct()) {
-    symbol = &symbol->GetUltimate();
-    if (!symbol->owner().IsDerivedType() && !symbol->has<ProcEntityDetails>() &&
-        !symbol->has<SubprogramDetails>() && !IsObjectWithVisibleDSA(*symbol)) {
+  if (name.symbol && WithinConstruct()) {
+    const Symbol &symbol{name.symbol->GetUltimate()};
+    if (!symbol.owner().IsDerivedType() && !symbol.has<ProcEntityDetails>() &&
+        !symbol.has<SubprogramDetails>() && !IsObjectWithVisibleDSA(symbol)) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
-        if (symbol != found) {
-          name.symbol = found; // adjust the symbol within region
+        if (&symbol != found) {
+          // adjust the symbol within the region
+          // TODO: why didn't name resolution set the right name originally?
+          name.symbol = found;
         } else if (GetContext().defaultDSA == Symbol::Flag::AccNone) {
           // 2.5.14.
           context_.Say(name.source,
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
-              symbol->name());
+              symbol.name());
         }
+      } else {
+        // TODO: assertion here?  or clear name.symbol?
       }
     }
-  } // within OpenACC construct
+  }
 }
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
@@ -1810,13 +1803,11 @@ Symbol *AccAttributeVisitor::ResolveAcc(
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     const parser::Name &name, Symbol::Flag accFlag) {
-  Symbol *prev{currScope().FindSymbol(name.source)};
-  if (!name.symbol || !prev) {
+  if (name.symbol) {
+    return DeclareOrMarkOtherAccessEntity(*name.symbol, accFlag);
+  } else {
     return nullptr;
-  } else if (prev != name.symbol) {
-    name.symbol = prev;
   }
-  return DeclareOrMarkOtherAccessEntity(*prev, accFlag);
 }
 
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
@@ -2990,6 +2981,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
 }
 
 Symbol *OmpAttributeVisitor::ResolveName(const parser::Name *name) {
+  // TODO: why is the symbol not properly resolved by name resolution?
   if (auto *resolvedSymbol{
           name ? GetContext().scope.FindSymbol(name->source) : nullptr}) {
     name->symbol = resolvedSymbol;
