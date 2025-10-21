@@ -84,8 +84,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: We can vectorize this loop!
 define i32 @redi(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
@@ -107,9 +106,8 @@ for.end.loopexit:                                 ; preds = %for.body
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret i32 %Red.0.lcssa
+for.end:                                          ; preds = %for.end.loopexit
+  ret i32 %add.lcssa
 }
 
 ; Floating-point loops need fast-math to be vectorizeable
@@ -121,8 +119,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; DARWIN: We can vectorize this loop!
 define float @redf(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
@@ -144,9 +141,8 @@ for.end.loopexit:                                 ; preds = %for.body
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ 0.0e+00, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret float %Red.0.lcssa
+for.end:                                          ; preds = %for.end.loopexit
+  ret float %add.lcssa
 }
 
 ; Make sure calls that turn into builtins are also covered
@@ -277,8 +273,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: We can vectorize this loop!
 define float @redf_fast(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
 for.body.preheader:                               ; preds = %entry
   br label %for.body
@@ -300,9 +295,8 @@ for.end.loopexit:                                 ; preds = %for.body
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ 0.0e+00, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret float %Red.0.lcssa
+for.end:                                          ; preds = %for.end.loopexit
+  ret float %add.lcssa
 }
 
 ; Make sure calls that turn into builtins are also covered

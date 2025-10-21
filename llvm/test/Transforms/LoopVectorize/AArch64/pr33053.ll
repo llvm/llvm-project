@@ -9,9 +9,7 @@ define i32 @fn1() local_unnamed_addr #0 {
 ; We expect the backend to expand all reductions.
 ; CHECK: @llvm.vector.reduce
 entry:
-  %0 = load i32, ptr @b, align 4, !tbaa !1
-  %cmp40 = icmp sgt i32 %0, 0
-  br i1 %cmp40, label %for.body.lr.ph, label %for.end
+  br label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
   %1 = load ptr, ptr @a, align 8, !tbaa !5
@@ -33,10 +31,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %cmp = icmp slt i64 %indvars.iv.next, %3
   br i1 %cmp, label %for.body, label %for.end
 
-for.end:                                          ; preds = %for.body, %entry
-  %c.0.lcssa = phi i16 [ 0, %entry ], [ %c.0., %for.body ]
-  %d.0.lcssa = phi i16 [ 0, %entry ], [ %.sink28, %for.body ]
-  %cmp26 = icmp sgt i16 %c.0.lcssa, %d.0.lcssa
+for.end:                                          ; preds = %for.body
+  %cmp26 = icmp sgt i16 %c.0., %.sink28
   %conv27 = zext i1 %cmp26 to i32
   ret i32 %conv27
 }
