@@ -463,6 +463,9 @@ protected:
   // file.
   bool processCallGraphSection();
 
+  void getCallGraphRelocations(std::vector<Relocation<ELFT>> &Relocations,
+                               const Elf_Shdr *&RelocSymTab);
+
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
 };
@@ -5438,37 +5441,43 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   return true;
 }
 
+template <class ELFT>
+void ELFDumper<ELFT>::getCallGraphRelocations(
+    std::vector<Relocation<ELFT>> &Relocations, const Elf_Shdr *&RelocSymTab) {
+  const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
+  if (!CGSection)
+    return;
+
+  const Elf_Shdr *CGRelSection = nullptr;
+  auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
+      Obj.getSectionAndRelocations(IsMatch);
+  if (MapOrErr && !MapOrErr->empty()) {
+    CGRelSection = MapOrErr->front().second;
+  }
+
+  if (CGRelSection) {
+    forEachRelocationDo(*CGRelSection,
+                        [&](const Relocation<ELFT> &R, unsigned Ndx,
+                            const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
+                          RelocSymTab = SymTab;
+                          Relocations.push_back(R);
+                        });
+    llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
+      return LHS.Offset < RHS.Offset;
+    });
+  }
+}
+
 template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection())
     return;
   if (this->FuncCGInfos.empty())
     return;
 
-  const Elf_Shdr *CGSection = this->findSectionByName(".llvm.callgraph");
-  const Elf_Shdr *CGRelSection = nullptr;
   std::vector<Relocation<ELFT>> Relocations;
   const Elf_Shdr *RelocSymTab = nullptr;
-
-  if (CGSection) {
-    auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
-    Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
-        this->Obj.getSectionAndRelocations(IsMatch);
-    if (MapOrErr && !MapOrErr->empty()) {
-      CGRelSection = MapOrErr->front().second;
-    }
-  }
-
-  if (CGRelSection) {
-    this->forEachRelocationDo(*CGRelSection,
-                              [&](const Relocation<ELFT> &R, unsigned Ndx,
-                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
-                                RelocSymTab = SymTab;
-                                Relocations.push_back(R);
-                              });
-    llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
-      return LHS.Offset < RHS.Offset;
-    });
-  }
+  this->getCallGraphRelocations(Relocations, RelocSymTab);
 
   auto GetFunctionName = [&](uint64_t EntryPc) {
     SmallVector<uint32_t> FuncSymIndexes =
@@ -5525,7 +5534,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
        << GetFunctionAddressAndName(CGInfo.FunctionAddress) << "\n";
     OS << "    Indirect Target:   " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
        << "\n";
-    OS << "    Type ID:           " << format_hex(CGInfo.FunctionTypeId, 1)
+    OS << "    Type ID:           0x" << format_hex(CGInfo.FunctionTypeId, 1)
        << "\n";
 
     OS << "    Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
@@ -8375,34 +8384,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection())
     return;
-  if (this->FuncCGInfos.size() == 0)
+  if (this->FuncCGInfos.empty())
     return;
 
-  const Elf_Shdr *CGSection = this->findSectionByName(".llvm.callgraph");
-  const Elf_Shdr *CGRelSection = nullptr;
   std::vector<Relocation<ELFT>> Relocations;
   const Elf_Shdr *RelocSymTab = nullptr;
-
-  if (CGSection) {
-    auto IsMatch = [&](const Elf_Shdr &Sec) { return &Sec == CGSection; };
-    Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> MapOrErr =
-        this->Obj.getSectionAndRelocations(IsMatch);
-    if (MapOrErr && !MapOrErr->empty()) {
-      CGRelSection = MapOrErr->front().second;
-    }
-  }
-
-  if (CGRelSection) {
-    this->forEachRelocationDo(*CGRelSection,
-                              [&](const Relocation<ELFT> &R, unsigned Ndx,
-                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
-                                RelocSymTab = SymTab;
-                                Relocations.push_back(R);
-                              });
-    llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
-      return LHS.Offset < RHS.Offset;
-    });
-  }
+  this->getCallGraphRelocations(Relocations, RelocSymTab);
 
   auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
     SmallVector<uint32_t> FuncSymIndexes =
