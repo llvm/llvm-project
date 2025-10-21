@@ -1833,13 +1833,13 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_uabd:
     return LowerBinOp(TargetOpcode::G_ABDU);
   case Intrinsic::aarch64_neon_uhadd:
-    return LowerBinOp(AArch64::G_UHADD);
+    return LowerBinOp(AArch64::G_AVGFLOORU);
   case Intrinsic::aarch64_neon_urhadd:
-    return LowerBinOp(AArch64::G_URHADD);
+    return LowerBinOp(AArch64::G_AVGCEILU);
   case Intrinsic::aarch64_neon_shadd:
-    return LowerBinOp(AArch64::G_SHADD);
+    return LowerBinOp(AArch64::G_AVGFLOORS);
   case Intrinsic::aarch64_neon_srhadd:
-    return LowerBinOp(AArch64::G_SRHADD);
+    return LowerBinOp(AArch64::G_AVGCEILS);
   case Intrinsic::aarch64_neon_abs: {
     // Lower the intrinsic to G_ABS.
     MIB.buildInstr(TargetOpcode::G_ABS, {MI.getOperand(0)}, {MI.getOperand(2)});

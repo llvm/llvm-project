@@ -245,25 +245,25 @@ def G_USDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_UHADD : AArch64GenericInstruction {
+def G_AVGFLOORU : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
 }
 
-def G_URHADD : AArch64GenericInstruction {
+def G_AVGCEILU : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
 }
 
-def G_SHADD : AArch64GenericInstruction {
+def G_AVGFLOORS : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
 }
 
-def G_SRHADD : AArch64GenericInstruction {
+def G_AVGCEILS : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src1, type1:$src2);
   let hasSideEffects = 0;
@@ -317,10 +317,10 @@ def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
 def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
-def : GINodeEquiv<G_UHADD, avgflooru>;
-def : GINodeEquiv<G_URHADD, avgceilu>;
-def : GINodeEquiv<G_SHADD, avgfloors>;
-def : GINodeEquiv<G_SRHADD, avgceils>;
+def : GINodeEquiv<G_AVGFLOORU, avgflooru>;
+def : GINodeEquiv<G_AVGCEILU, avgceilu>;
+def : GINodeEquiv<G_AVGFLOORS, avgfloors>;
+def : GINodeEquiv<G_AVGCEILS, avgceils>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
