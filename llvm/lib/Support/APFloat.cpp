@@ -2600,8 +2600,7 @@ APFloat::opStatus IEEEFloat::convert(const fltSemantics &toSemantics,
     int exponentChange = omsb - fromSemantics.precision;
     if (exponent + exponentChange < toSemantics.minExponent)
       exponentChange = toSemantics.minExponent - exponent;
-    if (exponentChange < shift)
-      exponentChange = shift;
+    exponentChange = std::max(exponentChange, shift);
     if (exponentChange < 0) {
       shift -= exponentChange;
       exponent += exponentChange;
@@ -3043,8 +3042,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
       if (decSig.exponent < semantics->minExponent) {
         excessPrecision += (semantics->minExponent - decSig.exponent);
         truncatedBits = excessPrecision;
-        if (excessPrecision > calcSemantics.precision)
-          excessPrecision = calcSemantics.precision;
+        excessPrecision = std::min(excessPrecision, calcSemantics.precision);
       }
       /* Extra half-ulp lost in reciprocal of exponent.  */
       powHUerr = (powStatus == opOK && calcLostFraction == lfExactlyZero) ? 0:2;
@@ -3441,8 +3439,7 @@ char *IEEEFloat::convertNormalToHexString(char *dst, unsigned int hexDigits,
     /* Convert as much of "part" to hexdigits as we can.  */
     unsigned int curDigits = integerPartWidth / 4;
 
-    if (curDigits > outputDigits)
-      curDigits = outputDigits;
+    curDigits = std::min(curDigits, outputDigits);
     dst += partAsHex (dst, part, curDigits, hexDigitChars);
     outputDigits -= curDigits;
   }
