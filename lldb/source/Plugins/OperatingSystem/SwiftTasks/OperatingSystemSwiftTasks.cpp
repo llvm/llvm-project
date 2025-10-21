@@ -143,7 +143,8 @@ OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
   uint64_t masked_task_id = TASK_MASK | task_id;
 
   // If we already had a thread for this Task in the last stop, re-use it.
-  if (ThreadSP old_thread = old_thread_list.FindThreadByID(masked_task_id);
+  if (ThreadSP old_thread =
+          old_thread_list.FindThreadByID(masked_task_id, /*can_update*/ false);
       IsOperatingSystemPluginThread(old_thread))
     return old_thread;
 
