@@ -1,0 +1,407 @@
+//===- llvm/IR/DIOps.def - DIExpression Op definitions ----------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Macros for running through all typed DIExpression operations.
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined HANDLE_OP || defined HANDLE_OP0 || defined HANDLE_OP1 ||    \
+      defined HANDLE_OP2)
+#error "Missing macro definition of HANDLE_OP*"
+#endif
+
+#if defined HANDLE_OP &&                                                  \
+    (defined HANDLE_OP0 || defined HANDLE_OP1 || defined HANDLE_OP2)
+#error "HANDLE_OP cannot be defined together with HANDLE_OP{0,1,2}"
+#endif
+
+// TODO: Update docs to reflect ENCODING param
+
+/// If defined, HANDLE_OP is invoked for each DIExpr operation.
+///
+/// It is invoked with one argument, which is the identifier for the name of
+/// the operation.
+///
+/// If defined, none of HANDLE_OP{0,1,2} may be defined.
+#ifndef HANDLE_OP
+#define HANDLE_OP(NAME, ENCODING)
+#endif
+
+/// If defined, HANDLE_OP0 is invoked once for each DIExpr operation which has
+/// exactly zero arguments.
+///
+/// It is invoked with one argument, which is the identifier for the name of
+/// the operation.
+#ifndef HANDLE_OP0
+#define HANDLE_OP0(NAME, ENCODING) HANDLE_OP(NAME, ENCODING)
+#endif
+
+/// If defined, HANDLE_OP1 is invoked once for each DIExpr operation which has
+/// exactly one argument.
+///
+/// It is invoked with three arguments:
+///
+/// 1. The identifier for the name of the operation.
+/// (2, 3). The type and identifier of the first argument to the operation.
+#ifndef HANDLE_OP1
+#define HANDLE_OP1(NAME, ENCODING, ...) HANDLE_OP(NAME, ENCODING)
+#endif
+
+/// If defined, HANDLE_OP2 is invoked once for each DIExpr operation which has
+/// exactly two arguments.
+///
+/// It is invoked with five arguments:
+///
+/// 1. The identifier for the name of the operation.
+/// (2, 3). The type and identifier of the first argument to the operation.
+/// (4, 5). The type and identifier of the second argument to the operation.
+#ifndef HANDLE_OP2
+#define HANDLE_OP2(NAME, ENCODING, ...) HANDLE_OP(NAME, ENCODING)
+#endif
+
+/// If defined, SEPARATOR is invoked between each invocation of the HANDLE_OP*
+/// macros.
+#ifndef SEPARATOR
+#define SEPARATOR
+#endif
+
+HANDLE_OP1(Addr, ::llvm::dwarf::DW_OP_addr, uint64_t, Value)
+SEPARATOR
+HANDLE_OP0(Deref, ::llvm::dwarf::DW_OP_deref)
+SEPARATOR
+HANDLE_OP1(Const1U, ::llvm::dwarf::DW_OP_const1u, uint8_t, Value)
+SEPARATOR
+HANDLE_OP1(Const1S, ::llvm::dwarf::DW_OP_const1s, int8_t, Value)
+SEPARATOR
+HANDLE_OP1(Const2U, ::llvm::dwarf::DW_OP_const2u, uint16_t, Value)
+SEPARATOR
+HANDLE_OP1(Const2S, ::llvm::dwarf::DW_OP_const2s, int16_t, Value)
+SEPARATOR
+HANDLE_OP1(Const4U, ::llvm::dwarf::DW_OP_const4u, uint32_t, Value)
+SEPARATOR
+HANDLE_OP1(Const4S, ::llvm::dwarf::DW_OP_const4s, int32_t, Value)
+SEPARATOR
+HANDLE_OP1(Const8U, ::llvm::dwarf::DW_OP_const8u, uint64_t, Value)
+SEPARATOR
+HANDLE_OP1(Const8S, ::llvm::dwarf::DW_OP_const8s, int64_t, Value)
+SEPARATOR
+HANDLE_OP1(ConstU, ::llvm::dwarf::DW_OP_constu, uint64_t, Value)
+SEPARATOR
+HANDLE_OP1(ConstS, ::llvm::dwarf::DW_OP_consts, int64_t, Value)
+SEPARATOR
+HANDLE_OP0(Dup, ::llvm::dwarf::DW_OP_dup)
+SEPARATOR
+HANDLE_OP0(Drop, ::llvm::dwarf::DW_OP_drop)
+SEPARATOR
+HANDLE_OP0(Over, ::llvm::dwarf::DW_OP_over)
+SEPARATOR
+HANDLE_OP1(Pick, ::llvm::dwarf::DW_OP_pick, uint64_t, Index)
+SEPARATOR
+HANDLE_OP0(Swap, ::llvm::dwarf::DW_OP_swap)
+SEPARATOR
+HANDLE_OP0(Rot, ::llvm::dwarf::DW_OP_rot)
+SEPARATOR
+HANDLE_OP0(XDeref, ::llvm::dwarf::DW_OP_xderef)
+SEPARATOR
+HANDLE_OP0(Abs, ::llvm::dwarf::DW_OP_abs)
+SEPARATOR
+HANDLE_OP0(And, ::llvm::dwarf::DW_OP_and)
+SEPARATOR
+HANDLE_OP0(Div, ::llvm::dwarf::DW_OP_div)
+SEPARATOR
+HANDLE_OP0(Minus, ::llvm::dwarf::DW_OP_minus)
+SEPARATOR
+HANDLE_OP0(Mod, ::llvm::dwarf::DW_OP_mod)
+SEPARATOR
+HANDLE_OP0(Mul, ::llvm::dwarf::DW_OP_mul)
+SEPARATOR
+HANDLE_OP0(Neg, ::llvm::dwarf::DW_OP_neg)
+SEPARATOR
+HANDLE_OP0(Not, ::llvm::dwarf::DW_OP_not)
+SEPARATOR
+HANDLE_OP0(Or, ::llvm::dwarf::DW_OP_or)
+SEPARATOR
+HANDLE_OP0(Plus, ::llvm::dwarf::DW_OP_plus)
+SEPARATOR
+HANDLE_OP1(PlusUConst, ::llvm::dwarf::DW_OP_plus_uconst, uint64_t, Value)
+SEPARATOR
+HANDLE_OP0(Shl, ::llvm::dwarf::DW_OP_shl)
+SEPARATOR
+HANDLE_OP0(Shr, ::llvm::dwarf::DW_OP_shr)
+SEPARATOR
+HANDLE_OP0(Shra, ::llvm::dwarf::DW_OP_shra)
+SEPARATOR
+HANDLE_OP0(Xor, ::llvm::dwarf::DW_OP_xor)
+SEPARATOR
+HANDLE_OP0(Bra, ::llvm::dwarf::DW_OP_bra)
+SEPARATOR
+HANDLE_OP0(Eq, ::llvm::dwarf::DW_OP_eq)
+SEPARATOR
+HANDLE_OP0(Ge, ::llvm::dwarf::DW_OP_ge)
+SEPARATOR
+HANDLE_OP0(Gt, ::llvm::dwarf::DW_OP_gt)
+SEPARATOR
+HANDLE_OP0(Le, ::llvm::dwarf::DW_OP_le)
+SEPARATOR
+HANDLE_OP0(Lt, ::llvm::dwarf::DW_OP_lt)
+SEPARATOR
+HANDLE_OP0(Ne, ::llvm::dwarf::DW_OP_ne)
+SEPARATOR
+HANDLE_OP1(Skip, ::llvm::dwarf::DW_OP_skip, uint16_t, Bytes)
+SEPARATOR
+HANDLE_OP0(Lit0, ::llvm::dwarf::DW_OP_lit0)
+SEPARATOR
+HANDLE_OP0(Lit1, ::llvm::dwarf::DW_OP_lit1)
+SEPARATOR
+HANDLE_OP0(Lit2, ::llvm::dwarf::DW_OP_lit2)
+SEPARATOR
+HANDLE_OP0(Lit3, ::llvm::dwarf::DW_OP_lit3)
+SEPARATOR
+HANDLE_OP0(Lit4, ::llvm::dwarf::DW_OP_lit4)
+SEPARATOR
+HANDLE_OP0(Lit5, ::llvm::dwarf::DW_OP_lit5)
+SEPARATOR
+HANDLE_OP0(Lit6, ::llvm::dwarf::DW_OP_lit6)
+SEPARATOR
+HANDLE_OP0(Lit7, ::llvm::dwarf::DW_OP_lit7)
+SEPARATOR
+HANDLE_OP0(Lit8, ::llvm::dwarf::DW_OP_lit8)
+SEPARATOR
+HANDLE_OP0(Lit9, ::llvm::dwarf::DW_OP_lit9)
+SEPARATOR
+HANDLE_OP0(Lit10, ::llvm::dwarf::DW_OP_lit10)
+SEPARATOR
+HANDLE_OP0(Lit11, ::llvm::dwarf::DW_OP_lit11)
+SEPARATOR
+HANDLE_OP0(Lit12, ::llvm::dwarf::DW_OP_lit12)
+SEPARATOR
+HANDLE_OP0(Lit13, ::llvm::dwarf::DW_OP_lit13)
+SEPARATOR
+HANDLE_OP0(Lit14, ::llvm::dwarf::DW_OP_lit14)
+SEPARATOR
+HANDLE_OP0(Lit15, ::llvm::dwarf::DW_OP_lit15)
+SEPARATOR
+HANDLE_OP0(Lit16, ::llvm::dwarf::DW_OP_lit16)
+SEPARATOR
+HANDLE_OP0(Lit17, ::llvm::dwarf::DW_OP_lit17)
+SEPARATOR
+HANDLE_OP0(Lit18, ::llvm::dwarf::DW_OP_lit18)
+SEPARATOR
+HANDLE_OP0(Lit19, ::llvm::dwarf::DW_OP_lit19)
+SEPARATOR
+HANDLE_OP0(Lit20, ::llvm::dwarf::DW_OP_lit20)
+SEPARATOR
+HANDLE_OP0(Lit21, ::llvm::dwarf::DW_OP_lit21)
+SEPARATOR
+HANDLE_OP0(Lit22, ::llvm::dwarf::DW_OP_lit22)
+SEPARATOR
+HANDLE_OP0(Lit23, ::llvm::dwarf::DW_OP_lit23)
+SEPARATOR
+HANDLE_OP0(Lit24, ::llvm::dwarf::DW_OP_lit24)
+SEPARATOR
+HANDLE_OP0(Lit25, ::llvm::dwarf::DW_OP_lit25)
+SEPARATOR
+HANDLE_OP0(Lit26, ::llvm::dwarf::DW_OP_lit26)
+SEPARATOR
+HANDLE_OP0(Lit27, ::llvm::dwarf::DW_OP_lit27)
+SEPARATOR
+HANDLE_OP0(Lit28, ::llvm::dwarf::DW_OP_lit28)
+SEPARATOR
+HANDLE_OP0(Lit29, ::llvm::dwarf::DW_OP_lit29)
+SEPARATOR
+HANDLE_OP0(Lit30, ::llvm::dwarf::DW_OP_lit30)
+SEPARATOR
+HANDLE_OP0(Lit31, ::llvm::dwarf::DW_OP_lit31)
+SEPARATOR
+HANDLE_OP0(Reg0, ::llvm::dwarf::DW_OP_reg0)
+SEPARATOR
+HANDLE_OP0(Reg1, ::llvm::dwarf::DW_OP_reg1)
+SEPARATOR
+HANDLE_OP0(Reg2, ::llvm::dwarf::DW_OP_reg2)
+SEPARATOR
+HANDLE_OP0(Reg3, ::llvm::dwarf::DW_OP_reg3)
+SEPARATOR
+HANDLE_OP0(Reg4, ::llvm::dwarf::DW_OP_reg4)
+SEPARATOR
+HANDLE_OP0(Reg5, ::llvm::dwarf::DW_OP_reg5)
+SEPARATOR
+HANDLE_OP0(Reg6, ::llvm::dwarf::DW_OP_reg6)
+SEPARATOR
+HANDLE_OP0(Reg7, ::llvm::dwarf::DW_OP_reg7)
+SEPARATOR
+HANDLE_OP0(Reg8, ::llvm::dwarf::DW_OP_reg8)
+SEPARATOR
+HANDLE_OP0(Reg9, ::llvm::dwarf::DW_OP_reg9)
+SEPARATOR
+HANDLE_OP0(Reg10, ::llvm::dwarf::DW_OP_reg10)
+SEPARATOR
+HANDLE_OP0(Reg11, ::llvm::dwarf::DW_OP_reg11)
+SEPARATOR
+HANDLE_OP0(Reg12, ::llvm::dwarf::DW_OP_reg12)
+SEPARATOR
+HANDLE_OP0(Reg13, ::llvm::dwarf::DW_OP_reg13)
+SEPARATOR
+HANDLE_OP0(Reg14, ::llvm::dwarf::DW_OP_reg14)
+SEPARATOR
+HANDLE_OP0(Reg15, ::llvm::dwarf::DW_OP_reg15)
+SEPARATOR
+HANDLE_OP0(Reg16, ::llvm::dwarf::DW_OP_reg16)
+SEPARATOR
+HANDLE_OP0(Reg17, ::llvm::dwarf::DW_OP_reg17)
+SEPARATOR
+HANDLE_OP0(Reg18, ::llvm::dwarf::DW_OP_reg18)
+SEPARATOR
+HANDLE_OP0(Reg19, ::llvm::dwarf::DW_OP_reg19)
+SEPARATOR
+HANDLE_OP0(Reg20, ::llvm::dwarf::DW_OP_reg20)
+SEPARATOR
+HANDLE_OP0(Reg21, ::llvm::dwarf::DW_OP_reg21)
+SEPARATOR
+HANDLE_OP0(Reg22, ::llvm::dwarf::DW_OP_reg22)
+SEPARATOR
+HANDLE_OP0(Reg23, ::llvm::dwarf::DW_OP_reg23)
+SEPARATOR
+HANDLE_OP0(Reg24, ::llvm::dwarf::DW_OP_reg24)
+SEPARATOR
+HANDLE_OP0(Reg25, ::llvm::dwarf::DW_OP_reg25)
+SEPARATOR
+HANDLE_OP0(Reg26, ::llvm::dwarf::DW_OP_reg26)
+SEPARATOR
+HANDLE_OP0(Reg27, ::llvm::dwarf::DW_OP_reg27)
+SEPARATOR
+HANDLE_OP0(Reg28, ::llvm::dwarf::DW_OP_reg28)
+SEPARATOR
+HANDLE_OP0(Reg29, ::llvm::dwarf::DW_OP_reg29)
+SEPARATOR
+HANDLE_OP0(Reg30, ::llvm::dwarf::DW_OP_reg30)
+SEPARATOR
+HANDLE_OP0(Reg31, ::llvm::dwarf::DW_OP_reg31)
+SEPARATOR
+HANDLE_OP1(BReg0, ::llvm::dwarf::DW_OP_breg0, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg1, ::llvm::dwarf::DW_OP_breg1, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg2, ::llvm::dwarf::DW_OP_breg2, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg3, ::llvm::dwarf::DW_OP_breg3, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg4, ::llvm::dwarf::DW_OP_breg4, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg5, ::llvm::dwarf::DW_OP_breg5, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg6, ::llvm::dwarf::DW_OP_breg6, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg7, ::llvm::dwarf::DW_OP_breg7, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg8, ::llvm::dwarf::DW_OP_breg8, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg9, ::llvm::dwarf::DW_OP_breg9, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg10, ::llvm::dwarf::DW_OP_breg10, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg11, ::llvm::dwarf::DW_OP_breg11, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg12, ::llvm::dwarf::DW_OP_breg12, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg13, ::llvm::dwarf::DW_OP_breg13, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg14, ::llvm::dwarf::DW_OP_breg14, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg15, ::llvm::dwarf::DW_OP_breg15, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg16, ::llvm::dwarf::DW_OP_breg16, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg17, ::llvm::dwarf::DW_OP_breg17, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg18, ::llvm::dwarf::DW_OP_breg18, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg19, ::llvm::dwarf::DW_OP_breg19, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg20, ::llvm::dwarf::DW_OP_breg20, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg21, ::llvm::dwarf::DW_OP_breg21, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg22, ::llvm::dwarf::DW_OP_breg22, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg23, ::llvm::dwarf::DW_OP_breg23, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg24, ::llvm::dwarf::DW_OP_breg24, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg25, ::llvm::dwarf::DW_OP_breg25, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg26, ::llvm::dwarf::DW_OP_breg26, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg27, ::llvm::dwarf::DW_OP_breg27, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg28, ::llvm::dwarf::DW_OP_breg28, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg29, ::llvm::dwarf::DW_OP_breg29, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg30, ::llvm::dwarf::DW_OP_breg30, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(BReg31, ::llvm::dwarf::DW_OP_breg31, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP1(RegX, ::llvm::dwarf::DW_OP_regx, uint32_t, Register)
+SEPARATOR
+HANDLE_OP1(FBReg, ::llvm::dwarf::DW_OP_fbreg, uint64_t, Offset)
+SEPARATOR
+HANDLE_OP2(BRegX, ::llvm::dwarf::DW_OP_bregx, uint32_t, Register, uint32_t, Offset)
+SEPARATOR
+HANDLE_OP1(Piece, ::llvm::dwarf::DW_OP_piece, uint64_t, SizeInBytes)
+SEPARATOR
+HANDLE_OP1(DerefSize, ::llvm::dwarf::DW_OP_deref_size, uint8_t, SizeInBytes)
+SEPARATOR
+HANDLE_OP1(XDerefSize, ::llvm::dwarf::DW_OP_xderef_size, uint8_t, SizeInBytes)
+SEPARATOR
+HANDLE_OP0(Nop, ::llvm::dwarf::DW_OP_nop)
+SEPARATOR
+HANDLE_OP0(PushObjectAddress, ::llvm::dwarf::DW_OP_push_object_address)
+SEPARATOR
+HANDLE_OP1(Call2, ::llvm::dwarf::DW_OP_call2, uint16_t, DIEOffset)
+SEPARATOR
+HANDLE_OP1(Call4, ::llvm::dwarf::DW_OP_call4, uint32_t, DIEOffset)
+SEPARATOR
+HANDLE_OP1(CallRef, ::llvm::dwarf::DW_OP_call_ref, uint64_t, DIEOffset)
+SEPARATOR
+HANDLE_OP0(FormTLSAddress, ::llvm::dwarf::DW_OP_form_tls_address)
+SEPARATOR
+HANDLE_OP0(CallFrameCFA, ::llvm::dwarf::DW_OP_call_frame_cfa)
+SEPARATOR
+HANDLE_OP2(BitPiece, ::llvm::dwarf::DW_OP_bit_piece, uint32_t, SizeInBits, uint32_t, OffsetInBits)
+SEPARATOR
+HANDLE_OP0(StackValue, ::llvm::dwarf::DW_OP_stack_value)
+SEPARATOR
+HANDLE_OP1(AddrX, ::llvm::dwarf::DW_OP_addrx, uint64_t, Index)
+SEPARATOR
+HANDLE_OP1(ConstX, ::llvm::dwarf::DW_OP_constx, uint64_t, Index)
+SEPARATOR
+HANDLE_OP1(Convert, ::llvm::dwarf::DW_OP_convert, uint64_t, DIEOffset)
+SEPARATOR
+HANDLE_OP1(Reinterpret, ::llvm::dwarf::DW_OP_reinterpret, uint64_t, DIEOffset)
+SEPARATOR
+HANDLE_OP2(LLVMFragment, ::llvm::dwarf::DW_OP_LLVM_fragment, uint32_t, OffsetInBits, uint32_t, SizeInBits)
+SEPARATOR
+HANDLE_OP2(LLVMConvert, ::llvm::dwarf::DW_OP_LLVM_convert, uint32_t, SizeInBits, uint8_t, Encoding)
+SEPARATOR
+HANDLE_OP1(LLVMTagOffset, ::llvm::dwarf::DW_OP_LLVM_tag_offset, uint64_t, Tag)
+SEPARATOR
+HANDLE_OP1(LLVMEntryValue, ::llvm::dwarf::DW_OP_LLVM_entry_value, uint64_t, Ops)
+SEPARATOR
+HANDLE_OP0(LLVMImplicitPointer, ::llvm::dwarf::DW_OP_LLVM_implicit_pointer)
+SEPARATOR
+HANDLE_OP1(LLVMArg, ::llvm::dwarf::DW_OP_LLVM_arg, uint64_t, Index)
+SEPARATOR
+HANDLE_OP2(LLVMExtractBitsSExt, ::llvm::dwarf::DW_OP_LLVM_extract_bits_sext, uint32_t, OffsetInBits, uint32_t, SizeInBits)
+SEPARATOR
+HANDLE_OP2(LLVMExtractBitsZExt, ::llvm::dwarf::DW_OP_LLVM_extract_bits_zext, uint32_t, OffsetInBits, uint32_t, SizeInBits)
+
+#undef SEPARATOR
+#undef HANDLE_OP2
+#undef HANDLE_OP1
+#undef HANDLE_OP0
+#undef HANDLE_OP

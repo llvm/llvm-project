@@ -42,6 +42,7 @@
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoExprs.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -2011,15 +2012,17 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   // The address component of a dbg.assign cannot be variadic.
   uint64_t CurrentLocOps = 0;
   SmallVector<Value *, 4> AdditionalValues;
-  SmallVector<uint64_t, 16> Ops;
-  Value *NewV = salvageDebugInfoImpl(*I, CurrentLocOps, Ops, AdditionalValues);
+  DIExprBuf OpsToAppend;
+  Value *NewV =
+      salvageDebugInfoImpl(*I, CurrentLocOps, OpsToAppend, AdditionalValues);
 
   // Check if the salvage failed.
   if (!NewV)
     return;
 
-  DIExpression *SalvagedExpr = DIExpression::appendOpsToArg(
-      Assign->getAddressExpression(), Ops, 0, /*StackValue=*/false);
+  DIExprBuf DIBuf(Assign->getAddressExpression());
+  DIExpression *SalvagedExpr =
+      DIBuf.appendOpsToArg(OpsToAppend.asRef(), 0, false).toExpr();
   assert(!SalvagedExpr->getFragmentInfo().has_value() &&
          "address-expression shouldn't have fragment info");
 
@@ -2042,6 +2045,9 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
   const unsigned MaxDebugArgs = 16;
   const unsigned MaxExpressionSize = 128;
   bool Salvaged = false;
+
+  DIExprBuf DIBuf;
+  DIExprBuf OpsToAppend;
 
   for (auto *DVR : DPUsers) {
     if (DVR->isDbgAssign()) {
@@ -2068,17 +2074,20 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
     // values added; thus we call salvageDebugInfoImpl for each 'I' instance in
     // DVRLocation.
     Value *Op0 = nullptr;
-    DIExpression *SalvagedExpr = DVR->getExpression();
+    DIExpression *OriginalExpr = DVR->getExpression();
+    if (!OriginalExpr)
+      break;
+    DIBuf.assign(OriginalExpr);
     auto LocItr = find(DVRLocation, &I);
-    while (SalvagedExpr && LocItr != DVRLocation.end()) {
-      SmallVector<uint64_t, 16> Ops;
+    while (LocItr != DVRLocation.end()) {
       unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);
-      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
+      uint64_t CurrentLocOps = DIBuf.asRef().getNumLocationOperands();
+      OpsToAppend.clear();
+      Op0 =
+          salvageDebugInfoImpl(I, CurrentLocOps, OpsToAppend, AdditionalValues);
       if (!Op0)
         break;
-      SalvagedExpr =
-          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
+      DIBuf.appendOpsToArg(OpsToAppend.asRef(), LocNo, StackValue);
       LocItr = std::find(++LocItr, DVRLocation.end(), &I);
     }
     // salvageDebugInfoImpl should fail on examining the first element of
@@ -2086,6 +2095,7 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
     if (!Op0)
       break;
 
+    DIExpression *SalvagedExpr = DIBuf.toExpr();
     SalvagedExpr = SalvagedExpr->foldConstantMath();
     DVR->replaceVariableLocationOp(&I, Op0);
     bool IsValidSalvageExpr =
@@ -2115,9 +2125,38 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
     DVR->setKillLocation();
 }
 
+Value *getSalvageOpsForCast(CastInst *CI, const DataLayout &DL,
+                            uint64_t &CurrentLocOps, DIExprBuf &OpsToAppend,
+                            SmallVectorImpl<Value *> &AdditionalValues) {
+  Value *FromValue = CI->getOperand(0);
+  // No-op casts are irrelevant for debug info.
+  if (CI->isNoopCast(DL)) {
+    return FromValue;
+  }
+
+  Type *Type = CI->getType();
+  if (Type->isPointerTy())
+    Type = DL.getIntPtrType(Type);
+  // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
+  if (Type->isVectorTy() ||
+      !(isa<TruncInst>(CI) || isa<SExtInst>(CI) || isa<ZExtInst>(CI) ||
+        isa<IntToPtrInst>(CI) || isa<PtrToIntInst>(CI)))
+    return nullptr;
+
+  llvm::Type *FromType = FromValue->getType();
+  if (FromType->isPointerTy())
+    FromType = DL.getIntPtrType(FromType);
+
+  unsigned FromTypeBitSize = FromType->getScalarSizeInBits();
+  unsigned ToTypeBitSize = Type->getScalarSizeInBits();
+
+  OpsToAppend.appendRaw(
+      DIExprRef::getExtOps(FromTypeBitSize, ToTypeBitSize, isa<SExtInst>(CI)));
+  return FromValue;
+}
+
 Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
-                           uint64_t CurrentLocOps,
-                           SmallVectorImpl<uint64_t> &Opcodes,
+                           uint64_t &CurrentLocOps, DIExprBuf &OpsToAppend,
                            SmallVectorImpl<Value *> &AdditionalValues) {
   unsigned BitWidth = DL.getIndexSizeInBits(GEP->getPointerAddressSpace());
   // Rewrite a GEP into a DIExpression.
@@ -2126,65 +2165,65 @@ Value *getSalvageOpsForGEP(GetElementPtrInst *GEP, const DataLayout &DL,
   if (!GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset))
     return nullptr;
   if (!VariableOffsets.empty() && !CurrentLocOps) {
-    Opcodes.insert(Opcodes.begin(), {dwarf::DW_OP_LLVM_arg, 0});
+    OpsToAppend.convertToVariadicExpressionUnchecked();
     CurrentLocOps = 1;
   }
   for (const auto &Offset : VariableOffsets) {
     AdditionalValues.push_back(Offset.first);
     assert(Offset.second.isStrictlyPositive() &&
            "Expected strictly positive multiplier for offset.");
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps++, dwarf::DW_OP_constu,
-                    Offset.second.getZExtValue(), dwarf::DW_OP_mul,
-                    dwarf::DW_OP_plus});
+    OpsToAppend.appendRaw({DIOp::LLVMArg(CurrentLocOps++),
+                           DIOp::ConstU(Offset.second.getZExtValue()),
+                           DIOp::Mul(), DIOp::Plus()});
   }
-  DIExpression::appendOffset(Opcodes, ConstantOffset.getSExtValue());
+  OpsToAppend.appendOffset(ConstantOffset.getSExtValue());
   return GEP->getOperand(0);
 }
 
-uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
+std::optional<DIOp::Op> getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
   switch (Opcode) {
   case Instruction::Add:
-    return dwarf::DW_OP_plus;
+    return DIOp::Plus();
   case Instruction::Sub:
-    return dwarf::DW_OP_minus;
+    return DIOp::Minus();
   case Instruction::Mul:
-    return dwarf::DW_OP_mul;
+    return DIOp::Mul();
   case Instruction::SDiv:
-    return dwarf::DW_OP_div;
+    return DIOp::Div();
   case Instruction::SRem:
-    return dwarf::DW_OP_mod;
+    return DIOp::Mod();
   case Instruction::Or:
-    return dwarf::DW_OP_or;
+    return DIOp::Or();
   case Instruction::And:
-    return dwarf::DW_OP_and;
+    return DIOp::And();
   case Instruction::Xor:
-    return dwarf::DW_OP_xor;
+    return DIOp::Xor();
   case Instruction::Shl:
-    return dwarf::DW_OP_shl;
+    return DIOp::Shl();
   case Instruction::LShr:
-    return dwarf::DW_OP_shr;
+    return DIOp::Shr();
   case Instruction::AShr:
-    return dwarf::DW_OP_shra;
+    return DIOp::Shra();
   default:
     // TODO: Salvage from each kind of binop we know about.
-    return 0;
+    return std::nullopt;
   }
 }
 
-static void handleSSAValueOperands(uint64_t CurrentLocOps,
-                                   SmallVectorImpl<uint64_t> &Opcodes,
+static void handleSSAValueOperands(uint64_t &CurrentLocOps,
+                                   DIExprBuf &OpsToAppend,
                                    SmallVectorImpl<Value *> &AdditionalValues,
                                    Instruction *I) {
   if (!CurrentLocOps) {
-    Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
+    OpsToAppend.convertToVariadicExpression();
     CurrentLocOps = 1;
   }
-  Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
+  OpsToAppend.appendRaw({DIOp::LLVMArg(CurrentLocOps++)});
   AdditionalValues.push_back(I->getOperand(1));
 }
 
-Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
-                             SmallVectorImpl<uint64_t> &Opcodes,
+Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t &CurrentLocOps,
+                             DIExprBuf &OpsToAppend,
                              SmallVectorImpl<Value *> &AdditionalValues) {
   // Handle binary operations with constant integer operands as a special case.
   auto *ConstInt = dyn_cast<ConstantInt>(BI->getOperand(1));
@@ -2200,50 +2239,50 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     // simplified.
     if (BinOpcode == Instruction::Add || BinOpcode == Instruction::Sub) {
       uint64_t Offset = BinOpcode == Instruction::Add ? Val : -int64_t(Val);
-      DIExpression::appendOffset(Opcodes, Offset);
+      OpsToAppend.appendOffset(Offset);
       return BI->getOperand(0);
     }
-    Opcodes.append({dwarf::DW_OP_constu, Val});
+    OpsToAppend.appendRaw({DIOp::ConstU(Val)});
   } else {
-    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, BI);
+    handleSSAValueOperands(CurrentLocOps, OpsToAppend, AdditionalValues, BI);
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
   // representation in a DIExpression.
-  uint64_t DwarfBinOp = getDwarfOpForBinOp(BinOpcode);
-  if (!DwarfBinOp)
-    return nullptr;
-  Opcodes.push_back(DwarfBinOp);
-  return BI->getOperand(0);
+  if (std::optional<DIOp::Op> DwarfBinOp = getDwarfOpForBinOp(BinOpcode)) {
+    OpsToAppend.appendRaw({*DwarfBinOp});
+    return BI->getOperand(0);
+  }
+  return nullptr;
 }
 
-uint64_t getDwarfOpForIcmpPred(CmpInst::Predicate Pred) {
+std::optional<DIOp::Op> getDwarfOpForIcmpPred(CmpInst::Predicate Pred) {
   // The signedness of the operation is implicit in the typed stack, signed and
   // unsigned instructions map to the same DWARF opcode.
   switch (Pred) {
   case CmpInst::ICMP_EQ:
-    return dwarf::DW_OP_eq;
+    return DIOp::Eq();
   case CmpInst::ICMP_NE:
-    return dwarf::DW_OP_ne;
+    return DIOp::Ne();
   case CmpInst::ICMP_UGT:
   case CmpInst::ICMP_SGT:
-    return dwarf::DW_OP_gt;
+    return DIOp::Gt();
   case CmpInst::ICMP_UGE:
   case CmpInst::ICMP_SGE:
-    return dwarf::DW_OP_ge;
+    return DIOp::Ge();
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_SLT:
-    return dwarf::DW_OP_lt;
+    return DIOp::Lt();
   case CmpInst::ICMP_ULE:
   case CmpInst::ICMP_SLE:
-    return dwarf::DW_OP_le;
+    return DIOp::Le();
   default:
-    return 0;
+    return std::nullopt;
   }
 }
 
-Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
-                              SmallVectorImpl<uint64_t> &Opcodes,
+Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t &CurrentLocOps,
+                              DIExprBuf &OpsToAppend,
                               SmallVectorImpl<Value *> &AdditionalValues) {
   // Handle icmp operations with constant integer operands as a special case.
   auto *ConstInt = dyn_cast<ConstantInt>(Icmp->getOperand(1));
@@ -2252,66 +2291,42 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
     return nullptr;
   // Push any Constant Int operand onto the expression stack.
   if (ConstInt) {
-    if (Icmp->isSigned())
-      Opcodes.push_back(dwarf::DW_OP_consts);
-    else
-      Opcodes.push_back(dwarf::DW_OP_constu);
-    uint64_t Val = ConstInt->getSExtValue();
-    Opcodes.push_back(Val);
+    OpsToAppend.appendConstant(Icmp->isSigned()
+                                   ? SignedOrUnsignedConstant::SignedConstant
+                                   : SignedOrUnsignedConstant::UnsignedConstant,
+                               ConstInt->getSExtValue());
   } else {
-    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, Icmp);
+    handleSSAValueOperands(CurrentLocOps, OpsToAppend, AdditionalValues, Icmp);
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
   // representation in a DIExpression.
-  uint64_t DwarfIcmpOp = getDwarfOpForIcmpPred(Icmp->getPredicate());
-  if (!DwarfIcmpOp)
-    return nullptr;
-  Opcodes.push_back(DwarfIcmpOp);
-  return Icmp->getOperand(0);
+  if (std::optional<DIOp::Op> DwarfIcmpOp =
+          getDwarfOpForIcmpPred(Icmp->getPredicate())) {
+    OpsToAppend.appendRaw({*DwarfIcmpOp});
+    return Icmp->getOperand(0);
+  }
+  return nullptr;
 }
 
-Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
-                                  SmallVectorImpl<uint64_t> &Ops,
+Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t &CurrentLocOps,
+                                  DIExprBuf &OpsToAppend,
                                   SmallVectorImpl<Value *> &AdditionalValues) {
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
 
-  if (auto *CI = dyn_cast<CastInst>(&I)) {
-    Value *FromValue = CI->getOperand(0);
-    // No-op casts are irrelevant for debug info.
-    if (CI->isNoopCast(DL)) {
-      return FromValue;
-    }
-
-    Type *Type = CI->getType();
-    if (Type->isPointerTy())
-      Type = DL.getIntPtrType(Type);
-    // Casts other than Trunc, SExt, or ZExt to scalar types cannot be salvaged.
-    if (Type->isVectorTy() ||
-        !(isa<TruncInst>(&I) || isa<SExtInst>(&I) || isa<ZExtInst>(&I) ||
-          isa<IntToPtrInst>(&I) || isa<PtrToIntInst>(&I)))
-      return nullptr;
-
-    llvm::Type *FromType = FromValue->getType();
-    if (FromType->isPointerTy())
-      FromType = DL.getIntPtrType(FromType);
-
-    unsigned FromTypeBitSize = FromType->getScalarSizeInBits();
-    unsigned ToTypeBitSize = Type->getScalarSizeInBits();
-
-    auto ExtOps = DIExpression::getExtOps(FromTypeBitSize, ToTypeBitSize,
-                                          isa<SExtInst>(&I));
-    Ops.append(ExtOps.begin(), ExtOps.end());
-    return FromValue;
-  }
-
+  if (auto *CI = dyn_cast<CastInst>(&I))
+    return getSalvageOpsForCast(CI, DL, CurrentLocOps, OpsToAppend,
+                                AdditionalValues);
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
-    return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, Ops, AdditionalValues);
+    return getSalvageOpsForGEP(GEP, DL, CurrentLocOps, OpsToAppend,
+                               AdditionalValues);
   if (auto *BI = dyn_cast<BinaryOperator>(&I))
-    return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
+    return getSalvageOpsForBinOp(BI, CurrentLocOps, OpsToAppend,
+                                 AdditionalValues);
   if (auto *IC = dyn_cast<ICmpInst>(&I))
-    return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
+    return getSalvageOpsForIcmpOp(IC, CurrentLocOps, OpsToAppend,
+                                  AdditionalValues);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
