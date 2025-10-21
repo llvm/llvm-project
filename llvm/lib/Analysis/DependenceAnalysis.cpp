@@ -122,11 +122,49 @@ static cl::opt<unsigned> MIVMaxLevelThreshold(
     cl::desc("Maximum depth allowed for the recursive algorithm used to "
              "explore MIV direction vectors."));
 
-static cl::opt<bool> RunSIVRoutinesOnly(
-    "da-run-siv-routines-only", cl::init(false), cl::ReallyHidden,
-    cl::desc("Run only SIV routines and disable others (ZIV, RDIV, and MIV). "
-             "The purpose is mainly to exclude the influence of those routines "
-             "in regression tests for SIV routines."));
+namespace {
+
+/// Types of dependence test routines.
+enum class DependenceTestType {
+  All,
+  StrongSIV,
+  WeakCrossingSIV,
+  ExactSIV,
+  WeakZeroSIV,
+  ExactRDIV,
+  SymbolicRDIV,
+  GCDMIV,
+  BanerjeeMIV,
+};
+
+} // anonymous namespace
+
+static cl::opt<DependenceTestType> EnableDependenceTest(
+    "da-enable-dependence-test", cl::init(DependenceTestType::All),
+    cl::ReallyHidden,
+    cl::desc("Run only specified dependence test routine and disable others. "
+             "The purpose is mainly to exclude the influence of other "
+             "dependence test routines in regression tests. If set to All, all "
+             "dependence test routines are enabled."),
+    cl::values(clEnumValN(DependenceTestType::All, "all",
+                          "Enable all dependence test routines."),
+               clEnumValN(DependenceTestType::StrongSIV, "strong-siv",
+                          "Enable only Strong SIV test."),
+               clEnumValN(DependenceTestType::WeakCrossingSIV,
+                          "weak-crossing-siv",
+                          "Enable only Weak-Crossing SIV test."),
+               clEnumValN(DependenceTestType::ExactSIV, "exact-siv",
+                          "Enable only Exact SIV test."),
+               clEnumValN(DependenceTestType::WeakZeroSIV, "weak-zero-siv",
+                          "Enable only Weak-Zero SIV test."),
+               clEnumValN(DependenceTestType::ExactRDIV, "exact-rdiv",
+                          "Enable only Exact RDIV test."),
+               clEnumValN(DependenceTestType::SymbolicRDIV, "symbolic-rdiv",
+                          "Enable only Symbolic RDIV test."),
+               clEnumValN(DependenceTestType::GCDMIV, "gcd-miv",
+                          "Enable only GCD MIV test."),
+               clEnumValN(DependenceTestType::BanerjeeMIV, "banerjee-miv",
+                          "Enable only Banerjee MIV test.")));
 
 // TODO: This flag is disabled by default because it is still under development.
 // Enable it or delete this flag when the feature is ready.
@@ -1544,6 +1582,13 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
+/// Returns true iff \p Test is enabled.
+static bool isDependenceTestEnabled(DependenceTestType Test) {
+  if (EnableDependenceTest == DependenceTestType::All)
+    return true;
+  return EnableDependenceTest == Test;
+}
+
 // testZIV -
 // When we have a pair of subscripts of the form [c1] and [c2],
 // where c1 and c2 are both loop invariant, we attack it using
@@ -1605,6 +1650,9 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
                                    const Loop *CurDstLoop, unsigned Level,
                                    FullDependence &Result,
                                    Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::StrongSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tStrong SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff);
   LLVM_DEBUG(dbgs() << ", " << *Coeff->getType() << "\n");
@@ -1739,6 +1787,9 @@ bool DependenceInfo::weakCrossingSIVtest(
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint,
     const SCEV *&SplitIter) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakCrossingSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tWeak-Crossing SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    Coeff = " << *Coeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1997,6 +2048,9 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                   const Loop *CurDstLoop, unsigned Level,
                                   FullDependence &Result,
                                   Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::ExactSIV))
+    return false;
+
   LLVM_DEBUG(dbgs() << "\tExact SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -2176,6 +2230,9 @@ bool DependenceInfo::weakZeroSrcSIVtest(
     const SCEV *DstCoeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+    return false;
+
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
@@ -2284,6 +2341,9 @@ bool DependenceInfo::weakZeroDstSIVtest(
     const SCEV *SrcCoeff, const SCEV *SrcConst, const SCEV *DstConst,
     const Loop *CurSrcLoop, const Loop *CurDstLoop, unsigned Level,
     FullDependence &Result, Constraint &NewConstraint) const {
+  if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
+    return false;
+
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
@@ -2367,8 +2427,9 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
                                    const SCEV *SrcConst, const SCEV *DstConst,
                                    const Loop *SrcLoop, const Loop *DstLoop,
                                    FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::ExactRDIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "\tExact RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << " = AM\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << " = BM\n");
@@ -2513,8 +2574,9 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
                                       const SCEV *C1, const SCEV *C2,
                                       const Loop *Loop1,
                                       const Loop *Loop2) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::SymbolicRDIV))
     return false;
+
   ++SymbolicRDIVapplications;
   LLVM_DEBUG(dbgs() << "\ttry symbolic RDIV test\n");
   LLVM_DEBUG(dbgs() << "\t    A1 = " << *A1);
@@ -2828,8 +2890,9 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
 // to "a common divisor".
 bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
                                 FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::GCDMIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "starting gcd\n");
   ++GCDapplications;
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
@@ -2996,8 +3059,9 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
 bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
                                      const SmallBitVector &Loops,
                                      FullDependence &Result) const {
-  if (RunSIVRoutinesOnly)
+  if (!isDependenceTestEnabled(DependenceTestType::BanerjeeMIV))
     return false;
+
   LLVM_DEBUG(dbgs() << "starting Banerjee\n");
   ++BanerjeeApplications;
   LLVM_DEBUG(dbgs() << "    Src = " << *Src << '\n');

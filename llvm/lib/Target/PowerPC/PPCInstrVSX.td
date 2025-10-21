@@ -2786,14 +2786,16 @@ def : Pat<(v2f64 (any_frint v2f64:$S)), (v2f64 (XVRDPIC $S))>;
 // Rounding without exceptions (nearbyint). Due to strange tblgen behaviour,
 // these need to be defined after the any_frint versions so ISEL will correctly
 // add the chain to the strict versions.
-def : Pat<(f32 (fnearbyint f32:$S)),
+// TODO: Match strict fp rounding intrinsics with instructions like xsrdpiz when
+// rounding mode is propagated to CodeGen part.
+def : Pat<(f32 (strict_fnearbyint f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIC
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
-def : Pat<(f64 (fnearbyint f64:$S)),
+def : Pat<(f64 (strict_fnearbyint f64:$S)),
           (f64 (XSRDPIC $S))>;
-def : Pat<(v2f64 (fnearbyint v2f64:$S)),
+def : Pat<(v2f64 (strict_fnearbyint v2f64:$S)),
           (v2f64 (XVRDPIC $S))>;
-def : Pat<(v4f32 (fnearbyint v4f32:$S)),
+def : Pat<(v4f32 (strict_fnearbyint v4f32:$S)),
           (v4f32 (XVRSPIC $S))>;
 
 // Materialize a zero-vector of long long
@@ -3578,25 +3580,25 @@ def : Pat<(f64 (bitconvert i64:$S)),
           (f64 (MTVSRD $S))>;
 
 // Rounding to integer.
-def : Pat<(i64 (lrint f64:$S)),
+def : Pat<(i64 (strict_lrint f64:$S)),
           (i64 (MFVSRD (FCTID $S)))>;
-def : Pat<(i64 (lrint f32:$S)),
+def : Pat<(i64 (strict_lrint f32:$S)),
           (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
-def : Pat<(i64 (llrint f64:$S)),
+def : Pat<(i64 (strict_llrint f64:$S)),
           (i64 (MFVSRD (FCTID $S)))>;
-def : Pat<(i64 (llrint f32:$S)),
+def : Pat<(i64 (strict_llrint f32:$S)),
           (i64 (MFVSRD (FCTID (COPY_TO_REGCLASS $S, F8RC))))>;
-def : Pat<(i64 (lround f64:$S)),
+def : Pat<(i64 (strict_lround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
-def : Pat<(i64 (lround f32:$S)),
+def : Pat<(i64 (strict_lround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
-def : Pat<(i32 (lround f64:$S)),
+def : Pat<(i32 (strict_lround f64:$S)),
           (i32 (MFVSRWZ (FCTIW (XSRDPI $S))))>;
-def : Pat<(i32 (lround f32:$S)),
+def : Pat<(i32 (strict_lround f32:$S)),
           (i32 (MFVSRWZ (FCTIW (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
-def : Pat<(i64 (llround f64:$S)),
+def : Pat<(i64 (strict_llround f64:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI $S))))>;
-def : Pat<(i64 (llround f32:$S)),
+def : Pat<(i64 (strict_llround f32:$S)),
           (i64 (MFVSRD (FCTID (XSRDPI (COPY_TO_REGCLASS $S, VSFRC)))))>;
 
 // Alternate patterns for PPCmtvsrz where the output is v8i16 or v16i8 instead
