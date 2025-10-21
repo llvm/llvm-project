@@ -21,7 +21,7 @@ using namespace testing;
 class DAPTest : public TransportBase {};
 
 TEST_F(DAPTest, SendProtocolMessages) {
-  dap->Send(Event{0, /*event=*/"my-event", /*body=*/std::nullopt});
+  dap->Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
   EXPECT_CALL(client, Received(IsEvent("my-event")));
   Run();
 }
