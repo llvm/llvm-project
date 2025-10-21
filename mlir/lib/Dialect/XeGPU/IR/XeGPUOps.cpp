@@ -128,29 +128,12 @@ isValidNdOffset(TypedValue<TensorDescType> tDesc,
                 std::optional<llvm::ArrayRef<int64_t>> constOffsets,
                 int64_t offsetSize,
                 function_ref<InFlightDiagnostic()> emitError) {
-  if (auto createTDescOp = tDesc.getDefiningOp<CreateNdDescOp>()) {
-    // If CreateNdDescOp is available, we can further
-    // check the offsets rank against the source rank.
-    auto staticSource = createTDescOp.getConstShapeAttr();
-    int64_t sourceRank;
-    if (!staticSource || staticSource.empty()) {
-      auto sourceTy = dyn_cast<MemRefType>(createTDescOp.getSourceType());
-      sourceRank = sourceTy.getRank();
-    } else
-      sourceRank = staticSource.size();
-
-    int64_t constOffsetSize = constOffsets ? constOffsets->size() : 0;
-    auto tDescRank = tDesc.getType().getRank();
-    bool sourceRankMismatch =
-        ((offsetSize != 0) && (offsetSize != sourceRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != sourceRank));
-    bool tdescRankMismatch =
-        ((offsetSize != 0) && (offsetSize != tDescRank)) ||
-        ((constOffsetSize != 0) && (constOffsetSize != tDescRank));
-    if (sourceRankMismatch && tdescRankMismatch)
-      return emitError() << "Offsets rank must match either the source or the "
-                            "TensorDesc rank.";
-  }
+  int64_t constOffsetSize = constOffsets ? constOffsets->size() : 0;
+  auto tDescRank = tDesc.getType().getRank();
+  if (((offsetSize != 0) && (offsetSize < tDescRank)) ||
+      ((constOffsetSize != 0) && (constOffsetSize < tDescRank)))
+    return emitError() << "Offsets rank cannot be smaller than tensor "
+                          "descriptor rank.";
   return success();
 }
 
