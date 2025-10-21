@@ -840,7 +840,9 @@ struct BBAddrMap {
       return FuncEntryCount || BBFreq || BrProb || PropellerCFG;
     }
 
-    bool hasPGOAnalysisBBData() const { return BBFreq || BrProb || PropellerCFG; }
+    bool hasPGOAnalysisBBData() const {
+      return BBFreq || BrProb || PropellerCFG;
+    }
 
     // Encodes to minimum bit width representation.
     uint16_t encode() const {
