@@ -746,13 +746,12 @@ VPRegionBlock *VPRegionBlock::clone() {
   VPRegionBlock *NewRegion =
       isReplicator()
           ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
-          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+          : Plan.createLoopRegion(CanIVInfo->getType(),
+                                  CanIVInfo->getDebugLoc(), getName(), NewEntry,
+                                  NewExiting);
 
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
-
-  if (CanIVInfo)
-    NewRegion->CanIVInfo = CanIVInfo->clone();
 
   return NewRegion;
 }
