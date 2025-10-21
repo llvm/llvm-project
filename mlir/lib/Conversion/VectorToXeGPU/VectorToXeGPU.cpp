@@ -105,9 +105,9 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
-  if (srcTy.hasStaticShape())
+  if (srcTy.hasStaticShape()) {
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src);
-  else {
+  } else {
     // In case of any dynamic shapes, source's shape and strides have to be
     // explicitly provided.
     SmallVector<Value> sourceDims;
@@ -123,21 +123,8 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
         mixedShapes.push_back(rewriter.getI64IntegerAttr(shape));
     }
 
-    // Compute strides in reverse order.
-    SmallVector<OpFoldResult> mixedStrides;
-    Value accStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    // Last stride is guaranteed to be static and unit.
-    mixedStrides.push_back(rewriter.getI64IntegerAttr(1));
-    for (int i = static_cast<int>(strides.size()) - 2; i >= 0; --i) {
-      accStride =
-          arith::MulIOp::create(rewriter, loc, accStride, sourceDims[i + 1]);
-      if (strides[i] == ShapedType::kDynamic)
-        mixedStrides.push_back(accStride);
-      else
-        mixedStrides.push_back(rewriter.getI64IntegerAttr(strides[i]));
-    }
-    std::reverse(mixedStrides.begin(), mixedStrides.end());
-
+    auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
+    SmallVector<OpFoldResult> mixedStrides(meta.getStrides().begin(), meta.getStrides().end());
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
                                            mixedShapes, mixedStrides);
   }
