@@ -18,6 +18,7 @@
 #include "kmp_config.h"
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+.att_syntax
 
 # if defined(__ELF__) && defined(__CET__) && defined(__has_include)
 # if __has_include(<cet.h>)

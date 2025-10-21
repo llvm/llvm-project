@@ -337,4 +337,8 @@
 #endif
 #endif
 
+#if defined(__i386__) || defined(__amd64__)
+.att_syntax
+#endif
+
 #endif // COMPILERRT_ASSEMBLY_H
