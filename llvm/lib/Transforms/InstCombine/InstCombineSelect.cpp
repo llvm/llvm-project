@@ -3455,27 +3455,45 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select a, false, b -> select !a, b, false
   if (match(TrueVal, m_Specific(Zero))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    return SelectInst::Create(NotCond, FalseVal, Zero);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, MDFrom);
+    NewSI->swapProfMetadata();
+    return NewSI;
   }
   // select a, b, true -> select !a, true, b
   if (match(FalseVal, m_Specific(One))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
-    return SelectInst::Create(NotCond, One, TrueVal);
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, MDFrom);
+    NewSI->swapProfMetadata();
+    return NewSI;
   }
 
   // DeMorgan in select form: !a && !b --> !(a || b)
   // select !a, !b, false --> not (select a, true, b)
   if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || TrueVal->hasOneUse()) &&
-      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr()))
-    return BinaryOperator::CreateNot(Builder.CreateSelect(A, One, B));
+      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", MDFrom));
+    NewSI->swapProfMetadata();
+    return BinaryOperator::CreateNot(NewSI);
+  }
 
   // DeMorgan in select form: !a || !b --> !(a && b)
   // select !a, true, !b --> not (select a, b, false)
   if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || FalseVal->hasOneUse()) &&
-      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr()))
-    return BinaryOperator::CreateNot(Builder.CreateSelect(A, B, Zero));
+      !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
+    SelectInst *NewSI =
+        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", MDFrom));
+    NewSI->swapProfMetadata();
+    return BinaryOperator::CreateNot(NewSI);
+  }
 
   // select (select a, true, b), true, b -> select a, true, b
   if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&

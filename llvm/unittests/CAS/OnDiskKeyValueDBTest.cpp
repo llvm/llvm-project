@@ -33,13 +33,13 @@ TEST_F(OnDiskCASTest, OnDiskKeyValueDBTest) {
   }
 
   ValueType ValW = valueFromString("world");
-  ArrayRef<char> Val;
+  std::optional<ArrayRef<char>> Val;
   ASSERT_THAT_ERROR(DB->put(digest("hello"), ValW).moveInto(Val), Succeeded());
-  EXPECT_EQ(Val, ArrayRef(ValW));
+  EXPECT_EQ(*Val, ArrayRef(ValW));
   ASSERT_THAT_ERROR(
       DB->put(digest("hello"), valueFromString("other")).moveInto(Val),
       Succeeded());
-  EXPECT_EQ(Val, ArrayRef(ValW));
+  EXPECT_EQ(*Val, ArrayRef(ValW));
 
   {
     std::optional<ArrayRef<char>> Val;
