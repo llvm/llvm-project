@@ -423,40 +423,37 @@ public:
 
   // Command queues related functions
   /// Create a command list with given ordinal and flags
-  Expected<ze_command_list_handle_t> createCmdList(ze_context_handle_t Context,
-                                         ze_device_handle_t Device,
-                                         uint32_t Ordinal,
-                                         ze_command_list_flags_t Flags,
-                                         const std::string_view DeviceIdStr);
+  Expected<ze_command_list_handle_t>
+  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
+                uint32_t Ordinal, ze_command_list_flags_t Flags,
+                const std::string_view DeviceIdStr);
 
   /// Create a command list with default flags
-  Expected<ze_command_list_handle_t> createCmdList(ze_context_handle_t Context,
-                                         ze_device_handle_t Device,
-                                         uint32_t Ordinal,
-                                         const std::string_view DeviceIdStr);
+  Expected<ze_command_list_handle_t>
+  createCmdList(ze_context_handle_t Context, ze_device_handle_t Device,
+                uint32_t Ordinal, const std::string_view DeviceIdStr);
 
   Expected<ze_command_list_handle_t> getCmdList();
 
   /// Create a command queue with given ordinal and flags
-  Expected<ze_command_queue_handle_t> createCmdQueue(ze_context_handle_t Context,
-                                           ze_device_handle_t Device,
-                                           uint32_t Ordinal, uint32_t Index,
-                                           ze_command_queue_flags_t Flags,
-                                           const std::string_view DeviceIdStr);
+  Expected<ze_command_queue_handle_t>
+  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
+                 uint32_t Ordinal, uint32_t Index,
+                 ze_command_queue_flags_t Flags,
+                 const std::string_view DeviceIdStr);
 
   /// Create a command queue with default flags
-  Expected<ze_command_queue_handle_t> createCmdQueue(ze_context_handle_t Context,
-                                           ze_device_handle_t Device,
-                                           uint32_t Ordinal, uint32_t Index,
-                                           const std::string_view DeviceIdStr,
-                                           bool InOrder = false);
+  Expected<ze_command_queue_handle_t>
+  createCmdQueue(ze_context_handle_t Context, ze_device_handle_t Device,
+                 uint32_t Ordinal, uint32_t Index,
+                 const std::string_view DeviceIdStr, bool InOrder = false);
 
   /// Create a new command queue for the given OpenMP device ID
   Expected<ze_command_queue_handle_t> createCommandQueue(bool InOrder = false);
 
   /// Create an immediate command list
-  Expected<ze_command_list_handle_t> createImmCmdList(uint32_t Ordinal, uint32_t Index,
-                                            bool InOrder = false);
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
 
   /// Create an immediate command list for computing
   Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
