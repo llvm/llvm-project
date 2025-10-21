@@ -3765,6 +3765,8 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
   case ISD::FP_TO_UINT:
   case ISD::LRINT:
   case ISD::LLRINT:
+  case ISD::LROUND:
+  case ISD::LLROUND:
     Res = SoftPromoteHalfOp_Op0WithStrict(N);
     break;
   case ISD::FP_TO_SINT_SAT:

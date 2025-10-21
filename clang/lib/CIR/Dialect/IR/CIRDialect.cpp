@@ -2941,6 +2941,21 @@ mlir::LogicalResult cir::ThrowOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicFetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicFetchOp::verify() {
+  if (getBinop() != cir::AtomicFetchKind::Add &&
+      getBinop() != cir::AtomicFetchKind::Sub &&
+      getBinop() != cir::AtomicFetchKind::Max &&
+      getBinop() != cir::AtomicFetchKind::Min &&
+      !mlir::isa<cir::IntType>(getVal().getType()))
+    return emitError("only atomic add, sub, max, and min operation could "
+                     "operate on floating-point values");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 

@@ -4457,6 +4457,79 @@ def CIR_TryOp : CIR_Op<"try",[
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AtomicFetchKind : CIR_I32EnumAttr<
+  "AtomicFetchKind", "Binary opcode for atomic fetch-and-update operations", [
+    I32EnumAttrCase<"Add", 0, "add">,
+    I32EnumAttrCase<"Sub", 1, "sub">,
+    I32EnumAttrCase<"And", 2, "and">,
+    I32EnumAttrCase<"Xor", 3, "xor">,
+    I32EnumAttrCase<"Or", 4, "or">,
+    I32EnumAttrCase<"Nand", 5, "nand">,
+    I32EnumAttrCase<"Max", 6, "max">,
+    I32EnumAttrCase<"Min", 7, "min">
+]>;
+
+def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
+  AllTypesMatch<["result", "val"]>,
+  TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
+    "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Atomic fetch-and-update operation";
+  let description = [{
+    C/C++ atomic fetch-and-update operation. This operation implements the C/C++
+    builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
+    `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+
+    This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
+    type of `val` must match the pointee type of `ptr`. If the binary operation
+    is `add`, `sub`, `max`, or `min`, the type of `val` may either be an integer
+    type or a floating-point type. Otherwise, `val` must be an integer.
+
+    This operation atomically loads the value from `ptr`, performs the binary
+    operation as indicated by `binop` on the loaded value and `val`, and stores
+    the result back to `ptr`. If the `fetch_first` flag is present, the result
+    of this operation is the old value loaded from `ptr` before the binary
+    operation. Otherwise, the result of this operation is the result of the
+    binary operation.
+
+    Example:
+    %res = cir.atomic.fetch add seq_cst %ptr, %val
+        : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  }];
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins
+    Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyIntOrFloatType:$val,
+    CIR_AtomicFetchKind:$binop,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    UnitAttr:$is_volatile,
+    UnitAttr:$fetch_first
+  );
+
+  let assemblyFormat = [{
+    $binop $mem_order
+    (`fetch_first` $fetch_first^)?
+    $ptr `,` $val
+    (`volatile` $is_volatile^)?
+    `:` `(` qualified(type($ptr)) `,` qualified(type($val)) `)`
+    `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::Value buildPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                            mlir::ConversionPatternRewriter &rewriter,
+                            mlir::Value rmwVal, bool isInt) const;
+
+    mlir::Value buildMinMaxPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Value rmwVal, bool isInt,
+                                  bool isSigned) const;
+  }];
+}
+
 def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   AllTypesMatch<["result", "val"]>,
   TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",

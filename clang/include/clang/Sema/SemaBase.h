@@ -212,16 +212,13 @@ public:
   };
 
   /// Emit a diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID,
-                             bool DeferHint = false);
+  SemaDiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID);
 
   /// Emit a partial diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD,
-                             bool DeferHint = false);
+  SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD);
 
   /// Emit a compatibility diagnostic.
-  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId,
-                                   bool DeferHint = false);
+  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId);
 
   /// Build a partial diagnostic.
   PartialDiagnostic PDiag(unsigned DiagID = 0);
