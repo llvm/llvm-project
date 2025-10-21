@@ -360,6 +360,43 @@ def TilingInterface : OpInterface<"TilingInterface"> {
         /*defaultImplementation=*/[{
           return failure();
         }]
+      >,
+      //===------------------------------------------------------------------===//
+      // Interface methods for querying fusability.
+      //===------------------------------------------------------------------===//
+      InterfaceMethod<
+        /*desc=*/[{
+          Indicates whether it is possible to fuse this operation with the given
+          result slice. This method is not allowed to generate any IR.
+        }],
+        /*retTy=*/"bool",
+        /*methodName=*/"isOpFusableWithConsumerSlice",
+        /*args=*/(ins
+          "unsigned":$resultNumber,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$offsets,
+          "::mlir::ArrayRef<::mlir::OpFoldResult>":$sizes
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Indicates whether it is possible to fuse this operation with the given
+          list of operand slices. This method is not allowed to generate any IR.
+        }],
+        /*retTy=*/"bool",
+        /*methodName=*/"isOpFusableWithProducerSlices",
+        /*args=*/(ins
+          "::mlir::ArrayRef<unsigned>":$operandNumbers,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allOffsets,
+          "::mlir::ArrayRef<::mlir::SmallVector<::mlir::OpFoldResult>>":$allSizes
+        ),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
       >
   ];
 }
