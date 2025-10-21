@@ -17462,9 +17462,9 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // fold (fsub (fpext (fneg (fmul, x, y))), z)
   //   -> (fneg (fma (fpext x), (fpext y), z))
   // Note: This could be removed with appropriate canonicalization of the
-  // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However, the
-  // orthogonal flags -fp-contract=fast and -enable-unsafe-fp-math prevent
-  // from implementing the canonicalization in visitFSUB.
+  // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However,
+  // -fp-contract=fast prevent from implementing the canonicalization
+  // in visitFSUB.
   if (matcher.match(N0, ISD::FP_EXTEND)) {
     SDValue N00 = N0.getOperand(0);
     if (matcher.match(N00, ISD::FNEG)) {
@@ -17486,9 +17486,9 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // fold (fsub (fneg (fpext (fmul, x, y))), z)
   //   -> (fneg (fma (fpext x)), (fpext y), z)
   // Note: This could be removed with appropriate canonicalization of the
-  // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However, the
-  // orthogonal flags -fp-contract=fast and -enable-unsafe-fp-math prevent
-  // from implementing the canonicalization in visitFSUB.
+  // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However,
+  // -fp-contract=fast prevent from implementing the canonicalization
+  // in visitFSUB.
   if (matcher.match(N0, ISD::FNEG)) {
     SDValue N00 = N0.getOperand(0);
     if (matcher.match(N00, ISD::FP_EXTEND)) {
