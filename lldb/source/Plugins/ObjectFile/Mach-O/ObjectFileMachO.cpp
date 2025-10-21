@@ -1674,6 +1674,10 @@ void ObjectFileMachO::ProcessSegmentCommand(
   uint32_t segment_sect_idx;
   const lldb::user_id_t first_segment_sectID = context.NextSectionIdx + 1;
 
+  // dSYM files can create sections whose data exceeds the 4GB barrier, but
+  // mach-o sections only have 32 bit offsets. So keep track of when we
+  // overflow and fix the sections offsets as we iterate.
+  uint64_t section_offset_adjust = 0;
   const uint32_t num_u32s = load_cmd.cmd == LC_SEGMENT ? 7 : 8;
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
        ++segment_sect_idx) {
@@ -1697,6 +1701,14 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // isn't stored in the abstracted Sections.
     m_mach_sections.push_back(sect64);
 
+    // Make sure we can load dSYM files whose __DWARF sections exceed the 4GB
+    // barrier. llvm::MachO::section_64 have only 32 bit file offsets for the
+    // section contents.
+    const uint64_t section_file_offset = sect64.offset + section_offset_adjust;
+    // If this section overflows a 4GB barrier, then we need to adjust any
+    // subsequent the section offsets.
+    if (is_dsym && ((uint64_t)sect64.offset + sect64.size) >= UINT32_MAX)
+      section_offset_adjust += 0x100000000ull;
     if (add_section) {
       ConstString section_name(
           sect64.sectname, strnlen(sect64.sectname, sizeof(sect64.sectname)));
@@ -1736,13 +1748,13 @@ void ObjectFileMachO::ProcessSegmentCommand(
           }
 
           // Grow the section size as needed.
-          if (sect64.offset) {
+          if (section_file_offset) {
             const lldb::addr_t segment_min_file_offset =
                 segment->GetFileOffset();
             const lldb::addr_t segment_max_file_offset =
                 segment_min_file_offset + segment->GetFileSize();
 
-            const lldb::addr_t section_min_file_offset = sect64.offset;
+            const lldb::addr_t section_min_file_offset = section_file_offset;
             const lldb::addr_t section_max_file_offset =
                 section_min_file_offset + sect64.size;
             const lldb::addr_t new_file_offset =
@@ -1770,9 +1782,9 @@ void ObjectFileMachO::ProcessSegmentCommand(
               sect64.addr, // File VM address == addresses as they are
               // found in the object file
               sect64.size,   // VM size in bytes of this section
-              sect64.offset, // Offset to the data for this section in
+              section_file_offset, // Offset to the data for this section in
               // the file
-              sect64.offset ? sect64.size : 0, // Size in bytes of
+              section_file_offset ? sect64.size : 0, // Size in bytes of
               // this section as
               // found in the file
               sect64.align,
@@ -1792,14 +1804,14 @@ void ObjectFileMachO::ProcessSegmentCommand(
       SectionSP section_sp(new Section(
           segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
           sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
-          sect64.offset, sect64.offset == 0 ? 0 : sect64.size, sect64.align,
-          sect64.flags));
+          section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
+          sect64.align, sect64.flags));
       // Set the section to be encrypted to match the segment
 
       bool section_is_encrypted = false;
       if (!segment_is_encrypted && load_cmd.filesize != 0)
         section_is_encrypted = context.EncryptedRanges.FindEntryThatContains(
-                                   sect64.offset) != nullptr;
+                                   section_file_offset) != nullptr;
 
       section_sp->SetIsEncrypted(segment_is_encrypted || section_is_encrypted);
       section_sp->SetPermissions(segment_permissions);
