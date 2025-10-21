@@ -85,8 +85,7 @@ CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
   if (!requiresArrayCookie(e))
     return CharUnits::Zero();
 
-  cgm.errorNYI(e->getSourceRange(), "CIRGenCXXABI::getArrayCookieSize");
-  return CharUnits::Zero();
+  return getArrayCookieSizeImpl(e->getAllocatedType());
 }
 
 bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
