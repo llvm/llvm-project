@@ -57,24 +57,25 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
   SkipNum = 2;
   // These flags are all of the form -Flag <Arg> and are treated as two
   // arguments.  Therefore, we need to skip the flag and the next argument.
-  bool ShouldSkip = llvm::StringSwitch<bool>(Flag)
-    .Cases("-MF", "-MT", "-MQ", "-serialize-diagnostic-file", true)
-    .Cases("-o", "-dependency-file", true)
-    .Cases("-fdebug-compilation-dir", "-diagnostic-log-file", true)
-    .Cases("-dwarf-debug-flags", "-ivfsoverlay", true)
-    .Default(false);
+  bool ShouldSkip =
+      llvm::StringSwitch<bool>(Flag)
+          .Cases({"-MF", "-MT", "-MQ", "-serialize-diagnostic-file"}, true)
+          .Cases({"-o", "-dependency-file"}, true)
+          .Cases({"-fdebug-compilation-dir", "-diagnostic-log-file"}, true)
+          .Cases({"-dwarf-debug-flags", "-ivfsoverlay"}, true)
+          .Default(false);
   if (ShouldSkip)
     return true;
 
   // Some include flags shouldn't be skipped if we have a crash VFS
   IsInclude =
       llvm::StringSwitch<bool>(Flag)
-          .Cases("-include", "-header-include-file", true)
-          .Cases("-idirafter", "-internal-isystem", "-iwithprefix", true)
-          .Cases("-internal-externc-isystem", "-iprefix", true)
-          .Cases("-iwithprefixbefore", "-isystem", "-iquote", true)
-          .Cases("-isysroot", "-I", "-F", "-resource-dir", true)
-          .Cases("-internal-iframework", "-iframework", "-include-pch", true)
+          .Cases({"-include", "-header-include-file"}, true)
+          .Cases({"-idirafter", "-internal-isystem", "-iwithprefix"}, true)
+          .Cases({"-internal-externc-isystem", "-iprefix"}, true)
+          .Cases({"-iwithprefixbefore", "-isystem", "-iquote"}, true)
+          .Cases({"-isysroot", "-I", "-F", "-resource-dir"}, true)
+          .Cases({"-internal-iframework", "-iframework", "-include-pch"}, true)
           .Default(false);
   if (IsInclude)
     return !HaveCrashVFS;
@@ -83,9 +84,9 @@ static bool skipArgs(const char *Flag, bool HaveCrashVFS, int &SkipNum,
 
   // These flags are all of the form -Flag and have no second argument.
   ShouldSkip = llvm::StringSwitch<bool>(Flag)
-    .Cases("-M", "-MM", "-MG", "-MP", "-MD", true)
-    .Case("-MMD", true)
-    .Default(false);
+                   .Cases({"-M", "-MM", "-MG", "-MP", "-MD"}, true)
+                   .Case("-MMD", true)
+                   .Default(false);
 
   // Match found.
   SkipNum = 1;

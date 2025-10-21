@@ -163,7 +163,7 @@ void AsanThread::StartSwitchFiber(FakeStack **fake_stack_save, uptr bottom,
   if (fake_stack_save)
     *fake_stack_save = fake_stack_;
   fake_stack_ = nullptr;
-  SetTLSFakeStack(nullptr);
+  ResetTLSFakeStack();
   // if fake_stack_save is null, the fiber will die, delete the fakestack
   if (!fake_stack_save && current_fake_stack)
     current_fake_stack->Destroy(this->tid());
@@ -177,8 +177,8 @@ void AsanThread::FinishSwitchFiber(FakeStack *fake_stack_save, uptr *bottom_old,
   }
 
   if (fake_stack_save) {
-    SetTLSFakeStack(fake_stack_save);
     fake_stack_ = fake_stack_save;
+    ResetTLSFakeStack();
   }
 
   if (bottom_old)
@@ -242,7 +242,7 @@ FakeStack *AsanThread::AsyncSignalSafeLazyInitFakeStack() {
         Max(stack_size_log, static_cast<uptr>(flags()->min_uar_stack_size_log));
     fake_stack_ = FakeStack::Create(stack_size_log);
     DCHECK_EQ(GetCurrentThread(), this);
-    SetTLSFakeStack(fake_stack_);
+    ResetTLSFakeStack();
     return fake_stack_;
   }
   return nullptr;
