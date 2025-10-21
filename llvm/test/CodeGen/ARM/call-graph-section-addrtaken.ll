@@ -27,7 +27,7 @@ entry:
 !1 = !{i64 0, !"_ZTSFivE.generalized"}
 !2 = !{i64 0, !"_ZTSFviE.generalized"}
 
-; CHECK: .section .callgraph,"o",%progbits,.text
+; CHECK: .section .llvm.callgraph,"o",%progbits,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags -- Potential indirect target so LSB is set to 1. Other bits are 0.

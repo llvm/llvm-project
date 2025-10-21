@@ -158,7 +158,7 @@ static FailureOr<GridOp> getGridAndVerify(Operation *op,
 }
 
 template <typename It>
-bool isUnique(It begin, It end) {
+static bool isUnique(It begin, It end) {
   if (begin == end) {
     return true;
   }
