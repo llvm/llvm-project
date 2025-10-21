@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// ``type`` type.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-if.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-if.html
 class IncorrectEnableIfCheck : public ClangTidyCheck {
 public:
   IncorrectEnableIfCheck(StringRef Name, ClangTidyContext *Context)

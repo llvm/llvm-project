@@ -10,6 +10,7 @@
 #define LLVM_CLANG_CIR_DIALECT_BUILDER_CIRBASEBUILDER_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -124,13 +125,44 @@ public:
   cir::ConstantOp getTrue(mlir::Location loc) { return getBool(true, loc); }
 
   cir::BoolType getBoolTy() { return cir::BoolType::get(getContext()); }
+  cir::VoidType getVoidTy() { return cir::VoidType::get(getContext()); }
+
+  cir::IntType getUIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, false);
+  }
+
+  cir::IntType getSIntNTy(int n) {
+    return cir::IntType::get(getContext(), n, true);
+  }
 
   cir::PointerType getPointerTo(mlir::Type ty) {
     return cir::PointerType::get(ty);
   }
 
-  cir::PointerType getVoidPtrTy() {
-    return getPointerTo(cir::VoidType::get(getContext()));
+  cir::PointerType getPointerTo(mlir::Type ty, cir::TargetAddressSpaceAttr as) {
+    return cir::PointerType::get(ty, as);
+  }
+
+  cir::PointerType getPointerTo(mlir::Type ty, clang::LangAS langAS) {
+    if (langAS == clang::LangAS::Default) // Default address space.
+      return getPointerTo(ty);
+
+    if (clang::isTargetAddressSpace(langAS)) {
+      unsigned addrSpace = clang::toTargetAddressSpace(langAS);
+      auto asAttr = cir::TargetAddressSpaceAttr::get(
+          getContext(), getUI32IntegerAttr(addrSpace));
+      return getPointerTo(ty, asAttr);
+    }
+
+    llvm_unreachable("language-specific address spaces NYI");
+  }
+
+  cir::PointerType getVoidPtrTy(clang::LangAS langAS = clang::LangAS::Default) {
+    return getPointerTo(cir::VoidType::get(getContext()), langAS);
+  }
+
+  cir::PointerType getVoidPtrTy(cir::TargetAddressSpaceAttr as) {
+    return getPointerTo(cir::VoidType::get(getContext()), as);
   }
 
   cir::BoolAttr getCIRBoolAttr(bool state) {
@@ -148,15 +180,17 @@ public:
   }
 
   mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return cir::ComplexRealOp::create(*this, loc, operandTy.getElementType(),
-                                      operand);
+    auto resultType = operand.getType();
+    if (auto complexResultType = mlir::dyn_cast<cir::ComplexType>(resultType))
+      resultType = complexResultType.getElementType();
+    return cir::ComplexRealOp::create(*this, loc, resultType, operand);
   }
 
   mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return cir::ComplexImagOp::create(*this, loc, operandTy.getElementType(),
-                                      operand);
+    auto resultType = operand.getType();
+    if (auto complexResultType = mlir::dyn_cast<cir::ComplexType>(resultType))
+      resultType = complexResultType.getElementType();
+    return cir::ComplexImagOp::create(*this, loc, resultType, operand);
   }
 
   cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
@@ -243,6 +277,13 @@ public:
     return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
   }
 
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    return createAlloca(loc, addrType, type, name, alignmentAttr);
+  }
+
   /// Get constant address of a global variable as an MLIR attribute.
   /// This wrapper infers the attribute type through the global op.
   cir::GlobalViewAttr getGlobalViewAttr(cir::GlobalOp globalOp,
@@ -270,8 +311,9 @@ public:
   }
 
   /// Create a copy with inferred length.
-  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src) {
-    return cir::CopyOp::create(*this, dst.getLoc(), dst, src);
+  cir::CopyOp createCopy(mlir::Value dst, mlir::Value src,
+                         bool isVolatile = false) {
+    return cir::CopyOp::create(*this, dst.getLoc(), dst, src, isVolatile);
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
@@ -339,6 +381,12 @@ public:
     resOperands.append(operands.begin(), operands.end());
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
                         resOperands, attrs);
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
+                           mlir::ValueRange operands = mlir::ValueRange(),
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
   }
 
   cir::CallOp createTryCallOp(
@@ -410,6 +458,11 @@ public:
   mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
     assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
     return createBitcast(src, getPointerTo(newPointeeTy));
+  }
+
+  mlir::Value createPtrIsNull(mlir::Value ptr) {
+    mlir::Value nullPtr = getNullPtr(ptr.getType(), ptr.getLoc());
+    return createCompare(ptr.getLoc(), cir::CmpOpKind::eq, ptr, nullPtr);
   }
 
   //===--------------------------------------------------------------------===//
@@ -603,6 +656,12 @@ public:
 
   mlir::IntegerAttr getSizeFromCharUnits(clang::CharUnits size) {
     return getI64IntegerAttr(size.getQuantity());
+  }
+
+  // Creates constant nullptr for pointer type ty.
+  cir::ConstantOp getNullPtr(mlir::Type ty, mlir::Location loc) {
+    assert(!cir::MissingFeatures::targetCodeGenInfoGetNullPointer());
+    return cir::ConstantOp::create(*this, loc, getConstPtrAttr(ty, 0));
   }
 
   /// Create a loop condition.

@@ -185,7 +185,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
     components.emplace_back(std::optional<Keyword>{},
-        ComponentDataSource{std::move(*Unwrap<Expr>(subscript))});
+        ComponentDataSource{std::move(UnwrapRef<Expr>(subscript))});
   }
   DerivedTypeSpec spec{std::move(name), std::list<TypeParamSpec>{}};
   spec.derivedTypeSpec = &derived;

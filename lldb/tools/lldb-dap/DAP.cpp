@@ -266,40 +266,49 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   Send(message);
 }
 
-void DAP::Send(const Message &message) {
-  if (const protocol::Event *event = std::get_if<protocol::Event>(&message)) {
+Id DAP::Send(const Message &message) {
+  std::lock_guard<std::mutex> guard(call_mutex);
+  Message msg = std::visit(
+      [this](auto &&msg) -> Message {
+        if (msg.seq == kCalculateSeq)
+          msg.seq = seq++;
+        return msg;
+      },
+      Message(message));
+
+  if (const protocol::Event *event = std::get_if<protocol::Event>(&msg)) {
     if (llvm::Error err = transport.Send(*event))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending event failed",
                     m_client_name);
-    return;
+    return event->seq;
   }
 
-  if (const Request *req = std::get_if<Request>(&message)) {
+  if (const Request *req = std::get_if<Request>(&msg)) {
     if (llvm::Error err = transport.Send(*req))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending request failed",
                     m_client_name);
-    return;
+    return req->seq;
   }
 
-  if (const Response *resp = std::get_if<Response>(&message)) {
+  if (const Response *resp = std::get_if<Response>(&msg)) {
     // FIXME: After all the requests have migrated from LegacyRequestHandler >
     // RequestHandler<> this should be handled in RequestHandler<>::operator().
     // If the debugger was interrupted, convert this response into a
     // 'cancelled' response because we might have a partial result.
-    llvm::Error err =
-        (debugger.InterruptRequested())
-            ? transport.Send({/*request_seq=*/resp->request_seq,
-                              /*command=*/resp->command,
-                              /*success=*/false,
-                              /*message=*/eResponseMessageCancelled,
-                              /*body=*/std::nullopt})
-            : transport.Send(*resp);
-    if (err) {
+    llvm::Error err = (debugger.InterruptRequested())
+                          ? transport.Send({
+                                /*request_seq=*/resp->request_seq,
+                                /*command=*/resp->command,
+                                /*success=*/false,
+                                /*message=*/eResponseMessageCancelled,
+                                /*body=*/std::nullopt,
+                                /*seq=*/resp->seq,
+                            })
+                          : transport.Send(*resp);
+    if (err)
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending response failed",
                     m_client_name);
-      return;
-    }
-    return;
+    return resp->seq;
   }
 
   llvm_unreachable("Unexpected message type");
@@ -1368,6 +1377,12 @@ void DAP::EventThread() {
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(
       listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+
+  // listen for thread events.
+  listener.StartListeningForEventClass(
+      debugger, lldb::SBThread::GetBroadcasterClassName(),
+      lldb::SBThread::eBroadcastBitStackChanged);
+
   bool done = false;
   while (!done) {
     if (listener.WaitForEvent(1, event)) {
@@ -1503,6 +1518,9 @@ void DAP::EventThread() {
             SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
+
+      } else if (lldb::SBThread::EventIsThreadEvent(event)) {
+        HandleThreadEvent(event);
       } else if (event_mask & lldb::eBroadcastBitError ||
                  event_mask & lldb::eBroadcastBitWarning) {
         lldb::SBStructuredData data =
@@ -1519,6 +1537,16 @@ void DAP::EventThread() {
         }
       }
     }
+  }
+}
+
+void DAP::HandleThreadEvent(const lldb::SBEvent &event) {
+  uint32_t event_type = event.GetType();
+
+  if (event_type & lldb::SBThread::eBroadcastBitStackChanged) {
+    const lldb::SBThread evt_thread = lldb::SBThread::GetThreadFromEvent(event);
+    SendInvalidatedEvent(*this, {InvalidatedEventBody::eAreaStacks},
+                         evt_thread.GetThreadID());
   }
 }
 

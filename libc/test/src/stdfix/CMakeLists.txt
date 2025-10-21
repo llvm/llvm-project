@@ -120,6 +120,22 @@ foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   )
 endforeach()
 
+foreach(suffix IN ITEMS r)
+  add_libc_test(
+    ${suffix}divi_test
+    SUITE
+      libc-stdfix-tests
+    HDRS
+      DivITest.h
+    SRCS
+      ${suffix}divi_test.cpp
+    DEPENDS
+      libc.src.stdfix.${suffix}divi
+      libc.src.__support.fixed_point.fx_bits
+      libc.hdr.signal_macros
+  )
+endforeach()
+
 add_libc_test(
   uhksqrtus_test
   SUITE

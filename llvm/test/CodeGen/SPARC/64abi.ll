@@ -473,12 +473,25 @@ declare i64 @receive_fp128(i64 %a, ...)
 ; HARD-DAG:   ldx [%sp+[[Offset0]]], %o2
 ; HARD-DAG:   ldx [%sp+[[Offset1]]], %o3
 ; SOFT-DAG:   mov  %i0, %o0
-; SOFT-DAG:   mov  %i1, %o1
 ; SOFT-DAG:   mov  %i2, %o2
+; SOFT-DAG:   mov  %i3, %o3
 ; CHECK:      call receive_fp128
 define i64 @test_fp128_variable_args(i64 %a, fp128 %b) {
 entry:
   %0 = call i64 (i64, ...) @receive_fp128(i64 %a, fp128 %b)
+  ret i64 %0
+}
+
+declare i64 @receive_i128(i64 %a, i128 %b)
+
+; CHECK-LABEL: test_i128_args:
+; CHECK:   mov  %i3, %o3
+; CHECK:   mov  %i2, %o2
+; CHECK:   mov  %i0, %o0
+; CHECK:   call receive_i128
+define i64 @test_i128_args(i64 %a, i128 %b) {
+entry:
+  %0 = call i64 @receive_i128(i64 %a, i128 %b)
   ret i64 %0
 }
 

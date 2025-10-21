@@ -227,8 +227,8 @@ public:
   unsigned getXLen() const {
     return is64Bit() ? 64 : 32;
   }
-  bool useLoadStorePairs() const;
-  bool useCCMovInsn() const;
+  bool useMIPSLoadStorePairs() const;
+  bool useMIPSCCMovInsn() const;
   unsigned getFLen() const {
     if (HasStdExtD)
       return 64;
@@ -288,9 +288,12 @@ public:
   bool hasVInstructionsI64() const { return HasStdExtZve64x; }
   bool hasVInstructionsF16Minimal() const { return HasStdExtZvfhmin; }
   bool hasVInstructionsF16() const { return HasStdExtZvfh; }
-  bool hasVInstructionsBF16Minimal() const { return HasStdExtZvfbfmin; }
+  bool hasVInstructionsBF16Minimal() const {
+    return HasStdExtZvfbfmin || HasStdExtZvfbfa;
+  }
   bool hasVInstructionsF32() const { return HasStdExtZve32f; }
   bool hasVInstructionsF64() const { return HasStdExtZve64d; }
+  bool hasVInstructionsBF16() const { return HasStdExtZvfbfa; }
   // F16 and F64 both require F32.
   bool hasVInstructionsAnyF() const { return hasVInstructionsF32(); }
   bool hasVInstructionsFullMultiply() const { return HasStdExtV; }

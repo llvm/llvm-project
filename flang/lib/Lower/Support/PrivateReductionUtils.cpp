@@ -516,15 +516,10 @@ void PopulateInitAndCleanupRegionsHelper::initAndCleanupBoxedArray(
       return createStackTempFromMold(loc, builder, source);
 
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
-    // if needsDealloc isn't statically false, add cleanup region. Always
+    // if needsDealloc, add cleanup region. Always
     // do this for allocatable boxes because they might have been re-allocated
     // in the body of the loop/parallel region
-
-    std::optional<int64_t> cstNeedsDealloc =
-        fir::getIntIfConstant(needsDealloc);
-    assert(cstNeedsDealloc.has_value() &&
-           "createTempFromMold decides this statically");
-    if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
+    if (needsDealloc) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       createCleanupRegion(converter, loc, argType, cleanupRegion, sym,
                           isDoConcurrent);

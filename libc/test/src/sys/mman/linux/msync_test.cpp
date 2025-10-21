@@ -16,6 +16,8 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMsyncTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
@@ -24,7 +26,7 @@ struct PageHolder {
   void *addr;
 
   PageHolder()
-      : size(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE)),
+      : size(PAGE_SIZE),
         addr(LIBC_NAMESPACE::mmap(nullptr, size, PROT_READ | PROT_WRITE,
                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) {}
   ~PageHolder() {

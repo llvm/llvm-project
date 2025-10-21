@@ -117,6 +117,7 @@ template <endianness E> struct FDEInfo {
     Info = ((PAuthKey & 1) << 5) | ((static_cast<uint8_t>(FDE) & 1) << 4) |
            (static_cast<uint8_t>(FRE) & 0xf);
   }
+  uint8_t getFuncInfo() const { return Info; }
 };
 
 template <endianness E> struct FuncDescEntry {
@@ -155,6 +156,7 @@ template <endianness E> struct FREInfo {
     Info = ((RA & 1) << 7) | ((static_cast<uint8_t>(Sz) & 3) << 5) |
            ((N & 0xf) << 1) | (static_cast<uint8_t>(Reg) & 1);
   }
+  uint8_t getFREInfo() const { return Info; }
 };
 
 template <typename T, endianness E> struct FrameRowEntry {
