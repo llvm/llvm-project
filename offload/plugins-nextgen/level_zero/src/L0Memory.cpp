@@ -83,7 +83,10 @@ MemAllocatorTy::MemPoolTy::MemPoolTy(int32_t Kind, MemAllocatorTy *_Allocator,
 
   // Check page size used for this allocation kind to decide minimum
   // allocation size when allocating from L0.
-  void *Mem = Allocator->allocL0(8, 0, AllocKind);
+  auto MemOrErr = Allocator->allocL0(8, 0, AllocKind);
+  if (!MemOrErr)
+    FATAL_MESSAGE0(0, "Failed to allocate memory pool\n");
+  void *Mem = *MemOrErr;
   ze_memory_allocation_properties_t AP{
       ZE_STRUCTURE_TYPE_MEMORY_ALLOCATION_PROPERTIES, nullptr,
       ZE_MEMORY_TYPE_UNKNOWN, 0, 0};
@@ -277,7 +280,14 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
     // Bucket is empty or all blocks in the bucket are full
     const auto ChunkSize = BucketParams[BucketId].first;
     const auto BlockSize = BucketParams[BucketId].second;
-    void *Base = Allocator->allocL0(BlockSize, 0, AllocKind);
+    auto BaseOrErr = Allocator->allocL0(BlockSize, 0, AllocKind);
+    if (!BaseOrErr) {
+      consumeError(BaseOrErr.takeError());
+      DP("Failed to allocate new block for %s pool\n",
+         AllocKindToStr(AllocKind));
+      return nullptr;
+    }
+    void *Base = *BaseOrErr;
 
     if (ZeroInit) {
       auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
@@ -515,7 +525,10 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
     }
   }
 
-  AllocBase = allocL0(AllocSize, Align, Kind, Size);
+  auto AllocBaseOrErr = allocL0(AllocSize, Align, Kind, Size);
+  if (!AllocBaseOrErr)
+    return AllocBaseOrErr.takeError();
+  AllocBase = *AllocBaseOrErr;
   if (AllocBase) {
     Mem = (void *)((uintptr_t)AllocBase + Offset);
     AllocInfo.add(Mem, AllocBase, Size, Kind, false, UserAlloc);
@@ -581,8 +594,8 @@ Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
   return Device->enqueueMemCopy(Dst, Src, Size);
 }
 
-void *MemAllocatorTy::allocL0(size_t Size, size_t Align, int32_t Kind,
-                              size_t ActiveSize) {
+Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
+                                         int32_t Kind, size_t ActiveSize) {
   void *Mem = nullptr;
   ze_device_mem_alloc_desc_t DeviceDesc{ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC,
                                         nullptr, 0, 0};
@@ -604,17 +617,17 @@ void *MemAllocatorTy::allocL0(size_t Size, size_t Align, int32_t Kind,
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     makeResident = true;
-    CALL_ZE_RET_NULL(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
-                     zeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
+                      zeDevice, &Mem);
     DP("Allocated a device memory " DPxMOD "\n", DPxPTR(Mem));
     break;
   case TARGET_ALLOC_HOST:
-    CALL_ZE_RET_NULL(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
     DP("Allocated a host memory " DPxMOD "\n", DPxPTR(Mem));
     break;
   case TARGET_ALLOC_SHARED:
-    CALL_ZE_RET_NULL(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
-                     Align, zeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
+                      Align, zeDevice, &Mem);
     DP("Allocated a shared memory " DPxMOD "\n", DPxPTR(Mem));
     break;
   default:
@@ -626,8 +639,10 @@ void *MemAllocatorTy::allocL0(size_t Size, size_t Align, int32_t Kind,
   if (makeResident) {
     assert(Device &&
            "Device is not set for memory allocation. Is this a Device Pool?");
-    if (Device->makeMemoryResident(Mem, Size) != OFFLOAD_SUCCESS)
+    if (auto Err = Device->makeMemoryResident(Mem, Size)) {
       Mem = nullptr;
+      return std::move(Err);
+    }
   }
   return Mem;
 }

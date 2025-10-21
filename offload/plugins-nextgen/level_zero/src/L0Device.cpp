@@ -255,13 +255,13 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
   auto &Program = addProgram(ImageId, std::move(TgtImage));
 
   if (auto Err = Program.buildModules(CompilationOptions))
-    return Err;
+    return std::move(Err);
 
   if (auto Err = Program.linkModules())
-    return Err;
+    return std::move(Err);
 
   if (auto Err = Program.loadModuleKernels())
-    return Err;
+    return std::move(Err);
 
   return &Program;
 }
@@ -787,17 +787,10 @@ Error L0DeviceTy::dataDelete(void *Ptr) {
   return Allocator.dealloc(Ptr);
 }
 
-int32_t L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
-  ze_result_t RC;
-  CALL_ZE(RC, zeContextMakeMemoryResident, getZeContext(), getZeDevice(), Mem,
-          Size);
-  if (RC != ZE_RESULT_SUCCESS) {
-    DP("Could not make memory " DPxMOD " resident on Level Zero device " DPxMOD
-       ".\n",
-       DPxPTR(Mem), DPxPTR(getZeDevice()));
-    return OFFLOAD_FAIL;
-  }
-  return OFFLOAD_SUCCESS;
+Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
+  CALL_ZE_RET_ERROR(zeContextMakeMemoryResident, getZeContext(), getZeDevice(),
+                    Mem, Size);
+  return Plugin::success();
 }
 
 // Command queues related functions

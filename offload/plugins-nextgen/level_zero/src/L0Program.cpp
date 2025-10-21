@@ -31,14 +31,12 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   const char *GlobalName = DeviceGlobal.getName().data();
 
   L0ProgramTy &Program = L0ProgramTy::makeL0Program(Image);
-  void *Addr = Program.getOffloadVarDeviceAddr(GlobalName);
+  auto AddrOrErr = Program.getOffloadVarDeviceAddr(GlobalName);
+  if (!AddrOrErr)
+    return AddrOrErr.takeError();
 
   // Save the pointer to the symbol allowing nullptr.
-  DeviceGlobal.setPtr(Addr);
-
-  if (Addr == nullptr)
-    return Plugin::error(ErrorCode::UNKNOWN, "Failed to load global '%s'",
-                         GlobalName);
+  DeviceGlobal.setPtr(*AddrOrErr);
 
   return Plugin::success();
 }
@@ -481,11 +479,12 @@ Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
 }
 
-void *L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
+Expected<void *> L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
   DP("Looking up OpenMP global variable '%s'.\n", CName);
 
   if (!GlobalModule || !CName)
-    return nullptr;
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Invalid arguments to getOffloadVarDeviceAddr");
 
   std::string Name(CName);
   size_t SizeDummy = 0;
@@ -497,9 +496,9 @@ void *L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
     if (RC == ZE_RESULT_SUCCESS && DevicePtr)
       return DevicePtr;
   }
-  DP("Warning: global variable '%s' was not found in the device.\n",
-     Name.c_str());
-  return nullptr;
+  return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                       "Global variable '%s' not found on device",
+                       Name.c_str());
 }
 
 Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,

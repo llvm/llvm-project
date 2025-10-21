@@ -24,12 +24,8 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) const {
 
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
-  int32_t RC = runTargetTeamRegion(l0Device, KernelArgs,
-                                   std::move(LaunchParams), AsyncInfoWrapper);
-  if (RC == OFFLOAD_SUCCESS)
-    return Plugin::success();
-  return Plugin::error(error::ErrorCode::UNKNOWN,
-                       "Error in launch Kernel %s: %d", getName(), RC);
+  return runTargetTeamRegion(l0Device, KernelArgs, std::move(LaunchParams),
+                             AsyncInfoWrapper);
 }
 
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
@@ -222,7 +218,7 @@ static uint64_t computeThreadsNeeded(const llvm::ArrayRef<size_t> TripCounts,
   return GroupCount[0] * ThreadsPerWG;
 }
 
-int32_t L0KernelTy::decideLoopKernelGroupArguments(
+Error L0KernelTy::decideLoopKernelGroupArguments(
     L0DeviceTy &Device, uint32_t ThreadLimit, TgtNDRangeDescTy *LoopLevels,
     uint32_t *GroupSizes, ze_group_count_t &GroupCounts, bool HalfNumThreads,
     bool &AllowCooperative) const {
@@ -282,7 +278,7 @@ int32_t L0KernelTy::decideLoopKernelGroupArguments(
         INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
              "Invalid number of teams %zu due to large loop trip count\n",
              DistributeTripCount);
-        return OFFLOAD_FAIL;
+        return Plugin::success();
       }
       GRPCounts[DistributeDim] = DistributeTripCount;
     }
@@ -290,7 +286,7 @@ int32_t L0KernelTy::decideLoopKernelGroupArguments(
     GroupCounts.groupCountX = GRPCounts[0];
     GroupCounts.groupCountY = GRPCounts[1];
     GroupCounts.groupCountZ = GRPCounts[2];
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   if (!MaxGroupSizeForced) {
@@ -355,9 +351,10 @@ int32_t L0KernelTy::decideLoopKernelGroupArguments(
       GRPSizes[I] = Trip;
     size_t Count = (Trip + GRPSizes[I] - 1) / GRPSizes[I];
     if (Count > UINT32_MAX) {
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Invalid number of teams %zu due to large loop trip count\n", Count);
-      return OFFLOAD_FAIL;
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "Invalid number of teams %zu due to large loop "
+                           "trip count\n",
+                           Count);
     }
     GRPCounts[I] = (uint32_t)Count;
   }
@@ -367,14 +364,13 @@ int32_t L0KernelTy::decideLoopKernelGroupArguments(
   GroupCounts.groupCountZ = GRPCounts[2];
   std::copy(GRPSizes, GRPSizes + 3, GroupSizes);
 
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
-int32_t L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                                   int32_t ThreadLimit, uint32_t *GroupSizes,
-                                   ze_group_count_t &GroupCounts,
-                                   void *LoopDesc,
-                                   bool &AllowCooperative) const {
+Error L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
+                                 int32_t ThreadLimit, uint32_t *GroupSizes,
+                                 ze_group_count_t &GroupCounts, void *LoopDesc,
+                                 bool &AllowCooperative) const {
 
   const auto DeviceId = Device.getDeviceId();
   const auto &KernelPR = getProperties();
@@ -443,13 +439,13 @@ int32_t L0KernelTy::getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
     AllowCooperative = false;
   }
 
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
-int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
-                                        KernelArgsTy &KernelArgs,
-                                        KernelLaunchParamsTy LaunchParams,
-                                        __tgt_async_info *AsyncInfo) const {
+Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
+                                      KernelArgsTy &KernelArgs,
+                                      KernelLaunchParamsTy LaunchParams,
+                                      __tgt_async_info *AsyncInfo) const {
   // Libomptarget can pass negative NumTeams and ThreadLimit now after
   // introducing __tgt_target_kernel. This happens only when we have valid
   // LoopDesc and the region is not a teams region.
@@ -500,13 +496,9 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
       GroupSizes, GroupCounts, AllowCooperative);
 
   if (!GroupParamsReused) {
-    auto RC = getGroupsShape(Device, NumTeams, ThreadLimit, GroupSizes,
-                             GroupCounts, LoopDesc, AllowCooperative);
-
-    if (RC != OFFLOAD_SUCCESS) {
-      return RC;
-    }
-
+    if (auto Err = getGroupsShape(Device, NumTeams, ThreadLimit, GroupSizes,
+                                  GroupCounts, LoopDesc, AllowCooperative))
+      return Err;
     KernelPR.cacheGroupParams(static_cast<TgtNDRangeDescTy *>(LoopDesc),
                               NumTeams, ThreadLimit, GroupSizes, GroupCounts,
                               AllowCooperative);
@@ -522,8 +514,8 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   for (int32_t I = 0; I < NumArgs; I++) {
     {
       void *Arg = (static_cast<void **>(LaunchParams.Data))[I];
-      CALL_ZE_RET_FAIL(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
-                       Arg == nullptr ? nullptr : &Arg);
+      CALL_ZE_RET_ERROR(zeKernelSetArgumentValue, zeKernel, I, sizeof(Arg),
+                        Arg == nullptr ? nullptr : &Arg);
       INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
            "Kernel Pointer argument %" PRId32 " (value: " DPxMOD
            ") was set successfully for device %s.\n",
@@ -540,14 +532,14 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   if (PrevFlags != Flags) {
     // Combine with common access flags
     const auto FinalFlags = Device.getIndirectFlags() | Flags;
-    CALL_ZE_RET_FAIL(zeKernelSetIndirectAccess, getZeKernel(), FinalFlags);
+    CALL_ZE_RET_ERROR(zeKernelSetIndirectAccess, getZeKernel(), FinalFlags);
     DP("Setting indirect access flags " DPxMOD "\n", DPxPTR(FinalFlags));
     PrevFlags = Flags;
   }
 
   if (!GroupParamsReused) {
-    CALL_ZE_RET_FAIL(zeKernelSetGroupSize, zeKernel, GroupSizes[0],
-                     GroupSizes[1], GroupSizes[2]);
+    CALL_ZE_RET_ERROR(zeKernelSetGroupSize, zeKernel, GroupSizes[0],
+                      GroupSizes[1], GroupSizes[2]);
   }
 
   ze_command_list_handle_t CmdList = nullptr;
@@ -580,36 +572,36 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Kernel depends on %zu data copying events.\n", NumWaitEvents);
     if (AllowCooperative)
-      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                       zeKernel, &GroupCounts, Event, NumWaitEvents,
-                       WaitEvents);
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                        zeKernel, &GroupCounts, Event, NumWaitEvents,
+                        WaitEvents);
     else
-      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                       &GroupCounts, Event, NumWaitEvents, WaitEvents);
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                        &GroupCounts, Event, NumWaitEvents, WaitEvents);
     KernelLock.unlock();
     if (IsAsync) {
       AsyncQueue->WaitEvents.push_back(Event);
       AsyncQueue->KernelEvent = Event;
     } else {
-      CALL_ZE_RET_FAIL(zeEventHostSynchronize, Event, UINT64_MAX);
+      CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
       Device.releaseEvent(Event);
     }
   } else {
     ze_event_handle_t Event = nullptr;
     if (AllowCooperative)
-      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                       zeKernel, &GroupCounts, Event, 0, nullptr);
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
+                        zeKernel, &GroupCounts, Event, 0, nullptr);
     else
-      CALL_ZE_RET_FAIL(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                       &GroupCounts, Event, 0, nullptr);
+      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
+                        &GroupCounts, Event, 0, nullptr);
     KernelLock.unlock();
-    CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
-    CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, Device.getMutex(),
-                         CmdQueue, 1, &CmdList, nullptr);
+    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, Device.getMutex(),
+                          CmdQueue, 1, &CmdList, nullptr);
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-    CALL_ZE_RET_FAIL(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
-    CALL_ZE_RET_FAIL(zeCommandListReset, CmdList);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
     if (Event) {
       Device.releaseEvent(Event);
     }
@@ -619,7 +611,7 @@ int32_t L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
        "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
        IdStr);
 
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
 } // namespace llvm::omp::target::plugin

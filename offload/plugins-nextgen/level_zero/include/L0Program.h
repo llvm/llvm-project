@@ -109,7 +109,7 @@ public:
   /// \p Name and \p Size in the device environment for the current device.
   /// The lookup is first done via the device offload table. If it fails,
   /// then the lookup falls back to non-OpenMP specific lookup on the device.
-  void *getOffloadVarDeviceAddr(const char *Name) const;
+  Expected<void *> getOffloadVarDeviceAddr(const char *Name) const;
 
   /// Returns the handle of a module that contains a given Kernel name
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {

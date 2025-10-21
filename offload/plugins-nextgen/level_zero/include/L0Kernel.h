@@ -110,9 +110,9 @@ class L0KernelTy : public GenericKernelTy {
   KernelPropertiesTy Properties;
   auto &getProperties() { return Properties; }
 
-  int32_t runTargetTeamRegion(L0DeviceTy &Device, KernelArgsTy &KernelArgs,
-                              KernelLaunchParamsTy LaunchParams,
-                              __tgt_async_info *AsyncInfo) const;
+  Error runTargetTeamRegion(L0DeviceTy &Device, KernelArgsTy &KernelArgs,
+                            KernelLaunchParamsTy LaunchParams,
+                            __tgt_async_info *AsyncInfo) const;
 
   void decideKernelGroupArguments(L0DeviceTy &Device, uint32_t NumTeams,
                                   uint32_t ThreadLimit,
@@ -122,10 +122,12 @@ class L0KernelTy : public GenericKernelTy {
                                   bool HalfNumThreads,
                                   bool IsTeamsNDRange) const;
 
-  int32_t decideLoopKernelGroupArguments(
-      L0DeviceTy &Device, uint32_t ThreadLimit, TgtNDRangeDescTy *LoopLevels,
-      uint32_t *GroupSizes, ze_group_count_t &GroupCounts, bool HalfNumThreads,
-      bool &AllowCooperative) const;
+  Error decideLoopKernelGroupArguments(L0DeviceTy &Device, uint32_t ThreadLimit,
+                                       TgtNDRangeDescTy *LoopLevels,
+                                       uint32_t *GroupSizes,
+                                       ze_group_count_t &GroupCounts,
+                                       bool HalfNumThreads,
+                                       bool &AllowCooperative) const;
 
   Error buildKernel(L0ProgramTy &Program);
 
@@ -160,10 +162,10 @@ public:
 
   ze_kernel_handle_t getZeKernel() const { return zeKernel; }
 
-  int32_t getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
-                         int32_t ThreadLimit, uint32_t *GroupSizes,
-                         ze_group_count_t &GroupCounts, void *LoopDesc,
-                         bool &AllowCooperative) const;
+  Error getGroupsShape(L0DeviceTy &Device, int32_t NumTeams,
+                       int32_t ThreadLimit, uint32_t *GroupSizes,
+                       ze_group_count_t &GroupCounts, void *LoopDesc,
+                       bool &AllowCooperative) const;
 };
 
 } // namespace llvm::omp::target::plugin

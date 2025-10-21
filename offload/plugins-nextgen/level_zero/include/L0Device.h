@@ -549,7 +549,7 @@ public:
     return getDeviceMemAllocator();
   }
 
-  int32_t makeMemoryResident(void *Mem, size_t Size);
+  Error makeMemoryResident(void *Mem, size_t Size);
 
   // Generic device interface implementation
   Expected<DeviceImageTy *>

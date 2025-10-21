@@ -329,7 +329,8 @@ public:
   /// Allocate memory from L0 GPU RT. We use over-allocation workaround
   /// to support target pointer with offset, and positive "ActiveSize" is
   /// specified in such cases for correct debug logging.
-  void *allocL0(size_t Size, size_t Align, int32_t Kind, size_t ActiveSize = 0);
+  Expected<void *> allocL0(size_t Size, size_t Align, int32_t Kind,
+                           size_t ActiveSize = 0);
 
   /// Allocate memory with the specified information from a memory pool
   Expected<void *> alloc(size_t Size, size_t Align, int32_t Kind,
