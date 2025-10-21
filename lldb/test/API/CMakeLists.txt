@@ -80,7 +80,8 @@ if(LLDB_DIRNAME_PATH)
 else()
   message(STATUS "Could NOT find 'dirname'")
   message(WARNING
-        "Many LLDB API tests require the 'dirname' tool. Please provide it in Path.")
+        "Many LLDB API tests require the GNU coreutils tools. Please make "
+        "sure they are installed and in PATH.")
 endif()
 
 if (TARGET clang)
