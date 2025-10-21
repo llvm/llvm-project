@@ -573,7 +573,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
       CSInfo.emplace(*CSKind, Checksum);
   }
   return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(SM.getExpansionLoc(Loc))));
+                    getSource(SM, SM.getFileID(SM.getFileLoc(Loc))));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
