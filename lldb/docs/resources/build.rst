@@ -95,36 +95,30 @@ commands below.
 Windows
 *******
 
-* Visual Studio 2019.
-* The latest Windows SDK.
-* The Active Template Library (ATL).
-* `GnuWin32 <http://gnuwin32.sourceforge.net/>`_ for CoreUtils and Make.
-* `Python 3 <https://www.python.org/downloads/windows/>`_.  Make sure to (1) get
-  the x64 variant if that's what you're targeting and (2) install the debug
-  library if you want to build a debug lldb. The standalone installer is the
-  easiest way to get the debug library.
-* `Python Tools for Visual Studio
-  <https://github.com/Microsoft/PTVS/>`_. If you plan to debug test failures
-  or even write new tests at all, PTVS is an indispensable debugging
-  extension to VS that enables full editing and debugging support for Python
-  (including mixed native/managed debugging).
+
 * `SWIG for Windows <http://www.swig.org/download.html>`_
 
-The steps outlined here describes how to set up your system and install the
+The steps outlined here describe how to set up your system and install the
 required dependencies such that they can be found when needed during the build
 process. They only need to be performed once.
 
-#. Install Visual Studio with the "Desktop Development with C++" workload and
-   the "Python Development" workload.
-#. Install GnuWin32, making sure ``<GnuWin32 install dir>\bin`` is added to
-   your PATH environment variable. Verify that utilities like ``dirname`` and
-   ``make`` are available from your terminal.
-#. Install SWIG for Windows, making sure ``<SWIG install dir>`` is added to
-   your PATH environment variable. Verify that ``swig`` is available from your
-   terminal.
-#. Install Python 3 from the standalone installer and include the debug libraries
-   in the install, making sure the Python install path is added to your PATH
-   environment variable.
+#. Install `Visual Studio <https://visualstudio.microsoft.com>` with the
+   "Desktop Development with C++" workload. Make sure that the latest Windows
+   SDK and the Active Template Library (ATL) are installed.
+#. If you plan to debug test failures or even write new tests at all,
+   `Python Tools for Visual Studio <https://github.com/Microsoft/PTVS/>`_ is an
+   indispensable debugging extension to Visual Studio which enables full
+   editing and debugging support for Python (including mixed native/managed
+   debugging).
+#. Install `Git Bash <https://git-scm.com/install/windows>`_ and add
+   ``<Git install dir>\usr\bin`` to your ``PATH``. Verify that utilities like
+   ``dirname`` and ``make`` are available from your terminal.
+#. Install `Python 3 <https://www.python.org/downloads/windows/>`_ from the
+   standalone installer and include the debug libraries in the install. Make
+   sure ``python`` is added to your ``PATH``.
+#. Install `SWIG for Windows <http://www.swig.org/download.html>`_. Make sure
+   ``swig`` is added to your ``PATH`` and that ``swig -swiglib`` points to the
+   correct directory.
 #. Register the Debug Interface Access DLLs with the Registry from a privileged
    terminal.
 
