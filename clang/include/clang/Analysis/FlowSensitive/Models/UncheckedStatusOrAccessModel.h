@@ -56,7 +56,6 @@ BoolValue &initializeStatusOr(RecordStorageLocation &StatusOrLoc,
 // N.B. if it is already initialized, the value gets reset.
 BoolValue &initializeStatus(RecordStorageLocation &StatusLoc, Environment &Env);
 
-bool isRecordTypeWithName(QualType Type, llvm::StringRef TypeName);
 // Return true if `Type` is instantiation of `absl::StatusOr<T>`
 bool isStatusOrType(QualType Type);
 // Return true if `Type` is `absl::Status`

@@ -200,11 +200,6 @@ clang::ast_matchers::TypeMatcher statusOrType() {
   return hasCanonicalType(qualType(hasDeclaration(statusOrClass())));
 }
 
-bool isRecordTypeWithName(QualType Type, llvm::StringRef TypeName) {
-  return Type->isRecordType() &&
-         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() == TypeName;
-}
-
 bool isStatusOrType(QualType Type) {
   return isTypeNamed(Type, {"absl"}, "StatusOr");
 }
