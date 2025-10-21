@@ -25,24 +25,19 @@
 
 int main(int, char**) {
   for (std::regex_constants::syntax_option_type op :
-       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
-        std::regex::awk}) {
+       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep, std::regex::awk}) {
     try {
       bool b = std::regex_search(
-          "aaaaaaaaaaaaaaaaaaaa",
-          std::regex(
-              "a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa",
-              op));
+          "aaaaaaaaaaaaaaaaaaaa", std::regex("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?aaaaaaaaaaaaaaaaaaaa", op));
       LIBCPP_ASSERT(false);
       assert(b);
-    } catch (const std::regex_error &e) {
+    } catch (const std::regex_error& e) {
       assert(e.code() == std::regex_constants::error_complexity);
     }
   }
   std::string s(100000, 'a');
   for (std::regex_constants::syntax_option_type op :
-       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep,
-        std::regex::awk}) {
+       {std::regex::ECMAScript, std::regex::extended, std::regex::egrep, std::regex::awk}) {
     assert(std::regex_search(s, std::regex("a*", op)));
   }
   return 0;

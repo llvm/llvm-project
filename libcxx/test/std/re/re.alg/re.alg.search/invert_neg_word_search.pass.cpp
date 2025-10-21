@@ -20,10 +20,8 @@
 
 #include "test_macros.h"
 
-
 // PR34310
-int main(int, char**)
-{
+int main(int, char**) {
   assert(std::regex_search("HelloWorld", std::regex("[^\\W]")));
   assert(std::regex_search("_", std::regex("[^\\W]")));
   return 0;

@@ -22,20 +22,18 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER < 14
-#error
+#  error
 #endif
 
-int main(int, char**)
-{
-    {
-         std::regex phone_numbers("\\d{3}-(\\d{4})");
-        const char phone_book[] = "start 555-1234, 555-2345, 555-3456 end";
-        std::vector<int> v;
-        v.push_back(-1);
-        v.push_back(-1);
-        std::cregex_token_iterator i(std::begin(phone_book), std::end(phone_book)-1,
-                                     std::regex("\\d{3}-\\d{4}"), v);
-    }
+int main(int, char**) {
+  {
+    std::regex phone_numbers("\\d{3}-(\\d{4})");
+    const char phone_book[] = "start 555-1234, 555-2345, 555-3456 end";
+    std::vector<int> v;
+    v.push_back(-1);
+    v.push_back(-1);
+    std::cregex_token_iterator i(std::begin(phone_book), std::end(phone_book) - 1, std::regex("\\d{3}-\\d{4}"), v);
+  }
 
   return 0;
 }

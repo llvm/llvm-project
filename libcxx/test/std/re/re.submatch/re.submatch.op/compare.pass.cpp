@@ -243,61 +243,58 @@
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
 
 template <class CharT>
-void
-test(const std::basic_string<CharT>& x, const std::basic_string<CharT>& y, bool doCStrTests = true)
-{
-    typedef std::basic_string<CharT> string;
-    typedef std::sub_match<typename string::const_iterator> sub_match;
+void test(const std::basic_string<CharT>& x, const std::basic_string<CharT>& y, bool doCStrTests = true) {
+  typedef std::basic_string<CharT> string;
+  typedef std::sub_match<typename string::const_iterator> sub_match;
 #if TEST_STD_VER > 17
-    AssertOrderReturn<std::strong_ordering, sub_match>();
-    AssertOrderReturn<std::strong_ordering, sub_match, string>();
+  AssertOrderReturn<std::strong_ordering, sub_match>();
+  AssertOrderReturn<std::strong_ordering, sub_match, string>();
 #else
-    AssertComparisonsReturnBool<sub_match>();
-    AssertComparisonsReturnBool<sub_match, string>();
+  AssertComparisonsReturnBool<sub_match>();
+  AssertComparisonsReturnBool<sub_match, string>();
 #endif
-    sub_match sm1;
-    sm1.first = x.begin();
-    sm1.second = x.end();
-    sm1.matched = true;
-    sub_match sm2;
-    sm2.first = y.begin();
-    sm2.second = y.end();
-    sm2.matched = true;
+  sub_match sm1;
+  sm1.first   = x.begin();
+  sm1.second  = x.end();
+  sm1.matched = true;
+  sub_match sm2;
+  sm2.first   = y.begin();
+  sm2.second  = y.end();
+  sm2.matched = true;
 
-    assert(testComparisons(sm1, sm2, x == y, x < y));
-    assert(testComparisons(x, sm2, x == y, x < y));
-    assert(testComparisons(sm1, y, x == y, x < y));
+  assert(testComparisons(sm1, sm2, x == y, x < y));
+  assert(testComparisons(x, sm2, x == y, x < y));
+  assert(testComparisons(sm1, y, x == y, x < y));
 #if TEST_STD_VER > 17
-    assert(testOrder(sm1, sm2, x <=> y));
-    assert(testOrder(x, sm2, x <=> y));
-    assert(testOrder(sm1, y, x <=> y));
+  assert(testOrder(sm1, sm2, x <=> y));
+  assert(testOrder(x, sm2, x <=> y));
+  assert(testOrder(sm1, y, x <=> y));
 #endif
 
-    if (doCStrTests) {
-        assert(testComparisons(x.c_str(), sm2, x == y, x < y));
-        assert(testComparisons(sm1, y.c_str(), x == y, x < y));
+  if (doCStrTests) {
+    assert(testComparisons(x.c_str(), sm2, x == y, x < y));
+    assert(testComparisons(sm1, y.c_str(), x == y, x < y));
 #if TEST_STD_VER > 17
-        assert(testOrder(x.c_str(), sm2, x <=> y));
-        assert(testOrder(sm1, y.c_str(), x <=> y));
+    assert(testOrder(x.c_str(), sm2, x <=> y));
+    assert(testOrder(sm1, y.c_str(), x <=> y));
 #endif
-    }
+  }
 
-    assert(testComparisons(x[0], sm2, string(1, x[0]) == y, string(1, x[0]) < y));
-    assert(testComparisons(sm1, y[0], x == string(1, y[0]), x < string(1, y[0])));
+  assert(testComparisons(x[0], sm2, string(1, x[0]) == y, string(1, x[0]) < y));
+  assert(testComparisons(sm1, y[0], x == string(1, y[0]), x < string(1, y[0])));
 #if TEST_STD_VER > 17
-    assert(testOrder(x[0], sm2, (string(1, x[0]) <=> y)));
-    assert(testOrder(sm1, y[0], x <=> (string(1, y[0]))));
+  assert(testOrder(x[0], sm2, (string(1, x[0]) <=> y)));
+  assert(testOrder(sm1, y[0], x <=> (string(1, y[0]))));
 #endif
 }
 
 #if TEST_STD_VER > 17
 template <class CharT, class Ordering>
 struct char_traits : public constexpr_char_traits<CharT> {
-    using comparison_category = Ordering;
+  using comparison_category = Ordering;
 };
 
 template <class T, class Ordering = std::strong_ordering>
@@ -339,22 +336,33 @@ constexpr void test_all_orderings() {
 }
 #endif //  TEST_STD_VER > 17
 
-int main(int, char**)
-{
-    test(std::string("123"), std::string("123"));
-    test(std::string("1234"), std::string("123"));
-    test(std::string("123\000" "56", 6), std::string("123\000" "56", 6), false);
+int main(int, char**) {
+  test(std::string("123"), std::string("123"));
+  test(std::string("1234"), std::string("123"));
+  test(std::string("123\000"
+                   "56",
+                   6),
+       std::string("123\000"
+                   "56",
+                   6),
+       false);
 #if TEST_STD_VER > 17
-    test_all_orderings<char>();
+  test_all_orderings<char>();
 #endif
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test(std::wstring(L"123"), std::wstring(L"123"));
-    test(std::wstring(L"1234"), std::wstring(L"123"));
-    test(std::wstring(L"123\000" L"56", 6), std::wstring(L"123\000" L"56", 6), false);
-#if TEST_STD_VER > 17
-    test_all_orderings<wchar_t>();
-#endif
+  test(std::wstring(L"123"), std::wstring(L"123"));
+  test(std::wstring(L"1234"), std::wstring(L"123"));
+  test(std::wstring(L"123\000"
+                    L"56",
+                    6),
+       std::wstring(L"123\000"
+                    L"56",
+                    6),
+       false);
+#  if TEST_STD_VER > 17
+  test_all_orderings<wchar_t>();
+#  endif
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 
   return 0;

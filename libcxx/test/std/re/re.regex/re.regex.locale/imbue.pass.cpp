@@ -21,15 +21,14 @@
 #include "test_macros.h"
 #include "platform_support.h" // locale name macros
 
-int main(int, char**)
-{
-    std::regex r;
-    std::locale loc = r.imbue(std::locale(LOCALE_en_US_UTF_8));
-    assert(loc.name() == "C");
-    assert(r.getloc().name() == LOCALE_en_US_UTF_8);
-    loc = r.imbue(std::locale("C"));
-    assert(loc.name() == LOCALE_en_US_UTF_8);
-    assert(r.getloc().name() == "C");
+int main(int, char**) {
+  std::regex r;
+  std::locale loc = r.imbue(std::locale(LOCALE_en_US_UTF_8));
+  assert(loc.name() == "C");
+  assert(r.getloc().name() == LOCALE_en_US_UTF_8);
+  loc = r.imbue(std::locale("C"));
+  assert(loc.name() == LOCALE_en_US_UTF_8);
+  assert(r.getloc().name() == "C");
 
   return 0;
 }

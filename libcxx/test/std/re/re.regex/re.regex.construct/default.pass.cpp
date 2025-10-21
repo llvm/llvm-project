@@ -17,19 +17,16 @@
 #include "test_macros.h"
 
 template <class CharT>
-void
-test()
-{
-    std::basic_regex<CharT> r;
-    assert(r.flags() == std::regex_constants::ECMAScript);
-    assert(r.mark_count() == 0);
+void test() {
+  std::basic_regex<CharT> r;
+  assert(r.flags() == std::regex_constants::ECMAScript);
+  assert(r.mark_count() == 0);
 }
 
-int main(int, char**)
-{
-    test<char>();
+int main(int, char**) {
+  test<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-    test<wchar_t>();
+  test<wchar_t>();
 #endif
 
   return 0;
