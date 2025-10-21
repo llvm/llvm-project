@@ -124,7 +124,8 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
     }
 
     auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    SmallVector<OpFoldResult> mixedStrides(meta.getStrides().begin(), meta.getStrides().end());
+    SmallVector<OpFoldResult> mixedStrides(meta.getStrides().begin(),
+                                           meta.getStrides().end());
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
                                            mixedShapes, mixedStrides);
   }
