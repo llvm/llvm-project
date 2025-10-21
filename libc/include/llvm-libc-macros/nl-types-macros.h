@@ -13,4 +13,3 @@
 #define NL_CAT_LOCALE 1
 
 #endif // LLVM_LIBC_MACROS_NL_TYPES_MACROS_H
-
