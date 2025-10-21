@@ -277,9 +277,9 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
   return State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+                                  BlockCount, getLocationContext(),
+                                  /*CausedByPointerEscape*/ true,
+                                  /*Symbols=*/nullptr, this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
