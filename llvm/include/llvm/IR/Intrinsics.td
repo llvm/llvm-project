@@ -49,29 +49,29 @@ def IntrArgMemOnly : IntrinsicProperty;
 // accessible by the module being compiled. This is a weaker form of IntrNoMem.
 def IntrInaccessibleMemOnly : IntrinsicProperty;
 
+// IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
+// its pointer-typed arguments point to or memory that is not accessible
+// by the module being compiled. This is a weaker form of IntrArgMemOnly.
+def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
 
-
-class IntrinsicMemoryLocation;
 // Tablegen representation of IRMemLocation.
+class IntrinsicMemoryLocation;
+
 // TODO: Populate with all IRMemLocation enum values and update
 // getValueAsIRMemLocation accordingly.
 def InaccessibleMem : IntrinsicMemoryLocation;
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;
+
 // The list of IRMemoryLocations that are read from.
 class IntrRead<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
    list<IntrinsicMemoryLocation>  MemLoc=idx;
 }
-//  The list of IRMemoryLocations that are write from.
+
+//  The list of IRMemoryLocations that are write to.
 class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
    list<IntrinsicMemoryLocation> MemLoc=idx;
 }
-
-
-// IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
-// its pointer-typed arguments point to or memory that is not accessible
-// by the module being compiled. This is a weaker form of IntrArgMemOnly.
-def IntrInaccessibleMemOrArgMemOnly : IntrinsicProperty;
 
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;

@@ -66,8 +66,7 @@ enum class IRMemLocation {
   ErrnoMem = 2,
   /// Any other memory.
   Other = 3,
-  /// Target Memory Location
-  /// Used by a target to represent target specif memory regions
+  /// Represents target specific state.
   TargetMem0 = 4,
   TargetMem1 = 5,
 
@@ -184,11 +183,6 @@ public:
     return MemoryEffectsBase(Data);
   }
 
-  bool isTargetMemLoc(IRMemLocation Loc) {
-    return static_cast<unsigned>(Loc) >=
-           static_cast<unsigned>(Location::FirstTarget);
-  }
-
   /// Convert MemoryEffectsBase into an encoded integer value (used by memory
   /// attribute).
   uint32_t toIntValue() const {
@@ -243,9 +237,9 @@ public:
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(IRMemLocation::TargetMem0)
+    return getWithoutLoc(Location::InaccessibleMem)
+        .getWithoutLoc(IRMemLocation::TargetMem0)
         .getWithoutLoc(IRMemLocation::TargetMem1)
-        .getWithoutLoc(Location::InaccessibleMem)
         .doesNotAccessMemory();
   }
 
@@ -259,6 +253,8 @@ public:
   bool onlyAccessesInaccessibleOrArgMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
         .getWithoutLoc(Location::ArgMem)
+        .getWithoutLoc(Location::TargetMem0)
+        .getWithoutLoc(Location::TargetMem1)
         .doesNotAccessMemory();
   }
 

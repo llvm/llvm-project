@@ -476,7 +476,7 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
           .Default(IRMemLocation::Other); // fallback enum
 
   if (Loc == IRMemLocation::Other)
-    PrintFatalError(R->getLoc(), "unknown Target IRMemLocation: " + Name);
+    PrintFatalError(R->getLoc(), "unknown IRMemLocation: " + Name);
 
   return Loc;
 }

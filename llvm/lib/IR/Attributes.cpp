@@ -630,7 +630,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     // Print access kind for "other" as the default access kind. This way it
     // will apply to any new location kinds that get split out of "other".
     ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
-    ModRefInfo InaccessibleMemMR = ME.getModRef(IRMemLocation::InaccessibleMem);
     if (OtherMR != ModRefInfo::NoModRef || ME.getModRef() == OtherMR) {
       First = false;
       OS << getModRefStr(OtherMR);
@@ -639,11 +638,6 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
       if (MR == OtherMR)
-        continue;
-
-      // Only prints Target Location if InaccessibleMem and Target_MemX
-      // ModRefInfo is different. Otherwise skpit Target_Mem print
-      if (ME.isTargetMemLoc(Loc) && MR == InaccessibleMemMR)
         continue;
 
       if (!First)

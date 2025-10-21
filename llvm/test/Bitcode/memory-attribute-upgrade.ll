@@ -3,5 +3,5 @@
 ; CHECK: ; Function Attrs: memory(write, argmem: read, target_mem0: none, target_mem1: none)
 ; CHECK-NEXT: define void @test_any_write_argmem_read(ptr %p)
 
-; CHECK: ; Function Attrs: memory(read, argmem: readwrite, inaccessiblemem: none)
+; CHECK: ; Function Attrs: memory(read, argmem: readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; CHECK-NEXT: define void @test_any_read_argmem_readwrite(ptr %p)

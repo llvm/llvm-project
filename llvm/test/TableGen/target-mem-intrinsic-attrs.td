@@ -2,18 +2,17 @@
 
 include "llvm/IR/Intrinsics.td"
 
-def int_aarch64_set_inaccessible_mem   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrWrite<[InaccessibleMem]>]>;
-
-def int_aarch64_set_target_mem0   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrWrite<[TargetMem0]>]>;
-
-def int_aarch64_get_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrReadMem,  IntrRead<[TargetMem1]>]>;
+def int_aarch64_get_target_mem0_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrReadMem, IntrRead<[TargetMem0, TargetMem1]>]>;
 
 def int_aarch64_get_target_mem0_set_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrRead<[TargetMem0]>, IntrWrite<[TargetMem1]>]>;
 
+def int_aarch64_get_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrReadMem,  IntrRead<[TargetMem1]>]>;
+
 def int_aarch64_get_target_mem1_set_target_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrRead<[TargetMem1]>, IntrWrite<[TargetMem1]>]>;
 
-def int_aarch64_get_target_mem0_mem1   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrReadMem, IntrRead<[TargetMem0, TargetMem1]>]>;
+def int_aarch64_set_inaccessible_mem   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrWrite<[InaccessibleMem]>]>;
 
+def int_aarch64_set_target_mem0   : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrWrite<[TargetMem0]>]>;
 
 // CHECK:   static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
 // CHECK-NEXT:  switch (ID) {
