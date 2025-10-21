@@ -46,7 +46,7 @@ WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 404
 
 READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
 READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
-READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
+READ-BAT-CHECK: PERF2BOLT: read 79 aggregated brstack entries
 READ-BAT-CHECK: HEATMAP: building heat map
 READ-BAT-CHECK: BOLT-INFO: 5 out of 21 functions in the binary (23.8%) have non-empty execution profile
 READ-BAT-FDATA-CHECK: BOLT-INFO: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile

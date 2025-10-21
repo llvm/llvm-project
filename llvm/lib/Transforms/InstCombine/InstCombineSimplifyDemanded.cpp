@@ -1892,7 +1892,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // segfaults which didn't exist in the original program.
       APInt DemandedPtrs(APInt::getAllOnes(VWidth)),
           DemandedPassThrough(DemandedElts);
-      if (auto *CMask = dyn_cast<Constant>(II->getOperand(2))) {
+      if (auto *CMask = dyn_cast<Constant>(II->getOperand(1))) {
         for (unsigned i = 0; i < VWidth; i++) {
           if (Constant *CElt = CMask->getAggregateElement(i)) {
             if (CElt->isNullValue())
@@ -1905,7 +1905,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
 
       if (II->getIntrinsicID() == Intrinsic::masked_gather)
         simplifyAndSetOp(II, 0, DemandedPtrs, PoisonElts2);
-      simplifyAndSetOp(II, 3, DemandedPassThrough, PoisonElts3);
+      simplifyAndSetOp(II, 2, DemandedPassThrough, PoisonElts3);
 
       // Output elements are undefined if the element from both sources are.
       // TODO: can strengthen via mask as well.

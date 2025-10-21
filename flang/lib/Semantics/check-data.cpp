@@ -25,9 +25,10 @@ namespace Fortran::semantics {
 // Ensures that references to an implied DO loop control variable are
 // represented as such in the "body" of the implied DO loop.
 void DataChecker::Enter(const parser::DataImpliedDo &x) {
-  auto name{std::get<parser::DataImpliedDo::Bounds>(x.t).name.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::DataImpliedDo::Bounds>(x.t).name)};
   int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
-  if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
+  if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
       kind = dynamicType->kind();
     }
@@ -36,7 +37,8 @@ void DataChecker::Enter(const parser::DataImpliedDo &x) {
 }
 
 void DataChecker::Leave(const parser::DataImpliedDo &x) {
-  auto name{std::get<parser::DataImpliedDo::Bounds>(x.t).name.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(
+      std::get<parser::DataImpliedDo::Bounds>(x.t).name)};
   exprAnalyzer_.RemoveImpliedDo(name.source);
 }
 
@@ -211,7 +213,7 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
           std::get_if<parser::Scalar<common::Indirection<parser::Designator>>>(
               &object.u)}) {
     if (MaybeExpr expr{exprAnalyzer_.Analyze(*designator)}) {
-      auto source{designator->thing.value().source};
+      auto source{parser::UnwrapRef<parser::Designator>(*designator).source};
       DataVarChecker checker{exprAnalyzer_.context(), source};
       if (checker(*expr)) {
         if (checker.HasComponentWithoutSubscripts()) { // C880
