@@ -164,6 +164,17 @@ public:
               });
   }
 
+  void reverseRelations(
+      const clangd::RelationsRequest &Request,
+      llvm::function_ref<void(const SymbolID &, const clangd::Symbol &)>
+          Callback) const override {
+    streamRPC(Request, &remote::v1::SymbolIndex::Stub::ReverseRelations,
+              // Unpack protobuf Relation.
+              [&](std::pair<SymbolID, clangd::Symbol> SubjectAndObject) {
+                Callback(SubjectAndObject.first, SubjectAndObject.second);
+              });
+  }
+
   llvm::unique_function<IndexContents(llvm::StringRef) const>
   indexedFiles() const override {
     // FIXME: For now we always return IndexContents::None regardless of whether
