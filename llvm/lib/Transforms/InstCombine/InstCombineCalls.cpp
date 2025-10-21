@@ -4015,7 +4015,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           continue;
         // Don't replace a scalar select with a more expensive vector select if
         // we can't simplify both arms of the select.
-        bool SimplifyBothArms = !Op->getType()->isVectorTy() && II->getType()->isVectorTy();
+        bool SimplifyBothArms =
+            !Op->getType()->isVectorTy() && II->getType()->isVectorTy();
         if (Instruction *R = FoldOpIntoSelect(
                 *II, Sel, /*FoldWithMultiUse=*/false, SimplifyBothArms))
           return R;
