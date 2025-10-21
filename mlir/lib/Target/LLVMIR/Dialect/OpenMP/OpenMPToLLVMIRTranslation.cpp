@@ -246,7 +246,7 @@ public:
 
   // Rewrite all uses of the original variable in `BBName`
   //  with the linear variable in-place
-  void rewriteInPlace(llvm::IRBuilderBase &builder, std::string BBName,
+  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
                       size_t varIndex) {
     llvm::SmallVector<llvm::User *> users;
     for (llvm::User *user : linearOrigVal[varIndex]->users())

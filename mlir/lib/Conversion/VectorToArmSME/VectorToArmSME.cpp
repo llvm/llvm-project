@@ -731,28 +731,14 @@ struct ExtractFromCreateMaskToPselLowering
   }
 };
 
-// Convert all `vector.splat` to `vector.broadcast`. There is a path from
-// `vector.broadcast` to ArmSME via another pattern.
-struct ConvertSplatToBroadcast : public OpRewritePattern<vector::SplatOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(vector::SplatOp splatOp,
-                                PatternRewriter &rewriter) const final {
-
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(splatOp, splatOp.getType(),
-                                                     splatOp.getInput());
-    return success();
-  }
-};
-
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<BroadcastOpToArmSMELowering, ConvertSplatToBroadcast,
-               TransferReadToArmSMELowering, TransferWriteToArmSMELowering,
-               TransposeOpToArmSMELowering, VectorLoadToArmSMELowering,
-               VectorStoreToArmSMELowering, VectorOuterProductToArmSMELowering,
+  patterns.add<BroadcastOpToArmSMELowering, TransferReadToArmSMELowering,
+               TransferWriteToArmSMELowering, TransposeOpToArmSMELowering,
+               VectorLoadToArmSMELowering, VectorStoreToArmSMELowering,
+               VectorOuterProductToArmSMELowering,
                VectorExtractToArmSMELowering, VectorInsertToArmSMELowering,
                VectorPrintToArmSMELowering, FoldTransferWriteOfExtractTileSlice,
                ExtractFromCreateMaskToPselLowering>(&ctx);

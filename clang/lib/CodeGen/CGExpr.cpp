@@ -1756,7 +1756,7 @@ LValue CodeGenFunction::EmitUnsupportedLValue(const Expr *E,
                                               const char *Name) {
   ErrorUnsupported(E, Name);
   llvm::Type *ElTy = ConvertType(E->getType());
-  llvm::Type *Ty = UnqualPtrTy;
+  llvm::Type *Ty = DefaultPtrTy;
   return MakeAddrLValue(
       Address(llvm::UndefValue::get(Ty), ElTy, CharUnits::One()), E->getType());
 }
@@ -2011,7 +2011,7 @@ static bool isConstantEmittableObjectType(QualType type) {
   // Otherwise, all object types satisfy this except C++ classes with
   // mutable subobjects or non-trivial copy/destroy behavior.
   if (const auto *RT = dyn_cast<RecordType>(type))
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->hasMutableFields() || !RD->isTrivial())
         return false;
@@ -4270,7 +4270,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
       llvm::StructType::get(Int8Ty, SourceLocationTy, VoidPtrTy);
 
   llvm::Value *V = Builder.CreateConstGEP2_32(
-      CfiCheckFailDataTy, Builder.CreatePointerCast(Data, UnqualPtrTy), 0, 0);
+      CfiCheckFailDataTy, Builder.CreatePointerCast(Data, DefaultPtrTy), 0, 0);
 
   Address CheckKindAddr(V, Int8Ty, getIntAlign());
   llvm::Value *CheckKind = Builder.CreateLoad(CheckKindAddr);
@@ -4564,7 +4564,7 @@ static bool IsPreserveAIArrayBase(CodeGenFunction &CGF, const Expr *ArrayBase) {
     const auto *PointeeT = PtrT->getPointeeType()
                              ->getUnqualifiedDesugaredType();
     if (const auto *RecT = dyn_cast<RecordType>(PointeeT))
-      return RecT->getOriginalDecl()
+      return RecT->getDecl()
           ->getMostRecentDecl()
           ->hasAttr<BPFPreserveAccessIndexAttr>();
     return false;
@@ -5711,7 +5711,7 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
       if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Live->IgnoreParens())) {
         CGF.EmitCXXThrowExpr(ThrowExpr);
         llvm::Type *ElemTy = CGF.ConvertType(Dead->getType());
-        llvm::Type *Ty = CGF.UnqualPtrTy;
+        llvm::Type *Ty = CGF.DefaultPtrTy;
         return CGF.MakeAddrLValue(
             Address(llvm::UndefValue::get(Ty), ElemTy, CharUnits::One()),
             Dead->getType());
@@ -7008,7 +7008,7 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
         WorkList.emplace_back(LVal, CAT->getElementType(), IdxListCopy);
       }
     } else if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const RecordDecl *Record = RT->getDecl()->getDefinitionOrSelf();
       assert(!Record->isUnion() && "Union types not supported in flat cast.");
 
       const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(Record);
