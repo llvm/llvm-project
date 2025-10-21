@@ -1,4 +1,4 @@
-# REQUIRES: lld
+# REQUIRES: lld, target-windows
 
 # Test that functions have the correct types.
 # This uses the same input as SymbolFile/PDB/func-symbols.test. However, DIA 
