@@ -5441,7 +5441,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
 template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   if (!this->processCallGraphSection())
     return;
-  if (this->FuncCGInfos.size() == 0)
+  if (this->FuncCGInfos.empty())
     return;
 
   const Elf_Shdr *CGSection = this->findSectionByName(".llvm.callgraph");
@@ -5482,67 +5482,62 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
     return join(FuncSymNames, ", ");
   };
 
-  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
+  auto GetFunctionAddressAndName = [&](uint64_t FuncEntryPC) -> std::string {
+    std::string S;
+    raw_string_ostream Stream(S);
     if (this->Obj.getHeader().e_type == ELF::ET_REL) {
       auto Reloc = llvm::lower_bound(
           Relocations, FuncEntryPC,
           [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
-      OS << "\nFunction:: ";
       Expected<RelSymbol<ELFT>> RelSym =
           this->getRelocationTarget(*Reloc, RelocSymTab);
       if (!RelSym) {
         this->reportUniqueWarning(RelSym.takeError());
-        OS << format("0x%lx", FuncEntryPC);
+        Stream << format("0x%lx", FuncEntryPC);
       } else {
         SmallString<32> RelocName;
         this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
-        OS << RelSym->Name;
+        Stream << RelSym->Name;
         if (Reloc->Addend) {
           if (*Reloc->Addend >= 0)
-            OS << " + " << *Reloc->Addend;
+            Stream << " + " << *Reloc->Addend;
           else
-            OS << " - " << -(*Reloc->Addend);
+            Stream << " - " << -(*Reloc->Addend);
         }
-        OS << " (" << RelocName << ")";
+        Stream << " (" << RelocName << ")";
       }
-
     } else {
       std::string FuncSymNames = GetFunctionName(FuncEntryPC);
+      Stream << "0x" << to_string(format_hex(FuncEntryPC, 1));
       if (!FuncSymNames.empty())
-        OS << "\nFunction:: " << FuncSymNames;
-      OS << "\nFunction PC:: ";
-      OS << format("0x%lx", FuncEntryPC);
+        Stream << " <" << FuncSymNames << ">";
     }
+    return Stream.str();
   };
 
-  OS << "Per-function call graph information:: \n";
-  for (const auto &CGInfo : this->FuncCGInfos) {
-    PrintFunctionInfo(CGInfo.FunctionAddress);
+  OS << "\nCall graph section '.llvm.callgraph' contains "
+     << this->FuncCGInfos.size() << " entries:\n";
 
-    OS << "\nFormatVersionNumber:: " << CGInfo.FormatVersionNumber;
-    OS << "\nIsIndirectTarget:: "
-       << (CGInfo.IsIndirectTarget ? "true" : "false");
-    OS << "\nFunction Type ID:: 0x" << format("%lx", CGInfo.FunctionTypeId);
-    OS << "\nDirect callee count:: " << CGInfo.DirectCallees.size();
-    if (CGInfo.DirectCallees.size() > 0) {
-      OS << "\n{";
-      for (auto CalleePC : CGInfo.DirectCallees) {
-        OS.PadToColumn(2);
-        PrintFunctionInfo(CalleePC);
-      }
-      OS << "\n}";
+  int EntryIndex = 0;
+  for (const auto &CGInfo : this->FuncCGInfos) {
+    OS << "\n  Entry " << EntryIndex++ << ":\n";
+    OS << "    Function:          "
+       << GetFunctionAddressAndName(CGInfo.FunctionAddress) << "\n";
+    OS << "    Indirect Target:   " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
+       << "\n";
+    OS << "    Type ID:           " << format_hex(CGInfo.FunctionTypeId, 1)
+       << "\n";
+
+    OS << "    Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
+    for (auto CalleePC : CGInfo.DirectCallees) {
+      OS << "      " << GetFunctionAddressAndName(CalleePC) << "\n";
     }
-    OS << "\nIndirect target type ID count:: " << CGInfo.IndirectTypeIDs.size();
-    if (CGInfo.IndirectTypeIDs.size() > 0) {
-      OS << "\n{";
-      for (auto TypeId : CGInfo.IndirectTypeIDs) {
-        OS << "\n";
-        OS.PadToColumn(2);
-        OS << "calleeTypeId: 0x" << format("%lx", TypeId);
-      }
-      OS << "\n}";
+
+    OS << "    Indirect Callees by Type ID (" << CGInfo.IndirectTypeIDs.size()
+       << "):\n";
+    for (auto TypeId : CGInfo.IndirectTypeIDs) {
+      OS << "      0x" << format_hex(TypeId, 1) << "\n";
     }
-    OS << "\n";
   }
 }
 
