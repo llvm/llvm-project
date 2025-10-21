@@ -3455,16 +3455,18 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select a, false, b -> select !a, b, false
   if (match(TrueVal, m_Specific(Zero))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, &SI);
+        SelectInst::Create(NotCond, FalseVal, Zero, "", nullptr, MDFrom);
     NewSI->swapProfMetadata();
     return NewSI;
   }
   // select a, b, true -> select !a, true, b
   if (match(FalseVal, m_Specific(One))) {
     Value *NotCond = Builder.CreateNot(CondVal, "not." + CondVal->getName());
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, &SI);
+        SelectInst::Create(NotCond, One, TrueVal, "", nullptr, MDFrom);
     NewSI->swapProfMetadata();
     return NewSI;
   }
@@ -3474,8 +3476,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || TrueVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", &SI));
+        cast<SelectInst>(Builder.CreateSelect(A, One, B, "", MDFrom));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
@@ -3485,8 +3488,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
       (CondVal->hasOneUse() || FalseVal->hasOneUse()) &&
       !match(A, m_ConstantExpr()) && !match(B, m_ConstantExpr())) {
+    Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
     SelectInst *NewSI =
-        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", &SI));
+        cast<SelectInst>(Builder.CreateSelect(A, B, Zero, "", MDFrom));
     NewSI->swapProfMetadata();
     return BinaryOperator::CreateNot(NewSI);
   }
