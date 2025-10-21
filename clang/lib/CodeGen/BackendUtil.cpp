@@ -1211,7 +1211,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       }
     }
 
-    if (shouldEmitUnifiedLTOModueFlag())
+    if (shouldEmitUnifiedLTOModueFlag() &&
+        !TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 

@@ -70,6 +70,26 @@ unsigned long test_builtin_unknown() {
   return __builtin_infer_alloc_token(4096);
 }
 
+// Test template instantiation.
+template <typename T>
+constexpr unsigned long get_token() {
+  return __builtin_infer_alloc_token(sizeof(T));
+}
+
+// CHECK-LABEL: @_Z13get_token_intv()
+// CHECK-CODEGEN: call i64 @llvm.alloc.token.id.i64(metadata ![[META_INT]])
+// CHECK-LOWER: ret i64 0
+unsigned long get_token_int() {
+  return get_token<int>();
+}
+
+// CHECK-LABEL: @_Z13get_token_ptrv()
+// CHECK-CODEGEN: call i64 @llvm.alloc.token.id.i64(metadata ![[META_PTR]])
+// CHECK-LOWER: ret i64 1
+unsigned long get_token_ptr() {
+  return get_token<int *>();
+}
+
 // CHECK-CODEGEN: ![[META_INT]] = !{!"int", i1 false}
 // CHECK-CODEGEN: ![[META_PTR]] = !{!"int *", i1 true}
 // CHECK-CODEGEN: ![[META_NOPTR]] = !{!"NoPtr", i1 false}
