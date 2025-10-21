@@ -87,6 +87,7 @@ static llvm::cl::opt<bool> LimitedCoverage(
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
+static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
 
 static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   switch (CGM.getContext().getCXXABIKind()) {
@@ -1587,6 +1588,17 @@ void CodeGenModule::Release() {
       }
     }
   }
+
+  // Emit `!llvm.errno.tbaa`, a module-level metadata that specifies the TBAA
+  // for an int access. This allows LLVM to reason about what memory can be
+  // accessed by certain library calls that only touch errno.
+  if (TBAA) {
+    TBAAAccessInfo TBAAInfo = getTBAAAccessInfo(Context.IntTy);
+    if (llvm::MDNode *IntegerNode = getTBAAAccessTagInfo(TBAAInfo)) {
+      auto *ErrnoTBAAMD = TheModule.getOrInsertNamedMetadata(ErrnoTBAAMDName);
+      ErrnoTBAAMD->addOperand(IntegerNode);
+    }
+  }
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
@@ -2855,6 +2867,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     }
   }
 
+  if (CodeGenOpts.CallGraphSection) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      createIndirectFunctionTypeMD(FD, F);
+  }
+
   // Emit type metadata on member functions for member function pointer checks.
   // These are only ever necessary on definitions; we're guaranteed that the
   // definition will be present in the LTO unit as a result of LTO visibility.
@@ -3058,6 +3075,26 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
+static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
+  llvm::MDNode *MD = F->getMetadata(llvm::LLVMContext::MD_type);
+  return MD && MD->hasGeneralizedMDString();
+}
+
+void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
+                                                 llvm::Function *F) {
+  // Return if generalized type metadata is already attached.
+  if (hasExistingGeneralizedTypeMD(F))
+    return;
+
+  // All functions which are not internal linkage could be indirect targets.
+  // Address taken functions with internal linkage could be indirect targets.
+  if (!F->hasLocalLinkage() ||
+      F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
+                                       /*IgnoreAssumeLikeCalls=*/true,
+                                       /*IgnoreLLVMUsed=*/false))
+    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+}
+
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                                        llvm::Function *F) {
   // Only if we are checking indirect calls.
@@ -3073,15 +3110,32 @@ void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                            /*GeneralizePointers=*/false);
   llvm::Metadata *MD = CreateMetadataIdentifierForType(FnType);
   F->addTypeMetadata(0, MD);
-
-  QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
-                                                 /*GeneralizePointers=*/true);
-  F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
+  // Add the generalized identifier if not added already.
+  if (!hasExistingGeneralizedTypeMD(F)) {
+    QualType GenPtrFnType = GeneralizeFunctionType(getContext(), FD->getType(),
+                                                   /*GeneralizePointers=*/true);
+    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(GenPtrFnType));
+  }
 
   // Emit a hash-based bit set entry for cross-DSO calls.
   if (CodeGenOpts.SanitizeCfiCrossDso)
     if (auto CrossDsoTypeId = CreateCrossDsoCfiTypeId(MD))
       F->addTypeMetadata(0, llvm::ConstantAsMetadata::get(CrossDsoTypeId));
+}
+
+void CodeGenModule::createCalleeTypeMetadataForIcall(const QualType &QT,
+                                                     llvm::CallBase *CB) {
+  // Only if needed for call graph section and only for indirect calls.
+  if (!CodeGenOpts.CallGraphSection || !CB->isIndirectCall())
+    return;
+
+  llvm::Metadata *TypeIdMD = CreateMetadataIdentifierGeneralized(QT);
+  llvm::MDTuple *TypeTuple = llvm::MDTuple::get(
+      getLLVMContext(), {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                             llvm::Type::getInt64Ty(getLLVMContext()), 0)),
+                         TypeIdMD});
+  llvm::MDTuple *MDN = llvm::MDNode::get(getLLVMContext(), {TypeTuple});
+  CB->setMetadata(llvm::LLVMContext::MD_callee_type, MDN);
 }
 
 void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
@@ -3218,6 +3272,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   if (!CodeGenOpts.SanitizeCfiCrossDso ||
       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
     createFunctionTypeMetadataForIcall(FD, F);
+
+  if (CodeGenOpts.CallGraphSection)
+    createIndirectFunctionTypeMD(FD, F);
 
   if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
     setKCFIType(FD, F);
