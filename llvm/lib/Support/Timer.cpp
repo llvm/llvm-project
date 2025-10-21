@@ -288,8 +288,8 @@ TimerGroup::TimerGroup(StringRef Name, StringRef Description, bool PrintOnExit)
     : TimerGroup(Name, Description, timerLock(), PrintOnExit) {}
 
 TimerGroup::TimerGroup(StringRef Name, StringRef Description,
-                       const StringMap<TimeRecord> &Records)
-    : TimerGroup(Name, Description, /*PrintOnExit=*/false) {
+                       const StringMap<TimeRecord> &Records, bool PrintOnExit)
+    : TimerGroup(Name, Description, PrintOnExit) {
   TimersToPrint.reserve(Records.size());
   for (const auto &P : Records)
     TimersToPrint.emplace_back(P.getValue(), std::string(P.getKey()),

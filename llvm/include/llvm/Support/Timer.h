@@ -219,7 +219,8 @@ public:
                                bool PrintOnExit = true);
 
   LLVM_ABI explicit TimerGroup(StringRef Name, StringRef Description,
-                               const StringMap<TimeRecord> &Records);
+                               const StringMap<TimeRecord> &Records,
+                               bool PrintOnExit = true);
 
   LLVM_ABI ~TimerGroup();
 
