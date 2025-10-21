@@ -27,7 +27,7 @@ __amdgpu_buffer_rsrc_t getBuffer(void *p) {
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr addrspace(5) [[P]], addrspacecast (ptr null to ptr addrspace(5))
 // CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
 // CHECK:       [[IF_THEN]]:
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[P]], align 16, !tbaa [[__AMDGPU_BUFFER_RSRC_T_TBAA4:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[P]], align 16, !tbaa [[__AMDGPU_BUFFER_RSRC_T_TBAA8:![0-9]+]]
 // CHECK-NEXT:    tail call void @consumeBuffer(ptr addrspace(8) [[TMP0]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
@@ -41,14 +41,14 @@ void consumeBufferPtr(__amdgpu_buffer_rsrc_t *p) {
 // CHECK-LABEL: define dso_local void @test(
 // CHECK-SAME: ptr addrspace(5) noundef readonly captures(address) [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A]], align 16, !tbaa [[INT_TBAA8:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A]], align 16, !tbaa [[INT_TBAA10:![0-9]+]]
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq ptr addrspace(5) [[A]], addrspacecast (ptr null to ptr addrspace(5))
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL_NOT]], i1 true, i1 [[TOBOOL_NOT_I]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label %[[IF_END:.*]], label %[[IF_THEN_I:.*]]
 // CHECK:       [[IF_THEN_I]]:
 // CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[A]], i32 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[R]], align 16, !tbaa [[__AMDGPU_BUFFER_RSRC_T_TBAA4]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(8), ptr addrspace(5) [[R]], align 16, !tbaa [[__AMDGPU_BUFFER_RSRC_T_TBAA8]]
 // CHECK-NEXT:    tail call void @consumeBuffer(ptr addrspace(8) [[TMP1]]) #[[ATTR2]]
 // CHECK-NEXT:    br label %[[IF_END]]
 // CHECK:       [[IF_END]]:
@@ -81,11 +81,11 @@ AA bar(void *p) {
   return a;
 }
 //.
-// CHECK: [[__AMDGPU_BUFFER_RSRC_T_TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-// CHECK: [[META5]] = !{!"__amdgpu_buffer_rsrc_t", [[META6:![0-9]+]], i64 0}
+// CHECK: [[META5:![0-9]+]] = !{!"int", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 // CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[INT_TBAA8]] = !{[[META9:![0-9]+]], [[META10:![0-9]+]], i64 0}
-// CHECK: [[META9]] = !{!"AA_ty", [[META10]], i64 0, [[META5]], i64 16}
-// CHECK: [[META10]] = !{!"int", [[META6]], i64 0}
+// CHECK: [[__AMDGPU_BUFFER_RSRC_T_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK: [[META9]] = !{!"__amdgpu_buffer_rsrc_t", [[META6]], i64 0}
+// CHECK: [[INT_TBAA10]] = !{[[META11:![0-9]+]], [[META5]], i64 0}
+// CHECK: [[META11]] = !{!"AA_ty", [[META5]], i64 0, [[META9]], i64 16}
 //.

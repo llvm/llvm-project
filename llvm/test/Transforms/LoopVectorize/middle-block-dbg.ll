@@ -48,7 +48,7 @@ for.cond.cleanup.loopexit:
   br label %for.cond.cleanup, !dbg !33
 
 for.cond.cleanup:
-  %2 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ undef, %entry ], !dbg !33
+  %2 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ 0, %entry ], !dbg !33
   %sub = add nsw i32 %0, -5, !dbg !33
   %idxprom3 = sext i32 %sub to i64, !dbg !33
   %arrayidx4 = getelementptr inbounds i32, ptr %vla, i64 %idxprom3, !dbg !33
