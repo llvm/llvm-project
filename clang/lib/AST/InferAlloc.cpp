@@ -160,9 +160,9 @@ static QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
   return QualType();
 }
 
-QualType clang::infer_alloc::inferPossibleType(const CallExpr *E,
-                                               const ASTContext &Ctx,
-                                               const CastExpr *CastE) {
+QualType infer_alloc::inferPossibleType(const CallExpr *E,
+                                        const ASTContext &Ctx,
+                                        const CastExpr *CastE) {
   QualType AllocType;
   // First check arguments.
   for (const Expr *Arg : E->arguments()) {
@@ -179,7 +179,7 @@ QualType clang::infer_alloc::inferPossibleType(const CallExpr *E,
 }
 
 std::optional<llvm::AllocTokenMetadata>
-clang::infer_alloc::getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
+infer_alloc::getAllocTokenMetadata(QualType T, const ASTContext &Ctx) {
   llvm::AllocTokenMetadata ATMD;
 
   // Get unique type name.
