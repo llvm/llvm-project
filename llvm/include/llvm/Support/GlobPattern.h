@@ -72,7 +72,7 @@ public:
     return SubGlobs[0].getPat() == "*";
   }
 
-  // The followind functions are as shortcuts to some matching. They are
+  // The following functions are just shortcuts for faster matching. They are
   // conservative to simplify implementations.
 
   // Returns plain prefix of the pattern.
