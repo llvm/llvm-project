@@ -414,7 +414,7 @@ Below are some guidelines about the format of the message itself:
   included in the submitted code.
 
 * Avoid 'tagging' someone's username in your commits and PR descriptions
-  (e.g., `@<someUser>`), doing so results in that account receiving an email
+  (e.g., `@<someUser>`), doing so results in that account receiving a notification
   every time the commit is cherry-picked and to a fork.
 
 LLVM uses a squash workflow for pull requests, so as the pull request evolves
