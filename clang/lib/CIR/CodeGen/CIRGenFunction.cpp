@@ -555,7 +555,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     // When generating code for a builtin with an inline declaration, use a
     // mangled name to hold the actual body, while keeping an external
     // declaration in case the function pointer is referenced somewhere.
-    std::string fdInlineName = fn.getName().str() + ".inline";
+    std::string fdInlineName = (cgm.getMangledName(funcDecl) + ".inline").str();
     cir::FuncOp clone =
         mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
     if (!clone) {
@@ -563,14 +563,11 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = builder.create<cir::FuncOp>(fn.getLoc(), fdInlineName,
                                           fn.getFunctionType());
-      clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
-          &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
+      clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
-      clone.setInlineKindAttr(cir::InlineAttr::get(
-          &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+      clone.setInlineKind(cir::InlineKind::AlwaysInline);
     }
-    fn.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
-        &cgm.getMLIRContext(), cir::GlobalLinkageKind::ExternalLinkage));
+    fn.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
     fn.setSymVisibility("private");
     fn = clone;
   } else {
@@ -584,6 +581,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
         if (auto inlineFn = mlir::cast_or_null<cir::FuncOp>(
                 cgm.getGlobalValue(inlineName))) {
           // Replace all uses of the .inline function with the regular function
+          // FIXME: This performs a linear walk over the module. Introduce some
+          // caching here.
           if (inlineFn
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
