@@ -382,3 +382,13 @@ define <16 x i1> @test_select_of_active_lane_mask_bound(i64 %base, i64 %n, i1 %c
   %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %s)
   ret <16 x i1> %mask
 }
+
+define <16 x i1> @test_select_of_active_lane_mask_bound_both_constant(i64 %base, i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_active_lane_mask_bound_both_constant(
+; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[COND:%.*]], <16 x i1> splat (i1 true), <16 x i1> zeroinitializer
+; CHECK-NEXT:    ret <16 x i1> [[MASK]]
+;
+  %s = select i1 %cond, i64 16, i64 0
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 %s)
+  ret <16 x i1> %mask
+}

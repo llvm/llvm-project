@@ -1822,7 +1822,7 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   if (!NewTV && !NewFV)
     return nullptr;
 
-  if (SimplifyBothArms)
+  if (SimplifyBothArms && !(NewTV && NewFV))
     return nullptr;
 
   // Create an instruction for the arm that did not fold.
