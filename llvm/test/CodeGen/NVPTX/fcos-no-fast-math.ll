@@ -6,9 +6,7 @@ declare float @llvm.cos.f32(float)
 
 ; CHECK: LLVM ERROR: Cannot select: {{.*}}: f32 = fcos
 ; CHECK: In function: test_fcos_safe
-define float @test_fcos_safe(float %a) #0 {
+define float @test_fcos_safe(float %a) {
   %r = tail call float @llvm.cos.f32(float %a)
   ret float %r
 }
-
-attributes #0 = { "unsafe-fp-math" = "false" }

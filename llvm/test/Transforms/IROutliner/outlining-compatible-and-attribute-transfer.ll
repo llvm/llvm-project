@@ -101,7 +101,7 @@ entry:
 }
 
 attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "less-precise-fpmad"="true"
-"unsafe-fp-math"="true" "no-infs-fp-math"="true"}
+"no-infs-fp-math"="true"}
 
 ; CHECK: define internal void @outlined_ir_func_0(ptr [[ARG0:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) [[ATTR1:#[0-9]+]] {
 ; CHECK: entry_to_outline:
@@ -122,5 +122,5 @@ attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "les
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[ARG2]], align 4
 
 
-; CHECK: attributes [[ATTR1]] =   { minsize optsize "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "unsafe-fp-math"="false" }
-; CHECK: attributes [[ATTR]] = { minsize optsize "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "unsafe-fp-math"="true" }
+; CHECK: attributes [[ATTR1]] =   { minsize optsize "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" }
+; CHECK: attributes [[ATTR]] = { minsize optsize "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }

@@ -84,7 +84,7 @@ declare spir_func target("spirv.SampledImage", float, 1, 1, 0, 0, 0, 0, 0) @_Z20
 
 declare spir_func <4 x float> @_Z38__spirv_ImageSampleExplicitLod_Rfloat4PU3AS120__spirv_SampledImageDv4_iif(target("spirv.SampledImage", float, 1, 1, 0, 0, 0, 0, 0), <4 x i32>, i32, float)
 
-attributes #0 = { nounwind readnone "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readnone "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 !opencl.enable.FP_CONTRACT = !{}
 !opencl.spir.version = !{!6}

@@ -381,7 +381,7 @@ define <16 x half> @stack_fold_getmantph_maskz_ymm(<16 x half> %a0, ptr %mask) {
   ret <16 x half> %3
 }
 
-define <8 x half> @stack_fold_maxph(<8 x half> %a0, <8 x half> %a1) #0 {
+define <8 x half> @stack_fold_maxph(<8 x half> %a0, <8 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -410,7 +410,7 @@ define <8 x half> @stack_fold_maxph_commutable(<8 x half> %a0, <8 x half> %a1) #
   ret <8 x half> %2
 }
 
-define <16 x half> @stack_fold_maxph_ymm(<16 x half> %a0, <16 x half> %a1) #0 {
+define <16 x half> @stack_fold_maxph_ymm(<16 x half> %a0, <16 x half> %a1) {
 ; CHECK-LABEL: stack_fold_maxph_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -439,7 +439,7 @@ define <16 x half> @stack_fold_maxph_ymm_commutable(<16 x half> %a0, <16 x half>
   ret <16 x half> %2
 }
 
-define <8 x half> @stack_fold_minph(<8 x half> %a0, <8 x half> %a1) #0 {
+define <8 x half> @stack_fold_minph(<8 x half> %a0, <8 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -468,7 +468,7 @@ define <8 x half> @stack_fold_minph_commutable(<8 x half> %a0, <8 x half> %a1) #
   ret <8 x half> %2
 }
 
-define <16 x half> @stack_fold_minph_ymm(<16 x half> %a0, <16 x half> %a1) #0 {
+define <16 x half> @stack_fold_minph_ymm(<16 x half> %a0, <16 x half> %a1) {
 ; CHECK-LABEL: stack_fold_minph_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -1471,6 +1471,3 @@ define <8 x float> @stack_fold_fcmaddc_maskz_ymm(<8 x float> %a0, <8 x float> %a
   ret <8 x float> %3
 }
 declare <8 x float> @llvm.x86.avx512fp16.maskz.vfcmadd.cph.256(<8 x float>, <8 x float>, <8 x float>, i8)
-
-attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" }

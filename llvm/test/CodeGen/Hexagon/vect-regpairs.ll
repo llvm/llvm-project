@@ -125,7 +125,7 @@ declare <32 x i32> @llvm.hexagon.V6.vmpahb.acc(<32 x i32>, <32 x i32>, i32)
 declare <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32>, <16 x i32>, i32)
 declare <16 x i32> @llvm.hexagon.V6.vshuffeb(<16 x i32>, <16 x i32>)
 
-attributes #0 = { "correctly-rounded-divide-sqrt-fp-math""target-cpu"="hexagonv65" "target-features"="+hvx-length64b,+hvxv65,+v65,-long-calls" "unsafe-fp-math"}
+attributes #0 = { "correctly-rounded-divide-sqrt-fp-math""target-cpu"="hexagonv65" "target-features"="+hvx-length64b,+hvxv65,+v65,-long-calls" }
 !8 = !{!9, !9, i64 0}
 !9 = !{!"omnipotent char", !10}
 !10 = !{}

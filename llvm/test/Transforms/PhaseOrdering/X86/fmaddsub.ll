@@ -1022,4 +1022,4 @@ define <8 x double> @buildvector_mul_subadd_pd512_partial(<8 x double> %C, <8 x 
   ret <8 x double> %vecinsert8
 }
 
-attributes #0 = { nounwind "unsafe-fp-math"="true" }
+attributes #0 = { nounwind }
