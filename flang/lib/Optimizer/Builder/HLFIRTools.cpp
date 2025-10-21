@@ -1026,7 +1026,7 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
       if (!couldVectorize) {
         mlir::LLVM::LoopVectorizeAttr va{mlir::LLVM::LoopVectorizeAttr::get(
             builder.getContext(),
-            /*disable=*/builder.getBoolAttr(true), {}, {}, {}, {}, {}, {})};
+            /*disable=*/builder.getBoolAttr(true), {}, {}, {}, {}, {}, {}, {})};
         mlir::LLVM::LoopAnnotationAttr la = mlir::LLVM::LoopAnnotationAttr::get(
             builder.getContext(), {}, /*vectorize=*/va, {}, /*unroll*/ {},
             /*unroll_and_jam*/ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
