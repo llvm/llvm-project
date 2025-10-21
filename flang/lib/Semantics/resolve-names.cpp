@@ -1441,6 +1441,30 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenACCStandaloneConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCCacheConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCWaitConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCAtomicConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCEndConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCDeclarativeConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
 
   void CopySymbolWithDevice(const parser::Name *name);
 
@@ -1480,7 +1504,8 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // symbols are created for the one appearing in the use_device
   // clause. These new symbols have the CUDA Fortran device
   // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+      name->symbol) {
     name->symbol = currScope().CopySymbol(*name->symbol);
     if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
@@ -1490,15 +1515,12 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
   for (const auto &accObject : x.v.v) {
+    Walk(accObject);
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name{
                       parser::GetDesignatorNameIfDataRef(designator)}) {
-                Symbol *prev{currScope().FindSymbol(name->source)};
-                if (prev != name->symbol) {
-                  name->symbol = prev;
-                }
                 CopySymbolWithDevice(name);
               } else {
                 if (const auto *dataRef{
@@ -1507,13 +1529,8 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
                       common::Indirection<parser::ArrayElement>;
                   if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
                     const parser::ArrayElement &arrayElement{ind->value()};
-                    Walk(arrayElement.subscripts);
                     const parser::DataRef &base{arrayElement.base};
                     if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                      Symbol *prev{currScope().FindSymbol(name->source)};
-                      if (prev != name->symbol) {
-                        name->symbol = prev;
-                      }
                       CopySymbolWithDevice(name);
                     }
                   }
@@ -1537,6 +1554,7 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
 
 bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  currScope().AddSourceRange(x.source);
   return true;
 }
 
