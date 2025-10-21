@@ -1699,6 +1699,9 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::OR:    return RISCV::PseudoCCOR;    break;
   case RISCV::XOR:   return RISCV::PseudoCCXOR;   break;
   case RISCV::MAX:   return RISCV::PseudoCCMAX;   break;
+  case RISCV::MAXU:  return RISCV::PseudoCCMAXU;  break;
+  case RISCV::MIN:   return RISCV::PseudoCCMIN;   break;
+  case RISCV::MINU:  return RISCV::PseudoCCMINU;  break;
 
   case RISCV::ADDI:  return RISCV::PseudoCCADDI;  break;
   case RISCV::SLLI:  return RISCV::PseudoCCSLLI;  break;
