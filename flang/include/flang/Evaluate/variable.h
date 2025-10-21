@@ -275,9 +275,9 @@ public:
 private:
   common::CopyableIndirection<DataRef> base_;
   std::vector<Expr<SubscriptInteger>> cosubscript_;
+  std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
   std::optional<common::CopyableIndirection<Expr<SomeInteger>>> stat_;
   std::optional<common::CopyableIndirection<Expr<SomeType>>> team_;
-  std::optional<common::CopyableIndirection<Expr<SomeType>>> notify_;
 };
 
 // R911 data-ref is defined syntactically as a series of part-refs, which

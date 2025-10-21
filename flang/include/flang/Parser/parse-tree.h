@@ -1690,7 +1690,7 @@ struct ImageSelectorSpec {
   WRAPPER_CLASS(Team_Number, ScalarIntExpr);
   WRAPPER_CLASS(Notify, Scalar<common::Indirection<Variable>>);
   UNION_CLASS_BOILERPLATE(ImageSelectorSpec);
-  std::variant<Stat, TeamValue, Team_Number, Notify> u;
+  std::variant<Notify, Stat, TeamValue, Team_Number> u;
 };
 
 // R924 image-selector ->
