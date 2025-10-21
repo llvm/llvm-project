@@ -8,7 +8,6 @@
 
 #include "SelectionDAGTestBase.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
-#include "gtest/gtest.h"
 
 using namespace llvm;
 
