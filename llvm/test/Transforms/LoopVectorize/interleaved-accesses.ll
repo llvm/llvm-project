@@ -791,8 +791,8 @@ define void @int_float_struct(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ <float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ <i32 undef, i32 0, i32 0, i32 0>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_INTFLOAT:%.*]], ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -822,8 +822,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %SumB.014 = phi float [ undef, %entry ], [ %add3, %for.body ]
-  %SumA.013 = phi i32 [ undef, %entry ], [ %add, %for.body ]
+  %SumB.014 = phi float [ 0.0e+00, %entry ], [ %add3, %for.body ]
+  %SumA.013 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %a = getelementptr inbounds %struct.IntFloat, ptr %A, i64 %indvars.iv, i32 0
   %tmp = load i32, ptr %a, align 4
   %add = add nsw i32 %tmp, %SumA.013

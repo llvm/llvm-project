@@ -1626,14 +1626,15 @@ LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot) {
+RValue CIRGenFunction::emitAnyExpr(const Expr *e, AggValueSlot aggSlot,
+                                   bool ignoreResult) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
   case cir::TEK_Complex:
     return RValue::getComplex(emitComplexExpr(e));
   case cir::TEK_Aggregate: {
-    if (aggSlot.isIgnored())
+    if (!ignoreResult && aggSlot.isIgnored())
       aggSlot = createAggTemp(e->getType(), getLoc(e->getSourceRange()),
                               getCounterAggTmpAsString());
     emitAggExpr(e, aggSlot);
@@ -1674,7 +1675,25 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
     // name to make it clear it's not the actual builtin.
     auto fn = cast<cir::FuncOp>(curFn);
     if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
-      cgm.errorNYI("Inline only builtin function calls");
+      cir::FuncOp clone =
+          mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
+
+      if (!clone) {
+        // Create a forward declaration - the body will be generated in
+        // generateCode when the function definition is processed
+        cir::FuncOp calleeFunc = emitFunctionDeclPointer(cgm, gd);
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(cgm.getModule().getBody());
+
+        clone = builder.create<cir::FuncOp>(calleeFunc.getLoc(), fdInlineName,
+                                            calleeFunc.getFunctionType());
+        clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+            &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
+        clone.setSymVisibility("private");
+        clone.setInlineKindAttr(cir::InlineAttr::get(
+            &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+      }
+      return CIRGenCallee::forDirect(clone, gd);
     }
 
     // Replaceable builtins provide their own implementation of a builtin. If we
@@ -1869,8 +1888,7 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
-    assert(!cir::MissingFeatures::aggValueSlot());
-    emitAnyExpr(e);
+    emitAnyExpr(e, AggValueSlot::ignored(), /*ignoreResult=*/true);
     return;
   }
 
