@@ -4382,7 +4382,8 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
         SE.getURemExpr(TC, SE.getElementCount(TCType, MainLoopVF * IC));
   else if (ScalableTC) {
     const SCEV *EstimatedTC = SE.getMulExpr(
-        KnownMinTC, SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
+        KnownMinTC,
+        SE.getConstant(TCType, CM.getVScaleForTuning().value_or(1)));
     RemainingIterations = SE.getURemExpr(
         EstimatedTC, SE.getElementCount(TCType, MainLoopVF * IC));
   } else
