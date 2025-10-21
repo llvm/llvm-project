@@ -329,9 +329,16 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
   dummy_process.read_more_than_requested = true;
   llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
   llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x12345, 128}};
-  ASSERT_DEATH(
-      { process_sp->ReadMemoryRanges(ranges, buffer); },
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
+  ASSERT_DEBUG_DEATH(
+      { read_results = process_sp->ReadMemoryRanges(ranges, buffer); },
       "read more than requested bytes");
+#ifdef NDEBUG
+  // With asserts off, the read should return empty ranges.
+  ASSERT_EQ(read_results.size(), 1u);
+  ASSERT_TRUE(read_results[0].empty());
+#endif
 }
 
 TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
@@ -346,9 +353,17 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
       std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
   ASSERT_TRUE(process_sp);
 
-  llvm::SmallVector<uint8_t, 0> too_short_buffer(10, 0);
-  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x12345, 128}};
-  ASSERT_DEATH(
-      { process_sp->ReadMemoryRanges(ranges, too_short_buffer); },
+  llvm::SmallVector<uint8_t, 0> short_buffer(10, 0);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x12345, 128},
+                                                     {0x11, 128}};
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
+  ASSERT_DEBUG_DEATH(
+      { read_results = process_sp->ReadMemoryRanges(ranges, short_buffer); },
       "provided buffer is too short");
+#ifdef NDEBUG
+  // With asserts off, the read should return empty ranges.
+  ASSERT_EQ(read_results.size(), ranges.size());
+  for (llvm::MutableArrayRef<uint8_t> result : read_results)
+    ASSERT_TRUE(result.empty());
+#endif
 }
