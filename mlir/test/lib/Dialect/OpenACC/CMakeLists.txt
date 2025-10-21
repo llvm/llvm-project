@@ -1,6 +1,7 @@
 add_mlir_library(MLIROpenACCTestPasses
   TestOpenACC.cpp
   TestPointerLikeTypeInterface.cpp
+  TestRecipePopulate.cpp
   
   EXCLUDE_FROM_LIBMLIR
 )

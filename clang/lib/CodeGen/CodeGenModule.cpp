@@ -83,6 +83,7 @@ static llvm::cl::opt<bool> LimitedCoverage(
     llvm::cl::desc("Emit limited coverage mapping information (experimental)"));
 
 static const char AnnotationSection[] = "llvm.metadata";
+static constexpr auto ErrnoTBAAMDName = "llvm.errno.tbaa";
 
 static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
   switch (CGM.getContext().getCXXABIKind()) {
@@ -1583,6 +1584,17 @@ void CodeGenModule::Release() {
       }
     }
   }
+
+  // Emit `!llvm.errno.tbaa`, a module-level metadata that specifies the TBAA
+  // for an int access. This allows LLVM to reason about what memory can be
+  // accessed by certain library calls that only touch errno.
+  if (TBAA) {
+    TBAAAccessInfo TBAAInfo = getTBAAAccessInfo(Context.IntTy);
+    if (llvm::MDNode *IntegerNode = getTBAAAccessTagInfo(TBAAInfo)) {
+      auto *ErrnoTBAAMD = TheModule.getOrInsertNamedMetadata(ErrnoTBAAMDName);
+      ErrnoTBAAMD->addOperand(IntegerNode);
+    }
+  }
 }
 
 void CodeGenModule::EmitOpenCLMetadata() {
@@ -2348,7 +2360,7 @@ static QualType GeneralizeTransparentUnion(QualType Ty) {
   const RecordType *UT = Ty->getAsUnionType();
   if (!UT)
     return Ty;
-  const RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *UD = UT->getDecl()->getDefinitionOrSelf();
   if (!UD->hasAttr<TransparentUnionAttr>())
     return Ty;
   for (const auto *it : UD->fields()) {
@@ -4230,7 +4242,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 static bool HasNonDllImportDtor(QualType T) {
   if (const auto *RT =
           T->getBaseElementTypeUnsafe()->getAsCanonical<RecordType>())
-    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
       RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
         return true;
