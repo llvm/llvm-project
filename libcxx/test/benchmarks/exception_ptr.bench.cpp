@@ -20,15 +20,15 @@ BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
 
 static bool exception_ptr_moves_copies_swap(std::exception_ptr p1) {
   // Taken from https://llvm.org/PR45547
-  std::exception_ptr p2(p1);            // Copy constructor
-  std::exception_ptr p3(std::move(p2)); // Move constructor
-  p2 = std::move(p1);                   // Move assignment
-  p1 = p2;                              // Copy assignment
-  swap(p1, p2);                         // Swap
+  std::exception_ptr p2(p1);
+  std::exception_ptr p3(std::move(p2));
+  p2 = std::move(p1);
+  p1 = p2;
+  swap(p1, p2);
   // Comparisons against nullptr. The overhead from creating temporary `exception_ptr`
   // instances should be optimized out.
   bool is_null  = p1 == nullptr && nullptr == p2;
-  bool is_equal = p1 == p2; // Comparison
+  bool is_equal = p1 == p2;
   return is_null && is_equal;
 }
 
