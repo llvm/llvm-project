@@ -2125,7 +2125,7 @@ template <typename Op_t> struct PtrToIntOrAddr_GEAddrSize_match {
       // For ptrtoint we have to explicitly check it.
       return (Opcode == Instruction::PtrToAddr ||
               (Opcode == Instruction::PtrToInt &&
-               O->getType()->getScalarSizeInBits() ==
+               O->getType()->getScalarSizeInBits() >=
                    DL.getAddressSizeInBits(O->getOperand(0)->getType()))) &&
              Op.match(O->getOperand(0));
     }
