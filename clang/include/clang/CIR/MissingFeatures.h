@@ -119,6 +119,7 @@ struct MissingFeatures {
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
   static bool opCallChain() { return false; }
+  static bool opCallExceptionAttr() { return false; }
 
   // CXXNewExpr
   static bool exprNewNullCheck() { return false; }
