@@ -1356,7 +1356,7 @@ def HasVendorXSfvfexp32e : Predicate<"Subtarget->hasVendorXSfvfexp32e()">;
 def HasVendorXSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">;
 def HasVendorXSfvfexpAny : Predicate<"Subtarget->hasVendorXSfvfbfexp16e() || Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">,
                            AssemblerPredicate<(any_of FeatureVendorXSfvfbfexp16e, FeatureVendorXSfvfexp16e, FeatureVendorXSfvfexp32e),
-                           "'Xsfvfbfexp16e/Xsfvfexp16e/Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
+                           "'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
 
 def FeatureVendorXSfvfexpa
     : RISCVExtension<0, 2,

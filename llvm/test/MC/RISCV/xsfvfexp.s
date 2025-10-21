@@ -25,5 +25,5 @@
 sf.vfexp.v v2, v5, v0.t
 # CHECK-INST: sf.vfexp.v v2, v5, v0.t
 # CHECK-ENCODING: [0x57,0x91,0x53,0x4c]
-# CHECK-ERROR: instruction requires the following: 'Xsfvfbfexp16e/Xsfvfexp16e/Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction){{$}}
+# CHECK-ERROR: instruction requires the following: 'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction){{$}}
 # CHECK-UNKNOWN: 4c539157 <unknown>
