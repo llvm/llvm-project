@@ -38,7 +38,7 @@ public:
                 "Reg isn't large enough to hold full range.");
   static constexpr unsigned MaxFrameIndexBitwidth = 30;
   static constexpr unsigned FirstStackSlot = 1u << MaxFrameIndexBitwidth;
-  static const unsigned StackSlotMask =
+  static constexpr const unsigned StackSlotMask =
       (unsigned)(-1) >> (CHAR_BIT * sizeof(unsigned) - MaxFrameIndexBitwidth);
   static_assert(FirstStackSlot >= MCRegister::LastPhysicalReg);
   static constexpr unsigned VirtualRegFlag = 1u << 31;
@@ -91,7 +91,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(SignExtend64(Reg & Register::StackSlotMask, 30));
+    return static_cast<int>(SignExtend64<30>(Reg & Register::StackSlotMask));
   }
 
   constexpr operator unsigned() const { return Reg; }
