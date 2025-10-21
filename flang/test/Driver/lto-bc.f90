@@ -1,5 +1,5 @@
 ! Test that the output is LLVM bitcode for LTO and not a native objectfile by
-! disassembling it to LLVM IR. Also tests module summaries are emitted for LTO
+! disassembling it to LLVM IR. Also tests that module summaries are emitted for LTO
 
 ! RUN: %flang %s -c -o - | not llvm-dis -o %t
 ! RUN: %flang_fc1 %s -emit-llvm-bc -o - | llvm-dis -o - | FileCheck %s
@@ -11,7 +11,7 @@
 ! CHECK-NOT: ^{{.*}} = gv: (name:
 ! CHECK-NOT: ^{{.*}} = blockcount:
 
-! RUN: %flang -flto %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
+! RUN: %flang -flto=thin %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=THIN
 ! THIN: define void @_QQmain()
 ! THIN-NEXT:  ret void
 ! THIN-NEXT: }
@@ -20,7 +20,7 @@
 ! THIN: ^{{.*}} = gv: (name:
 ! THIN: ^{{.*}} = blockcount:
 
-! RUN: %flang -flto=thin %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=THIN
+! RUN: %flang -flto %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
 ! FULL: define void @_QQmain()
 ! FULL-NEXT:  ret void
 ! FULL-NEXT: }

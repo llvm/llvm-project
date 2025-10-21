@@ -1027,10 +1027,10 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   if (emitSummary && !opts.PrepareForThinLTO)
     llvmModule->addModuleFlag(llvm::Module::Error, "ThinLTO", uint32_t(0));
 
-  if (opts.PrepareForFatLTO) {
+  if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
-  } else if (opts.PrepareForFullLTO)
+  else if (opts.PrepareForFullLTO)
     mpm = pb.buildLTOPreLinkDefaultPipeline(level);
   else if (opts.PrepareForThinLTO)
     mpm = pb.buildThinLTOPreLinkDefaultPipeline(level);
