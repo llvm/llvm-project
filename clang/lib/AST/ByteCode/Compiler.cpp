@@ -6633,7 +6633,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (!this->emitCheckNull(E))
+    if (!SubExpr->getType()->isFunctionPointerType() && !this->emitCheckNull(E))
       return false;
 
     if (classifyPrim(SubExpr) == PT_Ptr)
