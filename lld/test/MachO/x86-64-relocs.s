@@ -7,11 +7,15 @@
 # CHECK:       __data {{[0-9a-z]+}} [[#%x, DATA_ADDR:]]
 
 # CHECK-LABEL: SYMBOL TABLE:
-# CHECK:       [[#%x, F_ADDR:]] {{.*}} _f
+# CHECK-DAG:   [[#%x, F_ADDR:]] {{.*}} _f
+# CHECK-DAG:   [[#%x, G_ADDR:]] {{.*}} _g
 
 # CHECK-LABEL: <_main>:
 ## Test X86_64_RELOC_BRANCH
 # CHECK:       callq 0x[[#%x, F_ADDR]] <_f>
+# CHECK:       jrcxz 0x[[#%x, F_ADDR]] <_f>
+# CHECK:       callq 0x[[#%x, G_ADDR]] <_g>
+# CHECK:       jrcxz 0x[[#%x, G_ADDR]] <_g>
 ## Test extern (symbol) X86_64_RELOC_SIGNED
 # CHECK:       leaq [[#%u, LOCAL_OFF:]](%rip), %rsi
 # CHECK-NEXT:  [[#%x, DATA_ADDR - LOCAL_OFF]]
@@ -24,11 +28,19 @@
 # NONPCREL-NEXT: 100001000 08200000 01000000 08200000 01000000
 
 .section __TEXT,__text
-.globl _main, _f
+.globl _main, _f, _g
+
 _main:
-  callq _f # X86_64_RELOC_BRANCH
+  callq _f # X86_64_RELOC_BRANCH with r_length=2
+  jrcxz _f # X86_64_RELOC_BRANCH with r_length=0
+  # test negative addends
+  callq _f - 1
+  jrcxz _f - 1
   mov $0, %rax
   ret
+
+_g:
+ .byte 0x0
 
 _f:
   leaq _local(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel symbol relocation
