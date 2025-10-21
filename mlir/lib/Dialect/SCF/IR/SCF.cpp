@@ -334,7 +334,7 @@ struct ExecuteRegionForwardingEliminator
         opResultsToReplaceWithExternalValues.push_back(op.getResult(index));
       }
     }
-    // No yeilded external values - nothing to do.
+    // No yielded external values - nothing to do.
     if (externalValues.empty())
       return failure();
 
