@@ -21,11 +21,13 @@
     br label %common.ret
   }
 ...
-# FIXME: Following code has a load from constant pool. Accessing constant pool
+# Following code has a load from constant pool. Accessing constant pool
 # must not be considered as a stack access and hence, shrink wrapping must
 # happen.
-# CHECK-NOT: savePoint
-# CHECK-NOT: restorePoint
+# CHECK:  savePoint:
+# CHECK:    - point:           '%bb.3'
+# CHECK:  restorePoint:
+# CHECK:    - point:           '%bb.5'
 ---
 name:            shrink_wrap_load_from_const_pool
 tracksRegLiveness: true
