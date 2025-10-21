@@ -32,45 +32,45 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test_sfinae() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   // Mode
-  static_assert(std::constructible_from<SpBuf, std::ios_base::openmode>);
-  static_assert(!test_convertible<SpBuf, std::ios_base::openmode>());
+  static_assert(std::constructible_from<SpanBuf, std::ios_base::openmode>);
+  static_assert(!test_convertible<SpanBuf, std::ios_base::openmode>());
 
   // Non-mode
-  static_assert(!std::constructible_from<SpBuf, const NonMode>);
-  static_assert(!test_convertible<SpBuf, const NonMode>());
+  static_assert(!std::constructible_from<SpanBuf, const NonMode>);
+  static_assert(!test_convertible<SpanBuf, const NonMode>());
 }
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   // Mode: `in`
   {
-    SpBuf spBuf{std::ios_base::in};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf{std::ios_base::in};
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
   }
   // Mode: `out`
   {
-    SpBuf spBuf{std::ios_base::out};
-    assert(spBuf.span().data() == nullptr);
+    SpanBuf spanBuf{std::ios_base::out};
+    assert(spanBuf.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spBuf.span().size() == 0);
+    assert(spanBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpBuf spBuf{std::ios_base::ate};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf{std::ios_base::ate};
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpBuf spBuf{std::ios_base::out | std::ios_base::ate};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf{std::ios_base::out | std::ios_base::ate};
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
   }
 }
 

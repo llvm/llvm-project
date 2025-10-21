@@ -23,7 +23,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -34,87 +34,87 @@ void test() {
 
   // Mode: default (`in` | `out`)
   {
-    SpBuf rhsSpBuf{sp};
-    assert(rhsSpBuf.span().data() == arr);
+    SpanBuf rhsSpanBuf{sp};
+    assert(rhsSpanBuf.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpBuf.span().size() == 0);
+    assert(rhsSpanBuf.span().size() == 0);
 
-    SpBuf spBuf;
-    assert(spBuf.span().data() == nullptr);
+    SpanBuf spanBuf;
+    assert(spanBuf.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spBuf.span().size() == 0);
+    assert(spanBuf.span().size() == 0);
 
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 0);
-    assert(rhsSpBuf.span().data() == nullptr);
-    assert(rhsSpBuf.span().size() == 0);
+    std::swap(spanBuf, rhsSpanBuf);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 0);
+    assert(rhsSpanBuf.span().data() == nullptr);
+    assert(rhsSpanBuf.span().size() == 0);
   }
   // Mode: `in`
   {
-    SpBuf rhsSpBuf{sp, std::ios_base::in};
-    assert(rhsSpBuf.span().data() == arr);
-    assert(rhsSpBuf.span().size() == 4);
+    SpanBuf rhsSpanBuf{sp, std::ios_base::in};
+    assert(rhsSpanBuf.span().data() == arr);
+    assert(rhsSpanBuf.span().size() == 4);
 
-    SpBuf spBuf(std::span<CharT>{});
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf(std::span<CharT>{});
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 4);
-    assert(rhsSpBuf.span().data() == nullptr);
-    assert(rhsSpBuf.span().size() == 0);
+    std::swap(spanBuf, rhsSpanBuf);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 4);
+    assert(rhsSpanBuf.span().data() == nullptr);
+    assert(rhsSpanBuf.span().size() == 0);
   }
   // Mode `out`
   {
-    SpBuf rhsSpBuf{sp, std::ios_base::out};
-    assert(rhsSpBuf.span().data() == arr);
+    SpanBuf rhsSpanBuf{sp, std::ios_base::out};
+    assert(rhsSpanBuf.span().data() == arr);
     // Mode `out` counts read characters
-    assert(rhsSpBuf.span().size() == 0);
+    assert(rhsSpanBuf.span().size() == 0);
 
-    SpBuf spBuf;
-    assert(spBuf.span().data() == nullptr);
+    SpanBuf spanBuf;
+    assert(spanBuf.span().data() == nullptr);
     // Mode `out` counts read characters
-    assert(spBuf.span().size() == 0);
+    assert(spanBuf.span().size() == 0);
 
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 0);
-    assert(rhsSpBuf.span().data() == nullptr);
-    assert(rhsSpBuf.span().size() == 0);
+    std::swap(spanBuf, rhsSpanBuf);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 0);
+    assert(rhsSpanBuf.span().data() == nullptr);
+    assert(rhsSpanBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpBuf rhsSpBuf{sp, std::ios_base::ate};
-    assert(rhsSpBuf.span().data() == arr);
-    assert(rhsSpBuf.span().size() == 4);
+    SpanBuf rhsSpanBuf{sp, std::ios_base::ate};
+    assert(rhsSpanBuf.span().data() == arr);
+    assert(rhsSpanBuf.span().size() == 4);
 
-    SpBuf spBuf(std::span<CharT>{});
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf(std::span<CharT>{});
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 4);
-    assert(rhsSpBuf.span().data() == nullptr);
-    assert(rhsSpBuf.span().size() == 0);
+    std::swap(spanBuf, rhsSpanBuf);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 4);
+    assert(rhsSpanBuf.span().data() == nullptr);
+    assert(rhsSpanBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpBuf rhsSpBuf{sp, std::ios_base::out | std::ios_base::ate};
-    assert(rhsSpBuf.span().data() == arr);
-    assert(rhsSpBuf.span().size() == 4);
+    SpanBuf rhsSpanBuf{sp, std::ios_base::out | std::ios_base::ate};
+    assert(rhsSpanBuf.span().data() == arr);
+    assert(rhsSpanBuf.span().size() == 4);
 
-    SpBuf spBuf(std::span<CharT>{});
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf(std::span<CharT>{});
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    std::swap(spBuf, rhsSpBuf);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 4);
-    assert(rhsSpBuf.span().data() == nullptr);
-    assert(rhsSpBuf.span().size() == 0);
+    std::swap(spanBuf, rhsSpanBuf);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 4);
+    assert(rhsSpanBuf.span().data() == nullptr);
+    assert(rhsSpanBuf.span().size() == 0);
   }
 }
 

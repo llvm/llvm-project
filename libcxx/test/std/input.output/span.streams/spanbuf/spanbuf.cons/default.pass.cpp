@@ -26,11 +26,11 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
-  SpBuf spBuf;
-  assert(spBuf.span().data() == nullptr);
-  assert(spBuf.span().size() == 0);
+  SpanBuf spanBuf;
+  assert(spanBuf.span().data() == nullptr);
+  assert(spanBuf.span().size() == 0);
 }
 
 int main(int, char**) {

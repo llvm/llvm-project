@@ -28,7 +28,7 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   CharT arr[4];
 
@@ -38,59 +38,59 @@ void test() {
 
   // Mode: default (`in` | `out`)
   {
-    SpBuf spBuf;
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf;
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
+    spanBuf.span(arr);
+    assert(spanBuf.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spBuf.span().size() == 0);
+    assert(spanBuf.span().size() == 0);
   }
   // Mode: `in`
   {
-    SpBuf spBuf{std::ios_base::in};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf{std::ios_base::in};
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    assert(spBuf.span().size() == 4);
+    spanBuf.span(arr);
+    assert(spanBuf.span().data() == arr);
+    assert(spanBuf.span().size() == 4);
   }
   // Mode: `out`
   {
-    SpBuf spBuf{std::ios_base::out};
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf{std::ios_base::out};
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().size() == 0);
 
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
+    spanBuf.span(arr);
+    assert(spanBuf.span().data() == arr);
     // Mode `out` counts read characters
-    assert(spBuf.span().size() == 0);
+    assert(spanBuf.span().size() == 0);
   }
   // Mode: `ate`
   {
-    SpBuf spBuf(std::ios_base::ate);
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf(std::ios_base::ate);
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().empty());
+    assert(spanBuf.span().size() == 0);
 
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
+    spanBuf.span(arr);
+    assert(spanBuf.span().data() == arr);
+    assert(!spanBuf.span().empty());
+    assert(spanBuf.span().size() == 4);
   }
   // Mode: `ate`
   {
-    SpBuf spBuf(std::ios_base::out | std::ios_base::ate);
-    assert(spBuf.span().data() == nullptr);
-    assert(spBuf.span().empty());
-    assert(spBuf.span().size() == 0);
+    SpanBuf spanBuf(std::ios_base::out | std::ios_base::ate);
+    assert(spanBuf.span().data() == nullptr);
+    assert(spanBuf.span().empty());
+    assert(spanBuf.span().size() == 0);
 
-    spBuf.span(arr);
-    assert(spBuf.span().data() == arr);
-    assert(!spBuf.span().empty());
-    assert(spBuf.span().size() == 4);
+    spanBuf.span(arr);
+    assert(spanBuf.span().data() == arr);
+    assert(!spanBuf.span().empty());
+    assert(spanBuf.span().size() == 4);
   }
 }
 

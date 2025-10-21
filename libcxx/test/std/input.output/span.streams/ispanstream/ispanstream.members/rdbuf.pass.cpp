@@ -40,16 +40,16 @@ void test() {
   // Mode: default (`in`)
   {
     SpStream spSt{sp};
-    auto* spBuf = static_cast<spanbuf_wrapper<CharT, TraitsT>*>(spSt.rdbuf());
+    auto* spanBuf = static_cast<spanbuf_wrapper<CharT, TraitsT>*>(spSt.rdbuf());
 
-    assert(spBuf->span().size() == 4);
-    assert(spBuf->span().data() == arr);
-    assert(spBuf->eback() == arr);
-    assert(spBuf->gptr() == arr);
-    assert(spBuf->egptr() == arr + 4);
-    assert(spBuf->pbase() == nullptr);
-    assert(spBuf->pptr() == nullptr);
-    assert(spBuf->epptr() == nullptr);
+    assert(spanBuf->span().size() == 4);
+    assert(spanBuf->span().data() == arr);
+    assert(spanBuf->eback() == arr);
+    assert(spanBuf->gptr() == arr);
+    assert(spanBuf->egptr() == arr + 4);
+    assert(spanBuf->pbase() == nullptr);
+    assert(spanBuf->pptr() == nullptr);
+    assert(spanBuf->epptr() == nullptr);
   }
   // Mode: explicit `in`
   {

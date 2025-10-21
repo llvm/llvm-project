@@ -33,30 +33,30 @@
 
 template <typename CharT, typename TraitsT = std::char_traits<CharT>>
 void test() {
-  using SpBuf = std::basic_spanbuf<CharT, TraitsT>;
+  using SpanBuf = std::basic_spanbuf<CharT, TraitsT>;
 
   // Constructors
 
-  static_assert(std::is_default_constructible_v<SpBuf>);
+  static_assert(std::is_default_constructible_v<SpanBuf>);
 
   // Types
 
-  static_assert(std::is_base_of_v<std::basic_streambuf<CharT, TraitsT>, SpBuf>);
-  static_assert(std::is_same_v<typename SpBuf::char_type, CharT>);
-  static_assert(std::is_same_v<typename SpBuf::int_type, typename TraitsT::int_type>);
-  static_assert(std::is_same_v<typename SpBuf::pos_type, typename TraitsT::pos_type>);
-  static_assert(std::is_same_v<typename SpBuf::off_type, typename TraitsT::off_type>);
-  static_assert(std::is_same_v<typename SpBuf::traits_type, TraitsT>);
+  static_assert(std::is_base_of_v<std::basic_streambuf<CharT, TraitsT>, SpanBuf>);
+  static_assert(std::is_same_v<typename SpanBuf::char_type, CharT>);
+  static_assert(std::is_same_v<typename SpanBuf::int_type, typename TraitsT::int_type>);
+  static_assert(std::is_same_v<typename SpanBuf::pos_type, typename TraitsT::pos_type>);
+  static_assert(std::is_same_v<typename SpanBuf::off_type, typename TraitsT::off_type>);
+  static_assert(std::is_same_v<typename SpanBuf::traits_type, TraitsT>);
 
   // Copy properties
 
-  static_assert(!std::is_copy_constructible_v<SpBuf>);
-  static_assert(!std::is_copy_assignable_v<SpBuf>);
+  static_assert(!std::is_copy_constructible_v<SpanBuf>);
+  static_assert(!std::is_copy_assignable_v<SpanBuf>);
 
   // Move properties
 
-  static_assert(std::is_move_constructible_v<SpBuf>);
-  static_assert(std::is_move_assignable_v<SpBuf>);
+  static_assert(std::is_move_constructible_v<SpanBuf>);
+  static_assert(std::is_move_assignable_v<SpanBuf>);
 }
 
 void test() {
