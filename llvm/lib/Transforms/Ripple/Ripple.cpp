@@ -321,6 +321,15 @@ getIncrementAndCleanupTargets(BasicBlock *BranchingBB, BasicBlock *PDom,
       " hasTrivialLoopLikeBackEdge is true.");
 }
 
+DebugLoc getFunctionDebugLoc(const Function *F) {
+  if (auto *SP = F->getSubprogram()) {
+    llvm::DILocation *Loc =
+        llvm::DILocation::get(F->getContext(), SP->getLine(), 0, SP /*scope*/);
+    return Loc;
+  } else
+    return {};
+}
+
 } // namespace
 
 bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
@@ -607,6 +616,51 @@ void TensorShapeAny<SizeTy>::print(raw_ostream &O) const {
     } else
       OmittedOnes++;
   }
+}
+
+/// @brief Prints this shape as ripple external function signature
+template <typename SizeTy>
+void TensorShapeAny<SizeTy>::printAsSignature(raw_ostream &O,
+                                              Type *ScalarType) const {
+  O << 't';
+  if (isScalar()) {
+    O << '1';
+  } else {
+    size_t OmittedOnes = 0;
+    bool First = true;
+    for (auto &len : shape) {
+      if (len > 1) {
+        for (; OmittedOnes; --OmittedOnes) {
+          if (!First)
+            O << 'x';
+          O << '1';
+          First = false;
+        }
+        if (!First)
+          O << 'x';
+        O << len;
+        First = false;
+      } else
+        OmittedOnes++;
+    }
+  }
+  // Print the type
+  if (ScalarType->isBFloatTy())
+    O << "bf16";
+  if (ScalarType->isHalfTy())
+    O << "f16";
+  else if (ScalarType->isFloatTy())
+    O << "f32";
+  else if (ScalarType->isDoubleTy())
+    O << "f64";
+  else if (auto *IntTy = dyn_cast<IntegerType>(ScalarType)) {
+    O << "i" << IntTy->getBitWidth();
+  } else if (auto *PtrTy = dyn_cast<PointerType>(ScalarType)) {
+    O << "ptr";
+    if (PtrTy->getAddressSpace())
+      O << PtrTy->getAddressSpace();
+  } else
+    llvm_unreachable("unhandled type");
 }
 
 template <typename SizeTy>
@@ -7669,7 +7723,7 @@ ExternalRippleFunction::createExternalFunction(Function *F,
   auto [SignatureAndBaseName, OptionList] = splitOptions(Options_and_Basename);
 
   SmallVector<ArgumentSignatureInfo> ArgumentSignatures;
-  ReturnSignatureInfo ReturnSignature;
+  std::optional<ReturnSignatureInfo> ReturnSignature;
   bool IsUniformSignature = false;
   auto BaseNameOpt =
       parseSignature(SignatureAndBaseName, *F, ArgumentSignatures,
@@ -7689,10 +7743,15 @@ ExternalRippleFunction::createExternalFunction(Function *F,
     F->getContext().diagnose(Diag);
     return nullptr;
   }
-  auto &[ReturnMultidimType, ReturnMultidimTS] = ReturnSignature;
-  bool AnyVectorType = ReturnMultidimTS.isVector();
-  auto *NormalizedFTy = normalizeFunctionType(F);
-  if (ReturnMultidimType) {
+
+  bool HasMaskOpt =
+      any_of(OptionList, [](StringRef S) { return S == MaskedOption; });
+  Argument *MaskArg = HasMaskOpt ? getMaskArgument(F) : nullptr;
+  auto *NormalizedFTy =
+      normalizeFunctionType(F, MaskArg, ReturnSignature, ArgumentSignatures);
+  bool AnyError = false;
+  if (ReturnSignature) {
+    auto &[ReturnMultidimType, ReturnMultidimTS] = *ReturnSignature;
     LLVM_DEBUG(dbgs() << "Signature return type is " << *ReturnMultidimType
                       << " and tensor shape " << ReturnMultidimTS << "\n");
     // This candidate is not fit for this function
@@ -7706,13 +7765,16 @@ ExternalRippleFunction::createExternalFunction(Function *F,
         {
           raw_string_ostream RSO(ErrMsg);
           RSO << "the external ripple function '" << F->getName()
-              << "' return value tensor shape '" << ReturnMultidimTS
-              << "' is incompatible with a vector size of "
+              << "' return tensor shape '";
+          ReturnMultidimTS.printAsSignature(
+              RSO, ReturnMultidimType->getScalarType());
+          RSO << "' is incompatible with the declared return vector type of "
+                 "size "
               << VecRetTy->getElementCount().getFixedValue();
         }
-        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        DiagnosticInfoRipple Diag(DS_Error, ErrMsg);
         F->getContext().diagnose(Diag);
-        return nullptr;
+        AnyError = true;
       }
     }
   }
@@ -7724,7 +7786,6 @@ ExternalRippleFunction::createExternalFunction(Function *F,
                            "rank, not considering\n");
       return nullptr;
     }
-    AnyVectorType = AnyVectorType || ArgTS.isVector();
     if (ArgIdx >= NormalizedFTy->getNumParams()) {
       std::string ErrMsg;
       {
@@ -7736,33 +7797,33 @@ ExternalRippleFunction::createExternalFunction(Function *F,
       }
       DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
       F->getContext().diagnose(Diag);
-      return nullptr;
-    }
-    if (auto *ArgVecTy =
-            dyn_cast<VectorType>(NormalizedFTy->getParamType(ArgIdx))) {
+      AnyError = true;
+    } else if (auto *ArgVecTy =
+                   dyn_cast<VectorType>(NormalizedFTy->getParamType(ArgIdx))) {
       if (ArgVecTy->getElementCount().getFixedValue() != ArgTS.flatShape()) {
         std::string ErrMsg;
         {
           raw_string_ostream RSO(ErrMsg);
           RSO << "the external ripple function '" << F->getName()
-              << "' argument at index " << ArgIdx << " tensor shape '" << ArgTS
-              << "' is incompatible with a vector size of "
+              << "' argument at index " << ArgIdx << " tensor shape '";
+          ArgTS.printAsSignature(RSO, ArgTy->getScalarType());
+          RSO << "' is incompatible with the declared argument vector type of "
+                 "size "
               << ArgVecTy->getElementCount().getFixedValue();
         }
-        DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
+        DiagnosticInfoRipple Diag(DS_Error, ErrMsg);
         F->getContext().diagnose(Diag);
-        return nullptr;
+        AnyError = true;
       }
     }
   }
+  if (AnyError)
+    return nullptr;
   // Check vector-ness
-  AnyVectorType = AnyVectorType || isa<VectorType>(F->getReturnType());
-  for (auto &Arg : F->args()) {
-    Type *ArgTy = Arg.getType();
-    if (Arg.hasByValAttr() || Arg.hasStructRetAttr())
-      ArgTy = Arg.getPointeeInMemoryValueType();
-    AnyVectorType = AnyVectorType || isa<VectorType>(ArgTy);
-  }
+  bool AnyVectorType = isa<VectorType>(NormalizedFTy->getReturnType()) ||
+                       any_of(NormalizedFTy->params(), [](auto &Param) {
+                         return isa<VectorType>(Param);
+                       });
   if (!AnyVectorType)
     return nullptr;
 
@@ -7795,22 +7856,32 @@ ExternalRippleFunction::createExternalFunction(Function *F,
   // If the function is masked the last operand is vector of integer type, most
   // likely i1 or i8 depending on the target or pointer to an integer type that
   // the function can use as a mask.
-  bool HasMask =
-      any_of(OptionList, [](StringRef S) { return S == MaskedOption; });
-  if (HasMask) {
-    size_t NumArgs = F->arg_size();
-    if (NumArgs < 1)
+  if (HasMaskOpt) {
+    if (!MaskArg) {
+      std::string ErrMsg;
+      {
+        llvm::raw_string_ostream RSO(ErrMsg);
+        RSO << "function '" << F->getName()
+            << "' is missing the mask argument for '_mask' option";
+      }
+      DiagnosticInfoRippleWithLoc DI(DS_Error, *F, getFunctionDebugLoc(F),
+                                     ErrMsg);
+      F->getContext().diagnose(DI);
       return nullptr;
-    Argument *MaskArg = F->getArg(NumArgs - 1);
-    if (MaskArg->hasStructRetAttr()) {
-      if (NumArgs < 2)
-        return nullptr;
-      MaskArg = F->getArg(F->arg_size() - 2);
     }
     Type *MaskArgTy = getTrueMaskType(MaskArg);
     if (!(MaskArgTy->isVectorTy() &&
           MaskArgTy->getScalarType()->isIntegerTy())) {
-      // TODO: show a warning to the user that doesn't turn into an error!
+      std::string ErrMsg;
+      {
+        llvm::raw_string_ostream RSO(ErrMsg);
+        RSO << "function '" << F->getName()
+            << "' '_mask' option requires the last argument to be an integer "
+               "vector";
+      }
+      DiagnosticInfoRippleWithLoc DI(DS_Error, *F, getFunctionDebugLoc(F),
+                                     ErrMsg);
+      F->getContext().diagnose(DI);
       return nullptr;
     }
   }
@@ -7843,11 +7914,15 @@ void ExternalRippleFunction::eraseValueAtSretIndex(const Function *F,
     C.erase(C.begin() + StructRetArgIt->getArgNo());
 }
 
-FunctionType *
-ExternalRippleFunction::normalizeFunctionType(const Function *F,
-                                              const Argument *MaskArg) {
-  return FunctionType::get(getTrueReturnType(F),
-                           getTrueArgumentTypes(F, MaskArg, true),
+FunctionType *ExternalRippleFunction::normalizeFunctionType(
+    const Function *F, const Argument *MaskArg,
+    std::optional<ReturnSignatureInfo> RetSig,
+    const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
+    bool ForceSignature) {
+  return FunctionType::get(getTrueReturnType(F, RetSig, ForceSignature),
+                           getTrueArgumentTypes(F, MaskArg, true, RetSig,
+                                                ArgumentSignatures,
+                                                ForceSignature),
                            F->isVarArg());
 }
 
@@ -8150,12 +8225,7 @@ void ExternalRippleFunction::applyOptions(
              "This cannot possibly be element-wise!");
     } else if (Option == MaskedOption) {
       // We already check the argument size in the constructor wrapper
-      assert(F->arg_size() >= 1);
-      TensorMaskArgument = F->getArg(F->arg_size() - 1);
-      if (TensorMaskArgument->hasStructRetAttr()) {
-        assert(F->arg_size() >= 2);
-        TensorMaskArgument = F->getArg(F->arg_size() - 2);
-      }
+      TensorMaskArgument = getMaskArgument(F);
     } else if (Option == PureOption) {
       IsPureOtherThanSretAndByVal = true;
     }
@@ -8179,44 +8249,74 @@ ExternalRippleFunction::splitOptions(StringRef OptionsAndBaseName) {
   return {OptionsAndBaseName, std::move(OptionList)};
 }
 
-Type *ExternalRippleFunction::getTrueReturnType(const Function *F) {
-  for (auto &Arg : F->args()) {
-    if (Arg.hasStructRetAttr())
-      return Arg.getParamStructRetType();
+Type *ExternalRippleFunction::getTrueReturnType(
+    const Function *F, std::optional<ReturnSignatureInfo> RetSig,
+    bool ForceSignature) {
+  if (RetSig && ForceSignature)
+    return std::get<0>(*RetSig);
+
+  if (F->getReturnType()->isVoidTy()) {
+    // Look for an sret argument
+    for (auto &Arg : F->args())
+      if (Arg.hasStructRetAttr())
+        return Arg.getParamStructRetType();
+  } else if (RetSig && F->getReturnType()->isPointerTy()) {
+    return std::get<0>(*RetSig);
   }
+
   return F->getReturnType();
 }
 
-Type *ExternalRippleFunction::getTrueReturnType() const {
-  return getTrueReturnType(getFunction());
+Type *ExternalRippleFunction::getTrueReturnType(
+    std::optional<ReturnSignatureInfo> RetSig, bool ForceSignature) const {
+  return getTrueReturnType(getFunction(), RetSig, ForceSignature);
 }
 
 SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
-    const Function *F, const Argument *SkipMask, bool SkipStructRet) {
+    const Function *F, const Argument *SkipMask, bool SkipStructRet,
+    std::optional<ReturnSignatureInfo> RetSig,
+    const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
+    bool ForceSignature) {
   SmallVector<Type *, 0> ArgTypes;
   ArgTypes.reserve(F->arg_size());
+  unsigned NumArgSkipped = 0;
   for (auto &Arg : F->args()) {
-    if (SkipMask == &Arg)
+    unsigned ArgIdx = Arg.getArgNo() - NumArgSkipped;
+    auto ArgSig = llvm::find_if(ArgumentSignatures, [ArgIdx](auto &Tuple) {
+      return std::get<2>(Tuple) == ArgIdx;
+    });
+    bool FoundArgSig =
+        ArgSig != ArgumentSignatures.end() && Arg.getType()->isPointerTy();
+    bool ForceRetSignature = ForceSignature && RetSig;
+    bool ForceArgSignature = ForceSignature && FoundArgSig;
+
+    if (SkipMask == &Arg || (Arg.hasStructRetAttr() && SkipStructRet)) {
+      NumArgSkipped++;
       continue;
-    if (Arg.hasStructRetAttr()) {
-      if (SkipStructRet)
-        continue;
-      else
-        ArgTypes.push_back(Arg.getParamStructRetType());
-    } else if (Arg.hasPassPointeeByValueCopyAttr())
+    } else if (Arg.hasStructRetAttr() && ForceRetSignature)
+      ArgTypes.push_back(std::get<0>(*RetSig));
+    else if (Arg.hasStructRetAttr() && !ForceRetSignature)
+      ArgTypes.push_back(Arg.getParamStructRetType());
+    else if (Arg.hasPassPointeeByValueCopyAttr() && ForceArgSignature)
+      ArgTypes.push_back(std::get<0>(*ArgSig));
+    else if (Arg.hasPassPointeeByValueCopyAttr() && !ForceArgSignature)
       ArgTypes.push_back(Arg.getPointeeInMemoryValueType());
-    else
+    else if (FoundArgSig) {
+      ArgTypes.push_back(std::get<0>(*ArgSig));
+    } else
       ArgTypes.push_back(Arg.getType());
   }
   return ArgTypes;
 }
 
-SmallVector<Type *, 0>
-ExternalRippleFunction::getTrueArgumentTypes(bool SkipMask,
-                                             bool SkipStructRet) const {
-  return getTrueArgumentTypes(getFunction(),
-                              SkipMask ? getTensorMaskArgument() : nullptr,
-                              SkipStructRet);
+SmallVector<Type *, 0> ExternalRippleFunction::getTrueArgumentTypes(
+    bool SkipMask, bool SkipStructRet,
+    std::optional<ReturnSignatureInfo> RetSig,
+    const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
+    bool ForceSignature) const {
+  return getTrueArgumentTypes(
+      getFunction(), SkipMask ? getTensorMaskArgument() : nullptr,
+      SkipStructRet, RetSig, ArgumentSignatures, ForceSignature);
 }
 
 Value *Ripple::genFunctionCallHandleArgAttributes(
@@ -8251,8 +8351,8 @@ Value *Ripple::genFunctionCallHandleArgAttributes(
   }
   // Get the call arguments right
   SmallVector<Value *, 0> ToCallArgs;
-  for (unsigned FromIdx = 0, ToIdx = 0, E = To->arg_size();
-       FromIdx < E && ToIdx < E; ++ToIdx, ++FromIdx) {
+  for (unsigned FromIdx = 0, ToIdx = 0, E = To->arg_size(); ToIdx < E;
+       ++ToIdx, ++FromIdx) {
 
     Argument *ToArg = To->getArg(ToIdx);
     if (ToArg->hasStructRetAttr()) {
@@ -8262,6 +8362,8 @@ Value *Ripple::genFunctionCallHandleArgAttributes(
       continue;
     }
 
+    // If FromArg stays nullptr, we are processing the mask argument, that does
+    // not exist in the from function
     Argument *FromArg = nullptr;
     Value *ProcessingArg = nullptr;
     if (ToArg == Calling.getTensorMaskArgument()) {
@@ -8279,19 +8381,24 @@ Value *Ripple::genFunctionCallHandleArgAttributes(
         }
       }
     }
+    bool PassByValue = ToArg->getType()->isPointerTy() && FromArg &&
+                       !FromArg->getType()->isPointerTy();
 
-    if (ToArg->hasPassPointeeByValueCopyAttr()) {
-      if (FromArg && FromArg->hasPassPointeeByValueCopyAttr()) {
+    if (ToArg->hasPassPointeeByValueCopyAttr() || PassByValue) {
+      if (FromArg && FromArg->hasPassPointeeByValueCopyAttr() && !PassByValue) {
         ToCallArgs.push_back(ProcessingArg);
       } else {
+        assert(PassByValue || !FromArg ||
+               (ToArg->hasPassPointeeByValueCopyAttr() &&
+                FromArg->getType() == ToArg->getPointeeInMemoryValueType()));
         // We need to pass a pointer but have a value, store it!
         irBuilder.SetInsertPoint(F.getEntryBlock().getFirstInsertionPt());
-        Value *ArgStorage =
-            irBuilder.CreateAlloca(ToArg->getPointeeInMemoryValueType());
+        Value *ArgStorage = irBuilder.CreateAlloca(ProcessingArg->getType());
         setRippleShape(ArgStorage, ScalarShape);
         irBuilder.SetInsertPoint(CallSite);
         auto *StoreInst = irBuilder.CreateStore(ProcessingArg, ArgStorage);
-        setRippleShape(StoreInst, Calling.getArgOperandShape(ToIdx));
+        setRippleShape(StoreInst, Calling.getArgOperandShape(
+                                      ToIdx, /*IgnoreStructRet*/ false));
         ToSkipMaskingWhenIfConvert.insert(StoreInst);
         ToCallArgs.push_back(ArgStorage);
       }
@@ -8301,7 +8408,8 @@ Value *Ripple::genFunctionCallHandleArgAttributes(
         irBuilder.SetInsertPoint(CallSite);
         auto *RegisterVal =
             irBuilder.CreateLoad(ToArg->getType(), ProcessingArg);
-        setRippleShape(RegisterVal, Calling.getArgOperandShape(ToIdx));
+        setRippleShape(RegisterVal, Calling.getArgOperandShape(
+                                        ToIdx, /*IgnoreStructRet*/ false));
         ToSkipMaskingWhenIfConvert.insert(RegisterVal);
         ToCallArgs.push_back(RegisterVal);
       } else {
@@ -8332,9 +8440,8 @@ Ripple::getInstructionToRippleShape() const {
 ExternalRippleFunction::ExternalRippleFunction(
     Function *Fun, StringRef ScalarName,
     const SmallVectorImpl<StringRef> &Options, size_t TensorRank,
-    const std::tuple<Type *, TensorShape> &ReturnSignature,
-    const SmallVectorImpl<std::tuple<Type *, TensorShape, unsigned>>
-        &ArgumentSignatures,
+    const std::optional<ReturnSignatureInfo> &ReturnSignature,
+    const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures,
     bool UniformSignature)
     : F(Fun), ScalarName(ScalarName) {
 
@@ -8348,8 +8455,8 @@ ExternalRippleFunction::ExternalRippleFunction(
     return TypeShape;
   };
 
-  auto &[RetTySig, RetShapeSig] = ReturnSignature;
-  if (RetTySig) {
+  if (ReturnSignature) {
+    auto &[RetTySig, RetShapeSig] = *ReturnSignature;
     assert(RetShapeSig.rank() <= TensorRank);
     TensorShape::Shape RS(TensorRank, TensorShape::DimSize(1));
     std::copy(RetShapeSig.begin(),
@@ -8376,7 +8483,8 @@ ExternalRippleFunction::ExternalRippleFunction(
           AS.begin());
       ArgShapes.push_back(TensorShape(std::move(AS)));
     } else {
-      if (UniformSignature && RetTySig && Params->isVectorTy()) {
+      if (UniformSignature && ReturnSignature && Params->isVectorTy()) {
+        auto &[RetTySig, RetShapeSig] = *ReturnSignature;
         assert(RetShapeSig.rank() <= TensorRank);
         TensorShape::Shape AS(TensorRank, TensorShape::DimSize(1));
         std::copy(
@@ -8413,7 +8521,8 @@ ExternalRippleFunction::ExternalRippleFunction(
       }
     }
   }
-  NormalizedFunType = normalizeFunctionType(F, getTensorMaskArgument());
+  NormalizedFunType = normalizeFunctionType(
+      F, getTensorMaskArgument(), ReturnSignature, ArgumentSignatures);
 }
 
 bool ExternalRippleFunction::hasTensorMaskArgument() const {
@@ -9821,7 +9930,8 @@ ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
   TensorShape TS(std::move(TShape));
 
   // Parsing the data type section coming after the tensor shape
-  const Regex TypeStrRE("^(f16|bf16|f32|f64|i1|i8|i16|i32|i64|u8|u16|u32|u64)");
+  const Regex TypeStrRE(
+      "^(f16|bf16|f32|f64|i1|i8|i16|i32|i64|u8|u16|u32|u64|ptr[0-9]*)");
   SmallVector<StringRef, 2> TypeMatchResult;
   if (!TypeStrRE.match(S, &TypeMatchResult)) {
     std::string ErrMsg;
@@ -9830,7 +9940,7 @@ ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
       warningContextMessage(RSO);
       RSO << "'s type is not valid starting at '" << S
           << "'; expected one of: f16, bf16, f32, f64, i1, i8, i16, i32, i64, "
-             "u8, u16, u32 or u64";
+             "u8, u16, u32, u64 or ptr";
     }
     DiagnosticInfoRipple Diag(DS_Warning, ErrMsg);
     Fn.getContext().diagnose(Diag);
@@ -9856,15 +9966,17 @@ ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
   }
   S = S.substr(TypeMatchResult[0].size() + 1);
 
+  bool IsPointer = TypeMatchResult[1].consume_front("ptr");
   bool IsFloat = TypeMatchResult[1].consume_front("f");
   bool IsBFloat = TypeMatchResult[1].consume_front("bf");
-  bool IsInteger = !IsFloat && !IsBFloat;
+  bool IsInteger = !IsFloat && !IsBFloat && !IsPointer;
   if (IsInteger) {
     // Remove the 'u'/'i' part
     TypeMatchResult[1] = TypeMatchResult[1].substr(1);
   }
-  unsigned Size;
-  if (TypeMatchResult[1].getAsInteger(10, Size))
+  unsigned Size = 0;
+  bool FailedParsingInteger = TypeMatchResult[1].getAsInteger(10, Size);
+  if (!IsPointer && FailedParsingInteger)
     llvm_unreachable(NotAnIntegerError);
   Type *DataTy = nullptr;
   auto &C = Fn.getContext();
@@ -9884,8 +9996,13 @@ ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
     }
   } else if (IsBFloat) {
     DataTy = Type::getBFloatTy(C);
+  } else if (IsPointer) {
+    DataTy = PointerType::get(C, Size);
   } else {
     DataTy = Type::getIntNTy(C, Size);
+  }
+  if (TS.isVector()) {
+    DataTy = VectorType::get(DataTy, TS.flatShape(), /*Scalable*/ false);
   }
 
   return std::make_tuple(DataTy, std::move(TS), ArgIdx, S);
@@ -9894,7 +10011,7 @@ ExternalRippleFunction::parseTensorType(StringRef S, const Function &Fn) {
 std::optional<StringRef> ExternalRippleFunction::parseSignature(
     StringRef S, const Function &Fn,
     SmallVectorImpl<ArgumentSignatureInfo> &ArgumentShapes,
-    ReturnSignatureInfo &ReturnShape, bool &IsUniform) {
+    std::optional<ReturnSignatureInfo> &ReturnShape, bool &IsUniform) {
 
   IsUniform = S.consume_front(UniformShape);
   if (IsUniform) {
@@ -9920,9 +10037,9 @@ std::optional<StringRef> ExternalRippleFunction::parseSignature(
         return std::nullopt;
       }
       // Set return shape and type
-      auto &[RetTy, RetShape] = ReturnShape;
-      RetTy = ParsedTy;
-      std::swap(RetShape, TS);
+      ReturnSignatureInfo NewReturnSignature(ParsedTy, std::move(TS));
+      std::optional<ReturnSignatureInfo> OptSig(std::move(NewReturnSignature));
+      std::swap(ReturnShape, OptSig);
     } else {
       // Warn that we parsed `uniform_` but couldn't find a valid tensor shape
       // following it
@@ -9972,9 +10089,10 @@ std::optional<StringRef> ExternalRippleFunction::parseSignature(
       // Advance S
       S = SR;
       if (SigIndex == -2) {
-        auto &[RetTy, RetShape] = ReturnShape;
-        RetTy = ParsedTy;
-        std::swap(RetShape, TS);
+        ReturnSignatureInfo NewReturnSignature(ParsedTy, std::move(TS));
+        std::optional<ReturnSignatureInfo> OptSig(
+            std::move(NewReturnSignature));
+        std::swap(ReturnShape, OptSig);
       } else {
         ArgumentShapes.push_back(
             std::make_tuple(ParsedTy, TS, static_cast<unsigned>(ArgIdx)));
@@ -9984,6 +10102,16 @@ std::optional<StringRef> ExternalRippleFunction::parseSignature(
     }
   }
   return S;
+}
+
+Argument *ExternalRippleFunction::getMaskArgument(Function *F) {
+  Argument *MaskArg = F->getArg(F->arg_size() - 1);
+  if (MaskArg->hasStructRetAttr()) {
+    if (F->arg_size() < 2)
+      return nullptr;
+    MaskArg = F->getArg(F->arg_size() - 2);
+  }
+  return MaskArg;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

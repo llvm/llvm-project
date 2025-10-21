@@ -1,6 +1,6 @@
 // REQUIRES: target=hexagon{{.*}} || target-x86_64
 // RUN: %clang -S -O2 -emit-llvm %s -DCOMPILE_LIB=1 -o %t.ll
-// RUN: %clang -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s &> %t.warnings && FileCheck %s --input-file=%t.warnings
+// RUN: %clang -S -O2 -emit-llvm -fenable-ripple -fripple-lib=%t.ll -mllvm -ripple-disable-link %s &> %t.warnings; FileCheck %s --input-file=%t.warnings
 
 #ifdef COMPILE_LIB
 
@@ -48,7 +48,7 @@ extern v16f32 ripple_ew_uniform_arg0_t32f32_aa(v16f32 A, v16f32 B) { return A + 
 extern v16f32 ripple_ew_uniform_arg_t32f32_aa(v16f32 A, v16f32 B) { return A + B; }
 
 // Unknown datatype f400
-// CHECK: warning: the external ripple function 'ripple_ew_uniform_t16x2f400_aa' tensor shape's type is not valid starting at 'f400_aa'; expected one of: f16, bf16, f32, f64, i1, i8, i16, i32, i64, u8, u16, u32 or u64
+// CHECK: warning: the external ripple function 'ripple_ew_uniform_t16x2f400_aa' tensor shape's type is not valid starting at 'f400_aa'; expected one of: f16, bf16, f32, f64, i1, i8, i16, i32, i64, u8, u16, u32, u64 or ptr
 // CHECK: warning: the external ripple function 'ripple_ew_uniform_t16x2f400_aa' uniform shape requires a tensor shape specifier between 'uniform_' and 't16x2f400_aa', e.g., 'uniform_t2x4f32_t16x2f400_aa'
 extern v16f32 ripple_ew_uniform_t16x2f400_aa(v16f32 A, v16f32 B) { return A + B; }
 
@@ -69,11 +69,11 @@ extern v16f32 ripple_ret_t16f32_arg0_t16f32_ret_t16f32_bb(v16f32 A, v16f32 B) { 
 extern v16f32 ripple_ret_t16f32_arg9_t16f32_bb(v16f32 A, v16f32 B) { return A + B; }
 
 // Wrong argument tensor shape
-// CHECK: warning: the external ripple function 'ripple_ret_t16f32_arg1_t16x2f32_cc' argument at index 1 tensor shape 'Tensor[16][2]' is incompatible with a vector size of 16
+// CHECK: error: the external ripple function 'ripple_ret_t16f32_arg1_t16x2f32_cc' argument at index 1 tensor shape 't16x2f32' is incompatible with the declared argument vector type of size 16
 extern v16f32 ripple_ret_t16f32_arg1_t16x2f32_cc(v16f32 A, v16f32 B) { return A + B; }
 
 // Wrong return tensor shape
-// CHECK: warning: the external ripple function 'ripple_ret_t8x4f32_arg1_t4x4f32_cc' return value tensor shape 'Tensor[8][4]' is incompatible with a vector size of 16
+// CHECK: error: the external ripple function 'ripple_ret_t8x4f32_arg1_t4x4f32_cc' return tensor shape 't8x4f32' is incompatible with the declared return vector type of size 16
 extern v16f32 ripple_ret_t8x4f32_arg1_t4x4f32_cc(v16f32 A, v16f32 B) { return A + B; }
 
 #else

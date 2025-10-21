@@ -179,6 +179,9 @@ public:
   /// @param O the output stream
   void print(raw_ostream &O) const;
 
+  /// @brief Prints this shape as ripple external function signature
+  void printAsSignature(raw_ostream &O, Type *ScalarType) const;
+
   /// @brief Equality operator
   /// @return true if the shapes match, false otherwise
   /// N.B.: The shapes do not need to be of the same rank, only non-empty
@@ -694,19 +697,47 @@ class ExternalRippleFunction {
   Argument *TensorMaskArgument = nullptr;
 
 public:
+  /// @brief <Scalar Type, Tensor Shape, Argument Index>
+  using ArgumentSignatureInfo = std::tuple<Type *, TensorShape, unsigned>;
+  /// @brief <Scalar Type, Tensor Shape>
+  using ReturnSignatureInfo = std::pair<Type *, TensorShape>;
+
   /// @brief Get the Function's return type seeing through StructRetAttr
   /// (where the return value is allocated by the caller and passed by pointer).
-  static Type *getTrueReturnType(const Function *F);
-  Type *getTrueReturnType() const;
+  /// If a return signature @p RetSig is present and the type of the return
+  /// value is a pointer, returns the return signature type. If @p
+  /// ForceSignature is true and RetSig is valid, returns the RetSig type.
+  static Type *
+  getTrueReturnType(const Function *F,
+                    std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
+                    bool ForceSignature = false);
+  Type *
+  getTrueReturnType(std::optional<ReturnSignatureInfo> RetSig = std::nullopt,
+                    bool ForceSignature = false) const;
 
   /// @brief Get the Function's argument types, skipping mask argument if
   /// @p SkipMask is true and the return as argument (StructRet) if
   /// @p SkipStructRet is true.
-  static SmallVector<Type *, 0>
-  getTrueArgumentTypes(const Function *F, const Argument *SkipMask = nullptr,
-                       bool SkipStructRet = true);
-  SmallVector<Type *, 0> getTrueArgumentTypes(bool SkipMask = true,
-                                              bool SkipStructRet = true) const;
+  /// @p ReturnSignature an optional type and shape of the return tensor from
+  /// the ripple function signature
+  /// @p ArgumentSignatures an optional type and shape of the arguments tensor
+  /// from the ripple function signature
+  /// @p ForceSignature Forces returning the signature type when available, the
+  /// default is relying on the LLVM type system's type when available and only
+  /// relying on the signature for passing by value using a pointer.
+  static SmallVector<Type *, 0> getTrueArgumentTypes(
+      const Function *F, const Argument *SkipMask = nullptr,
+      bool SkipStructRet = true,
+      std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
+      const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures =
+          SmallVector<ArgumentSignatureInfo, 1>(),
+      bool ForceSignature = false);
+  SmallVector<Type *, 0> getTrueArgumentTypes(
+      bool SkipMask = true, bool SkipStructRet = true,
+      std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
+      const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentSignatures =
+          SmallVector<ArgumentSignatureInfo, 1>(),
+      bool ForceSignature = false) const;
 
   /// @brief Sole constructor of ExternalRippleFunction
   ///
@@ -792,10 +823,15 @@ public:
                        ArrayRef<const TensorShape *> CallArgShapes) const;
 
   /// @brief Normalizes the function type by moving sret argument to the return
-  /// type and replace pointer byval argument by the byval type.
-  static FunctionType *
-  normalizeFunctionType(const Function *F,
-                        const Argument *MaskArgument = nullptr);
+  /// type and replace pointer byval argument by the byval type. Uses the return
+  /// and argument signatures to get the type for passing by value through a
+  /// pointer without type information.
+  static FunctionType *normalizeFunctionType(
+      const Function *F, const Argument *MaskArgument = nullptr,
+      std::optional<ReturnSignatureInfo> ReturnSignature = std::nullopt,
+      const SmallVectorImpl<ArgumentSignatureInfo> &AgumentSignatures =
+          SmallVector<ArgumentSignatureInfo, 1>(),
+      bool ForceSignature = false);
   /// @brief If @p F has an sret argument, removes the value at the sret
   /// argument index from @p C. Otherwise does nothing.
   /// @pre C.size() == F->arg_size()
@@ -846,6 +882,10 @@ public:
   /// attr,returns then returns the  byval type, else the type of the argument.
   static Type *getTrueMaskType(const Argument *Mask);
 
+  /// @brief returns the argument that is treated as mask by ripple, or nullptr
+  /// if no candidate are available
+  static Argument *getMaskArgument(Function *F);
+
 private:
   /// @brief Remove the ripple prefix from \p Fun's name.
   static StringRef removeRipplePrefix(const Function *Fun);
@@ -854,9 +894,8 @@ private:
   ExternalRippleFunction(
       Function *Fun, StringRef ScalarName,
       const SmallVectorImpl<StringRef> &Options, size_t TensorRank,
-      const std::tuple<Type *, TensorShape> &ReturnShape,
-      const SmallVectorImpl<std::tuple<Type *, TensorShape, unsigned>>
-          &ArgumentShapes,
+      const std::optional<ReturnSignatureInfo> &ReturnShape,
+      const SmallVectorImpl<ArgumentSignatureInfo> &ArgumentShapes,
       bool Uniform = false);
 
   static constexpr StringRef RipplePrefix = "ripple_";
@@ -868,10 +907,6 @@ private:
   static constexpr StringRef UniformShape = "uniform_";
   static constexpr StringRef RetShape = "ret_";
   static constexpr StringRef ArgShape = "arg";
-  /// @brief <Scalar Type, Tensor Shape>
-  using ReturnSignatureInfo = std::pair<Type *, TensorShape>;
-  /// @brief <Scalar Type, Tensor Shape, Argument Index>
-  using ArgumentSignatureInfo = std::tuple<Type *, TensorShape, unsigned>;
 
   /// @brief Parse and toggle Ripple External function options, e.g.,
   /// element-wise, multi-dimensional tensor shapes, etc
@@ -896,7 +931,8 @@ private:
   static std::optional<StringRef>
   parseSignature(StringRef S, const Function &Fn,
                  SmallVectorImpl<ArgumentSignatureInfo> &ArgumentShapes,
-                 ReturnSignatureInfo &ReturnShape, bool &IsUniform);
+                 std::optional<ReturnSignatureInfo> &ReturnShape,
+                 bool &IsUniform);
 };
 
 namespace {
