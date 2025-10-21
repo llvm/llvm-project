@@ -2860,8 +2860,9 @@ static std::optional<APInt> getConstantPart(const SCEV *Expr) {
   if (const auto *Constant = dyn_cast<SCEVConstant>(Expr))
     return Constant->getAPInt();
   if (const auto *Product = dyn_cast<SCEVMulExpr>(Expr))
-    if (const auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
-      return Constant->getAPInt();
+    if (Product->hasNoSignedWrap())
+      if (auto *Constant = dyn_cast<SCEVConstant>(Product->getOperand(0)))
+        return Constant->getAPInt();
   return std::nullopt;
 }
 
