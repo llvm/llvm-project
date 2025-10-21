@@ -11811,6 +11811,73 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     });
 
+  case X86::BI__builtin_ia32_extract128i256:
+  case X86::BI__builtin_ia32_vextractf128_pd256:
+  case X86::BI__builtin_ia32_vextractf128_ps256:
+  case X86::BI__builtin_ia32_vextractf128_si256: {
+    APValue SourceVec, SourceImm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceImm))
+      return false;
+
+    if (!SourceVec.isVector())
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+    unsigned Idx = SourceImm.getInt().getZExtValue() & 1;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+
+    for (unsigned I = 0; I < RetLen; I++)
+      ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
+
+    return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case X86::BI__builtin_ia32_extracti32x4_256_mask:
+  case X86::BI__builtin_ia32_extractf32x4_256_mask:
+  case X86::BI__builtin_ia32_extracti32x4_mask:
+  case X86::BI__builtin_ia32_extractf32x4_mask:
+  case X86::BI__builtin_ia32_extracti32x8_mask:
+  case X86::BI__builtin_ia32_extractf32x8_mask:
+  case X86::BI__builtin_ia32_extracti64x2_256_mask:
+  case X86::BI__builtin_ia32_extractf64x2_256_mask:
+  case X86::BI__builtin_ia32_extracti64x2_512_mask:
+  case X86::BI__builtin_ia32_extractf64x2_512_mask:
+  case X86::BI__builtin_ia32_extracti64x4_mask:
+  case X86::BI__builtin_ia32_extractf64x4_mask: {
+    APValue SourceVec, MergeVec;
+    APSInt Imm, MaskImm;
+
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceVec) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info) ||
+        !EvaluateAsRValue(Info, E->getArg(2), MergeVec) ||
+        !EvaluateInteger(E->getArg(3), MaskImm, Info))
+      return false;
+
+    const auto *RetVT = E->getType()->castAs<VectorType>();
+    unsigned RetLen = RetVT->getNumElements();
+
+    if (!SourceVec.isVector() || !MergeVec.isVector())
+      return false;
+    unsigned SrcLen = SourceVec.getVectorLength();
+    unsigned Lanes = SrcLen / RetLen;
+    unsigned Lane = static_cast<unsigned>(Imm.getZExtValue() % Lanes);
+    unsigned Base = Lane * RetLen;
+
+    SmallVector<APValue, 32> ResultElements;
+    ResultElements.reserve(RetLen);
+    for (unsigned I = 0; I < RetLen; ++I) {
+      if (MaskImm[I])
+        ResultElements.push_back(SourceVec.getVectorElt(Base + I));
+      else
+        ResultElements.push_back(MergeVec.getVectorElt(I));
+    }
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
   case clang::X86::BI__builtin_ia32_pavgb256:
@@ -12351,6 +12418,40 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!evalPshufBuiltin(Info, E, false, R))
       return false;
     return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_phminposuw128: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ElemBitWidth = Info.Ctx.getTypeSize(ElemQT);
+
+    APInt MinIndex(ElemBitWidth, 0);
+    APInt MinVal = Source.getVectorElt(0).getInt();
+    for (unsigned I = 1; I != SourceLen; ++I) {
+      APInt Val = Source.getVectorElt(I).getInt();
+      if (MinVal.ugt(Val)) {
+        MinVal = Val;
+        MinIndex = I;
+      }
+    }
+
+    bool ResultUnsigned = E->getCallReturnType(Info.Ctx)
+                              ->castAs<VectorType>()
+                              ->getElementType()
+                              ->isUnsignedIntegerOrEnumerationType();
+
+    SmallVector<APValue, 8> Result;
+    Result.reserve(SourceLen);
+    Result.emplace_back(APSInt(MinVal, ResultUnsigned));
+    Result.emplace_back(APSInt(MinIndex, ResultUnsigned));
+    for (unsigned I = 0; I != SourceLen - 2; ++I) {
+      Result.emplace_back(APSInt(APInt(ElemBitWidth, 0), ResultUnsigned));
+    }
+    return Success(APValue(Result.data(), Result.size()), E);
   }
 
   case X86::BI__builtin_ia32_pternlogd128_mask:
@@ -15266,6 +15367,36 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!handleAssignment(Info, E, ResultLValue, ResultType, APV))
       return false;
     return Success(CarryOut, E);
+  }
+
+  case clang::X86::BI__builtin_ia32_movmskps:
+  case clang::X86::BI__builtin_ia32_movmskpd:
+  case clang::X86::BI__builtin_ia32_pmovmskb128:
+  case clang::X86::BI__builtin_ia32_pmovmskb256:
+  case clang::X86::BI__builtin_ia32_movmskps256:
+  case clang::X86::BI__builtin_ia32_movmskpd256: {
+    APValue Source;
+    if (!Evaluate(Source, Info, E->getArg(0)))
+      return false;
+    unsigned SourceLen = Source.getVectorLength();
+    const VectorType *VT = E->getArg(0)->getType()->castAs<VectorType>();
+    QualType ElemQT = VT->getElementType();
+    unsigned ResultLen = Info.Ctx.getTypeSize(
+        E->getCallReturnType(Info.Ctx)); // Always 32-bit integer.
+    APInt Result(ResultLen, 0);
+
+    for (unsigned I = 0; I != SourceLen; ++I) {
+      APInt Elem;
+      if (ElemQT->isIntegerType()) {
+        Elem = Source.getVectorElt(I).getInt();
+      } else if (ElemQT->isRealFloatingType()) {
+        Elem = Source.getVectorElt(I).getFloat().bitcastToAPInt();
+      } else {
+        return false;
+      }
+      Result.setBitVal(I, Elem.isNegative());
+    }
+    return Success(Result, E);
   }
 
   case clang::X86::BI__builtin_ia32_bextr_u32:

@@ -2665,8 +2665,9 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     return;
   }
   const bool SkipRelocs = StringSwitch<bool>(RelocatedSectionName)
-                              .Cases(".plt", ".rela.plt", ".got.plt",
-                                     ".eh_frame", ".gcc_except_table", true)
+                              .Cases({".plt", ".rela.plt", ".got.plt",
+                                      ".eh_frame", ".gcc_except_table"},
+                                     true)
                               .Default(false);
   if (SkipRelocs) {
     LLVM_DEBUG(

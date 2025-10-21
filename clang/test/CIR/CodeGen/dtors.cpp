@@ -14,7 +14,7 @@ void test_temporary_dtor() {
 }
 
 // CIR: cir.func dso_local @_Z19test_temporary_dtorv()
-// CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp0"]
+// CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp.ensured"]
 // CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A>) -> ()
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}

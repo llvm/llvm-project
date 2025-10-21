@@ -570,6 +570,11 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
   if (!Constraint.hasParameterMapping())
     return std::move(MLTAL);
 
+  // The mapping is empty, meaning no template arguments are needed for
+  // evaluation.
+  if (Constraint.getParameterMapping().empty())
+    return MultiLevelTemplateArgumentList();
+
   TemplateDeductionInfo Info(Constraint.getBeginLoc());
   Sema::InstantiatingTemplate Inst(
       S, Constraint.getBeginLoc(),
@@ -736,8 +741,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
 
@@ -868,8 +874,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = E;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return E;
@@ -1012,8 +1019,9 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   UnsubstitutedConstraintSatisfactionCacheResult Cache;
   Cache.Satisfaction.ContainsErrors = Satisfaction.ContainsErrors;
   Cache.Satisfaction.IsSatisfied = Satisfaction.IsSatisfied;
-  std::copy(Satisfaction.Details.begin() + Size, Satisfaction.Details.end(),
-            std::back_inserter(Cache.Satisfaction.Details));
+  Cache.Satisfaction.Details.insert(Cache.Satisfaction.Details.end(),
+                                    Satisfaction.Details.begin() + Size,
+                                    Satisfaction.Details.end());
   Cache.SubstExpr = CE;
   S.UnsubstitutedConstraintSatisfactionCache.insert({ID, std::move(Cache)});
   return CE;
@@ -1217,10 +1225,10 @@ bool Sema::CheckConstraintSatisfaction(
   return false;
 }
 
-static const ExprResult
-SubstituteConceptsInConstrainExpression(Sema &S, const NamedDecl *D,
-                                        const ConceptSpecializationExpr *CSE,
-                                        UnsignedOrNone SubstIndex) {
+static ExprResult
+SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
+                                         const ConceptSpecializationExpr *CSE,
+                                         UnsignedOrNone SubstIndex) {
 
   // [C++2c] [temp.constr.normal]
   // Otherwise, to form CE, any non-dependent concept template argument Ai
@@ -1255,7 +1263,7 @@ bool Sema::CheckConstraintSatisfaction(
     const ConceptSpecializationExpr *ConstraintExpr,
     ConstraintSatisfaction &Satisfaction) {
 
-  ExprResult Res = SubstituteConceptsInConstrainExpression(
+  ExprResult Res = SubstituteConceptsInConstraintExpression(
       *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
   if (!Res.isUsable())
     return true;
@@ -2017,8 +2025,13 @@ void SubstituteParameterMappings::buildParameterMapping(
       SemaRef.MarkUsedTemplateParameters(Args->arguments(),
                                          /*Depth=*/0, OccurringIndices);
   }
+  unsigned Size = OccurringIndices.count();
+  // When the constraint is independent of any template parameters,
+  // we build an empty mapping so that we can distinguish these cases
+  // from cases where no mapping exists at all, e.g. when there are only atomic
+  // constraints.
   TemplateArgumentLoc *TempArgs =
-      new (SemaRef.Context) TemplateArgumentLoc[OccurringIndices.count()];
+      new (SemaRef.Context) TemplateArgumentLoc[Size];
   llvm::SmallVector<NamedDecl *> UsedParams;
   for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I) {
     SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
@@ -2039,7 +2052,6 @@ void SubstituteParameterMappings::buildParameterMapping(
       TemplateParams->getLAngleLoc(), UsedParams,
       /*RAngleLoc=*/SourceLocation(),
       /*RequiresClause=*/nullptr);
-  unsigned Size = OccurringIndices.count();
   N.updateParameterMapping(
       std::move(OccurringIndices), std::move(OccurringIndicesForSubsumption),
       MutableArrayRef<TemplateArgumentLoc>{TempArgs, Size}, UsedList);
@@ -2049,6 +2061,10 @@ bool SubstituteParameterMappings::substitute(
     NormalizedConstraintWithParamMapping &N) {
   if (!N.hasParameterMapping())
     buildParameterMapping(N);
+
+  // If the parameter mapping is empty, there is nothing to substitute.
+  if (N.getParameterMapping().empty())
+    return false;
 
   SourceLocation InstLocBegin, InstLocEnd;
   llvm::ArrayRef Arguments = ArgsAsWritten->arguments();
@@ -2289,7 +2305,7 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       ConceptDecl *CD = CSE->getNamedConcept()->getCanonicalDecl();
 
       ExprResult Res =
-          SubstituteConceptsInConstrainExpression(S, D, CSE, SubstIndex);
+          SubstituteConceptsInConstraintExpression(S, D, CSE, SubstIndex);
       if (!Res.isUsable())
         return nullptr;
 
