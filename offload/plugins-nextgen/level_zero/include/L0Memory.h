@@ -32,6 +32,8 @@ struct L0OptionsTy;
 class L0DeviceTy;
 class L0ContextTy;
 
+constexpr static int32_t MaxMemKind = TARGET_ALLOC_LAST + 1;
+
 struct DynamicMemHeapTy {
   /// Base address memory is allocated from
   uintptr_t AllocBase = 0;
@@ -97,10 +99,6 @@ class MemAllocatorTy {
     size_t PeakUse[2] = {0, 0};   // Peak bytes used
     size_t NumAllocs[2] = {0, 0}; // Number of allocations
     MemStatTy() = default;
-
-    MemStatTy(const MemStatTy &) = default;
-    MemStatTy(MemStatTy &&) = default;
-    ~MemStatTy() = default;
   };
 
   /// Memory pool which enables reuse of already allocated blocks
@@ -234,11 +232,10 @@ class MemAllocatorTy {
 
   /// Allocation information maintained in the plugin
   class MemAllocInfoMapTy {
-    constexpr static int32_t MaxKind = TARGET_ALLOC_LAST + 1;
     /// Map from allocated pointer to allocation information
     std::map<void *, MemAllocInfoTy> Map;
     /// Map from target alloc kind to number of implicit arguments
-    std::array<uint32_t, MaxKind> NumImplicitArgs;
+    std::array<uint32_t, MaxMemKind> NumImplicitArgs;
 
   public:
     /// Add allocation information to the map
@@ -274,7 +271,8 @@ class MemAllocatorTy {
     /// Returns the number of implicit arguments for the specified allocation
     /// kind.
     size_t getNumImplicitArgs(int32_t Kind) {
-      assert(Kind >= 0 && Kind < MaxKind && "Invalid target allocation kind");
+      assert(Kind >= 0 && Kind < MaxMemKind &&
+             "Invalid target allocation kind");
       return NumImplicitArgs[Kind];
     }
   }; // MemAllocInfoMapTy
@@ -288,9 +286,10 @@ class MemAllocatorTy {
   /// Cached max alloc size supported by device
   uint64_t MaxAllocSize;
   /// Map from allocation kind to memory statistics
-  llvm::DenseMap<int32_t, MemStatTy> Stats;
+  std::array<MemStatTy, MaxMemKind> Stats;
   /// Map from allocation kind to memory pool
-  std::unordered_map<int32_t, MemPoolTy> Pools;
+  std::array<std::unique_ptr<MemPoolTy>, MaxMemKind> Pools;
+
   /// Memory pool dedicated to reduction scratch space
   std::unique_ptr<MemPoolTy> ReductionPool;
   /// Memory pool dedicated to reduction counters
@@ -371,7 +370,7 @@ public:
 
   /// Log memory allocation/deallocation
   void log(size_t ReqSize, size_t Size, int32_t Kind, bool Pool = false) {
-    if (Stats.count(Kind) == 0)
+    if (Kind < 0 || Kind >= MaxMemKind)
       return; // Stat is disabled
 
     auto &ST = Stats[Kind];

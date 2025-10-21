@@ -336,7 +336,7 @@ void MemAllocatorTy::MemAllocInfoMapTy::add(void *Ptr, void *Base, size_t Size,
     }
   }
   assert(Valid && "Invalid overlapping memory allocation");
-  assert(Kind >= 0 && Kind < MaxKind && "Invalid target allocation kind");
+  assert(Kind >= 0 && Kind < MaxMemKind && "Invalid target allocation kind");
   if (ImplicitArg)
     NumImplicitArgs[Kind]++;
 }
@@ -364,11 +364,8 @@ void MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
     if (Option.MemPoolInfo.count(Kind) > 0) {
       std::lock_guard<std::mutex> Lock(Mtx);
-      Pools.emplace(std::piecewise_construct, std::forward_as_tuple(Kind),
-                    std::forward_as_tuple(Kind, this, Option));
+      Pools[Kind] = std::make_unique<MemPoolTy>(Kind, this, Option);
     }
-    if (getDebugLevel() > 0)
-      Stats.try_emplace(Kind);
   }
   ReductionPool = std::make_unique<MemPoolTy>(this, Option);
   CounterPool = std::make_unique<MemPoolTy>(this);
@@ -382,12 +379,9 @@ void MemAllocatorTy::initHostPool(L0ContextTy &Driver,
   this->L0Context = &Driver;
   if (Option.MemPoolInfo.count(TARGET_ALLOC_HOST) > 0) {
     std::lock_guard<std::mutex> Lock(Mtx);
-    Pools.emplace(std::piecewise_construct,
-                  std::forward_as_tuple(TARGET_ALLOC_HOST),
-                  std::forward_as_tuple(TARGET_ALLOC_HOST, this, Option));
+    Pools[TARGET_ALLOC_HOST] =
+        std::make_unique<MemPoolTy>(TARGET_ALLOC_HOST, this, Option);
   }
-  if (getDebugLevel() > 0)
-    Stats.try_emplace(TARGET_ALLOC_HOST);
 }
 
 void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
@@ -425,8 +419,6 @@ Error MemAllocatorTy::deinit() {
     if (Err)
       return Err;
   }
-  // Release resources used in the pool
-  Pools.clear();
   ReductionPool.reset(nullptr);
   CounterPool.reset(nullptr);
   // Report memory usage if requested
@@ -434,18 +426,17 @@ Error MemAllocatorTy::deinit() {
     for (auto &Stat : Stats) {
       DP("Memory usage for %s, device " DPxMOD "\n", AllocKindToStr(Stat.first),
          DPxPTR(Device));
-      const auto &ST = Stat.second;
-      if (ST.NumAllocs[0] == 0 && ST.NumAllocs[1] == 0) {
+      if (Stat.NumAllocs[0] == 0 && Stat.NumAllocs[1] == 0) {
         DP("-- Not used\n");
         continue;
       }
       DP("-- Allocator: %12s, %12s\n", "Native", "Pool");
-      DP("-- Requested: %12zu, %12zu\n", ST.Requested[0], ST.Requested[1]);
-      DP("-- Allocated: %12zu, %12zu\n", ST.Allocated[0], ST.Allocated[1]);
-      DP("-- Freed    : %12zu, %12zu\n", ST.Freed[0], ST.Freed[1]);
-      DP("-- InUse    : %12zu, %12zu\n", ST.InUse[0], ST.InUse[1]);
-      DP("-- PeakUse  : %12zu, %12zu\n", ST.PeakUse[0], ST.PeakUse[1]);
-      DP("-- NumAllocs: %12zu, %12zu\n", ST.NumAllocs[0], ST.NumAllocs[1]);
+      DP("-- Requested: %12zu, %12zu\n", Stat.Requested[0], Stat.Requested[1]);
+      DP("-- Allocated: %12zu, %12zu\n", Stat.Allocated[0], Stat.Allocated[1]);
+      DP("-- Freed    : %12zu, %12zu\n", Stat.Freed[0], Stat.Freed[1]);
+      DP("-- InUse    : %12zu, %12zu\n", Stat.InUse[0], Stat.InUse[1]);
+      DP("-- PeakUse  : %12zu, %12zu\n", Stat.PeakUse[0], Stat.PeakUse[1]);
+      DP("-- NumAllocs: %12zu, %12zu\n", Stat.NumAllocs[0], Stat.NumAllocs[1]);
     }
   }
 
@@ -477,7 +468,7 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
       (AllocOpt == AllocOptionTy::ALLOC_OPT_REDUCTION_COUNTER);
   const bool UseDedicatedPool = UseScratchPool || UseZeroInitPool;
 
-  if ((Pools.count(Kind) > 0 && MemAdvice == UINT32_MAX) || UseDedicatedPool) {
+  if ((Pools[Kind] != nullptr && MemAdvice == UINT32_MAX) || UseDedicatedPool) {
     // Pool is enabled for the allocation kind, and we do not use any memory
     // advice. We should avoid using pool if there is any meaningful memory
     // advice not to affect sibling allocation in the same block.
@@ -489,7 +480,7 @@ Expected<void *> MemAllocatorTy::alloc(size_t Size, size_t Align, int32_t Kind,
     else if (UseZeroInitPool)
       AllocBase = CounterPool->alloc(AllocSize, PoolAllocSize);
     else
-      AllocBase = Pools[Kind].alloc(AllocSize, PoolAllocSize);
+      AllocBase = Pools[Kind]->alloc(AllocSize, PoolAllocSize);
     if (AllocBase) {
       uintptr_t Base = (uintptr_t)AllocBase;
       if (Align > 0)
@@ -533,8 +524,8 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
   }
   if (Info.InPool) {
     size_t DeallocSize = 0;
-    if (Pools.count(Info.Kind) > 0)
-      DeallocSize = Pools.at(Info.Kind).dealloc(Info.Base);
+    if (Pools[Info.Kind] != nullptr)
+      DeallocSize = Pools[Info.Kind]->dealloc(Info.Base);
     if (DeallocSize == 0) {
       // Try reduction scratch pool
       DeallocSize = ReductionPool->dealloc(Info.Base);
