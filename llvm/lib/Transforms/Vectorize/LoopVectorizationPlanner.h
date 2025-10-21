@@ -325,6 +325,8 @@ public:
     VPIRFlags Flags;
     if (Opcode == Instruction::Trunc)
       Flags = VPIRFlags::TruncFlagsTy(false, false);
+    else if (Opcode == Instruction::ZExt)
+      Flags = VPIRFlags::NonNegFlagsTy(false);
     return tryInsertInstruction(
         new VPWidenCastRecipe(Opcode, Op, ResultTy, Flags));
   }
