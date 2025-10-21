@@ -13,7 +13,6 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
