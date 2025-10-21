@@ -14,6 +14,14 @@ sqrshrn z10.d, { z0.d, z1.d }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+sqrshrn z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: sqrshrn z0.b, { z0.h, z1.s }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Invalid operand for instruction
 
 sqrshrn z10.h, { z0.b, z1.b }, #1
@@ -88,6 +96,14 @@ sqrshrun z10.b, { z1.h, z2.h }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+sqrshrun z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: sqrshrun z0.b, { z0.h, z1.s }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
@@ -107,6 +123,14 @@ sqshrn z10.s, { z0.s, z1.s }, #1
 sqshrn z10.d, { z0.d, z1.d }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: sqshrn z10.d, { z0.d, z1.d }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+sqshrn z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: sqshrn z0.b, { z0.h, z1.s }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -160,6 +184,14 @@ sqshrun z10.d, { z0.d, z1.d }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+sqshrun z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: sqshrun z0.b, { z0.h, z1.s }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Intermediate out of range
 
 sqshrun z10.b, { z0.h, z1.h }, #0
@@ -210,6 +242,14 @@ uqrshrn z10.d, { z0.d, z1.d }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+uqrshrn z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: uqrshrn z0.b, { z0.h, z1.s }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
 // Invalid operand for instruction
 
 uqrshrn z10.h, { z0.b, z1.b }, #1
@@ -255,6 +295,14 @@ uqshrn z10.s, { z0.s, z1.s }, #1
 uqshrn z10.d, { z0.d, z1.d }, #1
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid element width
 // CHECK-NEXT: uqshrn z10.d, { z0.d, z1.d }, #1
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Mismatched register size suffix
+
+uqshrn z0.b, { z0.h, z1.s }, #1
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: mismatched register size suffix
+// CHECK-NEXT: uqshrn z0.b, { z0.h, z1.s }, #1
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
