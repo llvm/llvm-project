@@ -19,5 +19,3 @@ LLVM_LIBC_FUNCTION(int, catclose, ([[maybe_unused]] nl_catd catalog)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-

@@ -20,5 +20,3 @@ char *catgets(nl_catd catalog, int set_number, int message_number,
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_NL_TYPES_CATGETS_H
-
-

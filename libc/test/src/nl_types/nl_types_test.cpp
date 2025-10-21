@@ -25,9 +25,9 @@ TEST_F(LlvmLibcNlTypesTest, CatcloseFails) {
 }
 
 TEST_F(LlvmLibcNlTypesTest, CatgetsFails) {
-  const char* message = "message";
+  const char *message = "message";
   // Note that we test for pointer equality here, since catgets
   // is expected to return the input argument as-is.
   ASSERT_EQ(LIBC_NAMESPACE::catgets(nullptr, 0, 0, message),
-            const_cast<char*>(message));
+            const_cast<char *>(message));
 }

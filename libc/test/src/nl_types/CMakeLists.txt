@@ -12,4 +12,3 @@ add_libc_test(
     libc.src.nl_types.catclose
     libc.src.nl_types.catgets
 )
-

@@ -19,4 +19,3 @@ int catclose(nl_catd catalog);
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_NL_TYPES_CATCLOSE_H
-

@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_NL_CATD_H
 #define LLVM_LIBC_TYPES_NL_CATD_H
 
-typedef void* nl_catd;
+typedef void *nl_catd;
 
 #endif // LLVM_LIBC_TYPES_NL_CATD_H
-
