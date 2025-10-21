@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_H
 
 #include <__algorithm/for_each_segment.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/segmented_iterator.h>
@@ -42,6 +43,19 @@ __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Func& __func,
   std::__for_each_segment(__first, __last, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
     std::__for_each(__lfirst, __llast, __func, __proj);
   });
+  return __last;
+}
+
+template <class _InputIterator,
+          class _Func,
+          class _Proj,
+          __enable_if_t<__specialized_algorithm<_Algorithm::__for_each,
+                                                __iterator_pair<_InputIterator, _InputIterator>>::__has_algorithm,
+                        int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+__for_each(_InputIterator __first, _InputIterator __last, _Func& __func, _Proj& __proj) {
+  __specialized_algorithm<_Algorithm::__for_each, __iterator_pair<_InputIterator, _InputIterator>>()(
+      __first, __last, __func, __proj);
   return __last;
 }
 #endif // !_LIBCPP_CXX03_LANG

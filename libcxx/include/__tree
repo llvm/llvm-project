@@ -11,6 +11,7 @@
 #define _LIBCPP___TREE
 
 #include <__algorithm/min.h>
+#include <__algorithm/specialized_algorithms.h>
 #include <__assert>
 #include <__config>
 #include <__fwd/pair.h>
@@ -717,6 +718,59 @@ private:
   friend class __tree_const_iterator;
 };
 
+template <class _Reference, class _EndNodePtr, class _NodePtr, class _Func, class _Proj>
+_LIBCPP_HIDE_FROM_ABI bool __tree_iterate_from_root(_EndNodePtr __last, _NodePtr __root, _Func& __func, _Proj& __proj) {
+  if (__root->__left_) {
+    if (std::__tree_iterate_from_root<_Reference>(__last, static_cast<_NodePtr>(__root->__left_), __func, __proj))
+      return true;
+  }
+  if (__root == __last)
+    return true;
+  __func(static_cast<_Reference>(__root->__get_value()));
+  if (__root->__right_)
+    return std::__tree_iterate_from_root<_Reference>(__last, static_cast<_NodePtr>(__root->__right_), __func, __proj);
+  return false;
+}
+
+template <class _Reference, class _NodePtr, class _EndNodePtr, class _Func, class _Proj>
+_LIBCPP_HIDE_FROM_ABI void
+__tree_iterate_from_begin(_EndNodePtr __first, _EndNodePtr __last, _Func& __func, _Proj& __proj) {
+  while (true) {
+    if (__first == __last)
+      return;
+    auto __nfirst = static_cast<_NodePtr>(__first);
+    __func(static_cast<_Reference>(__nfirst->__get_value()));
+    if (__nfirst->__right_) {
+      if (std::__tree_iterate_from_root<_Reference>(__last, static_cast<_NodePtr>(__nfirst->__right_), __func, __proj))
+        return;
+    }
+    if (std::__tree_is_left_child(__nfirst)) {
+      __first = __nfirst->__parent_;
+    } else {
+      do {
+        __first = __nfirst->__parent_;
+      } while (!std::__tree_is_left_child(__nfirst));
+    }
+  }
+}
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _NodePtr, class _DiffType>
+struct __specialized_algorithm<
+    _Algorithm::__for_each,
+    __iterator_pair<__tree_iterator<_Tp, _NodePtr, _DiffType>, __tree_iterator<_Tp, _NodePtr, _DiffType>>> {
+  static const bool __has_algorithm = true;
+
+  using __iterator _LIBCPP_NODEBUG = __tree_iterator<_Tp, _NodePtr, _DiffType>;
+
+  template <class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+    std::__tree_iterate_from_begin<typename __iterator::reference, _NodePtr>(
+        __first.__ptr_, __last.__ptr_, __func, __proj);
+  }
+};
+#endif
+
 template <class _Tp, class _NodePtr, class _DiffType>
 class __tree_const_iterator {
   using _NodeTypes _LIBCPP_NODEBUG = __tree_node_types<_NodePtr>;
@@ -780,7 +834,27 @@ private:
 
   template <class, class, class>
   friend class __tree;
+
+  friend struct __specialized_algorithm<_Algorithm::__for_each,
+                                        __iterator_pair<__tree_const_iterator, __tree_const_iterator> >;
 };
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _NodePtr, class _DiffType>
+struct __specialized_algorithm<
+    _Algorithm::__for_each,
+    __iterator_pair<__tree_const_iterator<_Tp, _NodePtr, _DiffType>, __tree_const_iterator<_Tp, _NodePtr, _DiffType>>> {
+  static const bool __has_algorithm = true;
+
+  using __iterator = __tree_const_iterator<_Tp, _NodePtr, _DiffType>;
+
+  template <class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static void operator()(__iterator __first, __iterator __last, _Func& __func, _Proj& __proj) {
+    std::__tree_iterate_from_begin<typename __iterator::reference, _NodePtr>(
+        __first.__ptr_, __last.__ptr_, __func, __proj);
+  }
+};
+#endif
 
 template <class _Tp, class _Compare>
 #ifndef _LIBCPP_CXX03_LANG
@@ -1466,7 +1540,36 @@ private:
 
     return __dest;
   }
+
+  friend struct __specialized_algorithm<_Algorithm::__for_each, __tree>;
 };
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp, class _Compare, class _Allocator>
+struct __specialized_algorithm<_Algorithm::__for_each, __tree<_Tp, _Compare, _Allocator> > {
+  static const bool __has_algorithm = true;
+
+  using __node_pointer _LIBCPP_NODEBUG = typename __tree<_Tp, _Compare, _Allocator>::__node_pointer;
+
+  template <class _Func, class _Proj>
+#ifndef _LIBCPP_COMPILER_GCC
+  _LIBCPP_HIDE_FROM_ABI
+#endif
+  static void __impl(__node_pointer __root, _Func& __func, _Proj& __proj) {
+    if (__root->__left_)
+      __impl(static_cast<__node_pointer>(__root->__left_), __func, __proj);
+    __func(__root->__get_value());
+    if (__root->__right_)
+      __impl(static_cast<__node_pointer>(__root->__right_), __func, __proj);
+  }
+
+  template <class _Tree, class _Func, class _Proj>
+  _LIBCPP_HIDE_FROM_ABI static auto operator()(_Tree&& __range, _Func __func, _Proj __proj) {
+    __impl(__range.__root(), __func, __proj);
+    return std::make_pair(__range.end(), std::move(__func));
+  }
+};
+#endif
 
 // Precondition:  __size_ != 0
 template <class _Tp, class _Compare, class _Allocator>

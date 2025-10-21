@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <cassert>
 #include <deque>
-#if __has_include(<ranges>)
-#  include <ranges>
-#endif
+#include <map>
+#include <ranges>
+#include <set>
 #include <vector>
 
 #include "test_macros.h"
@@ -79,11 +79,66 @@ struct deque_test {
   }
 };
 
+template <class Container, class Converter>
+void test_node_container(Converter conv) {
+  Container c;
+  using value_type = typename Container::value_type;
+  for (int i = 0; i != 10; ++i)
+    c.insert(conv(i));
+  { // Simple check
+    int invoke_count = 0;
+    std::for_each(c.begin(), c.end(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 10);
+  }
+  { // Make sure that a start within the container works as expected
+    int invoke_count = 1;
+    std::for_each(std::next(c.begin()), c.end(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 10);
+  }
+  { // Make sure that a start within the container works as expected
+    int invoke_count = 2;
+    std::for_each(std::next(c.begin(), 2), c.end(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 10);
+  }
+  { // Make sure that an end within the container works as expected
+    int invoke_count = 1;
+    std::for_each(std::next(c.begin()), std::prev(c.end()), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 9);
+  }
+  { // Make sure that an empty range works
+    int invoke_count = 0;
+    std::for_each(c.begin(), c.begin(), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 0);
+  }
+  { // Make sure that a single-element range works
+    int invoke_count = 0;
+    std::for_each(c.begin(), std::next(c.begin()), [&c, &invoke_count](const value_type& i) {
+      assert(&i == &*std::next(c.begin(), invoke_count++));
+    });
+    assert(invoke_count == 1);
+  }
+}
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 20
   static_assert(test());
 #endif
+
+  test_node_container<std::set<int> >([](int i) { return i; });
+  test_node_container<std::multiset<int> >([](int i) { return i; });
+  test_node_container<std::map<int, int> >([](int i) { return std::make_pair(i, i); });
+  test_node_container<std::multimap<int, int> >([](int i) { return std::make_pair(i, i); });
 
   // check that segmented iterators work properly
   int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
