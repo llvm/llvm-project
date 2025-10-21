@@ -3655,6 +3655,42 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     Sub = VecOp->getDefiningRecipe();
     VecOp = Tmp;
   }
+
+  // If ValB is a constant and can be safely extended, truncate it to the same
+  // type as ExtA's operand, then extend it to the same type as ExtA. This
+  // creates two uniform extends that can more easily be matched by the rest of
+  // the bundling code. The ExtB reference, ValB and operand 1 of Mul are all
+  // replaced with the new extend of the constant.
+  auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
+                                           VPWidenCastRecipe *&ExtB,
+                                           VPValue *&ValB, VPWidenRecipe *Mul) {
+    if (ExtA && !ExtB && ValB->isLiveIn()) {
+      Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
+      Type *WideTy = Ctx.Types.inferScalarType(ExtA);
+      Instruction::CastOps ExtOpc = ExtA->getOpcode();
+      auto *Const = dyn_cast<ConstantInt>(ValB->getLiveInIRValue());
+      if (Const &&
+          llvm::canConstantBeExtended(
+              Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc))) {
+        // The truncate ensures that the type of each extended operand is the
+        // same, and it's been proven that the constant can be extended from
+        // NarrowTy safely. Necessary since ExtA's extended operand would be
+        // e.g. an i8, while the const will likely be an i32. This will be
+        // elided by later optimisations.
+        auto *Trunc =
+            new VPWidenCastRecipe(Instruction::CastOps::Trunc, ValB, NarrowTy);
+        Trunc->insertBefore(*ExtA->getParent(), std::next(ExtA->getIterator()));
+
+        VPWidenCastRecipe *NewCast =
+            new VPWidenCastRecipe(ExtOpc, Trunc, WideTy);
+        NewCast->insertAfter(Trunc);
+        ExtB = NewCast;
+        ValB = NewCast;
+        Mul->setOperand(1, NewCast);
+      }
+    }
+  };
+
   // Try to match reduce.add(mul(...)).
   if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
@@ -3663,31 +3699,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
-    // Match reduce.add(mul(ext, const)) and convert it to
-    // reduce.add(mul(ext, ext(const)))
-    if (RecipeA && !RecipeB && B->isLiveIn()) {
-      Type *NarrowTy = Ctx.Types.inferScalarType(RecipeA->getOperand(0));
-      Instruction::CastOps ExtOpc = RecipeA->getOpcode();
-      auto *Const = dyn_cast<ConstantInt>(B->getLiveInIRValue());
-      if (Const &&
-          llvm::canConstantBeExtended(
-              Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc))) {
-        // The truncate ensures that the type of each extended operand is the
-        // same, and it's been proven that the constant can be extended from
-        // NarrowTy safely. Necessary since RecipeA's extended operand would be
-        // e.g. an i8, while the const will likely be an i32. This will be
-        // elided by later optimisations.
-        auto *Trunc =
-            new VPWidenCastRecipe(Instruction::CastOps::Trunc, B, NarrowTy);
-        Trunc->insertBefore(*RecipeA->getParent(),
-                            std::next(RecipeA->getIterator()));
-
-        Type *WideTy = Ctx.Types.inferScalarType(RecipeA);
-        RecipeB = new VPWidenCastRecipe(ExtOpc, Trunc, WideTy);
-        RecipeB->insertAfter(Trunc);
-        Mul->setOperand(1, RecipeB);
-      }
-    }
+    // Convert reduce.add(mul(ext, const)) to reduce.add(mul(ext, ext(const)))
+    ExtendAndReplaceConstantOp(RecipeA, RecipeB, B, Mul);
 
     // Match reduce.add/sub(mul(ext, ext)).
     if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
@@ -3698,7 +3711,6 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                       cast<VPWidenRecipe>(Sub), Red);
       return new VPExpressionRecipe(RecipeA, RecipeB, Mul, Red);
     }
-    // Match reduce.add(mul).
     // TODO: Add an expression type for this variant with a negated mul
     if (!Sub && IsMulAccValidAndClampRange(Mul, nullptr, nullptr, nullptr))
       return new VPExpressionRecipe(Mul, Red);
@@ -3707,18 +3719,23 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // variants.
   if (Sub)
     return nullptr;
-  // Match reduce.add(ext(mul(ext(A), ext(B)))).
-  // All extend recipes must have same opcode or A == B
-  // which can be transform to reduce.add(zext(mul(sext(A), sext(B)))).
-  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
-                                      m_ZExtOrSExt(m_VPValue()))))) {
+
+  // Match reduce.add(ext(mul(A, B))).
+  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0)->getDefiningRecipe());
-    auto *Ext0 =
-        cast<VPWidenCastRecipe>(Mul->getOperand(0)->getDefiningRecipe());
-    auto *Ext1 =
-        cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
-    if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
+    auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
+    auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
+
+    // Convert reduce.add(ext(mul(ext, const))) to reduce.add(ext(mul(ext,
+    // ext(const))))
+    ExtendAndReplaceConstantOp(Ext0, Ext1, B, Mul);
+
+    // Match reduce.add(ext(mul(ext(A), ext(B))))
+    // All extend recipes must have same opcode or A == B
+    // which can be transformed to reduce.add(zext(mul(sext(A), sext(B)))).
+    if (Ext0 && Ext1 &&
+        (Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
         Ext0->getOpcode() == Ext1->getOpcode() &&
         IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
       auto *NewExt0 = new VPWidenCastRecipe(
