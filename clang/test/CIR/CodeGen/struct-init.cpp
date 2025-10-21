@@ -9,6 +9,12 @@ struct S {
   int a, b, c;
 };
 
+S partial_init = { 1 };
+
+// CIR: cir.global external @partial_init = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<0> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+// LLVM: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
+// OGCG: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};
