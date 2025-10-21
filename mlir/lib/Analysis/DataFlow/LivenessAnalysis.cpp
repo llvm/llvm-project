@@ -247,9 +247,10 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     for (BlockArgument argument : argumentNotOperand) {
       Liveness *argumentLiveness = getLatticeElement(argument);
       LDBG() << "Marking RegionBranchOp's argument live: " << argument;
-      // TODO: this is overly conservative: we should be able to eliminate unused 
-      // values in a RegionBranchOpInterface operation but that may requires removing
-      // operation results which is beyond current capabilities of this pass right now.
+      // TODO: this is overly conservative: we should be able to eliminate
+      // unused values in a RegionBranchOpInterface operation but that may
+      // requires removing operation results which is beyond current
+      // capabilities of this pass right now.
       propagateIfChanged(argumentLiveness, argumentLiveness->markLive());
     }
   }
