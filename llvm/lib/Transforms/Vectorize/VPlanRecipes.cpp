@@ -3336,7 +3336,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
 
     Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
-
     bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
     bool UsedByLoadStoreAddress =
         !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
