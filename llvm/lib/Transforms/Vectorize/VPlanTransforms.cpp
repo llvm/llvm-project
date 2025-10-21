@@ -973,10 +973,17 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
                                  ArrayRef<VPValue *> Operands,
                                  const DataLayout &DL,
                                  VPTypeAnalysis &TypeInfo) {
-  auto FoldIROperands = [&R, &DL, &TypeInfo](ArrayRef<Value *> Ops) -> Value * {
+  auto FoldToIRValue = [&]() -> Value * {
     auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
     if (!OpcodeOrIID)
       return nullptr;
+
+    SmallVector<Value *, 4> Ops;
+    for (VPValue *Op : Operands) {
+      if (!Op->isLiveIn() || !Op->getLiveInIRValue())
+        return nullptr;
+      Ops.push_back(Op->getLiveInIRValue());
+    }
 
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
@@ -1010,7 +1017,7 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
       auto &RFlags = cast<VPRecipeWithIRFlags>(R);
       auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
       return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
-                            Ops.drop_front(), RFlags.getGEPNoWrapFlags());
+                            drop_begin(Ops), RFlags.getGEPNoWrapFlags());
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
@@ -1026,14 +1033,7 @@ static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
     return nullptr;
   };
 
-  SmallVector<Value *, 4> Ops;
-  for (VPValue *Op : Operands) {
-    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
-      return nullptr;
-    Ops.push_back(Op->getLiveInIRValue());
-  }
-
-  if (Value *V = FoldIROperands(Ops))
+  if (Value *V = FoldToIRValue())
     return R.getParent()->getPlan()->getOrAddLiveIn(V);
   return nullptr;
 }
