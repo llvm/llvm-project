@@ -152,15 +152,15 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 }
 
 // Compute the product of sizes in the range [lo, hi) from the sizes array.
+// Note: all sizes are i64.
 static Value getProductOfSizes(ConversionPatternRewriter &rewriter,
                                Location loc, ArrayRef<OpFoldResult> sizes,
                                size_t lo, size_t hi) {
-  Type indexTy = rewriter.getIndexType();
-  Value product = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  Value product =
+      arith::ConstantIntOp::create(rewriter, loc, rewriter.getI64Type(), 1);
   for (size_t idx = lo; idx < hi; idx++) {
     OpFoldResult ofr = sizes[idx];
     Value sizeVal = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
-    sizeVal = getValueOrCreateCastToIndexLike(rewriter, loc, indexTy, sizeVal);
     product = rewriter.createOrFold<arith::MulIOp>(loc, product, sizeVal);
   }
   return product;
@@ -233,6 +233,8 @@ class CreateNdDescToXeVMPattern
       // Generate compute chain for height (product of sizes of all but the last
       // dimension).
       baseShapeH = getProductOfSizes(rewriter, loc, mixedSizes, 0, srcRank - 1);
+      baseShapeH = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy,
+                                                   baseShapeH);
     }
     if (sourceMemrefTy) {
       // Cast index to i64.
