@@ -182,7 +182,7 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
-      op, adaptor.getDst(), adaptor.getSrc(), length, /*isVolatile=*/false);
+      op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
   return mlir::success();
 }
 
@@ -727,6 +727,187 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
       llvmOrder);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicTestAndSetOpLowering::matchAndRewrite(
+    cir::AtomicTestAndSetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+
+  auto one = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI8Type(), 1);
+  auto rmw = mlir::LLVM::AtomicRMWOp::create(
+      rewriter, op.getLoc(), mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(),
+      one, llvmOrder, /*syncscope=*/llvm::StringRef(),
+      adaptor.getAlignment().value_or(0), op.getIsVolatile());
+
+  auto zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI8Type(), 0);
+  auto cmp = mlir::LLVM::ICmpOp::create(
+      rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, rmw, zero);
+
+  rewriter.replaceOp(op, cmp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
+    cir::AtomicClearOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+  auto zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI8Type(), 0);
+  auto store = mlir::LLVM::StoreOp::create(
+      rewriter, op.getLoc(), zero, adaptor.getPtr(),
+      adaptor.getAlignment().value_or(0), op.getIsVolatile(),
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, llvmOrder);
+
+  rewriter.replaceOp(op, store);
+  return mlir::success();
+}
+
+static mlir::LLVM::AtomicBinOp
+getLLVMAtomicBinOp(cir::AtomicFetchKind k, bool isInt, bool isSignedInt) {
+  switch (k) {
+  case cir::AtomicFetchKind::Add:
+    return isInt ? mlir::LLVM::AtomicBinOp::add : mlir::LLVM::AtomicBinOp::fadd;
+  case cir::AtomicFetchKind::Sub:
+    return isInt ? mlir::LLVM::AtomicBinOp::sub : mlir::LLVM::AtomicBinOp::fsub;
+  case cir::AtomicFetchKind::And:
+    return mlir::LLVM::AtomicBinOp::_and;
+  case cir::AtomicFetchKind::Xor:
+    return mlir::LLVM::AtomicBinOp::_xor;
+  case cir::AtomicFetchKind::Or:
+    return mlir::LLVM::AtomicBinOp::_or;
+  case cir::AtomicFetchKind::Nand:
+    return mlir::LLVM::AtomicBinOp::nand;
+  case cir::AtomicFetchKind::Max: {
+    if (!isInt)
+      return mlir::LLVM::AtomicBinOp::fmax;
+    return isSignedInt ? mlir::LLVM::AtomicBinOp::max
+                       : mlir::LLVM::AtomicBinOp::umax;
+  }
+  case cir::AtomicFetchKind::Min: {
+    if (!isInt)
+      return mlir::LLVM::AtomicBinOp::fmin;
+    return isSignedInt ? mlir::LLVM::AtomicBinOp::min
+                       : mlir::LLVM::AtomicBinOp::umin;
+  }
+  }
+  llvm_unreachable("Unknown atomic fetch opcode");
+}
+
+static llvm::StringLiteral getLLVMBinop(cir::AtomicFetchKind k, bool isInt) {
+  switch (k) {
+  case cir::AtomicFetchKind::Add:
+    return isInt ? mlir::LLVM::AddOp::getOperationName()
+                 : mlir::LLVM::FAddOp::getOperationName();
+  case cir::AtomicFetchKind::Sub:
+    return isInt ? mlir::LLVM::SubOp::getOperationName()
+                 : mlir::LLVM::FSubOp::getOperationName();
+  case cir::AtomicFetchKind::And:
+    return mlir::LLVM::AndOp::getOperationName();
+  case cir::AtomicFetchKind::Xor:
+    return mlir::LLVM::XOrOp::getOperationName();
+  case cir::AtomicFetchKind::Or:
+    return mlir::LLVM::OrOp::getOperationName();
+  case cir::AtomicFetchKind::Nand:
+    // There's no nand binop in LLVM, this is later fixed with a not.
+    return mlir::LLVM::AndOp::getOperationName();
+  case cir::AtomicFetchKind::Max:
+  case cir::AtomicFetchKind::Min:
+    llvm_unreachable("handled in buildMinMaxPostOp");
+  }
+  llvm_unreachable("Unknown atomic fetch opcode");
+}
+
+mlir::Value CIRToLLVMAtomicFetchOpLowering::buildPostOp(
+    cir::AtomicFetchOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter, mlir::Value rmwVal,
+    bool isInt) const {
+  SmallVector<mlir::Value> atomicOperands = {rmwVal, adaptor.getVal()};
+  SmallVector<mlir::Type> atomicResTys = {rmwVal.getType()};
+  return rewriter
+      .create(op.getLoc(),
+              rewriter.getStringAttr(getLLVMBinop(op.getBinop(), isInt)),
+              atomicOperands, atomicResTys, {})
+      ->getResult(0);
+}
+
+mlir::Value CIRToLLVMAtomicFetchOpLowering::buildMinMaxPostOp(
+    cir::AtomicFetchOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter, mlir::Value rmwVal, bool isInt,
+    bool isSigned) const {
+  mlir::Location loc = op.getLoc();
+
+  if (!isInt) {
+    if (op.getBinop() == cir::AtomicFetchKind::Max)
+      return mlir::LLVM::MaxNumOp::create(rewriter, loc, rmwVal,
+                                          adaptor.getVal());
+    return mlir::LLVM::MinNumOp::create(rewriter, loc, rmwVal,
+                                        adaptor.getVal());
+  }
+
+  mlir::LLVM::ICmpPredicate pred;
+  if (op.getBinop() == cir::AtomicFetchKind::Max) {
+    pred = isSigned ? mlir::LLVM::ICmpPredicate::sgt
+                    : mlir::LLVM::ICmpPredicate::ugt;
+  } else { // Min
+    pred = isSigned ? mlir::LLVM::ICmpPredicate::slt
+                    : mlir::LLVM::ICmpPredicate::ult;
+  }
+  mlir::Value cmp = mlir::LLVM::ICmpOp::create(
+      rewriter, loc,
+      mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(), pred), rmwVal,
+      adaptor.getVal());
+  return mlir::LLVM::SelectOp::create(rewriter, loc, cmp, rmwVal,
+                                      adaptor.getVal());
+}
+
+mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
+    cir::AtomicFetchOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  bool isInt = false;
+  bool isSignedInt = false;
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getVal().getType())) {
+    isInt = true;
+    isSignedInt = intTy.isSigned();
+  } else if (mlir::isa<cir::SingleType, cir::DoubleType>(
+                 op.getVal().getType())) {
+    isInt = false;
+  } else {
+    return op.emitError() << "Unsupported type: " << op.getVal().getType();
+  }
+
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+  mlir::LLVM::AtomicBinOp llvmBinOp =
+      getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
+  auto rmwVal = mlir::LLVM::AtomicRMWOp::create(rewriter, op.getLoc(),
+                                                llvmBinOp, adaptor.getPtr(),
+                                                adaptor.getVal(), llvmOrder);
+
+  mlir::Value result = rmwVal.getResult();
+  if (!op.getFetchFirst()) {
+    if (op.getBinop() == cir::AtomicFetchKind::Max ||
+        op.getBinop() == cir::AtomicFetchKind::Min)
+      result = buildMinMaxPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt,
+                                 isSignedInt);
+    else
+      result = buildPostOp(op, adaptor, rewriter, rmwVal.getRes(), isInt);
+
+    // Compensate lack of nand binop in LLVM IR.
+    if (op.getBinop() == cir::AtomicFetchKind::Nand) {
+      auto negOne = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                                   result.getType(), -1);
+      result = mlir::LLVM::XOrOp::create(rewriter, op.getLoc(), result, negOne);
+    }
+  }
+
+  rewriter.replaceOp(op, result);
   return mlir::success();
 }
 
