@@ -270,7 +270,8 @@ public:
 using ThinBackendFunction = std::function<std::unique_ptr<ThinBackendProc>(
     const Config &C, ModuleSummaryIndex &CombinedIndex,
     const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-    AddStreamFn AddStream, FileCache Cache)>;
+    AddStreamFn AddStream, FileCache Cache,
+    const SmallVector<const char *> &BitcodeLibFuncs)>;
 
 /// This type defines the behavior following the thin-link phase during ThinLTO.
 /// It encapsulates a backend function and a strategy for thread pool
@@ -285,10 +286,11 @@ struct ThinBackend {
   std::unique_ptr<ThinBackendProc> operator()(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, FileCache Cache) {
+      AddStreamFn AddStream, FileCache Cache,
+      const SmallVector<const char *> &BitcodeLibFuncs) {
     assert(isValid() && "Invalid backend function");
     return Func(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
-                std::move(AddStream), std::move(Cache));
+                std::move(AddStream), std::move(Cache), BitcodeLibFuncs);
   }
   ThreadPoolStrategy getParallelism() const { return Parallelism; }
   bool isValid() const { return static_cast<bool>(Func); }
@@ -402,6 +404,8 @@ public:
   /// InputFile::symbols().
   LLVM_ABI Error add(std::unique_ptr<InputFile> Obj,
                      ArrayRef<SymbolResolution> Res);
+
+  LLVM_ABI void setBitcodeLibFuncs(const SmallVector<const char *> &BitcodeLibFuncs);
 
   /// Returns an upper bound on the number of tasks that the client may expect.
   /// This may only be called after all IR object files have been added. For a
@@ -589,6 +593,8 @@ private:
 
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
+
+  const SmallVector<const char *> *BitcodeLibFuncs;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

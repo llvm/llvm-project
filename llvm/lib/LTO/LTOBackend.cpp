@@ -376,7 +376,8 @@ static bool isEmptyModule(const Module &Mod) {
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
-              const std::vector<uint8_t> &CmdArgs) {
+              const std::vector<uint8_t> &CmdArgs,
+              const SmallVector<const char *> &BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
@@ -564,7 +565,8 @@ Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
 
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
-                   ModuleSummaryIndex &CombinedIndex) {
+                   ModuleSummaryIndex &CombinedIndex,
+                   const SmallVector<const char *> &BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
@@ -576,7 +578,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-             /*CmdArgs*/ std::vector<uint8_t>()))
+             /*CmdArgs*/ std::vector<uint8_t>(), BitcodeLibFuncs))
       return Error::success();
   }
 
@@ -616,7 +618,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       bool CodeGenOnly, AddStreamFn IRAddStream,
+                       bool CodeGenOnly,
+                       const SmallVector<const char *> &BitcodeLibFuncs,
+                       AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
   llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
@@ -655,7 +659,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs))
+                 CmdArgs, BitcodeLibFuncs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.

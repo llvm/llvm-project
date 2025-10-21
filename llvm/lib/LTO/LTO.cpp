@@ -756,6 +756,10 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
   return Error::success();
 }
 
+void LTO::setBitcodeLibFuncs(const SmallVector<const char *> &BitcodeLibFuncs) {
+  this->BitcodeLibFuncs = &BitcodeLibFuncs;
+}
+
 Expected<ArrayRef<SymbolResolution>>
 LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
                unsigned ModI, ArrayRef<SymbolResolution> Res) {
@@ -1418,7 +1422,8 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
   if (!RegularLTO.EmptyCombinedModule || Conf.AlwaysEmitRegularLTOObj) {
     if (Error Err =
             backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-                    *RegularLTO.CombinedModule, ThinLTO.CombinedIndex))
+                    *RegularLTO.CombinedModule, ThinLTO.CombinedIndex,
+                    *BitcodeLibFuncs))
       return Err;
   }
 
@@ -1531,6 +1536,7 @@ public:
 class InProcessThinBackend : public CGThinBackend {
 protected:
   FileCache Cache;
+  const SmallVector<const char*> &BitcodeLibFuncs;
 
 public:
   InProcessThinBackend(
@@ -1538,11 +1544,12 @@ public:
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache, lto::IndexWriteCallback OnWrite,
-      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles)
+      bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
+      const SmallVector<const char *> &BitcodeLibFuncs)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
-        Cache(std::move(Cache)) {}
+        Cache(std::move(Cache)), BitcodeLibFuncs(BitcodeLibFuncs) {}
 
   virtual Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
@@ -1563,7 +1570,7 @@ public:
 
       return thinBackend(Conf, Task, AddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
-                         Conf.CodeGenOnly);
+                         Conf.CodeGenOnly, BitcodeLibFuncs);
     };
     if (ShouldEmitIndexFiles) {
       if (auto E = emitFiles(ImportList, ModuleID, ModuleID.str()))
@@ -1648,13 +1655,14 @@ public:
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn CGAddStream, FileCache CGCache, AddStreamFn IRAddStream,
+      AddStreamFn CGAddStream, FileCache CGCache,
+      const SmallVector<const char *> &BitcodeLibFuncs, AddStreamFn IRAddStream,
       FileCache IRCache)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
                              ModuleToDefinedGVSummaries, std::move(CGAddStream),
                              std::move(CGCache), /*OnWrite=*/nullptr,
                              /*ShouldEmitIndexFiles=*/false,
-                             /*ShouldEmitImportsFiles=*/false),
+                             /*ShouldEmitImportsFiles=*/false, BitcodeLibFuncs),
         IRAddStream(std::move(IRAddStream)), IRCache(std::move(IRCache)) {}
 
   Error runThinLTOBackendThread(
@@ -1677,7 +1685,7 @@ public:
 
       return thinBackend(Conf, Task, CGAddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
-                         Conf.CodeGenOnly, IRAddStream);
+                         Conf.CodeGenOnly, BitcodeLibFuncs, IRAddStream);
     };
     // Like InProcessThinBackend, we produce index files as needed for
     // FirstRoundThinBackend. However, these files are not generated for
@@ -1744,6 +1752,7 @@ public:
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, FileCache Cache,
+      const SmallVector<const char *> &BitcodeLibFuncs,
       std::unique_ptr<SmallVector<StringRef>> IRFiles,
       stable_hash CombinedCGDataHash)
       : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
@@ -1751,7 +1760,7 @@ public:
                              std::move(Cache),
                              /*OnWrite=*/nullptr,
                              /*ShouldEmitIndexFiles=*/false,
-                             /*ShouldEmitImportsFiles=*/false),
+                             /*ShouldEmitImportsFiles=*/false, BitcodeLibFuncs),
         IRFiles(std::move(IRFiles)), CombinedCGDataHash(CombinedCGDataHash) {}
 
   virtual Error runThinLTOBackendThread(
@@ -1772,7 +1781,7 @@ public:
 
       return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,
-                         /*CodeGenOnly=*/true);
+                         /*CodeGenOnly=*/true, BitcodeLibFuncs);
     };
     if (!Cache.isValid() || !CombinedIndex.modulePaths().count(ModuleID) ||
         all_of(CombinedIndex.getModuleHash(ModuleID),
@@ -1811,11 +1820,12 @@ ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache) {
+          AddStreamFn AddStream, FileCache Cache,
+          const SmallVector<const char *> &BitcodeLibFuncs) {
         return std::make_unique<InProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
-            ShouldEmitImportsFiles);
+            ShouldEmitImportsFiles, BitcodeLibFuncs);
       };
   return ThinBackend(Func, Parallelism);
 }
@@ -1932,7 +1942,8 @@ ThinBackend lto::createWriteIndexesThinBackend(
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache Cache) {
+          AddStreamFn AddStream, FileCache Cache,
+          const SmallVector<const char *> &BitcodeLibFuncs) {
         return std::make_unique<WriteIndexesThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             OldPrefix, NewPrefix, NativeObjectPrefix, ShouldEmitImportsFiles,
@@ -2150,7 +2161,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   if (!CodeGenDataThinLTOTwoRounds) {
     std::unique_ptr<ThinBackendProc> BackendProc =
         ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                        AddStream, Cache);
+                        AddStream, Cache, *BitcodeLibFuncs);
     return RunBackends(BackendProc.get());
   }
 
@@ -2173,7 +2184,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the first round of codegen\n");
   auto FirstRoundLTO = std::make_unique<FirstRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      CG.AddStream, CG.Cache, IR.AddStream, IR.Cache);
+      CG.AddStream, CG.Cache, *BitcodeLibFuncs, IR.AddStream, IR.Cache);
   if (Error E = RunBackends(FirstRoundLTO.get()))
     return E;
 
@@ -2189,7 +2200,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "[TwoRounds] Running the second round of codegen\n");
   auto SecondRoundLTO = std::make_unique<SecondRoundThinBackend>(
       Conf, ThinLTO.CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-      AddStream, Cache, IR.getResult(), CombinedHash);
+      AddStream, Cache, *BitcodeLibFuncs, IR.getResult(), CombinedHash);
   return RunBackends(SecondRoundLTO.get());
 }
 
@@ -2564,7 +2575,8 @@ ThinBackend lto::createOutOfProcessThinBackend(
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache /*Cache*/) {
+          AddStreamFn AddStream, FileCache /*Cache*/,
+          const SmallVector<const char *> &BitcodeLibFuncs) {
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,

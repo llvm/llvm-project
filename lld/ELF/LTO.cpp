@@ -311,7 +311,9 @@ static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile(s).
 SmallVector<std::unique_ptr<InputFile>, 0>
-BitcodeCompiler::compile(const SmallVector<const char *> &bitcodeLibfuncs) {
+BitcodeCompiler::compile(const SmallVector<const char *> &bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
+
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
