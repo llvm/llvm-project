@@ -6,6 +6,12 @@ subroutine f00(y)
   !$omp allocate(x) align(y)
 end
 
+subroutine f01()
+  integer :: x(10)
+  !ERROR: The alignment should be a power of 2
+  !$omp allocate(x) align(7)
+end
+
 subroutine f02()
   integer :: x(10)
   !ERROR: The alignment should be positive
