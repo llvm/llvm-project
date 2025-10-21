@@ -448,9 +448,9 @@ private:
   /// 'perf script --show-mmap-events -F pid,brstack --itrace=bl -i perf.data'
   ///
   /// Note:
-  /// The original perf.data should be profiled with '-b' or '--spe'.
+  /// The original perf.data should be profiled with '-b' or 'Arm Spe'.
   ///
-  /// How the input file looks like:
+  /// How the output of this command looks like:
   /// {<name> .* <sec>.<usec>: }PERF_RECORD_MMAP2 <pid>/<tid>: .* <file_name>
   /// {<name> .* <sec>.<usec>: }PERF_RECORD_MMAP2 <pid>/<tid>: .* <file_name>
   ///  PID  {FROM/TO/P/-/-/1/COND/-}+
@@ -458,10 +458,10 @@ private:
   ///
   /// The hybrid profile means it contains mmap events along with branch events.
   /// An mmap event might appear among the branch events, therefore
-  /// Bolt will read this hybrid profile, detects the type of the events
-  /// and classify them into either mmap or branch events.
+  /// Bolt will read this hybrid profile, selects the mmap events, the other
+  /// events treat as branch event.
   /// Then it prepares the ParsingBuf based on the classification and
-  /// call the proper functions parseMMapEvents() or parseBranchEvents().
+  /// call the proper functions like parseMMapEvents() or parseBranchEvents().
   ///
   /// This option is only for testing purposes.
   void parsePerfScriptEvents();
