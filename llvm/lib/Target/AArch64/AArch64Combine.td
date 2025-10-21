@@ -332,12 +332,12 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-def lower_fptrunc_fptrunc: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_FPTRUNC):$root,
-        [{ return matchFpTruncFpTrunc(*${root}, MRI); }]),
-  (apply [{ applyFpTruncFpTrunc(*${root}, MRI, B); }])
->;
+// def lower_fptrunc_fptrunc: GICombineRule<
+//   (defs root:$root),
+//   (match (wip_match_opcode G_FPTRUNC):$root,
+//         [{ return matchFpTruncFpTrunc(*${root}, MRI); }]),
+//   (apply [{ applyFpTruncFpTrunc(*${root}, MRI, B); }])
+// >;
 
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
@@ -347,7 +347,7 @@ def AArch64PostLegalizerLowering
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore, fconstant_to_constant,
-                        vector_sext_inreg_to_shift, lower_fptrunc_fptrunc,
+                        vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
                         unmerge_duplanes]> {

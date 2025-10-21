@@ -905,7 +905,7 @@ unsigned getCmpOperandFoldingProfit(Register CmpOp, MachineRegisterInfo &MRI) {
 // Checks that the given definition belongs to an FPTRUNC and that the source is
 // not an integer, as no rounding is necessary due to the range of values
 bool isFPTruncFromDouble(MachineRegisterInfo &MRI, MachineInstr *MaybeFpTrunc) {
-  if (!MaybeFpTrunc || MaybeFpTrunc->getOpcode() != TargetOpcode::G_FPTRUNC)
+  if (!MaybeFpTrunc || MaybeFpTrunc->getOpcode() != TargetOpcode::G_FPTRUNC_ODD)
     return false;
 
   // Check the source is 64 bits as we only want to match a very specific
