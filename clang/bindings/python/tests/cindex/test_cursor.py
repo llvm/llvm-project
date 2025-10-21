@@ -785,9 +785,19 @@ int count(int a, int b){
         self.assertEqual(cursor.storage_class, StorageClass.REGISTER)
 
     def test_function_inlined(self):
-        tu = get_tu("inline void foo(void);")
-        cursor = get_cursor(tu, "foo")
+        tu = get_tu(
+            """
+inline void f_inline(void);
+void f_noninline(void);
+int d_noninline;
+"""
+        )
+        cursor = get_cursor(tu, "f_inline")
         self.assertEqual(cursor.is_function_inlined(), True)
+        cursor = get_cursor(tu, "f_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
+        cursor = get_cursor(tu, "d_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
 
     def test_availability(self):
         tu = get_tu("class A { A(A const&) = delete; };", lang="cpp")
