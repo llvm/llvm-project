@@ -4,6 +4,7 @@
 declare void @a()
 declare void @b()
 declare void @c()
+declare void @d()
 
 define void @switch_replace_default(i32 %x) {
 ; CHECK-LABEL: define void @switch_replace_default(
@@ -186,6 +187,58 @@ case3:
 unreachable:
   unreachable
 }
+
+define void @do_not_replace_switch_default_but_remove_dead_cases(i32 %x) {
+; CHECK-LABEL: define void @do_not_replace_switch_default_but_remove_dead_cases(
+; CHECK-SAME: i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 3)
+; CHECK-NEXT:    switch i32 [[MIN]], label %[[CASE0:.*]] [
+; CHECK-NEXT:      i32 3, label %[[COMMON_RET:.*]]
+; CHECK-NEXT:      i32 1, label %[[CASE1:.*]]
+; CHECK-NEXT:      i32 2, label %[[CASE2:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[COMMON_RET]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CASE0]]:
+; CHECK-NEXT:    call void @a()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[CASE1]]:
+; CHECK-NEXT:    call void @b()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    call void @c()
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+;
+  %min = call i32 @llvm.umin.i32(i32 %x, i32 3)
+  switch i32 %min, label %case0 [ ; default is reachable, therefore simplification not triggered
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  i32 3, label %case3
+  i32 4, label %case4
+  ]
+
+case0:
+  call void @a()
+  ret void
+
+case1:
+  call void @b()
+  ret void
+
+case2:
+  call void @c()
+  ret void
+
+case3:
+  ret void
+
+case4:
+  call void @d()
+  ret void
+
+}
+
 
 !0 = !{!"branch_weights", i32 1, i32 2, i32 3, i32 99, i32 5}
 ;.

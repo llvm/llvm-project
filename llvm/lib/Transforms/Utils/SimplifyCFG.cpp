@@ -7540,14 +7540,18 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
-/// Tries to transform the switch when the condition is umin and a constant.
+/// Tries to transform the switch when the condition is umin with a constant.
 /// In that case, the default branch can be replaced by the constant's branch.
+/// This method also removes dead cases when the simplification cannot replace
+/// the default branch.
+///
 /// For example:
 /// switch(umin(a, 3)) {
 /// case 0:
 /// case 1:
 /// case 2:
 /// case 3:
+/// case 4:
 ///   // ...
 /// default:
 ///   unreachable
@@ -7569,28 +7573,11 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   if (!match(SI->getCondition(), m_UMin(m_Value(A), m_ConstantInt(Constant))))
     return false;
 
-  if (!SI->defaultDestUnreachable())
-    return false;
-
-  auto Case = SI->findCaseValue(Constant);
-
-  // When the case value cannot be found then `findCaseValue` returns the
-  // default cause. This means that there is no `case 3:` and this
-  // simplification fails.
-  if (Case == SI->case_default())
-    return false;
-
-  SwitchInstProfUpdateWrapper SIW(*SI);
-
-  BasicBlock *Unreachable = SI->getDefaultDest();
-  SIW.replaceDefaultDest(Case);
-  SIW.removeCase(Case);
-  SIW->setCondition(A);
-
-  BasicBlock *BB = SIW->getParent();
   SmallVector<DominatorTree::UpdateType> Updates;
-  Updates.push_back({DominatorTree::Delete, BB, Unreachable});
+  SwitchInstProfUpdateWrapper SIW(*SI);
+  BasicBlock *BB = SIW->getParent();
 
+  // Dead cases are removed even when the simplification fails.
   // A case is dead when its value is higher than the Constant.
   SmallVector<ConstantInt *, 4> DeadCases;
   for (auto Case : SI->cases())
@@ -7604,6 +7591,24 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     SIW.removeCase(DeadCase);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
   }
+
+  auto Case = SI->findCaseValue(Constant);
+  // If the case value is not found, `findCaseValue` returns the default case.
+  // In this scenario, since there is no explicit `case 3:`, the simplification
+  // fails. The simplification also fails when the switch’s default destination
+  // is reachable.
+  if (!SI->defaultDestUnreachable() || Case == SI->case_default()) {
+    if (DTU)
+      DTU->applyUpdates(Updates);
+    return false;
+  }
+
+  BasicBlock *Unreachable = SI->getDefaultDest();
+  SIW.replaceDefaultDest(Case);
+  SIW.removeCase(Case);
+  SIW->setCondition(A);
+
+  Updates.push_back({DominatorTree::Delete, BB, Unreachable});
 
   if (DTU)
     DTU->applyUpdates(Updates);
