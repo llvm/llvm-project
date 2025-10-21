@@ -1,6 +1,5 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
-#include <inttypes.h>
 #include <omp.h>
 #include <stdio.h>
 
@@ -17,7 +16,7 @@ struct ST {
   int m = 0;
 
   void f6() {
-    intptr_t offset = (uintptr_t)&d - n;
+    ptrdiff_t offset = (char *)&d - ((char *)(uintptr_t)n);
 #pragma omp target data map(to : m, d)
     {
       void *mapped_ptr = omp_get_mapped_ptr(&d, omp_get_default_device());
@@ -37,9 +36,10 @@ struct ST {
         //  &ref_ptr(this[0].d), &ref_ptee(this[0].d), 4, ATTACH
         // EXPECTED:   1 0
         // CHECK-NEXT: 0 1
-        intptr_t offset_device = (intptr_t)mapped_ptr - (intptr_t)&d;
+        ptrdiff_t offset_device = (char *)mapped_ptr - (char *)&d;
         printf("%d %d\n", &d == mapped_ptr, offset == offset_device);
-        printf("%" PRIdPTR " %" PRIdPTR "\n", offset, offset_device);
+        printf("%td (%p) %td (%p)\n", offset, (void *)offset, offset_device,
+               (void *)offset_device);
       }
     }
   }
