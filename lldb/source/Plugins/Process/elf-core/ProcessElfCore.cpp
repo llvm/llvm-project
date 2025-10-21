@@ -1023,9 +1023,13 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   case llvm::Triple::OpenBSD:
     return parseOpenBSDNotes(*notes_or_error);
   default:
-    return llvm::make_error<llvm::StringError>(
-        "Don't know how to parse core file. Unsupported OS.",
-        llvm::inconvertibleErrorCode());
+    // Treat bare-metal 32-bit RISC-V like Linux.
+    if (GetArchitecture().GetTriple().getArch() == llvm::Triple::riscv32)
+      return parseLinuxNotes(*notes_or_error);
+    else
+      return llvm::make_error<llvm::StringError>(
+          "Don't know how to parse core file. Unsupported OS.",
+          llvm::inconvertibleErrorCode());
   }
 }
 
