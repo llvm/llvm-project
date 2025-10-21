@@ -658,13 +658,13 @@ namespace {
                           bool InexpensiveOnly = false,
                           std::optional<EVT> OutVT = std::nullopt);
     SDValue BuildDivEstimate(SDValue N, SDValue Op, SDNodeFlags Flags);
-    SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
-    SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags Flags);
-    SDValue buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags, bool Recip);
+    SDValue buildRsqrtEstimate(SDValue Op);
+    SDValue buildSqrtEstimate(SDValue Op);
+    SDValue buildSqrtEstimateImpl(SDValue Op, bool Recip);
     SDValue buildSqrtNROneConst(SDValue Arg, SDValue Est, unsigned Iterations,
-                                SDNodeFlags Flags, bool Reciprocal);
+                                bool Reciprocal);
     SDValue buildSqrtNRTwoConst(SDValue Arg, SDValue Est, unsigned Iterations,
-                                SDNodeFlags Flags, bool Reciprocal);
+                                bool Reciprocal);
     SDValue MatchBSwapHWordLow(SDNode *N, SDValue N0, SDValue N1,
                                bool DemandHighBits = true);
     SDValue MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1);
@@ -16433,7 +16433,8 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::OR:
   case ISD::XOR:
     if (!LegalOperations && N0.hasOneUse() &&
-        (isConstantOrConstantVector(N0.getOperand(0), true) ||
+        (N0.getOperand(0) == N0.getOperand(1) ||
+         isConstantOrConstantVector(N0.getOperand(0), true) ||
          isConstantOrConstantVector(N0.getOperand(1), true))) {
       // TODO: We already restricted this to pre-legalization, but for vectors
       // we are extra cautious to not create an unsupported operation.
@@ -17759,7 +17760,6 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   bool N1CFP = DAG.isConstantFPBuildVectorOrConstantFP(N1);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
@@ -17825,7 +17825,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   bool AllowNewConst = (Level < AfterLegalizeDAG);
 
   // If nnan is enabled, fold lots of things.
-  if ((Options.NoNaNsFPMath || Flags.hasNoNaNs()) && AllowNewConst) {
+  if (Flags.hasNoNaNs() && AllowNewConst) {
     // If allowed, fold (fadd (fneg x), x) -> 0.0
     if (N0.getOpcode() == ISD::FNEG && N0.getOperand(0) == N1)
       return DAG.getConstantFP(0.0, DL, VT);
@@ -17974,7 +17974,6 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
   ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, true);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   const SDNodeFlags Flags = N->getFlags();
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
@@ -18002,7 +18001,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   if (N0 == N1) {
     // (fsub x, x) -> 0.0
-    if (Options.NoNaNsFPMath || Flags.hasNoNaNs())
+    if (Flags.hasNoNaNs())
       return DAG.getConstantFP(0.0f, DL, VT);
   }
 
@@ -18313,7 +18312,6 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
   // FMA nodes have flags that propagate to the created nodes.
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
   MatchContextClass matcher(DAG, TLI, N);
@@ -18339,8 +18337,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
       return matcher.getNode(ISD::FMA, DL, VT, NegN0, NegN1, N2);
   }
 
-  if ((Options.NoNaNsFPMath && N->getFlags().hasNoInfs()) ||
-      (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
+  if (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs()) {
     if (N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
       if (N0CFP && N0CFP->isZero())
@@ -18590,20 +18587,18 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
     if (N1.getOpcode() == ISD::FSQRT) {
-      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0), Flags))
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT) {
-      if (SDValue RV =
-              buildRsqrtEstimate(N1.getOperand(0).getOperand(0), Flags)) {
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT) {
-      if (SDValue RV =
-              buildRsqrtEstimate(N1.getOperand(0).getOperand(0), Flags)) {
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
@@ -18635,7 +18630,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
             SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A);
             SDValue AAZ =
                 DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0));
-            if (SDValue Rsqrt = buildRsqrtEstimate(AAZ, Flags))
+            if (SDValue Rsqrt = buildRsqrtEstimate(AAZ))
               return DAG.getNode(ISD::FMUL, DL, VT, N0, Rsqrt);
 
             // Estimate creation failed. Clean up speculatively created nodes.
@@ -18645,7 +18640,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
         // We found a FSQRT, so try to make this fold:
         // X / (Y * sqrt(Z)) -> X * (rsqrt(Z) / Y)
-        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0), Flags)) {
+        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0))) {
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
@@ -18742,11 +18737,12 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
     return SDValue();
 
   // FSQRT nodes have flags that propagate to the created nodes.
+  SelectionDAG::FlagInserter FlagInserter(DAG, Flags);
   // TODO: If this is N0/sqrt(N0), and we reach this node before trying to
   //       transform the fdiv, we may produce a sub-optimal estimate sequence
   //       because the reciprocal calculation may not have to filter out a
   //       0.0 input.
-  return buildSqrtEstimate(N0, Flags);
+  return buildSqrtEstimate(N0);
 }
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)
@@ -26881,6 +26877,8 @@ static SDValue combineTruncationShuffle(ShuffleVectorSDNode *SVN,
   // TODO: handle more extension/truncation cases as cases arise.
   if (EltSizeInBits != ExtSrcSizeInBits)
     return SDValue();
+  if (VT.getSizeInBits() != N00.getValueSizeInBits())
+    return SDValue();
 
   // We can remove *extend_vector_inreg only if the truncation happens at
   // the same scale as the extension.
@@ -29743,28 +29741,27 @@ SDValue DAGCombiner::BuildDivEstimate(SDValue N, SDValue Op,
 ///   X_{i+1} = X_i (1.5 - A X_i^2 / 2)
 /// As a result, we precompute A/2 prior to the iteration loop.
 SDValue DAGCombiner::buildSqrtNROneConst(SDValue Arg, SDValue Est,
-                                         unsigned Iterations,
-                                         SDNodeFlags Flags, bool Reciprocal) {
+                                         unsigned Iterations, bool Reciprocal) {
   EVT VT = Arg.getValueType();
   SDLoc DL(Arg);
   SDValue ThreeHalves = DAG.getConstantFP(1.5, DL, VT);
 
   // We now need 0.5 * Arg which we can write as (1.5 * Arg - Arg) so that
   // this entire sequence requires only one FP constant.
-  SDValue HalfArg = DAG.getNode(ISD::FMUL, DL, VT, ThreeHalves, Arg, Flags);
-  HalfArg = DAG.getNode(ISD::FSUB, DL, VT, HalfArg, Arg, Flags);
+  SDValue HalfArg = DAG.getNode(ISD::FMUL, DL, VT, ThreeHalves, Arg);
+  HalfArg = DAG.getNode(ISD::FSUB, DL, VT, HalfArg, Arg);
 
   // Newton iterations: Est = Est * (1.5 - HalfArg * Est * Est)
   for (unsigned i = 0; i < Iterations; ++i) {
-    SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Est, Est, Flags);
-    NewEst = DAG.getNode(ISD::FMUL, DL, VT, HalfArg, NewEst, Flags);
-    NewEst = DAG.getNode(ISD::FSUB, DL, VT, ThreeHalves, NewEst, Flags);
-    Est = DAG.getNode(ISD::FMUL, DL, VT, Est, NewEst, Flags);
+    SDValue NewEst = DAG.getNode(ISD::FMUL, DL, VT, Est, Est);
+    NewEst = DAG.getNode(ISD::FMUL, DL, VT, HalfArg, NewEst);
+    NewEst = DAG.getNode(ISD::FSUB, DL, VT, ThreeHalves, NewEst);
+    Est = DAG.getNode(ISD::FMUL, DL, VT, Est, NewEst);
   }
 
   // If non-reciprocal square root is requested, multiply the result by Arg.
   if (!Reciprocal)
-    Est = DAG.getNode(ISD::FMUL, DL, VT, Est, Arg, Flags);
+    Est = DAG.getNode(ISD::FMUL, DL, VT, Est, Arg);
 
   return Est;
 }
@@ -29775,8 +29772,7 @@ SDValue DAGCombiner::buildSqrtNROneConst(SDValue Arg, SDValue Est,
 ///     =>
 ///   X_{i+1} = (-0.5 * X_i) * (A * X_i * X_i + (-3.0))
 SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
-                                         unsigned Iterations,
-                                         SDNodeFlags Flags, bool Reciprocal) {
+                                         unsigned Iterations, bool Reciprocal) {
   EVT VT = Arg.getValueType();
   SDLoc DL(Arg);
   SDValue MinusThree = DAG.getConstantFP(-3.0, DL, VT);
@@ -29789,9 +29785,9 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
   // Newton iterations for reciprocal square root:
   // E = (E * -0.5) * ((A * E) * E + -3.0)
   for (unsigned i = 0; i < Iterations; ++i) {
-    SDValue AE = DAG.getNode(ISD::FMUL, DL, VT, Arg, Est, Flags);
-    SDValue AEE = DAG.getNode(ISD::FMUL, DL, VT, AE, Est, Flags);
-    SDValue RHS = DAG.getNode(ISD::FADD, DL, VT, AEE, MinusThree, Flags);
+    SDValue AE = DAG.getNode(ISD::FMUL, DL, VT, Arg, Est);
+    SDValue AEE = DAG.getNode(ISD::FMUL, DL, VT, AE, Est);
+    SDValue RHS = DAG.getNode(ISD::FADD, DL, VT, AEE, MinusThree);
 
     // When calculating a square root at the last iteration build:
     // S = ((A * E) * -0.5) * ((A * E) * E + -3.0)
@@ -29799,13 +29795,13 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
     SDValue LHS;
     if (Reciprocal || (i + 1) < Iterations) {
       // RSQRT: LHS = (E * -0.5)
-      LHS = DAG.getNode(ISD::FMUL, DL, VT, Est, MinusHalf, Flags);
+      LHS = DAG.getNode(ISD::FMUL, DL, VT, Est, MinusHalf);
     } else {
       // SQRT: LHS = (A * E) * -0.5
-      LHS = DAG.getNode(ISD::FMUL, DL, VT, AE, MinusHalf, Flags);
+      LHS = DAG.getNode(ISD::FMUL, DL, VT, AE, MinusHalf);
     }
 
-    Est = DAG.getNode(ISD::FMUL, DL, VT, LHS, RHS, Flags);
+    Est = DAG.getNode(ISD::FMUL, DL, VT, LHS, RHS);
   }
 
   return Est;
@@ -29814,8 +29810,7 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
 /// Build code to calculate either rsqrt(Op) or sqrt(Op). In the latter case
 /// Op*rsqrt(Op) is actually computed, so additional postprocessing is needed if
 /// Op can be zero.
-SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
-                                           bool Reciprocal) {
+SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal) {
   if (LegalDAG)
     return SDValue();
 
@@ -29843,8 +29838,8 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
 
     if (Iterations > 0)
       Est = UseOneConstNR
-            ? buildSqrtNROneConst(Op, Est, Iterations, Flags, Reciprocal)
-            : buildSqrtNRTwoConst(Op, Est, Iterations, Flags, Reciprocal);
+                ? buildSqrtNROneConst(Op, Est, Iterations, Reciprocal)
+                : buildSqrtNRTwoConst(Op, Est, Iterations, Reciprocal);
     if (!Reciprocal) {
       SDLoc DL(Op);
       // Try the target specific test first.
@@ -29862,12 +29857,12 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, SDNodeFlags Flags,
   return SDValue();
 }
 
-SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags) {
-  return buildSqrtEstimateImpl(Op, Flags, true);
+SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op) {
+  return buildSqrtEstimateImpl(Op, true);
 }
 
-SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags Flags) {
-  return buildSqrtEstimateImpl(Op, Flags, false);
+SDValue DAGCombiner::buildSqrtEstimate(SDValue Op) {
+  return buildSqrtEstimateImpl(Op, false);
 }
 
 /// Return true if there is any possibility that the two addresses overlap.
