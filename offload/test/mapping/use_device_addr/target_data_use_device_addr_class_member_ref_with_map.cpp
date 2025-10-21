@@ -1,8 +1,8 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+#include <inttypes.h>
 #include <omp.h>
 #include <stdio.h>
-#include <inttypes.h>
 
 int x = 0;
 int *y = &x;
