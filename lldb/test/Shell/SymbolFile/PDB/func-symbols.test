@@ -1,4 +1,4 @@
-REQUIRES: target-windows, lld
+REQUIRES: target-windows, lld, diasdk
 RUN: mkdir -p %t.dir
 RUN: %build --compiler=clang-cl --arch=32 --nodefaultlib --output=%t.dir/FuncSymbolsTest.exe %S/Inputs/FuncSymbolsTestMain.cpp %S/Inputs/FuncSymbols.cpp
 RUN: lldb-test symbols %t.dir/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s

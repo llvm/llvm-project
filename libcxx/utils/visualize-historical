@@ -112,7 +112,7 @@ def truncate_lines(string, n, marker=None):
     assert len(truncated) <= n, "broken post-condition"
     return '\n'.join(truncated)
 
-def create_plot(data, metric, subtitle=None):
+def create_plot(data, metric, trendline=None, subtitle=None):
     """
     Create a plot object showing the evolution of each benchmark throughout the given commits for
     the given metric.
@@ -126,7 +126,7 @@ def create_plot(data, metric, subtitle=None):
                                           symbol='benchmark',
                                           color='benchmark',
                                           hover_name=[hover_info[c] for c in data['commit']],
-                                          trendline="lowess")
+                                          trendline=trendline)
     return figure
 
 def directory_path(string):
@@ -221,6 +221,10 @@ def main(argv):
     parser.add_argument('--open', action='store_true',
         help='Whether to automatically open the generated HTML file when finished. If no output file is provided, '
              'the resulting benchmark is opened automatically by default.')
+    parser.add_argument('--trendline', type=str, required=False, default=None, choices=('ols', 'lowess', 'expanding'),
+        help='Optional trendline to add on each series in the chart. See the documentation in '
+             'https://plotly.com/python-api-reference/generated/plotly.express.trendline_functions.html '
+             'details on each option.')
     args = parser.parse_args(argv)
 
     # Extract benchmark data from the directory.
@@ -250,9 +254,11 @@ def main(argv):
     if args.filter is not None:
         keeplist = [b for b in data['benchmark'] if re.search(args.filter, b) is not None]
         data = data[data['benchmark'].isin(keeplist)]
+        if len(data) == 0:
+            raise RuntimeError(f'Filter "{args.filter}" resulted in empty data set -- nothing to plot')
 
     # Plot the data for all the required benchmarks.
-    figure = create_plot(data, args.metric, subtitle=args.subtitle)
+    figure = create_plot(data, args.metric, trendline=args.trendline, subtitle=args.subtitle)
     do_open = args.output is None or args.open
     output = args.output if args.output is not None else tempfile.NamedTemporaryFile(suffix='.html').name
     plotly.io.write_html(figure, file=output, auto_open=do_open)

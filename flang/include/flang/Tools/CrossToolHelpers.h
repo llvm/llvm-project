@@ -128,7 +128,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
-  bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
+  bool UnsafeFPMath = false; ///< Set all fast-math flags for instructions.
   std::string Reciprocals = ""; ///< Set reciprocal-estimate attribute for
                                 ///< functions.
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for

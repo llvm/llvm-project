@@ -560,7 +560,7 @@ public:
     auto getArgument{[&](auto &&maybeClause) {
       if (maybeClause) {
         // Scalar<Logical<Constant<common::Indirection<Expr>>>>
-        auto &parserExpr{maybeClause->v.thing.thing.thing.value()};
+        auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
         evaluate::ExpressionAnalyzer ea{context_};
         if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
           if (auto v{omp::GetLogicalValue(*maybeExpr)}) {
