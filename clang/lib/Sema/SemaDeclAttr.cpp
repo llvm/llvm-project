@@ -5205,17 +5205,17 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
-  bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getASTContext().getTargetInfo().getTriple().isNVPTX() &&
-      !DeviceKernelAttr::isOpenCLSpelling(AL)) {
-    handleGlobalAttr(S, D, AL);
-  } else {
+  if (DeviceKernelAttr::isOpenCLSpelling(AL) ||
+      !S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+    bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
     // OpenCL C++ will throw a more specific error.
     if (!S.getLangOpts().OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
       S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
           << AL << AL.isRegularKeywordAttribute() << "functions";
     }
     handleSimpleAttribute<DeviceKernelAttr>(S, D, AL);
+  } else {
+    handleGlobalAttr(S, D, AL);
   }
   // Make sure we validate the CC with the target
   // and warn/error if necessary.
