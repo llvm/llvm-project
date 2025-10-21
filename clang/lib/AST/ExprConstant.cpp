@@ -12318,12 +12318,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_psignw256:
   case X86::BI__builtin_ia32_psignd128:
   case X86::BI__builtin_ia32_psignd256:
-    return EvaluateBinOpExpr(
-        [](const APSInt &AElem, const APSInt &BElem) -> APInt {
-          return BElem.isNegative() ? static_cast<const APInt &>(-AElem)
-                 : BElem.isZero()   ? APInt(AElem.getBitWidth(), 0)
-                                    : static_cast<const APInt &>(AElem);
-        });
+    return EvaluateBinOpExpr([](const APSInt &AElem,
+                                const APSInt &BElem) -> APInt {
+      return BElem[BElem.getBitWidth() - 1] ? static_cast<const APInt &>(-AElem)
+             : BElem.isZero()               ? APInt(AElem.getBitWidth(), 0)
+                                            : static_cast<const APInt &>(AElem);
+    });
 
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
