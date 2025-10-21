@@ -23,7 +23,8 @@ Error L0ContextTy::init() {
   CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
   if (auto Err = EventPool.init(zeContext, 0))
     return Err;
-  HostMemAllocator.initHostPool(*this, Plugin.getOptions());
+  if (auto Err = HostMemAllocator.initHostPool(*this, Plugin.getOptions()))
+    return Err;
   return Plugin::success();
 }
 

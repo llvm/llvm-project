@@ -214,7 +214,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   LinkCopyOrdinal = findCopyOrdinal(true);
   IsAsyncEnabled =
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
-  MemAllocator.initDevicePools(*this, getPlugin().getOptions());
+  if (auto Err = MemAllocator.initDevicePools(*this, getPlugin().getOptions()))
+    return Err;
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
   return Plugin::success();
 }

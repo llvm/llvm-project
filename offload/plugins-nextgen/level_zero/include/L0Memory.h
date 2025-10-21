@@ -205,15 +205,6 @@ class MemAllocatorTy {
 
   public:
     MemPoolTy() = default;
-
-    /// Construct pool with allocation kind, allocator, and user options.
-    MemPoolTy(int32_t Kind, MemAllocatorTy *_Allocator,
-              const L0OptionsTy &Option);
-    // Used for reduction pool
-    MemPoolTy(MemAllocatorTy *_Allocator, const L0OptionsTy &Option);
-    // Used for small memory pool with fixed parameters
-    MemPoolTy(MemAllocatorTy *_Allocator);
-
     MemPoolTy(const MemPoolTy &) = delete;
     MemPoolTy(MemPoolTy &&) = delete;
     MemPoolTy &operator=(const MemPoolTy &) = delete;
@@ -221,12 +212,21 @@ class MemAllocatorTy {
     ~MemPoolTy() {}
 
     void printUsage();
+
+    /// Initialize pool with allocation kind, allocator, and user options.
+    Error init(int32_t Kind, MemAllocatorTy *_Allocator,
+               const L0OptionsTy &Option);
+    // Initialize pool used for reduction pool
+    Error init(MemAllocatorTy *_Allocator, const L0OptionsTy &Option);
+    // Initialize pool used for small memory pool with fixed parameters
+    Error init(MemAllocatorTy *_Allocator);
+
     /// Release resources used in the pool.
     Error deinit();
 
     /// Allocate the requested size of memory from this pool.
     /// AllocSize is the chunk size internally used for the returned memory.
-    void *alloc(size_t Size, size_t &AllocSize);
+    Expected<void *> alloc(size_t Size, size_t &AllocSize);
     /// Deallocate the specified memory and returns block size deallocated.
     size_t dealloc(void *Ptr);
   }; // MemPoolTy
@@ -322,8 +322,8 @@ public:
   /// Allocator only supports host memory
   bool supportsHostMem() { return IsHostMem; }
 
-  void initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
-  void initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
+  Error initDevicePools(L0DeviceTy &L0Device, const L0OptionsTy &Option);
+  Error initHostPool(L0ContextTy &Driver, const L0OptionsTy &Option);
   void updateMaxAllocSize(L0DeviceTy &L0Device);
 
   /// Allocate memory from L0 GPU RT. We use over-allocation workaround
