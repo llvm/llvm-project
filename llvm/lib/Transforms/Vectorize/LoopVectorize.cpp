@@ -7913,26 +7913,22 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
       ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
   }
 
-  // Check that all partial reductions in a chain are only used by other partial
-  // reductions with the same scale factor. Otherwise we end up creating users
-  // of scaled reductions where the types of the other operands don't match.
-  auto AllUsersPartialRdx = [this](Instruction *I, unsigned Scale) {
-    return all_of(I->users(), [Scale, this](const User *U) {
+  // Check that all partial reductions in a chain are only used by other
+  // partial reductions with the same scale factor. Otherwise we end up creating
+  // users of scaled reductions where the types of the other operands don't match.
+  for (const auto &[Chain, Scale] : PartialReductionChains) {
+    auto AllUsersPartialRdx = [ScaleVal=Scale, this](const User *U) {
       auto *UI = cast<Instruction>(U);
-
       if (isa<PHINode>(UI) && UI->getParent() == OrigLoop->getHeader()) {
-        return all_of(UI->users(), [Scale, this](const User *U) {
+        return all_of(UI->users(), [ScaleVal, this](const User *U) {
           auto *UI = cast<Instruction>(U);
-          return ScaledReductionMap.lookup_or(UI, 0) == Scale;
+          return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal;
         });
       }
-
-      return ScaledReductionMap.lookup_or(UI, 0) == Scale ||
+      return ScaledReductionMap.lookup_or(UI, 0) == ScaleVal ||
              !OrigLoop->contains(UI->getParent());
-    });
-  };
-  for (const auto &[Chain, Scale] : PartialReductionChains) {
-    if (!AllUsersPartialRdx(Chain.Reduction, Scale))
+    };
+    if (!all_of(Chain.Reduction->users(), AllUsersPartialRdx))
       ScaledReductionMap.erase(Chain.Reduction);
   }
 }
