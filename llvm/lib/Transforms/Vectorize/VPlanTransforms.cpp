@@ -1478,11 +1478,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   if (!Plan.getVectorLoopRegion())
     return false;
 
-  if (!Plan.getTripCount()->isLiveIn())
-    return false;
-  auto *TC = dyn_cast_if_present<ConstantInt>(
-      Plan.getTripCount()->getUnderlyingValue());
-  if (!TC || !BestVF.isFixed())
+  const APInt *TC;
+  if (!BestVF.isFixed() || !match(Plan.getTripCount(), m_APInt(TC)))
     return false;
 
   // Calculate the minimum power-of-2 bit width that can fit the known TC, VF
@@ -1495,7 +1492,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     return std::max<unsigned>(PowerOf2Ceil(MaxVal.getActiveBits()), 8);
   };
   unsigned NewBitWidth =
-      ComputeBitWidth(TC->getValue(), BestVF.getKnownMinValue() * BestUF);
+      ComputeBitWidth(*TC, BestVF.getKnownMinValue() * BestUF);
 
   LLVMContext &Ctx = Plan.getContext();
   auto *NewIVTy = IntegerType::get(Ctx, NewBitWidth);
@@ -2092,8 +2089,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // Recipes in replicate regions implicitly depend on predicate. If either
     // recipe is in a replicate region, only consider them equal if both have
     // the same parent.
-    const VPRegionBlock *RegionL = L->getParent()->getParent();
-    const VPRegionBlock *RegionR = R->getParent()->getParent();
+    const VPRegionBlock *RegionL = L->getRegion();
+    const VPRegionBlock *RegionR = R->getRegion();
     if (((RegionL && RegionL->isReplicator()) ||
          (RegionR && RegionR->isReplicator())) &&
         L->getParent() != R->getParent())
@@ -3867,8 +3864,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
         // required lanes implicitly.
         // TODO: Remove once replicate regions are unrolled completely.
         auto IsCandidateUnpackUser = [Def](VPUser *U) {
-          VPRegionBlock *ParentRegion =
-              cast<VPRecipeBase>(U)->getParent()->getParent();
+          VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
           return U->usesScalars(Def) &&
                  (!ParentRegion || !ParentRegion->isReplicator());
         };
