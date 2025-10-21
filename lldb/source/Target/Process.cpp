@@ -1977,7 +1977,8 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
-  // In production builds, gracefully fail by returning empty chunks.
+  // In production builds, gracefully fail by returning a length of 0 for all
+  // ranges.
   assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
   if (buffer.size() < total_ranges_len) {
     llvm::MutableArrayRef<uint8_t> empty;
@@ -1987,7 +1988,7 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> results;
 
   // While `buffer` has space, take the next requested range and read
-  // memory into a `buffer` chunk, then slice it to remove the used chunk.
+  // memory into a `buffer` piece, then slice it to remove the used memory.
   for (auto [addr, range_len] : ranges) {
     Status status;
     size_t num_bytes_read =
@@ -1999,13 +2000,14 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
 
     assert(num_bytes_read <= range_len && "read more than requested bytes");
     if (num_bytes_read > range_len) {
-      // In production builds, gracefully fail by returning an empty chunk.
+      // In production builds, gracefully fail by returning length zero for this
+      // range.
       results.emplace_back();
       continue;
     }
 
     results.push_back(buffer.take_front(num_bytes_read));
-    // Slice buffer to remove the used chunk.
+    // Slice buffer to remove the used memory.
     buffer = buffer.drop_front(num_bytes_read);
   }
 
