@@ -1356,7 +1356,11 @@ public:
     StopHook(const StopHook &rhs);
     virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookKind : uint32_t {
+      CommandBased = 0,
+      ScriptBased,
+      CodeBased,
+    };
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
@@ -1403,6 +1407,12 @@ public:
 
     bool GetRunAtInitialStop() const { return m_at_initial_stop; }
 
+    void SetSuppressOutput(bool suppress_output) {
+      m_suppress_output = suppress_output;
+    }
+
+    bool GetSuppressOutput() const { return m_suppress_output; }
+
     void GetDescription(Stream &s, lldb::DescriptionLevel level) const;
     virtual void GetSubclassDescription(Stream &s,
                                         lldb::DescriptionLevel level) const = 0;
@@ -1414,6 +1424,7 @@ public:
     bool m_active = true;
     bool m_auto_continue = false;
     bool m_at_initial_stop = true;
+    bool m_suppress_output = false;
 
     StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid);
   };
@@ -1433,7 +1444,7 @@ public:
 
   private:
     StringList m_commands;
-    // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
+    // Use CreateStopHook to make a new empty stop hook. The SetActionFromString
     // and fill it with commands, and SetSpecifier to set the specifier shared
     // pointer (can be null, that will match anything.)
     StopHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
@@ -1460,19 +1471,56 @@ public:
     StructuredDataImpl m_extra_args;
     lldb::ScriptedStopHookInterfaceSP m_interface_sp;
 
-    /// Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
-    /// and fill it with commands, and SetSpecifier to set the specifier shared
-    /// pointer (can be null, that will match anything.)
+    /// Use CreateStopHook to make a new empty stop hook. Use SetScriptCallback
+    /// to set the script to execute, and SetSpecifier to set the specifier
+    /// shared pointer (can be null, that will match anything.)
     StopHookScripted(lldb::TargetSP target_sp, lldb::user_id_t uid)
         : StopHook(target_sp, uid) {}
     friend class Target;
   };
 
+  class StopHookCoded : public StopHook {
+  public:
+    ~StopHookCoded() override = default;
+
+    using HandleStopCallback = StopHookResult(ExecutionContext &exc_ctx,
+                                              lldb::StreamSP output);
+
+    void SetCallback(llvm::StringRef name, HandleStopCallback *callback) {
+      m_name = name;
+      m_callback = callback;
+    }
+
+    StopHookResult HandleStop(ExecutionContext &exc_ctx,
+                              lldb::StreamSP output) override {
+      return m_callback(exc_ctx, output);
+    }
+
+    void GetSubclassDescription(Stream &s,
+                                lldb::DescriptionLevel level) const override {
+      s.Indent();
+      s.Printf("%s (built-in)\n", m_name.c_str());
+    }
+
+  private:
+    std::string m_name;
+    HandleStopCallback *m_callback;
+
+    /// Use CreateStopHook to make a new empty stop hook. Use SetCallback to set
+    /// the callback to execute, and SetSpecifier to set the specifier shared
+    /// pointer (can be null, that will match anything.)
+    StopHookCoded(lldb::TargetSP target_sp, lldb::user_id_t uid)
+        : StopHook(target_sp, uid) {}
+    friend class Target;
+  };
+
+  void RegisterInternalStopHooks();
+
   typedef std::shared_ptr<StopHook> StopHookSP;
 
   /// Add an empty stop hook to the Target's stop hook list, and returns a
-  /// shared pointer to it in new_hook. Returns the id of the new hook.
-  StopHookSP CreateStopHook(StopHook::StopHookKind kind);
+  /// shared pointer to it in new_hook.
+  StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
 
   /// If you tried to create a stop hook, and that failed, call this to
   /// remove the stop hook, as it will also reset the stop hook counter.
@@ -1656,6 +1704,7 @@ protected:
   typedef std::map<lldb::user_id_t, StopHookSP> StopHookCollection;
   StopHookCollection m_stop_hooks;
   lldb::user_id_t m_stop_hook_next_id;
+  std::vector<StopHookSP> m_internal_stop_hooks;
   uint32_t m_latest_stop_hook_id; /// This records the last natural stop at
                                   /// which we ran a stop-hook.
   bool m_valid;
