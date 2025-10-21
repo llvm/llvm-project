@@ -5451,7 +5451,8 @@ void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
   }
 }
 
-// If name is a generic, return specific subprogram with the same name.
+// If name is a generic in the same scope, return its specific subprogram with
+// the same name, if any.
 Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
   // Search for the name but don't resolve it
   if (auto *symbol{currScope().FindSymbol(name.source)}) {
@@ -5461,6 +5462,9 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
         // symbol doesn't inherit it and ruin the ability to check it.
         symbol->attrs().reset(Attr::MODULE);
       }
+    } else if (&symbol->owner() != &currScope() && inInterfaceBlock() &&
+        !isGeneric()) {
+      // non-generic interface shadows outer definition
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};
