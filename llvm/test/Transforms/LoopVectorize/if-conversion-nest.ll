@@ -3,7 +3,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
+define void @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -73,7 +73,7 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -106,11 +106,11 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret void
 }
 
 ; As above but with multiple variables set per block.
-define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
+define void @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-LABEL: @multi_variable_if_nest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -188,7 +188,7 @@ define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -224,5 +224,5 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret void
 }

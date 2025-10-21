@@ -66,6 +66,12 @@ public:
     MemUsed -= RHS.MemUsed;
     InstructionsExecuted -= RHS.InstructionsExecuted;
   }
+  TimeRecord operator-(const TimeRecord &RHS) const {
+    TimeRecord R = *this;
+    R -= RHS;
+    return R;
+  }
+  // Feel free to add operator+ if you need it
 
   /// Print the current time record to \p OS, with a breakdown showing
   /// contributions to the \p Total time record.
@@ -167,7 +173,7 @@ public:
 /// you to declare a new timer, AND specify the region to time, all in one
 /// statement.  All timers with the same name are merged.  This is primarily
 /// used for debugging and for hunting performance problems.
-struct NamedRegionTimer : public TimeRegion {
+struct NamedRegionTimer : TimeRegion {
   LLVM_ABI explicit NamedRegionTimer(StringRef Name, StringRef Description,
                                      StringRef GroupName,
                                      StringRef GroupDescription,
