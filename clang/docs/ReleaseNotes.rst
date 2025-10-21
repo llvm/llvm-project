@@ -609,6 +609,7 @@ clang-format
   literals.
 - Add ``Leave`` suboption to ``IndentPPDirectives``.
 - Add ``AllowBreakBeforeQtProperty`` option.
+- Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
 
 libclang
 --------
