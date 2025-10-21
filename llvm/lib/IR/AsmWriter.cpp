@@ -100,6 +100,10 @@ static cl::opt<bool> PrintProfData(
     "print-prof-data", cl::Hidden,
     cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
 
+static cl::opt<bool> PrintFPMemoryEffects(
+    "print-fp-memory-effects", cl::Hidden,
+    cl::desc("Pretty print floating-point memory effects when dumping"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -4359,6 +4363,25 @@ void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
   Out << ")";
 }
 
+static void printFPMemoryEffects(raw_ostream &Out, MemoryEffects ME) {
+  ModRefInfo MR = ME.getModRef(IRMemLocation::InaccessibleMem);
+  Out << " ; fpe=[";
+  switch (MR) {
+  case ModRefInfo::NoModRef:
+    break;
+  case ModRefInfo::Ref:
+    Out << "r";
+    break;
+  case ModRefInfo::Mod:
+    Out << "w";
+    break;
+  case ModRefInfo::ModRef:
+    Out << "rw";
+    break;
+  }
+  Out << "]";
+}
+
 /// printInfoComment - Print a little comment after the instruction indicating
 /// which slot it occupies.
 void AssemblyWriter::printInfoComment(const Value &V) {
@@ -4389,30 +4412,14 @@ void AssemblyWriter::printInfoComment(const Value &V) {
   if (PrintInstAddrs)
     Out << " ; " << &V;
 
-  if (auto *CI = dyn_cast<CallInst>(&V))
-    if (Intrinsic::ID IID = CI->getIntrinsicID())
-      if (IntrinsicInst::isFloatingPointOperation(IID))
-        if (const BasicBlock *BB = CI->getParent())
-          if (const Function *F = BB->getParent())
-            if (F->hasFnAttribute(Attribute::StrictFP)) {
-              MemoryEffects ME = CI->getMemoryEffects();
-              ModRefInfo MR = ME.getModRef(IRMemLocation::InaccessibleMem);
-              Out << " ; fpe=[";
-              switch (MR) {
-              case ModRefInfo::NoModRef:
-                break;
-              case ModRefInfo::Ref:
-                Out << "r";
-                break;
-              case ModRefInfo::Mod:
-                Out << "w";
-                break;
-              case ModRefInfo::ModRef:
-                Out << "rw";
-                break;
-              }
-              Out << "]";
-            }
+  if (PrintFPMemoryEffects) {
+    if (auto *CI = dyn_cast<CallInst>(&V))
+      if (Intrinsic::ID IID = CI->getIntrinsicID())
+        if (const Function *F = CI->getFunction())
+          if (IntrinsicInst::isFloatingPointOperation(IID) &&
+              F->hasFnAttribute(Attribute::StrictFP))
+            printFPMemoryEffects(Out, CI->getMemoryEffects());
+  }
 }
 
 static void maybePrintCallAddrSpace(const Value *Operand, const Instruction *I,
