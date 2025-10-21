@@ -16430,12 +16430,16 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
       AssociatedDecl == E->getAssociatedDecl())
     return E;
 
-  auto getParamAndType = [Index = E->getIndex()](Decl *AssociatedDecl)
+  auto getParamAndType = [E](Decl *AssociatedDecl)
       -> std::tuple<NonTypeTemplateParmDecl *, QualType> {
-    auto [PDecl, Arg] = getReplacedTemplateParameter(AssociatedDecl, Index);
+    auto [PDecl, Arg] =
+        getReplacedTemplateParameter(AssociatedDecl, E->getIndex());
     auto *Param = cast<NonTypeTemplateParmDecl>(PDecl);
-    return {Param, Arg.isNull() ? Param->getType()
-                                : Arg.getNonTypeTemplateArgumentType()};
+    if (Arg.isNull())
+      return {Param, Param->getType()};
+    if (UnsignedOrNone PackIndex = E->getPackIndex())
+      Arg = Arg.getPackAsArray()[*PackIndex];
+    return {Param, Arg.getNonTypeTemplateArgumentType()};
   };
 
   // If the replacement expression did not change, and the parameter type

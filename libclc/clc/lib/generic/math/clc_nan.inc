@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #if __CLC_FPSIZE == 64
-#define NAN_MASK 0x7ff0000000000000ul
+#define NAN_MASK 0x7ff8000000000000ul
 #elif __CLC_FPSIZE == 32
 #define NAN_MASK 0x7fc00000
 #elif __CLC_FPSIZE == 16
