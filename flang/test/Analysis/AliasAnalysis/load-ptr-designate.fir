@@ -88,8 +88,8 @@
 // CHECK-DAG: obj#0 <-> obj%alloc#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%p0.tgt#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: MayAlias
+// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: PartialAlias
+// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: PartialAlias
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 
@@ -252,8 +252,8 @@ func.func @_QPtest.fir() {
 // CHECK-DAG: obj#0 <-> obj%alloc#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%p0.tgt#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: MayAlias
+// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: PartialAlias
+// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: PartialAlias
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 
@@ -412,8 +412,8 @@ func.func @_QPtest.fir(%arg0: !fir.ref<!fir.type<_QMmTty{p0:!fir.box<!fir.ptr<f3
 // CHECK-DAG: obj#0 <-> obj%alloc#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%p0.tgt#0: MayAlias
 // CHECK-DAG: obj#0 <-> obj%alloc.tgt#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: MayAlias
-// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: MayAlias
+// CHECK-DAG: obj.fir#0 <-> obj%p0.fir#0: PartialAlias
+// CHECK-DAG: obj.fir#0 <-> obj%alloc.fir#0: PartialAlias
 // CHECK-DAG: obj.fir#0 <-> obj%p0.tgt.fir#0: MayAlias
 // CHECK-DAG: obj.fir#0 <-> obj%alloc.tgt.fir#0: MayAlias
 

@@ -35,9 +35,12 @@ public:
     /// The two locations may or may not alias. This is the least precise
     /// result.
     MayAlias,
-    /// The two locations alias, but only due to a partial overlap.
+    /// The two locations overlap in some way, regardless of whether
+    /// they start at the same address or not.
     PartialAlias,
-    /// The two locations precisely alias each other.
+    /// The two locations precisely alias each other, meaning that
+    /// they always start at exactly the same location.
+    /// This result does not imply that the pointers compare equal.
     MustAlias,
   };
 

@@ -2840,6 +2840,7 @@ def fir_ConvertOp
     static bool areVectorsCompatible(mlir::Type inTy, mlir::Type outTy);
     mlir::Value getViewSource() { return getValue(); }
     bool isSameStart() { return true; }
+    bool isCompleteView() { return true; }
   }];
   let hasCanonicalizer = 1;
 }

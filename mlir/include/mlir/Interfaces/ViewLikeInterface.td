@@ -37,11 +37,6 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
         return $_op->getResult(0);
       }]>,
        InterfaceMethod<
-           // TBD: should it be generalized into isPartialView that will
-           // return true in any of these cases?
-           //   1. Resulting view is a slice view of the source.
-           //   2. Resulting view's start does not match the source's start.
-           //   3. Resulting view's end does not match the source's end.
            /*desc=*/
            [{ Returns true iff the source buffer and the resulting view start at the same "address". }],
            /*retTy=*/"bool",
@@ -50,7 +45,23 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
            /*methodBody=*/"",
            /*defaultImplementation=*/[{
         return false;
+      }]>,
+       InterfaceMethod<
+           /*desc=*/
+           [{ Returns true iff the resulting view is a complete view of the source buffer, i.e. isSameStart() is true and the result has the same total size and is not a subview of the input. }],
+           /*retTy=*/"bool",
+           /*methodName=*/"isCompleteView",
+           /*args=*/(ins),
+           /*methodBody=*/"",
+           /*defaultImplementation=*/[{
+        return false;
       }]>];
+
+  let verify = [{
+    auto concreteOp = ::mlir::cast<ConcreteOp>($_op);
+    // isCompleteView() == true implies isSameStart() == true.
+    return !concreteOp.isCompleteView() || concreteOp.isSameStart() ? ::mlir::success() : ::mlir::failure();
+  }];
 }
 
 def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface"> {

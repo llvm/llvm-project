@@ -38,20 +38,23 @@ using namespace mlir;
 static constexpr unsigned maxUnderlyingValueSearchDepth = 10;
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output);
+/// When `maybeOffset` is true, this means that the value is used
+/// by an operation that potentially offsets the `value` making
+/// the access through the operation's result potentially partial
+/// with regards to the memory object pointed to by the `value`.
+static void
+collectUnderlyingAddressValues(Value value, unsigned maxDepth,
+                               DenseSet<Value> &visited, bool maybeOffset,
+                               SmallVectorImpl<std::pair<Value, bool>> &output);
 
 /// Given a successor (`region`) of a RegionBranchOpInterface, collect all of
 /// the underlying values being addressed by one of the successor inputs. If the
 /// provided `region` is null, as per `RegionBranchOpInterface` this represents
 /// the parent operation.
-static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
-                                           Region *region, Value inputValue,
-                                           unsigned inputIndex,
-                                           unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    RegionBranchOpInterface branch, Region *region, Value inputValue,
+    unsigned inputIndex, unsigned maxDepth, DenseSet<Value> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   // Given the index of a region of the branch (`predIndex`), or std::nullopt to
   // represent the parent operation, try to return the index into the outputs of
   // this region predecessor that correspond to the input values of `region`. If
@@ -66,7 +69,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
       // Check that the successor inputs map to the given input value.
       ValueRange inputs = successor.getSuccessorInputs();
       if (inputs.empty()) {
-        output.push_back(inputValue);
+        output.push_back({inputValue, maybeOffset});
         break;
       }
       unsigned firstInputIndex, lastInputIndex;
@@ -78,7 +81,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
         lastInputIndex = cast<OpResult>(inputs.back()).getResultNumber();
       }
       if (firstInputIndex > inputIndex || lastInputIndex < inputIndex) {
-        output.push_back(inputValue);
+        output.push_back({inputValue, maybeOffset});
         break;
       }
       return inputIndex - firstInputIndex;
@@ -95,7 +98,7 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
           getOperandIndexIfPred(/*predIndex=*/RegionBranchPoint::parent())) {
     collectUnderlyingAddressValues(
         branch.getEntrySuccessorOperands(branchPoint)[*operandIndex], maxDepth,
-        visited, output);
+        visited, maybeOffset, output);
   }
   // Check branches from each child region.
   Operation *op = branch.getOperation();
@@ -108,11 +111,11 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
                 block.getTerminator())) {
           collectUnderlyingAddressValues(
               term.getSuccessorOperands(branchPoint)[*operandIndex], maxDepth,
-              visited, output);
+              visited, maybeOffset, output);
         } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
           // any assumptions about which values get passed.
-          output.push_back(inputValue);
+          output.push_back({inputValue, maybeOffset});
           return;
         }
       }
@@ -121,37 +124,33 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
 }
 
 /// Given a result, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    OpResult result, unsigned maxDepth, DenseSet<Value> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   Operation *op = result.getOwner();
 
   // If this is a view, unwrap to the source.
   if (ViewLikeOpInterface view = dyn_cast<ViewLikeOpInterface>(op)) {
     if (result == view.getViewDest()) {
-      // TODO: if view.isSameStart() returns false here,
-      // we have to make sure that further analysis may return
-      // PartialAlias for all underlying addresses we are going
-      // to collect from this point up the def-use.
-      return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                            visited, output);
+      return collectUnderlyingAddressValues(
+          view.getViewSource(), maxDepth, visited, !view.isSameStart(), output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return collectUnderlyingAddressValues(branch, /*region=*/nullptr, result,
                                           result.getResultNumber(), maxDepth,
-                                          visited, output);
+                                          visited, maybeOffset, output);
   }
 
-  output.push_back(result);
+  output.push_back({result, maybeOffset});
 }
 
 /// Given a block argument, collect all of the underlying values being
 /// addressed.
-static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    BlockArgument arg, unsigned maxDepth, DenseSet<Value> &visited,
+    bool maybeOffset, SmallVectorImpl<std::pair<Value, bool>> &output) {
   Block *block = arg.getOwner();
   unsigned argNumber = arg.getArgNumber();
 
@@ -161,7 +160,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       auto branch = dyn_cast<BranchOpInterface>((*it)->getTerminator());
       if (!branch) {
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output.push_back({arg, maybeOffset});
         return;
       }
 
@@ -170,10 +169,11 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       Value operand = branch.getSuccessorOperands(index)[argNumber];
       if (!operand) {
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output.push_back({arg, maybeOffset});
         return;
       }
-      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
+      collectUnderlyingAddressValues(operand, maxDepth, visited, maybeOffset,
+                                     output);
     }
     return;
   }
@@ -182,39 +182,40 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
   Region *region = block->getParent();
   Operation *op = region->getParentOp();
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
-    return collectUnderlyingAddressValues(branch, region, arg, argNumber,
-                                          maxDepth, visited, output);
+    return collectUnderlyingAddressValues(
+        branch, region, arg, argNumber, maxDepth, visited, maybeOffset, output);
   }
 
   // We can't reason about the underlying address of this argument.
-  output.push_back(arg);
+  output.push_back({arg, maybeOffset});
 }
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
-                                           DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    Value value, unsigned maxDepth, DenseSet<Value> &visited, bool maybeOffset,
+    SmallVectorImpl<std::pair<Value, bool>> &output) {
   // Check that we don't infinitely recurse.
   if (!visited.insert(value).second)
     return;
   if (maxDepth == 0) {
-    output.push_back(value);
+    output.push_back({value, maybeOffset});
     return;
   }
   --maxDepth;
 
   if (BlockArgument arg = dyn_cast<BlockArgument>(value))
-    return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
+    return collectUnderlyingAddressValues(arg, maxDepth, visited, maybeOffset,
+                                          output);
   collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
-                                 output);
+                                 maybeOffset, output);
 }
 
 /// Given a value, collect all of the underlying values being addressed.
-static void collectUnderlyingAddressValues(Value value,
-                                           SmallVectorImpl<Value> &output) {
+static void collectUnderlyingAddressValues(
+    Value value, SmallVectorImpl<std::pair<Value, bool>> &output) {
   DenseSet<Value> visited;
   collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, visited,
-                                 output);
+                                 /*maybeOffset=*/false, output);
 }
 
 //===----------------------------------------------------------------------===//
@@ -375,7 +376,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
     return AliasResult::MustAlias;
 
   // Get the underlying values being addressed.
-  SmallVector<Value, 8> lhsValues, rhsValues;
+  SmallVector<std::pair<Value, bool>, 8> lhsValues, rhsValues;
   collectUnderlyingAddressValues(lhs, lhsValues);
   collectUnderlyingAddressValues(rhs, rhsValues);
 
@@ -386,9 +387,14 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Check the alias results against each of the underlying values.
   std::optional<AliasResult> result;
-  for (Value lhsVal : lhsValues) {
-    for (Value rhsVal : rhsValues) {
+  for (auto [lhsVal, lhsPartial] : lhsValues) {
+    for (auto [rhsVal, rhsPartial] : rhsValues) {
       AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
+      // If the original lhs/rhs may be an offsetted access
+      // of the memory objects pointed to by lhsVal/rhsVal,
+      // we'd better turn MustAlias results into PartialAlias.
+      if (nextResult == AliasResult::MustAlias && (lhsPartial || rhsPartial))
+        nextResult = AliasResult::PartialAlias;
       result = result ? result->merge(nextResult) : nextResult;
     }
   }

@@ -41,13 +41,13 @@
 // therefore x needs to alias with x.next to prevent the loads from being merged.
 // CHECK-DAG: x#0 <-> xnext1#0: MayAlias
 // CHECK-DAG: x#0 <-> xnext2#0: MayAlias
-// CHECK-DAG: x.fir#0 <-> xnext1.fir#0: MayAlias
-// CHECK-DAG: x.fir#0 <-> xnext2.fir#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> xnext1.fir#0: PartialAlias
+// CHECK-DAG: x.fir#0 <-> xnext2.fir#0: PartialAlias
 
 // TODO: xnext1#0 <-> xnext2#0 are the same and therefore MustAlias but 
 //       we are currently not comparing operands involved in offset computations
 // CHECK-DAG: xnext1#0 <-> xnext2#0: MayAlias
-// CHECK-DAG: xnext1.fir#0 <-> xnext2.fir#0: MayAlias
+// CHECK-DAG: xnext1.fir#0 <-> xnext2.fir#0: PartialAlias
 
 // CHECK-DAG: xnext1#0 <-> ynext#0: NoAlias
 // CHECK-DAG: xnext1.fir#0 <-> ynext.fir#0: NoAlias
@@ -217,7 +217,7 @@ func.func @_QMmPfoo3.fir(%arg0: !fir.ref<!fir.type<_QMmTta{array:!fir.box<!fir.p
 
 // CHECK-LABEL: Testing : "_QMmPtest"
 // CHECK-DAG: x#0 <-> x%p#0: MayAlias
-// CHECK-DAG: x.fir#0 <-> x%p.fir#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> x%p.fir#0: PartialAlias
 
 func.func @_QMmPtest() {
   %0 = fir.address_of(@_QMmEx) : !fir.ref<!fir.type<_QMmTt{p:!fir.box<!fir.heap<i32>>}>>
@@ -258,8 +258,8 @@ func.func @_QMmPtest.fir() {
 // composite is nested within another composite.
 // CHECK-DAG: x#0 <-> x%p#0: MayAlias
 // CHECK-DAG: x%x#0 <-> x%x%p#0: MayAlias
-// CHECK-DAG: x.fir#0 <-> x%p.fir#0: MayAlias
-// CHECK-DAG: x%x.fir#0 <-> x%x%p.fir#0: MayAlias
+// CHECK-DAG: x.fir#0 <-> x%p.fir#0: PartialAlias
+// CHECK-DAG: x%x.fir#0 <-> x%x%p.fir#0: PartialAlias
 
 // The addresses of different components of the same composite do not alias.
 //
@@ -274,9 +274,12 @@ func.func @_QMmPtest.fir() {
 // CHECK-DAG: x%x#0 <-> x%i#0: MayAlias
 // CHECK-DAG: x%p#0 <-> x%i#0: NoAlias
 // CHECK-DAG: x%x#0 <-> x%p#0: MayAlias
-// CHECK-DAG: x%x.fir#0 <-> x%i.fir#0: MayAlias
-// CHECK-DAG: x%p.fir#0 <-> x%i.fir#0: NoAlias
-// CHECK-DAG: x%x.fir#0 <-> x%p.fir#0: MayAlias
+// CHECK-DAG: x%x.fir#0 <-> x%i.fir#0: PartialAlias
+
+// NOTE: FIR AliasAnalysis can prove NoAlias, but LocalAliasAnalysis
+// conservatively assumes PartialAlias.
+// CHECK-DAG: x%p.fir#0 <-> x%i.fir#0: PartialAlias
+// CHECK-DAG: x%x.fir#0 <-> x%p.fir#0: PartialAlias
 
 func.func @_QMmPtest() {
   %0 = fir.alloca !fir.type<_QMmTt2{x:!fir.type<_QMmTt1{p:!fir.box<!fir.ptr<i32>>}>,p:!fir.box<!fir.ptr<i32>>,i:i32}> {bindc_name = "x", uniq_name = "_QMmFtestEx"}

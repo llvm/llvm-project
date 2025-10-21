@@ -212,6 +212,10 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
     if (lhsSrc.origin == rhsSrc.origin) {
       LLVM_DEBUG(llvm::dbgs()
                  << "  aliasing because same source kind and origin\n");
+      // TODO: we should return PartialAlias here. Need to decide
+      // if returning PartialAlias for fir.pack_array is okay;
+      // if not, then we need to handle it specially to still return
+      // MayAlias.
       if (approximateSource)
         return AliasResult::MayAlias;
       return AliasResult::MustAlias;
@@ -569,7 +573,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // so we should set followingData.
           if (mlir::isa<fir::BaseBoxType>(v.getType()) &&
               !mlir::isa<fir::BaseBoxType>(ty))
-            followingData = true;
+            followBoxData = true;
           if (!op.isSameStart())
             approximateSource = true;
         })
