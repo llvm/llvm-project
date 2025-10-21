@@ -234,8 +234,6 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     const lto::InputFile::Symbol &objSym = objSyms[i];
     lto::SymbolResolution &r = resols[i];
 
-    dbgs() << sym->
-
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
     // flags an undefined in IR with a definition in ASM as prevailing.
