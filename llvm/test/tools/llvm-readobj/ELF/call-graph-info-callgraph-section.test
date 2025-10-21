@@ -7,40 +7,34 @@
 # RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
 
-# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
-# CHECK-NEXT: Per-function call graph information:: 
-# CHECK-EMPTY: 
-# CHECK-NEXT: Function:: foo
-# CHECK-NEXT: Function PC:: 0x0
-# CHECK-NEXT: FormatVersionNumber:: 0
-# CHECK-NEXT: Function Kind:: NOT_INDIRECT
-# CHECK-NEXT: Indirect callee count:: 0
-# CHECK-NEXT: Direct callee count:: 1
-# CHECK-NEXT: {
-# CHECK-NEXT:   CalleePC:: 0x5
-# CHECK-NEXT: }
-# CHECK-EMPTY: 
-# CHECK-NEXT: Function:: bar
-# CHECK-NEXT: Function PC:: 0x6
-# CHECK-NEXT: FormatVersionNumber:: 0
-# CHECK-NEXT: Function Kind:: UNKNOWN_TID
-# CHECK-NEXT: Indirect callee count:: 1
-# CHECK-NEXT: {
-# CHECK-NEXT:   callsite: 0x9
-# CHECK-NEXT:   calleeTypeId: 0x10
-# CHECK-NEXT: }
-# CHECK-NEXT: Direct callee count:: 0
-# CHECK-EMPTY: 
-# CHECK-NEXT: Function:: baz
-# CHECK-NEXT: Function PC:: 0xa
-# CHECK-NEXT: FormatVersionNumber:: 0
-# CHECK-NEXT: Function Kind:: KNOWN_TID
-# CHECK-NEXT: Function Type ID:: 0x20
-# CHECK-NEXT: Indirect callee count:: 0
-# CHECK-NEXT: Direct callee count:: 0
 
+# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
+# CHECK-NEXT: Call graph section '.llvm.callgraph' contains 3 entries:
+# CHECK-EMPTY:
+# CHECK-NEXT:  Entry 0:
+# CHECK-NEXT:    Function:          0x2
+# CHECK-NEXT:    Indirect Target:   Yes
+# CHECK-NEXT:    Type ID:           0x0x0
+# CHECK-NEXT:    Direct Callees (1):
+# CHECK-NEXT:      0x13
+# CHECK-NEXT:    Indirect Callees by Type ID (0):
+# CHECK-EMPTY:
+# CHECK-NEXT:  Entry 1:
+# CHECK-NEXT:    Function:          0x1d
+# CHECK-NEXT:    Indirect Target:   Yes
+# CHECK-NEXT:    Type ID:           0x0x0
+# CHECK-NEXT:    Direct Callees (0):
+# CHECK-NEXT:    Indirect Callees by Type ID (1):
+# CHECK-NEXT:      0x0x10
+# CHECK-EMPTY:
+# CHECK-NEXT:  Entry 2:
+# CHECK-NEXT:    Function:          0x38
+# CHECK-NEXT:    Indirect Target:   Yes
+# CHECK-NEXT:    Type ID:           0x0x20
+# CHECK-NEXT:    Direct Callees (0):
+# CHECK-NEXT:    Indirect Callees by Type ID (0):
 
-# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
 # LLVM: callgraph_info [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     Name: foo
@@ -83,7 +77,7 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
-# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .callgraph section has unknown type id for 1 indirect targets.
+# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
 # JSON:     "callgraph_info": [
 # JSON-NEXT:       {
 # JSON-NEXT:         "Function": {
@@ -162,21 +156,19 @@ baz:                  #< baz is at 10 (a).
 qux:                  #< qux is at 11 (b).
  retq
 
-.section	.callgraph,"o",@progbits,.text
+.section	.llvm.callgraph,"o",@llvm_call_graph_section,.text
 .byte	0       #< Format version number.
-.byte	1       #< Flag IsIndirectTarget true
+.byte	3       #< Flag IsIndirectTarget true
 .quad	0       #< foo()'s entry address.
 .quad	0       #< TypeID: unknown.
-.long   1       #< Count of direct callees.
-.long	0       #< Count of indirect target type IDs.
+.byte   1       #< Count of direct callees.
 .quad   5       #< Direct callee foo's address>
 
 .byte	0       #< Format version number.
-.byte   1       #< Flag IsIndirectTarget true
+.byte   5       #< Flag IsIndirectTarget true
 .quad	6       #< bar()'s entry address.
 .quad	0       #< TypeID: unknown.
-.long   0       #< Count of direct callees
-.long	1       #< Count of indirect target type IDs
+.byte	1       #< Count of indirect target type IDs
 .quad   16      #< Indirect call type id.
 
 
@@ -184,8 +176,6 @@ qux:                  #< qux is at 11 (b).
 .byte   1       #< Flag IsIndirectTarget true
 .quad	10      #< baz()'s entry address.
 .quad   32      #< Indirect target type id.
-.long	0       #< Count of direct callees
-.long   0       #< Count of indirect call type ids
 
 # No call graph section entry for qux. 
 # Technically its "UNKNOWN" type id but will not be printed as such by llvm-readelf.  

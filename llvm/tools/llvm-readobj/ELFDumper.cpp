@@ -5495,6 +5495,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
       auto Reloc = llvm::lower_bound(
           Relocations, FuncEntryPC,
           [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+      if (Reloc == Relocations.end()) {
+        Stream << format("0x%lx", FuncEntryPC);
+        return Stream.str();
+      }
       Expected<RelSymbol<ELFT>> RelSym =
           this->getRelocationTarget(*Reloc, RelocSymTab);
       if (!RelSym) {
@@ -8403,6 +8407,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       auto Reloc = llvm::lower_bound(
           Relocations, FuncEntryPC,
           [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+      if (Reloc == Relocations.end()) {
+        W.printHex("Address", FuncEntryPC);      
+        return;
+      }          
       Expected<RelSymbol<ELFT>> RelSym =
           this->getRelocationTarget(*Reloc, RelocSymTab);
       if (!RelSym) {
