@@ -49,3 +49,8 @@ Options
 
    When set to `true`, static non-const variables and variables in anonymous
    namespaces will not generate a warning. The default value is `false`.
+
+.. option:: AllowThreadLocal
+
+   When set to `true`, non-const global variables with thread-local storage
+   duration will not generate a warning. The default value is `false`.
