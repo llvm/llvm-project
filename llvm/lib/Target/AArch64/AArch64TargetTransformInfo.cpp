@@ -5666,18 +5666,21 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   VectorType *AccumVectorType =
       VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
   // We don't yet support all kinds of legalization.
-  auto TA = TLI->getTypeAction(AccumVectorType->getContext(),
-                               EVT::getEVT(AccumVectorType));
-  switch (TA) {
+  auto TC = TLI->getTypeConversion(AccumVectorType->getContext(),
+                                   EVT::getEVT(AccumVectorType));
+  switch (TC.first) {
   default:
     return Invalid;
   case TargetLowering::TypeLegal:
   case TargetLowering::TypePromoteInteger:
   case TargetLowering::TypeSplitVector:
+    // The legalised type (e.g. after splitting) must be legal too.
+    if (TLI->getTypeAction(AccumVectorType->getContext(), TC.second) !=
+        TargetLowering::TypeLegal)
+      return Invalid;
     break;
   }
 
-  // Check what kind of type-legalisation happens.
   std::pair<InstructionCost, MVT> AccumLT =
       getTypeLegalizationCost(AccumVectorType);
   std::pair<InstructionCost, MVT> InputLT =
@@ -5719,7 +5722,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   }
 
   // Add additional cost for the extends that would need to be inserted.
-  return Cost + 4;
+  return Cost + 2;
 }
 
 InstructionCost

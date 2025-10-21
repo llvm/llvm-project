@@ -672,11 +672,12 @@ ExprResult InitListChecker::PerformEmptyInit(SourceLocation Loc,
           IsInStd = true;
       }
 
-      if (IsInStd && llvm::StringSwitch<bool>(R->getName())
-              .Cases("basic_string", "deque", "forward_list", true)
-              .Cases("list", "map", "multimap", "multiset", true)
-              .Cases("priority_queue", "queue", "set", "stack", true)
-              .Cases("unordered_map", "unordered_set", "vector", true)
+      if (IsInStd &&
+          llvm::StringSwitch<bool>(R->getName())
+              .Cases({"basic_string", "deque", "forward_list"}, true)
+              .Cases({"list", "map", "multimap", "multiset"}, true)
+              .Cases({"priority_queue", "queue", "set", "stack"}, true)
+              .Cases({"unordered_map", "unordered_set", "vector"}, true)
               .Default(false)) {
         InitSeq.InitializeFrom(
             SemaRef, Entity,
@@ -775,7 +776,7 @@ void InitListChecker::FillInEmptyInitForField(unsigned Init, FieldDecl *Field,
 
   if (Init >= NumInits || !ILE->getInit(Init)) {
     if (const RecordType *RType = ILE->getType()->getAsCanonical<RecordType>())
-      if (!RType->getOriginalDecl()->isUnion())
+      if (!RType->getDecl()->isUnion())
         assert((Init < NumInits || VerifyOnly) &&
                "This ILE should have been expanded");
 
@@ -3920,6 +3921,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_AddressOfUnaddressableFunction:
   case FK_ParenthesizedListInitFailed:
   case FK_DesignatedInitForNonAggregate:
+  case FK_HLSLInitListFlatteningFailed:
     return false;
 
   case FK_ReferenceInitOverloadFailed:
@@ -4882,8 +4884,10 @@ static void TryListInitialization(Sema &S,
                                   bool TreatUnavailableAsInvalid) {
   QualType DestType = Entity.getType();
 
-  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList))
+  if (S.getLangOpts().HLSL && !S.HLSL().transformInitList(Entity, InitList)) {
+    Sequence.SetFailed(InitializationSequence::FK_HLSLInitListFlatteningFailed);
     return;
+  }
 
   // C++ doesn't allow scalar initialization with more than one argument.
   // But C99 complex numbers are scalars and it makes sense there.
@@ -6817,33 +6821,18 @@ void InitializationSequence::InitializeFrom(Sema &S,
   assert(Args.size() >= 1 && "Zero-argument case handled above");
 
   // For HLSL ext vector types we allow list initialization behavior for C++
-  // constructor syntax. This is accomplished by converting initialization
-  // arguments an InitListExpr late.
+  // functional cast expressions which look like constructor syntax. This is
+  // accomplished by converting initialization arguments to InitListExpr.
   if (S.getLangOpts().HLSL && Args.size() > 1 && DestType->isExtVectorType() &&
       (SourceType.isNull() ||
        !Context.hasSameUnqualifiedType(SourceType, DestType))) {
-
-    llvm::SmallVector<Expr *> InitArgs;
-    for (auto *Arg : Args) {
-      if (Arg->getType()->isExtVectorType()) {
-        const auto *VTy = Arg->getType()->castAs<ExtVectorType>();
-        unsigned Elm = VTy->getNumElements();
-        for (unsigned Idx = 0; Idx < Elm; ++Idx) {
-          InitArgs.emplace_back(new (Context) ArraySubscriptExpr(
-              Arg,
-              IntegerLiteral::Create(
-                  Context, llvm::APInt(Context.getIntWidth(Context.IntTy), Idx),
-                  Context.IntTy, SourceLocation()),
-              VTy->getElementType(), Arg->getValueKind(), Arg->getObjectKind(),
-              SourceLocation()));
-        }
-      } else
-        InitArgs.emplace_back(Arg);
-    }
-    InitListExpr *ILE = new (Context) InitListExpr(
-        S.getASTContext(), SourceLocation(), InitArgs, SourceLocation());
+    InitListExpr *ILE = new (Context)
+        InitListExpr(S.getASTContext(), Args.front()->getBeginLoc(), Args,
+                     Args.back()->getEndLoc());
+    ILE->setType(DestType);
     Args[0] = ILE;
-    AddListInitializationStep(DestType);
+    TryListInitialization(S, Entity, Kind, ILE, *this,
+                          TreatUnavailableAsInvalid);
     return;
   }
 
@@ -9198,9 +9187,8 @@ bool InitializationSequence::Diagnose(Sema &S,
                    diag::note_member_declared_at);
 
             if (const auto *Record = Entity.getType()->getAs<RecordType>())
-              S.Diag(Record->getOriginalDecl()->getLocation(),
-                     diag::note_previous_decl)
-                  << S.Context.getCanonicalTagType(Record->getOriginalDecl());
+              S.Diag(Record->getDecl()->getLocation(), diag::note_previous_decl)
+                  << S.Context.getCanonicalTagType(Record->getDecl());
           }
           break;
         }
@@ -9298,6 +9286,14 @@ bool InitializationSequence::Diagnose(Sema &S,
 
   case FK_PlaceholderType: {
     // FIXME: Already diagnosed!
+    break;
+  }
+
+  case InitializationSequence::FK_HLSLInitListFlatteningFailed: {
+    // Unlike C/C++ list initialization, there is no fallback if it fails. This
+    // allows us to diagnose the failure when it happens in the
+    // TryListInitialization call instead of delaying the diagnosis, which is
+    // beneficial because the flattening is also expensive.
     break;
   }
 
@@ -9498,6 +9494,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_DesignatedInitForNonAggregate:
       OS << "designated initializer for non-aggregate type";
+      break;
+
+    case FK_HLSLInitListFlatteningFailed:
+      OS << "HLSL initialization list flattening failed";
       break;
     }
     OS << '\n';
@@ -9974,8 +9974,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
         // Cases where template arguments in the RHS of the alias are not
         // dependent. e.g.
         //   using AliasFoo = Foo<bool>;
-        if (const auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(
-                RT->getOriginalDecl()))
+        if (const auto *CTSD =
+                llvm::dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
           Template = CTSD->getSpecializedTemplate();
       }
     }

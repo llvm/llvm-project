@@ -212,7 +212,10 @@ static void runTest(StringRef InputFile) {
   for (Value V : *TestArray) {
     auto TestData =
         ExitOnErr(TestData::createTestData(V.getAsObject(), InputFile));
-    Template T(TestData.TemplateStr);
+    BumpPtrAllocator Allocator;
+    StringSaver Saver(Allocator);
+    MustacheContext Ctx(Allocator, Saver);
+    Template T(TestData.TemplateStr, Ctx);
     registerPartials(TestData.Partials, T);
 
     std::string ActualStr;

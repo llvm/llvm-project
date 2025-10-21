@@ -149,6 +149,10 @@ public:
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
 
+  /// Whether a cir.stacksave operation has been added. Used to avoid
+  /// inserting cir.stacksave for multiple VLAs in the same scope.
+  bool didCallStackSave = false;
+
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
   bool sawAsmBlock = false;
@@ -187,6 +191,14 @@ public:
   /// Keeps track of the current set of opaque value expressions.
   llvm::DenseMap<const OpaqueValueExpr *, LValue> opaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> opaqueRValues;
+
+  // This keeps track of the associated size for each VLA type.
+  // We track this by the size expression rather than the type itself because
+  // in certain situations, like a const qualifier applied to an VLA typedef,
+  // multiple VLA types can share the same size expression.
+  // FIXME: Maybe this could be a stack of maps that is pushed/popped as we
+  // enter/leave scopes.
+  llvm::DenseMap<const Expr *, mlir::Value> vlaSizeMap;
 
 public:
   /// A non-RAII class containing all the information about a bound
@@ -436,6 +448,20 @@ public:
     }
   };
 
+  struct VlaSizePair {
+    mlir::Value numElts;
+    QualType type;
+
+    VlaSizePair(mlir::Value num, QualType ty) : numElts(num), type(ty) {}
+  };
+
+  /// Returns an MLIR::Value+QualType pair that corresponds to the size,
+  /// in non-variably-sized elements, of a variable length array type,
+  /// plus that largest non-variably-sized element type.  Assumes that
+  /// the type has already been emitted with emitVariablyModifiedType.
+  VlaSizePair getVLASize(const VariableArrayType *type);
+  VlaSizePair getVLASize(QualType type);
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -555,6 +581,35 @@ public:
   cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &d,
                                               cir::GlobalOp gv,
                                               cir::GetGlobalOp gvAddr);
+
+  /// Enter the cleanups necessary to complete the given phase of destruction
+  /// for a destructor. The end result should call destructors on members and
+  /// base classes in reverse order of their construction.
+  void enterDtorCleanups(const CXXDestructorDecl *dtor, CXXDtorType type);
+
+  /// Determines whether an EH cleanup is required to destroy a type
+  /// with the given destruction kind.
+  /// TODO(cir): could be shared with Clang LLVM codegen
+  bool needsEHCleanup(QualType::DestructionKind kind) {
+    switch (kind) {
+    case QualType::DK_none:
+      return false;
+    case QualType::DK_cxx_destructor:
+    case QualType::DK_objc_weak_lifetime:
+    case QualType::DK_nontrivial_c_struct:
+      return getLangOpts().Exceptions;
+    case QualType::DK_objc_strong_lifetime:
+      return getLangOpts().Exceptions &&
+             cgm.getCodeGenOpts().ObjCAutoRefCountExceptions;
+    }
+    llvm_unreachable("bad destruction kind");
+  }
+
+  CleanupKind getCleanupKind(QualType::DestructionKind kind) {
+    return needsEHCleanup(kind) ? NormalAndEHCleanup : NormalCleanup;
+  }
+
+  void pushStackRestore(CleanupKind kind, Address spMem);
 
   /// Set the address of a local variable.
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
@@ -678,6 +733,11 @@ public:
     SourceLocExprScopeGuard sourceLocScope;
   };
 
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &cfg, const CXXDefaultArgExpr *e)
+        : SourceLocExprScopeGuard(e, cfg.curSourceLocExprScope) {}
+  };
+
   LValue makeNaturalAlignPointeeAddrLValue(mlir::Value v, clang::QualType t);
   LValue makeNaturalAlignAddrLValue(mlir::Value val, QualType ty);
 
@@ -798,6 +858,13 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
+  /// returns true if aggregate type has a volatile member.
+  bool hasVolatileMember(QualType t) {
+    if (const auto *rd = t->getAsRecordDecl())
+      return rd->hasVolatileMember();
+    return false;
+  }
+
   /// The cleanup depth enclosing all the cleanups associated with the
   /// parameters.
   EHScopeStack::stable_iterator prologueCleanupDepth;
@@ -827,6 +894,7 @@ public:
 
   protected:
     bool performCleanup;
+    bool oldDidCallStackSave;
 
   private:
     RunCleanupsScope(const RunCleanupsScope &) = delete;
@@ -840,6 +908,8 @@ public:
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
       cleanupStackDepth = cgf.ehStack.stable_begin();
+      oldDidCallStackSave = cgf.didCallStackSave;
+      cgf.didCallStackSave = false;
       oldCleanupStackDepth = cgf.currentCleanupStackDepth;
       cgf.currentCleanupStackDepth = cleanupStackDepth;
     }
@@ -856,6 +926,7 @@ public:
       assert(performCleanup && "Already forced cleanup");
       {
         mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
+        cgf.didCallStackSave = oldDidCallStackSave;
         cgf.popCleanupBlocks(cleanupStackDepth);
         performCleanup = false;
         cgf.currentCleanupStackDepth = oldCleanupStackDepth;
@@ -1018,6 +1089,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushDestroy(QualType::DestructionKind dtorKind, Address addr,
+                   QualType type);
+
   void pushDestroy(CleanupKind kind, Address addr, QualType type,
                    Destroyer *destroyer);
 
@@ -1072,14 +1146,16 @@ public:
   ///        occupied by some other object. More efficient code can often be
   ///        generated if not.
   void emitAggregateCopy(LValue dest, LValue src, QualType eltTy,
-                         AggValueSlot::Overlap_t mayOverlap);
+                         AggValueSlot::Overlap_t mayOverlap,
+                         bool isVolatile = false);
 
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e,
-                     AggValueSlot aggSlot = AggValueSlot::ignored());
+                     AggValueSlot aggSlot = AggValueSlot::ignored(),
+                     bool ignoreResult = false);
 
   /// Emits the code necessary to evaluate an arbitrary expression into the
   /// given memory location.
@@ -1089,6 +1165,8 @@ public:
   /// Similarly to emitAnyExpr(), however, the result will always be accessible
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
+
+  void emitAnyExprToExn(const Expr *e, Address addr);
 
   void emitArrayDestroy(mlir::Value begin, mlir::Value numElements,
                         QualType elementType, CharUnits elementAlign,
@@ -1252,13 +1330,23 @@ public:
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
+  void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
+                               mlir::Type elementTy, Address beginPtr,
+                               mlir::Value numElements,
+                               mlir::Value allocSizeWithoutCookie);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
+  void emitCXXTemporary(const CXXTemporary *temporary, QualType tempType,
+                        Address ptr);
+
   void emitCXXThrowExpr(const CXXThrowExpr *e);
+
+  mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
@@ -1274,6 +1362,8 @@ public:
                       QualType deleteTy);
 
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+
+  mlir::Value emitDynamicCast(Address thisAddr, const CXXDynamicCastExpr *dce);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -1444,6 +1534,10 @@ public:
   LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
+
+  LValue emitOpaqueValueLValue(const OpaqueValueExpr *e);
+
+  LValue emitConditionalOperatorLValue(const AbstractConditionalOperator *expr);
 
   /// Given an expression with a pointer type, emit the value and compute our
   /// best estimate of the alignment of the pointee.

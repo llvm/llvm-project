@@ -4528,6 +4528,10 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
         !eq(ptx_elt_type, "e2m1"),
         !ne(kind, "")) : [hasSM120a, hasPTX<87>],
 
+    !and(!or(!eq(ptx_elt_type,"e4m3"),
+             !eq(ptx_elt_type,"e5m2")),
+         !eq(geom, "m16n8k16")) : [hasSM<89>, hasPTX<87>],
+
     !or(!eq(ptx_elt_type, "e4m3"),
         !eq(ptx_elt_type, "e5m2")) : [hasSM<89>, hasPTX<84>],
 
@@ -4542,6 +4546,11 @@ class WMMA_REGINFO<WMMA_REGS r, string op, string metadata = "", string kind = "
 
     !and(!eq(geom, "m8n8k4"),
          !eq(ptx_elt_type, "f64")) : [hasSM<80>, hasPTX<70>],
+
+    !and(!or(!eq(geom, "m16n8k4"),
+             !eq(geom, "m16n8k8"),
+             !eq(geom, "m16n8k16")),
+         !eq(ptx_elt_type, "f64")) : [hasSM<90>, hasPTX<78>],
 
     // fp16 -> fp16/fp32 @ m8n32k16/m32n8k16
     !and(!or(!eq(geom, "m8n32k16"),
@@ -4827,8 +4836,8 @@ defset list<WMMA_INSTR> WMMAs  = {
 // MMA
 class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
-               string ALayout, string BLayout, int Satfinite, string b1op>
-  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, FragA, FragB, FragC, FragD>.record,
+               string ALayout, string BLayout, int Satfinite, string b1op, string Kind>
+  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, Kind, FragA, FragB, FragC, FragD>.record,
                         [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
@@ -4843,6 +4852,7 @@ class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                   # FragA.geom
                   # "." # ALayout
                   # "." # BLayout
+                  # !if(!ne(Kind, ""), "." # Kind, "")
                   # !if(Satfinite, ".satfinite", "")
                   # TypeList
                   # b1op # "\n\t\t"
@@ -4859,13 +4869,15 @@ defset list<WMMA_INSTR> MMAs  = {
       foreach satf = [0, 1] in {
         foreach op = NVVM_MMA_OPS.all_mma_ops in {
           foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
-            if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, satf>.ret then {
-              def : MMA<WMMA_REGINFO<op[0], "mma">,
-                        WMMA_REGINFO<op[1], "mma">,
-                        WMMA_REGINFO<op[2], "mma">,
-                        WMMA_REGINFO<op[3], "mma">,
-                        layout_a, layout_b, satf, b1op>;
-            }
+            foreach kind = ["", "kind::f8f6f4"] in {
+              if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, kind, satf>.ret then {
+                def : MMA<WMMA_REGINFO<op[0], "mma", "", kind>,
+                          WMMA_REGINFO<op[1], "mma", "", kind>,
+                          WMMA_REGINFO<op[2], "mma", "", kind>,
+                          WMMA_REGINFO<op[3], "mma", "", kind>,
+                          layout_a, layout_b, satf, b1op, kind>;
+              }
+            } // kind
           } // b1op
         } // op
       } // satf
@@ -5091,8 +5103,8 @@ let Predicates = [hasSM<90>, hasPTX<78>] in {
 def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
-let isConvergent = true, Predicates = [hasTcgen05Instructions] in {
-
+let isConvergent = true in {
+let Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 multiclass TCGEN05_ALLOC_INTR<string AS, string num, Intrinsic Intr> {
   def "" : BasicNVPTXInst<(outs),
              (ins ADDR:$dst, B32:$ncols),
@@ -5144,15 +5156,6 @@ defm TCGEN05_COMMIT_CG2 : TCGEN05_COMMIT_INTR<"", "2">;
 defm TCGEN05_COMMIT_S64_CG1 : TCGEN05_COMMIT_INTR<"shared", "1">;
 defm TCGEN05_COMMIT_S64_CG2 : TCGEN05_COMMIT_INTR<"shared", "2">;
 
-multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs),
-             (ins ADDR:$tmem_addr),
-             "tcgen05.shift.cta_group::" # num # ".down",
-             [(Intr addr:$tmem_addr)]>;
-}
-defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
-defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
-
 multiclass TCGEN05_CP_INTR<string shape, string src_fmt, string mc = ""> {
   defvar dst_fmt = !if(!eq(src_fmt, ""), "", ".b8x16");
   defvar fmt_asm = StrJoin<".", [dst_fmt, src_fmt]>.ret;
@@ -5183,9 +5186,22 @@ foreach src_fmt = ["", "b6x16_p32", "b4x16_p64"] in {
   defm TCGEN05_CP_64x128_2 # src_fmt : TCGEN05_CP_INTR<"64x128b", src_fmt, "warpx2::01_23">;
   defm TCGEN05_CP_32x128 # src_fmt   : TCGEN05_CP_INTR<"32x128b", src_fmt, "warpx4">;
 }
+} // Predicates
+
+let Predicates = [callSubtarget<"hasTcgen05ShiftSupport">] in {
+multiclass TCGEN05_SHIFT_INTR<string num, Intrinsic Intr> {
+  def "" : BasicNVPTXInst<(outs),
+             (ins ADDR:$tmem_addr),
+             "tcgen05.shift.cta_group::" # num # ".down",
+             [(Intr addr:$tmem_addr)]>;
+}
+defm TCGEN05_SHIFT_CG1: TCGEN05_SHIFT_INTR<"1", int_nvvm_tcgen05_shift_down_cg1>;
+defm TCGEN05_SHIFT_CG2: TCGEN05_SHIFT_INTR<"2", int_nvvm_tcgen05_shift_down_cg2>;
+} // Predicates
+
 } // isConvergent
 
-let hasSideEffects = 1, Predicates = [hasTcgen05Instructions] in {
+let hasSideEffects = 1, Predicates = [callSubtarget<"hasTcgen05InstSupport">] in {
 
   def tcgen05_fence_before_thread_sync: NullaryInst<
     "tcgen05.fence::before_thread_sync", int_nvvm_tcgen05_fence_before_thread_sync>;
@@ -5219,8 +5235,7 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
 //
 
 class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
@@ -5244,8 +5259,7 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
 //
 
 class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
-        NVPTXInst<(outs), (ins), "?", []>,
-        Requires<[hasTcgen05Instructions]> {
+        NVPTXInst<(outs), (ins), "?", []> {
 
   TCGEN05_LDST_REGINFO Info = TCGEN05_LDST_REGINFO<
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;

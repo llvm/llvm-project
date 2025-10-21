@@ -428,7 +428,8 @@ static RT_API_ATTRS void GeneralCharFunc(Descriptor &result,
     result.GetDimension(j).SetBounds(1, ub[j]);
   }
   if (result.Allocate(kNoAsyncObject) != CFI_SUCCESS) {
-    terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
+    terminator.Crash(
+        "INDEX/SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
   std::size_t argElementChars{arg.ElementBytes() >> shift<CHAR>};
