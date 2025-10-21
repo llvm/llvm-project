@@ -3932,35 +3932,39 @@ class sme2_lut_single<string asm>
   let Inst{4-0}   = Zd;
 }
 
-class sme2_luti6_zt<string asm>
-  : I<(outs ZZZZ_b_mul_r:$Zd), (ins ZTR:$ZTt, ZZZ_Any:$Zn),
+//===----------------------------------------------------------------------===//
+// Lookup table read with 6-bit indices (8-bit)
+class sme2_luti6_zt_base<RegisterOperand zd_ty, string asm>
+  : I<(outs zd_ty:$Zd), (ins ZTR:$ZTt, ZZZ_Any:$Zn),
     asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
   bits<0> ZTt;
   bits<3> Zd;
   bits<3> Zn;
-  let Inst{31-10} = 0b1100000010001010000000;
+  let Inst{31-21} = 0b11000000100;
+  let Inst{19-10} = 0b1010000000;
   let Inst{9-7}   = Zn;
   let Inst{6-5}   = 0b00;
+}
+
+class sme2_luti6_zt_consecutive<string asm>
+  : sme2_luti6_zt_base<ZZZZ_b_mul_r, asm> {
+  let Inst{20}    = 0;
   let Inst{4-2}   = Zd;
   let Inst{1-0}   = 0b00;
 }
 
 class sme2_luti6_zt_strided<string asm>
-  : I<(outs ZZZZ_b_strided:$Zd), (ins ZTR:$ZTt, ZZZ_Any:$Zn),
-    asm, "\t$Zd, $ZTt, $Zn", "", []>, Sched<[]> {
-  bits<0> ZTt;
-  bits<3> Zd;
-  bits<3> Zn;
-  let Inst{31-10} = 0b1100000010011010000000;
-  let Inst{9-7}   = Zn;
-  let Inst{6-5}   = 0b00;
+  : sme2_luti6_zt_base<ZZZZ_b_strided, asm> {
+  let Inst{20}    = 1;
   let Inst{4}     = Zd{2};
   let Inst{3-2}   = 0b00;
   let Inst{1-0}   = Zd{1-0};
 }
 
-class sme2_luti6_vector_vg4<string asm>
-  : I<(outs ZZZZ_h_mul_r:$Zd), (ins ZZ_h:$Zn, ZZ_Any:$Zm, VectorIndexD:$i1),
+//===----------------------------------------------------------------------===//
+// Lookup table read with 6-bit indices (8-bit)
+class sme2_luti6_vector_vg4_base<RegisterOperand zd_ty, string asm>
+  : I<(outs zd_ty:$Zd), (ins ZZ_h:$Zn, ZZ_Any:$Zm, VectorIndexD:$i1),
     asm, "\t$Zd, $Zn, $Zm$i1", "", []>, Sched<[]> {
   bits<3> Zd;
   bits<5> Zn;
@@ -3970,25 +3974,19 @@ class sme2_luti6_vector_vg4<string asm>
   let Inst{22}    = i1;
   let Inst{21}    = 0b1;
   let Inst{20-16} = Zm;
-  let Inst{15-10} = 0b111101;
   let Inst{9-5}   = Zn;
+}
+
+class sme2_luti6_vector_vg4_consecutive<string asm>
+  : sme2_luti6_vector_vg4_base<ZZZZ_h_mul_r, asm> {
+  let Inst{15-10} = 0b111101;
   let Inst{4-2}   = Zd;
   let Inst{1-0}   = 0b00;
 }
 
 class sme2_luti6_vector_vg4_strided<string asm>
-  : I<(outs ZZZZ_h_strided:$Zd), (ins ZZ_h:$Zn, ZZ_Any:$Zm, VectorIndexD:$i1),
-    asm, "\t$Zd, $Zn, $Zm$i1", "", []>, Sched<[]> {
-  bits<3> Zd;
-  bits<5> Zn;
-  bits<5> Zm;
-  bits<1> i1;
-  let Inst{31-23} = 0b110000010;
-  let Inst{22}    = i1;
-  let Inst{21}    = 0b1;
-  let Inst{20-16} = Zm;
+  : sme2_luti6_vector_vg4_base<ZZZZ_h_strided, asm> {
   let Inst{15-10} = 0b111111;
-  let Inst{9-5}   = Zn;
   let Inst{4}     = Zd{2};
   let Inst{3-2}   = 0b00;
   let Inst{1-0}   = Zd{1-0};
