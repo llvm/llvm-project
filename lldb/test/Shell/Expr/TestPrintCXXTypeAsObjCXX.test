@@ -1,0 +1,34 @@
+# UNSUPPORTED: system-windows
+#
+# Tests that we don't crash when trying to `po` an incomplete
+# C++ type with synthetic children in an ObjC++ target.
+#
+# RUN: split-file %s %t
+# RUN: %clang_host -x objective-c++ -g %t/main.mm -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.mm
+
+#include <vector>
+
+int main() {
+    std::vector<int> * vec;
+    __builtin_debugtrap();
+}
+
+#--- commands.input
+
+run
+
+frame variable -O -- vec
+# CHECK:      frame variable
+# CHECK-NEXT: warning: no object description available
+
+expression -O -- vec
+# CHECK:      expression
+# CHECK-NEXT: size=error: incomplete type
+
+dwim-print -O -- vec
+# CHECK:      dwim-print
+# CHECK-NEXT: size=error: incomplete type
