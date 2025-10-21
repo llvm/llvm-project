@@ -43284,8 +43284,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
 // Simplify variable target shuffle masks based on the demanded elements.
 // TODO: Handle DemandedBits in mask indices as well?
 bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
-    SDValue Op, const APInt &DemandedElts, unsigned MaskIndex,
-    TargetLowering::TargetLoweringOpt &TLO, unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+    unsigned MaskIndex, TargetLowering::TargetLoweringOpt &TLO,
+    unsigned Depth) const {
   // If we're demanding all elements don't bother trying to simplify the mask.
   unsigned NumElts = DemandedElts.getBitWidth();
   if (DemandedElts.isAllOnes())
@@ -43297,8 +43298,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
 
   // Attempt to generically simplify the variable shuffle mask.
   APInt MaskUndef, MaskZero;
-  if (SimplifyDemandedVectorElts(Mask, DemandedElts, MaskUndef, MaskZero, TLO,
-                                 Depth + 1))
+  if (SimplifyDemandedVectorElts(Mask, DemandedElts, DoNotPoisonEltMask,
+                                 MaskUndef, MaskZero, TLO, Depth + 1))
     return true;
 
   // Attempt to extract+simplify a (constant pool load) shuffle mask.
@@ -43324,7 +43325,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
     return false;
   unsigned Scale = NumCstElts / NumElts;
 
-  // Simplify mask if we have an undemanded element that is not undef.
+  // Simplify mask if we have an undemanded element that is not undef/posion.
   bool Simplified = false;
   SmallVector<Constant *, 32> ConstVecOps;
   for (unsigned i = 0; i != NumCstElts; ++i) {
@@ -43351,8 +43352,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetShuffle(
 }
 
 bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
-    SDValue Op, const APInt &DemandedElts, APInt &KnownUndef, APInt &KnownZero,
-    TargetLoweringOpt &TLO, unsigned Depth) const {
+    SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonEltMask,
+    APInt &KnownUndef, APInt &KnownZero, TargetLoweringOpt &TLO,
+    unsigned Depth) const {
   int NumElts = DemandedElts.getBitWidth();
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
@@ -43365,11 +43367,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
-    if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, DoNotPoisonEltMask,
+                                   LHSUndef, LHSZero, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, DoNotPoisonEltMask,
+                                   RHSUndef, RHSZero, TLO, Depth + 1))
       return true;
     // Multiply by zero.
     KnownZero = LHSZero | RHSZero;
@@ -43382,24 +43384,26 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
     APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, 2 * NumElts);
+    APInt DoNotPoisonSrcElts =
+        APIntOps::ScaleBitMask(DoNotPoisonEltMask, 2 * NumElts);
 
-    if (SimplifyDemandedVectorElts(LHS, DemandedSrcElts, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedSrcElts, DoNotPoisonSrcElts,
+                                   LHSUndef, LHSZero, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, DemandedSrcElts, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedSrcElts, DoNotPoisonSrcElts,
+                                   RHSUndef, RHSZero, TLO, Depth + 1))
       return true;
 
     // TODO: Multiply by zero.
 
     // If RHS/LHS elements are known zero then we don't need the LHS/RHS equivalent.
     APInt DemandedLHSElts = DemandedSrcElts & ~RHSZero;
-    if (SimplifyDemandedVectorElts(LHS, DemandedLHSElts, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedLHSElts, DoNotPoisonSrcElts,
+                                   LHSUndef, LHSZero, TLO, Depth + 1))
       return true;
     APInt DemandedRHSElts = DemandedSrcElts & ~LHSZero;
-    if (SimplifyDemandedVectorElts(RHS, DemandedRHSElts, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedRHSElts, DoNotPoisonSrcElts,
+                                   RHSUndef, RHSZero, TLO, Depth + 1))
       return true;
     break;
   }
@@ -43414,7 +43418,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes()) {
       unsigned NumSrcElts = LHS.getValueType().getVectorNumElements();
-      APInt DemandedSrcElts = APIntOps::ScaleBitMask(DemandedElts, NumSrcElts);
+      APInt DemandedSrcElts =
+          APIntOps::ScaleBitMask(DemandedElts | DoNotPoisonEltMask, NumSrcElts);
       SDValue NewLHS = SimplifyMultipleUseDemandedVectorElts(
           LHS, DemandedSrcElts, TLO.DAG, Depth + 1);
       SDValue NewRHS = SimplifyMultipleUseDemandedVectorElts(
@@ -43448,7 +43453,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     APInt AmtUndef, AmtZero;
     unsigned NumAmtElts = AmtVT.getVectorNumElements();
     APInt AmtElts = APInt::getLowBitsSet(NumAmtElts, NumAmtElts / 2);
-    if (SimplifyDemandedVectorElts(Amt, AmtElts, AmtUndef, AmtZero, TLO,
+    APInt DoNotPoisonAmtElts = APInt::getZero(NumAmtElts);
+    if (SimplifyDemandedVectorElts(Amt, AmtElts, DoNotPoisonAmtElts, AmtUndef, AmtZero, TLO,
                                    Depth + 1, AssumeSingleUse))
       return true;
     [[fallthrough]];
@@ -43458,8 +43464,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::VSRAI: {
     SDValue Src = Op.getOperand(0);
     APInt SrcUndef;
-    if (SimplifyDemandedVectorElts(Src, DemandedElts, SrcUndef, KnownZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedElts, DoNotPoisonEltMask,
+                                   SrcUndef, KnownZero, TLO, Depth + 1))
       return true;
 
     // Fold shift(0,x) -> 0
@@ -43470,7 +43476,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     if (!DemandedElts.isAllOnes())
       if (SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-              Src, DemandedElts, TLO.DAG, Depth + 1))
+              Src, DemandedElts | DoNotPoisonEltMask, TLO.DAG, Depth + 1))
         return TLO.CombineTo(
             Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewSrc, Op.getOperand(1)));
     break;
@@ -43484,8 +43490,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
-    if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, DoNotPoisonEltMask,
+                                   LHSUndef, LHSZero, TLO, Depth + 1))
       return true;
 
     // Fold shift(0,x) -> 0
@@ -43493,8 +43499,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return TLO.CombineTo(
           Op, getZeroVector(VT.getSimpleVT(), Subtarget, TLO.DAG, SDLoc(Op)));
 
-    if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, DoNotPoisonEltMask,
+                                   RHSUndef, RHSZero, TLO, Depth + 1))
       return true;
 
     KnownZero = LHSZero;
@@ -43528,11 +43534,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     APInt RHSUndef, RHSZero;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
-    if (SimplifyDemandedVectorElts(LHS, DemandedElts, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(LHS, DemandedElts, DoNotPoisonEltMask,
+                                   LHSUndef, LHSZero, TLO, Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, DemandedElts, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(RHS, DemandedElts, DoNotPoisonEltMask,
+                                   RHSUndef, RHSZero, TLO, Depth + 1))
       return true;
     break;
   }
@@ -43566,8 +43572,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
 
     APInt DemandedSrc = DemandedElts.lshr(ShiftAmt);
-    if (SimplifyDemandedVectorElts(Src, DemandedSrc, KnownUndef, KnownZero, TLO,
-                                   Depth + 1))
+    APInt DoNotPoisonSrcElts = DoNotPoisonEltMask.lshr(ShiftAmt);
+    if (SimplifyDemandedVectorElts(Src, DemandedSrc, DoNotPoisonSrcElts,
+                                   KnownUndef, KnownZero, TLO, Depth + 1))
       return true;
 
     KnownUndef <<= ShiftAmt;
@@ -43605,8 +43612,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     }
 
     APInt DemandedSrc = DemandedElts.shl(ShiftAmt);
-    if (SimplifyDemandedVectorElts(Src, DemandedSrc, KnownUndef, KnownZero, TLO,
-                                   Depth + 1))
+    APInt DoNotPoisonSrcElts = DoNotPoisonEltMask.shl(ShiftAmt);
+    if (SimplifyDemandedVectorElts(Src, DemandedSrc, DoNotPoisonSrcElts,
+                                   KnownUndef, KnownZero, TLO, Depth + 1))
       return true;
 
     KnownUndef.lshrInPlace(ShiftAmt);
@@ -43654,17 +43662,17 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     APInt LHSUndef, LHSZero;
     APInt RHSUndef, RHSZero;
-    if (SimplifyDemandedVectorElts(LHS, EltsLHS, LHSUndef, LHSZero, TLO,
+    if (SimplifyDemandedVectorElts(LHS, EltsLHS, DoNotPoisonEltMask, LHSUndef, LHSZero, TLO,
                                    Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(RHS, EltsRHS, RHSUndef, RHSZero, TLO,
+    if (SimplifyDemandedVectorElts(RHS, EltsRHS, DoNotPoisonEltMask, RHSUndef, RHSZero, TLO,
                                    Depth + 1))
       return true;
 
     if (!DemandedElts.isAllOnes()) {
-      SDValue NewLHS = SimplifyMultipleUseDemandedBits(LHS, BitsLHS, EltsLHS,
+      SDValue NewLHS = SimplifyMultipleUseDemandedBits(LHS, BitsLHS, EltsLHS | DoNotPoisonEltMask,
                                                        TLO.DAG, Depth + 1);
-      SDValue NewRHS = SimplifyMultipleUseDemandedBits(RHS, BitsRHS, EltsRHS,
+      SDValue NewRHS = SimplifyMultipleUseDemandedBits(RHS, BitsRHS, EltsRHS | DoNotPoisonEltMask,
                                                        TLO.DAG, Depth + 1);
       if (NewLHS || NewRHS) {
         NewLHS = NewLHS ? NewLHS : LHS;
@@ -43683,8 +43691,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     EVT SrcVT = Src.getValueType();
     APInt SrcUndef, SrcZero;
     APInt SrcElts = DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
-    if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
+    APInt DoNotPoisonSrcElts =
+        DoNotPoisonEltMask.zextOrTrunc(SrcVT.getVectorNumElements());
+    if (SimplifyDemandedVectorElts(Src, SrcElts, DoNotPoisonSrcElts, SrcUndef,
+                                   SrcZero, TLO, Depth + 1))
       return true;
     break;
   }
@@ -43695,14 +43705,16 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     APInt DemandedLHS, DemandedRHS;
     getPackDemandedElts(VT, DemandedElts, DemandedLHS, DemandedRHS);
+    APInt DoNotPoisonLHS, DoNotPoisonRHS;
+    getPackDemandedElts(VT, DoNotPoisonEltMask, DoNotPoisonLHS, DoNotPoisonRHS);
 
     APInt LHSUndef, LHSZero;
-    if (SimplifyDemandedVectorElts(N0, DemandedLHS, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(N0, DemandedLHS, DoNotPoisonLHS, LHSUndef,
+                                   LHSZero, TLO, Depth + 1))
       return true;
     APInt RHSUndef, RHSZero;
-    if (SimplifyDemandedVectorElts(N1, DemandedRHS, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(N1, DemandedRHS, DoNotPoisonRHS, RHSUndef,
+                                   RHSZero, TLO, Depth + 1))
       return true;
 
     // TODO - pass on known zero/undef.
@@ -43710,10 +43722,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     // TODO - we should do this for all target/faux shuffles ops.
     if (!DemandedElts.isAllOnes()) {
-      SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(N0, DemandedLHS,
-                                                            TLO.DAG, Depth + 1);
-      SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(N1, DemandedRHS,
-                                                            TLO.DAG, Depth + 1);
+      SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(
+          N0, DemandedLHS | DoNotPoisonLHS, TLO.DAG, Depth + 1);
+      SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(
+          N1, DemandedRHS | DoNotPoisonRHS, TLO.DAG, Depth + 1);
       if (NewN0 || NewN1) {
         NewN0 = NewN0 ? NewN0 : N0;
         NewN1 = NewN1 ? NewN1 : N1;
@@ -43732,14 +43744,17 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 
     APInt DemandedLHS, DemandedRHS;
     getHorizDemandedElts(VT, DemandedElts, DemandedLHS, DemandedRHS);
+    APInt DoNotPoisonLHS, DoNotPoisonRHS;
+    getHorizDemandedElts(VT, DoNotPoisonEltMask, DoNotPoisonLHS,
+                         DoNotPoisonRHS);
 
     APInt LHSUndef, LHSZero;
-    if (SimplifyDemandedVectorElts(N0, DemandedLHS, LHSUndef, LHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(N0, DemandedLHS, DoNotPoisonLHS, LHSUndef,
+                                   LHSZero, TLO, Depth + 1))
       return true;
     APInt RHSUndef, RHSZero;
-    if (SimplifyDemandedVectorElts(N1, DemandedRHS, RHSUndef, RHSZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(N1, DemandedRHS, DoNotPoisonRHS, RHSUndef,
+                                   RHSZero, TLO, Depth + 1))
       return true;
 
     // TODO - pass on known zero/undef.
@@ -43747,10 +43762,10 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // Aggressively peek through ops to get at the demanded elts.
     // TODO: Handle repeated operands.
     if (N0 != N1 && !DemandedElts.isAllOnes()) {
-      SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(N0, DemandedLHS,
-                                                            TLO.DAG, Depth + 1);
-      SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(N1, DemandedRHS,
-                                                            TLO.DAG, Depth + 1);
+      SDValue NewN0 = SimplifyMultipleUseDemandedVectorElts(
+          N0, DemandedLHS | DoNotPoisonLHS, TLO.DAG, Depth + 1);
+      SDValue NewN1 = SimplifyMultipleUseDemandedVectorElts(
+          N1, DemandedRHS | DoNotPoisonRHS, TLO.DAG, Depth + 1);
       if (NewN0 || NewN1) {
         NewN0 = NewN0 ? NewN0 : N0;
         NewN1 = NewN1 ? NewN1 : N1;
@@ -43766,9 +43781,11 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     SDValue Src = Op.getOperand(0);
     MVT SrcVT = Src.getSimpleValueType();
     APInt DemandedSrc = DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
+    APInt DoNotPoisonSrcElts =
+        DoNotPoisonEltMask.zextOrTrunc(SrcVT.getVectorNumElements());
     APInt SrcUndef, SrcZero;
-    if (SimplifyDemandedVectorElts(Src, DemandedSrc, SrcUndef, SrcZero, TLO,
-                                   Depth + 1))
+    if (SimplifyDemandedVectorElts(Src, DemandedSrc, DoNotPoisonSrcElts,
+                                   SrcUndef, SrcZero, TLO, Depth + 1))
       return true;
     KnownZero = SrcZero.zextOrTrunc(NumElts);
     KnownUndef = SrcUndef.zextOrTrunc(NumElts);
@@ -43779,25 +43796,28 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
     if (SDValue R = combineBlendOfPermutes(
             VT.getSimpleVT(), Op.getOperand(0), Op.getOperand(1), BlendMask,
-            DemandedElts, TLO.DAG, Subtarget, SDLoc(Op)))
+            DemandedElts | DoNotPoisonEltMask, TLO.DAG, Subtarget, SDLoc(Op)))
       return TLO.CombineTo(Op, R);
     break;
   }
   case X86ISD::BLENDV: {
     APInt SelUndef, SelZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, SelUndef,
-                                   SelZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts,
+                                   DoNotPoisonEltMask, SelUndef, SelZero, TLO,
+                                   Depth + 1))
       return true;
 
     // TODO: Use SelZero to adjust LHS/RHS DemandedElts.
     APInt LHSUndef, LHSZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, LHSUndef,
-                                   LHSZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts,
+                                   DoNotPoisonEltMask, LHSUndef, LHSZero, TLO,
+                                   Depth + 1))
       return true;
 
     APInt RHSUndef, RHSZero;
-    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedElts, RHSUndef,
-                                   RHSZero, TLO, Depth + 1))
+    if (SimplifyDemandedVectorElts(Op.getOperand(2), DemandedElts,
+                                   DoNotPoisonEltMask, RHSUndef, RHSZero, TLO,
+                                   Depth + 1))
       return true;
 
     KnownZero = LHSZero & RHSZero;
@@ -43807,7 +43827,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   case X86ISD::VZEXT_MOVL: {
     // If upper demanded elements are already zero then we have nothing to do.
     SDValue Src = Op.getOperand(0);
-    APInt DemandedUpperElts = DemandedElts;
+    APInt DemandedUpperElts = DemandedElts | DoNotPoisonEltMask;
     DemandedUpperElts.clearLowBits(1);
     if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1))
       return TLO.CombineTo(Op, Src);
@@ -43843,7 +43863,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       break;
     APInt SrcUndef, SrcZero;
     APInt SrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(), 0);
-    if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,
+    APInt DoNotPoisonSrcElts = APInt::getZero(SrcVT.getVectorNumElements());
+    if (SimplifyDemandedVectorElts(Src, SrcElts, DoNotPoisonSrcElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
     // Aggressively peek through src to get at the demanded elt.
@@ -43854,21 +43875,21 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::VPERMV:
-    if (SimplifyDemandedVectorEltsForTargetShuffle(Op, DemandedElts, 0, TLO,
-                                                   Depth))
+    if (SimplifyDemandedVectorEltsForTargetShuffle(
+            Op, DemandedElts, DoNotPoisonEltMask, 0, TLO, Depth))
       return true;
     break;
   case X86ISD::PSHUFB:
   case X86ISD::VPERMV3:
   case X86ISD::VPERMILPV:
-    if (SimplifyDemandedVectorEltsForTargetShuffle(Op, DemandedElts, 1, TLO,
-                                                   Depth))
+    if (SimplifyDemandedVectorEltsForTargetShuffle(
+            Op, DemandedElts, DoNotPoisonEltMask, 1, TLO, Depth))
       return true;
     break;
   case X86ISD::VPPERM:
   case X86ISD::VPERMIL2:
-    if (SimplifyDemandedVectorEltsForTargetShuffle(Op, DemandedElts, 2, TLO,
-                                                   Depth))
+    if (SimplifyDemandedVectorEltsForTargetShuffle(
+            Op, DemandedElts, DoNotPoisonEltMask, 2, TLO, Depth))
       return true;
     break;
   }
@@ -44203,6 +44224,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     return TLO.CombineTo(
         Op, getZeroVector(VT.getSimpleVT(), Subtarget, TLO.DAG, SDLoc(Op)));
   }
+  // FIXME: Do we need to consider DoNotPoisonEltMask?
   for (int Src = 0; Src != NumSrcs; ++Src)
     if (isSequentialOrUndefInRange(OpMask, 0, NumElts, Src * NumElts))
       return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, OpInputs[Src]));
@@ -44216,7 +44238,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     int Lo = Src * NumElts;
     APInt SrcElts = APInt::getZero(NumElts);
     for (int i = 0; i != NumElts; ++i)
-      if (DemandedElts[i]) {
+      if (DemandedElts[i] || DoNotPoisonEltMask[i]) {
         int M = OpMask[i] - Lo;
         if (0 <= M && M < NumElts)
           SrcElts.setBit(M);
@@ -44236,6 +44258,8 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   // to match. This prevents combineX86ShuffleChain from returning a
   // combined shuffle that's the same as the original root, causing an
   // infinite loop.
+  // FIXME: Here we assume that combineX86ShufflesRecursively doesn't make
+  // undemanded vector elements more poisonous. No idea if that is true.
   if (!DemandedElts.isAllOnes()) {
     assert(Depth < X86::MaxShuffleCombineDepth && "Depth out of range");
 
