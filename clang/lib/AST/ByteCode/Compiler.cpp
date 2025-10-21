@@ -4872,7 +4872,7 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
 
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-      return Init && checkDecl() && initGlobal(*GlobalIndex);
+      return !Init || (checkDecl() && initGlobal(*GlobalIndex));
     }
 
     UnsignedOrNone GlobalIndex = P.createGlobal(VD, Init);
