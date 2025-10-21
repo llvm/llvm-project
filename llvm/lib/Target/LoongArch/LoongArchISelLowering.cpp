@@ -2319,6 +2319,82 @@ static SDValue lowerVECTOR_SHUFFLE_XVPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
   return DAG.getNode(LoongArchISD::VPICKOD, DL, VT, V2, V1);
 }
 
+/// Lower VECTOR_SHUFFLE into XVEXTRINS (if possible).
+static SDValue
+lowerVECTOR_SHUFFLE_XVEXTRINS(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                              SDValue V1, SDValue V2, SelectionDAG &DAG,
+                              const LoongArchSubtarget &Subtarget) {
+  int NumElts = VT.getVectorNumElements();
+  MVT EltVT = VT.getVectorElementType();
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  if ((int)Mask.size() != NumElts)
+    return SDValue();
+
+  auto tryLowerToExtrAndIns = [&](int Base) -> SDValue {
+    SmallVector<int> DiffPos;
+    for (int i = 0; i < NumElts; ++i) {
+      if (Mask[i] == -1)
+        continue;
+      if (Mask[i] != Base + i) {
+        DiffPos.push_back(i);
+        if (DiffPos.size() > 2)
+          return SDValue();
+      }
+    }
+
+    // Need exactly two differing element to lower into XVEXTRINS.
+    if (DiffPos.size() != 2 || DiffPos[1] != DiffPos[0] + NumElts / 2)
+      return SDValue();
+
+    // DiffMask must be in its low or high part.
+    int DiffMaskLo = Mask[DiffPos[0]];
+    int DiffMaskHi = Mask[DiffPos[1]];
+    if (!(DiffMaskLo >= 0 && DiffMaskLo < NumElts / 2) &&
+        !(DiffMaskLo >= NumElts && DiffMaskLo < NumElts + NumElts / 2))
+      return SDValue();
+    if (!(DiffMaskHi >= NumElts / 2 && DiffMaskHi < NumElts) &&
+        !(DiffMaskHi >= NumElts + NumElts / 2 && DiffMaskHi < 2 * NumElts))
+      return SDValue();
+    if (DiffMaskHi != DiffMaskLo + NumElts / 2)
+      return SDValue();
+
+    // Determine source vector and source index.
+    SDValue SrcVec = (DiffMaskLo < NumElts / 2) ? V1 : V2;
+    int SrcIdxLo =
+        (DiffMaskLo < NumElts / 2) ? DiffMaskLo : (DiffMaskLo - NumElts);
+    bool IsEltFP = EltVT.isFloatingPoint();
+
+    auto extractVal = [&](int Idx) -> SDValue {
+      SDValue Extracted =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, IsEltFP ? EltVT : GRLenVT,
+                      SrcVec, DAG.getConstant(Idx, DL, GRLenVT));
+      SDValue InsertVal = Extracted;
+      if (!IsEltFP && EltVT != GRLenVT)
+        InsertVal =
+            DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT,
+                        DAG.getNode(ISD::TRUNCATE, DL, EltVT, Extracted));
+      return InsertVal;
+    };
+
+    // Replace with 2*EXTRACT_VECTOR_ELT + 2*INSERT_VECTOR_ELT, it will match
+    // the patterns of XVEXTRINS in tablegen.
+    SDValue InsertLo = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT,
+                                   (Base == 0) ? V1 : V2, extractVal(SrcIdxLo),
+                                   DAG.getConstant(DiffPos[0], DL, GRLenVT));
+    SDValue Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, InsertLo,
+                                 extractVal(SrcIdxLo + NumElts / 2),
+                                 DAG.getConstant(DiffPos[1], DL, GRLenVT));
+
+    return Result;
+  };
+
+  // Try [0, n-1) insertion then [n, 2n-1) insertion.
+  if (SDValue Result = tryLowerToExtrAndIns(0))
+    return Result;
+  return tryLowerToExtrAndIns(NumElts);
+}
+
 /// Lower VECTOR_SHUFFLE into XVINSVE0 (if possible).
 static SDValue
 lowerVECTOR_SHUFFLE_XVINSVE0(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
@@ -2638,6 +2714,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, Mask, VT, V1, V2, DAG)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, Mask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLE_XVEXTRINS(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLEAsShift(DL, Mask, VT, V1, V2, DAG, Subtarget,
                                            Zeroable)))

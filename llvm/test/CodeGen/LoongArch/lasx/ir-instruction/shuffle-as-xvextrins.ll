@@ -8,9 +8,7 @@ define void @shufflevector_v32i8(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    xvshuf.b $xr0, $xr1, $xr0, $xr2
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 240
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -26,10 +24,8 @@ define void @shufflevector_v16i16(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: shufflevector_v16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvshuf.h $xr1, $xr0, $xr0
-; CHECK-NEXT:    xvst $xr1, $a0, 0
+; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 66
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <16 x i16>, ptr %a
@@ -45,10 +41,8 @@ define void @shufflevector_v8i32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a0, 0
+; CHECK-NEXT:    xvextrins.w $xr1, $xr0, 3
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x i32>, ptr %a
@@ -64,10 +58,8 @@ define void @shufflevector_v8f32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a0, 0
+; CHECK-NEXT:    xvextrins.w $xr1, $xr0, 48
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x float>, ptr %a
