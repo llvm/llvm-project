@@ -2754,6 +2754,9 @@ static void emitPossiblyUnreachableDiags(Sema &S, AnalysisDeclContext &AC,
       const auto &D = *I;
       if (llvm::all_of(D.Stmts, [&](const Stmt *St) {
             const CFGBlock *Block = AC.getBlockForRegisteredExpression(St);
+            // FIXME: We should be able to assert that block is non-null, but
+            // the CFG analysis can skip potentially-evaluated expressions in
+            // edge cases; see test/Sema/vla-2.c.
             if (Block && Analysis)
               if (!Analysis->isReachable(&AC.getCFG()->getEntry(), Block))
                 return false;
