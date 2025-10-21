@@ -210,6 +210,13 @@ New checks
   Finds calls to STL library iterator algorithms that could be replaced with
   LLVM range-based algorithms from ``llvm/ADT/STLExtras.h``.
 
+- New :doc:`misc-bool-bitwise-operation
+  <clang-tidy/checks/misc/bool-bitwise-operation>` check.
+
+  Finds potentially inefficient use of bitwise operators such as ``&``,  ``|``
+  and their compound analogues on Boolean values where logical operators like
+  ``&&`` and ``||`` would be more appropriate.
+
 - New :doc:`misc-override-with-different-visibility
   <clang-tidy/checks/misc/override-with-different-visibility>` check.
 
