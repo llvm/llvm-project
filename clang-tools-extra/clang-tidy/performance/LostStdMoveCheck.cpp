@@ -174,7 +174,7 @@ void LostStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   const SourceManager &Source = Result.Context->getSourceManager();
-  const auto Range =
+  const CharSourceRange Range =
       CharSourceRange::getTokenRange(MatchedUse->getSourceRange());
   const StringRef NeedleExprCode =
       Lexer::getSourceText(Range, Source, Result.Context->getLangOpts());
