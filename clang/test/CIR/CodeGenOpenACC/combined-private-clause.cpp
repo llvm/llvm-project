@@ -158,7 +158,7 @@ struct HasDtor {
 // CHECK-NEXT: }
 
 extern "C" void acc_combined() {
-  // CHECK: cir.func{{.*}} @acc_combined() {
+  // CHECK: cir.func{{.*}} @acc_combined()
 
   int someInt;
   // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]

@@ -255,7 +255,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
   mlir::Value expected = builder.createLoad(loc, val1);
   mlir::Value desired = builder.createLoad(loc, val2);
 
-  auto cmpxchg = cir::AtomicCmpXchg::create(
+  auto cmpxchg = cir::AtomicCmpXchgOp::create(
       builder, loc, expected.getType(), builder.getBoolTy(), ptr.getPointer(),
       expected, desired,
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
@@ -404,8 +404,25 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_exchange:
-    opName = cir::AtomicXchg::getOperationName();
+    opName = cir::AtomicXchgOp::getOperationName();
     break;
+
+  case AtomicExpr::AO__atomic_test_and_set: {
+    auto op = cir::AtomicTestAndSetOp::create(
+        builder, loc, ptr.getPointer(), order,
+        builder.getI64IntegerAttr(ptr.getAlignment().getQuantity()),
+        expr->isVolatile());
+    builder.createStore(loc, op, dest);
+    return;
+  }
+
+  case AtomicExpr::AO__atomic_clear: {
+    cir::AtomicClearOp::create(
+        builder, loc, ptr.getPointer(), order,
+        builder.getI64IntegerAttr(ptr.getAlignment().getQuantity()),
+        expr->isVolatile());
+    return;
+  }
 
   case AtomicExpr::AO__opencl_atomic_init:
 
@@ -502,10 +519,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_fetch_nand:
   case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-
-  case AtomicExpr::AO__atomic_test_and_set:
-
-  case AtomicExpr::AO__atomic_clear:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
@@ -581,6 +594,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
 
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__atomic_test_and_set:
+  case AtomicExpr::AO__atomic_clear:
     break;
 
   case AtomicExpr::AO__atomic_load:
@@ -640,6 +655,9 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       dest = atomics.castToAtomicIntPointer(dest);
   } else if (e->isCmpXChg()) {
     dest = createMemTemp(resultTy, getLoc(e->getSourceRange()), "cmpxchg.bool");
+  } else if (e->getOp() == AtomicExpr::AO__atomic_test_and_set) {
+    dest = createMemTemp(resultTy, getLoc(e->getSourceRange()),
+                         "test_and_set.bool");
   } else if (!resultTy->isVoidType()) {
     dest = atomics.createTempAlloca();
     if (shouldCastToIntPtrTy)

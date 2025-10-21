@@ -1860,7 +1860,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 22)
+    if (Record.size() < 14 || Record.size() > 23)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1869,11 +1869,13 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
+    const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
         HasVersionedLanguage
-            ? DISourceLanguageName(Record[1] & ~LangVersionMask, 0)
+            ? DISourceLanguageName(Record[1] & ~LangVersionMask,
+                                   LanguageVersion)
             : DISourceLanguageName(Record[1]),
         getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
         getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],

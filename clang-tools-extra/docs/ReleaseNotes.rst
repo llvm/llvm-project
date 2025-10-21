@@ -132,7 +132,7 @@ Improvements to clang-tidy
   when run over C files. If ``-std`` is not specified, it defaults to
   ``c99-or-later``.
 
-- :program:`clang-tidy` no longer attemps to analyze code from system headers
+- :program:`clang-tidy` no longer attempts to analyze code from system headers
   by default, greatly improving performance. This behavior is disabled if the
   `SystemHeaders` option is enabled.
 
@@ -274,6 +274,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
   false positive from analysis of a conditional expression in C.
 
+- Improved :doc:`bugprone-not-null-terminated-result
+  <clang-tidy/checks/bugprone/not-null-terminated-result>` check by fixing
+  bogus fix-its for ``strncmp`` and ``wcsncmp`` on Windows and
+  a crash caused by certain value-dependent expressions.
+
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
   declarations and macros in system headers.
@@ -336,8 +341,9 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false
-  positives when pointers is tranferred to non-const references 
-  and avoid false positives of function pointer.
+  positives when pointers is transferred to non-const references 
+  and avoid false positives of function pointer and fix false
+  positives on return of non-const pointer.
 
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
@@ -358,6 +364,11 @@ Changes in existing checks
 - Improved :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check to
   suggest using designated initializers for aliased aggregate types.
+
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` by providing
+  correct fix-its when the right-hand side of a comparison contains a
+  non-C-style cast.
 
 - Improved :doc:`modernize-use-nullptr
   <clang-tidy/checks/modernize/use-nullptr>` check by fixing a crash
