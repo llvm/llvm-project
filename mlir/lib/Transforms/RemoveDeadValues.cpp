@@ -46,6 +46,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -869,9 +870,150 @@ struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
 };
 } // namespace
 
+/// If the target of CallOp is a public function and at least one argument is
+/// NonLive, privatize the function. Our strategy here is separation interface
+/// and implementation. eg.
+///
+/// public void foo(int unused){...}
+/// =>
+/// public void foo(int unused) {          // old function, interface
+///   return __foo_privatized(unused);
+/// }
+///
+/// private void __foo_privatized(int unused) { // the new private function, or
+/// implementation.
+///  ...                                        // the function body of the
+///  original function.
+/// }
+///
+/// Returns true if any IR changes were made, false otherwise.
+static bool processCallOp(CallOpInterface callOp, ModuleOp moduleOp,
+                          RunLivenessAnalysis &la) {
+  Operation *callableOp = callOp.resolveCallable();
+  auto funcOp = dyn_cast<FunctionOpInterface>(callableOp);
+  if (!funcOp || !funcOp.isPublic())
+    return false;
+
+  LDBG() << "Processing callOp " << callOp << " target is a public function: "
+         << funcOp.getOperation()->getName();
+
+  // Get the list of unnecessary (non-live) arguments in `nonLiveArgs`.
+  SmallVector<Value> arguments(callOp.getArgOperands());
+  BitVector nonLiveArgs = markLives(arguments, DenseSet<Value>(), la);
+  nonLiveArgs = nonLiveArgs.flip();
+
+  if (nonLiveArgs.count() > 0) {
+    OpBuilder rewriter(moduleOp.getContext());
+
+    // Clone function and create private version
+    FunctionOpInterface clonedFunc = cast<FunctionOpInterface>(funcOp.clone());
+
+    // Set visibility = 'private' and a new name for the cloned function
+    SymbolTable::setSymbolVisibility(clonedFunc,
+                                     SymbolTable::Visibility::Private);
+    std::string newName = "__" + funcOp.getName().str() + "_privatized";
+    clonedFunc.setName(newName);
+
+    // Insert the cloned function into the module
+    rewriter.setInsertionPointAfter(funcOp);
+    rewriter.insert(clonedFunc);
+
+    // Replace ALL callsites of the original function to call the cloned
+    // function directly
+    LogicalResult result = SymbolTable::replaceAllSymbolUses(
+        funcOp, clonedFunc.getNameAttr(), moduleOp);
+
+    if (result.failed()) {
+      LDBG() << "Failed to replace all symbol uses for " << funcOp.getName();
+      return false;
+    }
+
+    LDBG() << "Redirected all callsites from " << funcOp.getName() << " to "
+           << newName;
+
+    // Transform the original funcOp into a wrapper that calls the cloned
+    // function
+    Region &funcBody = funcOp.getFunctionBody();
+
+    // Clean the original function body
+    funcBody.dropAllReferences();
+    funcBody.getBlocks().clear();
+
+    // Create a new entry block for the wrapper function
+    Block *wrapperBlock = rewriter.createBlock(&funcBody);
+
+    // Add block arguments that match the function signature
+    for (Type argType : funcOp.getArgumentTypes()) {
+      wrapperBlock->addArgument(argType, funcOp.getLoc());
+    }
+
+    // Set insertion point to the new block
+    rewriter.setInsertionPointToStart(wrapperBlock);
+
+    // Clone the original call operation and update its callee
+    auto clonedCallOp = cast<CallOpInterface>(callOp->clone());
+    // Update the callee symbol reference to point to the new private function
+    auto symbolRef =
+        SymbolRefAttr::get(funcOp.getContext(), clonedFunc.getName());
+    clonedCallOp.setCalleeFromCallable(symbolRef);
+    // Set the call arguments to use the wrapper block's arguments
+    clonedCallOp->setOperands(wrapperBlock->getArguments());
+    rewriter.insert(clonedCallOp);
+
+    // Create return operation of the same type as the original function's
+    // return
+    Operation *returnOp = nullptr;
+    for (Block &block : clonedFunc.getFunctionBody()) {
+      if (block.getNumSuccessors() > 0)
+        continue;
+
+      Operation *terminator = block.getTerminator();
+      if (terminator && terminator->hasTrait<OpTrait::ReturnLike>()) {
+        returnOp = terminator;
+        break; // Use first return as template
+      }
+    }
+
+    if (returnOp) {
+      Operation *newReturnOp = returnOp->clone();
+      newReturnOp->setOperands(clonedCallOp->getResults());
+      newReturnOp->setLoc(funcOp.getLoc());
+      rewriter.insert(newReturnOp);
+    }
+    return true; // Changes were made
+  }
+
+  return false;
+}
+
 void RemoveDeadValues::runOnOperation() {
-  auto &la = getAnalysis<RunLivenessAnalysis>();
+  AnalysisManager am = getAnalysisManager();
+  RunLivenessAnalysis *la = &am.getAnalysis<RunLivenessAnalysis>();
   Operation *module = getOperation();
+
+  // Only privatize public functions if liveness analysis is inter-procedural.
+  if (la->getSolverConfig().isInterprocedural()) {
+    bool changed = false;
+    module->walk([&](CallOpInterface callOp) {
+      if (processCallOp(callOp, cast<ModuleOp>(module), *la)) {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      LDBG() << "IR has changed, invalidate RunLivenessAnalysis only";
+      auto &pa = getPassState().preservedAnalyses;
+      bool preserved = pa.isPreserved<RunLivenessAnalysis>();
+      la->invalidate();
+      am.invalidate(pa);
+      la = &am.getAnalysis<RunLivenessAnalysis>();
+      // If RunLivenessAnalysis was previously preserved, preserved the updated
+      // results.
+      if (preserved) {
+        pa.preserve<RunLivenessAnalysis>();
+      }
+    }
+  }
 
   // Tracks values eligible for erasure - complements liveness analysis to
   // identify "droppable" values.
@@ -883,11 +1025,11 @@ void RemoveDeadValues::runOnOperation() {
 
   module->walk([&](Operation *op) {
     if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-      processFuncOp(funcOp, module, la, deadVals, finalCleanupList);
+      processFuncOp(funcOp, module, *la, deadVals, finalCleanupList);
     } else if (auto regionBranchOp = dyn_cast<RegionBranchOpInterface>(op)) {
-      processRegionBranchOp(regionBranchOp, la, deadVals, finalCleanupList);
+      processRegionBranchOp(regionBranchOp, *la, deadVals, finalCleanupList);
     } else if (auto branchOp = dyn_cast<BranchOpInterface>(op)) {
-      processBranchOp(branchOp, la, deadVals, finalCleanupList);
+      processBranchOp(branchOp, *la, deadVals, finalCleanupList);
     } else if (op->hasTrait<::mlir::OpTrait::IsTerminator>()) {
       // Nothing to do here because this is a terminator op and it should be
       // honored with respect to its parent
@@ -895,7 +1037,7 @@ void RemoveDeadValues::runOnOperation() {
       // Nothing to do because this op is associated with a function op and gets
       // cleaned when the latter is cleaned.
     } else {
-      processSimpleOp(op, la, deadVals, finalCleanupList);
+      processSimpleOp(op, *la, deadVals, finalCleanupList);
     }
   });
 
