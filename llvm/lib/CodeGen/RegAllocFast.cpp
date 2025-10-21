@@ -211,7 +211,7 @@ private:
     unsigned getSparseSetIndex() const { return VirtReg.virtRegIndex(); }
   };
 
-  using LiveRegMap = SparseSet<LiveReg, identity<unsigned>, uint16_t>;
+  using LiveRegMap = SparseSet<LiveReg, unsigned, identity_cxx20, uint16_t>;
   /// This map contains entries for each virtual register that is currently
   /// available in a physical register.
   LiveRegMap LiveVirtRegs;
