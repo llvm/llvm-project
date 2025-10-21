@@ -14,7 +14,7 @@
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
-using lldb_private::pprint;
+using lldb_private::PrettyPrint;
 using llvm::json::parse;
 
 TEST(ProtocolRequestsTest, ExceptionInfoArguments) {
@@ -46,7 +46,7 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
     })");
 
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(pprint(*expected), pprint(body));
+  EXPECT_EQ(PrettyPrint(*expected), PrettyPrint(body));
 
   // Check optional keys.
   body.description = "SIGNAL SIGWINCH";
@@ -65,5 +65,5 @@ TEST(ProtocolRequestsTest, ExceptionInfoResponseBody) {
   })");
 
   ASSERT_THAT_EXPECTED(expected_opt, llvm::Succeeded());
-  EXPECT_EQ(pprint(*expected_opt), pprint(body));
+  EXPECT_EQ(PrettyPrint(*expected_opt), PrettyPrint(body));
 }
