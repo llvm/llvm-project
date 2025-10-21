@@ -610,33 +610,6 @@ static bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
   case Instruction::LShr:
     return canEvaluateShiftedShift(NumBits, IsLeftShift, I, IC, CxtI);
 
-  case Instruction::Add: {
-    // We can fold Add through right shifts if it has the appropriate nowrap
-    // flag. For lshr: requires nuw (no unsigned wrap) For ashr: requires nsw
-    // (no signed wrap) We don't support left shift through add.
-    if (IsLeftShift)
-      return false;
-
-    auto *BO = cast<BinaryOperator>(I);
-
-    // Determine which flag is required based on the shift type
-    bool HasRequiredFlag;
-    if (isa<LShrOperator>(CxtI))
-      HasRequiredFlag = BO->hasNoUnsignedWrap();
-    else if (isa<AShrOperator>(CxtI))
-      HasRequiredFlag = BO->hasNoSignedWrap();
-    else
-      return false;
-
-    if (!HasRequiredFlag)
-      return false;
-
-    // Both operands must be shiftable, pass through CxtI to preserve shift type
-    return canEvaluateShifted(I->getOperand(0), NumBits, IsLeftShift, IC,
-                              CxtI) &&
-           canEvaluateShifted(I->getOperand(1), NumBits, IsLeftShift, IC, CxtI);
-  }
-
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
     Value *TrueVal = SI->getTrueValue();
@@ -758,18 +731,6 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     return foldShiftedShift(cast<BinaryOperator>(I), NumBits, isLeftShift,
                             IC.Builder);
 
-  case Instruction::Add:
-    // Shift both operands, then perform the add.
-    I->setOperand(
-        0, getShiftedValue(I->getOperand(0), NumBits, isLeftShift, IC, DL));
-    I->setOperand(
-        1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
-    // We must clear the nuw/nsw flags because the original values that didn't
-    // overflow might overflow after we shift them.
-    cast<BinaryOperator>(I)->setHasNoUnsignedWrap(false);
-    cast<BinaryOperator>(I)->setHasNoSignedWrap(false);
-    return I;
-
   case Instruction::Select:
     I->setOperand(
         1, getShiftedValue(I->getOperand(1), NumBits, isLeftShift, IC, DL));
@@ -792,8 +753,8 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
     IC.InsertNewInstWith(Neg, I->getIterator());
     unsigned TypeWidth = I->getType()->getScalarSizeInBits();
     APInt Mask = APInt::getLowBitsSet(TypeWidth, TypeWidth - NumBits);
-    auto *And = BinaryOperator::CreateAnd(Neg,
-                                          ConstantInt::get(I->getType(), Mask));
+    auto *And =
+        BinaryOperator::CreateAnd(Neg, ConstantInt::get(I->getType(), Mask));
     And->takeName(I);
     return IC.InsertNewInstWith(And, I->getIterator());
   }
