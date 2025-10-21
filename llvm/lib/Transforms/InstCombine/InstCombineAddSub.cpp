@@ -2774,7 +2774,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return replaceInstUsesWith(I, Res);
 
   if (match(Op0, m_ZExt(m_PtrToIntOrAddr_GEAddrSize(DL, m_Value(LHSOp)))) &&
-      match(Op1, m_ZExtOrSelf(m_PtrToIntOrAddr(m_Value(RHSOp))))) {
+      match(Op1,
+            m_ZExtOrSelf(m_PtrToIntOrAddr_GEAddrSize(DL, m_Value(RHSOp))))) {
     if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
       if (GEP->getPointerOperand() == RHSOp) {
         if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {

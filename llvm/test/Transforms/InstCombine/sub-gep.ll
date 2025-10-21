@@ -505,6 +505,23 @@ define i64 @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw(i32 %offset) {
   ret i64 %D
 }
 
+define i64 @negative_zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_truncating(i32 %offset) {
+; CHECK-LABEL: @negative_zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_truncating(
+; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[A_IDX:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
+; CHECK-NEXT:    [[E:%.*]] = zext i32 [[A_IDX]] to i64
+; CHECK-NEXT:    [[D:%.*]] = zext i16 ptrtoint (ptr addrspace(2) @Arr_as2 to i16) to i64
+; CHECK-NEXT:    [[E1:%.*]] = sub nsw i64 [[E]], [[D]]
+; CHECK-NEXT:    ret i64 [[E1]]
+;
+  %A = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 %offset
+  %B = ptrtoint ptr addrspace(2) %A to i32
+  %C = zext i32 %B to i64
+  %D = zext i16 ptrtoint (ptr addrspace(2) @Arr_as2 to i16) to i64
+  %E = sub i64 %C, %D
+  ret i64 %E
+}
+
 define i64 @ptrtoint_sub_zext_ptrtoint_as2_inbounds_local(ptr addrspace(2) %p, i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint_as2_inbounds_local(
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds bfloat, ptr addrspace(2) [[P:%.*]], i32 [[OFFSET:%.*]]
