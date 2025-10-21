@@ -1458,6 +1458,10 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
 }
 
 /// Match low part of 128-bit multiplication.
+///
+/// Use counts are checked to prevent total instruction count increase as per
+/// contributors guide:
+/// https://llvm.org/docs/InstCombineContributorGuide.html#multi-use-handling
 static bool foldMul128Low(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
@@ -1529,6 +1533,10 @@ static bool foldMul128Low(Instruction &I) {
 }
 
 /// Match high part of 128-bit multiplication.
+///
+/// Use counts are checked to prevent total instruction count increase as per
+/// contributors guide:
+/// https://llvm.org/docs/InstCombineContributorGuide.html#multi-use-handling
 static bool foldMul128High(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))
@@ -1647,6 +1655,10 @@ static bool foldMul128High(Instruction &I) {
 ///   %u1_hi = lshr i64 %u1, 32
 ///   %u2 = add nuw i64 %u0_hi, %t3
 ///   %hw64 = add nuw i64 %u2, %u1_hi
+///
+/// Use counts are checked to prevent total instruction count increase as per
+/// contributors guide:
+/// https://llvm.org/docs/InstCombineContributorGuide.html#multi-use-handling
 static bool foldMul128HighVariant(Instruction &I) {
   auto *Ty = I.getType();
   if (!Ty->isIntegerTy(64))

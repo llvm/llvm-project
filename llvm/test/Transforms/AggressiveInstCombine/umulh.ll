@@ -84,7 +84,7 @@ define i64 @umulh_variant(i64 %x, i64 %y) {
 
 ; Commutative ops should match in any order. Ops where operand order has been
 ; reversed from above are marked 'commuted'. As per instcombine contributors
-; guide, constants are always canonicalized to RHS, so don't both commuting
+; guide, constants are always canonicalized to RHS, so don't bother commuting
 ; constants.
 define i64 @umulh__commuted(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh__commuted(
