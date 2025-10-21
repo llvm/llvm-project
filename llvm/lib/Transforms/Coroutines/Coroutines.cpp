@@ -569,13 +569,13 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
   case coro::ABI::RetconOnceDynamic: {
     auto Dealloc = RetconLowering.Dealloc;
     SmallVector<Value *, 2> Args;
-    unsigned sizeParamIndex = 0;
+    unsigned allocationParamIndex = 0;
     if (ABI == coro::ABI::RetconOnceDynamic) {
-      sizeParamIndex = 1;
+      allocationParamIndex = 1;
       Args.push_back(RetconLowering.Allocator);
     }
     Ptr = Builder.CreateBitCast(
-        Ptr, Dealloc->getFunctionType()->getParamType(sizeParamIndex));
+        Ptr, Dealloc->getFunctionType()->getParamType(allocationParamIndex));
     Args.push_back(Ptr);
     auto *Call = Builder.CreateCall(Dealloc, Args);
     propagateCallAttrsFromCallee(Call, Dealloc);
