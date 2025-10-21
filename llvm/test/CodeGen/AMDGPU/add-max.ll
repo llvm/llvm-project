@@ -5,7 +5,7 @@
 define amdgpu_ps float @add_max_u32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_max_u32_e64 v0, v0, v1, v2
+; GCN-NEXT:    v_add_max_u32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.umax.i32(i32 %add, i32 %c)
@@ -16,7 +16,7 @@ define amdgpu_ps float @add_max_u32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_u32_svv(i32 inreg %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_u32_svv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_max_u32_e64 v0, s0, v0, v1
+; GCN-NEXT:    v_add_max_u32 v0, s0, v0, v1
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.umax.i32(i32 %add, i32 %c)
@@ -27,7 +27,7 @@ define amdgpu_ps float @add_max_u32_svv(i32 inreg %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_max_u32_ssv(i32 inreg %a, i32 inreg %b, i32 %c) {
 ; SDAG-LABEL: add_max_u32_ssv:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_add_max_u32_e64 v0, s0, s1, v0
+; SDAG-NEXT:    v_add_max_u32 v0, s0, s1, v0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: add_max_u32_ssv:
@@ -59,7 +59,7 @@ define amdgpu_ps float @add_max_u32_sss(i32 inreg %a, i32 inreg %b, i32 inreg %c
 define amdgpu_ps float @add_max_u32_vsi(i32 %a, i32 inreg %b) {
 ; GCN-LABEL: add_max_u32_vsi:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_max_u32_e64 v0, v0, s0, 4
+; GCN-NEXT:    v_add_max_u32 v0, v0, s0, 4
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.umax.i32(i32 %add, i32 4)
@@ -70,7 +70,7 @@ define amdgpu_ps float @add_max_u32_vsi(i32 %a, i32 inreg %b) {
 define amdgpu_ps float @add_max_u32_svl(i32 inreg %a, i32 %b) {
 ; GCN-LABEL: add_max_u32_svl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_max_u32_e64 v0, s0, v0, 0x64
+; GCN-NEXT:    v_add_max_u32 v0, s0, v0, 0x64
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.umax.i32(i32 %add, i32 100)
@@ -81,7 +81,7 @@ define amdgpu_ps float @add_max_u32_svl(i32 inreg %a, i32 %b) {
 define amdgpu_ps float @add_max_u32_slv(i32 inreg %a, i32 %b) {
 ; SDAG-LABEL: add_max_u32_slv:
 ; SDAG:       ; %bb.0:
-; SDAG-NEXT:    v_add_max_u32_e64 v0, 0x64, s0, v0
+; SDAG-NEXT:    v_add_max_u32 v0, 0x64, s0, v0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-LABEL: add_max_u32_slv:
@@ -99,7 +99,7 @@ define amdgpu_ps float @add_max_u32_slv(i32 inreg %a, i32 %b) {
 define amdgpu_ps float @add_max_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_max_i32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_max_i32_e64 v0, v0, v1, v2
+; GCN-NEXT:    v_add_max_i32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.smax.i32(i32 %add, i32 %c)
@@ -110,7 +110,7 @@ define amdgpu_ps float @add_max_i32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_min_u32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_min_u32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_min_u32_e64 v0, v0, v1, v2
+; GCN-NEXT:    v_add_min_u32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.umin.i32(i32 %add, i32 %c)
@@ -121,7 +121,7 @@ define amdgpu_ps float @add_min_u32_vvv(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @add_min_i32_vvv(i32 %a, i32 %b, i32 %c) {
 ; GCN-LABEL: add_min_i32_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_min_i32_e64 v0, v0, v1, v2
+; GCN-NEXT:    v_add_min_i32 v0, v0, v1, v2
 ; GCN-NEXT:    ; return to shader part epilog
   %add = add i32 %a, %b
   %max = call i32 @llvm.smin.i32(i32 %add, i32 %c)
