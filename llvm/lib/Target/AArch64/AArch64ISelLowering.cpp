@@ -29099,7 +29099,6 @@ bool AArch64TargetLowering::useLoadStackGuardNode(const Module &M) const {
 bool AArch64TargetLowering::useStackGuardXorFP() const {
   // Currently only MSVC CRTs XOR the frame pointer into the stack guard value.
   return Subtarget->getTargetTriple().isOSMSVCRT() &&
-         !Subtarget->isTargetMachO() &&
          !getTargetMachine().Options.EnableGlobalISel;
 }
 
