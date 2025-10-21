@@ -52,7 +52,7 @@ for.end:
 
 
 ; CHECK: br i1 %exitcond.3, label %for.latch, label %for.inner, !llvm.loop ![[LOOP_INNER:[0-9]+]]
-; CHECK: br i1 %niter.ncmp.3, label %for.end.loopexit.unr-lcssa.loopexit, label %for.outer, !llvm.loop ![[LOOP_OUTER:[0-9]+]]
+; CHECK: br i1 %niter.ncmp.3, label %for.end.loopexit.unr-lcssa, label %for.outer, !llvm.loop ![[LOOP_OUTER:[0-9]+]]
 ; CHECK: br i1 %exitcond.epil, label %for.latch.epil, label %for.inner.epil, !llvm.loop ![[LOOP_REMAINDER_INNER:[0-9]+]]
 ; CHECK: br i1 %exitcond.epil.1, label %for.latch.epil.1, label %for.inner.epil.1, !llvm.loop ![[LOOP_REMAINDER_INNER]]
 ; CHECK: br i1 %exitcond.epil.2, label %for.latch.epil.2, label %for.inner.epil.2, !llvm.loop ![[LOOP_REMAINDER_INNER]]
