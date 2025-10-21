@@ -2325,7 +2325,7 @@ are listed below.
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
 
-.. option:: -f[no]split-lto-unit
+.. option:: -f[no-]split-lto-unit
 
    Controls splitting the :doc:`LTO unit <LTOVisibility>` into regular LTO and
    :doc:`ThinLTO` portions, when compiling with -flto=thin. Defaults to false
@@ -2518,7 +2518,7 @@ are listed below.
 
 .. _funique_internal_linkage_names:
 
-.. option:: -f[no]-unique-internal-linkage-names
+.. option:: -f[no-]unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
    linkage symbols.  When this option is set, compiler hashes the main source
@@ -2539,7 +2539,7 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -f[no]-basic-block-address-map:
+.. option:: -f[no-]basic-block-address-map:
   Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
   basic block in the program, relative to the parent function address.
 
@@ -2778,7 +2778,26 @@ usual build cycle when using sample profilers for optimization:
 
      > clang-cl /O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+       code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+
+   [OPTIONAL] Pseudo instrumentation can be used as the anchor for accurate
+   profile mapping with the ``-fpseudo-probe-for-profiling`` option.
+
+   On Linux:
+
+   .. code-block:: console
+
+     $ clang++ -O2 -gline-tables-only \
+       -fpseudo-probe-for-profiling -funique-internal-linkage-names \
+       code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       -fpseudo-probe-for-profiling /clang:-funique-internal-linkage-names ^
+       code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
 
 .. note::
 
@@ -2861,13 +2880,15 @@ usual build cycle when using sample profilers for optimization:
    that executes faster than the original one. Note that you are not
    required to build the code with the exact same arguments that you
    used in the first step. The only requirement is that you build the code
-   with the same debug info options and ``-fprofile-sample-use``.
+   with the same debug info options and ``-fprofile-sample-use``. ``-gdwarf``
+   and ``-gline-tables-only`` can be omitted if you do not need debug info
+   in the final binary.
 
    On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only \
+     $ clang++ -O2 \
        -fdebug-info-for-profiling -funique-internal-linkage-names \
        -fprofile-sample-use=code.prof code.cc -o code
 
@@ -2875,9 +2896,28 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: winbatch
 
-     > clang-cl /O2 -gdwarf -gline-tables-only ^
+     > clang-cl /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code
+
+   [OPTIONAL] Pseudo instrumentation can be used as the anchor for accurate
+   profile mapping with the ``-fpseudo-probe-for-profiling`` option.
+
+   On Linux:
+
+   .. code-block:: console
+
+     $ clang++ -O2 \
+        -fpseudo-probe-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /O2 ^
+       -fpseudo-probe-for-profiling /clang:-funique-internal-linkage-names ^
+       -fprofile-sample-use=code.prof code.cc /Fe:code
 
    [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
    edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2886,7 +2926,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ clang++ -fsample-profile-use-profi -O2 -gline-tables-only \
+     $ clang++ -fsample-profile-use-profi -O2 \
        -fdebug-info-for-profiling -funique-internal-linkage-names \
        -fprofile-sample-use=code.prof code.cc -o code
 
@@ -2894,9 +2934,9 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: winbatch
 
-     > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
+     > clang-cl /clang:-fsample-profile-use-profi /O2 ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
-       -fprofile-sample-use=code.prof code.cc /Fe:code -fuse-ld=lld /link /debug:dwarf
+       -fprofile-sample-use=code.prof code.cc /Fe:code
 
 Sample Profile Formats
 """"""""""""""""""""""
@@ -4034,7 +4074,7 @@ Controlling implementation limits
   Sets the limit for the number of full-expressions evaluated in a single
   constant expression evaluation. This also controls the maximum size
   of array and dynamic array allocation that can be constant evaluated.
-  The default is 1048576.
+  The default is 1048576, and the limit can be disabled with `-fconstexpr-steps=0`.
 
 .. option:: -ftemplate-depth=N
 

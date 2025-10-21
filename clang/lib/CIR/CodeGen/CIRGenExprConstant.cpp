@@ -500,6 +500,26 @@ private:
   bool appendBitField(const FieldDecl *field, uint64_t fieldOffset,
                       cir::IntAttr ci, bool allowOverwrite = false);
 
+  /// Applies zero-initialization to padding bytes before and within a field.
+  /// \param layout The record layout containing field offset information.
+  /// \param fieldNo The field index in the record.
+  /// \param field The field declaration.
+  /// \param allowOverwrite Whether to allow overwriting existing values.
+  /// \param sizeSoFar The current size processed, updated by this function.
+  /// \param zeroFieldSize Set to true if the field has zero size.
+  /// \returns true on success, false if padding could not be applied.
+  bool applyZeroInitPadding(const ASTRecordLayout &layout, unsigned fieldNo,
+                            const FieldDecl &field, bool allowOverwrite,
+                            CharUnits &sizeSoFar, bool &zeroFieldSize);
+
+  /// Applies zero-initialization to trailing padding bytes in a record.
+  /// \param layout The record layout containing size information.
+  /// \param allowOverwrite Whether to allow overwriting existing values.
+  /// \param sizeSoFar The current size processed.
+  /// \returns true on success, false if padding could not be applied.
+  bool applyZeroInitPadding(const ASTRecordLayout &layout, bool allowOverwrite,
+                            CharUnits &sizeSoFar);
+
   bool build(InitListExpr *ile, bool allowOverwrite);
   bool build(const APValue &val, const RecordDecl *rd, bool isPrimaryBase,
              const CXXRecordDecl *vTableClass, CharUnits baseOffset);
@@ -548,10 +568,53 @@ bool ConstRecordBuilder::appendBitField(const FieldDecl *field,
                          allowOverwrite);
 }
 
+bool ConstRecordBuilder::applyZeroInitPadding(
+    const ASTRecordLayout &layout, unsigned fieldNo, const FieldDecl &field,
+    bool allowOverwrite, CharUnits &sizeSoFar, bool &zeroFieldSize) {
+  uint64_t startBitOffset = layout.getFieldOffset(fieldNo);
+  CharUnits startOffset =
+      cgm.getASTContext().toCharUnitsFromBits(startBitOffset);
+  if (sizeSoFar < startOffset) {
+    if (!appendBytes(sizeSoFar, computePadding(cgm, startOffset - sizeSoFar),
+                     allowOverwrite))
+      return false;
+  }
+
+  if (!field.isBitField()) {
+    CharUnits fieldSize =
+        cgm.getASTContext().getTypeSizeInChars(field.getType());
+    sizeSoFar = startOffset + fieldSize;
+    zeroFieldSize = fieldSize.isZero();
+  } else {
+    const CIRGenRecordLayout &rl =
+        cgm.getTypes().getCIRGenRecordLayout(field.getParent());
+    const CIRGenBitFieldInfo &info = rl.getBitFieldInfo(&field);
+    uint64_t endBitOffset = startBitOffset + info.size;
+    sizeSoFar = cgm.getASTContext().toCharUnitsFromBits(endBitOffset);
+    if (endBitOffset % cgm.getASTContext().getCharWidth() != 0)
+      sizeSoFar++;
+    zeroFieldSize = info.size == 0;
+  }
+  return true;
+}
+
+bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
+                                              bool allowOverwrite,
+                                              CharUnits &sizeSoFar) {
+  CharUnits totalSize = layout.getSize();
+  if (sizeSoFar < totalSize) {
+    if (!appendBytes(sizeSoFar, computePadding(cgm, totalSize - sizeSoFar),
+                     allowOverwrite))
+      return false;
+  }
+  sizeSoFar = totalSize;
+  return true;
+}
+
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
   RecordDecl *rd = ile->getType()
                        ->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
+                       ->getDecl()
                        ->getDefinitionOrSelf();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
@@ -562,11 +625,9 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     if (cxxrd->getNumBases())
       return false;
 
-  if (cgm.shouldZeroInitPadding()) {
-    assert(!cir::MissingFeatures::recordZeroInitPadding());
-    cgm.errorNYI(rd->getSourceRange(), "zero init padding");
-    return false;
-  }
+  const bool zeroInitPadding = cgm.shouldZeroInitPadding();
+  bool zeroFieldSize = false;
+  CharUnits sizeSoFar = CharUnits::Zero();
 
   unsigned elementNo = 0;
   for (auto [index, field] : llvm::enumerate(rd->fields())) {
@@ -596,7 +657,10 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       continue;
     }
 
-    assert(!cir::MissingFeatures::recordZeroInitPadding());
+    if (zeroInitPadding &&
+        !applyZeroInitPadding(layout, index, *field, allowOverwrite, sizeSoFar,
+                              zeroFieldSize))
+      return false;
 
     // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
     // represents additional overwriting of our current constant value, and not
@@ -641,8 +705,8 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
     }
   }
 
-  assert(!cir::MissingFeatures::recordZeroInitPadding());
-  return true;
+  return !zeroInitPadding ||
+         applyZeroInitPadding(layout, allowOverwrite, sizeSoFar);
 }
 
 namespace {
@@ -753,9 +817,8 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
 
 mlir::Attribute ConstRecordBuilder::finalize(QualType type) {
   type = type.getNonReferenceType();
-  RecordDecl *rd = type->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd =
+      type->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   mlir::Type valTy = cgm.convertType(type);
   return builder.build(valTy, rd->hasFlexibleArrayMember());
 }
@@ -778,9 +841,8 @@ mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
   ConstantAggregateBuilder constant(emitter.cgm);
   ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
 
-  const RecordDecl *rd = valTy->castAs<clang::RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+  const RecordDecl *rd =
+      valTy->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd);
   if (!builder.build(val, rd, false, cd, CharUnits::Zero()))
     return nullptr;
@@ -809,7 +871,7 @@ bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
 class ConstExprEmitter
     : public StmtVisitor<ConstExprEmitter, mlir::Attribute, QualType> {
   CIRGenModule &cgm;
-  LLVM_ATTRIBUTE_UNUSED ConstantEmitter &emitter;
+  [[maybe_unused]] ConstantEmitter &emitter;
 
 public:
   ConstExprEmitter(ConstantEmitter &emitter)

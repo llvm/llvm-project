@@ -1734,9 +1734,9 @@ mlir::Value ScalarExprEmitter::emitSub(const BinOpInfo &ops) {
   // LLVM we shall take VLA's, division by element size, etc.
   //
   // See more in `EmitSub` in CGExprScalar.cpp.
-  assert(!cir::MissingFeatures::ptrDiffOp());
-  cgf.cgm.errorNYI("ptrdiff");
-  return {};
+  assert(!cir::MissingFeatures::llvmLoweringPtrDiffConsidersPointee());
+  return cir::PtrDiffOp::create(builder, cgf.getLoc(ops.loc), cgf.PtrDiffTy,
+                                ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitShl(const BinOpInfo &ops) {
@@ -1916,6 +1916,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createIntToPtr(middleVal, destCIRTy);
   }
 
+  case CK_Dynamic: {
+    Address v = cgf.emitPointerWithAlignment(subExpr);
+    const auto *dce = cast<CXXDynamicCastExpr>(ce);
+    return cgf.emitDynamicCast(v, dce);
+  }
   case CK_ArrayToPointerDecay:
     return cgf.emitArrayToPointerDecay(subExpr).getPointer();
 

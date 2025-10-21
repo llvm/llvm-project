@@ -461,7 +461,7 @@ bool fromJSON(const json::Value &Params, DataBreakpointInfoArguments &DBIA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.map("variablesReference", DBIA.variablesReference) &&
-         O.map("name", DBIA.name) && O.map("frameId", DBIA.frameId) &&
+         O.map("name", DBIA.name) && O.mapOptional("frameId", DBIA.frameId) &&
          O.map("bytes", DBIA.bytes) && O.map("asAddress", DBIA.asAddress) &&
          O.map("mode", DBIA.mode);
 }

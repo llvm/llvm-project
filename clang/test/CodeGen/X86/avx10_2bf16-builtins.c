@@ -274,7 +274,7 @@ __m256bh test_mm256_loadu_pbh(void *p) {
 
 __m128bh test_mm_load_sbh(void const *A) {
   // CHECK-LABEL: test_mm_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> bitcast (<1 x i8> splat (i8 1) to <8 x i1>), <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> bitcast (<1 x i8> splat (i8 1) to <8 x i1>), <8 x bfloat> %{{.*}})
   return _mm_load_sbh(A);
 }
 
@@ -305,7 +305,7 @@ void test_mm_store_sbh(void *A, __m128bh B) {
 
 void test_mm_mask_store_sbh(void *__P, __mmask8 __U, __m128bh __A) {
   // CHECK-LABEL: @test_mm_mask_store_sbh
-  // CHECK: call void @llvm.masked.store.v8bf16.p0(<8 x bfloat> %{{.*}}, ptr %{{.*}}, i32 1, <8 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.store.v8bf16.p0(<8 x bfloat> %{{.*}}, ptr align 1 %{{.*}}, <8 x i1> %{{.*}})
   _mm_mask_store_sbh(__P, __U, __A);
 }
 
@@ -323,13 +323,13 @@ void test_mm_store_pbh(void *p, __m128bh a) {
 
 __m128bh test_mm_mask_load_sbh(__m128bh __A, __mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_mask_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
   return _mm_mask_load_sbh(__A, __U, __W);
 }
 
 __m128bh test_mm_maskz_load_sbh(__mmask8 __U, const void *__W) {
   // CHECK-LABEL: @test_mm_maskz_load_sbh
-  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
+  // CHECK: %{{.*}} = call <8 x bfloat> @llvm.masked.load.v8bf16.p0(ptr align 1 %{{.*}}, <8 x i1> %{{.*}}, <8 x bfloat> %{{.*}})
   return _mm_maskz_load_sbh(__U, __W);
 }
 
