@@ -9910,6 +9910,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (UserIC == 1 && Hints.getInterleave() > 1) {
+    assert(!LVL.isSafeForAnyVectorWidth() &&
+           "UserIC should only be ignored due to unsafe dependencies");
     LLVM_DEBUG(dbgs() << "LV: Ignoring user-specified interleave count.\n");
     IntDiagMsg = {"InterleavingUnsafe",
                   "Ignoring user-specified interleave count due to possibly "

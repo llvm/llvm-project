@@ -4,23 +4,22 @@
 
 ; CHECK: remark: <unknown>:0:0: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
 ; CHECK-LABEL: @loop_distance_4
-define void @loop_distance_4(i64 %N, ptr %a, ptr %b) {
+define void @loop_distance_4(ptr %a, ptr %b) {
 entry:
-  %cmp10 = icmp sgt i64 %N, 4
-  br i1 %cmp10, label %for.body, label %for.end
+  br label %loop
 
-for.body:
-  %indvars.iv = phi i64 [ 4, %entry ], [ %indvars.iv.next, %for.body ]
-  %0 = getelementptr i32, ptr %b, i64 %indvars.iv
+loop:
+  %iv = phi i64 [ 4, %entry ], [ %iv.next, %loop ]
+  %0 = getelementptr i32, ptr %b, i64 %iv
   %arrayidx = getelementptr i8, ptr %0, i64 -16
   %1 = load i32, ptr %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds nuw i32, ptr %a, i64 %indvars.iv
+  %arrayidx2 = getelementptr inbounds nuw i32, ptr %a, i64 %iv
   %2 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %2, %1
   store i32 %add, ptr %0, align 4
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %N
-  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 64
+  br i1 %exitcond.not, label %for.end, label %loop, !llvm.loop !1
 
 for.end:
   ret void
