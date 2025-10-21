@@ -1706,6 +1706,25 @@ let Predicates = [HasRelaxedSIMD] in {
               (relaxed_max V128:$lhs, V128:$rhs)>;
     def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_max V128:$lhs, V128:$rhs)>;
+
+    // Transform pmin/max-supposed patterns to relaxed min max
+    let AddedComplexity = 1 in {
+      def : Pat<(vec.vt (pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_min $lhs, $rhs)>;
+      def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+                (relaxed_max $lhs, $rhs)>;
+
+      def : Pat<(vec.int_vt (vselect
+                  (setolt (vec.vt (bitconvert V128:$rhs)),
+                          (vec.vt (bitconvert V128:$lhs))),
+                  V128:$rhs, V128:$lhs)),
+                (relaxed_min $lhs, $rhs)>;
+      def : Pat<(vec.int_vt (vselect
+                  (setolt (vec.vt (bitconvert V128:$lhs)),
+                          (vec.vt (bitconvert V128:$rhs))),
+                  V128:$rhs, V128:$lhs)),
+                (relaxed_max $lhs, $rhs)>;
+    }
   }
 }
 

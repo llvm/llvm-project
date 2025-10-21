@@ -59,7 +59,7 @@ define <4 x float> @test_pmin_v4f32_olt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -72,7 +72,7 @@ define <4 x float> @test_pmin_v4f32_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -85,7 +85,7 @@ define <4 x float> @test_pmin_v4f32_ogt(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -98,7 +98,7 @@ define <4 x float> @test_pmin_v4f32_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -126,7 +126,7 @@ define <4 x float> @test_pmin_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <4 x float> %y, %x
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -154,7 +154,7 @@ define <4 x float> @test_pmin_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <4 x float> %x, %y
   %a = select <4 x i1> %c, <4 x float> %y, <4 x float> %x
@@ -167,7 +167,7 @@ define <4 x i32> @test_pmin_int_v4f32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f32x4.pmin
+; CHECK-NEXT:    f32x4.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %fx = bitcast <4 x i32> %x to <4 x float>
   %fy = bitcast <4 x i32> %y to <4 x float>
@@ -182,7 +182,7 @@ define <2 x double> @test_pmin_v2f64_olt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp olt <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -195,7 +195,7 @@ define <2 x double> @test_pmin_v2f64_ole(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ole <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -208,7 +208,7 @@ define <2 x double> @test_pmin_v2f64_ogt(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp ogt <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -221,7 +221,7 @@ define <2 x double> @test_pmin_v2f64_oge(<2 x double> %x, <2 x double> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -249,7 +249,7 @@ define <2 x double> @test_pmin_v2f64_fast_ole(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast ole <2 x double> %y, %x
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -277,7 +277,7 @@ define <2 x double> @test_pmin_v2f64_fast_oge(<2 x double> %x, <2 x double> %y) 
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %c = fcmp fast oge <2 x double> %x, %y
   %a = select <2 x i1> %c, <2 x double> %y, <2 x double> %x
@@ -290,7 +290,7 @@ define <2 x i64> @test_pmin_int_v2f64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    f64x2.pmin
+; CHECK-NEXT:    f64x2.relaxed_min
 ; CHECK-NEXT:    # fallthrough-return
   %fx = bitcast <2 x i64> %x to <2 x double>
   %fy = bitcast <2 x i64> %y to <2 x double>
