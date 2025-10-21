@@ -397,16 +397,15 @@ def int_amdgcn_s_wait_loadcnt        : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_samplecnt      : AMDGPUWaitIntrinsic;
 def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
 
-// Force the VGPR allocation of the current wave to (at least) the given value.
-// The actual number of allocated VGPRs may be rounded up to match hardware
-// block boundaries.
+// Request the hardware to allocate the given number of VGPRs. The actual number
+// of allocated VGPRs may be rounded up to match hardware block boundaries.
 // It is the responsibility of the calling code to ensure it does not allocate
 // below the VGPR requirements of the current shader.
 def int_amdgcn_s_alloc_vgpr :
-  Intrinsic<
+  DefaultAttrsIntrinsic<
     [llvm_i1_ty], // Returns true if the allocation succeeded, false otherwise.
     [llvm_i32_ty], // The number of VGPRs to allocate.
-    [NoUndef<RetIndex>, IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+    [NoUndef<RetIndex>, IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
 
 def int_amdgcn_div_scale : PureIntrinsic<
   // 1st parameter: Numerator
