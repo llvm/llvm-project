@@ -6725,6 +6725,18 @@ public:
 
 /// Folds transpose(from_elements(...)) into a new from_elements with permuted
 /// operands matching the transposed shape.
+///
+/// Example:
+///
+///   %v = vector.from_elements %a00, %a01, %a02, %a10, %a11, %a12 :
+///   vector<2x3xi32> %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to
+///   vector<3x2xi32>
+///
+/// becomes ->
+///
+///   %r = vector.from_elements %a00, %a10, %a01, %a11, %a02, %a12 :
+///   vector<3x2xi32>
+///
 class FoldTransposeFromElements final : public OpRewritePattern<TransposeOp> {
 public:
   using Base::Base;
