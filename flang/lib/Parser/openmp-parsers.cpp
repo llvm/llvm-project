@@ -275,6 +275,13 @@ struct SpecificModifierParser {
 
 // --- Iterator helpers -----------------------------------------------
 
+static EntityDecl MakeEntityDecl(ObjectName &&name) {
+  return EntityDecl(
+      /*ObjectName=*/std::move(name), std::optional<ArraySpec>{},
+      std::optional<CoarraySpec>{}, std::optional<CharLength>{},
+      std::optional<Initialization>{});
+}
+
 // [5.0:47:17-18] In an iterator-specifier, if the iterator-type is not
 // specified then the type of that iterator is default integer.
 // [5.0:49:14] The iterator-type must be an integer type.
@@ -282,11 +289,7 @@ static std::list<EntityDecl> makeEntityList(std::list<ObjectName> &&names) {
   std::list<EntityDecl> entities;
 
   for (auto iter = names.begin(), end = names.end(); iter != end; ++iter) {
-    EntityDecl entityDecl(
-        /*ObjectName=*/std::move(*iter), std::optional<ArraySpec>{},
-        std::optional<CoarraySpec>{}, std::optional<CharLength>{},
-        std::optional<Initialization>{});
-    entities.push_back(std::move(entityDecl));
+    entities.push_back(MakeEntityDecl(std::move(*iter)));
   }
   return entities;
 }
@@ -305,6 +308,157 @@ static TypeDeclarationStmt makeIterSpecDecl(std::list<ObjectName> &&names) {
   return TypeDeclarationStmt(std::move(typeSpec), std::list<AttrSpec>{},
       makeEntityList(std::move(names)));
 }
+
+// --- Stylized expression handling -----------------------------------
+
+template <typename A> struct NeverParser {
+  using resultType = A;
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Always fail, but without any messages.
+    return std::nullopt;
+  }
+};
+
+template <typename A> constexpr auto never() { return NeverParser<A>{}; }
+
+template <typename A, typename B = void> struct NullParser;
+template <typename B> struct NullParser<std::optional<B>> {
+  using resultType = std::optional<B>;
+  std::optional<resultType> Parse(ParseState &) const {
+    return resultType{std::nullopt};
+  }
+};
+
+template <typename A> constexpr auto null() { return NullParser<A>{}; }
+
+// OmpStylizedDeclaration and OmpStylizedInstance are helper classes, and
+// don't correspond to anything in the source. Their parsers should still
+// exist, but they should never be executed.
+TYPE_PARSER(construct<OmpStylizedDeclaration>(never<OmpStylizedDeclaration>()))
+
+TYPE_PARSER( //
+    construct<OmpStylizedInstance::Instance>(Parser<AssignmentStmt>{}) ||
+    construct<OmpStylizedInstance::Instance>(
+        sourced(construct<CallStmt>(Parser<ProcedureDesignator>{},
+            null<std::optional<CallStmt::Chevrons>>(),
+            parenthesized(optionalList(actualArgSpec))))) ||
+    construct<OmpStylizedInstance::Instance>(indirect(expr)))
+
+TYPE_PARSER(construct<OmpStylizedInstance>(never<OmpStylizedInstance>()))
+
+struct OmpStylizedExpressionParser {
+  using resultType = OmpStylizedExpression;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto *saved{new ParseState(state)};
+    auto getSource{verbatim(Parser<OmpStylizedInstance::Instance>{} >> ok)};
+    if (auto &&ok{getSource.Parse(state)}) {
+      OmpStylizedExpression result{std::list<OmpStylizedInstance>{}};
+      result.source = ok->source;
+      result.state = saved;
+      // result.v remains empty
+      return std::move(result);
+    }
+    delete saved;
+    return std::nullopt;
+  }
+};
+
+static void Instantiate(OmpStylizedExpression &ose,
+    llvm::ArrayRef<const OmpTypeName *> types, llvm::ArrayRef<CharBlock> vars) {
+  assert(types.size() == vars.size() && "List size mismatch");
+  ParseState state{DEREF(ose.state)};
+
+  std::list<OmpStylizedDeclaration> decls;
+  for (auto [type, var] : llvm::zip(types, vars)) {
+    decls.emplace_back(OmpStylizedDeclaration{
+        common::Reference(*type), MakeEntityDecl(Name{var})});
+  }
+
+  if (auto &&instance{Parser<OmpStylizedInstance::Instance>{}.Parse(state)}) {
+    ose.v.emplace_back(
+        OmpStylizedInstance{std::move(decls), std::move(*instance)});
+  }
+}
+
+static void InstantiateForTypes(OmpStylizedExpression &ose,
+    const OmpTypeNameList &typeNames, llvm::ArrayRef<CharBlock> vars) {
+  // The variables "vars" need to be declared with the same type.
+  // For each type in the type list, splat the type into a vector of
+  // the same size as the variable list, and pass it to Instantiate.
+  for (const OmpTypeName &t : typeNames.v) {
+    std::vector<const OmpTypeName *> types(vars.size(), &t);
+    Instantiate(ose, types, vars);
+  }
+}
+
+static void InstantiateDeclareReduction(OmpDirectiveSpecification &spec) {
+  // There can be arguments/clauses that don't make sense, that analysis
+  // is left until semantic checks. Tolerate any unexpected stuff.
+  auto *rspec{GetFirstArgument<OmpReductionSpecifier>(spec)};
+  if (!rspec) {
+    return;
+  }
+
+  const OmpTypeNameList *typeNames{nullptr};
+
+  if (auto *cexpr{GetCombinerExpr(*rspec)}) {
+    typeNames = &std::get<OmpTypeNameList>(rspec->t);
+
+    InstantiateForTypes(const_cast<OmpCombinerExpression &>(*cexpr), *typeNames,
+        OmpCombinerExpression::Variables());
+    delete cexpr->state;
+  } else {
+    // If there are no types, there is nothing else to do.
+    return;
+  }
+
+  for (const OmpClause &clause : spec.Clauses().v) {
+    llvm::omp::Clause id{clause.Id()};
+    if (id == llvm::omp::Clause::OMPC_initializer) {
+      if (auto *iexpr{GetInitializerExpr(clause)}) {
+        InstantiateForTypes(const_cast<OmpInitializerExpression &>(*iexpr),
+            *typeNames, OmpInitializerExpression::Variables());
+        delete iexpr->state;
+      }
+    }
+  }
+}
+
+static void InstantiateStylizedDirective(OmpDirectiveSpecification &spec) {
+  const OmpDirectiveName &dirName{spec.DirName()};
+  if (dirName.v == llvm::omp::Directive::OMPD_declare_reduction) {
+    InstantiateDeclareReduction(spec);
+  }
+}
+
+template <typename P,
+    typename = std::enable_if_t<
+        std::is_same_v<typename P::resultType, OmpDirectiveSpecification>>>
+struct OmpStylizedInstanceCreator {
+  using resultType = OmpDirectiveSpecification;
+  constexpr OmpStylizedInstanceCreator(P p) : parser_(p) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto &&spec{parser_.Parse(state)}) {
+      InstantiateStylizedDirective(*spec);
+      return std::move(spec);
+    }
+    return std::nullopt;
+  }
+
+private:
+  const P parser_;
+};
+
+template <typename P>
+OmpStylizedInstanceCreator(P) -> OmpStylizedInstanceCreator<P>;
+
+// --- Parsers for types ----------------------------------------------
+
+TYPE_PARSER( //
+    sourced(construct<OmpTypeName>(Parser<DeclarationTypeSpec>{})) ||
+    sourced(construct<OmpTypeName>(Parser<TypeSpec>{})))
 
 // --- Parsers for arguments ------------------------------------------
 
@@ -365,10 +519,6 @@ struct OmpArgumentListParser {
         .Parse(state);
   }
 };
-
-TYPE_PARSER( //
-    construct<OmpTypeName>(Parser<DeclarationTypeSpec>{}) ||
-    construct<OmpTypeName>(Parser<TypeSpec>{}))
 
 // 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
@@ -1065,7 +1215,8 @@ TYPE_PARSER(construct<OmpOtherwiseClause>(
 
 TYPE_PARSER(construct<OmpWhenClause>(
     maybe(nonemptyList(Parser<OmpWhenClause::Modifier>{}) / ":"),
-    maybe(indirect(Parser<OmpDirectiveSpecification>{}))))
+    maybe(indirect(
+        OmpStylizedInstanceCreator(Parser<OmpDirectiveSpecification>{})))))
 
 // OMP 5.2 12.6.1 grainsize([ prescriptiveness :] scalar-integer-expression)
 TYPE_PARSER(construct<OmpGrainsizeClause>(
@@ -1780,9 +1931,7 @@ TYPE_PARSER(
 TYPE_PARSER(construct<OmpInitializerProc>(Parser<ProcedureDesignator>{},
     parenthesized(many(maybe(","_tok) >> Parser<ActualArgSpec>{}))))
 
-TYPE_PARSER(construct<OmpInitializerClause>(
-    construct<OmpInitializerClause>(assignmentStmt) ||
-    construct<OmpInitializerClause>(Parser<OmpInitializerProc>{})))
+TYPE_PARSER(construct<OmpInitializerClause>(Parser<OmpInitializerExpression>{}))
 
 // OpenMP 5.2: 7.5.4 Declare Variant directive
 TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
@@ -1794,7 +1943,7 @@ TYPE_PARSER(sourced(construct<OmpDeclareVariantDirective>(
 TYPE_PARSER(sourced(construct<OpenMPDeclareReductionConstruct>(
     predicated(Parser<OmpDirectiveName>{},
         IsDirective(llvm::omp::Directive::OMPD_declare_reduction)) >=
-    Parser<OmpDirectiveSpecification>{})))
+    OmpStylizedInstanceCreator(Parser<OmpDirectiveSpecification>{}))))
 
 // 2.10.6 Declare Target Construct
 TYPE_PARSER(sourced(construct<OpenMPDeclareTargetConstruct>(
@@ -1832,8 +1981,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
         IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
     Parser<OmpDirectiveSpecification>{})))
 
-TYPE_PARSER(construct<OmpCombinerExpression>(Parser<AssignmentStmt>{}) ||
-    construct<OmpCombinerExpression>(Parser<FunctionReference>{}))
+TYPE_PARSER(construct<OmpCombinerExpression>(OmpStylizedExpressionParser{}))
+TYPE_PARSER(construct<OmpInitializerExpression>(OmpStylizedExpressionParser{}))
 
 TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))
