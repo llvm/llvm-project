@@ -1618,7 +1618,7 @@ void ASTContext::setRelocationInfoForCXXRecord(
   RelocatableClasses.insert({D, Info});
 }
 
-static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
+static bool primaryBaseHasAddressDiscriminatedVTableAuthentication(
     const ASTContext &Context, const CXXRecordDecl *Class) {
   if (!Class->isPolymorphic())
     return false;
@@ -1672,7 +1672,14 @@ ASTContext::findPointerAuthContent(QualType T) const {
     return Result != PointerAuthContent::AddressDiscriminatedData;
   };
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) &&
+    // `primaryBaseHasAddressDiscriminatedVTableAuthentication` requires a
+    // non-null CXX record decl definition which might not be available if we
+    // are dealing with a non-instantiated template. It might be the case if the
+    // template was not instantiated due to a prior fatal error. See the
+    // corresponding check in the `Sema::InstantiatingTemplate` constructor.
+    if (getDiagnostics().hasFatalErrorOccurred())
+      return PointerAuthContent::None;
+    if (primaryBaseHasAddressDiscriminatedVTableAuthentication(*this, CXXRD) &&
         !ShouldContinueAfterUpdate(
             PointerAuthContent::AddressDiscriminatedVTable))
       return SaveResultAndReturn();
