@@ -636,7 +636,7 @@ unsigned CGDebugInfo::getColumnNumber(const PresumedLoc & PLoc, bool Force) cons
   // If the location is invalid then use the current column.
   if (PLoc.isInvalid() && CurPLoc.isInvalid())
     return 0;
-  return PLoc.isValid() ? PLoc.getColumn() : 0;
+  return PLoc.isValid() ? PLoc.getColumn() : CurPLoc.getColumn();
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
