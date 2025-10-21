@@ -888,7 +888,7 @@ auto StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const
     return nullptr;
 
   Candidate *BestC = nullptr;
-  EfficiencyLevel BestEfficiency = Unknown;
+  auto BestEfficiency = Candidate::Unknown;
   for (Candidate *C : reverse(It->second))
     if (C->Basis) {
       auto Efficiency = C->getRewriteEfficiency();
