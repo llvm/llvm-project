@@ -28,13 +28,8 @@ class SyntheticChildrenFrontEnd {
 protected:
   ValueObject &m_backend;
 
-  void SetValid(bool valid) { m_valid = valid; }
-
-  bool IsValid() { return m_valid; }
-
 public:
-  SyntheticChildrenFrontEnd(ValueObject &backend)
-      : m_backend(backend), m_valid(true) {}
+  SyntheticChildrenFrontEnd(ValueObject &backend) : m_backend(backend) {}
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
@@ -100,7 +95,6 @@ protected:
                                                 CompilerType type);
 
 private:
-  bool m_valid;
   SyntheticChildrenFrontEnd(const SyntheticChildrenFrontEnd &) = delete;
   const SyntheticChildrenFrontEnd &
   operator=(const SyntheticChildrenFrontEnd &) = delete;

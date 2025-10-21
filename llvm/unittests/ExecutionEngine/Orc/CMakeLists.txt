@@ -42,6 +42,7 @@ add_llvm_unittest(OrcJITTests
   SymbolStringPoolTest.cpp
   TaskDispatchTest.cpp
   ThreadSafeModuleTest.cpp
+  WaitingOnGraphTest.cpp
   WrapperFunctionUtilsTest.cpp
   JITLinkRedirectionManagerTest.cpp
   ReOptimizeLayerTest.cpp
