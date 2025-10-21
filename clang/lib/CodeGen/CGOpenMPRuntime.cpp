@@ -1829,10 +1829,42 @@ void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
       llvm::GlobalValue::WeakODRLinkage);
 }
 
-// Register VTable by scanning through the map clause of OpenMP target region.
+void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
+                                           CXXRecordDecl *CXXRecord,
+                                           const VarDecl *VD) {
+        // Register C++ VTable to OpenMP Offload Entry if it's a new
+        // CXXRecordDecl.
+        if (CXXRecord && CXXRecord->isDynamicClass() &&
+            CGM.getOpenMPRuntime().VTableDeclMap.find(CXXRecord) ==
+                CGM.getOpenMPRuntime().VTableDeclMap.end()) {
+          CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+          CGM.EmitVTable(CXXRecord);
+          CodeGenVTables VTables = CGM.getVTables();
+          llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+          if (VTablesAddr)
+            CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+          // Emit VTable for all the fields containing dynamic CXXRecord
+          for (const FieldDecl *Field : CXXRecord->fields()) {
+            if (CXXRecordDecl *RecordDecl =
+                    Field->getType()->getAsCXXRecordDecl())
+              emitAndRegisterVTable(CGM, RecordDecl, VD);
+
+          }
+          // Emit VTable for all dynamic parent class
+          for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+            if (CXXRecordDecl *BaseDecl =
+                    Base.getType()->getAsCXXRecordDecl())
+              emitAndRegisterVTable(CGM, BaseDecl, VD);
+
+          }
+        }
+      };
+
+
 void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
+  // Register VTable by scanning through the map clause of OpenMP target region.
   // Get CXXRecordDecl and VarDecl from Expr.
-  auto getVTableDecl = [](const Expr *E) {
+  auto GetVTableDecl = [](const Expr *E) {
     QualType VDTy = E->getType();
     CXXRecordDecl *CXXRecord = nullptr;
     if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
@@ -1847,45 +1879,10 @@ void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
       VD = cast<VarDecl>(DRE->getDecl());
     return std::pair<CXXRecordDecl *, const VarDecl *>(CXXRecord, VD);
   };
-
-  // Emit VTable and register the VTable to OpenMP offload entry recursively.
-  std::function<void(CodeGenModule &, CXXRecordDecl *, const VarDecl *)>
-      emitAndRegisterVTable = [&emitAndRegisterVTable](CodeGenModule &CGM,
-                                                       CXXRecordDecl *CXXRecord,
-                                                       const VarDecl *VD) {
-        // Register C++ VTable to OpenMP Offload Entry if it's a new
-        // CXXRecordDecl.
-        if (CXXRecord && CXXRecord->isDynamicClass() &&
-            CGM.getOpenMPRuntime().VTableDeclMap.find(CXXRecord) ==
-                CGM.getOpenMPRuntime().VTableDeclMap.end()) {
-          CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
-          CGM.EmitVTable(CXXRecord);
-          auto VTables = CGM.getVTables();
-          auto *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
-          if (VTablesAddr) {
-            CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
-          }
-          // Emit VTable for all the fields containing dynamic CXXRecord
-          for (const FieldDecl *Field : CXXRecord->fields()) {
-            if (CXXRecordDecl *RecordDecl =
-                    Field->getType()->getAsCXXRecordDecl()) {
-              emitAndRegisterVTable(CGM, RecordDecl, VD);
-            }
-          }
-          // Emit VTable for all dynamic parent class
-          for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
-            if (CXXRecordDecl *BaseDecl =
-                    Base.getType()->getAsCXXRecordDecl()) {
-              emitAndRegisterVTable(CGM, BaseDecl, VD);
-            }
-          }
-        }
-      };
-
   // Collect VTable from OpenMP map clause.
   for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
     for (const auto *E : C->varlist()) {
-      auto DeclPair = getVTableDecl(E);
+      auto DeclPair = GetVTableDecl(E);
       emitAndRegisterVTable(CGM, DeclPair.first, DeclPair.second);
     }
   }
@@ -10075,8 +10072,8 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // target data by checking if S is a executable directive (target).
     if (isa<OMPExecutableDirective>(S) &&
         isOpenMPTargetDataManagementDirective(
-            cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
-      auto &E = *cast<OMPExecutableDirective>(S);
+            dyn_cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
+      auto &E = *dyn_cast<OMPExecutableDirective>(S);
       // Don't need to check if it's device compile
       // since scanForTargetRegionsFunctions currently only called
       // in device compilation.

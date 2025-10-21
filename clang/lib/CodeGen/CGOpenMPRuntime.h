@@ -606,7 +606,7 @@ protected:
                           Address DependenciesArray);
 
   /// Keep track of VTable Declarations so we don't register duplicate VTable.
-  llvm::DenseMap<CXXRecordDecl*, const VarDecl*> VTableDeclMap;
+  llvm::SmallDenseMap<CXXRecordDecl *, const VarDecl *> VTableDeclMap;
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);
@@ -1123,6 +1123,13 @@ public:
   /// in OpenMP target region.
   /// \param D OpenMP target directive.
   virtual void registerVTable(const OMPExecutableDirective &D);
+
+  /// Emit and register VTable for the C++ class in OpenMP offload entry.
+  /// \param CXXRecord C++ class decl.
+  /// \param VD Variable decl which holds VTable.
+  virtual void emitAndRegisterVTable(CodeGenModule &CGM,
+                                     CXXRecordDecl *CXXRecord,
+                                     const VarDecl *VD);
 
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
