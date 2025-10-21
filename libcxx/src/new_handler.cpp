@@ -11,9 +11,7 @@
 #include "include/atomic_support.h"
 
 #if defined(_LIBCPP_ABI_MICROSOFT)
-#  if !defined(_LIBCPP_ABI_VCRUNTIME)
-#    define _LIBPCPP_DEFINE_NEW_HANDLER
-#  endif
+#  define _LIBPCPP_DEFINE_NEW_HANDLER
 #elif defined(LIBCXX_BUILDING_LIBCXXABI)
 // nothing to do, we use the one from libc++abi
 #elif defined(LIBCXXRT)
