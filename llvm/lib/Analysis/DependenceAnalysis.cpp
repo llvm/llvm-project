@@ -3463,11 +3463,37 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
 
   SmallVector<const SCEV *, 4> SrcSubscripts, DstSubscripts;
 
-  if (!tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                               SrcSubscripts, DstSubscripts) &&
-      !tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn,
-                                    SrcSubscripts, DstSubscripts))
-    return false;
+  // Check cache for both Src and Dst subscripts
+  auto SrcCacheKey = std::make_tuple(Src, SrcLoop, SrcAccessFn);
+  auto DstCacheKey = std::make_tuple(Dst, DstLoop, DstAccessFn);
+  auto SrcCacheIt = DelinearizationCache.find(SrcCacheKey);
+  auto DstCacheIt = DelinearizationCache.find(DstCacheKey);
+  bool SrcCached = (SrcCacheIt != DelinearizationCache.end());
+  bool DstCached = (DstCacheIt != DelinearizationCache.end());
+
+  if (SrcCached && DstCached) {
+    // Both are cached - use cached values and skip delinearization
+    SrcSubscripts = SrcCacheIt->second;
+    DstSubscripts = DstCacheIt->second;
+    LLVM_DEBUG(dbgs() << "  Delinearization cache hit for both Src and Dst\n");
+  } else {
+    // At least one is not cached - need to compute both
+    if (!tryDelinearizeFixedSize(Src, Dst, SrcAccessFn, DstAccessFn,
+                                 SrcSubscripts, DstSubscripts) &&
+        !tryDelinearizeParametricSize(Src, Dst, SrcAccessFn, DstAccessFn,
+                                      SrcSubscripts, DstSubscripts))
+      return false;
+
+    // Cache the results
+    if (!SrcCached) {
+      DelinearizationCache[SrcCacheKey] = SrcSubscripts;
+      LLVM_DEBUG(dbgs() << "  Cached Src subscripts\n");
+    }
+    if (!DstCached) {
+      DelinearizationCache[DstCacheKey] = DstSubscripts;
+      LLVM_DEBUG(dbgs() << "  Cached Dst subscripts\n");
+    }
+  }
 
   assert(isLoopInvariant(SrcBase, SrcLoop) &&
          isLoopInvariant(DstBase, DstLoop) &&

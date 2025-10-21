@@ -420,6 +420,12 @@ private:
   Function *F;
   SmallVector<const SCEVPredicate *, 4> Assumptions;
 
+  /// Cache for delinearized subscripts to avoid recomputation.
+  /// Maps (Instruction, Loop, AccessFn) -> Subscripts
+  DenseMap<std::tuple<Instruction *, Loop *, const SCEV *>,
+           SmallVector<const SCEV *, 4>>
+      DelinearizationCache;
+
   /// Subscript - This private struct represents a pair of subscripts from
   /// a pair of potentially multi-dimensional array references. We use a
   /// vector of them to guide subscript partitioning.
