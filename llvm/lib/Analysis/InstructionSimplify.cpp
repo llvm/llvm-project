@@ -4866,9 +4866,9 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   return nullptr;
 }
 
-/// Look for the following pattern and simplify %1 to %identicalPhi.
-/// Here %phi, %1 and %phi.next perform the same functionality as
-/// %identicalPhi and hence the select instruction %1 can be folded
+/// Look for the following pattern and simplify %to_fold to %identicalPhi.
+/// Here %phi, %to_fold and %phi.next perform the same functionality as
+/// %identicalPhi and hence the select instruction %to_fold can be folded
 /// into %identicalPhi.
 ///
 /// BB1:
@@ -4877,9 +4877,9 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
 ///   ...
 ///   %identicalPhi.next = select %cmp, %val, %identicalPhi
 ///                      (or select %cmp, %identicalPhi, %val)
-///   %1 = select %cmp2, %identicalPhi, %phi
-///   %phi.next = select %cmp, %val, %1
-///             (or select %cmp, %1, %val)
+///   %to_fold = select %cmp2, %identicalPhi, %phi
+///   %phi.next = select %cmp, %val, %to_fold
+///             (or select %cmp, %to_fold, %val)
 ///
 /// Prove that %phi and %identicalPhi are the same by induction:
 ///
@@ -4888,11 +4888,11 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
 /// Suppose %phi and %identicalPhi are equal at iteration i.
 /// We look at their values at iteration i+1 which are %phi.next and
 /// %identicalPhi.next. They would have become different only when %cmp is
-/// false and the corresponding values %1 and %identicalPhi differ
+/// false and the corresponding values %to_fold and %identicalPhi differ
 /// (similar reason for the other "or" case in the bracket).
 ///
-/// The only condition when %1 and %identicalPh could differ is when %cmp2
-/// is false and %1 is %phi, which contradicts our inductive hypothesis
+/// The only condition when %to_fold and %identicalPh could differ is when %cmp2
+/// is false and %to_fold is %phi, which contradicts our inductive hypothesis
 /// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
 /// always equal at iteration i+1.
 bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
@@ -4937,8 +4937,8 @@ bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
     return false;
   }
 
-  // Now check that the other values in select, i.e., %1 and %identicalPhi,
-  // are essentially the same value within the same BB.
+  // Now check that the other values in select, i.e., %to_fold and
+  // %identicalPhi, are essentially the same value.
   if (!SIOtherVal || IdenticalSIOtherVal != &IdenticalPN)
     return false;
   if (!(SIOtherVal->getTrueValue() == &IdenticalPN &&
