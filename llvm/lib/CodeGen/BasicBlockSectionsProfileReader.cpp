@@ -100,7 +100,7 @@ BasicBlockSectionsProfileReader::getClonePathsForFunction(
 // the edge 1->3. Within the given clusters, each cloned block is identified by
 // "<original block id>.<clone id>". For instance, 3.1 represents the first
 // clone of block 3. Original blocks are specified just with their block ids. A
-// block cloned multiple times appears with distinct clone ids. The Cfg for bar
+// block cloned multiple times appears with distinct clone ids. The CFG for bar
 // is shown below before and after cloning with its final clusters labeled.
 //
 // f main
@@ -240,12 +240,12 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
       }
       continue;
     }
-    case 'g': { // Cfg profile specifier.
+    case 'g': { // CFG profile specifier.
       // Skip the profile when we the profile iterator (FI) refers to the
       // past-the-end element.
       if (FI == ProgramPathAndClusterInfo.end())
         continue;
-      // For each node, its Cfg profile is encoded as
+      // For each node, its CFG profile is encoded as
       // <src>:<count>,<sink_1>:<count_1>,<sink_2>:<count_2>,...
       for (auto BasicBlockEdgeProfile : Values) {
         if (BasicBlockEdgeProfile.empty())
@@ -264,10 +264,10 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
                 Twine("unsigned integer expected: '") + CountStr + "'");
           if (i == 0) {
             // The first element represents the source and its total count.
-            FI->second.Cfg.NodeCounts[SrcBBID = *BBID] = Count;
+            FI->second.CFG.NodeCounts[SrcBBID = *BBID] = Count;
             continue;
           }
-          FI->second.Cfg.EdgeCounts[SrcBBID][*BBID] = Count;
+          FI->second.CFG.EdgeCounts[SrcBBID][*BBID] = Count;
         }
       }
       continue;
@@ -470,12 +470,6 @@ SmallVector<SmallVector<unsigned>>
 BasicBlockSectionsProfileReaderWrapperPass::getClonePathsForFunction(
     StringRef FuncName) const {
   return BBSPR.getClonePathsForFunction(FuncName);
-}
-
-const CfgProfile *
-BasicBlockSectionsProfileReaderWrapperPass::getFunctionCfgProfile(
-    StringRef FuncName) const {
-  return BBSPR.getFunctionCfgProfile(FuncName);
 }
 
 BasicBlockSectionsProfileReader &
