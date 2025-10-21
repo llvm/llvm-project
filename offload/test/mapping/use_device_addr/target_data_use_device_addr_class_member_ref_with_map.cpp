@@ -16,7 +16,7 @@ struct ST {
   int m = 0;
 
   void f6() {
-    uintptr_t offset = (uintptr_t)&d - n;
+    intptr_t offset = (uintptr_t)&d - n;
 #pragma omp target data map(to : m, d)
     {
       void *mapped_ptr = omp_get_mapped_ptr(&d, omp_get_default_device());
@@ -34,10 +34,11 @@ struct ST {
         // ref/attach modifiers:
         //  &ref_ptee(this[0].[d])), &ref_ptee(this[0].d), TO | FROM
         //  &ref_ptr(this[0].d), &ref_ptee(this[0].d), 4, ATTACH
-        // EXPECTED: 1 0
-        // CHECK:    0 1
-        printf("%d %d\n", &d == mapped_ptr,
-               (uintptr_t)&d == (uintptr_t)mapped_ptr - offset);
+        // EXPECTED:   1 0
+        // CHECK-NEXT: 0 1
+        intptr_t offset_device = (intptr_t)mapped_ptr - (intptr_t)&d;
+        printf("%d %d\n", &d == mapped_ptr, offset == offset_device);
+        printf("%lu %ld\n", offset, offset_device);
       }
     }
   }
