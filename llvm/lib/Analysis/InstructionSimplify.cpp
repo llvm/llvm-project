@@ -5106,32 +5106,33 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
         return Ptr;
 
       // The following transforms are only safe if the ptrtoint cast
-      // doesn't truncate the pointers.
-      if (Indices[0]->getType()->getScalarSizeInBits() ==
-          Q.DL.getPointerSizeInBits(AS)) {
+      // doesn't truncate the address of the pointers. The non-address bits
+      // must be the same, as the underlying objects are the same.
+      if (Indices[0]->getType()->getScalarSizeInBits() >=
+          Q.DL.getAddressSizeInBits(AS)) {
         auto CanSimplify = [GEPTy, &P, Ptr]() -> bool {
           return P->getType() == GEPTy &&
                  getUnderlyingObject(P) == getUnderlyingObject(Ptr);
         };
         // getelementptr V, (sub P, V) -> P if P points to a type of size 1.
         if (TyAllocSize == 1 &&
-            match(Indices[0],
-                  m_Sub(m_PtrToInt(m_Value(P)), m_PtrToInt(m_Specific(Ptr)))) &&
+            match(Indices[0], m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                    m_PtrToIntOrAddr(m_Specific(Ptr)))) &&
             CanSimplify())
           return P;
 
         // getelementptr V, (ashr (sub P, V), C) -> P if P points to a type of
         // size 1 << C.
-        if (match(Indices[0], m_AShr(m_Sub(m_PtrToInt(m_Value(P)),
-                                           m_PtrToInt(m_Specific(Ptr))),
+        if (match(Indices[0], m_AShr(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
                                      m_ConstantInt(C))) &&
             TyAllocSize == 1ULL << C && CanSimplify())
           return P;
 
         // getelementptr V, (sdiv (sub P, V), C) -> P if P points to a type of
         // size C.
-        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToInt(m_Value(P)),
-                                           m_PtrToInt(m_Specific(Ptr))),
+        if (match(Indices[0], m_SDiv(m_Sub(m_PtrToIntOrAddr(m_Value(P)),
+                                           m_PtrToIntOrAddr(m_Specific(Ptr))),
                                      m_SpecificInt(TyAllocSize))) &&
             CanSimplify())
           return P;
@@ -5440,9 +5441,10 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 
   // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
   Value *Ptr, *X;
-  if (CastOpc == Instruction::PtrToInt &&
-      match(Op, m_PtrAdd(m_Value(Ptr),
-                         m_Sub(m_Value(X), m_PtrToInt(m_Deferred(Ptr))))) &&
+  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+      match(Op,
+            m_PtrAdd(m_Value(Ptr),
+                     m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
       X->getType() == Ty && Ty == Q.DL.getIndexType(Ptr->getType()))
     return X;
 
@@ -6987,8 +6989,8 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
-    Value *MaskArg = Args[2];
-    Value *PassthruArg = Args[3];
+    Value *MaskArg = Args[1];
+    Value *PassthruArg = Args[2];
     // If the mask is all zeros or undef, the "passthru" argument is the result.
     if (maskIsAllZeroOrUndef(MaskArg))
       return PassthruArg;

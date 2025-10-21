@@ -60,7 +60,7 @@ define <16 x i8> @test_v16i8_reassociation(<16 x i8> %a) {
 define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> %a, <16 x i8> %b) {
 ; SSE2-LABEL: test_v16i8_demandedbits:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm0, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm3

@@ -2724,6 +2724,8 @@ def CIR_CopyOp : CIR_Op<"copy",[
     type of `src` and `dst` must match and both must implement the
     `DataLayoutTypeInterface`.
 
+    The `volatile` keyword indicates that the operation is volatile.
+
     Examples:
 
     ```mlir
@@ -2734,10 +2736,11 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-      Arg<CIR_PointerType, "", [MemRead]>:$src
+      Arg<CIR_PointerType, "", [MemRead]>:$src,
+      UnitAttr:$is_volatile
   );
 
-  let assemblyFormat = [{$src `to` $dst
+  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -4408,12 +4411,12 @@ def CIR_TryOp : CIR_Op<"try",[
   let arguments = (ins
     UnitAttr:$synthetic,
     UnitAttr:$cleanup,
-    CIR_TryHandlerArrayAttr:$handler_types
+    DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
   );
 
   let regions = (region
     AnyRegion:$try_region,
-    VariadicRegion<MinSizedRegion<1>>:$handler_regions
+    VariadicRegion<AnyRegion>:$handler_regions
   );
 
   let assemblyFormat = [{

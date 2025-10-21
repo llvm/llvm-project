@@ -1,11 +1,6 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-not-null-terminated-result %t -- \
 // RUN: -- -I %S/Inputs/not-null-terminated-result
 
-// FIXME: Something wrong with the APInt un/signed conversion on Windows:
-// in 'wcsncmp(wcs6, L"string", 7);' it tries to inject '4294967302' as length.
-
-// UNSUPPORTED: system-windows
-
 #include "not-null-terminated-result-cxx.h"
 
 #define __STDC_LIB_EXT1__ 1
