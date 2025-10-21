@@ -93,6 +93,8 @@ inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
   case SyncScope::OpenCLSubGroup:
   case SyncScope::WavefrontScope:
     return "subgroup";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:

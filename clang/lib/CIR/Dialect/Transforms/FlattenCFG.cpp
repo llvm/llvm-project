@@ -505,10 +505,19 @@ public:
     Block *trueBlock = &trueRegion.front();
     mlir::Operation *trueTerminator = trueRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&trueRegion.back());
-    auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator);
 
-    rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
-                                           continueBlock);
+    // Handle both yield and unreachable terminators (throw expressions)
+    if (auto trueYieldOp = dyn_cast<cir::YieldOp>(trueTerminator)) {
+      rewriter.replaceOpWithNewOp<cir::BrOp>(trueYieldOp, trueYieldOp.getArgs(),
+                                             continueBlock);
+    } else if (isa<cir::UnreachableOp>(trueTerminator)) {
+      // Terminator is unreachable (e.g., from throw), just keep it
+    } else {
+      trueTerminator->emitError("unexpected terminator in ternary true region, "
+                                "expected yield or unreachable, got: ")
+          << trueTerminator->getName();
+      return mlir::failure();
+    }
     rewriter.inlineRegionBefore(trueRegion, continueBlock);
 
     Block *falseBlock = continueBlock;
@@ -517,9 +526,19 @@ public:
     falseBlock = &falseRegion.front();
     mlir::Operation *falseTerminator = falseRegion.back().getTerminator();
     rewriter.setInsertionPointToEnd(&falseRegion.back());
-    auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator);
-    rewriter.replaceOpWithNewOp<cir::BrOp>(falseYieldOp, falseYieldOp.getArgs(),
-                                           continueBlock);
+
+    // Handle both yield and unreachable terminators (throw expressions)
+    if (auto falseYieldOp = dyn_cast<cir::YieldOp>(falseTerminator)) {
+      rewriter.replaceOpWithNewOp<cir::BrOp>(
+          falseYieldOp, falseYieldOp.getArgs(), continueBlock);
+    } else if (isa<cir::UnreachableOp>(falseTerminator)) {
+      // Terminator is unreachable (e.g., from throw), just keep it
+    } else {
+      falseTerminator->emitError("unexpected terminator in ternary false "
+                                 "region, expected yield or unreachable, got: ")
+          << falseTerminator->getName();
+      return mlir::failure();
+    }
     rewriter.inlineRegionBefore(falseRegion, continueBlock);
 
     rewriter.setInsertionPointToEnd(condBlock);
