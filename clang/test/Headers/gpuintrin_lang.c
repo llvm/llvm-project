@@ -26,12 +26,19 @@
 // RUN:   -std=c89 -internal-isystem %S/../../lib/Headers/ \
 // RUN:   -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=C89
+//
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers/ \
+// RUN:   -fsycl-is-device -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=SYCL
 
 #define _DEFAULT_FN_ATTRS __attribute__((always_inline))
 #include <gpuintrin.h>
 
 #ifdef __device__
 __device__ int foo() { return __gpu_thread_id_x(); }
+#elif defined(SYCL_EXTERNAL)
+SYCL_EXTERNAL int foo() { return __gpu_thread_id_x(); }
 #else
 // CUDA-LABEL: define dso_local i32 @foo(
 // CUDA-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -70,6 +77,16 @@ __device__ int foo() { return __gpu_thread_id_x(); }
 // C89-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // C89-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 // C89-NEXT:    ret i32 [[TMP0]]
+//
+// SYCL-LABEL: define dso_local i32 @foo(
+// SYCL-SAME: ) #[[ATTR0:[0-9]+]] {
+// SYCL-NEXT:  [[ENTRY:.*:]]
+// SYCL-NEXT:    [[RETVAL_I:%.*]] = alloca i32, align 4, addrspace(5)
+// SYCL-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// SYCL-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// SYCL-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
+// SYCL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+// SYCL-NEXT:    ret i32 [[TMP0]]
 //
 int foo() { return __gpu_thread_id_x(); }
 #pragma omp declare target to(foo)
