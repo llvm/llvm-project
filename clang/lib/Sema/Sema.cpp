@@ -2214,9 +2214,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty
+                        << false /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2233,9 +2233,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty << true /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
