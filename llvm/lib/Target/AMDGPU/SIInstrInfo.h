@@ -98,6 +98,8 @@ private:
 };
 
 class SIInstrInfo final : public AMDGPUGenInstrInfo {
+  struct ThreeAddressUpdates;
+
 private:
   const SIRegisterInfo RI;
   const GCNSubtarget &ST;
@@ -199,6 +201,9 @@ private:
                   StringRef &ErrInfo) const;
 
   bool resultDependsOnExec(const MachineInstr &MI) const;
+
+  MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,
+                                          ThreeAddressUpdates &Updates) const;
 
 protected:
   /// If the specific machine instruction is a instruction that moves/copies

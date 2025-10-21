@@ -1441,6 +1441,24 @@ void main() { Feeder<int>{}.feed<Cat<int>>(); }
 
 }
 
+namespace case9 {
+
+template <typename>
+concept a = requires { requires true; };
+template <typename T>
+concept b = a<typename T::EntitySpec>;
+template <typename T>
+concept c = requires { b<T>; };
+template <typename T>
+  requires c<T>
+struct s;
+template <typename> constexpr bool f() { return true; }
+template <typename T> constexpr bool d = f<T>();
+struct s2;
+static_assert(d<s<s2>>);
+
+}
+
 }
 
 namespace GH162125 {
