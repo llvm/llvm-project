@@ -27602,6 +27602,15 @@ static SDValue performPTestFirstCombine(SDNode *N,
 static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
+  if (DCI.isAfterLegalizeDAG()) {
+    if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
+                                             N->getOperand(0)))
+      return SDValue(LN, 0);
+  }
+
   // Let's do below transform.
   //
   //         t34: v4i32 = AArch64ISD::UADDLV t2
@@ -27638,7 +27647,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   // Let's generate new sequence with AArch64ISD::NVCAST.
-  SDLoc DL(N);
   SDValue EXTRACT_SUBVEC =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, UADDLV,
                   DAG.getConstant(0, DL, MVT::i64));
