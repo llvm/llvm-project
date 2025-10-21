@@ -309,6 +309,17 @@ LogicalResult ConvertBF16x2ToF8x2Op::verify() {
   return success();
 }
 
+LogicalResult ConvertF32x2ToF4x2Op::verify() {
+  mlir::MLIRContext *ctx = getContext();
+
+  if (!llvm::isa<mlir::Float4E2M1FNType>(getDstTy()))
+    return emitOpError("Only ")
+           << mlir::Float4E2M1FNType::get(ctx)
+           << " type is supported for conversions from f32x2 to f4x2.";
+
+  return success();
+}
+
 LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
@@ -785,6 +796,26 @@ LogicalResult MmaOp::verify() {
       return emitOpError("op requires " +
                          getIntOverflowBehaviorAttrName().strref() +
                          " attribute");
+  }
+
+  // Validate layout combinations. According to the operation description, most
+  // MMA operations require layoutA=row and layoutB=col. Only m8n8k4 with f16
+  // can use other layout combinations.
+  bool isM8N8K4_F16 =
+      (mmaShape[0] == 8 && mmaShape[1] == 8 && mmaShape[2] == 4 &&
+       getMultiplicandAPtxType() == MMATypes::f16);
+
+  if (!isM8N8K4_F16) {
+    // For all other shapes/types, layoutA must be row and layoutB must be col
+    if (getLayoutA() != MMALayout::row || getLayoutB() != MMALayout::col) {
+      return emitOpError("requires layoutA = #nvvm.mma_layout<row> and "
+                         "layoutB = #nvvm.mma_layout<col> for shape <")
+             << mmaShape[0] << ", " << mmaShape[1] << ", " << mmaShape[2]
+             << "> with element types "
+             << stringifyEnum(*getMultiplicandAPtxType()) << " and "
+             << stringifyEnum(*getMultiplicandBPtxType())
+             << ". Only m8n8k4 with f16 supports other layouts.";
+    }
   }
 
   return success();
@@ -2047,6 +2078,23 @@ ConvertFloatToTF32Op::getIntrinsicID(NVVM::FPRoundingMode rnd,
   }
 }
 
+NVVM::IDArgPair
+ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
+                                            LLVM::ModuleTranslation &mt,
+                                            llvm::IRBuilderBase &builder) {
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(op.getA()));
+  args.push_back(mt.lookupValue(op.getB()));
+
+  bool hasRelu = op.getRelu();
+
+  llvm::Intrinsic::ID intId =
+      hasRelu ? llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_relu_satfinite
+              : llvm::Intrinsic::nvvm_ff_to_e2m1x2_rn_satfinite;
+
+  return {intId, std::move(args)};
+}
+
 #define GET_F32x2_TO_F6x2_ID(type, has_relu)                                   \
   has_relu ? llvm::Intrinsic::nvvm_ff_to_##type##_rn_relu_satfinite            \
            : llvm::Intrinsic::nvvm_ff_to_##type##_rn_satfinite
@@ -2304,6 +2352,32 @@ static void nvvmInferResultRanges(Operation *op, Value result,
     setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
                              rangeAttr.getLower(), rangeAttr.getUpper()});
   }
+}
+
+/// Verify the range attribute satisfies LLVM ConstantRange constructor
+/// requirements for NVVM SpecialRangeableRegisterOp.
+static LogicalResult
+verifyConstantRangeAttr(Operation *op,
+                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+  if (!rangeAttr)
+    return success();
+
+  const llvm::APInt &lower = rangeAttr->getLower();
+  const llvm::APInt &upper = rangeAttr->getUpper();
+
+  // Check LLVM ConstantRange constructor condition
+  if (lower == upper && !lower.isMaxValue() && !lower.isMinValue()) {
+    unsigned bitWidth = lower.getBitWidth();
+    llvm::APInt minVal = llvm::APInt::getMinValue(bitWidth);
+    llvm::APInt maxVal = llvm::APInt::getMaxValue(bitWidth);
+    return op->emitOpError(
+               "invalid range attribute: Lower == Upper, but they aren't min (")
+           << llvm::toString(minVal, 10, false) << ") or max ("
+           << llvm::toString(maxVal, 10, false)
+           << ") value! This is an invalid constant range.";
+  }
+
+  return success();
 }
 
 static llvm::Value *getAsPackedI32(llvm::Value *arg,
