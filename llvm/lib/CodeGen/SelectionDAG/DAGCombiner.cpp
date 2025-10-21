@@ -6968,8 +6968,8 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
     if (!SDValue(Load, 0).hasOneUse())
       return false;
 
-    if (LegalOperations && !TLI.isLoadExtLegal(ExtType, Load->getValueType(0), MemVT,
-                                               Load->getAddressSpace()))
+    if (LegalOperations && !TLI.isLoadExtLegal(ExtType, Load->getValueType(0),
+                                               MemVT, Load->getAddressSpace()))
       return false;
 
     // For the transform to be legal, the load must produce only two values
@@ -7827,7 +7827,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     APInt ExtBits = APInt::getHighBitsSet(ExtBitSize, ExtBitSize - MemBitSize);
     if (DAG.MaskedValueIsZero(N1, ExtBits) &&
         ((!LegalOperations && LN0->isSimple()) ||
-         TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT, LN0->getAddressSpace()))) {
+         TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, MemVT,
+                            LN0->getAddressSpace()))) {
       SDValue ExtLoad =
           DAG.getExtLoad(ISD::ZEXTLOAD, SDLoc(N0), VT, LN0->getChain(),
                          LN0->getBasePtr(), MemVT, LN0->getMemOperand());

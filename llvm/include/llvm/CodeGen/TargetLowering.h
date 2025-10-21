@@ -1487,7 +1487,9 @@ public:
                            (uint64_t)AddrSpace;
 
     if (LoadExtActionOverrides.count(OverrideKey)) {
-      return (LegalizeAction)((LoadExtActionOverrides.at(OverrideKey) >> Shift) & 0xf);
+      return (
+          LegalizeAction)((LoadExtActionOverrides.at(OverrideKey) >> Shift) &
+                          0xf);
     }
     return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
   }

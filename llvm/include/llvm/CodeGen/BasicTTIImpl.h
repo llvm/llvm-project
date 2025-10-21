@@ -1243,7 +1243,7 @@ public:
         EVT ExtVT = EVT::getEVT(Dst);
         EVT LoadVT = EVT::getEVT(Src);
         unsigned LType =
-          ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
+            ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
 
         if (I) {
           if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
@@ -1253,18 +1253,19 @@ public:
               return 0;
           } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
             switch (II->getIntrinsicID()) {
-              case Intrinsic::masked_load: {
-                auto *PtrType = II->getArgOperand(0)->getType();
-                assert(PtrType->isPointerTy());
+            case Intrinsic::masked_load: {
+              auto *PtrType = II->getArgOperand(0)->getType();
+              assert(PtrType->isPointerTy());
 
-                if (DstLT.first == SrcLT.first &&
-                    TLI->isLoadExtLegal(LType, ExtVT, LoadVT,
-                                        PtrType->getPointerAddressSpace()))
-                  return 0;
+              if (DstLT.first == SrcLT.first &&
+                  TLI->isLoadExtLegal(LType, ExtVT, LoadVT,
+                                      PtrType->getPointerAddressSpace()))
+                return 0;
 
-                break;
-              }
-              default: break;
+              break;
+            }
+            default:
+              break;
             }
           }
         }
