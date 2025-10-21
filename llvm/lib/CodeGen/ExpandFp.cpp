@@ -993,7 +993,6 @@ static void addToWorklist(Instruction &I,
 static bool runImpl(Function &F, const TargetLowering &TLI,
                     AssumptionCache *AC) {
   SmallVector<Instruction *, 4> Worklist;
-  bool Modified = false;
 
   unsigned MaxLegalFpConvertBitWidth =
       TLI.getMaxLargeFPConvertBitWidthSupported();
@@ -1003,50 +1002,49 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
   if (MaxLegalFpConvertBitWidth >= llvm::IntegerType::MAX_INT_BITS)
     return false;
 
-  for (auto It = inst_begin(&F), End = inst_end(F); It != End;) {
-    Instruction &I = *It++;
+  auto ShouldHandleInst = [&](Instruction &I) {
     Type *Ty = I.getType();
     // TODO: This pass doesn't handle scalable vectors.
     if (Ty->isScalableTy())
-      continue;
+      return false;
 
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      if (!targetSupportsFrem(TLI, Ty) &&
-          FRemExpander::canExpandType(Ty->getScalarType())) {
-        addToWorklist(I, Worklist);
-        Modified = true;
-      }
-      break;
+      return !targetSupportsFrem(TLI, Ty) &&
+             FRemExpander::canExpandType(Ty->getScalarType());
+
     case Instruction::FPToUI:
     case Instruction::FPToSI: {
       auto *IntTy = cast<IntegerType>(Ty->getScalarType());
-      if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
-        continue;
-
-      addToWorklist(I, Worklist);
-      Modified = true;
-      break;
+      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
     }
+
     case Instruction::UIToFP:
     case Instruction::SIToFP: {
       auto *IntTy =
           cast<IntegerType>(I.getOperand(0)->getType()->getScalarType());
-      if (IntTy->getIntegerBitWidth() <= MaxLegalFpConvertBitWidth)
-        continue;
+      return IntTy->getIntegerBitWidth() > MaxLegalFpConvertBitWidth;
+    }
+    }
 
-      addToWorklist(I, Worklist);
-      Modified = true;
-      break;
-    }
-    default:
-      break;
-    }
+    return false;
+  };
+
+  bool Modified = false;
+  for (auto It = inst_begin(&F), End = inst_end(F); It != End;) {
+    Instruction &I = *It++;
+    if (!ShouldHandleInst(I))
+      continue;
+
+    addToWorklist(I, Worklist);
+    Modified = true;
   }
 
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (I->getOpcode() == Instruction::FRem) {
+
+    switch (I->getOpcode()) {
+    case Instruction::FRem: {
       auto SQ = [&]() -> std::optional<SimplifyQuery> {
         if (AC) {
           auto Res = std::make_optional<SimplifyQuery>(
@@ -1058,11 +1056,18 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       }();
 
       expandFRem(cast<BinaryOperator>(*I), SQ);
-    } else if (I->getOpcode() == Instruction::FPToUI ||
-               I->getOpcode() == Instruction::FPToSI) {
+      break;
+    }
+
+    case Instruction::FPToUI:
+    case Instruction::FPToSI:
       expandFPToI(I);
-    } else {
+      break;
+
+    case Instruction::UIToFP:
+    case Instruction::SIToFP:
       expandIToFP(I);
+      break;
     }
   }
 

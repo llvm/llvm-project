@@ -91,19 +91,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
       sys::Memory::InvalidateInstructionCache(Base.toPtr<void *>(), Size);
   }
 
-  std::vector<shared::WrapperFunctionCall> DeinitializeActions;
-  {
-    std::promise<MSVCPExpected<std::vector<shared::WrapperFunctionCall>>> P;
-    auto F = P.get_future();
-    shared::runFinalizeActions(
-        AI.Actions, [&](Expected<std::vector<shared::WrapperFunctionCall>> R) {
-          P.set_value(std::move(R));
-        });
-    if (auto DeinitializeActionsOrErr = F.get())
-      DeinitializeActions = std::move(*DeinitializeActionsOrErr);
-    else
-      return OnInitialized(DeinitializeActionsOrErr.takeError());
-  }
+  auto DeinitializeActions = shared::runFinalizeActions(AI.Actions);
+  if (!DeinitializeActions)
+    return OnInitialized(DeinitializeActions.takeError());
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -111,7 +101,7 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     // This is the maximum range whose permission have been possibly modified
     auto &Alloc = Allocations[MinAddr];
     Alloc.Size = MaxAddr - MinAddr;
-    Alloc.DeinitializationActions = std::move(DeinitializeActions);
+    Alloc.DeinitializationActions = std::move(*DeinitializeActions);
     Reservations[AI.MappingBase.toPtr<void *>()].Allocations.push_back(MinAddr);
   }
 
@@ -128,10 +118,10 @@ void InProcessMemoryMapper::deinitialize(
 
     for (auto Base : llvm::reverse(Bases)) {
 
-      shared::runDeallocActions(
-          Allocations[Base].DeinitializationActions, [&](Error Err) {
-            AllErr = joinErrors(std::move(AllErr), std::move(Err));
-          });
+      if (Error Err = shared::runDeallocActions(
+              Allocations[Base].DeinitializationActions)) {
+        AllErr = joinErrors(std::move(AllErr), std::move(Err));
+      }
 
       // Reset protections to read/write so the area can be reused
       if (auto EC = sys::Memory::protectMappedMemory(
