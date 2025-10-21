@@ -102,6 +102,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::Unpack:
     return SetResultTyFromOp();
   case VPInstruction::ExtractLane:
     return inferScalarType(R->getOperand(1));

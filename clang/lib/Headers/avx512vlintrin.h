@@ -7545,11 +7545,10 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
   __builtin_ia32_pmovqw256mem_mask ((__v8hi *) __P, (__v4di) __A, __M);
 }
 
-#define _mm256_extractf32x4_ps(A, imm) \
-  ((__m128)__builtin_ia32_extractf32x4_256_mask((__v8sf)(__m256)(A), \
-                                                (int)(imm), \
-                                                (__v4sf)_mm_undefined_ps(), \
-                                                (__mmask8)-1))
+#define _mm256_extractf32x4_ps(A, imm)                                         \
+  ((__m128)__builtin_ia32_extractf32x4_256_mask(                               \
+      (__v8sf)(__m256)(A), (int)(imm), (__v4sf)_mm_setzero_ps(),               \
+      (__mmask8) - 1))
 
 #define _mm256_mask_extractf32x4_ps(W, U, A, imm) \
   ((__m128)__builtin_ia32_extractf32x4_256_mask((__v8sf)(__m256)(A), \
@@ -7563,11 +7562,10 @@ _mm256_mask_cvtepi64_storeu_epi16 (void * __P, __mmask8 __M, __m256i __A)
                                                 (__v4sf)_mm_setzero_ps(), \
                                                 (__mmask8)(U)))
 
-#define _mm256_extracti32x4_epi32(A, imm) \
-  ((__m128i)__builtin_ia32_extracti32x4_256_mask((__v8si)(__m256i)(A), \
-                                                 (int)(imm), \
-                                                 (__v4si)_mm_undefined_si128(), \
-                                                 (__mmask8)-1))
+#define _mm256_extracti32x4_epi32(A, imm)                                      \
+  ((__m128i)__builtin_ia32_extracti32x4_256_mask(                              \
+      (__v8si)(__m256i)(A), (int)(imm), (__v4si)_mm_setzero_si128(),           \
+      (__mmask8) - 1))
 
 #define _mm256_mask_extracti32x4_epi32(W, U, A, imm) \
   ((__m128i)__builtin_ia32_extracti32x4_256_mask((__v8si)(__m256i)(A), \

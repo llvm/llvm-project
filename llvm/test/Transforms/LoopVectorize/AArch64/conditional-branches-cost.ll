@@ -470,7 +470,7 @@ define i32 @header_mask_and_invariant_compare(ptr %A, ptr %B, ptr %C, ptr %D, pt
 ; DEFAULT-NEXT:    store i32 [[TMP22]], ptr [[E]], align 4, !alias.scope [[META15]], !noalias [[META17]]
 ; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE37]]
 ; DEFAULT:       [[PRED_STORE_CONTINUE37]]:
-; DEFAULT-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr [[TMP16]], i32 4, <4 x i1> [[TMP8]]), !alias.scope [[META19:![0-9]+]], !noalias [[META20:![0-9]+]]
+; DEFAULT-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr align 4 [[TMP16]], <4 x i1> [[TMP8]]), !alias.scope [[META19:![0-9]+]], !noalias [[META20:![0-9]+]]
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; DEFAULT-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; DEFAULT-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
@@ -1326,10 +1326,10 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PRED-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
-; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP12]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; PRED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP12]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; PRED-NEXT:    [[TMP13:%.*]] = uitofp <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x float>
 ; PRED-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
-; PRED-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP14]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
+; PRED-NEXT:    [[WIDE_MASKED_LOAD5:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP14]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; PRED-NEXT:    [[TMP15:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD5]], zeroinitializer
 ; PRED-NEXT:    [[TMP16:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP15]], <vscale x 16 x i1> zeroinitializer
 ; PRED-NEXT:    [[TMP17:%.*]] = xor <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], splat (i8 1)

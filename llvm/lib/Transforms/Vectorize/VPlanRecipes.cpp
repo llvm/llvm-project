@@ -514,6 +514,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::Not:
+  case VPInstruction::Unpack:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -1245,6 +1246,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::VScale:
+  case VPInstruction::Unpack:
     return false;
   default:
     return true;
@@ -1289,7 +1291,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::WidePtrAdd:
-    return Op == getOperand(0);
+    // WidePtrAdd supports scalar and vector base addresses.
+    return false;
   case VPInstruction::ComputeAnyOfResult:
   case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
@@ -1415,6 +1418,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ResumeForEpilogue:
     O << "resume-for-epilogue";
+    break;
+  case VPInstruction::Unpack:
+    O << "unpack";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -2886,6 +2892,13 @@ bool VPExpressionRecipe::mayHaveSideEffects() const {
   return false;
 }
 
+bool VPExpressionRecipe::isSingleScalar() const {
+  // Cannot use vputils::isSingleScalar(), because all external operands
+  // of the expression will be live-ins while bundled.
+  return isa<VPReductionRecipe>(ExpressionRecipes.back()) &&
+         !isa<VPPartialReductionRecipe>(ExpressionRecipes.back());
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -3147,7 +3160,17 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
 
   while (!WorkList.empty()) {
     auto *Cur = dyn_cast<VPSingleDefRecipe>(WorkList.pop_back_val());
-    if (!Cur || !Seen.insert(Cur).second || isa<VPBlendRecipe>(Cur))
+    if (!Cur || !Seen.insert(Cur).second)
+      continue;
+
+    auto *Blend = dyn_cast<VPBlendRecipe>(Cur);
+    // Skip blends that use V only through a compare by checking if any incoming
+    // value was already visited.
+    if (Blend && none_of(seq<unsigned>(0, Blend->getNumIncomingValues()),
+                         [&](unsigned I) {
+                           return Seen.contains(
+                               Blend->getIncomingValue(I)->getDefiningRecipe());
+                         }))
       continue;
 
     for (VPUser *U : Cur->users()) {
@@ -3168,7 +3191,13 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
       }
     }
 
-    append_range(WorkList, cast<VPSingleDefRecipe>(Cur)->users());
+    // The legacy cost model only supports scalarization loads/stores with phi
+    // addresses, if the phi is directly used as load/store address. Don't
+    // traverse further for Blends.
+    if (Blend)
+      continue;
+
+    append_range(WorkList, Cur->users());
   }
   return false;
 }
