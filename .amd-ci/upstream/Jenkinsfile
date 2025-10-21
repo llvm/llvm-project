@@ -57,8 +57,12 @@ if (postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
     return this
 }
 
-// Code smell: should be false; we should be doing merge/push syncing in the separate llvm_sync job:
-Boolean intraJobRepoSync = postsub && env.BRANCH_NAME == upstreamBranch
+/*
+ * Code smell: intraJobRepoSync should be false;
+ * we should be doing merge/push syncing in the separate llvm_sync job:
+ * delete it (set to false), and the repo_sync.sh script.
+ */
+Boolean intraJobRepoSync = false
 
 Boolean disableStaging = false, disableRelease = true
 Boolean timerTrigger = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')
