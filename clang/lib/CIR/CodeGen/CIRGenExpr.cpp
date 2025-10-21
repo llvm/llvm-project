@@ -1675,7 +1675,25 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
     // name to make it clear it's not the actual builtin.
     auto fn = cast<cir::FuncOp>(curFn);
     if (fn.getName() != fdInlineName && onlyHasInlineBuiltinDeclaration(fd)) {
-      cgm.errorNYI("Inline only builtin function calls");
+      cir::FuncOp clone =
+          mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
+
+      if (!clone) {
+        // Create a forward declaration - the body will be generated in
+        // generateCode when the function definition is processed
+        cir::FuncOp calleeFunc = emitFunctionDeclPointer(cgm, gd);
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(cgm.getModule().getBody());
+
+        clone = builder.create<cir::FuncOp>(calleeFunc.getLoc(), fdInlineName,
+                                            calleeFunc.getFunctionType());
+        clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+            &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
+        clone.setSymVisibility("private");
+        clone.setInlineKindAttr(cir::InlineAttr::get(
+            &cgm.getMLIRContext(), cir::InlineKind::AlwaysInline));
+      }
+      return CIRGenCallee::forDirect(clone, gd);
     }
 
     // Replaceable builtins provide their own implementation of a builtin. If we
