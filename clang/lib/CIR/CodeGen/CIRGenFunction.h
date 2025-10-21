@@ -665,6 +665,12 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
+  // Replaces the address of the local variable, if it exists.  Else does the
+  // same thing as setAddrOfLocalVar.
+  void replaceAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
+    localDeclMap.insert_or_assign(vd, addr);
+  }
+
   // A class to allow reverting changes to a var-decl's registration to the
   // localDeclMap. This is used in cases where things are being inserted into
   // the variable list but don't follow normal lookup/search rules, like in
