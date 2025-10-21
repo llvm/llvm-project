@@ -1233,14 +1233,60 @@ struct WgToSgVectorTransposeOp
     if (!layout || !layout.isForWorkgroup())
       return failure();
 
+    // Get the source layout for validation
+    xegpu::DistributeLayoutAttr sourceLayout =
+        xegpu::getDistributeLayoutAttr(op.getVector());
+    if (!sourceLayout || !sourceLayout.isForWorkgroup())
+      return failure();
+
+    // Validate that result layout is transpose of source layout
+    SmallVector<int64_t> sourceSgLayout =
+        sourceLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> sourceSgData = sourceLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> resultSgLayout = layout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> resultSgData = layout.getEffectiveSgDataAsInt();
+
+    ArrayRef<int64_t> permutation = op.getPermutation();
+
+    // Check that sgLayout and sgData are properly transposed
+    if (sourceSgLayout.size() != resultSgLayout.size() ||
+        sourceSgData.size() != resultSgData.size() ||
+        sourceSgLayout.size() != permutation.size()) {
+      return rewriter.notifyMatchFailure(
+          op, "Source and result layouts must have same rank as permutation");
+    }
+
+    // Validate sgLayout transpose
+    for (size_t i = 0; i < permutation.size(); ++i) {
+      int64_t srcDim = permutation[i];
+      if (srcDim < 0 || srcDim >= static_cast<int64_t>(sourceSgLayout.size())) {
+        return rewriter.notifyMatchFailure(op, "Invalid permutation index");
+      }
+      if (resultSgLayout[i] != sourceSgLayout[srcDim]) {
+        return rewriter.notifyMatchFailure(
+            op, "Result sgLayout is not transpose of source sgLayout according "
+                "to permutation");
+      }
+    }
+
+    // Validate sgData transpose
+    for (size_t i = 0; i < permutation.size(); ++i) {
+      int64_t srcDim = permutation[i];
+      if (resultSgData[i] != sourceSgData[srcDim]) {
+        return rewriter.notifyMatchFailure(
+            op, "Result sgData is not transpose of source sgData according to "
+                "permutation");
+      }
+    }
+
     SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     VectorType newResultType =
         VectorType::get(sgShape, resultType.getElementType());
 
     SmallVector<Value> newTransposeOps;
     for (auto src : adaptor.getVector()) {
-      auto newTranspose = rewriter.create<vector::TransposeOp>(
-          op.getLoc(), newResultType, src, op.getPermutation());
+      auto newTranspose = vector::TransposeOp::create(
+          rewriter, op.getLoc(), newResultType, src, op.getPermutation());
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newTranspose->getResult(0),
@@ -1267,7 +1313,8 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
            WgToSgStoreScatterOpWithOffset, WgToSgLoadMatrixOp,
            WgToSgStoreMatrixOp, WgToSgVectorStepOp, WgToSgVectorShapeCastOp,
-           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp>(patterns.getContext());
+           WgToSgMultiDimReductionOp, WgToSgVectorTransposeOp>(
+          patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
