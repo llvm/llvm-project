@@ -5452,16 +5452,14 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
   // it is not we return an invalid cost specifying the orignal cost method
   // should be used.
   Instruction *RetI = I;
-  if (match(RetI, m_ZExtOrSExt(m_Value())) || match(RetI, m_FPExt(m_Value()))) {
+  if (match(RetI, m_ZExtOrSExt(m_Value()))) {
     if (!RetI->hasOneUser())
       return std::nullopt;
     RetI = RetI->user_back();
   }
 
-  if ((match(RetI, m_OneUse(m_Mul(m_Value(), m_Value()))) &&
-       RetI->user_back()->getOpcode() == Instruction::Add) ||
-      (match(RetI, m_OneUse(m_FMul(m_Value(), m_Value()))) &&
-       RetI->user_back()->getOpcode() == Instruction::FAdd)) {
+  if (match(RetI, m_OneUse(m_Mul(m_Value(), m_Value()))) &&
+      RetI->user_back()->getOpcode() == Instruction::Add) {
     RetI = RetI->user_back();
   }
 
