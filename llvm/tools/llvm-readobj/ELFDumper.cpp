@@ -191,7 +191,6 @@ struct GroupSection {
 // Per-function call graph information.
 struct FunctionCallgraphInfo {
   uint64_t FunctionAddress;
-  uint64_t FunctionAddressOffset;
   uint8_t FormatVersionNumber;
   bool IsIndirectTarget;
   uint64_t FunctionTypeId;
@@ -5470,9 +5469,7 @@ void ELFDumper<ELFT>::getCallGraphRelocations(
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection())
-    return;
-  if (this->FuncCGInfos.empty())
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
     return;
 
   std::vector<Relocation<ELFT>> Relocations;
@@ -8382,16 +8379,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
-  if (!this->processCallGraphSection())
-    return;
-  if (this->FuncCGInfos.empty())
+  if (!this->processCallGraphSection() || this->FuncCGInfos.empty())
     return;
 
   std::vector<Relocation<ELFT>> Relocations;
   const Elf_Shdr *RelocSymTab = nullptr;
   this->getCallGraphRelocations(Relocations, RelocSymTab);
 
-  auto GetFunctionName = [&](typename ELFT::uint EntryPc) {
+  auto GetFunctionName = [&](uint64_t EntryPc) {
     SmallVector<uint32_t> FuncSymIndexes =
         this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
     if (FuncSymIndexes.empty())
