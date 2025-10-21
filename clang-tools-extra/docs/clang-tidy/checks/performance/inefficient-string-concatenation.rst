@@ -53,7 +53,7 @@ In a slightly more efficient way like:
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 15.0.0)
 
    When `false`, the check will only check the string usage in ``while``, ``for``
    and ``for-range`` statements. Default is `false`.

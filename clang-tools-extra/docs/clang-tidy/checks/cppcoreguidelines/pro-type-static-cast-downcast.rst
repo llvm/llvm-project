@@ -18,7 +18,7 @@ profile from the C++ Core Guidelines.
 Options
 -------
 
-.. option:: StrictMode
+.. option:: StrictMode (added in 18.1.0)
 
   When set to `false`, no warnings are emitted for casts on non-polymorphic
   types. Default is `true`.

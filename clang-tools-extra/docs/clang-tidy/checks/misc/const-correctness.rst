@@ -66,7 +66,7 @@ an independent translation unit.
 Options
 -------
 
-.. option:: AnalyzeValues
+.. option:: AnalyzeValues (added in 21.1.0)
 
   Enable or disable the analysis of ordinary value variables, like
   ``int i = 42;``. Default is `true`.
@@ -83,7 +83,7 @@ Options
     // No warning
     int const a[] = {42, 42, 42};
 
-.. option:: AnalyzeReferences
+.. option:: AnalyzeReferences (added in 21.1.0)
 
   Enable or disable the analysis of reference variables, like
   ``int &ref = i;``. Default is `true`.
@@ -96,14 +96,14 @@ Options
     // No warning
     int const& ref = i;
 
-.. option:: AnalyzePointers
+.. option:: AnalyzePointers (added in 21.1.0)
 
   Enable or disable the analysis of pointers variables, like
   ``int *ptr = &i;``. For specific checks, see 
   :option:`WarnPointersAsValues` and :option:`WarnPointersAsPointers`.
   Default is `true`.
 
-.. option:: WarnPointersAsValues
+.. option:: WarnPointersAsValues (added in 21.1.0)
 
   This option enables the suggestion for ``const`` of the pointer itself.
   Pointer values have two possibilities to be ``const``, the pointer
@@ -118,7 +118,7 @@ Options
     // No warning
     const int *const pointer_variable = &value;
 
-.. option:: WarnPointersAsPointers
+.. option:: WarnPointersAsPointers (added in 21.1.0)
 
   This option enables the suggestion for ``const`` of the value pointing to.
   Default is `true`.
@@ -134,7 +134,7 @@ Options
     // Warning
     int *const pointer_variable = &value;
 
-.. option:: TransformValues
+.. option:: TransformValues (added in 21.1.0)
 
   Provides fixit-hints for value types that automatically add ``const`` if
   its a single declaration. Default is `true`.
@@ -155,7 +155,7 @@ Options
     int result = value * 3;
     result -= 10;
 
-.. option:: TransformReferences
+.. option:: TransformReferences (added in 21.1.0)
 
   Provides fixit-hints for reference types that automatically add ``const`` if
   its a single declaration. Default is `true`.
@@ -175,7 +175,7 @@ Options
     int result = ref_value * 3;
     result -= 10;
 
-.. option:: TransformPointersAsValues
+.. option:: TransformPointersAsValues (added in 21.1.0)
 
   Provides fixit-hints for pointers if their pointee is not changed. This does
   not analyze if the value-pointed-to is unchanged! Default is `false`.
@@ -209,7 +209,7 @@ Options
     int *changing_pointee = &value;
     changing_pointee = &result;
 
-.. option:: TransformPointersAsPointers
+.. option:: TransformPointersAsPointers (added in 21.1.0)
 
   Provides fix-it hints for pointers if the value it pointing to is not changed.
   Default is `false`.
@@ -230,7 +230,7 @@ Options
     // After
     const int * a[] = {&value, &value};
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 21.1.0)
 
   A semicolon-separated list of names of types that will be excluded from
   const-correctness checking. Regular expressions are accepted, e.g.

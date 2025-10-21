@@ -73,13 +73,13 @@ Developers do not need to enforce all operators, and can mix the representations
 as desired by specifying a semicolon-separated list of both traditional and
 alternative tokens in the configuration, such as `and;||;not`.
 
-.. option:: BinaryOperators
+.. option:: BinaryOperators (added in 17.0.1)
 
     This option allows you to specify a semicolon-separated list of binary
     operators for which you want to enforce specific token representation.
     The default value is empty string.
 
-.. option:: OverloadedOperators
+.. option:: OverloadedOperators (added in 17.0.1)
 
     This option allows you to specify a semicolon-separated list of overloaded
     operators for which you want to enforce specific token representation.

@@ -47,7 +47,7 @@ transforms to:
 Options
 -------
 
-.. option:: ReplacementString
+.. option:: ReplacementString (added in 15.0.0)
 
     Specifies a macro to use instead of ``[[nodiscard]]``. This is useful when
     maintaining source code that needs to compile with a pre-C++17 compiler.

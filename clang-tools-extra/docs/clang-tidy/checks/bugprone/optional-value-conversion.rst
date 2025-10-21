@@ -63,13 +63,13 @@ The support for non-standard optional types such as ``boost::optional`` or
 Options:
 --------
 
-.. option:: OptionalTypes
+.. option:: OptionalTypes (added in 18.1.0)
 
     Semicolon-separated list of (fully qualified) optional type names or regular
     expressions that match the optional types.
     Default value is `::std::optional;::absl::optional;::boost::optional`.
 
-.. option:: ValueMethods
+.. option:: ValueMethods (added in 18.1.0)
 
     Semicolon-separated list of (fully qualified) method names or regular
     expressions that match the methods.

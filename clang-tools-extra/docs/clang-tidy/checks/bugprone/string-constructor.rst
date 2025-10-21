@@ -48,16 +48,16 @@ Examples:
 Options
 -------
 
-.. option::  WarnOnLargeLength
+.. option::  WarnOnLargeLength (added in 15.0.0)
 
    When `true`, the check will warn on a string with a length greater than
    :option:`LargeLengthThreshold`. Default is `true`.
 
-.. option::  LargeLengthThreshold
+.. option::  LargeLengthThreshold (added in 15.0.0)
 
    An integer specifying the large length threshold. Default is `0x800000`.
 
-.. option:: StringNames
+.. option:: StringNames (added in 15.0.0)
 
     Default is `::std::basic_string;::std::basic_string_view`.
 

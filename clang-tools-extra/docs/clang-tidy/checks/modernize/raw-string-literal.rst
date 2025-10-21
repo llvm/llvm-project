@@ -48,13 +48,13 @@ vertical tab in source code is not visually obvious.
 Options
 -------
 
-.. option:: DelimiterStem
+.. option:: DelimiterStem (added in 17.0.1)
 
   Custom delimiter to escape characters in raw string literals. It is used in
   the following construction: ``R"stem_delimiter(contents)stem_delimiter"``.
   The default value is `lit`.
 
-.. option:: ReplaceShorterLiterals
+.. option:: ReplaceShorterLiterals (added in 17.0.1)
 
   Controls replacing shorter non-raw string literals with longer raw string
   literals. Setting this option to `true` enables the replacement.

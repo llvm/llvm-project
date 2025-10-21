@@ -44,7 +44,7 @@ Example
 Options
 -------
 
-.. option:: EnumIgnoreList
+.. option:: EnumIgnoreList (added in 17.0.1)
 
   Option is used to ignore certain enum types when checking for
   implicit/explicit casts to bool. It accepts a semicolon-separated list of

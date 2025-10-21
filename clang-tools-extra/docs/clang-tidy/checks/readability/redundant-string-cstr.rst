@@ -9,7 +9,7 @@ Finds unnecessary calls to ``std::string::c_str()`` and ``std::string::data()``.
 Options
 -------
 
-.. option:: StringParameterFunctions
+.. option:: StringParameterFunctions (added in 17.0.1)
 
    A semicolon-separated list of (fully qualified) function/method/operator
    names, with the requirement that any parameter currently accepting a

@@ -178,7 +178,7 @@ Limitations
 Options
 -------
 
-.. option:: MinTypeNameLength
+.. option:: MinTypeNameLength (added in 15.0.0)
 
    If the option is set to non-zero (default `5`), the check will ignore type
    names having a length less than the option value. The option affects
@@ -215,7 +215,7 @@ Options
   unsigned c = static_cast<unsigned>(foo());       // ---> auto c = ...
   long int d = static_cast<long int>(foo());       // ---> auto d = ...
 
-.. option:: RemoveStars
+.. option:: RemoveStars (added in 15.0.0)
 
    If the option is set to `true` (default is `false`), the check will remove
    stars from the non-typedef pointer types when replacing type names with

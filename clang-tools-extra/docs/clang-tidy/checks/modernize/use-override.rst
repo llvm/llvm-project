@@ -23,16 +23,16 @@ This can be useful as compilers can generate a compile time error when:
 Options
 -------
 
-.. option:: IgnoreDestructors
+.. option:: IgnoreDestructors (added in 15.0.0)
 
    If set to `true`, this check will not diagnose destructors. Default is `false`.
 
-.. option:: IgnoreTemplateInstantiations
+.. option:: IgnoreTemplateInstantiations (added in 17.0.1)
 
    If set to `true`, instructs this check to ignore virtual function overrides
    that are part of template instantiations. Default is `false`.
 
-.. option:: AllowOverrideAndFinal
+.. option:: AllowOverrideAndFinal (added in 15.0.0)
 
    If set to `true`, this check will not diagnose ``override`` as redundant
    with ``final``. This is useful when code will be compiled by a compiler with
@@ -40,13 +40,13 @@ Options
    members, such as ``gcc -Wsuggest-override``/``gcc -Werror=suggest-override``.
    Default is `false`.
 
-.. option:: OverrideSpelling
+.. option:: OverrideSpelling (added in 15.0.0)
 
    Specifies a macro to use instead of ``override``. This is useful when
    maintaining source code that also needs to compile with a pre-C++11
    compiler.
 
-.. option:: FinalSpelling
+.. option:: FinalSpelling (added in 15.0.0)
 
    Specifies a macro to use instead of ``final``. This is useful when
    maintaining source code that also needs to compile with a pre-C++11

@@ -38,7 +38,7 @@ Example:
 Options
 -------
 
-.. option:: ForwardFunction
+.. option:: ForwardFunction (added in 21.1.0)
 
    Specify the function used for forwarding. Default is `::std::forward`.
 

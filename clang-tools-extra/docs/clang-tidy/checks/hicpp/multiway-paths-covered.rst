@@ -90,7 +90,7 @@ Degenerated ``switch`` statements without any labels are caught as well.
 Options
 -------
 
-.. option:: WarnOnMissingElse
+.. option:: WarnOnMissingElse (added in 15.0.0)
 
   Boolean flag that activates a warning for missing ``else`` branches.
   Default is `false`.

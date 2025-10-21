@@ -22,7 +22,7 @@ because they are ABI incompatible.
 Options
 -------
 
-.. option:: Includes
+.. option:: Includes (added in 15.0.0)
 
    A string containing a comma separated glob list of allowed include
    filenames. Similar to the -checks glob list for running clang-tidy itself,

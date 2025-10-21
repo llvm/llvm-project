@@ -21,12 +21,12 @@ following heuristic is employed:
 Options
 -------
 
-.. option:: WarnOnAllAutoCopies
+.. option:: WarnOnAllAutoCopies (added in 15.0.0)
 
    When `true`, warns on any use of ``auto`` as the type of the range-based for
    loop variable. Default is `false`.
 
-.. option:: AllowedTypes
+.. option:: AllowedTypes (added in 15.0.0)
 
    A semicolon-separated list of names of types allowed to be copied in each
    iteration. Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$``

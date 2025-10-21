@@ -29,13 +29,13 @@ Exceptions:
 Options
 -------
 
-.. option:: CheckThrowTemporaries
+.. option:: CheckThrowTemporaries (added in 15.0.0)
 
    Triggers detection of violations of the CERT recommendation ERR09-CPP. Throw
    anonymous temporaries.
    Default is `true`.
 
-.. option:: WarnOnLargeObject
+.. option:: WarnOnLargeObject (added in 15.0.0)
 
    Also warns for any large, trivial object caught by value. Catching a large
    object by value is not dangerous but affects the performance negatively. The
@@ -43,7 +43,7 @@ Options
    using the `MaxSize` option.
    Default is `false`.
 
-.. option:: MaxSize
+.. option:: MaxSize (added in 15.0.0)
 
    Determines the maximum size of an object allowed to be caught without
    warning. Only applicable if :option:`WarnOnLargeObject` is set to `true`. If

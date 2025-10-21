@@ -112,40 +112,40 @@ even if not present in the respective ignored values list.
 Options
 -------
 
-.. option:: IgnoredIntegerValues
+.. option:: IgnoredIntegerValues (added in 15.0.0)
 
    Semicolon-separated list of magic positive integers that will be accepted
    without a warning. Default values are `{1, 2, 3, 4}`, and `0` is accepted
    unconditionally.
 
-.. option:: IgnorePowersOf2IntegerValues
+.. option:: IgnorePowersOf2IntegerValues (added in 15.0.0)
 
    Boolean value indicating whether to accept all powers-of-two integer values
    without warning. Default value is `false`.
 
-.. option:: IgnoredFloatingPointValues
+.. option:: IgnoredFloatingPointValues (added in 15.0.0)
 
    Semicolon-separated list of magic positive floating point values that will
    be accepted without a warning. Default values are `{1.0, 100.0}` and `0.0`
    is accepted unconditionally.
 
-.. option:: IgnoreAllFloatingPointValues
+.. option:: IgnoreAllFloatingPointValues (added in 15.0.0)
 
    Boolean value indicating whether to accept all floating point values without
    warning. Default value is `false`.
 
-.. option:: IgnoreBitFieldsWidths
+.. option:: IgnoreBitFieldsWidths (added in 15.0.0)
 
    Boolean value indicating whether to accept magic numbers as bit field widths
    without warning. This is useful for example for register definitions which
    are generated from hardware specifications. Default value is `true`.
 
-.. option:: IgnoreTypeAliases
+.. option:: IgnoreTypeAliases (added in 17.0.1)
 
    Boolean value indicating whether to accept magic numbers in ``typedef`` or
    ``using`` declarations. Default value is `false`.
 
-.. option:: IgnoreUserDefinedLiterals
+.. option:: IgnoreUserDefinedLiterals (added in 17.0.1)
 
    Boolean value indicating whether to accept magic numbers in user-defined
    literals. Default value is `false`.

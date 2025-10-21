@@ -29,7 +29,7 @@ Example:
 Options
 -------
 
-.. option:: IgnoreUnscopedEnumsInClasses
+.. option:: IgnoreUnscopedEnumsInClasses (added in 21.1.0)
 
    When `true`, ignores unscoped ``enum`` declarations in classes.
    Default is `false`.

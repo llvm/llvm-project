@@ -46,7 +46,7 @@ Example:
 Options
 -------
 
-.. option:: IgnoreInheritedVirtualFunctions
+.. option:: IgnoreInheritedVirtualFunctions (added in 19.1.0)
 
   When `true`, objects that only inherit a virtual function are not checked.
   Classes that do not declare a new virtual function are excluded

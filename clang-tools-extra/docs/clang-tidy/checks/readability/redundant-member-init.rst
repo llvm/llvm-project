@@ -24,7 +24,7 @@ Example
 Options
 -------
 
-.. option:: IgnoreBaseInCopyConstructors
+.. option:: IgnoreBaseInCopyConstructors (added in 15.0.0)
 
     Default is `false`.
 

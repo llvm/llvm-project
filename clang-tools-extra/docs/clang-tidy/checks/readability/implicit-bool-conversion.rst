@@ -124,17 +124,17 @@ are deliberately ignored, as it is not clear how to deal with such cases.
 Options
 -------
 
-.. option::  AllowIntegerConditions
+.. option::  AllowIntegerConditions (added in 15.0.0)
 
    When `true`, the check will allow conditional integer conversions. Default
    is `false`.
 
-.. option::  AllowPointerConditions
+.. option::  AllowPointerConditions (added in 15.0.0)
 
    When `true`, the check will allow conditional pointer conversions. Default
    is `false`.
 
-.. option::  UseUpperCaseLiteralSuffix
+.. option::  UseUpperCaseLiteralSuffix (added in 20.1.0)
 
    When `true`, the replacements will use an uppercase literal suffix in the
    provided fixes. Default is `false`.

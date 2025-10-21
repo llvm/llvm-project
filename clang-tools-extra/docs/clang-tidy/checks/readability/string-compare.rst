@@ -58,7 +58,7 @@ inequality of two strings instead of using the correct operators.
 Options
 -------
 
-.. option:: StringLikeClasses
+.. option:: StringLikeClasses (added in 19.1.0)
 
    A string containing semicolon-separated names of string-like classes.
    By default contains only ``::std::basic_string``

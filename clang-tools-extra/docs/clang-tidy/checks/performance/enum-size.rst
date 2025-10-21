@@ -66,7 +66,7 @@ Does not provide auto-fixes.
 Options
 -------
 
-.. option:: EnumIgnoreList
+.. option:: EnumIgnoreList (added in 18.1.0)
 
     Option is used to ignore certain enum types. It accepts a
     semicolon-separated list of (fully qualified) enum type names or regular

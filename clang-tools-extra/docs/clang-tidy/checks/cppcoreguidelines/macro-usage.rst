@@ -44,19 +44,19 @@ results in the following warnings::
 Options
 -------
 
-.. option:: AllowedRegexp
+.. option:: AllowedRegexp (added in 15.0.0)
 
     A regular expression to filter allowed macros. For example
     `DEBUG*|LIBTORRENT*|TORRENT*|UNI*` could be applied to filter `libtorrent`.
     Default value is `^DEBUG_*`.
 
-.. option:: CheckCapsOnly
+.. option:: CheckCapsOnly (added in 15.0.0)
 
     Boolean flag to warn on all macros except those with CAPS_ONLY names.
     This option is intended to ease introduction of this check into older
     code bases. Default value is `false`.
 
-.. option:: IgnoreCommandLineMacros
+.. option:: IgnoreCommandLineMacros (added in 15.0.0)
 
     Boolean flag to toggle ignoring command-line-defined macros.
     Default value is `true`.

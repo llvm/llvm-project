@@ -32,17 +32,17 @@ management isn't easily transformed automatically into RAII.
 Options
 -------
 
-.. option:: Allocations
+.. option:: Allocations (added in 15.0.0)
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
    Defaults to `::malloc;::calloc`.
 
-.. option:: Deallocations
+.. option:: Deallocations (added in 15.0.0)
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
    Defaults to `::free`.
 
-.. option:: Reallocations
+.. option:: Reallocations (added in 15.0.0)
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
    Defaults to `::realloc`.

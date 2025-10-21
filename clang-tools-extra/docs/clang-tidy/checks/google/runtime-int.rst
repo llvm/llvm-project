@@ -14,14 +14,14 @@ Corresponding cpplint.py check: `runtime/int`.
 Options
 -------
 
-.. option:: UnsignedTypePrefix
+.. option:: UnsignedTypePrefix (added in 15.0.0)
 
    A string specifying the unsigned type prefix. Default is `uint`.
 
-.. option:: SignedTypePrefix
+.. option:: SignedTypePrefix (added in 15.0.0)
 
    A string specifying the signed type prefix. Default is `int`.
 
-.. option:: TypeSuffix
+.. option:: TypeSuffix (added in 15.0.0)
 
    A string specifying the type suffix. Default is an empty string.

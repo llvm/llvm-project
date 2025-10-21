@@ -24,7 +24,7 @@ Examples:
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 16.0.0)
 
   Ignore the check when analyzing macros. This is useful for safely defining function-like macros:
 

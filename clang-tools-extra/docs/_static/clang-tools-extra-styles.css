@@ -21,3 +21,6 @@ details summary:hover {
   background-color: rgba(50, 150, 220, 0.2);
   cursor: pointer;
 }
+.strike {
+  text-decoration: line-through;
+}

@@ -29,27 +29,27 @@ expression, and replaces it with a call to ``std::make_unique``.
 Options
 -------
 
-.. option:: MakeSmartPtrFunction
+.. option:: MakeSmartPtrFunction (added in 15.0.0)
 
    A string specifying the name of make-unique-ptr function. Default is
    `std::make_unique`.
 
-.. option:: MakeSmartPtrFunctionHeader
+.. option:: MakeSmartPtrFunctionHeader (added in 15.0.0)
 
    A string specifying the corresponding header of make-unique-ptr function.
    Default is `<memory>`.
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
 
-.. option:: IgnoreDefaultInitialization
+.. option:: IgnoreDefaultInitialization (added in 15.0.0)
 
    If set to `false`, the check does not suggest edits that will transform
    default initialization into value initialization, as this can cause

@@ -12,18 +12,18 @@ builds.
 Options
 -------
 
-.. option:: AssertMacros
+.. option:: AssertMacros (added in 15.0.0)
 
    A comma-separated list of the names of assert macros to be checked.
    Default is `assert,NSAssert,NSCAssert`.
 
-.. option:: CheckFunctionCalls
+.. option:: CheckFunctionCalls (added in 15.0.0)
 
    Whether to treat non-const member and non-member functions as they produce
    side effects. Disabled by default because it can increase the number of false
    positive warnings.
 
-.. option:: IgnoredFunctions
+.. option:: IgnoredFunctions (added in 15.0.0)
 
    A semicolon-separated list of the names of functions or methods to be
    considered as not having side-effects. Regular expressions are accepted,

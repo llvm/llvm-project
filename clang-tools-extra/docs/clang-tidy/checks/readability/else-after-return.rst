@@ -62,14 +62,14 @@ Would be transformed into:
 Options
 -------
 
-.. option:: WarnOnUnfixable
+.. option:: WarnOnUnfixable (added in 15.0.0)
 
    When `true`, emit a warning for cases where the check can't output a
    Fix-It. These can occur with declarations inside the ``else`` branch that
    would have an extended lifetime if the ``else`` branch was removed.
    Default value is `true`.
 
-.. option:: WarnOnConditionVariables
+.. option:: WarnOnConditionVariables (added in 15.0.0)
 
    When `true`, the check will attempt to refactor a variable defined inside
    the condition of the ``if`` statement that is used in the ``else`` branch

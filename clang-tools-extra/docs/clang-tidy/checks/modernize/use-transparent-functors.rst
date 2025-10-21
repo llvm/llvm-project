@@ -30,7 +30,7 @@ untouched to preserve the semantics.
 Options
 -------
 
-.. option:: SafeMode
+.. option:: SafeMode (added in 15.0.0)
 
   If the option is set to `true`, the check will not diagnose cases where
   using a transparent functor cannot be guaranteed to produce identical results

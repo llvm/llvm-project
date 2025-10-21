@@ -17,13 +17,13 @@ Optionally, this check can generate fixes using ``gsl::at`` for indexing.
 Options
 -------
 
-.. option:: GslHeader
+.. option:: GslHeader (added in 15.0.0)
 
    The check can generate fixes after this option has been set to the name of
    the include file that contains ``gsl::at()``, e.g. `"gsl/gsl.h"`.
    Default is an empty string.
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.

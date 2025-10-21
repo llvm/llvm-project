@@ -91,14 +91,14 @@ argument get called with either a ``gsl::owner<T*>`` or a newly created resource
 Options
 -------
 
-.. option:: LegacyResourceProducers
+.. option:: LegacyResourceProducers (added in 15.0.0)
 
    Semicolon-separated list of fully qualified names of legacy functions that create
    resources but cannot introduce ``gsl::owner<>``.
    Defaults to `::malloc;::aligned_alloc;::realloc;::calloc;::fopen;::freopen;::tmpfile`.
 
 
-.. option:: LegacyResourceConsumers
+.. option:: LegacyResourceConsumers (added in 15.0.0)
 
    Semicolon-separated list of fully qualified names of legacy functions expecting
    resource owners as pointer arguments but cannot introduce ``gsl::owner<>``.

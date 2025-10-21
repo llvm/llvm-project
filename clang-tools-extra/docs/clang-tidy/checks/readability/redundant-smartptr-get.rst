@@ -17,7 +17,7 @@ Examples:
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 15.0.0)
 
    If this option is set to `true` (default is `true`), the check will not warn
    about calls inside macros.

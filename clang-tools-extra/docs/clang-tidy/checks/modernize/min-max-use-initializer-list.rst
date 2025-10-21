@@ -35,16 +35,16 @@ non-trivial types:
 Options
 =======
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 19.1.0)
 
   A string specifying which include-style is used, `llvm` or `google`. Default
   is `llvm`.
 
-.. option:: IgnoreNonTrivialTypes
+.. option:: IgnoreNonTrivialTypes (added in 19.1.0)
 
   A boolean specifying whether to ignore non-trivial types. Default is `true`.
 
-.. option:: IgnoreTrivialTypesOfSizeAbove
+.. option:: IgnoreTrivialTypesOfSizeAbove (added in 19.1.0)
 
   An integer specifying the size (in bytes) above which trivial types are
   ignored. Default is `32`.

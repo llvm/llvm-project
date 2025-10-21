@@ -126,7 +126,7 @@ and maintainable.
 Options
 -------
 
-.. option:: IgnoreCatchWithKeywords
+.. option:: IgnoreCatchWithKeywords (added in 17.0.1)
 
   This option can be used to ignore specific catch statements containing
   certain keywords. If a ``catch`` statement body contains (case-insensitive)
@@ -134,7 +134,7 @@ Options
   catch will be ignored, and no warning will be raised.
   Default value: `@TODO;@FIXME`.
 
-.. option:: AllowEmptyCatchForExceptions
+.. option:: AllowEmptyCatchForExceptions (added in 17.0.1)
 
   This option can be used to ignore empty catch statements for specific
   exception types. By default, the check will raise a warning if an empty

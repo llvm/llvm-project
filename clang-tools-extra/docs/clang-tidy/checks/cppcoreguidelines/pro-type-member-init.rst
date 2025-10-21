@@ -27,13 +27,13 @@ fix is to zero initialize the variable via ``{}`` for C++11 and beyond or ``=
 Options
 -------
 
-.. option:: IgnoreArrays
+.. option:: IgnoreArrays (added in 15.0.0)
 
    If set to `true`, the check will not warn about array members that are not
    zero-initialized during construction. For performance critical code, it may
    be important to not initialize fixed-size array members. Default is `false`.
 
-.. option:: UseAssignment
+.. option:: UseAssignment (added in 15.0.0)
 
    If set to `true`, the check will provide fix-its with literal initializers
    \( ``int i = 0;`` \) instead of curly braces \( ``int i{};`` \).

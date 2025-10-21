@@ -15,7 +15,7 @@ access does not perform an errant memory access.
 Options
 -------
 
-.. option:: IgnoredContainers
+.. option:: IgnoredContainers (added in 17.0.1)
 
    Semicolon-separated list of containers regexp for which this check won't be
    enforced. Default is an empty string.

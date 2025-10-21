@@ -18,7 +18,7 @@ also be ``std::unique_ptr<Foo>*``.
 Options
 -------
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 15.0.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.

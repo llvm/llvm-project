@@ -46,7 +46,7 @@ improving the overall reliability and maintainability of the code.
 Options
 -------
 
-.. option:: EnableInC
+.. option:: EnableInC (added in 21.1.0)
 
    If `true`, enables the check in C code (it is always enabled in C++ code).
    Default is `true`.

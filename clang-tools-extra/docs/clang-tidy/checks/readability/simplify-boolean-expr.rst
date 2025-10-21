@@ -82,27 +82,27 @@ Examples:
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 18.1.0)
 
    If `true`, ignore boolean expressions originating from expanded macros.
    Default is `false`.
 
-.. option:: ChainedConditionalReturn
+.. option:: ChainedConditionalReturn (added in 15.0.0)
 
    If `true`, conditional boolean return statements at the end of an
    ``if/else if`` chain will be transformed. Default is `false`.
 
-.. option:: ChainedConditionalAssignment
+.. option:: ChainedConditionalAssignment (added in 15.0.0)
 
    If `true`, conditional boolean assignments at the end of an ``if/else
    if`` chain will be transformed. Default is `false`.
 
-.. option:: SimplifyDeMorgan
+.. option:: SimplifyDeMorgan (added in 15.0.0)
 
    If `true`, DeMorgan's Theorem will be applied to simplify negated
    conjunctions and disjunctions.  Default is `true`.
 
-.. option:: SimplifyDeMorganRelaxed
+.. option:: SimplifyDeMorganRelaxed (added in 15.0.0)
 
    If `true`, :option:`SimplifyDeMorgan` will also transform negated
    conjunctions and disjunctions where there is no negation on either operand.

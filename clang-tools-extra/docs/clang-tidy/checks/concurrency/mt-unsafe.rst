@@ -35,7 +35,7 @@ Examples:
 Options
 -------
 
-.. option:: FunctionSet
+.. option:: FunctionSet (added in 15.0.0)
 
   Specifies which functions in libc should be considered thread-safe,
   possible values are `posix`, `glibc`, or `any`.

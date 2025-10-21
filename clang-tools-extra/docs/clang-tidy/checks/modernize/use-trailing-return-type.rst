@@ -73,12 +73,12 @@ The check can currently only detect and avoid a clash with a function parameter 
 Options
 -------
 
-.. option:: TransformFunctions
+.. option:: TransformFunctions (added in 21.1.0)
 
   When set to `true`, function declarations will be transformed to use trailing
   return. Default is `true`.
 
-.. option:: TransformLambdas
+.. option:: TransformLambdas (added in 21.1.0)
 
   Controls how lambda expressions are transformed to use trailing
   return type. Possible values are:

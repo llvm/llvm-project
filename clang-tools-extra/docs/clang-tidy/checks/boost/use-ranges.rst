@@ -160,18 +160,18 @@ Transforms to:
 Options
 -------
 
-.. option:: IncludeStyle
+.. option:: IncludeStyle (added in 19.1.0)
 
    A string specifying which include-style is used, `llvm` or `google`. Default
    is `llvm`.
 
-.. option:: IncludeBoostSystem
+.. option:: IncludeBoostSystem (added in 19.1.0)
    
    If `true` (default value) the boost headers are included as system headers
    with angle brackets (`#include <boost.hpp>`), otherwise quotes are used
    (`#include "boost.hpp"`).
 
-.. option:: UseReversePipe
+.. option:: UseReversePipe (added in 19.1.0)
 
   When `true` (default `false`), fixes which involve reverse ranges will use the
   pipe adaptor syntax instead of the function syntax.

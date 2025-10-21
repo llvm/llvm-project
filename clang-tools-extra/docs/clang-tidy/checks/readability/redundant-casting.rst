@@ -25,12 +25,12 @@ directly from lvalue to rvalue, are all disregarded by the check.
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 18.1.0)
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.
 
-.. option:: IgnoreTypeAliases
+.. option:: IgnoreTypeAliases (added in 18.1.0)
 
    When set to `false`, the check will consider type aliases, and when set to
    `true`, it will resolve all type aliases and operate on the underlying

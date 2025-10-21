@@ -54,12 +54,12 @@ statement body:
 Options
 -------
 
-.. option:: VectorLikeClasses
+.. option:: VectorLikeClasses (added in 15.0.0)
 
    Semicolon-separated list of names of vector-like classes. By default only
    ``::std::vector`` is considered.
 
-.. option:: EnableProto
+.. option:: EnableProto (added in 15.0.0)
 
    When `true`, the check will also warn on inefficient operations for proto
    repeated fields. Otherwise, the check only warns on inefficient vector

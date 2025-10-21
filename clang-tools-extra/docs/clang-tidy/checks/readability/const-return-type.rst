@@ -29,7 +29,7 @@ pointers or references to const values. For example, these are fine:
 Options
 -------
 
-.. option:: IgnoreMacros
+.. option:: IgnoreMacros (added in 16.0.0)
 
    If set to `true`, the check will not give warnings inside macros. Default
    is `true`.

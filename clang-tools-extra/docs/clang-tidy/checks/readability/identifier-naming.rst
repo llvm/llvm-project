@@ -116,27 +116,27 @@ Options description
 
 A detailed description of each option is presented below:
 
-.. option:: AbstractClassCase
+.. option:: AbstractClassCase (added in 15.0.0)
 
     When defined, the check will ensure abstract class names conform to the
     selected casing.
 
-.. option:: AbstractClassPrefix
+.. option:: AbstractClassPrefix (added in 15.0.0)
 
     When defined, the check will ensure abstract class names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: AbstractClassIgnoredRegexp
+.. option:: AbstractClassIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for abstract class names
     matching this regular expression.
 
-.. option:: AbstractClassSuffix
+.. option:: AbstractClassSuffix (added in 15.0.0)
 
     When defined, the check will ensure abstract class names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: AbstractClassHungarianPrefix
+.. option:: AbstractClassHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -169,7 +169,7 @@ After:
       pre_abstract_class_post();
     };
 
-.. option:: AggressiveDependentMemberLookup
+.. option:: AggressiveDependentMemberLookup (added in 15.0.0)
 
     When set to `true` the check will look in dependent base classes for dependent
     member references that need changing. This can lead to errors with template
@@ -227,7 +227,7 @@ After if AggressiveDependentMemberLookup is `true`:
       }
     };
 
-.. option:: CheckAnonFieldInParent
+.. option:: CheckAnonFieldInParent (added in 18.1.0)
 
     When set to `true`, fields in anonymous records (i.e. anonymous
     unions and structs) will be treated as names in the enclosing scope
@@ -253,27 +253,27 @@ that ``iv_`` and ``fv_`` are not coherent to public member names, because
 treated as private data members of ``Foo`` for the purpose of name checking
 and thus no warnings will be emitted.
 
-.. option:: ClassCase
+.. option:: ClassCase (added in 15.0.0)
 
     When defined, the check will ensure class names conform to the
     selected casing.
 
-.. option:: ClassPrefix
+.. option:: ClassPrefix (added in 15.0.0)
 
     When defined, the check will ensure class names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ClassIgnoredRegexp
+.. option:: ClassIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for class names matching
     this regular expression.
 
-.. option:: ClassSuffix
+.. option:: ClassSuffix (added in 15.0.0)
 
     When defined, the check will ensure class names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ClassHungarianPrefix
+.. option:: ClassHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -307,27 +307,27 @@ After:
       ~pre_foo_post();
     };
 
-.. option:: ClassConstantCase
+.. option:: ClassConstantCase (added in 15.0.0)
 
     When defined, the check will ensure class constant names conform to the
     selected casing.
 
-.. option:: ClassConstantPrefix
+.. option:: ClassConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure class constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ClassConstantIgnoredRegexp
+.. option:: ClassConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for class constant names
     matching this regular expression.
 
-.. option:: ClassConstantSuffix
+.. option:: ClassConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure class constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ClassConstantHungarianPrefix
+.. option:: ClassConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -359,27 +359,27 @@ After:
       static const int pre_class_constant_post;
     };
 
-.. option:: ClassMemberCase
+.. option:: ClassMemberCase (added in 15.0.0)
 
     When defined, the check will ensure class member names conform to the
     selected casing.
 
-.. option:: ClassMemberPrefix
+.. option:: ClassMemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure class member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ClassMemberIgnoredRegexp
+.. option:: ClassMemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for class member names
     matching this regular expression.
 
-.. option:: ClassMemberSuffix
+.. option:: ClassMemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure class member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ClassMemberHungarianPrefix
+.. option:: ClassMemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -411,22 +411,22 @@ After:
       static int pre_class_constant_post;
     };
 
-.. option:: ClassMethodCase
+.. option:: ClassMethodCase (added in 15.0.0)
 
     When defined, the check will ensure class method names conform to the
     selected casing.
 
-.. option:: ClassMethodPrefix
+.. option:: ClassMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure class method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ClassMethodIgnoredRegexp
+.. option:: ClassMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for class method names
     matching this regular expression.
 
-.. option:: ClassMethodSuffix
+.. option:: ClassMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure class method names will add the
     suffix with the given value (regardless of casing).
@@ -457,22 +457,22 @@ After:
       int pre_class_member_post();
     };
 
-.. option:: ConceptCase
+.. option:: ConceptCase (added in 18.1.0)
 
     When defined, the check will ensure concept names conform to the
     selected casing.
 
-.. option:: ConceptPrefix
+.. option:: ConceptPrefix (added in 18.1.0)
 
     When defined, the check will ensure concept names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConceptIgnoredRegexp
+.. option:: ConceptIgnoredRegexp (added in 18.1.0)
 
     Identifier naming checks won't be enforced for concept names
     matching this regular expression.
 
-.. option:: ConceptSuffix
+.. option:: ConceptSuffix (added in 18.1.0)
 
     When defined, the check will ensure concept names will add the
     suffix with the given value (regardless of casing).
@@ -497,27 +497,27 @@ After:
 
     template<typename T> concept PreMyConceptPost = requires (T t) { {t++}; };
 
-.. option:: ConstantCase
+.. option:: ConstantCase (added in 15.0.0)
 
     When defined, the check will ensure constant names conform to the
     selected casing.
 
-.. option:: ConstantPrefix
+.. option:: ConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstantIgnoredRegexp
+.. option:: ConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constant names
     matching this regular expression.
 
-.. option:: ConstantSuffix
+.. option:: ConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ConstantHungarianPrefix
+.. option:: ConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -543,27 +543,27 @@ After:
 
     void function() { unsigned const pre_myconst_array_post[] = {1, 2, 3}; }
 
-.. option:: ConstantMemberCase
+.. option:: ConstantMemberCase (added in 15.0.0)
 
     When defined, the check will ensure constant member names conform to the
     selected casing.
 
-.. option:: ConstantMemberPrefix
+.. option:: ConstantMemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure constant member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstantMemberIgnoredRegexp
+.. option:: ConstantMemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constant member names
     matching this regular expression.
 
-.. option:: ConstantMemberSuffix
+.. option:: ConstantMemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure constant member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ConstantMemberHungarianPrefix
+.. option:: ConstantMemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -593,27 +593,27 @@ After:
       char const pre_my_constmember_string_post[4] = "123";
     }
 
-.. option:: ConstantParameterCase
+.. option:: ConstantParameterCase (added in 15.0.0)
 
     When defined, the check will ensure constant parameter names conform to the
     selected casing.
 
-.. option:: ConstantParameterPrefix
+.. option:: ConstantParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure constant parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstantParameterIgnoredRegexp
+.. option:: ConstantParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constant parameter names
     matching this regular expression.
 
-.. option:: ConstantParameterSuffix
+.. option:: ConstantParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure constant parameter names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ConstantParameterHungarianPrefix
+.. option:: ConstantParameterHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -639,27 +639,27 @@ After:
 
     void GLOBAL_FUNCTION(int PARAMETER_1, int const pre_const_parameter_post);
 
-.. option:: ConstantPointerParameterCase
+.. option:: ConstantPointerParameterCase (added in 15.0.0)
 
     When defined, the check will ensure constant pointer parameter names conform to the
     selected casing.
 
-.. option:: ConstantPointerParameterPrefix
+.. option:: ConstantPointerParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure constant pointer parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstantPointerParameterIgnoredRegexp
+.. option:: ConstantPointerParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constant pointer parameter
     names matching this regular expression.
 
-.. option:: ConstantPointerParameterSuffix
+.. option:: ConstantPointerParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure constant pointer parameter names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ConstantPointerParameterHungarianPrefix
+.. option:: ConstantPointerParameterHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -685,22 +685,22 @@ After:
 
     void GLOBAL_FUNCTION(int const *pre_const_parameter_post);
 
-.. option:: ConstexprFunctionCase
+.. option:: ConstexprFunctionCase (added in 15.0.0)
 
     When defined, the check will ensure constexpr function names conform to the
     selected casing.
 
-.. option:: ConstexprFunctionPrefix
+.. option:: ConstexprFunctionPrefix (added in 15.0.0)
 
     When defined, the check will ensure constexpr function names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstexprFunctionIgnoredRegexp
+.. option:: ConstexprFunctionIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constexpr function names
     matching this regular expression.
 
-.. option:: ConstexprFunctionSuffix
+.. option:: ConstexprFunctionSuffix (added in 15.0.0)
 
     When defined, the check will ensure constexpr function names will add the
     suffix with the given value (regardless of casing).
@@ -725,22 +725,22 @@ After:
 
     constexpr int pre_ce_function_post() { return 3; }
 
-.. option:: ConstexprMethodCase
+.. option:: ConstexprMethodCase (added in 15.0.0)
 
     When defined, the check will ensure constexpr method names conform to the
     selected casing.
 
-.. option:: ConstexprMethodPrefix
+.. option:: ConstexprMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure constexpr method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstexprMethodIgnoredRegexp
+.. option:: ConstexprMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constexpr method names
     matching this regular expression.
 
-.. option:: ConstexprMethodSuffix
+.. option:: ConstexprMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure constexpr method names will add the
     suffix with the given value (regardless of casing).
@@ -771,27 +771,27 @@ After:
       constexpr int pre_cst_expr_method_post() { return 2; }
     }
 
-.. option:: ConstexprVariableCase
+.. option:: ConstexprVariableCase (added in 15.0.0)
 
     When defined, the check will ensure constexpr variable names conform to the
     selected casing.
 
-.. option:: ConstexprVariablePrefix
+.. option:: ConstexprVariablePrefix (added in 15.0.0)
 
     When defined, the check will ensure constexpr variable names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ConstexprVariableIgnoredRegexp
+.. option:: ConstexprVariableIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for constexpr variable names
     matching this regular expression.
 
-.. option:: ConstexprVariableSuffix
+.. option:: ConstexprVariableSuffix (added in 15.0.0)
 
     When defined, the check will ensure constexpr variable names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ConstexprVariableHungarianPrefix
+.. option:: ConstexprVariableHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -817,22 +817,22 @@ After:
 
     constexpr int pre_constexpr_variable_post = MyConstant;
 
-.. option:: EnumCase
+.. option:: EnumCase (added in 15.0.0)
 
     When defined, the check will ensure enumeration names conform to the
     selected casing.
 
-.. option:: EnumPrefix
+.. option:: EnumPrefix (added in 15.0.0)
 
     When defined, the check will ensure enumeration names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: EnumIgnoredRegexp
+.. option:: EnumIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for enumeration names
     matching this regular expression.
 
-.. option:: EnumSuffix
+.. option:: EnumSuffix (added in 15.0.0)
 
     When defined, the check will ensure enumeration names will add the
     suffix with the given value (regardless of casing).
@@ -857,27 +857,27 @@ After:
 
     enum pre_foo_post { One, Two, Three };
 
-.. option:: EnumConstantCase
+.. option:: EnumConstantCase (added in 15.0.0)
 
     When defined, the check will ensure enumeration constant names conform to the
     selected casing.
 
-.. option:: EnumConstantPrefix
+.. option:: EnumConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure enumeration constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: EnumConstantIgnoredRegexp
+.. option:: EnumConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for enumeration constant names
     matching this regular expression.
 
-.. option:: EnumConstantSuffix
+.. option:: EnumConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure enumeration constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: EnumConstantHungarianPrefix
+.. option:: EnumConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -903,22 +903,22 @@ After:
 
     enum FOO { pre_One_post, pre_Two_post, pre_Three_post };
 
-.. option:: FunctionCase
+.. option:: FunctionCase (added in 15.0.0)
 
     When defined, the check will ensure function names conform to the
     selected casing.
 
-.. option:: FunctionPrefix
+.. option:: FunctionPrefix (added in 15.0.0)
 
     When defined, the check will ensure function names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: FunctionIgnoredRegexp
+.. option:: FunctionIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for function names
     matching this regular expression.
 
-.. option:: FunctionSuffix
+.. option:: FunctionSuffix (added in 15.0.0)
 
     When defined, the check will ensure function names will add the
     suffix with the given value (regardless of casing).
@@ -943,34 +943,34 @@ After:
 
     char pre_my_function_string_post();
 
-.. option:: GetConfigPerFile
+.. option:: GetConfigPerFile (added in 15.0.0)
 
     When `true` the check will look for the configuration for where an
     identifier is declared. Useful for when included header files use a
     different style.
     Default value is `true`.
 
-.. option:: GlobalConstantCase
+.. option:: GlobalConstantCase (added in 15.0.0)
 
     When defined, the check will ensure global constant names conform to the
     selected casing.
 
-.. option:: GlobalConstantPrefix
+.. option:: GlobalConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure global constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: GlobalConstantIgnoredRegexp
+.. option:: GlobalConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for global constant names
     matching this regular expression.
 
-.. option:: GlobalConstantSuffix
+.. option:: GlobalConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure global constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: GlobalConstantHungarianPrefix
+.. option:: GlobalConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -996,27 +996,27 @@ After:
 
     unsigned const pre_myconstglobal_array_post[] = {1, 2, 3};
 
-.. option:: GlobalConstantPointerCase
+.. option:: GlobalConstantPointerCase (added in 15.0.0)
 
     When defined, the check will ensure global constant pointer names conform to the
     selected casing.
 
-.. option:: GlobalConstantPointerPrefix
+.. option:: GlobalConstantPointerPrefix (added in 15.0.0)
 
     When defined, the check will ensure global constant pointer names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: GlobalConstantPointerIgnoredRegexp
+.. option:: GlobalConstantPointerIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for global constant pointer
     names matching this regular expression.
 
-.. option:: GlobalConstantPointerSuffix
+.. option:: GlobalConstantPointerSuffix (added in 15.0.0)
 
     When defined, the check will ensure global constant pointer names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: GlobalConstantPointerHungarianPrefix
+.. option:: GlobalConstantPointerHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1042,22 +1042,22 @@ After:
 
     int *const pre_myconstantglobalpointer_post = nullptr;
 
-.. option:: GlobalFunctionCase
+.. option:: GlobalFunctionCase (added in 15.0.0)
 
     When defined, the check will ensure global function names conform to the
     selected casing.
 
-.. option:: GlobalFunctionPrefix
+.. option:: GlobalFunctionPrefix (added in 15.0.0)
 
     When defined, the check will ensure global function names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: GlobalFunctionIgnoredRegexp
+.. option:: GlobalFunctionIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for global function names
     matching this regular expression.
 
-.. option:: GlobalFunctionSuffix
+.. option:: GlobalFunctionSuffix (added in 15.0.0)
 
     When defined, the check will ensure global function names will add the
     suffix with the given value (regardless of casing).
@@ -1082,27 +1082,27 @@ After:
 
     void pre_global_function_post(int PARAMETER_1, int const CONST_parameter);
 
-.. option:: GlobalPointerCase
+.. option:: GlobalPointerCase (added in 15.0.0)
 
     When defined, the check will ensure global pointer names conform to the
     selected casing.
 
-.. option:: GlobalPointerPrefix
+.. option:: GlobalPointerPrefix (added in 15.0.0)
 
     When defined, the check will ensure global pointer names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: GlobalPointerIgnoredRegexp
+.. option:: GlobalPointerIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for global pointer names
     matching this regular expression.
 
-.. option:: GlobalPointerSuffix
+.. option:: GlobalPointerSuffix (added in 15.0.0)
 
     When defined, the check will ensure global pointer names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: GlobalPointerHungarianPrefix
+.. option:: GlobalPointerHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1128,27 +1128,27 @@ After:
 
     int *pre_global3_post;
 
-.. option:: GlobalVariableCase
+.. option:: GlobalVariableCase (added in 15.0.0)
 
     When defined, the check will ensure global variable names conform to the
     selected casing.
 
-.. option:: GlobalVariablePrefix
+.. option:: GlobalVariablePrefix (added in 15.0.0)
 
     When defined, the check will ensure global variable names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: GlobalVariableIgnoredRegexp
+.. option:: GlobalVariableIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for global variable names
     matching this regular expression.
 
-.. option:: GlobalVariableSuffix
+.. option:: GlobalVariableSuffix (added in 15.0.0)
 
     When defined, the check will ensure global variable names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: GlobalVariableHungarianPrefix
+.. option:: GlobalVariableHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1174,28 +1174,28 @@ After:
 
     int pre_global3_post;
 
-.. option:: IgnoreMainLikeFunctions
+.. option:: IgnoreMainLikeFunctions (added in 15.0.0)
 
     When set to `true` functions that have a similar signature to ``main`` or
     ``wmain`` won't enforce checks on the names of their parameters.
     Default value is `false`.
 
-.. option:: InlineNamespaceCase
+.. option:: InlineNamespaceCase (added in 15.0.0)
 
     When defined, the check will ensure inline namespaces names conform to the
     selected casing.
 
-.. option:: InlineNamespacePrefix
+.. option:: InlineNamespacePrefix (added in 15.0.0)
 
     When defined, the check will ensure inline namespaces names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: InlineNamespaceIgnoredRegexp
+.. option:: InlineNamespaceIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for inline namespaces names
     matching this regular expression.
 
-.. option:: InlineNamespaceSuffix
+.. option:: InlineNamespaceSuffix (added in 15.0.0)
 
     When defined, the check will ensure inline namespaces names will add the
     suffix with the given value (regardless of casing).
@@ -1228,27 +1228,27 @@ After:
     }
     } // namespace FOO_NS
 
-.. option:: LocalConstantCase
+.. option:: LocalConstantCase (added in 15.0.0)
 
     When defined, the check will ensure local constant names conform to the
     selected casing.
 
-.. option:: LocalConstantPrefix
+.. option:: LocalConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure local constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: LocalConstantIgnoredRegexp
+.. option:: LocalConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for local constant names
     matching this regular expression.
 
-.. option:: LocalConstantSuffix
+.. option:: LocalConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure local constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: LocalConstantHungarianPrefix
+.. option:: LocalConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1274,27 +1274,27 @@ After:
 
     void foo() { int const pre_local_constant_post = 3; }
 
-.. option:: LocalConstantPointerCase
+.. option:: LocalConstantPointerCase (added in 15.0.0)
 
     When defined, the check will ensure local constant pointer names conform to the
     selected casing.
 
-.. option:: LocalConstantPointerPrefix
+.. option:: LocalConstantPointerPrefix (added in 15.0.0)
 
     When defined, the check will ensure local constant pointer names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: LocalConstantPointerIgnoredRegexp
+.. option:: LocalConstantPointerIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for local constant pointer names
     matching this regular expression.
 
-.. option:: LocalConstantPointerSuffix
+.. option:: LocalConstantPointerSuffix (added in 15.0.0)
 
     When defined, the check will ensure local constant pointer names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: LocalConstantPointerHungarianPrefix
+.. option:: LocalConstantPointerHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1320,27 +1320,27 @@ After:
 
     void foo() { int const *pre_local_constant_post = 3; }
 
-.. option:: LocalPointerCase
+.. option:: LocalPointerCase (added in 15.0.0)
 
     When defined, the check will ensure local pointer names conform to the
     selected casing.
 
-.. option:: LocalPointerPrefix
+.. option:: LocalPointerPrefix (added in 15.0.0)
 
     When defined, the check will ensure local pointer names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: LocalPointerIgnoredRegexp
+.. option:: LocalPointerIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for local pointer names
     matching this regular expression.
 
-.. option:: LocalPointerSuffix
+.. option:: LocalPointerSuffix (added in 15.0.0)
 
     When defined, the check will ensure local pointer names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: LocalPointerHungarianPrefix
+.. option:: LocalPointerHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1366,17 +1366,17 @@ After:
 
     void foo() { int *pre_local_constant_post; }
 
-.. option:: LocalVariableCase
+.. option:: LocalVariableCase (added in 15.0.0)
 
     When defined, the check will ensure local variable names conform to the
     selected casing.
 
-.. option:: LocalVariablePrefix
+.. option:: LocalVariablePrefix (added in 15.0.0)
 
     When defined, the check will ensure local variable names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: LocalVariableIgnoredRegexp
+.. option:: LocalVariableIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for local variable names
     matching this regular expression.
@@ -1389,12 +1389,12 @@ For example using values of:
 Will exclude variables with a length less than or equal to 2 from the
 camel case check applied to other variables.
 
-.. option:: LocalVariableSuffix
+.. option:: LocalVariableSuffix (added in 15.0.0)
 
     When defined, the check will ensure local variable names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: LocalVariableHungarianPrefix
+.. option:: LocalVariableHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1420,22 +1420,22 @@ After:
 
     void foo() { int pre_local_constant_post; }
 
-.. option:: MacroDefinitionCase
+.. option:: MacroDefinitionCase (added in 15.0.0)
 
     When defined, the check will ensure macro definitions conform to the
     selected casing.
 
-.. option:: MacroDefinitionPrefix
+.. option:: MacroDefinitionPrefix (added in 15.0.0)
 
     When defined, the check will ensure macro definitions will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: MacroDefinitionIgnoredRegexp
+.. option:: MacroDefinitionIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for macro definitions
     matching this regular expression.
 
-.. option:: MacroDefinitionSuffix
+.. option:: MacroDefinitionSuffix (added in 15.0.0)
 
     When defined, the check will ensure macro definitions will add the
     suffix with the given value (regardless of casing).
@@ -1463,27 +1463,27 @@ After:
 Note: This will not warn on builtin macros or macros defined on the command line
 using the ``-D`` flag.
 
-.. option:: MemberCase
+.. option:: MemberCase (added in 15.0.0)
 
     When defined, the check will ensure member names conform to the
     selected casing.
 
-.. option:: MemberPrefix
+.. option:: MemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: MemberIgnoredRegexp
+.. option:: MemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for member names
     matching this regular expression.
 
-.. option:: MemberSuffix
+.. option:: MemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: MemberHungarianPrefix
+.. option:: MemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1513,22 +1513,22 @@ After:
       char pre_my_constmember_string_post[4];
     }
 
-.. option:: MethodCase
+.. option:: MethodCase (added in 15.0.0)
 
     When defined, the check will ensure method names conform to the
     selected casing.
 
-.. option:: MethodPrefix
+.. option:: MethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: MethodIgnoredRegexp
+.. option:: MethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for method names
     matching this regular expression.
 
-.. option:: MethodSuffix
+.. option:: MethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure method names will add the
     suffix with the given value (regardless of casing).
@@ -1557,22 +1557,22 @@ After:
       char pre_my_method_string_post();
     }
 
-.. option:: NamespaceCase
+.. option:: NamespaceCase (added in 15.0.0)
 
     When defined, the check will ensure namespace names conform to the
     selected casing.
 
-.. option:: NamespacePrefix
+.. option:: NamespacePrefix (added in 15.0.0)
 
     When defined, the check will ensure namespace names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: NamespaceIgnoredRegexp
+.. option:: NamespaceIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for namespace names
     matching this regular expression.
 
-.. option:: NamespaceSuffix
+.. option:: NamespaceSuffix (added in 15.0.0)
 
     When defined, the check will ensure namespace names will add the
     suffix with the given value (regardless of casing).
@@ -1601,27 +1601,27 @@ After:
     ...
     }
 
-.. option:: ParameterCase
+.. option:: ParameterCase (added in 15.0.0)
 
     When defined, the check will ensure parameter names conform to the
     selected casing.
 
-.. option:: ParameterPrefix
+.. option:: ParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ParameterIgnoredRegexp
+.. option:: ParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for parameter names
     matching this regular expression.
 
-.. option:: ParameterSuffix
+.. option:: ParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure parameter names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ParameterHungarianPrefix
+.. option:: ParameterHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1647,22 +1647,22 @@ After:
 
     void GLOBAL_FUNCTION(int pre_parameter_post, int const CONST_parameter);
 
-.. option:: ParameterPackCase
+.. option:: ParameterPackCase (added in 15.0.0)
 
     When defined, the check will ensure parameter pack names conform to the
     selected casing.
 
-.. option:: ParameterPackPrefix
+.. option:: ParameterPackPrefix (added in 15.0.0)
 
     When defined, the check will ensure parameter pack names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ParameterPackIgnoredRegexp
+.. option:: ParameterPackIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for parameter pack names
     matching this regular expression.
 
-.. option:: ParameterPackSuffix
+.. option:: ParameterPackSuffix (added in 15.0.0)
 
     When defined, the check will ensure parameter pack names will add the
     suffix with the given value (regardless of casing).
@@ -1691,27 +1691,27 @@ After:
       void FUNCTION(int... pre_type_parameters_post);
     }
 
-.. option:: PointerParameterCase
+.. option:: PointerParameterCase (added in 15.0.0)
 
     When defined, the check will ensure pointer parameter names conform to the
     selected casing.
 
-.. option:: PointerParameterPrefix
+.. option:: PointerParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure pointer parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: PointerParameterIgnoredRegexp
+.. option:: PointerParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for pointer parameter names
     matching this regular expression.
 
-.. option:: PointerParameterSuffix
+.. option:: PointerParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure pointer parameter names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: PointerParameterHungarianPrefix
+.. option:: PointerParameterHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1737,27 +1737,27 @@ After:
 
     void FUNCTION(int *pre_parameter_post);
 
-.. option:: PrivateMemberCase
+.. option:: PrivateMemberCase (added in 15.0.0)
 
     When defined, the check will ensure private member names conform to the
     selected casing.
 
-.. option:: PrivateMemberPrefix
+.. option:: PrivateMemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure private member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: PrivateMemberIgnoredRegexp
+.. option:: PrivateMemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for private member names
     matching this regular expression.
 
-.. option:: PrivateMemberSuffix
+.. option:: PrivateMemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure private member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: PrivateMemberHungarianPrefix
+.. option:: PrivateMemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1789,22 +1789,22 @@ After:
       int pre_member_variable_post;
     }
 
-.. option:: PrivateMethodCase
+.. option:: PrivateMethodCase (added in 15.0.0)
 
     When defined, the check will ensure private method names conform to the
     selected casing.
 
-.. option:: PrivateMethodPrefix
+.. option:: PrivateMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure private method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: PrivateMethodIgnoredRegexp
+.. option:: PrivateMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for private method names
     matching this regular expression.
 
-.. option:: PrivateMethodSuffix
+.. option:: PrivateMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure private method names will add the
     suffix with the given value (regardless of casing).
@@ -1835,27 +1835,27 @@ After:
       int pre_member_method_post();
     }
 
-.. option:: ProtectedMemberCase
+.. option:: ProtectedMemberCase (added in 15.0.0)
 
     When defined, the check will ensure protected member names conform to the
     selected casing.
 
-.. option:: ProtectedMemberPrefix
+.. option:: ProtectedMemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure protected member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ProtectedMemberIgnoredRegexp
+.. option:: ProtectedMemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for protected member names
     matching this regular expression.
 
-.. option:: ProtectedMemberSuffix
+.. option:: ProtectedMemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure protected member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ProtectedMemberHungarianPrefix
+.. option:: ProtectedMemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1887,22 +1887,22 @@ After:
       int pre_member_variable_post;
     }
 
-.. option:: ProtectedMethodCase
+.. option:: ProtectedMethodCase (added in 15.0.0)
 
     When defined, the check will ensure protected method names conform to the
     selected casing.
 
-.. option:: ProtectedMethodPrefix
+.. option:: ProtectedMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure protected method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ProtectedMethodIgnoredRegexp
+.. option:: ProtectedMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for protected method names
     matching this regular expression.
 
-.. option:: ProtectedMethodSuffix
+.. option:: ProtectedMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure protected method names will add the
     suffix with the given value (regardless of casing).
@@ -1933,27 +1933,27 @@ After:
       int pre_member_method_post();
     }
 
-.. option:: PublicMemberCase
+.. option:: PublicMemberCase (added in 15.0.0)
 
     When defined, the check will ensure public member names conform to the
     selected casing.
 
-.. option:: PublicMemberPrefix
+.. option:: PublicMemberPrefix (added in 15.0.0)
 
     When defined, the check will ensure public member names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: PublicMemberIgnoredRegexp
+.. option:: PublicMemberIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for public member names
     matching this regular expression.
 
-.. option:: PublicMemberSuffix
+.. option:: PublicMemberSuffix (added in 15.0.0)
 
     When defined, the check will ensure public member names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: PublicMemberHungarianPrefix
+.. option:: PublicMemberHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -1985,22 +1985,22 @@ After:
       int pre_member_variable_post;
     }
 
-.. option:: PublicMethodCase
+.. option:: PublicMethodCase (added in 15.0.0)
 
     When defined, the check will ensure public method names conform to the
     selected casing.
 
-.. option:: PublicMethodPrefix
+.. option:: PublicMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure public method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: PublicMethodIgnoredRegexp
+.. option:: PublicMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for public method names
     matching this regular expression.
 
-.. option:: PublicMethodSuffix
+.. option:: PublicMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure public method names will add the
     suffix with the given value (regardless of casing).
@@ -2031,27 +2031,27 @@ After:
       int pre_member_method_post();
     }
 
-.. option:: ScopedEnumConstantCase
+.. option:: ScopedEnumConstantCase (added in 15.0.0)
 
     When defined, the check will ensure scoped enum constant names conform to
     the selected casing.
 
-.. option:: ScopedEnumConstantPrefix
+.. option:: ScopedEnumConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure scoped enum constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ScopedEnumConstantIgnoredRegexp
+.. option:: ScopedEnumConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for scoped enum constant names
     matching this regular expression.
 
-.. option:: ScopedEnumConstantSuffix
+.. option:: ScopedEnumConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure scoped enum constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: ScopedEnumConstantHungarianPrefix
+.. option:: ScopedEnumConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -2077,27 +2077,27 @@ After:
 
     enum class FOO { pre_One_post, pre_Two_post, pre_Three_post };
 
-.. option:: StaticConstantCase
+.. option:: StaticConstantCase (added in 15.0.0)
 
     When defined, the check will ensure static constant names conform to the
     selected casing.
 
-.. option:: StaticConstantPrefix
+.. option:: StaticConstantPrefix (added in 15.0.0)
 
     When defined, the check will ensure static constant names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: StaticConstantIgnoredRegexp
+.. option:: StaticConstantIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for static constant names
     matching this regular expression.
 
-.. option:: StaticConstantSuffix
+.. option:: StaticConstantSuffix (added in 15.0.0)
 
     When defined, the check will ensure static constant names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: StaticConstantHungarianPrefix
+.. option:: StaticConstantHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -2123,27 +2123,27 @@ After:
 
     static unsigned const pre_myconststatic_array_post[] = {1, 2, 3};
 
-.. option:: StaticVariableCase
+.. option:: StaticVariableCase (added in 15.0.0)
 
     When defined, the check will ensure static variable names conform to the
     selected casing.
 
-.. option:: StaticVariablePrefix
+.. option:: StaticVariablePrefix (added in 15.0.0)
 
     When defined, the check will ensure static variable names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: StaticVariableIgnoredRegexp
+.. option:: StaticVariableIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for static variable names
     matching this regular expression.
 
-.. option:: StaticVariableSuffix
+.. option:: StaticVariableSuffix (added in 15.0.0)
 
     When defined, the check will ensure static variable names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: StaticVariableHungarianPrefix
+.. option:: StaticVariableHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -2169,22 +2169,22 @@ After:
 
     static unsigned pre_mystatic_array_post[] = {1, 2, 3};
 
-.. option:: StructCase
+.. option:: StructCase (added in 15.0.0)
 
     When defined, the check will ensure struct names conform to the
     selected casing.
 
-.. option:: StructPrefix
+.. option:: StructPrefix (added in 15.0.0)
 
     When defined, the check will ensure struct names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: StructIgnoredRegexp
+.. option:: StructIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for struct names
     matching this regular expression.
 
-.. option:: StructSuffix
+.. option:: StructSuffix (added in 15.0.0)
 
     When defined, the check will ensure struct names will add the
     suffix with the given value (regardless of casing).
@@ -2215,22 +2215,22 @@ After:
       ~pre_foo_post();
     };
 
-.. option:: TemplateParameterCase
+.. option:: TemplateParameterCase (added in 15.0.0)
 
     When defined, the check will ensure template parameter names conform to the
     selected casing.
 
-.. option:: TemplateParameterPrefix
+.. option:: TemplateParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure template parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: TemplateParameterIgnoredRegexp
+.. option:: TemplateParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for template parameter names
     matching this regular expression.
 
-.. option:: TemplateParameterSuffix
+.. option:: TemplateParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure template parameter names will add the
     suffix with the given value (regardless of casing).
@@ -2255,22 +2255,22 @@ After:
 
     template <typename pre_t_post> class Foo {};
 
-.. option:: TemplateTemplateParameterCase
+.. option:: TemplateTemplateParameterCase (added in 15.0.0)
 
     When defined, the check will ensure template template parameter names conform to the
     selected casing.
 
-.. option:: TemplateTemplateParameterPrefix
+.. option:: TemplateTemplateParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure template template parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: TemplateTemplateParameterIgnoredRegexp
+.. option:: TemplateTemplateParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for template template parameter
     names matching this regular expression.
 
-.. option:: TemplateTemplateParameterSuffix
+.. option:: TemplateTemplateParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure template template parameter names will add the
     suffix with the given value (regardless of casing).
@@ -2297,22 +2297,22 @@ After:
     template <template <typename> class pre_tpl_parameter_post, int COUNT_params,
               typename... TYPE_parameters>
 
-.. option:: TypeAliasCase
+.. option:: TypeAliasCase (added in 15.0.0)
 
     When defined, the check will ensure type alias names conform to the
     selected casing.
 
-.. option:: TypeAliasPrefix
+.. option:: TypeAliasPrefix (added in 15.0.0)
 
     When defined, the check will ensure type alias names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: TypeAliasIgnoredRegexp
+.. option:: TypeAliasIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for type alias names
     matching this regular expression.
 
-.. option:: TypeAliasSuffix
+.. option:: TypeAliasSuffix (added in 15.0.0)
 
     When defined, the check will ensure type alias names will add the
     suffix with the given value (regardless of casing).
@@ -2337,22 +2337,22 @@ After:
 
     using pre_my_struct_type_post = my_structure;
 
-.. option:: TypedefCase
+.. option:: TypedefCase (added in 15.0.0)
 
     When defined, the check will ensure typedef names conform to the
     selected casing.
 
-.. option:: TypedefPrefix
+.. option:: TypedefPrefix (added in 15.0.0)
 
     When defined, the check will ensure typedef names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: TypedefIgnoredRegexp
+.. option:: TypedefIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for typedef names
     matching this regular expression.
 
-.. option:: TypedefSuffix
+.. option:: TypedefSuffix (added in 15.0.0)
 
     When defined, the check will ensure typedef names will add the
     suffix with the given value (regardless of casing).
@@ -2377,22 +2377,22 @@ After:
 
     typedef int pre_myint_post;
 
-.. option:: TypeTemplateParameterCase
+.. option:: TypeTemplateParameterCase (added in 15.0.0)
 
     When defined, the check will ensure type template parameter names conform to the
     selected casing.
 
-.. option:: TypeTemplateParameterPrefix
+.. option:: TypeTemplateParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure type template parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: TypeTemplateParameterIgnoredRegexp
+.. option:: TypeTemplateParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for type template names
     matching this regular expression.
 
-.. option:: TypeTemplateParameterSuffix
+.. option:: TypeTemplateParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure type template parameter names will add the
     suffix with the given value (regardless of casing).
@@ -2419,22 +2419,22 @@ After:
     template <template <typename> class TPL_parameter, int COUNT_params,
               typename... pre_type_parameters_post>
 
-.. option:: UnionCase
+.. option:: UnionCase (added in 15.0.0)
 
     When defined, the check will ensure union names conform to the
     selected casing.
 
-.. option:: UnionPrefix
+.. option:: UnionPrefix (added in 15.0.0)
 
     When defined, the check will ensure union names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: UnionIgnoredRegexp
+.. option:: UnionIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for union names
     matching this regular expression.
 
-.. option:: UnionSuffix
+.. option:: UnionSuffix (added in 15.0.0)
 
     When defined, the check will ensure union names will add the
     suffix with the given value (regardless of casing).
@@ -2465,22 +2465,22 @@ After:
       char b;
     };
 
-.. option:: ValueTemplateParameterCase
+.. option:: ValueTemplateParameterCase (added in 15.0.0)
 
     When defined, the check will ensure value template parameter names conform to the
     selected casing.
 
-.. option:: ValueTemplateParameterPrefix
+.. option:: ValueTemplateParameterPrefix (added in 15.0.0)
 
     When defined, the check will ensure value template parameter names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: ValueTemplateParameterIgnoredRegexp
+.. option:: ValueTemplateParameterIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for value template parameter
     names matching this regular expression.
 
-.. option:: ValueTemplateParameterSuffix
+.. option:: ValueTemplateParameterSuffix (added in 15.0.0)
 
     When defined, the check will ensure value template parameter names will add the
     suffix with the given value (regardless of casing).
@@ -2507,27 +2507,27 @@ After:
     template <template <typename> class TPL_parameter, int pre_count_params_post,
               typename... TYPE_parameters>
 
-.. option:: VariableCase
+.. option:: VariableCase (added in 15.0.0)
 
     When defined, the check will ensure variable names conform to the
     selected casing.
 
-.. option:: VariablePrefix
+.. option:: VariablePrefix (added in 15.0.0)
 
     When defined, the check will ensure variable names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: VariableIgnoredRegexp
+.. option:: VariableIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for variable names
     matching this regular expression.
 
-.. option:: VariableSuffix
+.. option:: VariableSuffix (added in 15.0.0)
 
     When defined, the check will ensure variable names will add the
     suffix with the given value (regardless of casing).
 
-.. option:: VariableHungarianPrefix
+.. option:: VariableHungarianPrefix (added in 15.0.0)
 
     When enabled, the check ensures that the declared identifier will
     have a Hungarian notation prefix based on the declared type.
@@ -2553,22 +2553,22 @@ After:
 
     unsigned pre_myvariable_post;
 
-.. option:: VirtualMethodCase
+.. option:: VirtualMethodCase (added in 15.0.0)
 
     When defined, the check will ensure virtual method names conform to the
     selected casing.
 
-.. option:: VirtualMethodPrefix
+.. option:: VirtualMethodPrefix (added in 15.0.0)
 
     When defined, the check will ensure virtual method names will add the
     prefixed with the given value (regardless of casing).
 
-.. option:: VirtualMethodIgnoredRegexp
+.. option:: VirtualMethodIgnoredRegexp (added in 15.0.0)
 
     Identifier naming checks won't be enforced for virtual method names
     matching this regular expression.
 
-.. option:: VirtualMethodSuffix
+.. option:: VirtualMethodSuffix (added in 15.0.0)
 
     When defined, the check will ensure virtual method names will add the
     suffix with the given value (regardless of casing).
@@ -2684,22 +2684,22 @@ Options for Hungarian Notation
 - :option:`HungarianNotation.PrimitiveType.*`
 - :option:`HungarianNotation.UserDefinedType.*`
 
-.. option:: HungarianNotation.General.TreatStructAsClass
+.. option:: HungarianNotation.General.TreatStructAsClass (added in 15.0.0)
 
     When defined, the check will treat naming of struct as a class.
     The default value is `false`.
 
-.. option:: HungarianNotation.DerivedType.Array
+.. option:: HungarianNotation.DerivedType.Array (added in 15.0.0)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `a`.
 
-.. option:: HungarianNotation.DerivedType.Pointer
+.. option:: HungarianNotation.DerivedType.Pointer (added in 15.0.0)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `p`.
 
-.. option:: HungarianNotation.DerivedType.FunctionPointer
+.. option:: HungarianNotation.DerivedType.FunctionPointer (added in 15.0.0)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `fn`.
@@ -2734,22 +2734,22 @@ After:
     FUNC_PTR fnFuncPtr = NULL;
 
 
-.. option:: HungarianNotation.CString.CharPointer
+.. option:: HungarianNotation.CString.CharPointer (added in 17.0.1)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
 
-.. option:: HungarianNotation.CString.CharArray
+.. option:: HungarianNotation.CString.CharArray (added in 15.0.0)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `sz`.
 
-.. option:: HungarianNotation.CString.WideCharPointer
+.. option:: HungarianNotation.CString.WideCharPointer (added in 17.0.1)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `wsz`.
 
-.. option:: HungarianNotation.CString.WideCharArray
+.. option:: HungarianNotation.CString.WideCharArray (added in 15.0.0)
 
     When defined, the check will ensure variable name will add the prefix with
     the given string. The default prefix is `wsz`.
@@ -2788,13 +2788,13 @@ After:
     const wchar_t wszWideNameArray[] = L"Name";
 
 
-.. option:: HungarianNotation.PrimitiveType.*
+.. option:: HungarianNotation.PrimitiveType.* (added in 15.0.0)
 
     When defined, the check will ensure variable name of involved primitive
     types will add the prefix with the given string. The default prefixes are
     defined in the default mapping table.
 
-.. option:: HungarianNotation.UserDefinedType.*
+.. option:: HungarianNotation.UserDefinedType.* (added in 15.0.0)
 
     When defined, the check will ensure variable name of involved primitive
     types will add the prefix with the given string. The default prefixes are
