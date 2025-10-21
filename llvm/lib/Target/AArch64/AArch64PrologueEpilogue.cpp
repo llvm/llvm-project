@@ -377,6 +377,7 @@ SVEStackAllocations AArch64PrologueEpilogueCommon::getSVEStackAllocations(
   StackOffset AfterPPRs = {};
   if (SVELayout == SVEStackLayout::Split) {
     BeforePPRs = SVE.PPR.CalleeSavesSize;
+    // If there are no ZPR CSRs, place all local allocations after the ZPRs.
     if (SVE.ZPR.CalleeSavesSize)
       AfterPPRs += SVE.PPR.LocalsSize + SVE.ZPR.CalleeSavesSize;
     else
@@ -707,6 +708,8 @@ void AArch64PrologueEmitter::emitPrologue() {
 
   MachineBasicBlock::iterator FirstGPRSaveI = PrologueBeginI;
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+    assert(!SVEAllocs.AfterPPRs &&
+           "unexpected SVE allocs after PPRs with CalleeSavesAboveFrameRecord");
     // If we're doing SVE saves first, we need to immediately allocate space
     // for fixed objects, then space for the SVE callee saves.
     //
@@ -808,11 +811,10 @@ void AArch64PrologueEmitter::emitPrologue() {
     CFAOffset += SVEAllocs.AfterPPRs;
   } else {
     assert(SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord);
-    // Note: With CalleeSavesAboveFrameRecord, the SVE CS have already been
-    // allocated (and separate PPR locals are not supported, all SVE locals,
-    // both PPR and ZPR, are within the ZPR locals area).
-    assert(!PPR.LocalsSize && "Unexpected PPR locals!");
-    CFAOffset += ZPR.CalleeSavesSize + PPR.CalleeSavesSize;
+    // Note: With CalleeSavesAboveFrameRecord, the SVE CS (BeforePPRs) have
+    // already been allocated. PPR locals (included in AfterPPRs) are not
+    // supported (note: this is asserted above).
+    CFAOffset += SVEAllocs.BeforePPRs;
   }
 
   // Allocate space for the rest of the frame including ZPR locals. Align the
@@ -1485,6 +1487,8 @@ void AArch64EpilogueEmitter::emitEpilogue() {
 
   // Deallocate the SVE area.
   if (SVELayout == SVEStackLayout::CalleeSavesAboveFrameRecord) {
+    assert(!SVEAllocs.AfterPPRs &&
+           "unexpected SVE allocs after PPRs with CalleeSavesAboveFrameRecord");
     // If the callee-save area is before FP, restoring the FP implicitly
     // deallocates non-callee-save SVE allocations. Otherwise, deallocate them
     // explicitly.
