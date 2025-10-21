@@ -5862,10 +5862,6 @@ static const char *getSectionNameForCommandline(const Triple &T) {
   llvm_unreachable("Unimplemented ObjectFormatType");
 }
 
-static auto globalInUsedHasName(StringRef Name) {
-  return [Name](Constant *C) { return C->getName() == Name; };
-}
-
 void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
                                 bool EmbedBitcode, bool EmbedCmdline,
                                 const std::vector<uint8_t> &CmdArgs) {
@@ -5903,7 +5899,8 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
   NewGlobals.push_back(EmbeddedModule);
   if (llvm::GlobalVariable *Old =
           M.getGlobalVariable("llvm.embedded.module", true)) {
-    removeFromUsedLists(M, globalInUsedHasName("llvm.embedded.module"));
+    removeFromUsedLists(
+        M, [](Constant *C) { return C->getName() == "llvm.embedded.module"; });
     assert(Old->hasZeroLiveUses() &&
            "llvm.embedded.module can only be used once in llvm.compiler.used");
     EmbeddedModule->takeName(Old);
@@ -5925,7 +5922,8 @@ void llvm::embedBitcodeInModule(llvm::Module &M, llvm::MemoryBufferRef Buf,
     CmdLine->setSection(getSectionNameForCommandline(T));
     CmdLine->setAlignment(Align(1));
     if (llvm::GlobalVariable *Old = M.getGlobalVariable("llvm.cmdline", true)) {
-      removeFromUsedLists(M, globalInUsedHasName("llvm.cmdline"));
+      removeFromUsedLists(
+          M, [](Constant *C) { return C->getName() == "llvm.cmdline"; });
       assert(Old->hasZeroLiveUses() &&
              "llvm.cmdline can only be used once in llvm.compiler.used");
       CmdLine->takeName(Old);
