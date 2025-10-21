@@ -399,6 +399,15 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       }
     }
   }
+
+  // The scope to be aligned may not occupy entire lines. The rest of the line
+  // needs some book-keeping.
+  for (unsigned i = End; i < Changes.size() && Changes[i].NewlinesBefore == 0;
+       ++i) {
+    Changes[i].StartOfTokenColumn += Shift;
+    if (i + 1 != Changes.size())
+      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+  }
 }
 
 // Walk through a subset of the changes, starting at StartAt, and find
