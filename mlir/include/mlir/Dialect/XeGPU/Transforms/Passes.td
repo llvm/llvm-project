@@ -80,4 +80,14 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
+def XeGPUOptimizeTranspose : Pass<"xegpu-optimize-transpose"> {
+  let summary = "Optimize XeGPU loadNd operations feeding into vector.transpose";
+  let description = [{
+    This pass rewrites XeGPU loadNd operations that feed into vector.transpose
+    into more optimal forms to improve performance.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect"];
+}
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
