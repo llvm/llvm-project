@@ -192,6 +192,21 @@ bool Scope::AddCommonBlockUse(
   return commonBlockUses_.emplace(name, useCB).second;
 }
 
+Symbol *Scope::FindCommonBlock(const SourceName &name) const {
+  if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
+    return &*it->second;
+  }
+  return nullptr;
+}
+
+Symbol *Scope::FindCommonBlockUse(const SourceName &name) const {
+  if (const auto it{commonBlockUses_.find(name)};
+      it != commonBlockUses_.end()) {
+    return &*it->second;
+  }
+  return nullptr;
+}
+
 bool Scope::AddSubmodule(const SourceName &name, Scope &submodule) {
   return submodules_.emplace(name, submodule).second;
 }

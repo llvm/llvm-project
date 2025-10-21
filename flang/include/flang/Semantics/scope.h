@@ -198,21 +198,10 @@ public:
       const SourceName &name, Attrs attrs, Symbol &cbUltimate);
 
   // Find COMMON block that is declared in the current scope
-  Symbol *FindCommonBlock(const SourceName &name) const {
-    if (const auto it{commonBlocks_.find(name)}; it != commonBlocks_.end()) {
-      return &*it->second;
-    }
-    return nullptr;
-  }
+  Symbol *FindCommonBlock(const SourceName &name) const;
 
   // Find USE-associated COMMON block in the current scope
-  Symbol *FindCommonBlockUse(const SourceName &name) const {
-    if (const auto it{commonBlockUses_.find(name)};
-        it != commonBlockUses_.end()) {
-      return &*it->second;
-    }
-    return nullptr;
-  }
+  Symbol *FindCommonBlockUse(const SourceName &name) const;
 
   // Find COMMON block in current and surrounding scopes, follow USE
   // associations
