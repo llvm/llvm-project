@@ -232,11 +232,9 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 
   // 2. Compute the permutation vector to shuffle packed shape into the shape
   // before any outer or inner permutations have been applied.
-  PackingMetadata packingMetadata = computePackingMetadata(
-      packedTensorType.getRank(), packOp.getInnerDimsPos());
-  PackingMetadata packMetadata;
+  PackingMetadata packingMetadata;
   SmallVector<int64_t> packedToStripMinedShapePerm =
-      getPackInverseDestPerm(packOp, packMetadata);
+      getPackInverseDestPerm(packOp, packingMetadata);
 
   // 3. Compute the stripMinedShape: this is the packed shape before any outer
   // or inner permutations have been applied.
