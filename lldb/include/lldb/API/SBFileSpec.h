@@ -51,8 +51,10 @@ public:
 
   void SetDirectory(const char *directory);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   uint32_t GetPath(char *dst_path, size_t dst_len) const;
 
+  LLDB_RPC_POINTER_PLUS_LEN
   static int ResolvePath(const char *src_path, char *dst_path, size_t dst_len);
 
   bool GetDescription(lldb::SBStream &description) const;

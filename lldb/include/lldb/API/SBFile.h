@@ -34,7 +34,9 @@ public:
 
   SBFile &operator=(const SBFile &rhs);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   SBError Read(uint8_t *buf, size_t num_bytes, size_t *OUTPUT);
+  LLDB_RPC_POINTER_PLUS_LEN
   SBError Write(const uint8_t *buf, size_t num_bytes, size_t *OUTPUT);
   SBError Flush();
   bool IsValid() const;
