@@ -40,3 +40,87 @@ define i128 @ptrtoaddr_sext(ptr %p) {
   %ext = sext i64 %p.addr to i128
   ret i128 %ext
 }
+
+define i64 @sub_ptrtoaddr(ptr %p, i64 %offset) {
+; CHECK-LABEL: define i64 @sub_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %p2 = getelementptr i8, ptr %p, i64 %offset
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %sub = sub i64 %p2.addr, %p.addr
+  ret i64 %sub
+}
+
+define i32 @sub_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %offset) {
+; CHECK-LABEL: define i32 @sub_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    ret i32 [[OFFSET]]
+;
+  %p2 = getelementptr i8, ptr addrspace(1) %p, i32 %offset
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %sub = sub i32 %p2.addr, %p.addr
+  ret i32 %sub
+}
+
+define i32 @sub_trunc_ptrtoaddr(ptr %p, i64 %offset) {
+; CHECK-LABEL: define i32 @sub_trunc_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = trunc i64 [[OFFSET]] to i32
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %p2 = getelementptr i8, ptr %p, i64 %offset
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %p.addr.trunc = trunc i64 %p.addr to i32
+  %p2.addr.trunc = trunc i64 %p2.addr to i32
+  %sub = sub i32 %p2.addr.trunc, %p.addr.trunc
+  ret i32 %sub
+}
+
+define i16 @sub_trunc_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %offset) {
+; CHECK-LABEL: define i16 @sub_trunc_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = trunc i32 [[OFFSET]] to i16
+; CHECK-NEXT:    ret i16 [[SUB]]
+;
+  %p2 = getelementptr i8, ptr addrspace(1) %p, i32 %offset
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %p.addr.trunc = trunc i32 %p.addr to i16
+  %p2.addr.trunc = trunc i32 %p2.addr to i16
+  %sub = sub i16 %p2.addr.trunc, %p.addr.trunc
+  ret i16 %sub
+}
+
+define i128 @sub_zext_ptrtoaddr(ptr %p, i64 %offset) {
+; CHECK-LABEL: define i128 @sub_zext_ptrtoaddr(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = zext i64 [[OFFSET]] to i128
+; CHECK-NEXT:    ret i128 [[SUB]]
+;
+  %p2 = getelementptr nuw i8, ptr %p, i64 %offset
+  %p.addr = ptrtoaddr ptr %p to i64
+  %p2.addr = ptrtoaddr ptr %p2 to i64
+  %p.addr.ext = zext i64 %p.addr to i128
+  %p2.addr.ext = zext i64 %p2.addr to i128
+  %sub = sub i128 %p2.addr.ext, %p.addr.ext
+  ret i128 %sub
+}
+
+define i64 @sub_zext_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %offset) {
+; CHECK-LABEL: define i64 @sub_zext_ptrtoaddr_addrsize(
+; CHECK-SAME: ptr addrspace(1) [[P:%.*]], i32 [[OFFSET:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = zext i32 [[OFFSET]] to i64
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %p2 = getelementptr nuw i8, ptr addrspace(1) %p, i32 %offset
+  %p.addr = ptrtoaddr ptr addrspace(1) %p to i32
+  %p2.addr = ptrtoaddr ptr addrspace(1) %p2 to i32
+  %p.addr.ext = zext i32 %p.addr to i64
+  %p2.addr.ext = zext i32 %p2.addr to i64
+  %sub = sub i64 %p2.addr.ext, %p.addr.ext
+  ret i64 %sub
+}

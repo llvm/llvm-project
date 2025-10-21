@@ -2111,6 +2111,28 @@ template <typename Op_t> struct PtrToIntSameSize_match {
   }
 };
 
+template <typename Op_t> struct PtrToIntOrAddr_GEAddrSize_match {
+  const DataLayout &DL;
+  Op_t Op;
+
+  PtrToIntOrAddr_GEAddrSize_match(const DataLayout &DL, const Op_t &OpMatch)
+      : DL(DL), Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) const {
+    if (auto *O = dyn_cast<Operator>(V)) {
+      unsigned Opcode = O->getOpcode();
+      // The ptrtoaddr result type always matches the address size.
+      // For ptrtoint we have to explicitly check it.
+      return (Opcode == Instruction::PtrToAddr ||
+              (Opcode == Instruction::PtrToInt &&
+               O->getType()->getScalarSizeInBits() ==
+                   DL.getAddressSizeInBits(O->getOperand(0)->getType()))) &&
+             Op.match(O->getOperand(0));
+    }
+    return false;
+  }
+};
+
 template <typename Op_t> struct NNegZExt_match {
   Op_t Op;
 
@@ -2194,6 +2216,14 @@ m_PtrToAddr(const OpTy &Op) {
 /// Matches PtrToInt or PtrToAddr.
 template <typename OpTy> inline auto m_PtrToIntOrAddr(const OpTy &Op) {
   return m_CombineOr(m_PtrToInt(Op), m_PtrToAddr(Op));
+}
+
+/// Matches PtrToInt or PtrToAddr where the result is greater than or equal
+/// to the pointer address size.
+template <typename OpTy>
+inline PtrToIntOrAddr_GEAddrSize_match<OpTy>
+m_PtrToIntOrAddr_GEAddrSize(const DataLayout &DL, const OpTy &Op) {
+  return PtrToIntOrAddr_GEAddrSize_match<OpTy>(DL, Op);
 }
 
 /// Matches IntToPtr.
