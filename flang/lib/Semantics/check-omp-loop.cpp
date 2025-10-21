@@ -485,8 +485,8 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
           common::visit(
               common::visitors{
                   [&](const parser::Designator &designator) {
-                    if (const auto *name{semantics::getDesignatorNameIfDataRef(
-                            designator)}) {
+                    if (const auto *name{
+                            parser::GetDesignatorNameIfDataRef(designator)}) {
                       checkReductionSymbolInScan(name);
                     }
                   },
