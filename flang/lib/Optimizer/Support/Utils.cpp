@@ -51,6 +51,16 @@ std::optional<llvm::ArrayRef<int64_t>> fir::getComponentLowerBoundsIfNonDefault(
   return std::nullopt;
 }
 
+std::optional<bool>
+fir::isRecordWithFinalRoutine(fir::RecordType recordType, mlir::ModuleOp module,
+                              const mlir::SymbolTable *symbolTable) {
+  fir::TypeInfoOp typeInfo =
+      fir::lookupTypeInfoOp(recordType, module, symbolTable);
+  if (!typeInfo)
+    return std::nullopt;
+  return !typeInfo.getNoFinal();
+}
+
 mlir::LLVM::ConstantOp
 fir::genConstantIndex(mlir::Location loc, mlir::Type ity,
                       mlir::ConversionPatternRewriter &rewriter,
