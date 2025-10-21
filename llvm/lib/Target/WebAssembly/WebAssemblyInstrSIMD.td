@@ -1692,38 +1692,22 @@ defm SIMD_RELAXED_FMIN :
 defm SIMD_RELAXED_FMAX :
    RelaxedBinary<F64x2, int_wasm_relaxed_max, "relaxed_max", 0x110>;
 
-// Transform standard fminimum/fmaximum to relaxed versions
-def : Pat<(v4f32 (fminnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+let Predicates = [HasRelaxedSIMD] in {
+  foreach vec = [F32x4, F64x2] in {
+    defvar relaxed_min = !cast<NI>("SIMD_RELAXED_FMIN_"#vec);
+    defvar relaxed_max = !cast<NI>("SIMD_RELAXED_FMAX_"#vec);
 
-def : Pat<(v4f32 (fminimumnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v4f32 (fmaxnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v4f32 (fmaximumnum (v4f32 V128:$lhs), (v4f32 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F32x4 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v2f64 (fminnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v2f64 (fminimumnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMIN_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v2f64 (fmaxnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
-
-def : Pat<(v2f64 (fmaximumnum (v2f64 V128:$lhs), (v2f64 V128:$rhs))),
-          (SIMD_RELAXED_FMAX_F64x2 V128:$lhs, V128:$rhs)>,
-      Requires<[HasRelaxedSIMD]>;
+    // Transform standard fminimum/fmaximum to relaxed versions
+    def : Pat<(vec.vt (fminnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_min V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fminimumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_min V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fmaxnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_max V128:$lhs, V128:$rhs)>;
+    def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+              (relaxed_max V128:$lhs, V128:$rhs)>;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Relaxed rounding q15 multiplication
