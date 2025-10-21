@@ -268,48 +268,47 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 
 Id DAP::Send(const Message &message) {
   std::lock_guard<std::mutex> guard(call_mutex);
-  if (const protocol::Event *e = std::get_if<protocol::Event>(&message)) {
-    protocol::Event event = *e;
-    if (event.seq == kCalculateSeq)
-      event.seq = seq++;
-    if (llvm::Error err = transport.Send(event))
+  Message msg = std::visit(
+      [this](auto &&msg) -> Message {
+        if (msg.seq == kCalculateSeq)
+          msg.seq = seq++;
+        return msg;
+      },
+      Message(message));
+
+  if (const protocol::Event *event = std::get_if<protocol::Event>(&msg)) {
+    if (llvm::Error err = transport.Send(*event))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending event failed",
                     m_client_name);
-    return event.seq;
+    return event->seq;
   }
 
-  if (const Request *r = std::get_if<Request>(&message)) {
-    Request req = *r;
-    if (req.seq == kCalculateSeq)
-      req.seq = seq++;
-    if (llvm::Error err = transport.Send(req))
+  if (const Request *req = std::get_if<Request>(&msg)) {
+    if (llvm::Error err = transport.Send(*req))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending request failed",
                     m_client_name);
-    return req.seq;
+    return req->seq;
   }
 
-  if (const Response *r = std::get_if<Response>(&message)) {
-    Response resp = *r;
-    if (resp.seq == kCalculateSeq)
-      resp.seq = seq++;
+  if (const Response *resp = std::get_if<Response>(&msg)) {
     // FIXME: After all the requests have migrated from LegacyRequestHandler >
     // RequestHandler<> this should be handled in RequestHandler<>::operator().
     // If the debugger was interrupted, convert this response into a
     // 'cancelled' response because we might have a partial result.
     llvm::Error err = (debugger.InterruptRequested())
                           ? transport.Send({
-                                /*request_seq=*/resp.request_seq,
-                                /*command=*/resp.command,
+                                /*request_seq=*/resp->request_seq,
+                                /*command=*/resp->command,
                                 /*success=*/false,
                                 /*message=*/eResponseMessageCancelled,
                                 /*body=*/std::nullopt,
-                                /*seq=*/resp.seq,
+                                /*seq=*/resp->seq,
                             })
-                          : transport.Send(resp);
+                          : transport.Send(*resp);
     if (err)
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending response failed",
                     m_client_name);
-    return resp.seq;
+    return resp->seq;
   }
 
   llvm_unreachable("Unexpected message type");

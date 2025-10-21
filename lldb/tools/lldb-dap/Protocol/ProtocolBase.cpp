@@ -58,7 +58,7 @@ bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
 }
 
 json::Value toJSON(const Request &R) {
-  assert(R.seq != kCalculateSeq);
+  assert(R.seq != kCalculateSeq && "invalid seq");
 
   json::Object Result{
       {"type", "request"},
@@ -105,7 +105,8 @@ bool operator==(const Request &a, const Request &b) {
 }
 
 json::Value toJSON(const Response &R) {
-  assert(R.seq != kCalculateSeq);
+  assert(R.seq != kCalculateSeq && "invalid seq");
+
   json::Object Result{{"type", "response"},
                       {"seq", R.seq},
                       {"command", R.command},
@@ -215,7 +216,7 @@ bool fromJSON(json::Value const &Params, ErrorMessage &EM, json::Path P) {
 }
 
 json::Value toJSON(const Event &E) {
-  assert(E.seq != kCalculateSeq);
+  assert(E.seq != kCalculateSeq && "invalid seq");
 
   json::Object Result{
       {"type", "event"},
