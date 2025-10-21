@@ -411,7 +411,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if (CurrentState.BreakBeforeClosingBrace &&
       (Current.closesBlockOrBlockTypeList(Style) ||
-       (Current.is(tok::r_brace) &&
+       (Current.is(tok::r_brace) && Current.MatchingParen &&
         Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
   }
@@ -433,7 +433,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if ((startsNextParameter(Current, Style) || Previous.is(tok::semi) ||
        (Previous.is(TT_TemplateCloser) && Current.is(TT_StartOfName) &&
-        State.Line->First->isNot(TT_AttributeSquare) && Style.isCpp() &&
+        State.Line->First->isNot(TT_AttributeLSquare) && Style.isCpp() &&
         // FIXME: This is a temporary workaround for the case where clang-format
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
@@ -798,9 +798,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (!DryRun) {
+    const bool ContinuePPDirective =
+        State.Line->InMacroBody && Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
                                   State.Column + Spaces + PPColumnCorrection,
-                                  /*IsAligned=*/false, State.Line->InMacroBody);
+                                  /*IsAligned=*/false, ContinuePPDirective);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -833,7 +835,7 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   auto IsOpeningBracket = [&](const FormatToken &Tok) {
     auto IsStartOfBracedList = [&]() {
       return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
-             Style.Cpp11BracedListStyle;
+             Style.Cpp11BracedListStyle != FormatStyle::BLS_Block;
     };
     if (Tok.isNoneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
         !IsStartOfBracedList()) {
@@ -925,7 +927,12 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
                         TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)) &&
+       (Previous.is(BK_BracedInit) &&
+        (Style.Cpp11BracedListStyle != FormatStyle::BLS_FunctionCall ||
+         !Previous.Previous ||
+         Previous.Previous->isNoneOf(tok::identifier, tok::l_paren,
+                                     BK_BracedInit))) ||
+       Previous.is(TT_VerilogMultiLineListLParen)) &&
       !IsInTemplateString(Current)) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
@@ -1171,10 +1178,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       // about removing empty lines on closing blocks. Special case them here.
       MaxEmptyLinesToKeep = 1;
     }
-    unsigned Newlines =
+    const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
-    bool ContinuePPDirective =
-        State.Line->InPPDirective && State.Line->Type != LT_ImportStatement;
+    const bool ContinuePPDirective = State.Line->InPPDirective &&
+                                     State.Line->Type != LT_ImportStatement &&
+                                     Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
                                   CurrentState.IsAligned, ContinuePPDirective);
   }
@@ -1369,7 +1377,8 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
   if (Current.is(TT_LambdaArrow) &&
       Previous.isOneOf(tok::kw_noexcept, tok::kw_mutable, tok::kw_constexpr,
-                       tok::kw_consteval, tok::kw_static, TT_AttributeSquare)) {
+                       tok::kw_consteval, tok::kw_static,
+                       TT_AttributeRSquare)) {
     return ContinuationIndent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
@@ -1494,9 +1503,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
          Current.isNot(tok::l_paren) &&
          !Current.endsSequence(TT_StartOfName, TT_AttributeMacro,
                                TT_PointerOrReference)) ||
-        PreviousNonComment->isOneOf(
-            TT_AttributeRParen, TT_AttributeSquare, TT_FunctionAnnotationRParen,
-            TT_JavaAnnotation, TT_LeadingJavaAnnotation))) ||
+        PreviousNonComment->isOneOf(TT_AttributeRParen, TT_AttributeRSquare,
+                                    TT_FunctionAnnotationRParen,
+                                    TT_JavaAnnotation,
+                                    TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
        NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
     return std::max(CurrentState.LastSpace, CurrentState.Indent);
