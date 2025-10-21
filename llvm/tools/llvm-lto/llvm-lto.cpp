@@ -379,7 +379,7 @@ static void printIndexStats() {
 
     unsigned Calls = 0, Refs = 0, Functions = 0, Alias = 0, Globals = 0;
     for (auto &Summaries : *Index) {
-      for (auto &Summary : Summaries.second.SummaryList) {
+      for (auto &Summary : Summaries.second.getSummaryList()) {
         Refs += Summary->refs().size();
         if (auto *FuncSummary = dyn_cast<FunctionSummary>(Summary.get())) {
           Functions++;

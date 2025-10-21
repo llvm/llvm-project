@@ -1,0 +1,84 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func dso_local @empty_try_block_with_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } catch all {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func dso_local @empty_try_block_with_catch_all() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } catch all {
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func dso_local @empty_try_block_with_catch_unwind() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } unwind {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func dso_local @empty_try_block_with_catch_unwind() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } unwind {
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func dso_local @empty_try_block_with_catch_ist() {
+  cir.scope {
+    cir.try {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+      cir.yield
+    } unwind {
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK: cir.func dso_local @empty_try_block_with_catch_ist() {
+// CHECK:   cir.scope {
+// CHECK:     cir.try {
+// CHECK:       cir.yield
+// CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+// CHECK:       cir.yield
+// CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
+// CHECK:       cir.yield
+// CHECK:     } unwind {
+// CHECK:       cir.yield
+// CHECK:     }
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+}
