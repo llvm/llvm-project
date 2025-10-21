@@ -15,8 +15,8 @@
 // Usage Pattern:
 // ==============
 //
-// A pass that needs this functionality should call getAnalysis<OpenACCSupport>(),
-// which will provide either:
+// A pass that needs this functionality should call
+// getAnalysis<OpenACCSupport>(), which will provide either:
 // - A cached version if previously initialized, OR
 // - A default implementation if not previously initialized
 //
@@ -27,10 +27,11 @@
 // =====================================
 //
 // If a custom implementation is needed, create a pass that runs BEFORE the pass
-// that needs the analysis. In this setup pass, use getAnalysis<OpenACCSupport>()
-// followed by setImplementation() to register your custom implementation. The
-// custom implementation will need to provide implementation for all methods
-// defined in the `OpenACCSupportTraits::Concept` class.
+// that needs the analysis. In this setup pass, use
+// getAnalysis<OpenACCSupport>() followed by setImplementation() to register
+// your custom implementation. The custom implementation will need to provide
+// implementation for all methods defined in the `OpenACCSupportTraits::Concept`
+// class.
 //
 // Example:
 //   void MySetupPass::runOnOperation() {
