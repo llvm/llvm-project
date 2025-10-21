@@ -3659,6 +3659,46 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   static const char ID;
 };
 
+static bool isRuntimeFuncionWithCallbacks(RuntimeFunction RF) {
+  switch (RF) {
+  case OMPRTL___kmpc_distribute_static_loop_4:
+  case OMPRTL___kmpc_distribute_static_loop_4u:
+  case OMPRTL___kmpc_distribute_static_loop_8:
+  case OMPRTL___kmpc_distribute_static_loop_8u:
+  case OMPRTL___kmpc_distribute_for_static_loop_4:
+  case OMPRTL___kmpc_distribute_for_static_loop_4u:
+  case OMPRTL___kmpc_distribute_for_static_loop_8:
+  case OMPRTL___kmpc_distribute_for_static_loop_8u:
+  case OMPRTL___kmpc_for_static_loop_4:
+  case OMPRTL___kmpc_for_static_loop_4u:
+  case OMPRTL___kmpc_for_static_loop_8:
+  case OMPRTL___kmpc_for_static_loop_8u:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static unsigned runtimeFuncionCallbackArgNo(RuntimeFunction RF) {
+  switch (RF) {
+  case OMPRTL___kmpc_distribute_static_loop_4:
+  case OMPRTL___kmpc_distribute_static_loop_4u:
+  case OMPRTL___kmpc_distribute_static_loop_8:
+  case OMPRTL___kmpc_distribute_static_loop_8u:
+  case OMPRTL___kmpc_distribute_for_static_loop_4:
+  case OMPRTL___kmpc_distribute_for_static_loop_4u:
+  case OMPRTL___kmpc_distribute_for_static_loop_8:
+  case OMPRTL___kmpc_distribute_for_static_loop_8u:
+  case OMPRTL___kmpc_for_static_loop_4:
+  case OMPRTL___kmpc_for_static_loop_4u:
+  case OMPRTL___kmpc_for_static_loop_8:
+  case OMPRTL___kmpc_for_static_loop_8u:
+    return 1;
+  default:
+    llvm_unreachable("Unexpected runtime function!");
+  }
+}
+
 /// The function kernel info abstract attribute, basically, what can we say
 /// about a function with regards to the KernelInfoState.
 struct AAKernelInfoFunction : AAKernelInfo {
@@ -4752,6 +4792,30 @@ struct AAKernelInfoFunction : AAKernelInfo {
     bool AllSPMDStatesWereFixed = true;
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
+      auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+      const auto &It =
+          OMPInfoCache.RuntimeFunctionIDMap.find(CB.getCalledFunction());
+      if (It != OMPInfoCache.RuntimeFunctionIDMap.end()) {
+        RuntimeFunction RF = It->getSecond();
+        if (isRuntimeFuncionWithCallbacks(RF)) {
+          const unsigned int CallbackArgNo = runtimeFuncionCallbackArgNo(RF);
+          auto *LoopRegion = dyn_cast<Function>(
+              CB.getArgOperand(CallbackArgNo)->stripPointerCasts());
+          if (LoopRegion) {
+            auto *FnAA = A.getAAFor<AAKernelInfo>(
+                *this, IRPosition::function(*LoopRegion), DepClassTy::OPTIONAL);
+            if (FnAA) {
+              getState() ^= FnAA->getState();
+              AllSPMDStatesWereFixed &=
+                  FnAA->SPMDCompatibilityTracker.isAtFixpoint();
+              AllParallelRegionStatesWereFixed &=
+                  FnAA->ReachedKnownParallelRegions.isAtFixpoint();
+              AllParallelRegionStatesWereFixed &=
+                  FnAA->ReachedUnknownParallelRegions.isAtFixpoint();
+            }
+          }
+        }
+      }
       auto *CBAA = A.getAAFor<AAKernelInfo>(
           *this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL);
       if (!CBAA)
@@ -4927,7 +4991,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         // state based on the callee state in updateImpl.
         return;
       }
-      if (NumCallees > 1) {
+      if (NumCallees > 1 && !isRuntimeFuncionWithCallbacks(It->getSecond())) {
         indicatePessimisticFixpoint();
         return;
       }
@@ -5043,8 +5107,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         // kernel from being SPMD-izable. We mark it as such because we need
         // further changes in order to also consider the contents of the
         // callbacks passed to them.
-        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
-        SPMDCompatibilityTracker.insert(&CB);
+        // SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+        // SPMDCompatibilityTracker.insert(&CB);
         break;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
@@ -5097,7 +5161,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         getState() = FnAA->getState();
         return ChangeStatus::CHANGED;
       }
-      if (NumCallees > 1)
+      if (NumCallees > 1 && !isRuntimeFuncionWithCallbacks(It->getSecond()))
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
