@@ -136,7 +136,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
-  uint32_t seq = 0;
+  protocol::Id seq = 0;
   std::mutex call_mutex;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
