@@ -54,14 +54,12 @@ public:
 // Fills in the bits of a CompilerInstance that weren't initialized yet.
 // Provides "empty" ASTContext etc if we fail before parsing gets started.
 void createMissingComponents(CompilerInstance &Clang) {
-  if (!Clang.hasVirtualFileSystem())
-    Clang.createVirtualFileSystem();
   if (!Clang.hasDiagnostics())
-    Clang.createDiagnostics();
+    Clang.createDiagnostics(*llvm::vfs::getRealFileSystem());
   if (!Clang.hasFileManager())
     Clang.createFileManager();
   if (!Clang.hasSourceManager())
-    Clang.createSourceManager();
+    Clang.createSourceManager(Clang.getFileManager());
   if (!Clang.hasTarget())
     Clang.createTarget();
   if (!Clang.hasPreprocessor())
@@ -100,9 +98,7 @@ TestAST::TestAST(const TestInputs &In) {
 
   // Extra error conditions are reported through diagnostics, set that up first.
   bool ErrorOK = In.ErrorOK || llvm::StringRef(In.Code).contains("error-ok");
-  auto DiagConsumer = new StoreDiagnostics(Diagnostics, !ErrorOK);
-  Clang->createVirtualFileSystem(std::move(VFS), DiagConsumer);
-  Clang->createDiagnostics(DiagConsumer);
+  Clang->createDiagnostics(*VFS, new StoreDiagnostics(Diagnostics, !ErrorOK));
 
   // Parse cc1 argv, (typically [-std=c++20 input.cc]) into CompilerInvocation.
   std::vector<const char *> Argv;
@@ -119,7 +115,7 @@ TestAST::TestAST(const TestInputs &In) {
   }
   assert(!Clang->getInvocation().getFrontendOpts().DisableFree);
 
-  Clang->createFileManager();
+  Clang->createFileManager(VFS);
 
   // Running the FrontendAction creates the other components: SourceManager,
   // Preprocessor, ASTContext, Sema. Preprocessor needs TargetInfo to be set.

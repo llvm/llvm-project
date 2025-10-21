@@ -38,8 +38,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
       new raw_svector_ostream(IRBuffer));
 
   Compiler.setOutputStream(std::move(IRStream));
-  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
-  Compiler.createDiagnostics();
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   bool Success = ExecuteCompilerInvocation(&Compiler);
   EXPECT_TRUE(Success);
@@ -63,8 +62,8 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
 
   Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
   DiagnosticOptions DiagOpts;
-  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
-  Compiler.createDiagnostics(new TextDiagnosticPrinter(llvm::nulls(), DiagOpts),
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                             new TextDiagnosticPrinter(llvm::nulls(), DiagOpts),
                              true);
   Compiler.setVerboseOutputStream(VerboseStream);
 
@@ -93,8 +92,8 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
 
     Compiler.setOutputStream(std::make_unique<raw_null_ostream>());
     DiagnosticOptions DiagOpts;
-    Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
     Compiler.createDiagnostics(
+        *llvm::vfs::getRealFileSystem(),
         new TextDiagnosticPrinter(llvm::nulls(), DiagOpts), true);
     Compiler.setVerboseOutputStream(std::move(VerboseStream));
 

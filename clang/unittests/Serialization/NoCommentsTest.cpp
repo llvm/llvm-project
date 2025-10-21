@@ -99,7 +99,6 @@ void foo() {}
   ASSERT_TRUE(Invocation);
 
   CompilerInstance Instance(std::move(Invocation));
-  Instance.createVirtualFileSystem(CIOpts.VFS);
   Instance.setDiagnostics(Diags.get());
   Instance.getFrontendOpts().OutputFile = CacheBMIPath;
   GenerateReducedModuleInterfaceAction Action;

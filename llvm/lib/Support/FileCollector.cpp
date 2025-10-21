@@ -49,9 +49,8 @@ static bool isCaseSensitivePath(StringRef Path) {
   return true;
 }
 
-FileCollector::FileCollector(std::string Root, std::string OverlayRoot,
-                             IntrusiveRefCntPtr<vfs::FileSystem> VFS)
-    : Root(Root), OverlayRoot(OverlayRoot), Canonicalizer(std::move(VFS)) {
+FileCollector::FileCollector(std::string Root, std::string OverlayRoot)
+    : Root(Root), OverlayRoot(OverlayRoot) {
   assert(sys::path::is_absolute(Root) && "Root not absolute");
   assert(sys::path::is_absolute(OverlayRoot) && "OverlayRoot not absolute");
 }
@@ -68,8 +67,9 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
   SmallString<256> RealPath;
   auto DirWithSymlink = CachedDirs.find(Directory);
   if (DirWithSymlink == CachedDirs.end()) {
-    // FIXME: What if there is nothing on disk?
-    if (VFS->getRealPath(Directory, RealPath))
+    // FIXME: Should this be a call to FileSystem::getRealpath(), in some
+    // cases? What if there is nothing on disk?
+    if (sys::fs::real_path(Directory, RealPath))
       return;
     CachedDirs[Directory] = std::string(RealPath);
   } else {
@@ -88,9 +88,9 @@ void FileCollector::PathCanonicalizer::updateWithRealPath(
 }
 
 /// Make Path absolute.
-static void makeAbsolute(vfs::FileSystem &VFS, SmallVectorImpl<char> &Path) {
+static void makeAbsolute(SmallVectorImpl<char> &Path) {
   // We need an absolute src path to append to the root.
-  VFS.makeAbsolute(Path);
+  sys::fs::make_absolute(Path);
 
   // Canonicalize src to a native path to avoid mixed separator styles.
   sys::path::native(Path);
@@ -105,7 +105,7 @@ FileCollector::PathCanonicalizer::PathStorage
 FileCollector::PathCanonicalizer::canonicalize(StringRef SrcPath) {
   PathStorage Paths;
   Paths.VirtualPath = SrcPath;
-  makeAbsolute(*VFS, Paths.VirtualPath);
+  makeAbsolute(Paths.VirtualPath);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized

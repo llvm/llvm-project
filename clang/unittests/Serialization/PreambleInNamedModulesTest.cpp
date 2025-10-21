@@ -113,8 +113,12 @@ export using ::E;
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
   Clang->setDiagnostics(Diags.get());
-  Clang->createVirtualFileSystem(VFS);
-  Clang->createFileManager();
+
+  if (auto VFSWithRemapping = createVFSFromCompilerInvocation(
+          Clang->getInvocation(), Clang->getDiagnostics(), VFS))
+    VFS = VFSWithRemapping;
+
+  Clang->createFileManager(VFS);
   EXPECT_TRUE(Clang->createTarget());
 
   Buffer.release();

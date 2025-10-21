@@ -735,7 +735,7 @@ int main(int argc, char **argv) {
 
   InitLLVM X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv, /*Overview*/ "", /*Errs*/ nullptr,
-                              /*VFS*/ nullptr, "FILECHECK_OPTS");
+                              "FILECHECK_OPTS");
 
   // Select -dump-input* values.  The -help documentation specifies the default
   // value and which value to choose if an option is specified multiple times.

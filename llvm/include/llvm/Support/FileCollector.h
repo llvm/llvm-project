@@ -81,19 +81,11 @@ public:
     /// Canonicalize a pair of virtual and real paths.
     LLVM_ABI PathStorage canonicalize(StringRef SrcPath);
 
-    /// Return the underlying file system.
-    vfs::FileSystem &getFileSystem() const { return *VFS; };
-
-    explicit PathCanonicalizer(IntrusiveRefCntPtr<vfs::FileSystem> VFS)
-        : VFS(std::move(VFS)) {}
-
   private:
     /// Replace with a (mostly) real path, or don't modify. Resolves symlinks
     /// in the directory, using \a CachedDirs to avoid redundant lookups, but
     /// leaves the filename as a possible symlink.
     void updateWithRealPath(SmallVectorImpl<char> &Path);
-
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
     StringMap<std::string> CachedDirs;
   };
@@ -101,8 +93,7 @@ public:
   /// \p Root is the directory where collected files are will be stored.
   /// \p OverlayRoot is VFS mapping root.
   /// \p Root directory gets created in copyFiles unless it already exists.
-  FileCollector(std::string Root, std::string OverlayRoot,
-                IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+  FileCollector(std::string Root, std::string OverlayRoot);
 
   /// Write the yaml mapping (for the VFS) to the given file.
   std::error_code writeMapping(StringRef MappingFile);

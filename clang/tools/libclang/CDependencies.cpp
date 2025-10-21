@@ -856,14 +856,11 @@ enum CXErrorCode clang_experimental_DependencyScanner_generateReproducer(
   for (const Command &BuildCommand : TU.Commands)
     PrintArguments(ScriptOS, BuildCommand.Arguments);
 
-  auto RealFS = llvm::vfs::getRealFileSystem();
-  RealFS->setCurrentWorkingDirectory(*Opts.WorkingDirectory);
-
   SmallString<128> VFSCachePath = FileCachePath;
   llvm::sys::path::append(VFSCachePath, "vfs");
   std::string VFSCachePathStr = VFSCachePath.str().str();
   llvm::FileCollector FileCollector(VFSCachePathStr,
-                                    /*OverlayRoot=*/VFSCachePathStr, RealFS);
+                                    /*OverlayRoot=*/VFSCachePathStr);
   for (const auto &FileDep : TU.FileDeps) {
     FileCollector.addFile(FileDep);
   }

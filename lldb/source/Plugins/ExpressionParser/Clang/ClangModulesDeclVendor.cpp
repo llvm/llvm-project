@@ -745,8 +745,7 @@ ClangModulesDeclVendor::Create(Target &target) {
   auto instance = std::make_unique<clang::CompilerInstance>(invocation);
 
   // Make sure clang uses the same VFS as LLDB.
-  instance->setVirtualFileSystem(FileSystem::Instance().GetVirtualFileSystem());
-  instance->createFileManager();
+  instance->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
   instance->setDiagnostics(diagnostics_engine.get());
 
   std::unique_ptr<clang::FrontendAction> action(new clang::SyntaxOnlyAction);

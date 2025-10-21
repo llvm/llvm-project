@@ -148,7 +148,6 @@ int main(int argc, const char **argv) {
       "Split input into multiple parts separated by regex '^(.|//)--- ' and "
       "extract the part specified by '^(.|//)--- <part>'\n",
       nullptr,
-      /*VFS=*/nullptr,
       /*EnvVar=*/nullptr,
       /*LongOptionsUseDoubleDash=*/true);
 

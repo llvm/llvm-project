@@ -47,8 +47,7 @@ void ASTMergeAction::ExecuteAction() {
         /*ShouldOwnClient=*/true));
     std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromASTFile(
         ASTFiles[I], CI.getPCHContainerReader(), ASTUnit::LoadEverything,
-        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOpts());
+        nullptr, Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 
     if (!Unit)
       continue;

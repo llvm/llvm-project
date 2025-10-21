@@ -625,15 +625,13 @@ TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
                                                  *Diags, "clang"));
 
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation));
-  Clang->createVirtualFileSystem(VFS);
-  Clang->createDiagnostics();
+  Clang->createDiagnostics(*VFS);
 
-  Clang->createFileManager();
-  FileManager &FM = Clang->getFileManager();
+  auto *FM = Clang->createFileManager(VFS);
   ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
   EXPECT_THAT(
-      PI.getExporters(llvm::cantFail(FM.getFileRef("foo.h")), FM),
-      testing::ElementsAre(llvm::cantFail(FM.getFileRef("exporter.h"))));
+      PI.getExporters(llvm::cantFail(FM->getFileRef("foo.h")), *FM),
+      testing::ElementsAre(llvm::cantFail(FM->getFileRef("exporter.h"))));
 }
 
 TEST_F(PragmaIncludeTest, OutlivesFMAndSM) {
