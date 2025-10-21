@@ -8303,14 +8303,11 @@ void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
 }
 
 void Sema::ActOnCleanupAttr(Expr *E, Decl *D, const Attr *A) {
-  FunctionDecl *FD = nullptr;
-  DeclarationNameInfo NI;
-  CleanupAttr *Attr = D->getAttr<CleanupAttr>();
-
   // Obtains the FunctionDecl that was found when handling the attribute
   // earlier.
-  FD = Attr->getFunctionDecl();
-  NI = FD->getNameInfo();
+  CleanupAttr *Attr = D->getAttr<CleanupAttr>();
+  FunctionDecl *FD = Attr->getFunctionDecl();
+  DeclarationNameInfo NI = FD->getNameInfo();
 
   // We're currently more strict than GCC about what function types we accept.
   // If this ever proves to be a problem it should be easy to fix.
