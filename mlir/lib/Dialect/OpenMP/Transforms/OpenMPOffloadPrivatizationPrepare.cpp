@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/OpenMP/Transforms/OpenMPOffloadPrivatizationPrepare.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -52,12 +51,12 @@ class PrepareForOMPOffloadPrivatizationPass
           PrepareForOMPOffloadPrivatizationPass> {
 
   void runOnOperation() override {
-    ModuleOp mod = getOperation()->getParentOfType<ModuleOp>();
+    ModuleOp mod = getOperation();
 
-    // FunctionFilteringPass removes bounds arguments from omp.map.info
-    // operations. We require bounds else our pass asserts. But, that's only for
-    // maps in functions that are on the host. So, skip functions being compiled
-    // for the target.
+    // In this pass, we make host-allocated privatized variables persist for
+    // deferred target tasks by copying them to the heap. Once the target task
+    // is done, this heap memory is freed. Since all of this happens on the host
+    // we can skip device modules.
     auto offloadModuleInterface =
         dyn_cast<omp::OffloadModuleInterface>(mod.getOperation());
     if (offloadModuleInterface && offloadModuleInterface.getIsTargetDevice())
@@ -67,7 +66,6 @@ class PrepareForOMPOffloadPrivatizationPass
       if (!hasPrivateVars(targetOp) || !isTargetTaskDeferred(targetOp))
         return;
       IRRewriter rewriter(&getContext());
-      ModuleOp mod = targetOp->getParentOfType<ModuleOp>();
       OperandRange privateVars = targetOp.getPrivateVars();
       SmallVector<mlir::Value> newPrivVars;
       Value fakeDependVar;
@@ -89,8 +87,7 @@ class PrepareForOMPOffloadPrivatizationPass
                               omp::DataSharingClauseType::FirstPrivate;
 
         Value mappedValue = targetOp.getMappedValueForPrivateVar(privVarIdx);
-        Operation *mapInfoOperation = mappedValue.getDefiningOp();
-        auto mapInfoOp = cast<omp::MapInfoOp>(mapInfoOperation);
+        auto mapInfoOp = cast<omp::MapInfoOp>(mappedValue.getDefiningOp());
 
         if (mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByCopy) {
           newPrivVars.push_back(privVar);
@@ -130,12 +127,10 @@ class PrepareForOMPOffloadPrivatizationPass
         // pointed to by varPtr
         // For boxchars this won't be a pointer. But, MapsForPrivatizedSymbols
         // should have mapped the pointer to the boxchar so use that as varPtr.
-        Value varPtr = privVar;
+        Value varPtr = mapInfoOp.getVarPtr();
         Type varType = mapInfoOp.getVarType();
         bool isPrivatizedByValue =
             !isa<LLVM::LLVMPointerType>(privVar.getType());
-        if (isPrivatizedByValue)
-          varPtr = mapInfoOp.getVarPtr();
 
         assert(isa<LLVM::LLVMPointerType>(varPtr.getType()));
         Value heapMem =
@@ -180,17 +175,16 @@ class PrepareForOMPOffloadPrivatizationPass
         };
 
         SmallVector<Operation *> chainOfOps;
-        chainOfOps.push_back(mapInfoOperation);
-        if (!mapInfoOp.getMembers().empty()) {
-          for (auto member : mapInfoOp.getMembers()) {
-            if (usesVarPtr(member.getDefiningOp()))
-              chainOfOps.push_back(member.getDefiningOp());
-
-            omp::MapInfoOp memberMap =
-                cast<omp::MapInfoOp>(member.getDefiningOp());
-            if (memberMap.getVarPtrPtr() &&
-                usesVarPtr(memberMap.getVarPtrPtr().getDefiningOp()))
-              chainOfOps.push_back(memberMap.getVarPtrPtr().getDefiningOp());
+        chainOfOps.push_back(mapInfoOp);
+        for (auto member : mapInfoOp.getMembers()) {
+          omp::MapInfoOp memberMap =
+              cast<omp::MapInfoOp>(member.getDefiningOp());
+          if (usesVarPtr(memberMap))
+            chainOfOps.push_back(memberMap);
+          if (memberMap.getVarPtrPtr()) {
+              Operation  *defOp = memberMap.getVarPtrPtr().getDefiningOp();
+              if (defOp && usesVarPtr(defOp))
+                chainOfOps.push_back(defOp);
           }
         }
 
@@ -259,22 +253,19 @@ class PrepareForOMPOffloadPrivatizationPass
         // variable, rewrite all the uses of the original variable with
         // the heap-allocated variable.
         rewriter.setInsertionPoint(targetOp);
-        rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOperation));
+        rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOp));
 
         // Fix any members that may use varPtr to now use heapMem
-        if (!mapInfoOp.getMembers().empty()) {
-          for (auto member : mapInfoOp.getMembers()) {
-            Operation *memberOperation = member.getDefiningOp();
-            if (!usesVarPtr(memberOperation))
-              continue;
-            rewriter.setInsertionPoint(cloneModifyAndErase(memberOperation));
+        for (auto member : mapInfoOp.getMembers()) {
+          auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
+          if (!usesVarPtr(memberMapInfoOp))
+            continue;
+          rewriter.setInsertionPoint(cloneModifyAndErase(memberMapInfoOp));
 
-            auto memberMapInfoOp = cast<omp::MapInfoOp>(memberOperation);
-            if (memberMapInfoOp.getVarPtrPtr()) {
-              Operation *varPtrPtrdefOp =
-                  memberMapInfoOp.getVarPtrPtr().getDefiningOp();
-              rewriter.setInsertionPoint(cloneModifyAndErase(varPtrPtrdefOp));
-            }
+          if (memberMapInfoOp.getVarPtrPtr()) {
+            Operation *varPtrPtrdefOp =
+                memberMapInfoOp.getVarPtrPtr().getDefiningOp();
+            rewriter.setInsertionPoint(cloneModifyAndErase(varPtrPtrdefOp));
           }
         }
 
@@ -340,12 +331,8 @@ class PrepareForOMPOffloadPrivatizationPass
         targetOp.setDependKindsAttr(newDependKindsAttr);
       }
       rewriter.setInsertionPoint(targetOp);
-      Operation *newOp = rewriter.clone(*targetOp.getOperation());
-      omp::TargetOp newTargetOp = cast<omp::TargetOp>(newOp);
-      rewriter.modifyOpInPlace(newTargetOp, [&]() {
-        newTargetOp.getPrivateVarsMutable().assign(newPrivVars);
-      });
-      rewriter.replaceOp(targetOp, newTargetOp);
+      targetOp.getPrivateVarsMutable().clear();
+      targetOp.getPrivateVarsMutable().assign(newPrivVars);
     });
   }
 
@@ -373,34 +360,6 @@ private:
     llvm::TypeSize size = dl.getTypeSize(varType);
     unsigned short alignment = dl.getTypeABIAlignment(varType);
     return llvm::alignTo(size, alignment);
-  }
-
-  // Generate code to get the size of data being mapped from the bounds
-  // of mapInfoOp
-  Value getSizeInBytes(omp::MapInfoOp mapInfoOp, ModuleOp mod,
-                       IRRewriter &rewriter) const {
-    Location loc = mapInfoOp.getLoc();
-    Type llvmInt64Ty = rewriter.getI64Type();
-    Value constOne = rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Ty, 1);
-    Value elementCount = constOne;
-    // TODO: Consider using  boundsOp.getExtent() if available.
-    for (auto bounds : mapInfoOp.getBounds()) {
-      auto boundsOp = cast<omp::MapBoundsOp>(bounds.getDefiningOp());
-      elementCount = rewriter.create<LLVM::MulOp>(
-          loc, llvmInt64Ty, elementCount,
-          rewriter.create<LLVM::AddOp>(
-              loc, llvmInt64Ty,
-              (rewriter.create<LLVM::SubOp>(loc, llvmInt64Ty,
-                                            boundsOp.getUpperBound(),
-                                            boundsOp.getLowerBound())),
-              constOne));
-    }
-    const DataLayout &dl = DataLayout(mod);
-    std::int64_t elemSize = getSizeInBytes(dl, mapInfoOp.getVarType());
-    Value elemSizeV =
-        rewriter.create<LLVM::ConstantOp>(loc, llvmInt64Ty, elemSize);
-    return rewriter.create<LLVM::MulOp>(loc, llvmInt64Ty, elementCount,
-                                        elemSizeV);
   }
 
   LLVM::LLVMFuncOp getMalloc(ModuleOp mod, IRRewriter &rewriter) const {

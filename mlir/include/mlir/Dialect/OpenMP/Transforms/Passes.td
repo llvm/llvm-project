@@ -1,4 +1,4 @@
-//===-- Passes.td - LLVM pass definition file --------------*- tablegen -*-===//
+//===-- Passes.td - OpenMP pass definition file ------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "::mlir::LLVM::LLVMFuncOp"> {
+def PrepareForOMPOffloadPrivatizationPass : Pass<"omp-offload-privatization-prepare", "ModuleOp"> {
     let summary = "Prepare OpenMP maps for privatization for deferred target tasks";
     let description = [{
       When generating LLVMIR for privatized variables in an OpenMP offloading directive (eg. omp::TargetOp)
