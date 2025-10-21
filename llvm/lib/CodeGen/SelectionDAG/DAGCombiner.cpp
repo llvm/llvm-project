@@ -6182,8 +6182,7 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
       return S;
 
   // Fold max(x, neg(x)) -> abs(x)
-  if (Opcode == ISD::SMAX &&
-      TLI.isOperationLegal(ISD::ABS, VT)) {
+  if (Opcode == ISD::SMAX && TLI.isOperationLegal(ISD::ABS, VT)) {
     SDValue Value;
     if (sd_match(N, m_SMax(m_Value(Value), m_Neg(m_Deferred(Value)))))
       return DAG.getNode(ISD::ABS, DL, VT, Value);
