@@ -28,7 +28,6 @@
 #include "llvm/Analysis/TargetTransformInfoImpl.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -1246,13 +1245,28 @@ public:
         unsigned LType =
           ((Opcode == Instruction::ZExt) ? ISD::ZEXTLOAD : ISD::SEXTLOAD);
 
-        if (I && isa<LoadInst>(I->getOperand(0))) {
-          auto *LI = cast<LoadInst>(I->getOperand(0));
+        if (I) {
+          if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
+            if (DstLT.first == SrcLT.first &&
+                TLI->isLoadExtLegal(LType, ExtVT, LoadVT,
+                                    LI->getPointerAddressSpace()))
+              return 0;
+          } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
+            switch (II->getIntrinsicID()) {
+              case Intrinsic::masked_load: {
+                auto *PtrType = II->getArgOperand(0)->getType();
+                assert(PtrType->isPointerTy());
 
-          if (DstLT.first == SrcLT.first &&
-              TLI->isLoadExtLegal(LType, ExtVT, LoadVT,
-                                  LI->getPointerAddressSpace()))
-            return 0;
+                if (DstLT.first == SrcLT.first &&
+                    TLI->isLoadExtLegal(LType, ExtVT, LoadVT,
+                                        PtrType->getPointerAddressSpace()))
+                  return 0;
+
+                break;
+              }
+              default: break;
+            }
+          }
         }
       }
       break;
