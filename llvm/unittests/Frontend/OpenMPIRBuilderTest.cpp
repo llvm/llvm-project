@@ -7957,4 +7957,62 @@ TEST_F(OpenMPIRBuilderTest, spliceBBWithEmptyBB) {
   EXPECT_FALSE(Terminator->getDbgRecordRange().empty());
 }
 
+TEST_F(OpenMPIRBuilderTest, callBackFunctions) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.initialize();
+
+  // Test multiple runtime functions that should have callback metadata
+  std::vector<RuntimeFunction> CallbackFunctions = {
+    OMPRTL___kmpc_distribute_static_loop_4,
+    OMPRTL___kmpc_distribute_static_loop_4u,
+    OMPRTL___kmpc_distribute_static_loop_8,
+    OMPRTL___kmpc_distribute_static_loop_8u,
+    OMPRTL___kmpc_distribute_for_static_loop_4,
+    OMPRTL___kmpc_distribute_for_static_loop_4u,
+    OMPRTL___kmpc_distribute_for_static_loop_8,
+    OMPRTL___kmpc_distribute_for_static_loop_8u,
+    OMPRTL___kmpc_for_static_loop_4,
+    OMPRTL___kmpc_for_static_loop_4u,
+    OMPRTL___kmpc_for_static_loop_8,
+    OMPRTL___kmpc_for_static_loop_8u
+  };
+
+  for (RuntimeFunction RF : CallbackFunctions) {
+    Function *Fn = OMPBuilder.getOrCreateRuntimeFunctionPtr(RF);
+    ASSERT_NE(Fn, nullptr) << "Function should exist for runtime function";
+    
+    MDNode *CallbackMD = Fn->getMetadata(LLVMContext::MD_callback);
+    EXPECT_NE(CallbackMD, nullptr) << "Function should have callback metadata";
+    
+    if (CallbackMD) {
+      // Should have at least one callback
+      EXPECT_GE(CallbackMD->getNumOperands(), 1U);
+      
+      // Test first callback entry
+      MDNode *FirstCallback = cast<MDNode>(CallbackMD->getOperand(0));
+      EXPECT_EQ(FirstCallback->getNumOperands(), 4U);
+      
+      // Callee index should be valid
+      auto *CalleeIdxCM = cast<ConstantAsMetadata>(FirstCallback->getOperand(0));
+      uint64_t CalleeIdx = cast<ConstantInt>(CalleeIdxCM->getValue())->getZExtValue();
+      EXPECT_EQ(CalleeIdx, 1u);
+
+      // Verify payload arguments re (-1, 2)
+      auto *Arg0CM = cast<ConstantAsMetadata>(FirstCallback->getOperand(1));
+      int64_t Arg0 = cast<ConstantInt>(Arg0CM->getValue())->getSExtValue();
+      EXPECT_EQ(Arg0, -1);
+      auto *Arg1CM = cast<ConstantAsMetadata>(FirstCallback->getOperand(2));
+      int64_t Arg1 = cast<ConstantInt>(Arg1CM->getValue())->getSExtValue();
+      EXPECT_EQ(Arg1, 2);
+
+      // Verify the varArgs is false.
+      auto *VarArgCM = cast<ConstantAsMetadata>(FirstCallback->getOperand(3));
+      uint64_t VarArg = cast<ConstantInt>(VarArgCM->getValue())->getZExtValue();
+      EXPECT_EQ(VarArg, 0u);
+    }
+  }
+}
+
+
 } // namespace
