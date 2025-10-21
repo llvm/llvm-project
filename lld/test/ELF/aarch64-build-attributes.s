@@ -1,4 +1,5 @@
 // REQUIRES: aarch64
+// RUN: rm -rf %t %t.o %t.so %t2.o
 // RUN: llvm-mc -triple=aarch64 %s -filetype=obj -o %t.o
 // RUN: ld.lld %t.o --shared -o %t.so
 // RUN: llvm-readelf --sections %t.so | FileCheck %s
