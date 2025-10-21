@@ -4076,28 +4076,31 @@ static unsigned getNewFMAInst(const GCNSubtarget &ST, unsigned Opc) {
   }
 }
 
+/// Helper struct for the implementation of 3-address conversion to communicate
+/// updates made to instruction operands.
+struct SIInstrInfo::ThreeAddressUpdates {
+  /// Other instruction whose def is no longer used by the converted
+  /// instruction.
+  MachineInstr *RemoveMIUse = nullptr;
+};
+
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
                                                  LiveIntervals *LIS) const {
   MachineBasicBlock &MBB = *MI.getParent();
-  unsigned Opc = MI.getOpcode();
+  ThreeAddressUpdates U;
+  MachineInstr *NewMI = convertToThreeAddressImpl(MI, U);
 
-  // Handle MFMA.
-  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
-  if (NewMFMAOpc != -1) {
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
-    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
-      MIB.add(MI.getOperand(I));
-    updateLiveVariables(LV, MI, *MIB);
+  if (NewMI) {
+    updateLiveVariables(LV, MI, *NewMI);
     if (LIS) {
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
+      LIS->ReplaceMachineInstrInMaps(MI, *NewMI);
       // SlotIndex of defs needs to be updated when converting to early-clobber
-      MachineOperand &Def = MIB->getOperand(0);
+      MachineOperand &Def = NewMI->getOperand(0);
       if (Def.isEarlyClobber() && Def.isReg() &&
           LIS->hasInterval(Def.getReg())) {
-        SlotIndex OldIndex = LIS->getInstructionIndex(*MIB).getRegSlot(false);
-        SlotIndex NewIndex = LIS->getInstructionIndex(*MIB).getRegSlot(true);
+        SlotIndex OldIndex = LIS->getInstructionIndex(*NewMI).getRegSlot(false);
+        SlotIndex NewIndex = LIS->getInstructionIndex(*NewMI).getRegSlot(true);
         auto &LI = LIS->getInterval(Def.getReg());
         auto UpdateDefIndex = [&](LiveRange &LR) {
           auto *S = LR.find(OldIndex);
@@ -4112,6 +4115,58 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
           UpdateDefIndex(SR);
       }
     }
+  }
+
+  if (U.RemoveMIUse) {
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    // The only user is the instruction which will be killed.
+    Register DefReg = U.RemoveMIUse->getOperand(0).getReg();
+
+    if (MRI.hasOneNonDBGUse(DefReg)) {
+      // We cannot just remove the DefMI here, calling pass will crash.
+      U.RemoveMIUse->setDesc(get(AMDGPU::IMPLICIT_DEF));
+      U.RemoveMIUse->getOperand(0).setIsDead(true);
+      for (unsigned I = U.RemoveMIUse->getNumOperands() - 1; I != 0; --I)
+        U.RemoveMIUse->removeOperand(I);
+      if (LV)
+        LV->getVarInfo(DefReg).AliveBlocks.clear();
+    }
+
+    if (LIS) {
+      LiveInterval &DefLI = LIS->getInterval(DefReg);
+
+      // We cannot delete the original instruction here, so hack out the use
+      // in the original instruction with a dummy register so we can use
+      // shrinkToUses to deal with any multi-use edge cases. Other targets do
+      // not have the complexity of deleting a use to consider here.
+      Register DummyReg = MRI.cloneVirtualRegister(DefReg);
+      for (MachineOperand &MIOp : MI.uses()) {
+        if (MIOp.isReg() && MIOp.getReg() == DefReg) {
+          MIOp.setIsUndef(true);
+          MIOp.setReg(DummyReg);
+        }
+      }
+
+      LIS->shrinkToUses(&DefLI);
+    }
+  }
+
+  return NewMI;
+}
+
+MachineInstr *
+SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
+                                       ThreeAddressUpdates &U) const {
+  MachineBasicBlock &MBB = *MI.getParent();
+  unsigned Opc = MI.getOpcode();
+
+  // Handle MFMA.
+  int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
+  if (NewMFMAOpc != -1) {
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
+    for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
+      MIB.add(MI.getOperand(I));
     return MIB;
   }
 
@@ -4121,11 +4176,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                   .setMIFlags(MI.getFlags());
     for (unsigned I = 0, E = MI.getNumOperands(); I != E; ++I)
       MIB->addOperand(MI.getOperand(I));
-
-    updateLiveVariables(LV, MI, *MIB);
-    if (LIS)
-      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-
     return MIB;
   }
 
@@ -4196,39 +4246,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       (ST.getConstantBusLimit(Opc) > 1 || !Src0->isReg() ||
        !RI.isSGPRReg(MBB.getParent()->getRegInfo(), Src0->getReg()))) {
     MachineInstr *DefMI;
-    const auto killDef = [&]() -> void {
-      MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-      // The only user is the instruction which will be killed.
-      Register DefReg = DefMI->getOperand(0).getReg();
-
-      if (MRI.hasOneNonDBGUse(DefReg)) {
-        // We cannot just remove the DefMI here, calling pass will crash.
-        DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
-        DefMI->getOperand(0).setIsDead(true);
-        for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
-          DefMI->removeOperand(I);
-        if (LV)
-          LV->getVarInfo(DefReg).AliveBlocks.clear();
-      }
-
-      if (LIS) {
-        LiveInterval &DefLI = LIS->getInterval(DefReg);
-
-        // We cannot delete the original instruction here, so hack out the use
-        // in the original instruction with a dummy register so we can use
-        // shrinkToUses to deal with any multi-use edge cases. Other targets do
-        // not have the complexity of deleting a use to consider here.
-        Register DummyReg = MRI.cloneVirtualRegister(DefReg);
-        for (MachineOperand &MIOp : MI.uses()) {
-          if (MIOp.isReg() && MIOp.getReg() == DefReg) {
-            MIOp.setIsUndef(true);
-            MIOp.setReg(DummyReg);
-          }
-        }
-
-        LIS->shrinkToUses(&DefLI);
-      }
-    };
 
     int64_t Imm;
     if (!Src0Literal && getFoldableImm(Src2, Imm, &DefMI)) {
@@ -4240,10 +4257,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .add(*Src1)
                   .addImm(Imm)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4256,11 +4270,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4279,12 +4289,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                   .addImm(Imm)
                   .add(*Src2)
                   .setMIFlags(MI.getFlags());
-        updateLiveVariables(LV, MI, *MIB);
-
-        if (LIS)
-          LIS->ReplaceMachineInstrInMaps(MI, *MIB);
-        if (DefMI)
-          killDef();
+        U.RemoveMIUse = DefMI;
         return MIB;
       }
     }
@@ -4313,9 +4318,6 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
             .setMIFlags(MI.getFlags());
   if (AMDGPU::hasNamedOperand(NewOpc, AMDGPU::OpName::op_sel))
     MIB.addImm(OpSel ? OpSel->getImm() : 0);
-  updateLiveVariables(LV, MI, *MIB);
-  if (LIS)
-    LIS->ReplaceMachineInstrInMaps(MI, *MIB);
   return MIB;
 }
 
