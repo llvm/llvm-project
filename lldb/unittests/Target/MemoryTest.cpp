@@ -264,9 +264,6 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
       std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
   ASSERT_TRUE(process_sp);
 
-  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
-  process->SetMaxReadSize(1024);
-
   llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
 
   // Read 8 ranges of 128 bytes with arbitrary base addresses.
@@ -276,7 +273,7 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
       {0x17171717, 128},   {0x99999, 128}};
 
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
-      process->ReadMemoryRanges(ranges, buffer);
+      process_sp->ReadMemoryRanges(ranges, buffer);
 
   for (auto [range, memory] : llvm::zip(ranges, read_results)) {
     ASSERT_EQ(memory.size(), 128u);
