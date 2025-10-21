@@ -258,17 +258,12 @@ define void @pr43371() optsize {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP3]], align 1
-; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -284,17 +279,12 @@ define void @pr43371() optsize {
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
-; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
+; PGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; PGSO-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
+; PGSO-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; PGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
-; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; PGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; PGSO-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; PGSO-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
@@ -310,17 +300,12 @@ define void @pr43371() optsize {
 ; NPGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; NPGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
-; NPGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; NPGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; NPGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
+; NPGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; NPGSO-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
+; NPGSO-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
 ; NPGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; NPGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
-; NPGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; NPGSO-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; NPGSO-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
@@ -340,7 +325,7 @@ for.cond.cleanup28:
 
 for.body29:
   %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
-  %add33 = add i16 undef, %i24.0170
+  %add33 = add i16 3, %i24.0170
   %idxprom34 = zext i16 %add33 to i32
   %arrayidx35 = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 %idxprom34
   store i16 0, ptr %arrayidx35, align 1
@@ -359,17 +344,12 @@ define void @pr43371_pgso() !prof !14 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP3]], align 1
-; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -385,17 +365,12 @@ define void @pr43371_pgso() !prof !14 {
 ; PGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PGSO:       [[VECTOR_BODY]]:
 ; PGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[VEC_IND:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; PGSO-NEXT:    [[TMP0:%.*]] = add <2 x i16> undef, [[VEC_IND]]
-; PGSO-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[TMP0]] to <2 x i32>
-; PGSO-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; PGSO-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
-; PGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
+; PGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
+; PGSO-NEXT:    [[TMP0:%.*]] = add i16 3, [[OFFSET_IDX]]
+; PGSO-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP0]] to i32
 ; PGSO-NEXT:    [[TMP5:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP4]]
-; PGSO-NEXT:    store i16 0, ptr [[TMP3]], align 1
-; PGSO-NEXT:    store i16 0, ptr [[TMP5]], align 1
+; PGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP5]], align 1
 ; PGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; PGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i16> [[VEC_IND]], splat (i16 2)
 ; PGSO-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 756
 ; PGSO-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; PGSO:       [[MIDDLE_BLOCK]]:
@@ -406,15 +381,13 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO-LABEL: define void @pr43371_pgso(
 ; NPGSO-SAME: ) !prof [[PROF14]] {
 ; NPGSO-NEXT:  [[ENTRY:.*:]]
-; NPGSO-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
-; NPGSO:       [[VECTOR_SCEVCHECK]]:
-; NPGSO-NEXT:    br i1 undef, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; NPGSO-NEXT:    br label %[[VECTOR_PH:.*]]
 ; NPGSO:       [[VECTOR_PH]]:
 ; NPGSO-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NPGSO:       [[VECTOR_BODY]]:
 ; NPGSO-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; NPGSO-NEXT:    [[OFFSET_IDX:%.*]] = trunc i32 [[INDEX]] to i16
-; NPGSO-NEXT:    [[TMP1:%.*]] = add i16 undef, [[OFFSET_IDX]]
+; NPGSO-NEXT:    [[TMP1:%.*]] = add i16 3, [[OFFSET_IDX]]
 ; NPGSO-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
 ; NPGSO-NEXT:    [[TMP3:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[TMP2]]
 ; NPGSO-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP3]], align 1
@@ -423,19 +396,8 @@ define void @pr43371_pgso() !prof !14 {
 ; NPGSO-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[FOR_COND_CLEANUP28:.*]]
-; NPGSO:       [[SCALAR_PH]]:
-; NPGSO-NEXT:    br label %[[FOR_BODY29:.*]]
 ; NPGSO:       [[FOR_COND_CLEANUP28]]:
 ; NPGSO-NEXT:    unreachable
-; NPGSO:       [[FOR_BODY29]]:
-; NPGSO-NEXT:    [[I24_0170:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[INC37:%.*]], %[[FOR_BODY29]] ]
-; NPGSO-NEXT:    [[ADD33:%.*]] = add i16 undef, [[I24_0170]]
-; NPGSO-NEXT:    [[IDXPROM34:%.*]] = zext i16 [[ADD33]] to i32
-; NPGSO-NEXT:    [[ARRAYIDX35:%.*]] = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 [[IDXPROM34]]
-; NPGSO-NEXT:    store i16 0, ptr [[ARRAYIDX35]], align 1
-; NPGSO-NEXT:    [[INC37]] = add i16 [[I24_0170]], 1
-; NPGSO-NEXT:    [[CMP26:%.*]] = icmp ult i16 [[INC37]], 756
-; NPGSO-NEXT:    br i1 [[CMP26]], label %[[FOR_BODY29]], label %[[FOR_COND_CLEANUP28]], !llvm.loop [[LOOP21:![0-9]+]]
 ;
 ; We do not want to generate SCEV predicates when optimising for size, because
 ; that will lead to extra code generation such as the SCEV overflow runtime
@@ -449,7 +411,7 @@ for.cond.cleanup28:
 
 for.body29:
   %i24.0170 = phi i16 [ 0, %entry], [ %inc37, %for.body29]
-  %add33 = add i16 undef, %i24.0170
+  %add33 = add i16 3, %i24.0170
   %idxprom34 = zext i16 %add33 to i32
   %arrayidx35 = getelementptr [2592 x i16], ptr @cm_array, i32 0, i32 %idxprom34
   store i16 0, ptr %arrayidx35, align 1
@@ -561,7 +523,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; NPGSO-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 508
-; NPGSO-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; NPGSO-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
 ; NPGSO-NEXT:    br label %[[SCALAR_PH:.*]]
@@ -572,7 +534,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO-NEXT:    [[FOR:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[SCALAR_PH]] ], [ [[PIVPLUS1]], %[[LOOP]] ]
 ; NPGSO-NEXT:    [[PIVPLUS1]] = add nuw nsw i32 [[PIV]], 1
 ; NPGSO-NEXT:    [[COND:%.*]] = icmp ult i32 [[PIV]], 510
-; NPGSO-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP23:![0-9]+]]
+; NPGSO-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]], !llvm.loop [[LOOP22:![0-9]+]]
 ; NPGSO:       [[EXIT]]:
 ; NPGSO-NEXT:    [[FOR_LCSSA:%.*]] = phi i32 [ [[FOR]], %[[LOOP]] ]
 ; NPGSO-NEXT:    ret i32 [[FOR_LCSSA]]
@@ -704,7 +666,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; NPGSO-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
 ; NPGSO-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1026
-; NPGSO-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; NPGSO-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[FOR_END:.*]]
 ; NPGSO:       [[FOR_END]]:
@@ -809,7 +771,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; NPGSO-NEXT:    store <2 x i16> splat (i16 42), ptr [[TMP1]], align 4
 ; NPGSO-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; NPGSO-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; NPGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
+; NPGSO-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    br label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
@@ -822,7 +784,7 @@ define void @stride1_pgso(ptr noalias %B, i32 %BStride) !prof !14 {
 ; NPGSO-NEXT:    store i16 42, ptr [[GEPOFB]], align 4
 ; NPGSO-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; NPGSO-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 1025
-; NPGSO-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
+; NPGSO-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; NPGSO:       [[FOR_END]]:
 ; NPGSO-NEXT:    ret void
 ;
@@ -1026,10 +988,9 @@ exit:
 ; NPGSO: [[LOOP18]] = distinct !{[[LOOP18]], [[META17]], [[META16]]}
 ; NPGSO: [[LOOP19]] = distinct !{[[LOOP19]], [[META16]], [[META17]]}
 ; NPGSO: [[LOOP20]] = distinct !{[[LOOP20]], [[META16]], [[META17]]}
-; NPGSO: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]]}
-; NPGSO: [[LOOP22]] = distinct !{[[LOOP22]], [[META16]], [[META17]]}
-; NPGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META17]], [[META16]]}
+; NPGSO: [[LOOP21]] = distinct !{[[LOOP21]], [[META16]], [[META17]]}
+; NPGSO: [[LOOP22]] = distinct !{[[LOOP22]], [[META17]], [[META16]]}
+; NPGSO: [[LOOP23]] = distinct !{[[LOOP23]], [[META16]], [[META17]]}
 ; NPGSO: [[LOOP24]] = distinct !{[[LOOP24]], [[META16]], [[META17]]}
-; NPGSO: [[LOOP25]] = distinct !{[[LOOP25]], [[META16]], [[META17]]}
-; NPGSO: [[LOOP26]] = distinct !{[[LOOP26]], [[META16]]}
+; NPGSO: [[LOOP25]] = distinct !{[[LOOP25]], [[META16]]}
 ;.
