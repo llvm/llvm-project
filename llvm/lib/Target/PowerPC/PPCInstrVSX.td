@@ -2786,6 +2786,8 @@ def : Pat<(v2f64 (any_frint v2f64:$S)), (v2f64 (XVRDPIC $S))>;
 // Rounding without exceptions (nearbyint). Due to strange tblgen behaviour,
 // these need to be defined after the any_frint versions so ISEL will correctly
 // add the chain to the strict versions.
+// TODO: Match strict fp rounding intrinsics with instructions like xsrdpiz when
+// rounding mode is propagated to CodeGen part.
 def : Pat<(f32 (strict_fnearbyint f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSRDPIC
                                    (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
