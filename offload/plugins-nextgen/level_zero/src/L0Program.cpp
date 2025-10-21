@@ -87,9 +87,9 @@ void L0ProgramTy::setLibModule() {
 #endif // _WIN32
 }
 
-int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
-                               const std::string_view CommonBuildOptions,
-                               ze_module_format_t Format) {
+Error L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
+                             const std::string_view CommonBuildOptions,
+                             ze_module_format_t Format) {
   const ze_module_constants_t SpecConstants =
       LevelZeroPluginTy::getOptions().CommonSpecConstants.getModuleConstants();
   auto &l0Device = getL0Device();
@@ -105,27 +105,21 @@ int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
   ModuleDesc.format = Format;
   ze_module_handle_t Module = nullptr;
   ze_module_build_log_handle_t BuildLog = nullptr;
-  ze_result_t RC;
 
   // Build a single module from a single image
   ModuleDesc.inputSize = Size;
   ModuleDesc.pInputModule = Image;
   ModuleDesc.pBuildFlags = BuildOptions.c_str();
   ModuleDesc.pConstants = &SpecConstants;
-  CALL_ZE_RC(RC, zeModuleCreate, l0Device.getZeContext(),
-             l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
-
-  const bool BuildFailed = (RC != ZE_RESULT_SUCCESS);
-
-  if (BuildFailed)
-    return OFFLOAD_FAIL;
+  CALL_ZE_RET_ERROR(zeModuleCreate, l0Device.getZeContext(),
+                    l0Device.getZeDevice(), &ModuleDesc, &Module, &BuildLog);
 
   // Check if module link is required. We do not need this check for
   // library module
   if (!RequiresModuleLink && !IsLibModule) {
     ze_module_properties_t Properties = {ZE_STRUCTURE_TYPE_MODULE_PROPERTIES,
                                          nullptr, 0};
-    CALL_ZE_RET_FAIL(zeModuleGetProperties, Module, &Properties);
+    CALL_ZE_RET_ERROR(zeModuleGetProperties, Module, &Properties);
     RequiresModuleLink = Properties.flags & ZE_MODULE_PROPERTY_FLAG_IMPORTS;
   }
   // For now, assume the first module contains libraries, globals.
@@ -133,28 +127,26 @@ int32_t L0ProgramTy::addModule(size_t Size, const uint8_t *Image,
     GlobalModule = Module;
   Modules.push_back(Module);
   l0Device.addGlobalModule(Module);
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
-int32_t L0ProgramTy::linkModules() {
+Error L0ProgramTy::linkModules() {
   auto &l0Device = getL0Device();
   if (!RequiresModuleLink) {
     DP("Module link is not required\n");
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   if (Modules.empty()) {
-    DP("Invalid number of modules when linking modules\n");
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::UNKNOWN,
+                         "Invalid number of modules when linking modules");
   }
 
-  ze_result_t RC;
   ze_module_build_log_handle_t LinkLog = nullptr;
-  CALL_ZE_RC(RC, zeModuleDynamicLink,
-             static_cast<uint32_t>(l0Device.getNumGlobalModules()),
-             l0Device.getGlobalModulesArray(), &LinkLog);
-  const bool LinkFailed = (RC != ZE_RESULT_SUCCESS);
-  return LinkFailed ? OFFLOAD_FAIL : OFFLOAD_SUCCESS;
+  CALL_ZE_RET_ERROR(zeModuleDynamicLink,
+                    static_cast<uint32_t>(l0Device.getNumGlobalModules()),
+                    l0Device.getGlobalModulesArray(), &LinkLog);
+  return Plugin::success();
 }
 
 size_t L0ProgramTy::readFile(const char *FileName,
@@ -266,7 +258,7 @@ bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
   return Res;
 }
 
-int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
+Error L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   auto &l0Device = getL0Device();
   auto Image = getMemoryBuffer();
   if (identify_magic(Image.getBuffer()) == file_magic::spirv_object) {
@@ -279,7 +271,7 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
   uint64_t MajorVer, MinorVer;
   if (!isValidOneOmpImage(Image.getBuffer(), MajorVer, MinorVer)) {
     DP("Warning: image is not a valid oneAPI OpenMP image.\n");
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::UNKNOWN, "Invalid oneAPI OpenMP image");
   }
 
   setLibModule();
@@ -476,21 +468,17 @@ int32_t L0ProgramTy::buildModules(const std::string_view BuildOptions) {
           reinterpret_cast<const unsigned char *>(It->second.PartBegin[I]);
       size_t ImgSize = It->second.PartSize[I];
 
-      auto RC = addModule(ImgSize, ImgBegin, Options, ModuleFormat);
-
-      if (RC != OFFLOAD_SUCCESS) {
-        DP("Error: failed to create program from %s "
-           "(%" PRIu64 "-%zu).\n",
-           IsBinary ? "Binary" : "SPIR-V", Idx, I);
-        return OFFLOAD_FAIL;
-      }
+      DP("Creating module from %s image part #%" PRIu64 "-%zu.\n",
+         IsBinary ? "Binary" : "SPIR-V", Idx, I);
+      if (auto Err = addModule(ImgSize, ImgBegin, Options, ModuleFormat))
+        return Err;
     }
     DP("Created module from image #%" PRIu64 ".\n", Idx);
 
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
-  return OFFLOAD_FAIL;
+  return Plugin::error(ErrorCode::UNKNOWN, "Failed to create program modules.");
 }
 
 void *L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
@@ -514,52 +502,52 @@ void *L0ProgramTy::getOffloadVarDeviceAddr(const char *CName) const {
   return nullptr;
 }
 
-int32_t L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
-                                        void *HostPtr) {
+Error L0ProgramTy::readGlobalVariable(const char *Name, size_t Size,
+                                      void *HostPtr) {
   size_t SizeDummy = 0;
   void *DevicePtr = nullptr;
   ze_result_t RC;
   CALL_ZE(RC, zeModuleGetGlobalPointer, GlobalModule, Name, &SizeDummy,
           &DevicePtr);
   if (RC != ZE_RESULT_SUCCESS || !DevicePtr) {
-    DP("Warning: cannot read from device global variable %s\n", Name);
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Cannot read from device global variable %s", Name);
   }
   return getL0Device().enqueueMemCopy(HostPtr, DevicePtr, Size);
 }
 
-int32_t L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
-                                         const void *HostPtr) {
+Error L0ProgramTy::writeGlobalVariable(const char *Name, size_t Size,
+                                       const void *HostPtr) {
   size_t SizeDummy = 0;
   void *DevicePtr = nullptr;
   ze_result_t RC;
   CALL_ZE(RC, zeModuleGetGlobalPointer, GlobalModule, Name, &SizeDummy,
           &DevicePtr);
   if (RC != ZE_RESULT_SUCCESS || !DevicePtr) {
-    DP("Warning: cannot write to device global variable %s\n", Name);
-    return OFFLOAD_FAIL;
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "Cannot write to device global variable %s", Name);
   }
   return getL0Device().enqueueMemCopy(DevicePtr, HostPtr, Size);
 }
 
-int32_t L0ProgramTy::loadModuleKernels() {
+Error L0ProgramTy::loadModuleKernels() {
   // We need to build kernels here before filling the offload entries since we
   // don't know which module contains a specific kernel with a name.
   for (auto Module : Modules) {
     uint32_t Count = 0;
-    CALL_ZE_RET_FAIL(zeModuleGetKernelNames, Module, &Count, nullptr);
+    CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count, nullptr);
     if (Count == 0)
       continue;
 
     llvm::SmallVector<const char *> Names(Count);
-    CALL_ZE_RET_FAIL(zeModuleGetKernelNames, Module, &Count, Names.data());
+    CALL_ZE_RET_ERROR(zeModuleGetKernelNames, Module, &Count, Names.data());
 
     for (auto *Name : Names) {
       KernelsToModuleMap.emplace(Name, Module);
     }
   }
 
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
 } // namespace llvm::omp::target::plugin

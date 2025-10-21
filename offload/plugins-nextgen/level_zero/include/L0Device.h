@@ -258,12 +258,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// The current size of the global device memory pool (managed by us).
   uint64_t HeapSize = 1L << 23L /*8MB=*/;
 
-  int32_t synchronize(__tgt_async_info *AsyncInfo, bool ReleaseQueue = true);
-  int32_t submitData(void *TgtPtr, const void *HstPtr, int64_t Size,
-                     __tgt_async_info *AsyncInfo);
-  int32_t retrieveData(void *HstPtr, const void *TgtPtr, int64_t Size,
-                       __tgt_async_info *AsyncInfo);
-
   bool shouldSetupDeviceMemoryPool() const override { return false; }
   DeviceArchTy computeArch() const;
 
@@ -336,13 +330,12 @@ public:
     return nullptr;
   }
 
-  int32_t buildAllKernels() {
+  Error buildAllKernels() {
     for (auto &PGM : Programs) {
-      int32_t RC = PGM.loadModuleKernels();
-      if (RC != OFFLOAD_SUCCESS)
-        return RC;
+      if (auto Err = PGM.loadModuleKernels())
+        return Err;
     }
-    return OFFLOAD_SUCCESS;
+    return Plugin::success();
   }
 
   // add a new program to the device. Return a reference to the new program
@@ -488,17 +481,17 @@ public:
   ze_command_list_handle_t getImmCopyCmdList();
 
   /// Enqueue copy command
-  int32_t enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                         __tgt_async_info *AsyncInfo = nullptr,
-                         bool UseCopyEngine = true);
+  Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
+                       __tgt_async_info *AsyncInfo = nullptr,
+                       bool UseCopyEngine = true);
 
   /// Enqueue asynchronous copy command
-  int32_t enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
-                              __tgt_async_info *AsyncInfo, bool CopyTo = true);
+  Error enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
+                            __tgt_async_info *AsyncInfo, bool CopyTo = true);
 
   /// Enqueue fill command
-  int32_t enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
-                         size_t Size);
+  Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size);
 
   /// Driver related functions
 

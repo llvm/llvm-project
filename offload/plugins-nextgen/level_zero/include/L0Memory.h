@@ -388,10 +388,10 @@ public:
   }
 
   /// Perform copy operation
-  int32_t enqueueMemCopy(void *Dst, const void *Src, size_t Size);
+  Error enqueueMemCopy(void *Dst, const void *Src, size_t Size);
 
   /// Perform memory fill operation
-  int32_t enqueueMemSet(void *Dst, int8_t Value, size_t Size);
+  Error enqueueMemSet(void *Dst, int8_t Value, size_t Size);
 
 }; /// MemAllocatorTy
 
@@ -517,7 +517,7 @@ public:
   StagingBufferTy &operator=(const StagingBufferTy &) = delete;
   StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
 
-  ~StagingBufferTy() { }
+  ~StagingBufferTy() {}
 
   void clear() {
     ze_result_t Rc;

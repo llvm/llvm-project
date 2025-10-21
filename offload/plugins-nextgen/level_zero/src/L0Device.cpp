@@ -230,175 +230,6 @@ Error L0DeviceTy::deinitImpl() {
   return MemAllocator.deinit();
 }
 
-int32_t L0DeviceTy::synchronize(__tgt_async_info *AsyncInfo,
-                                bool ReleaseQueue) {
-  bool IsAsync = AsyncInfo && asyncEnabled();
-  if (!IsAsync)
-    return OFFLOAD_SUCCESS;
-
-  auto &Plugin = getPlugin();
-
-  AsyncQueueTy *AsyncQueue = (AsyncQueueTy *)AsyncInfo->Queue;
-
-  if (!AsyncQueue->WaitEvents.empty()) {
-    const auto &WaitEvents = AsyncQueue->WaitEvents;
-    if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
-      // Only need to wait for the last event
-      CALL_ZE_RET_FAIL(zeEventHostSynchronize, WaitEvents.back(), UINT64_MAX);
-      // Synchronize on kernel event to support printf()
-      auto KE = AsyncQueue->KernelEvent;
-      if (KE && KE != WaitEvents.back()) {
-        CALL_ZE_RET_FAIL(zeEventHostSynchronize, KE, UINT64_MAX);
-      }
-      for (auto &Event : WaitEvents) {
-        releaseEvent(Event);
-      }
-    } else { // Async
-      // Wait for all events. We should wait and reset events in reverse order
-      // to avoid premature event reset. If we have a kernel event in the
-      // queue, it is the last event to wait for since all wait events of the
-      // kernel are signaled before the kernel is invoked. We always invoke
-      // synchronization on kernel event to support printf().
-      bool WaitDone = false;
-      for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
-        if (!WaitDone) {
-          CALL_ZE_RET_FAIL(zeEventHostSynchronize, *Itr, UINT64_MAX);
-          if (*Itr == AsyncQueue->KernelEvent)
-            WaitDone = true;
-        }
-        releaseEvent(*Itr);
-      }
-    }
-  }
-
-  // Commit delayed USM2M copies
-  for (auto &USM2M : AsyncQueue->USM2MList) {
-    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
-                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
-  }
-  // Commit delayed H2M copies
-  for (auto &H2M : AsyncQueue->H2MList) {
-    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
-                static_cast<char *>(std::get<1>(H2M)));
-  }
-  if (ReleaseQueue) {
-    Plugin.releaseAsyncQueue(AsyncQueue);
-    getStagingBuffer().reset();
-    AsyncInfo->Queue = nullptr;
-  }
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t L0DeviceTy::submitData(void *TgtPtr, const void *HstPtr, int64_t Size,
-                               __tgt_async_info *AsyncInfo) {
-  if (Size == 0)
-    return OFFLOAD_SUCCESS;
-
-  auto &Plugin = getPlugin();
-
-  const auto DeviceId = getDeviceId();
-  bool IsAsync = AsyncInfo && asyncEnabled();
-  if (IsAsync && !AsyncInfo->Queue) {
-    AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
-    if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync
-  }
-  const auto TgtPtrType = getMemAllocType(TgtPtr);
-  if (TgtPtrType == ZE_MEMORY_TYPE_SHARED ||
-      TgtPtrType == ZE_MEMORY_TYPE_HOST) {
-    std::copy_n(static_cast<const char *>(HstPtr), Size,
-                static_cast<char *>(TgtPtr));
-  } else {
-    const void *SrcPtr = HstPtr;
-    if (isDiscreteDevice() &&
-        static_cast<size_t>(Size) <= Plugin.getOptions().StagingBufferSize &&
-        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      SrcPtr = getStagingBuffer().get(IsAsync);
-      std::copy_n(static_cast<const char *>(HstPtr), Size,
-                  static_cast<char *>(const_cast<void *>(SrcPtr)));
-    }
-    int32_t RC;
-    if (IsAsync)
-      RC = enqueueMemCopyAsync(TgtPtr, SrcPtr, Size, AsyncInfo);
-    else
-      RC = enqueueMemCopy(TgtPtr, SrcPtr, Size, AsyncInfo);
-    if (RC != OFFLOAD_SUCCESS)
-      return RC;
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "%s %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
-       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(HstPtr),
-       DPxPTR(TgtPtr));
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t L0DeviceTy::retrieveData(void *HstPtr, const void *TgtPtr, int64_t Size,
-                                 __tgt_async_info *AsyncInfo) {
-  if (Size == 0)
-    return OFFLOAD_SUCCESS;
-
-  auto &Plugin = getPlugin();
-  const auto DeviceId = getDeviceId();
-  bool IsAsync = AsyncInfo && asyncEnabled();
-  if (IsAsync && !AsyncInfo->Queue) {
-    AsyncInfo->Queue = Plugin.getAsyncQueue();
-    if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync
-  }
-  auto AsyncQueue =
-      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
-  auto TgtPtrType = getMemAllocType(TgtPtr);
-  if (TgtPtrType == ZE_MEMORY_TYPE_HOST ||
-      TgtPtrType == ZE_MEMORY_TYPE_SHARED) {
-    bool CopyNow = true;
-    if (IsAsync) {
-      if (AsyncQueue->KernelEvent) {
-        // Delay Host/Shared USM to host memory copy since it must wait for
-        // kernel completion.
-        AsyncQueue->USM2MList.emplace_back(TgtPtr, HstPtr, Size);
-        CopyNow = false;
-      }
-    }
-    if (CopyNow) {
-      std::copy_n(static_cast<const char *>(TgtPtr), Size,
-                  static_cast<char *>(HstPtr));
-    }
-  } else {
-    void *DstPtr = HstPtr;
-    if (isDiscreteDevice() &&
-        static_cast<size_t>(Size) <=
-            getPlugin().getOptions().StagingBufferSize &&
-        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      DstPtr = getStagingBuffer().get(IsAsync);
-    }
-    int32_t RC;
-    if (IsAsync)
-      RC = enqueueMemCopyAsync(DstPtr, TgtPtr, Size, AsyncInfo,
-                               /* CopyTo */ false);
-    else
-      RC = enqueueMemCopy(DstPtr, TgtPtr, Size, AsyncInfo);
-    if (RC != OFFLOAD_SUCCESS)
-      return RC;
-    if (DstPtr != HstPtr) {
-      if (IsAsync) {
-        // Store delayed H2M data copies
-        auto &H2MList = AsyncQueue->H2MList;
-        H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
-      } else {
-        std::copy_n(static_cast<char *>(DstPtr), Size,
-                    static_cast<char *>(HstPtr));
-      }
-    }
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "%s %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(TgtPtr),
-       DPxPTR(HstPtr));
-
-  return OFFLOAD_SUCCESS;
-}
-
 Expected<DeviceImageTy *>
 L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
                            int32_t ImageId) {
@@ -423,17 +254,14 @@ L0DeviceTy::loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
   CompilationOptions += Options.InternalCompilationOptions;
   auto &Program = addProgram(ImageId, std::move(TgtImage));
 
-  int32_t RC = Program.buildModules(CompilationOptions);
-  if (RC != OFFLOAD_SUCCESS)
-    return Plugin::check(RC, "Error in buildModules %d", RC);
+  if (auto Err = Program.buildModules(CompilationOptions))
+    return Err;
 
-  RC = Program.linkModules();
-  if (RC != OFFLOAD_SUCCESS)
-    return Plugin::check(RC, "Error in linkModules %d", RC);
+  if (auto Err = Program.linkModules())
+    return Err;
 
-  RC = Program.loadModuleKernels();
-  if (RC != OFFLOAD_SUCCESS)
-    return Plugin::check(RC, "Error in buildKernels %d", RC);
+  if (auto Err = Program.loadModuleKernels())
+    return Err;
 
   return &Program;
 }
@@ -446,14 +274,62 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
 
 Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                                   bool ReleaseQueue) {
-  if (!ReleaseQueue) {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "Support for ReleaseQueue=false in %s"
-                         " not implemented yet\n",
-                         __func__);
+  bool IsAsync = asyncEnabled();
+  if (!IsAsync)
+    return Plugin::success();
+
+  auto &Plugin = getPlugin();
+
+  AsyncQueueTy *AsyncQueue = (AsyncQueueTy *)AsyncInfo.Queue;
+
+  if (!AsyncQueue->WaitEvents.empty()) {
+    const auto &WaitEvents = AsyncQueue->WaitEvents;
+    if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
+      // Only need to wait for the last event
+      CALL_ZE_RET_ERROR(zeEventHostSynchronize, WaitEvents.back(), UINT64_MAX);
+      // Synchronize on kernel event to support printf()
+      auto KE = AsyncQueue->KernelEvent;
+      if (KE && KE != WaitEvents.back()) {
+        CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, UINT64_MAX);
+      }
+      for (auto &Event : WaitEvents) {
+        releaseEvent(Event);
+      }
+    } else { // Async
+      // Wait for all events. We should wait and reset events in reverse order
+      // to avoid premature event reset. If we have a kernel event in the
+      // queue, it is the last event to wait for since all wait events of the
+      // kernel are signaled before the kernel is invoked. We always invoke
+      // synchronization on kernel event to support printf().
+      bool WaitDone = false;
+      for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
+        if (!WaitDone) {
+          CALL_ZE_RET_ERROR(zeEventHostSynchronize, *Itr, UINT64_MAX);
+          if (*Itr == AsyncQueue->KernelEvent)
+            WaitDone = true;
+        }
+        releaseEvent(*Itr);
+      }
+    }
   }
-  int32_t RC = synchronize(&AsyncInfo, ReleaseQueue);
-  return Plugin::check(RC, "Error in synchronizeImpl %d", RC);
+
+  // Commit delayed USM2M copies
+  for (auto &USM2M : AsyncQueue->USM2MList) {
+    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
+                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
+  }
+  // Commit delayed H2M copies
+  for (auto &H2M : AsyncQueue->H2MList) {
+    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
+                static_cast<char *>(std::get<1>(H2M)));
+  }
+  if (ReleaseQueue) {
+    Plugin.releaseAsyncQueue(AsyncQueue);
+    getStagingBuffer().reset();
+    AsyncInfo.Queue = nullptr;
+  }
+
+  return Plugin::success();
 }
 
 Expected<bool>
@@ -512,15 +388,114 @@ Error L0DeviceTy::free(void *TgtPtr, TargetAllocTy Kind) {
 
 Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  int32_t RC = submitData(TgtPtr, HstPtr, Size, AsyncInfoWrapper);
-  return Plugin::check(RC, "Error in dataSubmitImpl %d", RC);
+  if (Size == 0)
+    return Plugin::success();
+
+  auto &Plugin = getPlugin();
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+
+  const auto DeviceId = getDeviceId();
+  bool IsAsync = AsyncInfo && asyncEnabled();
+  if (IsAsync && !AsyncInfo->Queue) {
+    AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
+    if (!AsyncInfo->Queue)
+      IsAsync = false; // Couldn't get a queue, revert to sync
+  }
+  const auto TgtPtrType = getMemAllocType(TgtPtr);
+  if (TgtPtrType == ZE_MEMORY_TYPE_SHARED ||
+      TgtPtrType == ZE_MEMORY_TYPE_HOST) {
+    std::copy_n(static_cast<const char *>(HstPtr), Size,
+                static_cast<char *>(TgtPtr));
+  } else {
+    const void *SrcPtr = HstPtr;
+    if (isDiscreteDevice() &&
+        static_cast<size_t>(Size) <= Plugin.getOptions().StagingBufferSize &&
+        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
+      SrcPtr = getStagingBuffer().get(IsAsync);
+      std::copy_n(static_cast<const char *>(HstPtr), Size,
+                  static_cast<char *>(const_cast<void *>(SrcPtr)));
+    }
+    if (IsAsync) {
+      if (auto Err = enqueueMemCopyAsync(TgtPtr, SrcPtr, Size, AsyncInfo))
+        return Err;
+    } else {
+      if (auto Err = enqueueMemCopy(TgtPtr, SrcPtr, Size, AsyncInfo))
+        return Err;
+    }
+  }
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "%s %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
+       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(HstPtr),
+       DPxPTR(TgtPtr));
+  return Plugin::success();
 }
 
 Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
                                    int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  int32_t RC = retrieveData(HstPtr, TgtPtr, Size, AsyncInfoWrapper);
-  return Plugin::check(RC, "Error in dataRetrieveImpl %d", RC);
+  if (Size == 0)
+    return Plugin::success();
+
+  auto &Plugin = getPlugin();
+  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+
+  const auto DeviceId = getDeviceId();
+  bool IsAsync = AsyncInfo && asyncEnabled();
+  if (IsAsync && !AsyncInfo->Queue) {
+    AsyncInfo->Queue = Plugin.getAsyncQueue();
+    if (!AsyncInfo->Queue)
+      IsAsync = false; // Couldn't get a queue, revert to sync
+  }
+  auto AsyncQueue =
+      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
+  auto TgtPtrType = getMemAllocType(TgtPtr);
+  if (TgtPtrType == ZE_MEMORY_TYPE_HOST ||
+      TgtPtrType == ZE_MEMORY_TYPE_SHARED) {
+    bool CopyNow = true;
+    if (IsAsync) {
+      if (AsyncQueue->KernelEvent) {
+        // Delay Host/Shared USM to host memory copy since it must wait for
+        // kernel completion.
+        AsyncQueue->USM2MList.emplace_back(TgtPtr, HstPtr, Size);
+        CopyNow = false;
+      }
+    }
+    if (CopyNow) {
+      std::copy_n(static_cast<const char *>(TgtPtr), Size,
+                  static_cast<char *>(HstPtr));
+    }
+  } else {
+    void *DstPtr = HstPtr;
+    if (isDiscreteDevice() &&
+        static_cast<size_t>(Size) <=
+            getPlugin().getOptions().StagingBufferSize &&
+        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
+      DstPtr = getStagingBuffer().get(IsAsync);
+    }
+    if (IsAsync) {
+      if (auto Err = enqueueMemCopyAsync(DstPtr, TgtPtr, Size, AsyncInfo,
+                                         /* CopyTo */ false))
+        return Err;
+    } else {
+      if (auto Err = enqueueMemCopy(DstPtr, TgtPtr, Size, AsyncInfo))
+        return Err;
+    }
+    if (DstPtr != HstPtr) {
+      if (IsAsync) {
+        // Store delayed H2M data copies
+        auto &H2MList = AsyncQueue->H2MList;
+        H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
+      } else {
+        std::copy_n(static_cast<char *>(DstPtr), Size,
+                    static_cast<char *>(HstPtr));
+      }
+    }
+  }
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "%s %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
+       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(TgtPtr),
+       DPxPTR(HstPtr));
+  return Plugin::success();
 }
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
@@ -695,17 +670,17 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
   return Plugin::success();
 }
 
-int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                                   __tgt_async_info *AsyncInfo,
-                                   bool UseCopyEngine) {
+Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
+                                 __tgt_async_info *AsyncInfo,
+                                 bool UseCopyEngine) {
   ze_command_list_handle_t CmdList = nullptr;
   ze_command_queue_handle_t CmdQueue = nullptr;
 
   if (useImmForCopy()) {
     CmdList = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
-    CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     nullptr, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
+                      nullptr, 0, nullptr);
+    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
   } else {
     if (UseCopyEngine) {
       CmdList = getCopyCmdList();
@@ -715,22 +690,22 @@ int32_t L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
       CmdQueue = getCmdQueue();
     }
 
-    CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                     nullptr, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
-    CALL_ZE_RET_FAIL_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
-                         CmdQueue, 1, &CmdList, nullptr);
-    CALL_ZE_RET_FAIL(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
-    CALL_ZE_RET_FAIL(zeCommandListReset, CmdList);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
+                      nullptr, 0, nullptr);
+    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
+                          CmdQueue, 1, &CmdList, nullptr);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
 /// Enqueue non-blocking memory copy. This function is invoked only when IMM is
 /// fully enabled and async mode is requested.
-int32_t L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
-                                        __tgt_async_info *AsyncInfo,
-                                        bool CopyTo) {
+Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
+                                      __tgt_async_info *AsyncInfo,
+                                      bool CopyTo) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
   ze_event_handle_t SignalEvent = getEvent();
@@ -748,44 +723,40 @@ int32_t L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
       NumWaitEvents = 0;
   }
   auto CmdList = getImmCopyCmdList();
-  CALL_ZE_RET_FAIL(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                   SignalEvent, NumWaitEvents, WaitEvents);
+  CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
+                    SignalEvent, NumWaitEvents, WaitEvents);
   AsyncQueue->WaitEvents.push_back(SignalEvent);
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
 /// Enqueue memory fill
-int32_t L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
-                                   size_t PatternSize, size_t Size) {
+Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
+                                 size_t PatternSize, size_t Size) {
   if (useImmForCopy()) {
     const auto CmdList = getImmCopyCmdList();
     auto Event = getEvent();
-    CALL_ZE_RET_FAIL(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                     PatternSize, Size, Event, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeEventHostSynchronize, Event, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
+                      PatternSize, Size, Event, 0, nullptr);
+    CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
   } else {
     auto CmdList = getCopyCmdList();
     const auto CmdQueue = getCopyCmdQueue();
-    CALL_ZE_RET_FAIL(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                     PatternSize, Size, nullptr, 0, nullptr);
-    CALL_ZE_RET_FAIL(zeCommandListClose, CmdList);
-    CALL_ZE_RET_FAIL(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                     nullptr);
-    CALL_ZE_RET_FAIL(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
-    CALL_ZE_RET_FAIL(zeCommandListReset, CmdList);
+    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
+                      PatternSize, Size, nullptr, 0, nullptr);
+    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
+    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
+                      nullptr);
+    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
+    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
   }
-  return OFFLOAD_SUCCESS;
+  return Plugin::success();
 }
 
 Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                                int64_t PatternSize, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
   // TODO: support async version
-  // TODO: convert enqueueMemFill to return Error code
-  if (enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size) == OFFLOAD_SUCCESS)
-    return Plugin::success();
-
-  return Plugin::error(error::ErrorCode::UNKNOWN, "%s failed\n", __func__);
+  return enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size);
 }
 
 Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,

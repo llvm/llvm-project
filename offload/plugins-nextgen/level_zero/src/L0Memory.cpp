@@ -280,8 +280,9 @@ void *MemAllocatorTy::MemPoolTy::alloc(size_t Size, size_t &AllocSize) {
     void *Base = Allocator->allocL0(BlockSize, 0, AllocKind);
 
     if (ZeroInit) {
-      auto RC = Allocator->enqueueMemSet(Base, 0, BlockSize);
-      if (RC != OFFLOAD_SUCCESS) {
+      auto Err = Allocator->enqueueMemSet(Base, 0, BlockSize);
+      if (Err) {
+        consumeError(std::move(Err));
         DP("Failed to zero-initialize pool memory\n");
         return nullptr;
       }
@@ -572,12 +573,11 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
   return Plugin::success();
 }
 
-int32_t MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
+Error MemAllocatorTy::enqueueMemSet(void *Dst, int8_t Value, size_t Size) {
   return Device->enqueueMemFill(Dst, &Value, sizeof(int8_t), Size);
 }
 
-int32_t MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src,
-                                       size_t Size) {
+Error MemAllocatorTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size) {
   return Device->enqueueMemCopy(Dst, Src, Size);
 }
 

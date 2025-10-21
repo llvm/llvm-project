@@ -70,6 +70,11 @@
   CALL_ZE_RET_MTX(NULL, Fn, Mtx, __VA_ARGS__)
 #define CALL_ZE_RET_ZERO_MTX(Fn, Mtx, ...)                                     \
   CALL_ZE_RET_MTX(0, Fn, Mtx, __VA_ARGS__)
+#define CALL_ZE_RET_ERROR_MTX(Fn, Mtx, ...)                                   \
+  CALL_ZE_RET_MTX(                                                            \
+    Plugin::error(ErrorCode::UNKNOWN, "%s failed with error %d, %s",          \
+    STR(Fn), rc, getZeErrorName(rc)), Fn, Mtx, __VA_ARGS__)
+
 
 /// For thread-safe functions
 #define CALL_ZE_RET(Ret, Fn, ...)                                              \

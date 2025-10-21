@@ -56,9 +56,9 @@ class L0ProgramTy : public DeviceImageTy {
   bool IsLibModule = false;
 
   /// Build a single module with the given image, build option, and format.
-  int32_t addModule(const size_t Size, const uint8_t *Image,
-                    const std::string_view BuildOption,
-                    ze_module_format_t Format);
+  Error addModule(const size_t Size, const uint8_t *Image,
+                  const std::string_view BuildOption,
+                  ze_module_format_t Format);
   /// Read file and return the size of the binary if successful.
   size_t readFile(const char *FileName, std::vector<uint8_t> &OutFile) const;
   void replaceDriverOptsWithBackendOpts(const L0DeviceTy &Device,
@@ -89,22 +89,21 @@ public:
   }
 
   /// Build modules from the target image description
-  int32_t buildModules(const std::string_view BuildOptions);
+  Error buildModules(const std::string_view BuildOptions);
 
   /// Link modules stored in \p Modules.
-  int32_t linkModules();
+  Error linkModules();
 
   /// Loads the kernels names from all modules
-  int32_t loadModuleKernels();
+  Error loadModuleKernels();
 
   /// Read data from the location in the device image which corresponds to the
   /// specified global variable name.
-  int32_t readGlobalVariable(const char *Name, size_t Size, void *HostPtr);
+  Error readGlobalVariable(const char *Name, size_t Size, void *HostPtr);
 
   /// Write data to the location in the device image which corresponds to the
   /// specified global variable name.
-  int32_t writeGlobalVariable(const char *Name, size_t Size,
-                              const void *HostPtr);
+  Error writeGlobalVariable(const char *Name, size_t Size, const void *HostPtr);
 
   /// Looks up an OpenMP declare target global variable with the given
   /// \p Name and \p Size in the device environment for the current device.
