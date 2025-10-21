@@ -379,8 +379,6 @@ public:
   /// Evict any dangling debug information, attempting to salvage it first.
   void resolveOrClearDbgInfo();
 
-  void pushOutChain(SDValue Result, fp::ExceptionBehavior EB);
-
   SDValue getValue(const Value *V);
 
   SDValue getNonRegisterValue(const Value *V);

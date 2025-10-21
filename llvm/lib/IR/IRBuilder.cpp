@@ -126,7 +126,7 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
   if (const auto *Func = dyn_cast<Function>(Callee))
     if (Intrinsic::ID ID = Func->getIntrinsicID())
       if (IntrinsicInst::isFloatingPointOperation(ID)) {
-        // If the builder has non-default floating-point options, add
+        // If the builder specifies non-default floating-point options, add
         // corresponding operand bundle unless a bundle with such tag is already
         // present.
         bool NeedRounding;
@@ -141,23 +141,24 @@ CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
           assert(DefaultConstrainedExcept == fp::ebIgnore &&
                  "FP exception in default mode must be ignored");
         }
+        // Options specified by bundles have higher precedence.
+        for (const auto &Bundle : OpBundles) {
+          if (NeedRounding && Bundle.getTag() == "fp.round")
+            NeedRounding = false;
+          if (NeedExceptions && Bundle.getTag() == "fp.except")
+            NeedExceptions = false;
+        }
         if (NeedRounding || NeedExceptions) {
-          for (const auto &Bundle : OpBundles) {
-            if (NeedRounding && Bundle.getTag() == "fp.round")
-              NeedRounding = false;
-            if (NeedExceptions && Bundle.getTag() == "fp.except")
-              NeedExceptions = false;
-          }
-          if (NeedRounding || NeedExceptions) {
-            ActualBundles.append(OpBundles.begin(), OpBundles.end());
-            if (NeedRounding)
-              createRoundingBundle(ActualBundles, DefaultConstrainedRounding);
-            if (NeedExceptions)
-              createExceptionBundle(ActualBundles, DefaultConstrainedExcept);
-            ActualBundlesRef = ActualBundles;
-          }
+          ActualBundles.append(OpBundles.begin(), OpBundles.end());
+          if (NeedRounding)
+            createRoundingBundle(ActualBundles, DefaultConstrainedRounding);
+          if (NeedExceptions)
+            createExceptionBundle(ActualBundles, DefaultConstrainedExcept);
+          ActualBundlesRef = ActualBundles;
         }
         if (IsFPConstrained) {
+          // Due to potential reading FP exception bits, in strictfp mode the
+          // memory effects must include read/write access to FPE.
           MemoryEffects FME = Func->getMemoryEffects();
           NeedUpdateMemoryEffects = !FME.doesAccessInaccessibleMem();
         }

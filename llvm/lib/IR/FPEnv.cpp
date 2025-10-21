@@ -76,27 +76,20 @@ std::optional<StringRef> convertRoundingModeToBundle(RoundingMode UseRounding) {
   std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
-    RoundingStr = "dynamic";
-    break;
+    return "dynamic";
   case RoundingMode::NearestTiesToEven:
-    RoundingStr = "tonearest";
-    break;
+    return "tonearest";
   case RoundingMode::NearestTiesToAway:
-    RoundingStr = "tonearestaway";
-    break;
+    return "tonearestaway";
   case RoundingMode::TowardNegative:
-    RoundingStr = "downward";
-    break;
+    return "downward";
   case RoundingMode::TowardPositive:
-    RoundingStr = "upward";
-    break;
+    return "upward";
   case RoundingMode::TowardZero:
-    RoundingStr = "towardzero";
-    break;
+    return "towardzero";
   default:
-    break;
+    return std::nullopt;
   }
-  return RoundingStr;
 }
 
 std::optional<fp::ExceptionBehavior>
@@ -139,16 +132,14 @@ convertExceptionBehaviorToBundle(fp::ExceptionBehavior UseExcept) {
   std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
-    ExceptStr = "strict";
-    break;
+    return "strict";
   case fp::ebIgnore:
-    ExceptStr = "ignore";
-    break;
+    return "ignore";
   case fp::ebMayTrap:
-    ExceptStr = "maytrap";
-    break;
+    return "maytrap";
+  default:
+    return std::nullopt;
   }
-  return ExceptStr;
 }
 
 Intrinsic::ID getConstrainedIntrinsicID(const Instruction &Instr) {

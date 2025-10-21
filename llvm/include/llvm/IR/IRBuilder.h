@@ -348,17 +348,19 @@ public:
   /// enabled the CreateF<op>() calls instead create constrained
   /// floating point intrinsic calls. Fast math flags are unaffected
   /// by this setting.
-  void setIsFPConstrained(bool IsCon, bool AndReset = true) {
-    if (AndReset) {
-      if (IsCon) {
-        setDefaultConstrainedRounding(RoundingMode::Dynamic);
-        setDefaultConstrainedExcept(fp::ebStrict);
-      } else {
-        setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
-        setDefaultConstrainedExcept(fp::ebIgnore);
-      }
+  void setIsFPConstrained(bool IsCon) { IsFPConstrained = IsCon; }
+
+  /// Enable/Disable use of constrained floating point math and reset FP options
+  /// according to the selected mode.
+  void resetModeToStrictFP(bool IsCon) {
+    if (IsCon) {
+      setDefaultConstrainedRounding(RoundingMode::Dynamic);
+      setDefaultConstrainedExcept(fp::ebStrict);
+    } else {
+      setDefaultConstrainedRounding(RoundingMode::NearestTiesToEven);
+      setDefaultConstrainedExcept(fp::ebIgnore);
     }
-    IsFPConstrained = IsCon;
+    setIsFPConstrained(IsCon);
   }
 
   /// Query for the use of constrained floating point math

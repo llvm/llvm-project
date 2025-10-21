@@ -81,6 +81,11 @@ LLVM_ABI std::optional<StringRef>
 std::optional<StringRef>
     convertExceptionBehaviorToBundle(fp::ExceptionBehavior);
 
+inline raw_ostream &operator<<(raw_ostream &OS, fp::ExceptionBehavior EB) {
+  OS << convertExceptionBehaviorToBundle(EB).value_or("invalid");
+  return OS;
+}
+
 /// Returns true if the exception handling behavior and rounding mode
 /// match what is used in the default floating point environment.
 inline bool isDefaultFPEnvironment(fp::ExceptionBehavior EB, RoundingMode RM) {
