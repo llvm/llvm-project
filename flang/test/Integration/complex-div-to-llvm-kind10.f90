@@ -6,7 +6,7 @@
 
 
 ! CHECK-LABEL: @div_test_extended
-! CHECK-SAME: ptr %[[RET:.*]], ptr %[[LHS:.*]], ptr %[[RHS:.*]])
+! CHECK-SAME: ptr noalias %[[RET:.*]], ptr noalias %[[LHS:.*]], ptr noalias %[[RHS:.*]])
 ! CHECK: %[[LOAD_LHS:.*]] = load { x86_fp80, x86_fp80 }, ptr %[[LHS]], align 16
 ! CHECK: %[[LOAD_RHS:.*]] = load { x86_fp80, x86_fp80 }, ptr %[[RHS]], align 16
 ! CHECK: %[[LHS_REAL:.*]] = extractvalue { x86_fp80, x86_fp80 } %[[LOAD_LHS]], 0

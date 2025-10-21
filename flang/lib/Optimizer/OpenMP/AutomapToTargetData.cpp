@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "flang/Support/OpenMP-utils.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
@@ -20,20 +20,47 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-
 namespace flangomp {
 #define GEN_PASS_DEF_AUTOMAPTOTARGETDATAPASS
 #include "flang/Optimizer/OpenMP/Passes.h.inc"
 } // namespace flangomp
 
 using namespace mlir;
-using namespace Fortran::common::openmp;
 
 namespace {
 class AutomapToTargetDataPass
     : public flangomp::impl::AutomapToTargetDataPassBase<
           AutomapToTargetDataPass> {
+
+  // Returns true if the variable has a dynamic size and therefore requires
+  // bounds operations to describe its extents.
+  inline bool needsBoundsOps(mlir::Value var) {
+    assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
+           "only pointer like types expected");
+    mlir::Type t = fir::unwrapRefType(var.getType());
+    if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
+      return fir::hasDynamicSize(inner);
+    return fir::hasDynamicSize(t);
+  }
+
+  // Generate MapBoundsOp operations for the variable if required.
+  inline void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
+                           llvm::SmallVectorImpl<mlir::Value> &boundsOps) {
+    mlir::Location loc = var.getLoc();
+    fir::factory::AddrAndBoundsInfo info =
+        fir::factory::getDataOperandBaseAddr(builder, var,
+                                             /*isOptional=*/false, loc);
+    fir::ExtendedValue exv =
+        hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
+                                        /*contiguousHint=*/true)
+            .first;
+    llvm::SmallVector<mlir::Value> tmp =
+        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                           mlir::omp::MapBoundsType>(
+            builder, info, exv, /*dataExvIsAssumedSize=*/false, loc);
+    llvm::append_range(boundsOps, tmp);
+  }
+
   void findRelatedAllocmemFreemem(fir::AddrOfOp addressOfOp,
                                   llvm::DenseSet<fir::StoreOp> &allocmems,
                                   llvm::DenseSet<fir::LoadOp> &freemems) {
@@ -91,12 +118,9 @@ class AutomapToTargetDataPass
           builder, memOp.getLoc(), memOp.getMemref().getType(),
           memOp.getMemref(),
           TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
-          builder.getIntegerAttr(
-              builder.getIntegerType(64, false),
-              static_cast<unsigned>(
-                  isa<fir::StoreOp>(memOp)
-                      ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
-                      : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)),
+          builder.getAttr<omp::ClauseMapFlagsAttr>(
+              isa<fir::StoreOp>(memOp) ? omp::ClauseMapFlags::to
+                                       : omp::ClauseMapFlags::del),
           builder.getAttr<omp::VariableCaptureKindAttr>(
               omp::VariableCaptureKind::ByCopy),
           /*var_ptr_ptr=*/mlir::Value{},

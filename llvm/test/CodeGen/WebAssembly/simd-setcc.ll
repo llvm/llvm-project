@@ -13,8 +13,7 @@ define i1 @setcc_load(ptr %a, ptr %b) {
 ; CHECK-NEXT:    v128.load $push0=, 0($1):p2align=0
 ; CHECK-NEXT:    i8x16.eq $push2=, $pop1, $pop0
 ; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
-; CHECK-NEXT:    i32.eqz $push4=, $pop3
-; CHECK-NEXT:    return $pop4
+; CHECK-NEXT:    return $pop3
   %cmp_16 = call i32 @memcmp(ptr %a, ptr %b, i32 16)
   %res = icmp eq i32 %cmp_16, 0
   ret i1 %res
@@ -47,8 +46,7 @@ define i1 @setcc_eq_const_i128(ptr %ptr) {
 ; CHECK-NEXT:    v128.const $push1=, 6, 0
 ; CHECK-NEXT:    i8x16.eq $push2=, $pop0, $pop1
 ; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
-; CHECK-NEXT:    i32.eqz $push4=, $pop3
-; CHECK-NEXT:    return $pop4
+; CHECK-NEXT:    return $pop3
   %l = load i128, ptr %ptr
   %res = icmp eq i128 %l, 6
   ret i1 %res

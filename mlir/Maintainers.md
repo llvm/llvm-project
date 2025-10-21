@@ -27,6 +27,42 @@ dialects, build system and language bindings.
   [@joker-eph](https://github.com/joker-eph) (GitHub),
   mehdi_amini (Discourse)
 
+### Code
+
+#### Standalone subcategories
+* Core tooling (ODS, DRR, PDLL, LSP) (core)
+* CMake ([christopherbate](https://github.com/christopherbate))
+* Dialect Conversion ([matthias-springer](https://github.com/matthias-springer), [zero9178](https://github.com/zero9178))
+* Python Bindings ([makslevental](https://github.com/makslevental), [rolfmorel](https://github.com/rolfmorel))
+
+### Dialects
+
+#### Code Structure Dialects
+* Builtin Dialect (core)
+* ‘func’ Dialect (core)
+* ‘scf’ Dialect (core)
+* ‘cf’ Dialect (core)
+* ‘index’ Dialect (core)
+* ‘ptr’ Dialect ([fabianmcg](https://github.com/fabianmcg))
+
+#### Basic Compute Dialects
+* ‘arith’ Dialect (core + [kuhar](https://github.com/kuhar))
+* ‘math’ Dialect (core)
+* Rewrite System Dialects (core)
+* Transform Dialect ([martin-luecke](https://github.com/martin-luecke), [ftynse](https://github.com/ftynse), [rolfmorel](https://github.com/rolfmorel))
+* ‘pdl_interp’ Dialect ([jpienaar](https://github.com/jpienaar))
+* ‘pdl’ Dialect ([jpienaar](https://github.com/jpienaar))
+
+#### Accessory Dialects
+* ‘affine’ Dialect ([ftynse](https://github.com/ftynse))
+* ‘dlti’ Dialect ([rolfmorel](https://github.com/rolfmorel))
+* ‘irdl’ Dialect ([math-fehr](https://github.com/math-fehr), [moxinilian](https://github.com/moxinilian))
+* ‘shape’ Dialect ([jpienaar](https://github.com/jpienaar))
+* ‘smt’ Dialect ([fabianschuiki](https://github.com/fabianschuiki), [maerhart](https://github.com/maerhart))
+* ‘ub’ Dialect ([Hardcode84](https://github.com/Hardcode84))
+* ‘complex’ Dialect (core)
+* ‘async’ Dialect (unmaintained)
+
 ## Egress
 
 MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
@@ -43,6 +79,40 @@ MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
   tobias.gysi@nextsilicon.com (email),
   [@gysit](https://github.com/gysit) (GitHub),
   gysit (Discourse)
+
+### Dialects
+
+The `egress` maintainer refers to the people working in the Egress category,
+with the point-of-contact being the maintainers above. Named maintainers, if
+available, should be contacted first, as they're more active in those areas.
+
+#### Lowering Dialects
+* ‘llvm’ Dialect (egress)
+* ‘SPIR-V’ Dialect ([@kuhar](https://github.com/kuhar), [@antiagainst](https://github.com/antiagainst))
+* ‘emitc’ Dialect ([@aniragil](https://github.com/aniragil), [@marbre](https://github.com/marbre))
+
+#### GPU Dialects
+* ‘gpu’ Dialect ([@fabianmcg](https://github.com/fabianmcg))
+* ‘amdgpu’ Dialect ([@krzysz00](https://github.com/krzysz00))
+* ‘rocdl’ Dialect ([@krzysz00](https://github.com/krzysz00))
+* ‘nvgpu’ Dialect ([@grypp](https://github.com/grypp))
+* ‘nvvm’ Dialect ([@grypp](https://github.com/grypp))
+* ‘xegpu’ Dialect ([@charithaintc](https://github.com/charithaintc), [@Jianhui-Li](https://github.com/Jianhui-Li))
+* 'xevm' Dialect ([@silee2](https://github.com/silee2))
+
+#### CPU Dialects
+* ‘arm_neon’ Dialect ([@banach-space](https://github.com/banach-space))
+* ‘arm_sve’ Dialect ([@banach-space](https://github.com/banach-space))
+* ‘ArmSME’ Dialect ([@banach-space](https://github.com/banach-space))
+* ‘amx’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
+* ‘x86vector’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
+* ‘vcix’ Dialect ([@mshockwave](https://github.com/mshockwave))
+
+#### Paradigm Dialects
+* ‘omp’ Dialect ([@tblah](https://github.com/tblah), [@skatrak](https://github.com/skatrak))
+* ‘acc’ Dialect ([@clementval](https://github.com/clementval), [@razvanlupusoru](https://github.com/razvanlupusoru))
+* ‘mpi’ Dialect ([@fschlimb](https://github.com/fschlimb))
+* ‘shard’ Dialect ([@fschlimb](https://github.com/fschlimb))
 
 ## Tensor Compiler
 

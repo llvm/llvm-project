@@ -62,15 +62,6 @@ void RTDEF(CUFDescriptorCheckSection)(
   }
 }
 
-void RTDEF(CUFSetAllocatorIndex)(
-    Descriptor *desc, int index, const char *sourceFile, int sourceLine) {
-  if (!desc) {
-    Terminator terminator{sourceFile, sourceLine};
-    terminator.Crash("descriptor is null");
-  }
-  desc->SetAllocIdx(index);
-}
-
 RT_EXT_API_GROUP_END
 }
 } // namespace Fortran::runtime::cuda

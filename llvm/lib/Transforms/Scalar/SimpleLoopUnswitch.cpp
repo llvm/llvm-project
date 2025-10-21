@@ -27,7 +27,6 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -98,6 +97,9 @@ static cl::opt<bool> EnableUnswitchCostMultiplier(
 static cl::opt<int> UnswitchSiblingsToplevelDiv(
     "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
     cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchParentBlocksDiv(
+    "unswitch-parent-blocks-div", cl::init(8), cl::Hidden,
+    cl::desc("Outer loop size divisor for cost multiplier."));
 static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
     "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
     cl::desc("Number of unswitch candidates that are ignored when calculating "
@@ -2144,23 +2146,9 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
 void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
                   bool CurrentLoopValid, bool PartiallyInvariant,
                   bool InjectedCondition, ArrayRef<Loop *> NewLoops) {
-  auto RecordLoopAsUnswitched = [&](Loop *TargetLoop, StringRef Tag,
-                                    StringRef DisableTag) {
-    auto &Ctx = TargetLoop->getHeader()->getContext();
-    MDNode *DisableMD = MDNode::get(Ctx, MDString::get(Ctx, DisableTag));
-    MDNode *NewLoopID = makePostTransformationMetadata(
-        Ctx, TargetLoop->getLoopID(), {Tag}, {DisableMD});
-    TargetLoop->setLoopID(NewLoopID);
-  };
-
-  // If we performed a non-trivial unswitch, we have added new cloned loops.
-  // Mark such newly-created loops as visited.
-  if (!NewLoops.empty()) {
-    for (Loop *NL : NewLoops)
-      RecordLoopAsUnswitched(NL, "llvm.loop.unswitch.nontrivial",
-                             "llvm.loop.unswitch.nontrivial.disable");
+  // If we did a non-trivial unswitch, we have added new (cloned) loops.
+  if (!NewLoops.empty())
     U.addSiblingLoops(NewLoops);
-  }
 
   // If the current loop remains valid, we should revisit it to catch any
   // other unswitch opportunities. Otherwise, we need to mark it as deleted.
@@ -2168,12 +2156,24 @@ void postUnswitch(Loop &L, LPMUpdater &U, StringRef LoopName,
     if (PartiallyInvariant) {
       // Mark the new loop as partially unswitched, to avoid unswitching on
       // the same condition again.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.partial",
-                             "llvm.loop.unswitch.partial.disable");
+      auto &Context = L.getHeader()->getContext();
+      MDNode *DisableUnswitchMD = MDNode::get(
+          Context,
+          MDString::get(Context, "llvm.loop.unswitch.partial.disable"));
+      MDNode *NewLoopID = makePostTransformationMetadata(
+          Context, L.getLoopID(), {"llvm.loop.unswitch.partial"},
+          {DisableUnswitchMD});
+      L.setLoopID(NewLoopID);
     } else if (InjectedCondition) {
       // Do the same for injection of invariant conditions.
-      RecordLoopAsUnswitched(&L, "llvm.loop.unswitch.injection",
-                             "llvm.loop.unswitch.injection.disable");
+      auto &Context = L.getHeader()->getContext();
+      MDNode *DisableUnswitchMD = MDNode::get(
+          Context,
+          MDString::get(Context, "llvm.loop.unswitch.injection.disable"));
+      MDNode *NewLoopID = makePostTransformationMetadata(
+          Context, L.getLoopID(), {"llvm.loop.unswitch.injection"},
+          {DisableUnswitchMD});
+      L.setLoopID(NewLoopID);
     } else
       U.revisitCurrentLoop();
   } else
@@ -2844,7 +2844,19 @@ static int CalculateUnswitchCostMultiplier(
     return 1;
   }
 
+  // Each invariant non-trivial condition, after being unswitched, is supposed
+  // to have its own specialized sibling loop (the invariant condition has been
+  // hoisted out of the child loop into a newly-cloned loop). When unswitching
+  // conditions in nested loops, the basic block size of the outer loop should
+  // not be altered. If such a size significantly increases across unswitching
+  // invocations, something may be wrong; so adjust the final cost taking this
+  // into account.
   auto *ParentL = L.getParentLoop();
+  int ParentLoopSizeMultiplier = 1;
+  if (ParentL)
+    ParentLoopSizeMultiplier =
+        std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
+
   int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
                                : std::distance(LI.begin(), LI.end()));
   // Count amount of clones that all the candidates might cause during
@@ -2889,14 +2901,16 @@ static int CalculateUnswitchCostMultiplier(
   // at an upper bound.
   int CostMultiplier;
   if (ClonesPower > Log2_32(UnswitchThreshold) ||
-      SiblingsMultiplier > UnswitchThreshold)
+      SiblingsMultiplier > UnswitchThreshold ||
+      ParentLoopSizeMultiplier > UnswitchThreshold)
     CostMultiplier = UnswitchThreshold;
   else
     CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
                               (int)UnswitchThreshold);
 
   LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
-                    << " (siblings " << SiblingsMultiplier << " * clones "
+                    << " (siblings " << SiblingsMultiplier << " * parent size "
+                    << ParentLoopSizeMultiplier << " * clones "
                     << (1 << ClonesPower) << ")"
                     << " for unswitch candidate: " << TI << "\n");
   return CostMultiplier;
@@ -3509,9 +3523,8 @@ static bool unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SmallVector<NonTrivialUnswitchCandidate, 4> UnswitchCandidates;
   IVConditionInfo PartialIVInfo;
   Instruction *PartialIVCondBranch = nullptr;
-  if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.nontrivial.disable"))
-    collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
-                              PartialIVCondBranch, L, LI, AA, MSSAU);
+  collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                            PartialIVCondBranch, L, LI, AA, MSSAU);
   if (!findOptionMDForLoop(&L, "llvm.loop.unswitch.injection.disable"))
     collectUnswitchCandidatesWithInjections(UnswitchCandidates, PartialIVInfo,
                                             PartialIVCondBranch, L, DT, LI, AA,
@@ -3597,8 +3610,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          AssumptionCache &AC, AAResults &AA,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
-                         MemorySSAUpdater *MSSAU, ProfileSummaryInfo *PSI,
-                         BlockFrequencyInfo *BFI, LPMUpdater &LoopUpdater) {
+                         MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 
@@ -3638,35 +3650,6 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
   if (F->hasOptSize())
     return false;
 
-  // Returns true if Loop L's loop nest is cold, i.e. if the headers of L,
-  // of the loops L is nested in, and of the loops nested in L are all cold.
-  auto IsLoopNestCold = [&](const Loop *L) {
-    // Check L and all of its parent loops.
-    auto *Parent = L;
-    while (Parent) {
-      if (!PSI->isColdBlock(Parent->getHeader(), BFI))
-        return false;
-      Parent = Parent->getParentLoop();
-    }
-    // Next check all loops nested within L.
-    SmallVector<const Loop *, 4> Worklist;
-    llvm::append_range(Worklist, L->getSubLoops());
-    while (!Worklist.empty()) {
-      auto *CurLoop = Worklist.pop_back_val();
-      if (!PSI->isColdBlock(CurLoop->getHeader(), BFI))
-        return false;
-      llvm::append_range(Worklist, CurLoop->getSubLoops());
-    }
-    return true;
-  };
-
-  // Skip cold loops in cold loop nests, as unswitching them brings little
-  // benefit but increases the code size
-  if (PSI && PSI->hasProfileSummary() && BFI && IsLoopNestCold(&L)) {
-    LLVM_DEBUG(dbgs() << " Skip cold loop: " << L << "\n");
-    return false;
-  }
-
   // Perform legality checks.
   if (!isSafeForNoNTrivialUnswitching(L, LI))
     return false;
@@ -3691,11 +3674,6 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &U) {
   Function &F = *L.getHeader()->getParent();
   (void)F;
-  ProfileSummaryInfo *PSI = nullptr;
-  if (auto OuterProxy =
-          AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
-              .getCachedResult<ModuleAnalysisManagerFunctionProxy>(F))
-    PSI = OuterProxy->getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L
                     << "\n");
 
@@ -3706,7 +3684,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
       AR.MSSA->verifyMemorySSA();
   }
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
-                    &AR.SE, MSSAU ? &*MSSAU : nullptr, PSI, AR.BFI, U))
+                    &AR.SE, MSSAU ? &*MSSAU : nullptr, U))
     return PreservedAnalyses::all();
 
   if (AR.MSSA && VerifyMemorySSA)

@@ -14,23 +14,23 @@
 
 #ifdef __CLC_NO_VALUE_ARG
 #define __CLC_DECLARE_ATOMIC(ADDRSPACE)                                        \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, int MemoryOrder,                  \
       int MemoryScope);
 #elif defined(__CLC_RETURN_VOID)
 #define __CLC_DECLARE_ATOMIC(ADDRSPACE)                                        \
-  _CLC_OVERLOAD _CLC_DECL void FUNCTION(volatile ADDRSPACE __CLC_GENTYPE *Ptr, \
-                                        __CLC_GENTYPE Value, int MemoryOrder,  \
-                                        int MemoryScope);
+  _CLC_OVERLOAD _CLC_DECL void __CLC_FUNCTION(                                 \
+      volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
+      int MemoryOrder, int MemoryScope);
 #elif defined(__CLC_COMPARE_EXCHANGE)
 #define __CLC_DECLARE_ATOMIC(ADDRSPACE)                                        \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Comparator,         \
       __CLC_GENTYPE Value, int MemoryOrderEqual, int MemoryOrderUnequal,       \
       int MemoryScope);
 #else
 #define __CLC_DECLARE_ATOMIC(ADDRSPACE)                                        \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
+  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE __CLC_FUNCTION(                        \
       volatile ADDRSPACE __CLC_GENTYPE *Ptr, __CLC_GENTYPE Value,              \
       int MemoryOrder, int MemoryScope);
 #endif

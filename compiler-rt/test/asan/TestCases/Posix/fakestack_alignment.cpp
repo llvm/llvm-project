@@ -17,8 +17,11 @@
 // RUN: %clangxx_asan -pthread -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -pthread -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <pthread.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +36,7 @@ bool misaligned = false;
 // happen by chance, so try this on many threads.
 void *Thread(void *unused) {
   big_object x;
-  uint alignment = (unsigned long)&x % alignof(big_object);
+  uintptr_t alignment = (uintptr_t)&x % alignof(big_object);
 
   if (alignment != 0)
     misaligned = true;

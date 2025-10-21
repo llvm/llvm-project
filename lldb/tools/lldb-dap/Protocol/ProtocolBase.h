@@ -30,6 +30,8 @@ namespace lldb_dap::protocol {
 
 // MARK: Base Protocol
 
+using Id = int64_t;
+
 /// A client or debug adapter initiated request.
 struct Request {
   /// Sequence number of the message (also known as message ID). The `seq` for
@@ -39,7 +41,7 @@ struct Request {
   /// associate requests with their corresponding responses. For protocol
   /// messages of type `request` the sequence number can be used to cancel the
   /// request.
-  int64_t seq;
+  Id seq;
 
   /// The command to execute.
   std::string command;
@@ -52,6 +54,7 @@ struct Request {
 };
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
+bool operator==(const Request &, const Request &);
 
 /// A debug adapter initiated event.
 struct Event {
@@ -63,6 +66,7 @@ struct Event {
 };
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
+bool operator==(const Event &, const Event &);
 
 enum ResponseMessage : unsigned {
   /// The request was cancelled
@@ -74,7 +78,7 @@ enum ResponseMessage : unsigned {
 /// Response for a request.
 struct Response {
   /// Sequence number of the corresponding request.
-  int64_t request_seq;
+  Id request_seq;
 
   /// The command requested.
   std::string command;
@@ -101,6 +105,7 @@ struct Response {
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);
+bool operator==(const Response &, const Response &);
 
 /// A structured message object. Used to return errors from requests.
 struct ErrorMessage {
@@ -140,6 +145,7 @@ llvm::json::Value toJSON(const ErrorMessage &);
 using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
+bool operator==(const Message &, const Message &);
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Message &V) {
   OS << toJSON(V);

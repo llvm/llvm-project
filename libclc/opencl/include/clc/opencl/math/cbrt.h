@@ -10,10 +10,10 @@
 #define __CLC_OPENCL_MATH_CBRT_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define FUNCTION cbrt
+#define __CLC_FUNCTION cbrt
 
 #include <clc/math/gentype.inc>
 
-#undef FUNCTION
+#undef __CLC_FUNCTION
 
 #endif // __CLC_OPENCL_MATH_CBRT_H__

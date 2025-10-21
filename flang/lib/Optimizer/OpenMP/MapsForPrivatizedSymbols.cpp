@@ -29,14 +29,12 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "flang/Support/OpenMP-utils.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Debug.h"
 #include <type_traits>
 
@@ -48,13 +46,13 @@ namespace flangomp {
 } // namespace flangomp
 
 using namespace mlir;
-using namespace Fortran::common::openmp;
 
 namespace {
 class MapsForPrivatizedSymbolsPass
     : public flangomp::impl::MapsForPrivatizedSymbolsPassBase<
           MapsForPrivatizedSymbolsPass> {
 
+  // TODO Use `createMapInfoOp` from `flang/Utils/OpenMP.h`.
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
     // Check if a value of type `type` can be passed to the kernel by value.
@@ -71,9 +69,6 @@ class MapsForPrivatizedSymbolsPass
       return size <= ptrSize && align <= ptrAlign;
     };
 
-    uint64_t mapTypeTo = static_cast<
-        std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
     Operation *definingOp = var.getDefiningOp();
 
     Value varPtr = var;
@@ -123,8 +118,7 @@ class MapsForPrivatizedSymbolsPass
         builder, loc, varPtr.getType(), varPtr,
         TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
                           .getElementType()),
-        builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
-                               mapTypeTo),
+        builder.getAttr<omp::ClauseMapFlagsAttr>(omp::ClauseMapFlags::to),
         builder.getAttr<omp::VariableCaptureKindAttr>(captureKind),
         /*varPtrPtr=*/Value{},
         /*members=*/SmallVector<Value>{},
@@ -194,6 +188,39 @@ class MapsForPrivatizedSymbolsPass
         addMapInfoOps(static_cast<omp::TargetOp>(targetOp), mapInfoOps);
       }
     }
+  }
+  // As the name suggests, this function examines var to determine if
+  // it has dynamic size. If true, this pass'll have to extract these
+  // bounds from descriptor of var and add the bounds to the resultant
+  // MapInfoOp.
+  bool needsBoundsOps(mlir::Value var) {
+    assert(mlir::isa<omp::PointerLikeType>(var.getType()) &&
+           "needsBoundsOps can deal only with pointer types");
+    mlir::Type t = fir::unwrapRefType(var.getType());
+    // t could be a box, so look inside the box
+    auto innerType = fir::dyn_cast_ptrOrBoxEleTy(t);
+    if (innerType)
+      return fir::hasDynamicSize(innerType);
+    return fir::hasDynamicSize(t);
+  }
+
+  void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
+                    llvm::SmallVector<mlir::Value> &boundsOps) {
+    mlir::Location loc = var.getLoc();
+    fir::factory::AddrAndBoundsInfo info =
+        fir::factory::getDataOperandBaseAddr(builder, var,
+                                             /*isOptional=*/false, loc);
+    fir::ExtendedValue extendedValue =
+        hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
+                                        /*continguousHint=*/true)
+            .first;
+    llvm::SmallVector<mlir::Value> boundsOpsVec =
+        fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                           mlir::omp::MapBoundsType>(
+            builder, info, extendedValue,
+            /*dataExvIsAssumedSize=*/false, loc);
+    for (auto bounds : boundsOpsVec)
+      boundsOps.push_back(bounds);
   }
 };
 } // namespace

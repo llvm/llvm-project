@@ -35,7 +35,7 @@ if(WIN32)
 endif()
 
 # The Python FFI interface is broken on AIX: https://bugs.python.org/issue38628.
-if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(RUN_PYTHON_TESTS FALSE)
 endif()
 

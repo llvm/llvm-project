@@ -1,4 +1,4 @@
-//===--- LoopConvertUtils.cpp - clang-tidy --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -370,7 +370,7 @@ static bool isAliasDecl(ASTContext *Context, const Decl *TheDecl,
       DeclarationType = DeclarationType.getNonReferenceType();
 
     if (InitType.isNull() || DeclarationType.isNull() ||
-        !Context->hasSameUnqualifiedType(DeclarationType, InitType))
+        !ASTContext::hasSameUnqualifiedType(DeclarationType, InitType))
       return false;
   }
 

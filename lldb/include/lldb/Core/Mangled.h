@@ -148,13 +148,7 @@ public:
   /// Mangled name get accessor.
   ///
   /// \return
-  ///     A reference to the mangled name string object.
-  ConstString &GetMangledName() { return m_mangled; }
-
-  /// Mangled name get accessor.
-  ///
-  /// \return
-  ///     A const reference to the mangled name string object.
+  ///     The mangled name string object.
   ConstString GetMangledName() const { return m_mangled; }
 
   /// Best name get accessor.
@@ -251,7 +245,7 @@ public:
   /// \return
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
-  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+  static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef name);
 
   static bool IsMangledName(llvm::StringRef name);
 
@@ -286,6 +280,17 @@ public:
 
   /// Retrieve \c DemangledNameInfo of the demangled name held by this object.
   const std::optional<DemangledNameInfo> &GetDemangledInfo() const;
+
+  /// Compute the base name (without namespace/class qualifiers) from the
+  /// demangled name.
+  ///
+  /// For a demangled name like "ns::MyClass<int>::templateFunc", this returns
+  /// just "templateFunc".
+  ///
+  /// \return
+  ///     A ConstString containing the basename, or nullptr if computation
+  ///     fails.
+  ConstString GetBaseName() const;
 
 private:
   /// If \c force is \c false, this function will re-use the previously

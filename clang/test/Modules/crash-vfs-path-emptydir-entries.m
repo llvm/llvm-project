@@ -1,4 +1,5 @@
-// REQUIRES: crash-recovery, shell
+// UNSUPPORTED: system-windows
+// REQUIRES: crash-recovery
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
 // XFAIL: target={{.*-windows-gnu}}

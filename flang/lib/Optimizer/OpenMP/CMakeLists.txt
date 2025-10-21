@@ -8,8 +8,10 @@ add_flang_library(FlangOpenMPTransforms
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
+  LowerWorkdistribute.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
+  SimdOnly.cpp
 
   DEPENDS
   FIRDialect
@@ -25,6 +27,7 @@ add_flang_library(FlangOpenMPTransforms
   FIRSupport
   FortranSupport
   HLFIRDialect
+  FortranUtils
 
   MLIR_DEPS
   ${dialect_libs}

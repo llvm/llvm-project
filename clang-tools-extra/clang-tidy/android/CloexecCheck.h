@@ -1,4 +1,4 @@
-//===--- CloexecCheck.h - clang-tidy-----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -89,10 +89,10 @@ protected:
                            int N) const;
 
   /// Binding name of the FuncDecl of a function call.
-  static const char *FuncDeclBindingStr;
+  static constexpr char FuncDeclBindingStr[] = "funcDecl";
 
   /// Binding name of the function call expression.
-  static const char *FuncBindingStr;
+  static constexpr char FuncBindingStr[] = "func";
 };
 
 } // namespace clang::tidy::android

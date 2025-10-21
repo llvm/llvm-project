@@ -77,6 +77,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -271,7 +272,7 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
     if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
       // Masks.
       // TODO: check that KillingII's mask is a superset of the DeadII's mask.
-      if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+      if (KillingII->getArgOperand(2) != DeadII->getArgOperand(2))
         return OW_Unknown;
     } else if (KillingII->getIntrinsicID() == Intrinsic::vp_store) {
       // Masks.
@@ -545,15 +546,8 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   };
 
   // Insert an unlinked dbg.assign intrinsic for the dead fragment after each
-  // overlapping dbg.assign intrinsic. The loop invalidates the iterators
-  // returned by getAssignmentMarkers so save a copy of the markers to iterate
-  // over.
-  auto LinkedRange = at::getAssignmentMarkers(Inst);
-  SmallVector<DbgVariableRecord *> LinkedDVRAssigns =
-      at::getDVRAssignmentMarkers(Inst);
-  SmallVector<DbgAssignIntrinsic *> Linked(LinkedRange.begin(),
-                                           LinkedRange.end());
-  auto InsertAssignForOverlap = [&](auto *Assign) {
+  // overlapping dbg.assign intrinsic.
+  for (DbgVariableRecord *Assign : at::getDVRAssignmentMarkers(Inst)) {
     std::optional<DIExpression::FragmentInfo> NewFragment;
     if (!at::calculateFragmentIntersect(DL, OriginalDest, DeadSliceOffsetInBits,
                                         DeadSliceSizeInBits, Assign,
@@ -563,11 +557,11 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
       // cautious and unlink the whole assignment from the store.
       Assign->setKillAddress();
       Assign->setAssignId(GetDeadLink());
-      return;
+      continue;
     }
     // No intersect.
     if (NewFragment->SizeInBits == 0)
-      return;
+      continue;
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
@@ -576,9 +570,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
     NewAssign->setKillAddress();
-  };
-  for_each(Linked, InsertAssignForOverlap);
-  for_each(LinkedDVRAssigns, InsertAssignForOverlap);
+  }
 }
 
 /// Update the attributes given that a memory access is updated (the
@@ -685,15 +677,13 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
                     << "\n  KILLER [" << ToRemoveStart << ", "
                     << int64_t(ToRemoveStart + ToRemoveSize) << ")\n");
 
-  Value *DeadWriteLength = DeadIntrinsic->getLength();
-  Value *TrimmedLength = ConstantInt::get(DeadWriteLength->getType(), NewSize);
-  DeadIntrinsic->setLength(TrimmedLength);
+  DeadIntrinsic->setLength(NewSize);
   DeadIntrinsic->setDestAlignment(PrefAlign);
 
   Value *OrigDest = DeadIntrinsic->getRawDest();
   if (!IsOverwriteEnd) {
     Value *Indices[1] = {
-        ConstantInt::get(DeadWriteLength->getType(), ToRemoveSize)};
+        ConstantInt::get(DeadIntrinsic->getLength()->getType(), ToRemoveSize)};
     Instruction *NewDestGEP = GetElementPtrInst::CreateInBounds(
         Type::getInt8Ty(DeadIntrinsic->getContext()), OrigDest, Indices, "",
         DeadI->getIterator());
@@ -816,9 +806,8 @@ tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
   return nullptr;
 }
 
-namespace {
 // Returns true if \p I is an intrinsic that does not read or write memory.
-bool isNoopIntrinsic(Instruction *I) {
+static bool isNoopIntrinsic(Instruction *I) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
@@ -839,7 +828,7 @@ bool isNoopIntrinsic(Instruction *I) {
 }
 
 // Check if we can ignore \p D for DSE.
-bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
+static bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
   Instruction *DI = D->getMemoryInst();
   // Calls that only access inaccessible memory cannot read or write any memory
   // locations we consider for elimination.
@@ -866,6 +855,8 @@ bool canSkipDef(MemoryDef *D, bool DefVisibleToCaller) {
 
   return false;
 }
+
+namespace {
 
 // A memory location wrapper that represents a MemoryLocation, `MemLoc`,
 // defined by `MemDef`.
@@ -900,23 +891,25 @@ struct MemoryDefWrapper {
   SmallVector<MemoryLocationWrapper, 1> DefinedLocations;
 };
 
-bool hasInitializesAttr(Instruction *I) {
-  CallBase *CB = dyn_cast<CallBase>(I);
-  return CB && CB->getArgOperandWithAttribute(Attribute::Initializes);
-}
-
 struct ArgumentInitInfo {
   unsigned Idx;
   bool IsDeadOrInvisibleOnUnwind;
   ConstantRangeList Inits;
 };
+} // namespace
+
+static bool hasInitializesAttr(Instruction *I) {
+  CallBase *CB = dyn_cast<CallBase>(I);
+  return CB && CB->getArgOperandWithAttribute(Attribute::Initializes);
+}
 
 // Return the intersected range list of the initializes attributes of "Args".
 // "Args" are call arguments that alias to each other.
 // If any argument in "Args" doesn't have dead_on_unwind attr and
 // "CallHasNoUnwindAttr" is false, return empty.
-ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
-                                              bool CallHasNoUnwindAttr) {
+static ConstantRangeList
+getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
+                            bool CallHasNoUnwindAttr) {
   if (Args.empty())
     return {};
 
@@ -935,6 +928,8 @@ ConstantRangeList getIntersectedInitRangeList(ArrayRef<ArgumentInitInfo> Args,
 
   return IntersectedIntervals;
 }
+
+namespace {
 
 struct DSEState {
   Function &F;
@@ -2339,10 +2334,11 @@ struct DSEState {
   // change state: whether make any change.
   bool eliminateDeadDefs(const MemoryDefWrapper &KillingDefWrapper);
 };
+} // namespace
 
 // Return true if "Arg" is function local and isn't captured before "CB".
-bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
-                               EarliestEscapeAnalysis &EA) {
+static bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
+                                      EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
          capturesNothing(
@@ -2638,7 +2634,6 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
   return MadeChange;
 }
-} // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 // DSE Pass
@@ -2739,8 +2734,6 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_END(DSELegacyPass, "dse", "Dead Store Elimination", false,
                     false)
 
-namespace llvm {
-LLVM_ABI FunctionPass *createDeadStoreEliminationPass() {
+LLVM_ABI FunctionPass *llvm::createDeadStoreEliminationPass() {
   return new DSELegacyPass();
 }
-} // namespace llvm

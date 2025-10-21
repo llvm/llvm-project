@@ -13,7 +13,7 @@ define {i1, i7} @functional({i32, i1} %a, [2 x i7] %b) {
 
 define {i1, i7} @call_functional({i32, i1} %a, [2 x i7] %b) {
   ; CHECK-LABEL: @call_functional.dfsan
-  ; CHECK-NEXT: %[[#REG:]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK-NEXT: %[[#REG:]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK-NEXT: %[[#REG+1]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK-NEXT: %[[#REG+2]] = extractvalue { i8, i8 } %[[#REG+1]], 0
   ; CHECK-NEXT: %[[#REG+3]] = extractvalue { i8, i8 } %[[#REG+1]], 1
@@ -68,7 +68,7 @@ define {i1, i7} @call_uninstrumented({i32, i1} %a, [2 x i7] %b) {
 define {i1, i7} @call_custom_with_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: @call_custom_with_ret.dfsan
   ; CHECK: %labelreturn = alloca i8, align 1
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
@@ -89,7 +89,7 @@ define {i1, i7} @call_custom_with_ret({i32, i1} %a, [2 x i7] %b) {
 
 define void @call_custom_without_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: @call_custom_without_ret.dfsan
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
@@ -105,7 +105,7 @@ define void @call_custom_without_ret({i32, i1} %a, [2 x i7] %b) {
 
 define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: @call_custom_varg.dfsan
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: %labelva = alloca [1 x i8], align 1
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
@@ -126,7 +126,7 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
 define {i1, i7} @call_custom_cb({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: define { i1, i7 } @call_custom_cb.dfsan({ i32, i1 } %a, [2 x i7] %b) {
   ; CHECK: %labelreturn = alloca i8, align 1
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
@@ -153,7 +153,7 @@ define {i1, i7} @custom_cb(ptr %cb, {i32, i1} %a, [2 x i7] %b) {
 
 define {i1, i7} @cb({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: define { i1, i7 } @cb.dfsan({ i32, i1 } %a, [2 x i7] %b)
-  ; CHECK: [[BL:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[BL:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[AL:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[AL1:%.*]] = extractvalue { i8, i8 } [[AL]], 1
   ; CHECK: [[BL0:%.*]] = extractvalue [2 x i8] [[BL]], 0
@@ -180,8 +180,8 @@ define ptr @ret_custom() {
 ; COMM: TODO simplify the expression [[#mul(2,SBYTES) + max(SBYTES,2)]] to
 ; COMM: [[#mul(3,SBYTES)]], if shadow-tls-alignment is updated to match shadow
 ; COMM: width bytes.
-; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 4) to ptr), align [[ALIGN:2]]
-; CHECK: [[A:%.*]] = load { i8, i8 }, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 4), align [[ALIGN:2]]
+; CHECK: [[A:%.*]] = load { i8, i8 }, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
 ; CHECK: [[CB:%.*]] = load i8, ptr @__dfsan_arg_tls, align [[ALIGN]]
 ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
 ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
@@ -198,7 +198,7 @@ define ptr @ret_custom() {
 define {i1, i7} @custom_with_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: define linkonce_odr { i1, i7 } @"dfsw$custom_with_ret"({ i32, i1 } %0, [2 x i7] %1)
   ; CHECK: %labelreturn = alloca i8, align 1
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
@@ -221,7 +221,7 @@ define {i1, i7} @custom_with_ret({i32, i1} %a, [2 x i7] %b) {
 
 define void @custom_without_ret({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: define linkonce_odr void @"dfsw$custom_without_ret"({ i32, i1 } %0, [2 x i7] %1)
-  ; CHECK: [[B:%.*]] = load [2 x i8], ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN:2]]
+  ; CHECK: [[B:%.*]] = load [2 x i8], ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN:2]]
   ; CHECK: [[A:%.*]] = load { i8, i8 }, ptr @__dfsan_arg_tls, align [[ALIGN]]
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1

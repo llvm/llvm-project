@@ -564,7 +564,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
-    if (!target || isa<DefinedAbsolute>(target))
+    if (!isa_and_nonnull<Defined>(target) || isa<DefinedAbsolute>(target))
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }

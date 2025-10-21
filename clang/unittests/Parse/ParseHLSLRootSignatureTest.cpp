@@ -180,7 +180,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   // First Descriptor Table with 4 elements
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::BReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 0u);
@@ -193,7 +193,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::TReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 42u);
@@ -205,7 +205,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::SReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 987u);
@@ -218,7 +218,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
             RegisterType::UReg);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.Number, 4294967294u);
@@ -263,7 +263,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
       filter = FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT,
       maxLOD = 9000, addressU = TEXTURE_ADDRESS_MIRROR,
       comparisonFunc = COMPARISON_NOT_EQUAL,
-      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT
+      borderColor = STATIC_BORDER_COLOR_OPAQUE_BLACK_UINT,
+      flags = 0
     )
   )cc";
 
@@ -332,6 +333,37 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Domain);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidStaticSamplerFlagsTest) {
+  const llvm::StringLiteral Source = R"cc(
+    StaticSampler(s0, flags = UINT_BORDER_COLOR | NON_NORMALIZED_COORDINATES)
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
+  auto ValidStaticSamplerFlags =
+      llvm::dxbc::StaticSamplerFlags::NonNormalizedCoordinates |
+      llvm::dxbc::StaticSamplerFlags::UintBorderColor;
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Flags, ValidStaticSamplerFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -445,7 +477,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   auto Elements = Parser.getElements();
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   auto ValidSamplerFlags =
       llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile;
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidSamplerFlags);
@@ -501,8 +533,6 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   using llvm::dxbc::RootFlags;
   const llvm::StringLiteral Source = R"cc(
-    RootFlags(),
-    RootFlags(0),
     RootFlags(
       deny_domain_shader_root_access |
       deny_pixel_shader_root_access |
@@ -533,17 +563,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_FALSE(Parser.parse());
 
   auto Elements = Parser.getElements();
-  ASSERT_EQ(Elements.size(), 3u);
+  ASSERT_EQ(Elements.size(), 1u);
 
   RootElement Elem = Elements[0].getElement();
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
-
-  Elem = Elements[1].getElement();
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
-
-  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
   auto ValidRootFlags = RootFlags::AllowInputAssemblerInputLayout |
                         RootFlags::DenyVertexShaderRootAccess |
@@ -558,6 +580,64 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
                         RootFlags::CBVSRVUAVHeapDirectlyIndexed |
                         RootFlags::SamplerHeapDirectlyIndexed;
   ASSERT_EQ(std::get<RootFlags>(Elem), ValidRootFlags);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyRootFlagsTest) {
+  using llvm::dxbc::RootFlags;
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(),
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, ValidParseZeroRootFlagsTest) {
+  using llvm::dxbc::RootFlags;
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(0),
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test no diagnostics produced
+  Consumer->setNoDiag();
+
+  ASSERT_FALSE(Parser.parse());
+
+  auto Elements = Parser.getElements();
+  ASSERT_EQ(Elements.size(), 1u);
+
+  RootElement Elem = Elements[0].getElement();
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -591,7 +671,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -602,7 +682,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
@@ -616,7 +696,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -628,7 +708,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
             RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3].getElement();
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
@@ -696,17 +776,17 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   auto DefRootDescriptorFlag = llvm::dxbc::RootDescriptorFlags::DataVolatile;
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
   auto ValidNonSamplerFlags =
@@ -714,22 +794,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
       llvm::dxbc::DescriptorRangeFlags::DataVolatile;
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
   Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile);
 
@@ -767,43 +847,43 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
   auto Elements = Parser.getElements();
   RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataVolatile);
 
   Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ResourceClass::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::None);
 
@@ -1653,6 +1733,29 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidDescriptorRangeFlagsValueTest) {
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_invalid_token);
+  ASSERT_TRUE(Parser.parse());
+
+  ASSERT_TRUE(Consumer->isSatisfied());
+}
+
+TEST_F(ParseHLSLRootSignatureTest, InvalidMultipleRootFlagsTest) {
+  // This test will check that an error is produced when there are multiple
+  // root flags provided
+  const llvm::StringLiteral Source = R"cc(
+    RootFlags(DENY_VERTEX_SHADER_ROOT_ACCESS),
+    RootFlags(DENY_PIXEL_SHADER_ROOT_ACCESS)
+  )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
+  TrivialModuleLoader ModLoader;
+  auto PP = createPP(Source, ModLoader);
+
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Signature, *PP);
+
+  // Test correct diagnostic produced
+  Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
   ASSERT_TRUE(Parser.parse());
 
   ASSERT_TRUE(Consumer->isSatisfied());
