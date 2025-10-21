@@ -12,16 +12,11 @@ jobs:
     runs-on: depot-windows-2022-16
     if: github.repository_owner == 'llvm'
     steps:
+      - Name: Setup crlf
+        run: |
+          git config --global core.autocrlf false
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
       - run: |
           subst S: ${{ github.workspace }}
           cd S:\llvm\utils\release\
           .\build_llvm_release.bat --x64 --version 21.1.3 --local-python --skip-checkout
-      - if: always()
-        run: |
-           S:\llvm\utils\release\llvm_package_21.1.3\build_amd64_stage0\bin\llvm-remarkutil.exe filter S:\llvm\test\tools\llvm-remarkutil/Inputs/filter.yaml | diff S:\llvm\test\tools\llvm-remarkutil/Inputs/filter.yaml - > diff.out
-      - if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: diff
-          path: diff.out
