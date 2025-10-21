@@ -15,7 +15,6 @@ define amdgpu_kernel void @test_s_barrier() {
 ;
 ; GFX10-CU-LABEL: test_s_barrier:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-CU-NEXT:    s_barrier
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -26,7 +25,6 @@ define amdgpu_kernel void @test_s_barrier() {
 ;
 ; GFX11-CU-LABEL: test_s_barrier:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX11-CU-NEXT:    s_barrier
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -38,7 +36,6 @@ define amdgpu_kernel void @test_s_barrier() {
 ;
 ; GFX12-CU-LABEL: test_s_barrier:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_alu 0xffe3
 ; GFX12-CU-NEXT:    s_barrier_signal -1
 ; GFX12-CU-NEXT:    s_barrier_wait -1
 ; GFX12-CU-NEXT:    s_endpgm
@@ -63,8 +60,8 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ;
 ; GFX10-CU-LABEL: test_s_barrier_workgroup_fence:
 ; GFX10-CU:       ; %bb.0: ; %entry
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-CU-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    s_barrier
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -77,8 +74,8 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ;
 ; GFX11-CU-LABEL: test_s_barrier_workgroup_fence:
 ; GFX11-CU:       ; %bb.0: ; %entry
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-CU-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_barrier
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -94,8 +91,10 @@ define amdgpu_kernel void @test_s_barrier_workgroup_fence() {
 ;
 ; GFX12-CU-LABEL: test_s_barrier_workgroup_fence:
 ; GFX12-CU:       ; %bb.0: ; %entry
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
-; GFX12-CU-NEXT:    s_wait_alu 0xffe3
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    s_barrier_signal -1
 ; GFX12-CU-NEXT:    s_barrier_wait -1
 ; GFX12-CU-NEXT:    s_endpgm
@@ -125,7 +124,6 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ; GFX10-CU:       ; %bb.0: ; %entry
 ; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-CU-NEXT:    s_barrier
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -140,7 +138,6 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-CU-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX11-CU-NEXT:    s_barrier
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -160,7 +157,6 @@ define amdgpu_kernel void @test_s_barrier_agent_fence() {
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-CU-NEXT:    s_wait_alu 0xffe3
 ; GFX12-CU-NEXT:    s_barrier_signal -1
 ; GFX12-CU-NEXT:    s_barrier_wait -1
 ; GFX12-CU-NEXT:    s_endpgm

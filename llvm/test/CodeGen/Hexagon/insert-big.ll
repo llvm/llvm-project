@@ -14,6 +14,8 @@
 ; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=4 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
 ; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=5 -debug-only=hexinsert -stop-after hexinsert < %s 2>&1 | FileCheck %s
 
+; REQUIRES: asserts
+
 define i32 @f(i32 %0, i32 %1, i32 %2) {
 entry:
   switch i32 %0, label %common.ret1 [

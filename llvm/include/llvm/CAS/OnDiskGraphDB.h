@@ -380,6 +380,7 @@ private:
     case ObjectPresence::OnlyInUpstreamDB:
       return true;
     }
+    llvm_unreachable("Unknown ObjectPresence enum");
   }
 
   /// When \p load is called for a node that doesn't exist, this function tries
