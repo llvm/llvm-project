@@ -641,6 +641,7 @@ clang-format
 - Deprecate ``AlwaysBreak`` and ``BlockIndent`` suboptions from the
   ``AlignAfterOpenBracket`` option, and make ``AlignAfterOpenBracket`` a
   ``bool`` type.
+- Add ``AlignPPAndNotPP`` suboption to ``AlignTrailingComments``.
 
 libclang
 --------

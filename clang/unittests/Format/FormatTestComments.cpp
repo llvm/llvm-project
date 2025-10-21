@@ -3378,6 +3378,54 @@ TEST_F(FormatTestComments, DontAlignOverScope) {
                "int foobar; // group");
 }
 
+TEST_F(FormatTestComments, DontAlignOverPPDirective) {
+  auto Style = getLLVMStyle();
+  Style.AlignTrailingComments.AlignPPAndNotPP = false;
+
+  verifyFormat("int i;    // Aligned\n"
+               "int long; // with this\n"
+               "#define FOO    // only aligned\n"
+               "#define LOOONG // with other pp directives\n"
+               "int loooong; // new alignment",
+               "int i;//Aligned\n"
+               "int long;//with this\n"
+               "#define FOO //only aligned\n"
+               "#define LOOONG //with other pp directives\n"
+               "int loooong; //new alignment",
+               Style);
+
+  verifyFormat("#define A  // Comment\n"
+               "#define AB // Comment",
+               Style);
+
+  Style.ColumnLimit = 30;
+  verifyNoChange("#define A // Comment\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
+
+  Style.AlignTrailingComments.OverEmptyLines = 1;
+  verifyNoChange("#define A // Comment\n"
+                 "\n"
+                 "          // Continued\n"
+                 "int i = 0; // New Stuff\n"
+                 "\n"
+                 "           // Continued\n"
+                 "#define Func(X)              \\\n"
+                 "  X();                       \\\n"
+                 "  X(); // Comment\n"
+                 "\n"
+                 "       // Continued\n"
+                 "long loong = 1; // Dont align",
+                 Style);
+}
+
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {
   verifyFormat("/*\n"
                " */",
