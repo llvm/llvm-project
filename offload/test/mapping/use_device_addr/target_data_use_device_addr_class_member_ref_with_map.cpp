@@ -2,6 +2,7 @@
 
 #include <omp.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 int x = 0;
 int *y = &x;
@@ -38,7 +39,7 @@ struct ST {
         // CHECK-NEXT: 0 1
         intptr_t offset_device = (intptr_t)mapped_ptr - (intptr_t)&d;
         printf("%d %d\n", &d == mapped_ptr, offset == offset_device);
-        printf("%ld %ld\n", offset, offset_device);
+        printf("%" PRIdPTR " %" PRIdPTR "\n", offset, offset_device);
       }
     }
   }
