@@ -839,6 +839,25 @@ TEST_F(FormatTestComments, MultiLineCommentsInDefines) {
                    getLLVMStyleWithColumns(17)));
 }
 
+TEST_F(FormatTestComments, LineCommentsInMacrosDoNotGetEscapedNewlines) {
+  FormatStyle Style = getLLVMStyleWithColumns(0);
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  verifyFormat("#define FOO (1U) // comment\n"
+               "                 // comment",
+               Style);
+
+  Style.ColumnLimit = 32;
+  verifyFormat("#define SOME_MACRO(x) x\n"
+               "#define FOO                    \\\n"
+               "  SOME_MACRO(1) +              \\\n"
+               "      SOME_MACRO(2) // comment\n"
+               "                    // comment",
+               "#define SOME_MACRO(x) x\n"
+               "#define FOO SOME_MACRO(1) + SOME_MACRO(2) // comment\n"
+               "                                          // comment",
+               Style);
+}
+
 TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
   EXPECT_EQ("namespace {}\n// Test\n#define A",
             format("namespace {}\n   // Test\n#define A"));

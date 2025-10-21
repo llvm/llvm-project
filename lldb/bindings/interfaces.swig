@@ -53,6 +53,7 @@
 %include "./interface/SBModuleSpecDocstrings.i"
 %include "./interface/SBMutexExtensions.i"
 %include "./interface/SBPlatformDocstrings.i"
+%include "./interface/SBPlatformExtensions.i"
 %include "./interface/SBProcessDocstrings.i"
 %include "./interface/SBProcessInfoDocstrings.i"
 %include "./interface/SBProgressDocstrings.i"
