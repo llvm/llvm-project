@@ -9,17 +9,16 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CLANGMODULESDECLVENDOR_H
 
+#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Platform.h"
-
-#include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 
 #include <set>
 #include <vector>
 
 namespace lldb_private {
 
-class ClangModulesDeclVendor : public ClangDeclVendor {
+class ClangModulesDeclVendor : public DeclVendor {
 public:
   // Constructors and Destructors
   ClangModulesDeclVendor();

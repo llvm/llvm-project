@@ -131,7 +131,7 @@ private:
 };
 
 AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
-    : ClangDeclVendor(eAppleObjCDeclVendor), m_runtime(runtime),
+    : DeclVendor(eAppleObjCDeclVendor), m_runtime(runtime),
       m_type_realizer_sp(m_runtime.GetEncodingToType()) {
   m_ast_ctx = std::make_shared<TypeSystemClang>(
       "AppleObjCDeclVendor AST",
