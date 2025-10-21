@@ -296,6 +296,8 @@ static void transferStatusOkCall(const CXXMemberCallExpr *Expr,
 static void transferStatusUpdateCall(const CXXMemberCallExpr *Expr,
                                      const MatchFinder::MatchResult &,
                                      LatticeTransferState &State) {
+  // S.Update(OtherS) sets S to the error code of OtherS if it is OK,
+  // otherwise does nothing.
   assert(Expr->getNumArgs() == 1);
   auto *Arg = Expr->getArg(0);
   RecordStorageLocation *ArgRecord =
