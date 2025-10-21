@@ -3888,9 +3888,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {
     if (*v <= 0) {
       context_.Say(GetContext().clauseSource,
           "The alignment should be positive"_err_en_US);
-    } else if (!llvm::isPowerOf2_64(*v)) {
-      context_.Say(GetContext().clauseSource,
-          "The alignment should be a power of 2"_err_en_US);
     }
   }
 }
