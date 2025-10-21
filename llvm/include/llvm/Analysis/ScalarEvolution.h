@@ -640,6 +640,9 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *
   getGEPExpr(GEPOperator *GEP, const SmallVectorImpl<const SCEV *> &IndexExprs);
+  LLVM_ABI const SCEV *getGEPExpr(
+      const SCEV *BaseExpr, const SmallVectorImpl<const SCEV *> &IndexExprs,
+      Type *SrcElementTy, SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap);
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<const SCEV *> &Operands);
