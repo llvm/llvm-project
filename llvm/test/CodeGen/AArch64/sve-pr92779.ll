@@ -4,9 +4,9 @@
 define void @main(ptr %0) {
 ; CHECK-LABEL: main:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uzp1 v1.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    neg v1.2s, v1.2s

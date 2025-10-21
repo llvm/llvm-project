@@ -534,7 +534,7 @@ bool ARMParallelDSP::MatchSMLAD(Function &F) {
 
       InsertParallelMACs(R);
       Changed = true;
-      AllAdds.insert(R.getAdds().begin(), R.getAdds().end());
+      AllAdds.insert_range(R.getAdds());
       LLVM_DEBUG(dbgs() << "BB after inserting parallel MACs:\n" << BB);
     }
   }

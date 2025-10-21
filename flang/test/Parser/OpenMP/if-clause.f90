@@ -4,33 +4,33 @@ program openmp_parse_if
   logical :: cond
   integer :: i
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
-  ! CHECK-NOT: DirectiveNameModifier
+  ! CHECK-NOT: OmpDirectiveName
   !$omp target update if(cond) to(i)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target update
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target update
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target update
   !$omp target update if(target update: cond) to(i)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target enter data
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target enter data
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target enter data
   !$omp target enter data map(to: i) if(target enter data: cond)
 
-  ! CHECK: OmpSimpleStandaloneDirective -> llvm::omp::Directive = target exit data
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target exit data
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target exit data
   !$omp target exit data map(from: i) if(target exit data: cond)
 
-  ! CHECK: OmpBlockDirective -> llvm::omp::Directive = target data
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target data
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target data
   !$omp target data map(tofrom: i) if(target data: cond)
   !$omp end target data
 
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = target teams distribute parallel do simd
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do simd
   ! CHECK: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = target
   ! CHECK: OmpClause -> If -> OmpIfClause
@@ -45,13 +45,13 @@ program openmp_parse_if
   end do
   !$omp end target teams distribute parallel do simd
 
-  ! CHECK: OmpBlockDirective -> llvm::omp::Directive = task
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = task
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = task
   !$omp task if(task: cond)
   !$omp end task
 
-  ! CHECK: OmpLoopDirective -> llvm::omp::Directive = taskloop
+  ! CHECK: OmpDirectiveName -> llvm::omp::Directive = taskloop
   ! CHECK-NEXT: OmpClause -> If -> OmpIfClause
   ! CHECK-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop
   !$omp taskloop if(taskloop: cond)

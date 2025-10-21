@@ -20,6 +20,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -44,7 +45,7 @@ public:
   const uint16_t RegSetSize;
   const uint16_t ID;
   const uint16_t RegSizeInBits;
-  const int8_t CopyCost;
+  const uint8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;
 
@@ -63,7 +64,7 @@ public:
 
   /// getRegister - Return the specified register in the class.
   ///
-  unsigned getRegister(unsigned i) const {
+  MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
     return RegsBegin[i];
   }
@@ -93,7 +94,7 @@ public:
   /// getCopyCost - Return the cost of copying a value between two registers in
   /// this class. A negative number means the register class is very expensive
   /// to copy e.g. status flag register classes.
-  int getCopyCost() const { return CopyCost; }
+  uint8_t getCopyCost() const { return CopyCost; }
 
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
@@ -146,7 +147,7 @@ struct MCRegisterDesc {
 /// TableGen generated physical register data. It must not be extended with
 /// virtual methods.
 ///
-class MCRegisterInfo {
+class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 

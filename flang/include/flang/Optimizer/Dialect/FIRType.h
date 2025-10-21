@@ -47,14 +47,26 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Get the raw address type of the memory described by the box.
+  mlir::Type getBaseAddressType() const;
+
   /// Unwrap element type from fir.heap, fir.ptr and fir.array.
   mlir::Type unwrapInnerType() const;
+
+  // Get the element type or the fir.array
+  mlir::Type getElementOrSequenceType() const;
 
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
   /// Is this a box for a pointer?
   bool isPointer() const;
+
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
+  /// Is this a box describing volatile memory?
+  bool isVolatile() const;
 
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
@@ -221,6 +233,10 @@ inline bool isa_char_string(mlir::Type t) {
 /// (since they may hold one), and are not considered to be unknown size.
 bool isa_unknown_size_box(mlir::Type t);
 
+/// Returns true iff `t` is a type capable of representing volatility and has
+/// the volatile attribute set.
+bool isa_volatile_type(mlir::Type t);
+
 /// Returns true iff `t` is a fir.char type and has an unknown length.
 inline bool characterWithDynamicLen(mlir::Type t) {
   if (auto charTy = mlir::dyn_cast<fir::CharacterType>(t))
@@ -376,6 +392,9 @@ bool isPolymorphicType(mlir::Type ty);
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
 
+/// Return true if CLASS(*)
+bool isClassStarType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an assumed type. In FIR,
 /// assumed types are of the form `[fir.ref|ptr|heap]fir.box<[fir.array]none>`,
 /// or `fir.ref|ptr|heap<[fir.array]none>`.
@@ -453,6 +472,10 @@ inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
   return fir::BoxType::get(eleTy);
 }
 
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
+
 /// Return the elementType where intrinsic types are replaced with none for
 /// unlimited polymorphic entities.
 ///
@@ -473,6 +496,10 @@ inline mlir::Type updateTypeForUnlimitedPolymorphic(mlir::Type ty) {
     return mlir::NoneType::get(ty.getContext());
   return ty;
 }
+
+/// Re-create the given type with the given volatility, if this is a type
+/// that can represent volatility.
+mlir::Type updateTypeWithVolatility(mlir::Type type, bool isVolatile);
 
 /// Replace the element type of \p type by \p newElementType, preserving
 /// all other layers of the type (fir.ref/ptr/heap/array/box/class).
@@ -530,6 +557,7 @@ std::optional<std::pair<uint64_t, unsigned short>>
 getTypeSizeAndAlignment(mlir::Location loc, mlir::Type ty,
                         const mlir::DataLayout &dl,
                         const fir::KindMapping &kindMap);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRTYPE_H

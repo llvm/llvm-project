@@ -18,13 +18,12 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -243,8 +242,99 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
-bool MemRefDependenceGraph::init() {
-  LLVM_DEBUG(llvm::dbgs() << "--- Initializing MDG ---\n");
+/// Returns the memref being read/written by a memref/affine load/store op.
+static Value getMemRef(Operation *memOp) {
+  if (auto memrefLoad = dyn_cast<memref::LoadOp>(memOp))
+    return memrefLoad.getMemRef();
+  if (auto affineLoad = dyn_cast<AffineReadOpInterface>(memOp))
+    return affineLoad.getMemRef();
+  if (auto memrefStore = dyn_cast<memref::StoreOp>(memOp))
+    return memrefStore.getMemRef();
+  if (auto affineStore = dyn_cast<AffineWriteOpInterface>(memOp))
+    return affineStore.getMemRef();
+  llvm_unreachable("unexpected op");
+}
+
+/// Returns true if there may be a dependence on `memref` from srcNode's
+/// memory ops to dstNode's memory ops, while using the affine memory
+/// dependence analysis checks. The method assumes that there is at least one
+/// memory op in srcNode's loads and stores on `memref`, and similarly for
+/// `dstNode`. `srcNode.op` and `destNode.op` are expected to be nested in the
+/// same block and so the dependences are tested at the depth of that block.
+static bool mayDependence(const Node &srcNode, const Node &dstNode,
+                          Value memref) {
+  assert(srcNode.op->getBlock() == dstNode.op->getBlock());
+  if (!isa<AffineForOp>(srcNode.op) || !isa<AffineForOp>(dstNode.op))
+    return true;
+
+  // Conservatively handle dependences involving non-affine load/stores. Return
+  // true if there exists a conflicting read/write access involving such.
+
+  // Check whether there is a dependence from a source read/write op to a
+  // destination read/write one; all expected to be memref/affine load/store.
+  auto hasNonAffineDep = [&](ArrayRef<Operation *> srcMemOps,
+                             ArrayRef<Operation *> dstMemOps) {
+    return llvm::any_of(srcMemOps, [&](Operation *srcOp) {
+      Value srcMemref = getMemRef(srcOp);
+      if (srcMemref != memref)
+        return false;
+      return llvm::find_if(dstMemOps, [&](Operation *dstOp) {
+               return srcMemref == getMemRef(dstOp);
+             }) != dstMemOps.end();
+    });
+  };
+
+  SmallVector<Operation *> dstOps;
+  // Between non-affine src stores and dst load/store.
+  llvm::append_range(dstOps, llvm::concat<Operation *const>(
+                                 dstNode.loads, dstNode.stores,
+                                 dstNode.memrefLoads, dstNode.memrefStores));
+  if (hasNonAffineDep(srcNode.memrefStores, dstOps))
+    return true;
+  // Between non-affine loads and dst stores.
+  dstOps.clear();
+  llvm::append_range(dstOps, llvm::concat<Operation *const>(
+                                 dstNode.stores, dstNode.memrefStores));
+  if (hasNonAffineDep(srcNode.memrefLoads, dstOps))
+    return true;
+  // Between affine stores and memref load/stores.
+  dstOps.clear();
+  llvm::append_range(dstOps, llvm::concat<Operation *const>(
+                                 dstNode.memrefLoads, dstNode.memrefStores));
+  if (hasNonAffineDep(srcNode.stores, dstOps))
+    return true;
+  // Between affine loads and memref stores.
+  dstOps.clear();
+  llvm::append_range(dstOps, dstNode.memrefStores);
+  if (hasNonAffineDep(srcNode.loads, dstOps))
+    return true;
+
+  // Affine load/store pairs. We don't need to check for locally allocated
+  // memrefs since the dependence analysis here is between mem ops from
+  // srcNode's for op to dstNode's for op at the depth at which those
+  // `affine.for` ops are nested, i.e., dependences at depth `d + 1` where
+  // `d` is the number of common surrounding loops.
+  for (auto *srcMemOp :
+       llvm::concat<Operation *const>(srcNode.stores, srcNode.loads)) {
+    MemRefAccess srcAcc(srcMemOp);
+    if (srcAcc.memref != memref)
+      continue;
+    for (auto *destMemOp :
+         llvm::concat<Operation *const>(dstNode.stores, dstNode.loads)) {
+      MemRefAccess destAcc(destMemOp);
+      if (destAcc.memref != memref)
+        continue;
+      // Check for a top-level dependence between srcNode and destNode's ops.
+      if (!noDependence(checkMemrefAccessDependence(
+              srcAcc, destAcc, getNestingDepth(srcNode.op) + 1)))
+        return true;
+    }
+  }
+  return false;
+}
+
+bool MemRefDependenceGraph::init(bool fullAffineDependences) {
+  LDBG() << "--- Initializing MDG ---";
   // Map from a memref to the set of ids of the nodes that have ops accessing
   // the memref.
   DenseMap<Value, SetVector<unsigned>> memrefAccesses;
@@ -291,8 +381,7 @@ bool MemRefDependenceGraph::init() {
       // Return false if non-handled/unknown region-holding ops are found. We
       // won't know what such ops do or what its regions mean; for e.g., it may
       // not be an imperative op.
-      LLVM_DEBUG(llvm::dbgs()
-                 << "MDG init failed; unknown region-holding op found!\n");
+      LDBG() << "MDG init failed; unknown region-holding op found!";
       return false;
     }
     // We aren't creating nodes for memory-effect free ops either with no
@@ -300,7 +389,7 @@ bool MemRefDependenceGraph::init() {
     // interface.
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "Created " << nodes.size() << " nodes\n");
+  LDBG() << "Created " << nodes.size() << " nodes";
 
   // Add dependence edges between nodes which produce SSA values and their
   // users. Load ops can be considered as the ones producing SSA values.
@@ -347,8 +436,12 @@ bool MemRefDependenceGraph::init() {
         Node *dstNode = getNode(dstId);
         bool dstHasStoreOrFree =
             dstNode->hasStore(srcMemRef) || dstNode->hasFree(srcMemRef);
-        if (srcHasStoreOrFree || dstHasStoreOrFree)
-          addEdge(srcId, dstId, srcMemRef);
+        if ((srcHasStoreOrFree || dstHasStoreOrFree)) {
+          // Check precise affine deps if asked for; otherwise, conservative.
+          if (!fullAffineDependences ||
+              mayDependence(*srcNode, *dstNode, srcMemRef))
+            addEdge(srcId, dstId, srcMemRef);
+        }
       }
     }
   }
@@ -559,20 +652,19 @@ MemRefDependenceGraph::getFusedLoopNestInsertionPoint(unsigned srcId,
   gatherDefiningNodes(dstId, definingNodes);
   if (llvm::any_of(definingNodes,
                    [&](unsigned id) { return hasDependencePath(srcId, id); })) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Can't fuse: a defining op with a user in the dst "
-                  "loop has dependence from the src loop\n");
+    LDBG() << "Can't fuse: a defining op with a user in the dst "
+           << "loop has dependence from the src loop";
     return nullptr;
   }
 
   // Build set of insts in range (srcId, dstId) which depend on 'srcId'.
-  SmallPtrSet<Operation *, 2> srcDepInsts;
+  llvm::SmallPtrSet<Operation *, 2> srcDepInsts;
   for (auto &outEdge : outEdges.lookup(srcId))
     if (outEdge.id != dstId)
       srcDepInsts.insert(getNode(outEdge.id)->op);
 
   // Build set of insts in range (srcId, dstId) on which 'dstId' depends.
-  SmallPtrSet<Operation *, 2> dstDepInsts;
+  llvm::SmallPtrSet<Operation *, 2> dstDepInsts;
   for (auto &inEdge : inEdges.lookup(dstId))
     if (inEdge.id != srcId)
       dstDepInsts.insert(getNode(inEdge.id)->op);
@@ -713,7 +805,7 @@ void MemRefDependenceGraph::clearNodeLoadAndStores(unsigned id) {
 void MemRefDependenceGraph::forEachMemRefInputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (inEdges.count(id) > 0)
-    forEachMemRefEdge(inEdges[id], callback);
+    forEachMemRefEdge(inEdges.at(id), callback);
 }
 
 // Calls 'callback' for each output edge from node 'id' which carries a
@@ -721,7 +813,7 @@ void MemRefDependenceGraph::forEachMemRefInputEdge(
 void MemRefDependenceGraph::forEachMemRefOutputEdge(
     unsigned id, const std::function<void(Edge)> &callback) {
   if (outEdges.count(id) > 0)
-    forEachMemRefEdge(outEdges[id], callback);
+    forEachMemRefEdge(outEdges.at(id), callback);
 }
 
 // Calls 'callback' for each edge in 'edges' which carries a memref
@@ -733,9 +825,6 @@ void MemRefDependenceGraph::forEachMemRefEdge(
     if (!isa<MemRefType>(edge.value.getType()))
       continue;
     assert(nodes.count(edge.id) > 0);
-    // Skip if 'edge.id' is not a loop nest.
-    if (!isa<AffineForOp>(getNode(edge.id)->op))
-      continue;
     // Visit current input edge 'edge'.
     callback(edge);
   }
@@ -963,20 +1052,20 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   FlatAffineValueConstraints srcConstraints;
   // TODO: Store the source's domain to avoid computation at each depth.
   if (failed(getSourceAsConstraints(srcConstraints))) {
-    LLVM_DEBUG(llvm::dbgs() << "Unable to compute source's domain\n");
+    LDBG() << "Unable to compute source's domain";
     return std::nullopt;
   }
   // As the set difference utility currently cannot handle symbols in its
   // operands, validity of the slice cannot be determined.
   if (srcConstraints.getNumSymbolVars() > 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Cannot handle symbols in source domain\n");
+    LDBG() << "Cannot handle symbols in source domain";
     return std::nullopt;
   }
   // TODO: Handle local vars in the source domains while using the 'projectOut'
   // utility below. Currently, aligning is not done assuming that there will be
   // no local vars in the source domain.
   if (srcConstraints.getNumLocalVars() != 0) {
-    LLVM_DEBUG(llvm::dbgs() << "Cannot handle locals in source domain\n");
+    LDBG() << "Cannot handle locals in source domain";
     return std::nullopt;
   }
 
@@ -984,7 +1073,7 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   // fusion succeeds.
   FlatAffineValueConstraints sliceConstraints;
   if (failed(getAsConstraints(&sliceConstraints))) {
-    LLVM_DEBUG(llvm::dbgs() << "Unable to compute slice's domain\n");
+    LDBG() << "Unable to compute slice's domain";
     return std::nullopt;
   }
 
@@ -993,11 +1082,11 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   sliceConstraints.projectOut(ivs.size(),
                               sliceConstraints.getNumVars() - ivs.size());
 
-  LLVM_DEBUG(llvm::dbgs() << "Domain of the source of the slice:\n");
-  LLVM_DEBUG(srcConstraints.dump());
-  LLVM_DEBUG(llvm::dbgs() << "Domain of the slice if this fusion succeeds "
-                             "(expressed in terms of its source's IVs):\n");
-  LLVM_DEBUG(sliceConstraints.dump());
+  LDBG() << "Domain of the source of the slice:\n"
+         << "Source constraints:" << srcConstraints
+         << "\nDomain of the slice if this fusion succeeds "
+         << "(expressed in terms of its source's IVs):\n"
+         << "Slice constraints:" << sliceConstraints;
 
   // TODO: Store 'srcSet' to avoid recalculating for each depth.
   PresburgerSet srcSet(srcConstraints);
@@ -1005,7 +1094,7 @@ std::optional<bool> ComputationSliceState::isSliceValid() const {
   PresburgerSet diffSet = sliceSet.subtract(srcSet);
 
   if (!diffSet.isIntegerEmpty()) {
-    LLVM_DEBUG(llvm::dbgs() << "Incorrect slice\n");
+    LDBG() << "Incorrect slice";
     return false;
   }
   return true;
@@ -1178,8 +1267,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
 
   unsigned rank = access.getRank();
 
-  LLVM_DEBUG(llvm::dbgs() << "MemRefRegion::compute: " << *op
-                          << "\ndepth: " << loopDepth << "\n";);
+  LDBG() << "MemRefRegion::compute: " << *op << " depth: " << loopDepth;
 
   // 0-d memrefs.
   if (rank == 0) {
@@ -1242,7 +1330,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
       if (auto constVal = getConstantIntValue(symbol))
         cst.addBound(BoundType::EQ, symbol, constVal.value());
     } else {
-      LLVM_DEBUG(llvm::dbgs() << "unknown affine dimensional value");
+      LDBG() << "unknown affine dimensional value";
       return failure();
     }
   }
@@ -1266,7 +1354,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   // Add access function equalities to connect loop IVs to data dimensions.
   if (failed(cst.composeMap(&accessValueMap))) {
     op->emitError("getMemRefRegion: compose affine map failed");
-    LLVM_DEBUG(accessValueMap.getAffineMap().dump());
+    LDBG() << "Access map: " << accessValueMap.getAffineMap();
     return failure();
   }
 
@@ -1323,8 +1411,7 @@ LogicalResult MemRefRegion::compute(Operation *op, unsigned loopDepth,
   }
   cst.removeTrivialRedundancy();
 
-  LLVM_DEBUG(llvm::dbgs() << "Memory region:\n");
-  LLVM_DEBUG(cst.dump());
+  LDBG() << "Memory region: " << cst;
   return success();
 }
 
@@ -1352,20 +1439,14 @@ std::optional<int64_t> MemRefRegion::getRegionSize() {
   auto memRefType = cast<MemRefType>(memref.getType());
 
   if (!memRefType.getLayout().isIdentity()) {
-    LLVM_DEBUG(llvm::dbgs() << "Non-identity layout map not yet supported\n");
+    LDBG() << "Non-identity layout map not yet supported";
     return false;
   }
-
-  // Indices to use for the DmaStart op.
-  // Indices for the original memref being DMAed from/to.
-  SmallVector<Value, 4> memIndices;
-  // Indices for the faster buffer being DMAed into/from.
-  SmallVector<Value, 4> bufIndices;
 
   // Compute the extents of the buffer.
   std::optional<int64_t> numElements = getConstantBoundingSizeAndShape();
   if (!numElements) {
-    LLVM_DEBUG(llvm::dbgs() << "Dynamic shapes not yet supported\n");
+    LDBG() << "Dynamic shapes not yet supported";
     return std::nullopt;
   }
   auto eltSize = getMemRefIntOrFloatEltSizeInBytes(memRefType);
@@ -1409,8 +1490,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
                             /*addMemRefDimBounds=*/false)))
     return success();
 
-  LLVM_DEBUG(llvm::dbgs() << "Memory region");
-  LLVM_DEBUG(region.getConstraints()->dump());
+  LDBG() << "Memory region: " << region.getConstraints();
 
   bool outOfBounds = false;
   unsigned rank = loadOrStoreOp.getMemRefType().getRank();
@@ -1438,7 +1518,7 @@ LogicalResult mlir::affine::boundCheckLoadOrStoreOp(LoadOrStoreOp loadOrStoreOp,
 
     // Check for a negative index.
     FlatAffineValueConstraints lcst(*region.getConstraints());
-    std::fill(ineq.begin(), ineq.end(), 0);
+    llvm::fill(ineq, 0);
     // d_i <= -1;
     lcst.addBound(BoundType::UB, r, -1);
     outOfBounds = !lcst.isEmpty();
@@ -1559,16 +1639,18 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   FlatAffineValueConstraints sliceUnionCst;
   assert(sliceUnionCst.getNumDimAndSymbolVars() == 0);
   std::vector<std::pair<Operation *, Operation *>> dependentOpPairs;
-  for (Operation *i : opsA) {
-    MemRefAccess srcAccess(i);
-    for (Operation *j : opsB) {
-      MemRefAccess dstAccess(j);
+  MemRefAccess srcAccess;
+  MemRefAccess dstAccess;
+  for (Operation *a : opsA) {
+    srcAccess = MemRefAccess(a);
+    for (Operation *b : opsB) {
+      dstAccess = MemRefAccess(b);
       if (srcAccess.memref != dstAccess.memref)
         continue;
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
-      if ((!isBackwardSlice && loopDepth > getNestingDepth(i)) ||
-          (isBackwardSlice && loopDepth > getNestingDepth(j))) {
-        LLVM_DEBUG(llvm::dbgs() << "Invalid loop depth\n");
+      if ((!isBackwardSlice && loopDepth > getNestingDepth(a)) ||
+          (isBackwardSlice && loopDepth > getNestingDepth(b))) {
+        LDBG() << "Invalid loop depth";
         return SliceComputationResult::GenericFailure;
       }
 
@@ -1581,24 +1663,22 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
           &dependenceConstraints, /*dependenceComponents=*/nullptr,
           /*allowRAR=*/readReadAccesses);
       if (result.value == DependenceResult::Failure) {
-        LLVM_DEBUG(llvm::dbgs() << "Dependence check failed\n");
+        LDBG() << "Dependence check failed";
         return SliceComputationResult::GenericFailure;
       }
       if (result.value == DependenceResult::NoDependence)
         continue;
-      dependentOpPairs.emplace_back(i, j);
+      dependentOpPairs.emplace_back(a, b);
 
       // Compute slice bounds for 'srcAccess' and 'dstAccess'.
       ComputationSliceState tmpSliceState;
-      mlir::affine::getComputationSliceState(i, j, dependenceConstraints,
-                                             loopDepth, isBackwardSlice,
-                                             &tmpSliceState);
+      getComputationSliceState(a, b, dependenceConstraints, loopDepth,
+                               isBackwardSlice, &tmpSliceState);
 
       if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
         // Initialize 'sliceUnionCst' with the bounds computed in previous step.
         if (failed(tmpSliceState.getAsConstraints(&sliceUnionCst))) {
-          LLVM_DEBUG(llvm::dbgs()
-                     << "Unable to compute slice bound constraints\n");
+          LDBG() << "Unable to compute slice bound constraints";
           return SliceComputationResult::GenericFailure;
         }
         assert(sliceUnionCst.getNumDimAndSymbolVars() > 0);
@@ -1608,8 +1688,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
       // Compute constraints for 'tmpSliceState' in 'tmpSliceCst'.
       FlatAffineValueConstraints tmpSliceCst;
       if (failed(tmpSliceState.getAsConstraints(&tmpSliceCst))) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute slice bound constraints\n");
+        LDBG() << "Unable to compute slice bound constraints";
         return SliceComputationResult::GenericFailure;
       }
 
@@ -1641,8 +1720,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
       if (sliceUnionCst.getNumLocalVars() > 0 ||
           tmpSliceCst.getNumLocalVars() > 0 ||
           failed(sliceUnionCst.unionBoundingBox(tmpSliceCst))) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Unable to compute union bounding box of slice bounds\n");
+        LDBG() << "Unable to compute union bounding box of slice bounds";
         return SliceComputationResult::GenericFailure;
       }
     }
@@ -1650,7 +1728,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
 
   // Empty union.
   if (sliceUnionCst.getNumDimAndSymbolVars() == 0) {
-    LLVM_DEBUG(llvm::dbgs() << "empty slice union - unexpected\n");
+    LDBG() << "empty slice union - unexpected";
     return SliceComputationResult::GenericFailure;
   }
 
@@ -1663,7 +1741,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   unsigned innermostCommonLoopDepth =
       getInnermostCommonLoopDepth(ops, &surroundingLoops);
   if (loopDepth > innermostCommonLoopDepth) {
-    LLVM_DEBUG(llvm::dbgs() << "Exceeds max loop depth\n");
+    LDBG() << "Exceeds max loop depth";
     return SliceComputationResult::GenericFailure;
   }
 
@@ -1707,7 +1785,7 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   // that the slice is valid, otherwise return appropriate failure status.
   std::optional<bool> isSliceValid = sliceUnion->isSliceValid();
   if (!isSliceValid) {
-    LLVM_DEBUG(llvm::dbgs() << "Cannot determine if the slice is valid\n");
+    LDBG() << "Cannot determine if the slice is valid";
     return SliceComputationResult::GenericFailure;
   }
   if (!*isSliceValid)
@@ -1957,16 +2035,16 @@ AffineForOp mlir::affine::insertBackwardComputationSlice(
 
 // Constructs  MemRefAccess populating it with the memref, its indices and
 // opinst from 'loadOrStoreOpInst'.
-MemRefAccess::MemRefAccess(Operation *loadOrStoreOpInst) {
-  if (auto loadOp = dyn_cast<AffineReadOpInterface>(loadOrStoreOpInst)) {
+MemRefAccess::MemRefAccess(Operation *memOp) {
+  if (auto loadOp = dyn_cast<AffineReadOpInterface>(memOp)) {
     memref = loadOp.getMemRef();
-    opInst = loadOrStoreOpInst;
+    opInst = memOp;
     llvm::append_range(indices, loadOp.getMapOperands());
   } else {
-    assert(isa<AffineWriteOpInterface>(loadOrStoreOpInst) &&
+    assert(isa<AffineWriteOpInterface>(memOp) &&
            "Affine read/write op expected");
-    auto storeOp = cast<AffineWriteOpInterface>(loadOrStoreOpInst);
-    opInst = loadOrStoreOpInst;
+    auto storeOp = cast<AffineWriteOpInterface>(memOp);
+    opInst = memOp;
     memref = storeOp.getMemRef();
     llvm::append_range(indices, storeOp.getMapOperands());
   }
@@ -2061,7 +2139,8 @@ static std::optional<int64_t> getMemoryFootprintBytes(Block &block,
     if (failed(
             region->compute(opInst,
                             /*loopDepth=*/getNestingDepth(&*block.begin())))) {
-      LLVM_DEBUG(opInst->emitError("error obtaining memory region"));
+      LDBG() << "Error obtaining memory region";
+      opInst->emitError("error obtaining memory region");
       return failure();
     }
 
@@ -2069,9 +2148,11 @@ static std::optional<int64_t> getMemoryFootprintBytes(Block &block,
     if (inserted) {
       it->second = std::move(region);
     } else if (failed(it->second->unionBoundingBox(*region))) {
-      LLVM_DEBUG(opInst->emitWarning(
+      LDBG() << "getMemoryFootprintBytes: unable to perform a union on a "
+                "memory region";
+      opInst->emitWarning(
           "getMemoryFootprintBytes: unable to perform a union on a memory "
-          "region"));
+          "region");
       return failure();
     }
     return WalkResult::advance();

@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
@@ -36,6 +37,15 @@ namespace fir {
 using namespace Fortran::runtime::cuda;
 
 namespace {
+
+static bool isAssumedSize(mlir::ValueRange shape) {
+  if (shape.size() != 1)
+    return false;
+  std::optional<std::int64_t> val = fir::getIntIfConstant(shape[0]);
+  if (val && *val == -1)
+    return true;
+  return false;
+}
 
 struct CUFComputeSharedMemoryOffsetsAndSize
     : public fir::impl::CUFComputeSharedMemoryOffsetsAndSizeBase<
@@ -57,38 +67,65 @@ struct CUFComputeSharedMemoryOffsetsAndSize
 
     auto gpuMod = cuf::getOrCreateGPUModule(mod, symTab);
     mlir::Type i8Ty = builder.getI8Type();
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::Type idxTy = builder.getIndexType();
     for (auto funcOp : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
       unsigned nbDynamicSharedVariables = 0;
       unsigned nbStaticSharedVariables = 0;
       uint64_t sharedMemSize = 0;
       unsigned short alignment = 0;
+      mlir::Value crtDynOffset;
 
       // Go over each shared memory operation and compute their start offset and
       // the size and alignment of the global to be generated if all variables
       // are static. If this is dynamic shared memory, then only the alignment
       // is computed.
       for (auto sharedOp : funcOp.getOps<cuf::SharedMemoryOp>()) {
+        mlir::Location loc = sharedOp.getLoc();
+        builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
           mlir::Type ty = sharedOp.getInType();
-          // getTypeSizeAndAlignmentOrCrash will crash trying to compute the
-          // size of an array with dynamic size. Just get the alignment to
-          // create the global.
           if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
             ty = seqTy.getEleTy();
           unsigned short align = dl->getTypeABIAlignment(ty);
-          ++nbDynamicSharedVariables;
-          sharedOp.setOffset(0);
           alignment = std::max(alignment, align);
+          uint64_t tySize = dl->getTypeSize(ty);
+          ++nbDynamicSharedVariables;
+          if (isAssumedSize(sharedOp.getShape()) || !crtDynOffset) {
+            mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
+            sharedOp.getOffsetMutable().assign(zero);
+          } else {
+            sharedOp.getOffsetMutable().assign(
+                builder.createConvert(loc, i32Ty, crtDynOffset));
+          }
+
+          mlir::Value dynSize =
+              builder.createIntegerConstant(loc, idxTy, tySize);
+          for (auto extent : sharedOp.getShape())
+            dynSize =
+                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
+          if (crtDynOffset)
+            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+                                                       crtDynOffset, dynSize);
+          else
+            crtDynOffset = dynSize;
+
           continue;
         }
         auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
             sharedOp.getLoc(), sharedOp.getInType(), *dl, kindMap);
         ++nbStaticSharedVariables;
-        sharedOp.setOffset(llvm::alignTo(sharedMemSize, align));
+        mlir::Value offset = builder.createIntegerConstant(
+            loc, i32Ty, llvm::alignTo(sharedMemSize, align));
+        sharedOp.getOffsetMutable().assign(offset);
         sharedMemSize =
             llvm::alignTo(sharedMemSize, align) + llvm::alignTo(size, align);
         alignment = std::max(alignment, align);
       }
+
+      if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
+        continue;
+
       if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
         mlir::emitError(
             funcOp.getLoc(),
@@ -106,7 +143,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
       auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
       std::string sharedMemGlobalName =
           (funcOp.getName() + llvm::Twine(cudaSharedMemSuffix)).str();
-      mlir::StringAttr linkage = builder.createInternalLinkage();
+      // Dynamic shared memory needs an external linkage while static shared
+      // memory needs an internal linkage.
+      mlir::StringAttr linkage = nbDynamicSharedVariables > 0
+                                     ? builder.createExternalLinkage()
+                                     : builder.createInternalLinkage();
       builder.setInsertionPointToEnd(gpuMod.getBody());
       llvm::SmallVector<mlir::NamedAttribute> attrs;
       auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
@@ -115,9 +156,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           fir::GlobalOp::getDataAttrAttrName(globalOpName),
           cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                       cuf::DataAttribute::Shared)));
-      auto sharedMem = builder.create<fir::GlobalOp>(
-          funcOp.getLoc(), sharedMemGlobalName, false, false, sharedMemType,
-          init, linkage, attrs);
+      auto sharedMem = fir::GlobalOp::create(
+          builder, funcOp.getLoc(), sharedMemGlobalName, false, false,
+          sharedMemType, init, linkage, attrs);
       sharedMem.setAlignment(alignment);
     }
   }

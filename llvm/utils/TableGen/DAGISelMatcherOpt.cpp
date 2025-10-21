@@ -282,8 +282,8 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 #endif
 
         if (ResultsMatch) {
-          const SmallVectorImpl<MVT::SimpleValueType> &VTs = EN->getVTList();
-          const SmallVectorImpl<unsigned> &Operands = EN->getOperandList();
+          ArrayRef<MVT::SimpleValueType> VTs = EN->getVTList();
+          ArrayRef<unsigned> Operands = EN->getOperandList();
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
               EN->hasInGlue(), EN->hasOutGlue(), EN->hasMemRefs(),
@@ -314,7 +314,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
   MatcherPtr = &(MatcherPtr->get()->getNextPtr());
 
   // If we reached the end of the chain, we're done.
-  if (!MatcherPtr->get())
+  if (!*MatcherPtr)
     return;
   }
 }
@@ -519,9 +519,9 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
       CheckTypeMatcher *CTM = cast_or_null<CheckTypeMatcher>(
           FindNodeWithKind(Optn, Matcher::CheckType));
       if (!CTM ||
-          // iPTR checks could alias any other case without us knowing, don't
-          // bother with them.
-          CTM->getType() == MVT::iPTR ||
+          // iPTR/cPTR checks could alias any other case without us knowing,
+          // don't bother with them.
+          CTM->getType() == MVT::iPTR || CTM->getType() == MVT::cPTR ||
           // SwitchType only works for result #0.
           CTM->getResNo() != 0 ||
           // If the CheckType isn't at the start of the list, see if we can move

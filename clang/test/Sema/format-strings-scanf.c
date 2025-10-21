@@ -30,6 +30,7 @@ int fscanf(FILE * restrict, const char * restrict, ...) ;
 int scanf(const char * restrict, ...) ;
 int sscanf(const char * restrict, const char * restrict, ...) ;
 int my_scanf(const char * restrict, ...) __attribute__((__format__(__scanf__, 1, 2)));
+int my_gnu_scanf(const char * restrict, ...) __attribute__((__format__(gnu_scanf, 1, 2)));
 
 int vscanf(const char * restrict, va_list);
 int vfscanf(FILE * restrict, const char * restrict, va_list);
@@ -98,6 +99,7 @@ void test_variants(int *i, const char *s, ...) {
   fscanf(f, "%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
   sscanf(buf, "%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
   my_scanf("%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  my_gnu_scanf("%ld", i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
 
   va_list ap;
   va_start(ap, s);
@@ -210,13 +212,13 @@ void test_size_types(void) {
   scanf("%zd", &s); // No warning.
 
   double d2 = 0.;
-  scanf("%zd", &d2); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+  scanf("%zd", &d2); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ssize_t sn = 0;
   scanf("%zn", &sn); // No warning.
 
   double d3 = 0.;
-  scanf("%zn", &d3); // expected-warning-re{{format specifies type 'ssize_t *' (aka '{{.+}}') but the argument has type 'double *'}}
+  scanf("%zn", &d3); // expected-warning-re{{format specifies type 'signed size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
 
 void test_ptrdiff_t_types(void) {

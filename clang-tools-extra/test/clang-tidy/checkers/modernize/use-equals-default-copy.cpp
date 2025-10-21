@@ -35,7 +35,7 @@ struct IL {
 // Skip unions.
 union NU {
   NU(const NU &Other) : Field(Other.Field) {}
-  // CHECK-FIXES: NU(const NU &Other) :
+  // CHECK-FIXES: NU(const NU &Other) : Field(Other.Field) {}
   NU &operator=(const NU &Other) {
     Field = Other.Field;
     return *this;
@@ -47,7 +47,7 @@ union NU {
 // Skip structs/classes containing anonymous unions.
 struct SU {
   SU(const SU &Other) : Field(Other.Field) {}
-  // CHECK-FIXES: SU(const SU &Other) :
+  // CHECK-FIXES: SU(const SU &Other) : Field(Other.Field) {}
   SU &operator=(const SU &Other) {
     Field = Other.Field;
     return *this;
@@ -147,7 +147,7 @@ struct BF {
   BF(const BF &Other) : Field1(Other.Field1), Field2(Other.Field2), Field3(Other.Field3),
                         Field4(Other.Field4) {};
   // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use '= default'
-  // CHECK-FIXES: BF(const BF &Other) {{$}}
+  // CHECK-FIXES: BF(const BF &Other)
   // CHECK-FIXES:                     = default;
   BF &operator=(const BF &);
 

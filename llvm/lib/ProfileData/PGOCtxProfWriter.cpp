@@ -13,7 +13,6 @@
 #include "llvm/ProfileData/PGOCtxProfWriter.h"
 #include "llvm/Bitstream/BitCodeEnums.h"
 #include "llvm/ProfileData/CtxInstrContextNode.h"
-#include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -58,6 +57,7 @@ PGOCtxProfileWriter::PGOCtxProfileWriter(
     DescribeRecord(PGOCtxProfileRecords::TotalRootEntryCount,
                    "TotalRootEntryCount");
     DescribeRecord(PGOCtxProfileRecords::Counters, "Counters");
+    DescribeBlock(PGOCtxProfileBlockIDs::UnhandledBlockID, "Unhandled");
     DescribeBlock(PGOCtxProfileBlockIDs::ContextNodeBlockID, "Context");
     DescribeRecord(PGOCtxProfileRecords::Guid, "GUID");
     DescribeRecord(PGOCtxProfileRecords::CallsiteIndex, "CalleeIndex");
@@ -135,6 +135,7 @@ void PGOCtxProfileWriter::endContextSection() { Writer.ExitBlock(); }
 void PGOCtxProfileWriter::endFlatSection() { Writer.ExitBlock(); }
 
 void PGOCtxProfileWriter::writeContextual(const ContextNode &RootNode,
+                                          const ContextNode *Unhandled,
                                           uint64_t TotalRootEntryCount) {
   if (!IncludeEmpty && (!TotalRootEntryCount || (RootNode.counters_size() > 0 &&
                                                  RootNode.entrycount() == 0)))
@@ -143,6 +144,12 @@ void PGOCtxProfileWriter::writeContextual(const ContextNode &RootNode,
   writeGuid(RootNode.guid());
   writeRootEntryCount(TotalRootEntryCount);
   writeCounters({RootNode.counters(), RootNode.counters_size()});
+
+  Writer.EnterSubblock(PGOCtxProfileBlockIDs::UnhandledBlockID, CodeLen);
+  for (const auto *P = Unhandled; P; P = P->next())
+    writeFlat(P->guid(), P->counters(), P->counters_size());
+  Writer.ExitBlock();
+
   writeSubcontexts(RootNode);
   Writer.ExitBlock();
 }
@@ -159,6 +166,9 @@ namespace {
 
 /// Representation of the context node suitable for yaml serialization /
 /// deserialization.
+using SerializableFlatProfileRepresentation =
+    std::pair<ctx_profile::GUID, std::vector<uint64_t>>;
+
 struct SerializableCtxRepresentation {
   ctx_profile::GUID Guid = 0;
   std::vector<uint64_t> Counters;
@@ -167,10 +177,8 @@ struct SerializableCtxRepresentation {
 
 struct SerializableRootRepresentation : public SerializableCtxRepresentation {
   uint64_t TotalRootEntryCount = 0;
+  std::vector<SerializableFlatProfileRepresentation> Unhandled;
 };
-
-using SerializableFlatProfileRepresentation =
-    std::pair<ctx_profile::GUID, std::vector<uint64_t>>;
 
 struct SerializableProfileRepresentation {
   std::vector<SerializableRootRepresentation> Contexts;
@@ -228,6 +236,7 @@ template <> struct yaml::MappingTraits<SerializableRootRepresentation> {
   static void mapping(yaml::IO &IO, SerializableRootRepresentation &R) {
     yaml::MappingTraits<SerializableCtxRepresentation>::mapping(IO, R);
     IO.mapRequired("TotalRootEntryCount", R.TotalRootEntryCount);
+    IO.mapOptional("Unhandled", R.Unhandled);
   }
 };
 
@@ -265,7 +274,15 @@ Error llvm::createCtxProfFromYAML(StringRef Profile, raw_ostream &Out) {
       if (!TopList)
         return createStringError(
             "Unexpected error converting internal structure to ctx profile");
-      Writer.writeContextual(*TopList, DC.TotalRootEntryCount);
+
+      ctx_profile::ContextNode *FirstUnhandled = nullptr;
+      for (const auto &U : DC.Unhandled) {
+        SerializableCtxRepresentation Unhandled;
+        Unhandled.Guid = U.first;
+        Unhandled.Counters = U.second;
+        FirstUnhandled = createNode(Nodes, Unhandled, FirstUnhandled);
+      }
+      Writer.writeContextual(*TopList, FirstUnhandled, DC.TotalRootEntryCount);
     }
     Writer.endContextSection();
   }

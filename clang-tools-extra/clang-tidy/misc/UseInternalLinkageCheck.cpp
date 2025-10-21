@@ -1,4 +1,4 @@
-//===--- UseInternalLinkageCheck.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -130,7 +130,10 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                                 isMain())))
           .bind("fn"),
       this);
-  Finder->addMatcher(varDecl(Common, hasGlobalStorage()).bind("var"), this);
+  Finder->addMatcher(
+      varDecl(Common, hasGlobalStorage(), unless(hasThreadStorageDuration()))
+          .bind("var"),
+      this);
 }
 
 static constexpr StringRef Message =

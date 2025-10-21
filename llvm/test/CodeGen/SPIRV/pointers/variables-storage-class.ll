@@ -1,5 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.2-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env opencl2.2 %}
 
 ; CHECK-DAG: %[[#U8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#U32:]] = OpTypeInt 32 0
@@ -15,12 +15,7 @@
 ; CHECK-DAG: %[[#INIT:]] = OpVariable %[[#VTYPE]] UniformConstant %[[#VAL]]
 @Init = private addrspace(2) constant i32 123
 
-; CHECK-DAG: %[[#VAL:]] = OpConstant %[[#U32]] 456
-; CHECK-DAG: %[[#VTYPE:]] = OpTypePointer Private %[[#U32]]
-; CHECK-DAG: %[[#]] = OpVariable %[[#VTYPE]] Private %[[#VAL]]
-@PrivInternal = internal addrspace(10) global i32 456
-
-define spir_kernel void @Foo() {
+define internal spir_func void @Foo() {
   ; CHECK: %[[#]] = OpLoad %[[#]] %[[#PTR]] Aligned 8
   %l = load ptr addrspace(1), ptr addrspace(1) @Ptr, align 8
   ; CHECK: OpCopyMemorySized %[[#]] %[[#INIT]] %[[#]] Aligned 4

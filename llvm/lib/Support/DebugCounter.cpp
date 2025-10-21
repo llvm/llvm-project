@@ -136,6 +136,13 @@ struct DebugCounterOwner : DebugCounter {
       cl::location(this->ShouldPrintCounter),
       cl::init(false),
       cl::desc("Print out debug counter info after all counters accumulated")};
+  cl::opt<bool, true> PrintDebugCounterQueries{
+      "print-debug-counter-queries",
+      cl::Hidden,
+      cl::Optional,
+      cl::location(this->ShouldPrintCounterQueries),
+      cl::init(false),
+      cl::desc("Print out each query of an enabled debug counter")};
   cl::opt<bool, true> BreakOnLastCount{
       "debug-counter-break-on-last",
       cl::Hidden,
@@ -172,6 +179,11 @@ DebugCounter &DebugCounter::instance() {
 void DebugCounter::push_back(const std::string &Val) {
   if (Val.empty())
     return;
+#ifdef NDEBUG
+  // isCountingEnabled is hardcoded to false in NDEBUG.
+  errs() << "Requested --debug-counter in LLVM build without assertions. This "
+            "is a no-op.\n";
+#endif
 
   // The strings should come in as counter=chunk_list
   auto CounterPair = StringRef(Val).split('=');
@@ -216,31 +228,40 @@ void DebugCounter::print(raw_ostream &OS) const {
   }
 }
 
+bool DebugCounter::handleCounterIncrement(CounterInfo &Info) {
+  int64_t CurrCount = Info.Count++;
+  uint64_t CurrIdx = Info.CurrChunkIdx;
+
+  if (Info.Chunks.empty())
+    return true;
+  if (CurrIdx >= Info.Chunks.size())
+    return false;
+
+  bool Res = Info.Chunks[CurrIdx].contains(CurrCount);
+  if (BreakOnLast && CurrIdx == (Info.Chunks.size() - 1) &&
+      CurrCount == Info.Chunks[CurrIdx].End) {
+    LLVM_BUILTIN_DEBUGTRAP;
+  }
+  if (CurrCount > Info.Chunks[CurrIdx].End) {
+    Info.CurrChunkIdx++;
+
+    /// Handle consecutive blocks.
+    if (Info.CurrChunkIdx < Info.Chunks.size() &&
+        CurrCount == Info.Chunks[Info.CurrChunkIdx].Begin)
+      return true;
+  }
+  return Res;
+}
+
 bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
   auto &Us = instance();
   auto Result = Us.Counters.find(CounterName);
   if (Result != Us.Counters.end()) {
     auto &CounterInfo = Result->second;
-    int64_t CurrCount = CounterInfo.Count++;
-    uint64_t CurrIdx = CounterInfo.CurrChunkIdx;
-
-    if (CounterInfo.Chunks.empty())
-      return true;
-    if (CurrIdx >= CounterInfo.Chunks.size())
-      return false;
-
-    bool Res = CounterInfo.Chunks[CurrIdx].contains(CurrCount);
-    if (Us.BreakOnLast && CurrIdx == (CounterInfo.Chunks.size() - 1) &&
-        CurrCount == CounterInfo.Chunks[CurrIdx].End) {
-      LLVM_BUILTIN_DEBUGTRAP;
-    }
-    if (CurrCount > CounterInfo.Chunks[CurrIdx].End) {
-      CounterInfo.CurrChunkIdx++;
-
-      /// Handle consecutive blocks.
-      if (CounterInfo.CurrChunkIdx < CounterInfo.Chunks.size() &&
-          CurrCount == CounterInfo.Chunks[CounterInfo.CurrChunkIdx].Begin)
-        return true;
+    bool Res = Us.handleCounterIncrement(CounterInfo);
+    if (Us.ShouldPrintCounterQueries && CounterInfo.IsSet) {
+      dbgs() << "DebugCounter " << Us.RegisteredCounters[CounterName] << "="
+             << (CounterInfo.Count - 1) << (Res ? " execute" : " skip") << "\n";
     }
     return Res;
   }
@@ -248,6 +269,8 @@ bool DebugCounter::shouldExecuteImpl(unsigned CounterName) {
   return true;
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugCounter::dump() const {
   print(dbgs());
 }
+#endif

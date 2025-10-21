@@ -530,7 +530,7 @@ SDNode *DAGTypeLegalizer::AnalyzeNewNode(SDNode *N) {
       NewOps.push_back(Op);
     } else if (Op != OrigOp) {
       // This is the first operand to change - add all operands so far.
-      NewOps.insert(NewOps.end(), N->op_begin(), N->op_begin() + i);
+      llvm::append_range(NewOps, N->ops().take_front(i));
       NewOps.push_back(Op);
     }
   }
@@ -1001,11 +1001,10 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
                               LVT.getSizeInBits() + HVT.getSizeInBits());
 
-  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::ZERO_EXTEND, dlLo, NVT, Lo);
   Hi = DAG.getNode(ISD::ANY_EXTEND, dlHi, NVT, Hi);
   Hi = DAG.getNode(ISD::SHL, dlHi, NVT, Hi,
-                   DAG.getConstant(LVT.getSizeInBits(), dlHi, ShiftAmtVT));
+                   DAG.getShiftAmountConstant(LVT.getSizeInBits(), NVT, dlHi));
   return DAG.getNode(ISD::OR, dlHi, NVT, Lo, Hi);
 }
 
@@ -1026,14 +1025,9 @@ void DAGTypeLegalizer::SplitInteger(SDValue Op,
   assert(LoVT.getSizeInBits() + HiVT.getSizeInBits() ==
          Op.getValueSizeInBits() && "Invalid integer splitting!");
   Lo = DAG.getNode(ISD::TRUNCATE, dl, LoVT, Op);
-  unsigned ReqShiftAmountInBits =
-      Log2_32_Ceil(Op.getValueType().getSizeInBits());
-  MVT ShiftAmountTy =
-      TLI.getScalarShiftAmountTy(DAG.getDataLayout(), Op.getValueType());
-  if (ReqShiftAmountInBits > ShiftAmountTy.getSizeInBits())
-    ShiftAmountTy = MVT::getIntegerVT(NextPowerOf2(ReqShiftAmountInBits));
-  Hi = DAG.getNode(ISD::SRL, dl, Op.getValueType(), Op,
-                   DAG.getConstant(LoVT.getSizeInBits(), dl, ShiftAmountTy));
+  Hi = DAG.getNode(
+      ISD::SRL, dl, Op.getValueType(), Op,
+      DAG.getShiftAmountConstant(LoVT.getSizeInBits(), Op.getValueType(), dl));
   Hi = DAG.getNode(ISD::TRUNCATE, dl, HiVT, Hi);
 }
 

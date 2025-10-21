@@ -71,7 +71,7 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   // Test with various allocators and different `size_type`s
   {
     test(std::vector<bool>());
-    test(std::vector<bool, std::allocator<int> >());
+    test(std::vector<bool, std::allocator<bool> >());
     test(std::vector<bool, min_allocator<bool> >());
     test(std::vector<bool, test_allocator<bool> >(test_allocator<bool>(1)));
     test(std::vector<bool, other_allocator<bool> >(other_allocator<bool>(5)));

@@ -376,8 +376,6 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
   if (SpillMode)
     LICalc[1].reset(&VRM.getMachineFunction(), LIS.getSlotIndexes(), &MDT,
                     &LIS.getVNInfoAllocator());
-
-  Edit->anyRematerializable();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -638,7 +636,7 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
     if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
-        Edit->canRematerializeAt(RM, OrigVNI, UseIdx)) {
+        Edit->canRematerializeAt(RM, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
         SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
         ++NumRemats;
@@ -1519,8 +1517,7 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();
   do {
-    const VNInfo &VNI = *WorkList.back();
-    WorkList.pop_back();
+    const VNInfo &VNI = *WorkList.pop_back_val();
     for (unsigned I = 0, E = Edit->size(); I != E; ++I)
       forceRecompute(I, VNI);
     if (!VNI.isPHIDef())

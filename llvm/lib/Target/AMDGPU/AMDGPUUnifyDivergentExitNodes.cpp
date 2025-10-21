@@ -74,10 +74,7 @@ public:
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
 public:
   static char ID;
-  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {
-    initializeAMDGPUUnifyDivergentExitNodesPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };

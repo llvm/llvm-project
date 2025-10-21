@@ -539,16 +539,16 @@ UnwindPlanSP ABISysV_loongarch::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = loongarch_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = loongarch_dwarf::dwarf_gpr_ra;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define CFA as the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
-  row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("loongarch function-entry unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -558,11 +558,10 @@ UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define the CFA as the current frame pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
-  row->SetOffset(0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
   int reg_size = 4;
   if (m_is_la64)
@@ -570,11 +569,11 @@ UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
 
   // Assume the ra reg (return pc) and caller's frame pointer
   // have been spilled to stack already.
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("loongarch default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -598,15 +597,16 @@ bool ABISysV_loongarch::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
 
   return llvm::StringSwitch<bool>(name)
       // integer ABI names
-      .Cases("ra", "sp", "fp", true)
-      .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", true)
+      .Cases({"ra", "sp", "fp"}, true)
+      .Cases({"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"}, true)
       // integer hardware names
-      .Cases("r1", "r3", "r22", true)
-      .Cases("r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31", true)
+      .Cases({"r1", "r3", "r22"}, true)
+      .Cases({"r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "31"},
+             true)
       // floating point ABI names
-      .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7", is_hw_fp)
+      .Cases({"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7"}, is_hw_fp)
       // floating point hardware names
-      .Cases("f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31", is_hw_fp)
+      .Cases({"f24", "f25", "f26", "f27", "f28", "f29", "f30", "f31"}, is_hw_fp)
       .Default(false);
 }
 

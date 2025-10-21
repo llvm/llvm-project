@@ -76,7 +76,7 @@ define void @masked_scatter_nxv2f64(<vscale x 2 x double> %data, <vscale x 2 x p
 define void @masked_scatter_splat_constant_pointer (<vscale x 4 x i1> %pg) {
 ; CHECK-LABEL: masked_scatter_splat_constant_pointer:
 ; CHECK:       // %bb.0: // %vector.body
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p1, [z0.d]

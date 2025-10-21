@@ -6002,15 +6002,17 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB67_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB67_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxrb w9, w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB67_1
-; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
-; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    stxrb w10, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB67_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB67_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -6108,15 +6110,17 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB68_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB68_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxrh w9, w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB68_1
-; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
-; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    stxrh w10, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB68_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB68_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -6206,6 +6210,7 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i32:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:  LBB69_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxr w0, [x8]
@@ -6213,15 +6218,16 @@ define { i32, i1 } @cmpxchg_i32(ptr %ptr, i32 %desired, i32 %new) {
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB69_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB69_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxr w9, w2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB69_1
-; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
-; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    stxr w10, w2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB69_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB69_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
@@ -6306,6 +6312,7 @@ define { i64, i1 } @cmpxchg_i64(ptr %ptr, i64 %desired, i64 %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_i64:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:  LBB70_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxr x0, [x8]
@@ -6313,14 +6320,15 @@ define { i64, i1 } @cmpxchg_i64(ptr %ptr, i64 %desired, i64 %new) {
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB70_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB70_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxr w9, x2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB70_1
-; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
-; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    stxr w10, x2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB70_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB70_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_i64:
@@ -6404,6 +6412,7 @@ define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
 ; CHECK-NOLSE-O1-LABEL: cmpxchg_ptr:
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:    mov x8, x0
+; CHECK-NOLSE-O1-NEXT:    mov w9, #1 ; =0x1
 ; CHECK-NOLSE-O1-NEXT:  LBB71_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NOLSE-O1-NEXT:    ldxr x0, [x8]
@@ -6411,14 +6420,15 @@ define { ptr, i1 } @cmpxchg_ptr(ptr %ptr, ptr %desired, ptr %new) {
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB71_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB71_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxr w9, x2, [x8]
-; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB71_1
-; CHECK-NOLSE-O1-NEXT:  ; %bb.3:
-; CHECK-NOLSE-O1-NEXT:    mov w1, #1 ; =0x1
+; CHECK-NOLSE-O1-NEXT:    stxr w10, x2, [x8]
+; CHECK-NOLSE-O1-NEXT:    cbnz w10, LBB71_1
+; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ; CHECK-NOLSE-O1-NEXT:  LBB71_4: ; %cmpxchg.nostore
-; CHECK-NOLSE-O1-NEXT:    mov w1, wzr
+; CHECK-NOLSE-O1-NEXT:    mov w9, wzr
 ; CHECK-NOLSE-O1-NEXT:    clrex
+; CHECK-NOLSE-O1-NEXT:    mov w1, w9
 ; CHECK-NOLSE-O1-NEXT:    ret
 ;
 ; CHECK-OUTLINE-O1-LABEL: cmpxchg_ptr:

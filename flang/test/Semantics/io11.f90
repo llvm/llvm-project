@@ -342,7 +342,7 @@ contains
   end subroutine
 end module m15
 
-module m16
+module m16a
   type,public :: t
     integer c
   contains
@@ -355,15 +355,58 @@ contains
     class(t), intent(inout) :: dtv
     integer, intent(in) :: unit
     character(len=*), intent(in) :: iotype
-    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape
+    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape vector
     integer, intent(in) :: vlist(5)
     integer, intent(out) :: iostat
     character(len=*), intent(inout) :: iomsg
-
     iostat = 343
     stop 'fail'
   end subroutine
-end module m16
+end module m16a
+
+module m16b
+  type,public :: t
+    integer c
+  contains
+    procedure, pass :: tbp=>formattedReadProc
+    generic :: read(formatted) => tbp
+  end type
+  private
+contains
+  subroutine formattedReadProc(dtv, unit, iotype, vlist, iostat, iomsg)
+    class(t), intent(inout) :: dtv
+    integer, intent(in) :: unit
+    character(len=*), intent(in) :: iotype
+    !ERROR: Dummy argument 'vlist' of a defined input/output procedure must be assumed shape vector
+    integer, intent(in) :: vlist(:,:)
+    integer, intent(out) :: iostat
+    character(len=*), intent(inout) :: iomsg
+    iostat = 343
+    stop 'fail'
+  end subroutine
+end module m16b
+
+module m16c
+  type,public :: t
+    integer c
+  contains
+    procedure, pass :: tbp=>formattedReadProc
+    generic :: read(formatted) => tbp
+  end type
+  private
+contains
+  subroutine formattedReadProc(dtv, unit, iotype, vlist, iostat, iomsg)
+    class(t), intent(inout) :: dtv
+    integer, intent(in) :: unit
+    character(len=*), intent(in) :: iotype
+    !ERROR: Dummy argument 'vlist' may not be assumed-rank
+    integer, intent(in) :: vlist(..)
+    integer, intent(out) :: iostat
+    character(len=*), intent(inout) :: iomsg
+    iostat = 343
+    stop 'fail'
+  end subroutine
+end module m16c
 
 module m17
   ! Test the same defined input/output procedure specified as a generic
@@ -766,3 +809,24 @@ module m29
     end
   end interface
 end
+
+module m30
+    type base
+        character(5), allocatable :: data
+    end type
+    interface write(formatted)
+        subroutine formattedRead (dtv, unit, iotype, v_list, iostat, iomsg)
+        import base
+            !ERROR: Dummy argument 'dtv' of a defined input/output procedure must be a scalar
+            class (base), intent(in) :: dtv(10)
+            integer, intent(in) :: unit
+            !ERROR: Dummy argument 'iotype' of a defined input/output procedure must be a scalar
+            character(*), intent(in) :: iotype(2)
+            integer, intent(in) :: v_list(:)
+            !ERROR: Dummy argument 'iostat' of a defined input/output procedure must be a scalar
+            integer, intent(out) :: iostat(*)
+            !ERROR: Dummy argument 'iomsg' of a defined input/output procedure must be a scalar
+            character(*), intent(inout) :: iomsg(:)
+        end subroutine
+    end interface
+end module

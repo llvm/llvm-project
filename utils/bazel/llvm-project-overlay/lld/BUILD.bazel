@@ -2,13 +2,14 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
 )
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:driver.bzl", "llvm_driver_cc_binary")
-load("//llvm:tblgen.bzl", "gentbl")
+load("//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -49,7 +50,6 @@ cc_library(
         "//llvm:CodeGen",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
-        "//llvm:IRPrinter",
         "//llvm:Option",
         "//llvm:ProfileData",
         "//llvm:Support",
@@ -59,27 +59,21 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "elf_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "ELF",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "ELF/Options.inc",
-    )],
+    tbl_outs = {"ELF/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "ELF/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
     name = "ELF",
     srcs = glob([
-        "ELF/*.cpp",
-        "ELF/*.h",
-        "ELF/Arch/*.cpp",
+        "ELF/**/*.cpp",
+        "ELF/**/*.h",
     ]),
     includes = ["ELF"],
     textual_hdrs = [
@@ -116,19 +110,14 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "coff_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "COFF",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "COFF/Options.inc",
-    )],
+    tbl_outs = {"COFF/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "COFF/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -163,7 +152,6 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Symbolize",
-        "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
@@ -172,17 +160,12 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "mingw_options_inc_gen",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "MinGW/Options.inc",
-    )],
+    tbl_outs = {"MinGW/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "MinGW/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -200,19 +183,14 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "macho_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "MachO",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "MachO/Options.inc",
-    )],
+    tbl_outs = {"MachO/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "MachO/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(
@@ -230,15 +208,11 @@ cc_library(
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:CGData",
-        "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
         "//llvm:LTO",
-        "//llvm:MC",
-        "//llvm:ObjCARC",
         "//llvm:Object",
         "//llvm:Option",
-        "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TextAPI",
@@ -246,19 +220,14 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "wasm_options_inc_gen",
     # See https://github.com/bazelbuild/bazel/issues/13803
     strip_include_prefix = "wasm",
-    tbl_outs = [(
-        "-gen-opt-parser-defs",
-        "wasm/Options.inc",
-    )],
+    tbl_outs = {"wasm/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "wasm/Options.td",
-    td_srcs = [
-        "//llvm:include/llvm/Option/OptParser.td",
-    ],
+    deps = ["//llvm:OptParserTdFiles"],
 )
 
 cc_library(

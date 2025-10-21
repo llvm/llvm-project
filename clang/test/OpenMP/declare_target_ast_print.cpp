@@ -133,7 +133,7 @@ int out_decl_target = 0;
 // CHECK: void lambda()
 // CHECK: #pragma omp end declare target{{$}}
 
-#pragma omp declare target
+#pragma omp begin declare target
 void lambda () {
 #ifdef __cpp_lambdas
   (void)[&] { ++out_decl_target; };
@@ -144,7 +144,7 @@ void lambda () {
 };
 #pragma omp end declare target
 
-#pragma omp declare target
+#pragma omp begin declare target
 // CHECK: #pragma omp declare target{{$}}
 void foo() {}
 // CHECK-NEXT: void foo()
@@ -152,7 +152,7 @@ void foo() {}
 // CHECK: #pragma omp end declare target{{$}}
 
 extern "C" {
-#pragma omp declare target
+#pragma omp begin declare target
 // CHECK: #pragma omp declare target
 void foo_c() {}
 // CHECK-NEXT: void foo_c()
@@ -161,7 +161,7 @@ void foo_c() {}
 }
 
 extern "C++" {
-#pragma omp declare target
+#pragma omp begin declare target
 // CHECK: #pragma omp declare target
 void foo_cpp() {}
 // CHECK-NEXT: void foo_cpp()
@@ -169,7 +169,7 @@ void foo_cpp() {}
 // CHECK: #pragma omp end declare target
 }
 
-#pragma omp declare target
+#pragma omp begin declare target
 template <class T>
 struct C {
 // CHECK: template <class T> struct C {
@@ -262,7 +262,7 @@ int c1, c2, c3;
 // CHECK: #pragma omp end declare target{{$}}
 
 struct SSSt {
-#pragma omp declare target
+#pragma omp begin declare target
   static int a;
   int b;
 #pragma omp end declare target
@@ -276,7 +276,7 @@ struct SSSt {
 
 template <class T>
 struct SSSTt {
-#pragma omp declare target
+#pragma omp begin declare target
   static T a;
   int b;
 #pragma omp end declare target
@@ -288,7 +288,7 @@ struct SSSTt {
 // CHECK: #pragma omp end declare target
 // CHECK: int b;
 
-#pragma omp declare target
+#pragma omp begin declare target
 template <typename T>
 T baz() { return T(); }
 #pragma omp end declare target
@@ -310,7 +310,7 @@ int baz() { return 1; }
 // CHECK: }
 // CHECK: #pragma omp end declare target
 
-#pragma omp declare target
+#pragma omp begin declare target
   #include "declare_target_include.h"
   void xyz();
 #pragma omp end declare target
@@ -322,8 +322,8 @@ int baz() { return 1; }
 // CHECK: void xyz();
 // CHECK: #pragma omp end declare target
 
-#pragma omp declare target
-  #pragma omp declare target
+#pragma omp begin declare target
+  #pragma omp begin declare target
     void abc();
   #pragma omp end declare target
   void cba();
@@ -336,7 +336,7 @@ int baz() { return 1; }
 // CHECK: void cba();
 // CHECK: #pragma omp end declare target
 
-#pragma omp declare target
+#pragma omp begin declare target
 int abc1() { return 1; }
 #if _OPENMP >= 202111
 #pragma omp declare target enter(abc1) device_type(nohost)
@@ -352,7 +352,7 @@ int abc1() { return 1; }
 // CHECK-NEXT: }
 // CHECK-NEXT: #pragma omp end declare target
 
-#pragma omp declare target
+#pragma omp begin declare target
 int inner_link;
 #pragma omp declare target link(inner_link)
 #pragma omp end declare target
@@ -396,7 +396,7 @@ int main (int argc, char **argv) {
 // CHECK-NEXT: #pragma omp end declare target
 
 // Do not expect anything here since the region is empty.
-#pragma omp declare target
+#pragma omp begin declare target
 #pragma omp end declare target
 
 #endif

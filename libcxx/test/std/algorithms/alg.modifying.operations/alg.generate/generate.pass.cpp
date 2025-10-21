@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <deque>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -51,12 +52,22 @@ test()
     assert(ia[3] == 1);
 }
 
+void deque_test() {
+  int sizes[] = {0, 1, 2, 1023, 1024, 1025, 2047, 2048, 2049};
+  for (const int size : sizes) {
+    std::deque<int> d(size);
+    std::generate(d.begin(), d.end(), gen_test());
+    assert(std::all_of(d.begin(), d.end(), [](int x) { return x == 1; }));
+  }
+}
+
 int main(int, char**)
 {
     test<forward_iterator<int*> >();
     test<bidirectional_iterator<int*> >();
     test<random_access_iterator<int*> >();
     test<int*>();
+    deque_test();
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());

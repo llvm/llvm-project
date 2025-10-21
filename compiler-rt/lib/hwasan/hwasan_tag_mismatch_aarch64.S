@@ -157,4 +157,4 @@ mismatch:
 // We do not need executable stack.
 NO_EXEC_STACK_DIRECTIVE
 
-GNU_PROPERTY_BTI_PAC
+GNU_PROPERTY_BTI_PAC_GCS

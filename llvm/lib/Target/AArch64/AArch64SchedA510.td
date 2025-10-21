@@ -804,13 +804,13 @@ def : InstRW<[CortexA510MCWrite<15, 12, CortexA510UnitVMC>], (instregex "^[SU]DI
 def : InstRW<[CortexA510MCWrite<26, 23, CortexA510UnitVMC>], (instregex "^[SU]DIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_S")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_BtoS")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instrs SUDOT_ZZZI, USDOT_ZZZI, USDOT_ZZZ)>;
 
 // Dot product, 16 bit
-def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_D")>;
+def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^[SU]DOT_ZZZI?_HtoD")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^DUP_ZI_[BHSD]",
@@ -825,7 +825,7 @@ def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instregex "^[SU]XTB_ZPmZ
                                             "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_B)>;
+def : InstRW<[CortexA510Write<3, CortexA510UnitVALU>], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE, EXT_ZZI_B)>;
 
 // Extract narrow saturating
 def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
@@ -1016,7 +1016,7 @@ def : InstRW<[CortexA510MCWrite<16, 13, CortexA510UnitVALU>], (instrs FADDA_VPZ_
 def : InstRW<[CortexA510MCWrite<8, 5, CortexA510UnitVALU>], (instrs FADDA_VPZ_D)>;
 
 // Floating point compare
-def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instregex "^FACG[ET]_PPzZZ_[HSD]",
+def : InstRW<[CortexA510MCWrite<4, 2, CortexA510UnitVALU>], (instregex "^FACG[ET]_PPzZZ_[HSD]",
                                             "^FCM(EQ|GE|GT|NE)_PPzZ[0Z]_[HSD]",
                                             "^FCM(LE|LT)_PPzZ0_[HSD]",
                                             "^FCMUO_PPzZZ_[HSD]")>;
@@ -1160,7 +1160,7 @@ def : InstRW<[CortexA510Write<4, CortexA510UnitVALU>], (instrs BFCVT_ZPmZ, BFCVT
 def : InstRW<[A510Write_10cyc_1VMAC_1VALU], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[A510Write_15cyc_1VMAC_1VALU], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[A510Write_15cyc_1VMAC_1VALU], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[CortexA510Write<4, CortexA510UnitVMAC>], (instregex "^BFMLAL[BT]_ZZZ(I)?")>;

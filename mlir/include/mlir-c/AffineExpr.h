@@ -104,6 +104,16 @@ MLIR_CAPI_EXPORTED MlirAffineExpr
 mlirAffineExprShiftSymbols(MlirAffineExpr affineExpr, uint32_t numSymbols,
                            uint32_t shift, uint32_t offset);
 
+/// Simplify an affine expression by flattening and some amount of simple
+/// analysis. This has complexity linear in the number of nodes in 'expr'.
+/// Returns the simplified expression, which is the same as the input expression
+/// if it can't be simplified. When `expr` is semi-affine, a simplified
+/// semi-affine expression is constructed in the sorted order of dimension and
+/// symbol positions.
+MLIR_CAPI_EXPORTED MlirAffineExpr mlirSimplifyAffineExpr(MlirAffineExpr expr,
+                                                         uint32_t numDims,
+                                                         uint32_t numSymbols);
+
 //===----------------------------------------------------------------------===//
 // Affine Dimension Expression.
 //===----------------------------------------------------------------------===//

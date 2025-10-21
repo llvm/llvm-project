@@ -85,7 +85,7 @@ end subroutine single_allocate
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatizationEy"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
 ! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 : f64, !fir.ref<f64>
-! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#1, %[[Y_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
+! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#0, %[[Y_PVT_DECL]]#0) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         return
@@ -113,7 +113,7 @@ end subroutine
 ! CHECK:             %[[Y_PVT_DECL:.*]]:2 = hlfir.declare %[[Y_PVT]] {uniq_name = "_QFsingle_privatization2Ey"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
 ! CHECK:             %[[Y_LOAD:.*]] = fir.load %[[Y_DECL]]#0 : !fir.ref<f64>
 ! CHECK:             hlfir.assign %[[Y_LOAD]] to %[[Y_PVT_DECL]]#0 : f64, !fir.ref<f64>
-! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#1, %[[Y_PVT_DECL]]#1) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
+! CHECK:             fir.call @_QPbar(%[[X_PVT_DECL]]#0, %[[Y_PVT_DECL]]#0) fastmath<contract> : (!fir.ref<f32>, !fir.ref<f64>) -> ()
 ! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           omp.terminator

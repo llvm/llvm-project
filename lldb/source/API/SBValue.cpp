@@ -666,7 +666,6 @@ lldb::SBValue SBValue::CreateBoolValue(const char *name, bool value) {
 SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  const bool can_create_synthetic = false;
   lldb::DynamicValueType use_dynamic = eNoDynamicValues;
   TargetSP target_sp;
   if (m_opaque_sp)
@@ -675,24 +674,24 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx) {
   if (target_sp)
     use_dynamic = target_sp->GetPreferDynamicValue();
 
-  return GetChildAtIndex(idx, use_dynamic, can_create_synthetic);
+  return GetChildAtIndex(idx, use_dynamic, /*treat_as_array=*/false);
 }
 
 SBValue SBValue::GetChildAtIndex(uint32_t idx,
                                  lldb::DynamicValueType use_dynamic,
-                                 bool can_create_synthetic) {
-  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, can_create_synthetic);
-
-  lldb::ValueObjectSP child_sp;
-
+                                 bool treat_as_array) {
+  LLDB_INSTRUMENT_VA(this, idx, use_dynamic, treat_as_array);
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
+
+  lldb::ValueObjectSP child_sp;
   if (value_sp) {
     const bool can_create = true;
-    child_sp = value_sp->GetChildAtIndex(idx);
-    if (can_create_synthetic && !child_sp) {
+    if (treat_as_array &&
+        (value_sp->IsPointerType() || value_sp->IsArrayType()))
       child_sp = value_sp->GetSyntheticArrayMember(idx, can_create);
-    }
+    else
+      child_sp = value_sp->GetChildAtIndex(idx);
   }
 
   SBValue sb_value;
@@ -704,13 +703,15 @@ SBValue SBValue::GetChildAtIndex(uint32_t idx,
 uint32_t SBValue::GetIndexOfChildWithName(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  uint32_t idx = UINT32_MAX;
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    idx = value_sp->GetIndexOfChildWithName(name);
+    if (auto idx_or_err = value_sp->GetIndexOfChildWithName(name))
+      return *idx_or_err;
+    else
+      llvm::consumeError(idx_or_err.takeError());
   }
-  return idx;
+  return UINT32_MAX;
 }
 
 SBValue SBValue::GetChildMemberWithName(const char *name) {
@@ -1119,11 +1120,11 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp) {
       lldb::DynamicValueType use_dynamic = target_sp->GetPreferDynamicValue();
       bool use_synthetic =
           target_sp->TargetProperties::GetEnableSyntheticValue();
-      m_opaque_sp = ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic));
+      m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic);
     } else
-      m_opaque_sp = ValueImplSP(new ValueImpl(sp, eNoDynamicValues, true));
+      m_opaque_sp = std::make_shared<ValueImpl>(sp, eNoDynamicValues, true);
   } else
-    m_opaque_sp = ValueImplSP(new ValueImpl(sp, eNoDynamicValues, false));
+    m_opaque_sp = std::make_shared<ValueImpl>(sp, eNoDynamicValues, false);
 }
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
@@ -1154,14 +1155,14 @@ void SBValue::SetSP(const lldb::ValueObjectSP &sp, bool use_synthetic) {
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic) {
-  m_opaque_sp = ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic));
+  m_opaque_sp = std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic);
 }
 
 void SBValue::SetSP(const lldb::ValueObjectSP &sp,
                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
                     const char *name) {
   m_opaque_sp =
-      ValueImplSP(new ValueImpl(sp, use_dynamic, use_synthetic, name));
+      std::make_shared<ValueImpl>(sp, use_dynamic, use_synthetic, name);
 }
 
 bool SBValue::GetExpressionPath(SBStream &description) {
@@ -1335,10 +1336,8 @@ lldb::SBAddress SBValue::GetAddress() {
   if (value_sp) {
     TargetSP target_sp(value_sp->GetTargetSP());
     if (target_sp) {
-      lldb::addr_t value = LLDB_INVALID_ADDRESS;
-      const bool scalar_is_load_address = true;
-      AddressType addr_type;
-      value = value_sp->GetAddressOf(scalar_is_load_address, &addr_type);
+      auto [value, addr_type] =
+          value_sp->GetAddressOf(/*scalar_is_load_address=*/true);
       if (addr_type == eAddressTypeFile) {
         ModuleSP module_sp(value_sp->GetModule());
         if (module_sp)

@@ -312,11 +312,12 @@ ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
     return BaseOffset();
   }
 
-  const CXXRecordDecl *DerivedRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl());
+  const auto *DerivedRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanDerivedReturnType)->getDecl())
+          ->getDefinitionOrSelf();
 
-  const CXXRecordDecl *BaseRD =
-    cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
+  const auto *BaseRD =
+      cast<CXXRecordDecl>(cast<RecordType>(CanBaseReturnType)->getDecl());
 
   return ComputeBaseOffset(Context, BaseRD, DerivedRD);
 }
@@ -1595,8 +1596,8 @@ void ItaniumVTableBuilder::AddMethods(
       NewVirtualFunctions.push_back(MD);
   }
 
-  std::stable_sort(
-      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+  llvm::stable_sort(
+      NewImplicitVirtualFunctions,
       [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
         if (A == B)
           return false;
@@ -3736,8 +3737,7 @@ void MicrosoftVTableContext::computeVTableRelatedInformation(
     }
   }
 
-  MethodVFTableLocations.insert(NewMethodLocations.begin(),
-                                NewMethodLocations.end());
+  MethodVFTableLocations.insert_range(NewMethodLocations);
   if (Context.getLangOpts().DumpVTableLayouts)
     dumpMethodLocations(RD, NewMethodLocations, llvm::outs());
 }
@@ -3824,8 +3824,7 @@ const VirtualBaseInfo &MicrosoftVTableContext::computeVBTableRelatedInformation(
     // virtual bases come first so that the layout is the same.
     const VirtualBaseInfo &BaseInfo =
         computeVBTableRelatedInformation(VBPtrBase);
-    VBI->VBTableIndices.insert(BaseInfo.VBTableIndices.begin(),
-                               BaseInfo.VBTableIndices.end());
+    VBI->VBTableIndices.insert_range(BaseInfo.VBTableIndices);
   }
 
   // New vbases are added to the end of the vbtable.

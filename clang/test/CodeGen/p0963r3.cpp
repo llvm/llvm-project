@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
-// RUN: %clang_cc1 -std=c++2c -verify -fsyntax-only -fexperimental-new-constant-interpreter -triple=x86_64-pc-linux-gnu %s
+// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o -                                         | FileCheck %s
+// RUN: %clang_cc1 -std=c++2c -verify -emit-llvm -triple=x86_64-pc-linux-gnu %s -o - -fexperimental-new-constant-interpreter | FileCheck %s
 // expected-no-diagnostics
 
 namespace std {

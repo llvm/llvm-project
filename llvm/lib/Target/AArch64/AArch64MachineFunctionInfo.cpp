@@ -23,9 +23,28 @@
 
 using namespace llvm;
 
+static std::optional<uint64_t>
+getSVEStackSize(const AArch64FunctionInfo &MFI,
+                uint64_t (AArch64FunctionInfo::*GetStackSize)() const) {
+  if (!MFI.hasCalculatedStackSizeSVE())
+    return std::nullopt;
+  return (MFI.*GetStackSize)();
+}
+
 yaml::AArch64FunctionInfo::AArch64FunctionInfo(
     const llvm::AArch64FunctionInfo &MFI)
-    : HasRedZone(MFI.hasRedZone()) {}
+    : HasRedZone(MFI.hasRedZone()),
+      StackSizeZPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizeZPR)),
+      StackSizePPR(
+          getSVEStackSize(MFI, &llvm::AArch64FunctionInfo::getStackSizePPR)),
+      HasStackFrame(MFI.hasStackFrame()
+                        ? std::optional<bool>(MFI.hasStackFrame())
+                        : std::nullopt),
+      HasStreamingModeChanges(
+          MFI.hasStreamingModeChanges()
+              ? std::optional<bool>(MFI.hasStreamingModeChanges())
+              : std::nullopt) {}
 
 void yaml::AArch64FunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<AArch64FunctionInfo>::mapping(YamlIO, *this);
@@ -35,6 +54,13 @@ void AArch64FunctionInfo::initializeBaseYamlFields(
     const yaml::AArch64FunctionInfo &YamlMFI) {
   if (YamlMFI.HasRedZone)
     HasRedZone = YamlMFI.HasRedZone;
+  if (YamlMFI.StackSizeZPR || YamlMFI.StackSizePPR)
+    setStackSizeSVE(YamlMFI.StackSizeZPR.value_or(0),
+                    YamlMFI.StackSizePPR.value_or(0));
+  if (YamlMFI.HasStackFrame)
+    setHasStackFrame(*YamlMFI.HasStackFrame);
+  if (YamlMFI.HasStreamingModeChanges)
+    setHasStreamingModeChanges(*YamlMFI.HasStreamingModeChanges);
 }
 
 static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
@@ -99,6 +125,9 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // BTI/PAuthLR are set on the function attribute.
   BranchTargetEnforcement = F.hasFnAttribute("branch-target-enforcement");
   BranchProtectionPAuthLR = F.hasFnAttribute("branch-protection-pauth-lr");
+
+  // Parse the SME function attributes.
+  SMEFnAttrs = SMEAttrs(F);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

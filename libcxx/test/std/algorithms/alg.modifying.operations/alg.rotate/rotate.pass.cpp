@@ -439,7 +439,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   types::for_each(types::forward_iterator_list<int*>(), TestIter());
 
 #if TEST_STD_VER >= 11
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
 

@@ -1,0 +1,17 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+
+!rec_anon_struct = !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+
+// expected-error @below {{expected !cir.record type}}
+cir.global constant external @type_info = #cir.typeinfo<{#cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2 : i32]> : !cir.ptr<!u8i>, #cir.global_view<@_ZTS1B> : !cir.ptr<!u8i>, #cir.global_view<@_ZTI1A> : !cir.ptr<!u8i>}> : !u8i
+
+// -----
+
+!u8i = !cir.int<u, 8>
+
+!rec_anon_struct = !cir.record<struct  {!u8i, !u8i, !u8i}>
+
+// expected-error @below {{integer or global view array attribute}}
+cir.global constant external @type_info = #cir.typeinfo<{ #cir.undef : !u8i, #cir.int<1> : !u8i, #cir.int<1> : !u8i}> : !rec_anon_struct

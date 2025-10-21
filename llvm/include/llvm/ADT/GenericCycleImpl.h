@@ -299,7 +299,7 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
 
-  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
+  NewParent->Blocks.insert_range(Child->blocks());
 
   for (auto &It : BlockMapTopLevel)
     if (It.second == Child)

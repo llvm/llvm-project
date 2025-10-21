@@ -530,13 +530,11 @@ static Expr<Type<TypeCategory::Logical, KIND>> RewriteOutOfRange(
           if (args.size() >= 3) {
             // Bounds depend on round= value
             if (auto *round{UnwrapExpr<Expr<SomeType>>(args[2])}) {
-              if (const Symbol * whole{UnwrapWholeSymbolDataRef(*round)};
-                  whole && semantics::IsOptional(whole->GetUltimate()) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::OptionalMustBePresent)) {
+              if (const Symbol *whole{UnwrapWholeSymbolDataRef(*round)};
+                  whole && semantics::IsOptional(whole->GetUltimate())) {
                 if (auto source{args[2]->sourceLocation()}) {
-                  context.messages().Say(
-                      common::UsageWarning::OptionalMustBePresent, *source,
+                  context.Warn(common::UsageWarning::OptionalMustBePresent,
+                      *source,
                       "ROUND= argument to OUT_OF_RANGE() is an optional dummy argument that must be present at execution"_warn_en_US);
                 }
               }
@@ -801,14 +799,20 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
+      std::optional<bool> knownContiguous;
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (auto contiguous{IsContiguous(*expr, context)}) {
-          return Expr<T>{*contiguous};
-        }
+        knownContiguous = IsContiguous(*expr, context);
       } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        if (auto contiguous{IsContiguous(*assumedType, context)}) {
-          return Expr<T>{*contiguous};
+        knownContiguous = IsContiguous(*assumedType, context);
+      }
+      if (knownContiguous) {
+        if (*knownContiguous) {
+          if (auto source{args[0]->sourceLocation()}) {
+            context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
+                "is_contiguous() is always true for named constants and subobjects of named constants"_warn_en_US);
+          }
         }
+        return Expr<T>{*knownContiguous};
       }
     }
   } else if (name == "is_iostat_end") {
@@ -875,8 +879,38 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
         IeeeFeature::Divide)};
   } else if (name == "__builtin_ieee_support_flag") {
-    return Expr<T>{context.targetCharacteristics().ieeeFeatures().test(
-        IeeeFeature::Flags)};
+    if (context.targetCharacteristics().ieeeFeatures().test(
+            IeeeFeature::Flags)) {
+      if (args[0]) {
+        if (const auto *cst{UnwrapExpr<Constant<SomeDerived>>(args[0])}) {
+          if (auto constr{cst->GetScalarValue()}) {
+            if (StructureConstructorValues & values{constr->values()};
+                values.size() == 1) {
+              const Expr<SomeType> &value{values.begin()->second.value()};
+              if (auto flag{ToInt64(value)}) {
+                if (flag != _FORTRAN_RUNTIME_IEEE_DENORM) {
+                  // Check for suppport for standard exceptions.
+                  return Expr<T>{
+                      context.targetCharacteristics().ieeeFeatures().test(
+                          IeeeFeature::Flags)};
+                } else if (args[1]) {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // a given kind.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport(
+                              args[1]->GetType().value().kind())};
+                } else {
+                  // Check for nonstandard ieee_denorm exception support for
+                  // all kinds.
+                  return Expr<T>{context.targetCharacteristics()
+                          .hasSubnormalExceptionSupport()};
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   } else if (name == "__builtin_ieee_support_halting") {
     if (!context.targetCharacteristics()
             .haltingSupportIsUnknownAtCompileTime()) {

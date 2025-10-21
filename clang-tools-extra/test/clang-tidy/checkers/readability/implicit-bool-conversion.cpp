@@ -490,14 +490,14 @@ int implicitConversionReturnInt()
 {
     return true;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 int implicitConversionReturnIntWithParens()
 {
     return (true);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 
@@ -505,14 +505,14 @@ bool implicitConversionReturnBool()
 {
     return 1;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 bool implicitConversionReturnBoolWithParens()
 {
     return (1);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 
@@ -545,5 +545,15 @@ namespace PR71848 {
     return( foo );
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: implicit conversion 'bool' -> 'int' [readability-implicit-bool-conversion]
 // CHECK-FIXES: return static_cast<int>( foo );
+  }
+}
+
+namespace PR161318 {  
+  int AddParenOutsideOfCompoundAssignOp() {
+    int val = -1;
+    while(val >>= 7) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: implicit conversion 'int' -> 'bool' [readability-implicit-bool-conversion]
+    // CHECK-FIXES: while((val >>= 7) != 0) {
+    }
   }
 }

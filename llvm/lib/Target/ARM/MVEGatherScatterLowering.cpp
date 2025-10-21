@@ -407,9 +407,9 @@ Instruction *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   auto *Ty = cast<FixedVectorType>(I->getType());
   Value *Ptr = I->getArgOperand(0);
-  Align Alignment = cast<ConstantInt>(I->getArgOperand(1))->getAlignValue();
-  Value *Mask = I->getArgOperand(2);
-  Value *PassThru = I->getArgOperand(3);
+  Align Alignment = I->getParamAlign(0).valueOrOne();
+  Value *Mask = I->getArgOperand(1);
+  Value *PassThru = I->getArgOperand(2);
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
                                Alignment))
@@ -458,7 +458,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base,
                                    {Ty, Ptr->getType()},
@@ -479,7 +479,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherBaseWB(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vldr_gather_base_wb,
                                    {Ty, Ptr->getType()},
@@ -552,7 +552,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     return nullptr;
 
   Root = Extend;
-  Value *Mask = I->getArgOperand(2);
+  Value *Mask = I->getArgOperand(1);
   Instruction *Load = nullptr;
   if (!match(Mask, m_One()))
     Load = Builder.CreateIntrinsic(
@@ -584,7 +584,7 @@ Instruction *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   // Potentially optimising the addressing modes as we do so.
   Value *Input = I->getArgOperand(0);
   Value *Ptr = I->getArgOperand(1);
-  Align Alignment = cast<ConstantInt>(I->getArgOperand(2))->getAlignValue();
+  Align Alignment = I->getParamAlign(1).valueOrOne();
   auto *Ty = cast<FixedVectorType>(Input->getType());
 
   if (!isLegalTypeAndAlignment(Ty->getNumElements(), Ty->getScalarSizeInBits(),
@@ -622,7 +622,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterBase(
     // Can't build an intrinsic for this
     return nullptr;
   }
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   //  int_arm_mve_vstr_scatter_base(_predicated) addr, offset, data(, mask)
   LLVM_DEBUG(dbgs() << "masked scatters: storing to a vector of pointers\n");
   if (match(Mask, m_One()))
@@ -646,7 +646,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterBaseWB(
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   if (match(Mask, m_One()))
     return Builder.CreateIntrinsic(Intrinsic::arm_mve_vstr_scatter_base_wb,
                                    {Ptr->getType(), Input->getType()},
@@ -662,7 +662,7 @@ Instruction *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder) {
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
-  Value *Mask = I->getArgOperand(3);
+  Value *Mask = I->getArgOperand(2);
   Type *InputTy = Input->getType();
   Type *MemoryTy = InputTy;
 
@@ -808,7 +808,7 @@ Instruction *MVEGatherScatterLowering::tryCreateIncrementingWBGatScat(
   // by a constant, thus we're looking for an add of a phi and a constant
   PHINode *Phi = dyn_cast<PHINode>(Offsets);
   if (Phi == nullptr || Phi->getNumIncomingValues() != 2 ||
-      Phi->getParent() != L->getHeader() || Phi->getNumUses() != 2)
+      Phi->getParent() != L->getHeader() || !Phi->hasNUses(2))
     // No phi means no IV to write back to; if there is a phi, we expect it
     // to have exactly two incoming values; the only phis we are interested in
     // will be loop IV's and have exactly two uses, one in their increment and
@@ -944,7 +944,7 @@ void MVEGatherScatterLowering::pushOutMulShl(unsigned Opcode, PHINode *&Phi,
 // Check whether all usages of this instruction are as offsets of
 // gathers/scatters or simple arithmetics only used by gathers/scatters
 static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
-  if (I->hasNUses(0)) {
+  if (I->use_empty()) {
     return false;
   }
   bool Gatscat = true;
@@ -1051,10 +1051,10 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   // If the phi is not used by anything else, we can just adapt it when
   // replacing the instruction; if it is, we'll have to duplicate it
   PHINode *NewPhi;
-  if (Phi->getNumUses() == 2) {
+  if (Phi->hasNUses(2)) {
     // No other users -> reuse existing phi (One user is the instruction
     // we're looking at, the other is the phi increment)
-    if (IncInstruction->getNumUses() != 1) {
+    if (!IncInstruction->hasOneUse()) {
       // If the incrementing instruction does have more users than
       // our phi, we need to copy it
       IncInstruction = BinaryOperator::Create(
@@ -1099,11 +1099,10 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
 
   // The instruction has now been "absorbed" into the phi value
   Offs->replaceAllUsesWith(NewPhi);
-  if (Offs->hasNUses(0))
-    Offs->eraseFromParent();
+  Offs->eraseFromParent();
   // Clean up the old increment in case it's unused because we built a new
   // one
-  if (IncInstruction->hasNUses(0))
+  if (IncInstruction->use_empty())
     IncInstruction->eraseFromParent();
 
   return true;

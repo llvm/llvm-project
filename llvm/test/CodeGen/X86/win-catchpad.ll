@@ -183,11 +183,11 @@ try.cont:
 ; X64: $cppxdata$try_catch_catch:
 ; X64-NEXT: .long   429065506
 ; X64-NEXT: .long   2
-; X64-NEXT: .long   ($stateUnwindMap$try_catch_catch)@IMGREL
+; X64-NEXT: .long   $stateUnwindMap$try_catch_catch@IMGREL
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   ($tryMap$try_catch_catch)@IMGREL
+; X64-NEXT: .long   $tryMap$try_catch_catch@IMGREL
 ; X64-NEXT: .long   5
-; X64-NEXT: .long   ($ip2state$try_catch_catch)@IMGREL
+; X64-NEXT: .long   $ip2state$try_catch_catch@IMGREL
 ; X64-NEXT: .long   48
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
@@ -197,7 +197,7 @@ try.cont:
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   2
-; X64-NEXT: .long   ($handlerMap$0$try_catch_catch)@IMGREL
+; X64-NEXT: .long   $handlerMap$0$try_catch_catch@IMGREL
 
 ; X64: $handlerMap$0$try_catch_catch:
 ; X64-NEXT:   .long   0
@@ -214,9 +214,9 @@ try.cont:
 ; X64: $ip2state$try_catch_catch:
 ; X64-NEXT: .long   .Lfunc_begin0@IMGREL
 ; X64-NEXT: .long   -1
-; X64-NEXT: .long   .Ltmp0@IMGREL+1
+; X64-NEXT: .long   .Ltmp0@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp1@IMGREL+1
+; X64-NEXT: .long   .Ltmp1@IMGREL
 ; X64-NEXT: .long   -1
 ; X64-NEXT: .long   "?catch$[[catch1bb]]@?0?try_catch_catch@4HA"@IMGREL
 ; X64-NEXT: .long   1
@@ -325,11 +325,11 @@ try.cont:
 ; X64-LABEL: $cppxdata$branch_to_normal_dest:
 ; X64-NEXT: .long   429065506
 ; X64-NEXT: .long   2
-; X64-NEXT: .long   ($stateUnwindMap$branch_to_normal_dest)@IMGREL
+; X64-NEXT: .long   $stateUnwindMap$branch_to_normal_dest@IMGREL
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   ($tryMap$branch_to_normal_dest)@IMGREL
+; X64-NEXT: .long   $tryMap$branch_to_normal_dest@IMGREL
 ; X64-NEXT: .long   4
-; X64-NEXT: .long   ($ip2state$branch_to_normal_dest)@IMGREL
+; X64-NEXT: .long   $ip2state$branch_to_normal_dest@IMGREL
 ; X64-NEXT: .long   40
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
@@ -345,7 +345,7 @@ try.cont:
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   1
-; X64-NEXT: .long   ($handlerMap$0$branch_to_normal_dest)@IMGREL
+; X64-NEXT: .long   $handlerMap$0$branch_to_normal_dest@IMGREL
 
 ; X64-LABEL: $handlerMap$0$branch_to_normal_dest:
 ; X64-NEXT: .long   64
@@ -357,9 +357,9 @@ try.cont:
 ; X64-LABEL: $ip2state$branch_to_normal_dest:
 ; X64-NEXT: .long   .Lfunc_begin1@IMGREL
 ; X64-NEXT: .long   -1
-; X64-NEXT: .long   .Ltmp[[before_call]]@IMGREL+1
+; X64-NEXT: .long   .Ltmp[[before_call]]@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp[[after_call]]@IMGREL+1
+; X64-NEXT: .long   .Ltmp[[after_call]]@IMGREL
 ; X64-NEXT: .long   -1
 ; X64-NEXT: .long   "?catch$[[catchbb]]@?0?branch_to_normal_dest@4HA"@IMGREL
 ; X64-NEXT: .long   1

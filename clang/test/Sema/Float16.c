@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64-linux-gnu %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple riscv32 %s -DHAVE
 // RUN: %clang_cc1 -fsyntax-only -verify -triple riscv64 %s -DHAVE
+// RUN: %clang_cc1 -fsyntax-only -verify -triple s390x-ibm-zos %s
 
 #ifndef HAVE
 // expected-error@+2{{_Float16 is not supported on this target}}
@@ -13,9 +14,10 @@
 _Float16 f;
 
 #ifdef HAVE
+// expected-no-diagnostics
 _Complex _Float16 a;
 void builtin_complex(void) {
   _Float16 a = 0;
-  (void)__builtin_complex(a, a); // expected-error {{'_Complex _Float16' is invalid}}
+  (void)__builtin_complex(a, a);
 }
 #endif

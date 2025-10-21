@@ -171,18 +171,10 @@ define <4 x half> @v_constained_fma_v4f16_fpexcept_strict(<4 x half> %x, <4 x ha
 ; GFX11-TRUE16-LABEL: v_constained_fma_v4f16_fpexcept_strict:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v8, 16, v4
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v11, 16, v1
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v5.l, v1.l, v3.l
+; GFX11-TRUE16-NEXT:    v_fma_f16 v5.h, v1.h, v3.h, v5.h
+; GFX11-TRUE16-NEXT:    v_fma_f16 v4.h, v0.h, v2.h, v4.h
 ; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v4.l, v0.l, v2.l
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v8.l, v10.l, v9.l
-; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v6.l, v11.l, v7.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v8.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, v6.l
+; GFX11-TRUE16-NEXT:    v_fmac_f16_e32 v5.l, v1.l, v3.l
 ; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, v4 :: v_dual_mov_b32 v1, v5
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

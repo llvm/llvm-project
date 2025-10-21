@@ -17,14 +17,16 @@ add_llvm_library(LLVMBOLTPasses
   IdenticalCodeFolding.cpp
   IndirectCallPromotion.cpp
   Inliner.cpp
+  InsertNegateRAStatePass.cpp
   Instrumentation.cpp
   JTFootprintReduction.cpp
   LongJmp.cpp
   LoopInversionPass.cpp
   LivenessAnalysis.cpp
   MCF.cpp
-  NonPacProtectedRetAnalysis.cpp
+  MarkRAStates.cpp
   PatchEntries.cpp
+  PAuthGadgetScanner.cpp
   PettisAndHansen.cpp
   PLTCall.cpp
   ProfileQualityStats.cpp

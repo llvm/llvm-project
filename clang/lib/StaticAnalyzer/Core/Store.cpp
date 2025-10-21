@@ -30,8 +30,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
@@ -212,7 +210,7 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
           // Is the offset a multiple of the size?  If so, we can layer the
           // ElementRegion (with elementType == PointeeTy) directly on top of
           // the base region.
-          if (off % pointeeTySize == 0) {
+          if (off.isMultipleOf(pointeeTySize)) {
             newIndex = off / pointeeTySize;
             newSuperR = baseR;
           }
@@ -511,13 +509,9 @@ SVal StoreManager::getLValueElement(QualType elementType, NonLoc Offset,
   // Only allow non-integer offsets if the base region has no offset itself.
   // FIXME: This is a somewhat arbitrary restriction. We should be using
   // SValBuilder here to add the two offsets without checking their types.
-  if (!isa<nonloc::ConcreteInt>(Offset)) {
-    if (isa<ElementRegion>(BaseRegion->StripCasts()))
-      return UnknownVal();
-
+  if (!isa<nonloc::ConcreteInt>(Offset))
     return loc::MemRegionVal(MRMgr.getElementRegion(
         elementType, Offset, cast<SubRegion>(ElemR->getSuperRegion()), Ctx));
-  }
 
   const llvm::APSInt& OffI = Offset.castAs<nonloc::ConcreteInt>().getValue();
   assert(BaseIdxI.isSigned());

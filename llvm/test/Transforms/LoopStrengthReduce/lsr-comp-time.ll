@@ -5,10 +5,10 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone uwtable
 define dso_local i32 @foo(i32 %arg, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6) local_unnamed_addr #3 {
@@ -83,31 +83,31 @@ bb:
   %tmp16 = alloca [100 x [100 x i32]], align 16
   %tmp17 = alloca [100 x [100 x i32]], align 16
   %tmp18 = alloca [100 x [100 x i32]], align 16
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp7) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp7) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp7, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp8) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp8) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp8, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp9) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp9) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp9, i8 0, i64 40000, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp10) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp10) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp10, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp11) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp11) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp11, i8 0, i64 40000, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp12) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp12) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp12, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp13) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp13) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp13, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp14) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp14) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp14, i8 0, i64 40000, i1 false)
-  call void @llvm.lifetime.start.p0(i64 400, ptr nonnull %tmp15) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp15) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp15, i8 0, i64 400, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp16) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp16) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp16, i8 0, i64 40000, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp17) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp17) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp17, i8 0, i64 40000, i1 false)
-  call void @llvm.lifetime.start.p0(i64 40000, ptr nonnull %tmp18) #4
+  call void @llvm.lifetime.start.p0(ptr nonnull %tmp18) #4
   call void @llvm.memset.p0.i64(ptr nonnull align 16 %tmp18, i8 0, i64 40000, i1 false)
   %tmp32 = getelementptr inbounds [100 x i32], ptr %tmp8, i64 0, i64 3
   br label %bb33
@@ -1300,19 +1300,19 @@ bb1051:                                           ; preds = %bb1007
   %tmp1063 = sub i32 %tmp1062, %tmp960
   %tmp1064 = add i32 %tmp1063, %tmp1004
   %tmp1065 = sub i32 %tmp1064, %tmp1048
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp18) #4
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp17) #4
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp16) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp15) #4
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp14) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp13) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp12) #4
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp11) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp10) #4
-  call void @llvm.lifetime.end.p0(i64 40000, ptr nonnull %tmp9) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp8) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp7) #4
-  call void @llvm.lifetime.end.p0(i64 400, ptr nonnull %tmp) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp18) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp17) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp16) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp15) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp14) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp13) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp12) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp11) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp10) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp9) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp8) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp7) #4
+  call void @llvm.lifetime.end.p0(ptr nonnull %tmp) #4
   ret i32 %tmp1065
 }
 

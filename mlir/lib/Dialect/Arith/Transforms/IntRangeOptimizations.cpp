@@ -8,6 +8,7 @@
 
 #include <utility>
 
+#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
@@ -57,10 +58,10 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
       *oldState);
 }
 
+namespace mlir::dataflow {
 /// Patterned after SCCP
-static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
-                                              PatternRewriter &rewriter,
-                                              Value value) {
+LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
+                                       RewriterBase &rewriter, Value value) {
   if (value.use_empty())
     return failure();
   std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, value);
@@ -91,10 +92,14 @@ static LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   if (!constOp)
     return failure();
 
-  copyIntegerRange(solver, value, constOp->getResult(0));
-  rewriter.replaceAllUsesWith(value, constOp->getResult(0));
+  OpResult res = constOp->getResult(0);
+  if (solver.lookupState<dataflow::IntegerValueRangeLattice>(res))
+    solver.eraseState(res);
+  copyIntegerRange(solver, value, res);
+  rewriter.replaceAllUsesWith(value, res);
   return success();
 }
+} // namespace mlir::dataflow
 
 namespace {
 class DataFlowListener : public RewriterBase::Listener {
@@ -301,18 +306,18 @@ static Value doCast(OpBuilder &builder, Location loc, Value src, Type dstType,
 
   if (isa<IndexType>(srcElemType) || isa<IndexType>(dstElemType)) {
     if (castKind == CastKind::Signed)
-      return builder.create<arith::IndexCastOp>(loc, dstType, src);
-    return builder.create<arith::IndexCastUIOp>(loc, dstType, src);
+      return arith::IndexCastOp::create(builder, loc, dstType, src);
+    return arith::IndexCastUIOp::create(builder, loc, dstType, src);
   }
 
   auto srcInt = cast<IntegerType>(srcElemType);
   auto dstInt = cast<IntegerType>(dstElemType);
   if (dstInt.getWidth() < srcInt.getWidth())
-    return builder.create<arith::TruncIOp>(loc, dstType, src);
+    return arith::TruncIOp::create(builder, loc, dstType, src);
 
   if (castKind == CastKind::Signed)
-    return builder.create<arith::ExtSIOp>(loc, dstType, src);
-  return builder.create<arith::ExtUIOp>(loc, dstType, src);
+    return arith::ExtSIOp::create(builder, loc, dstType, src);
+  return arith::ExtUIOp::create(builder, loc, dstType, src);
 }
 
 struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
@@ -481,6 +486,7 @@ struct IntRangeOptimizationsPass final
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
     solver.load<DeadCodeAnalysis>();
+    solver.load<SparseConstantPropagation>();
     solver.load<IntegerRangeAnalysis>();
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
@@ -490,10 +496,9 @@ struct IntRangeOptimizationsPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeOptimizationsPatterns(patterns, solver);
 
-    GreedyRewriteConfig config;
-    config.listener = &listener;
-
-    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(
+            op, std::move(patterns),
+            GreedyRewriteConfig().setListener(&listener))))
       signalPassFailure();
   }
 };
@@ -516,13 +521,12 @@ struct IntRangeNarrowingPass final
     RewritePatternSet patterns(ctx);
     populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
 
-    GreedyRewriteConfig config;
     // We specifically need bottom-up traversal as cmpi pattern needs range
     // data, attached to its original argument values.
-    config.useTopDownTraversal = false;
-    config.listener = &listener;
-
-    if (failed(applyPatternsGreedily(op, std::move(patterns), config)))
+    if (failed(applyPatternsGreedily(
+            op, std::move(patterns),
+            GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
+                &listener))))
       signalPassFailure();
   }
 };

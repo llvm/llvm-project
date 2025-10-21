@@ -19,11 +19,11 @@ void NormalUses() {
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} SomeVar 'bool'
 
-#pragma acc parallel loop device_type(SomeS) dtype(SomeImpl)
+#pragma acc parallel loop device_type(*) dtype(default)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: device_type(SomeS)
-  // CHECK-NEXT: dtype(SomeImpl)
+  // CHECK-NEXT: device_type(*)
+  // CHECK-NEXT: dtype(default)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
@@ -36,11 +36,11 @@ void NormalUses() {
   // CHECK-NEXT: UnaryOperator{{.*}}++
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc serial loop device_type(SomeVar) dtype(int)
+#pragma acc serial loop device_type(nvidia) dtype(acc_device_nvidia)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} serial loop
-  // CHECK-NEXT: device_type(SomeVar)
-  // CHECK-NEXT: dtype(int)
+  // CHECK-NEXT: device_type(nvidia)
+  // CHECK-NEXT: dtype(acc_device_nvidia)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
@@ -53,11 +53,11 @@ void NormalUses() {
   // CHECK-NEXT: UnaryOperator{{.*}}++
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc kernels loop device_type(private) dtype(struct)
+#pragma acc kernels loop device_type(radeon) dtype(host)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} kernels loop
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(struct)
+  // CHECK-NEXT: device_type(radeon)
+  // CHECK-NEXT: dtype(host)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
@@ -70,27 +70,10 @@ void NormalUses() {
   // CHECK-NEXT: UnaryOperator{{.*}}++
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel loop device_type(private) dtype(class)
+#pragma acc parallel loop device_type(multicore) dtype(*)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: device_type(private)
-  // CHECK-NEXT: dtype(class)
-  // CHECK-NEXT: ForStmt
-  // CHECK-NEXT: DeclStmt
-  // CHECK-NEXT: VarDecl{{.*}} i 'int'
-  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
-  // CHECK-NEXT: <<<NULL>>>
-  // CHECK-NEXT: BinaryOperator{{.*}}'<'
-  // CHECK-NEXT: ImplicitCastExpr
-  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
-  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
-  // CHECK-NEXT: UnaryOperator{{.*}}++
-  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
-  // CHECK-NEXT: CompoundStmt
-#pragma acc serial loop device_type(float) dtype(*)
-  for(int i = 0; i < 5; ++i){}
-  // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} serial loop
-  // CHECK-NEXT: device_type(float)
+  // CHECK-NEXT: device_type(multicore)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -104,10 +87,27 @@ void NormalUses() {
   // CHECK-NEXT: UnaryOperator{{.*}}++
   // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
   // CHECK-NEXT: CompoundStmt
-#pragma acc kernels loop device_type(float, int) dtype(*)
+#pragma acc serial loop device_type(default, nvidia) dtype(*)
+  for(int i = 0; i < 5; ++i){}
+  // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} serial loop
+  // CHECK-NEXT: device_type(default, nvidia)
+  // CHECK-NEXT: dtype(*)
+  // CHECK-NEXT: ForStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}} i 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: <<<NULL>>>
+  // CHECK-NEXT: BinaryOperator{{.*}}'<'
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 5
+  // CHECK-NEXT: UnaryOperator{{.*}}++
+  // CHECK-NEXT: DeclRefExpr{{.*}}'i' 'int'
+  // CHECK-NEXT: CompoundStmt
+#pragma acc kernels loop device_type(acc_device_nvidia, radeon) dtype(*)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} kernels loop
-  // CHECK-NEXT: device_type(float, int)
+  // CHECK-NEXT: device_type(acc_device_nvidia, radeon)
   // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
@@ -129,11 +129,11 @@ void TemplUses() {
   // CHECK-NEXT: TemplateTypeParmDecl{{.*}}T
   // CHECK-NEXT: FunctionDecl{{.*}}TemplUses
   // CHECK-NEXT: CompoundStmt
-#pragma acc parallel loop device_type(T) dtype(T)
+#pragma acc parallel loop device_type(host, multicore) dtype(*)
   for(int i = 0; i < 5; ++i){}
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host, multicore)
+  // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'
@@ -155,8 +155,8 @@ void TemplUses() {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: device_type(T)
-  // CHECK-NEXT: dtype(T)
+  // CHECK-NEXT: device_type(host, multicore)
+  // CHECK-NEXT: dtype(*)
   // CHECK-NEXT: ForStmt
   // CHECK-NEXT: DeclStmt
   // CHECK-NEXT: VarDecl{{.*}} i 'int'

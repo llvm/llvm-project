@@ -10,7 +10,15 @@
 # alphabetic macros. Also ensure that we don't swallow the definition of user
 # provided macros (in other words, ensure that we push/pop correctly everywhere).
 
+# This test fails with MSVC headers, with Clang 20 (and early 21 versions);
+# the headers end up pulling in Clang intrinsics headers, which in 20.x and
+# early 21.x versions use unreserved identifiers,
+# see https://github.com/llvm/llvm-project/issues/161808.
+#
+# UNSUPPORTED: clang-20 && msvc
+
 # RUN: %{python} %s %{libcxx-dir}/utils
+# END.
 
 import sys
 
@@ -27,6 +35,9 @@ for header in public_headers:
 //--- {header}.compile.pass.cpp
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
+
+// This is required to detect the platform we're building for below.
+#include <__config>
 
 #define SYSTEM_RESERVED_NAME This name should not be used in libc++
 

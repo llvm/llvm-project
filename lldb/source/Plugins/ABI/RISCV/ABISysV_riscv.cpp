@@ -724,16 +724,16 @@ UnwindPlanSP ABISysV_riscv::CreateFunctionEntryUnwindPlan() {
   uint32_t sp_reg_num = riscv_dwarf::dwarf_gpr_sp;
   uint32_t ra_reg_num = riscv_dwarf::dwarf_gpr_ra;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define CFA as the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
   // Previous frame's pc is in ra
-  row->SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
+  row.SetRegisterLocationToRegister(pc_reg_num, ra_reg_num, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv function-entry unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   return plan_sp;
@@ -743,11 +743,10 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   uint32_t pc_reg_num = LLDB_REGNUM_GENERIC_PC;
   uint32_t fp_reg_num = LLDB_REGNUM_GENERIC_FP;
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Define the CFA as the current frame pointer value.
-  row->GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
-  row->SetOffset(0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(fp_reg_num, 0);
 
   int reg_size = 4;
   if (m_is_rv64)
@@ -755,11 +754,11 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
 
   // Assume the ra reg (return pc) and caller's frame pointer 
   // have been spilled to stack already.
-  row->SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
+  row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
-  plan_sp->AppendRow(row);
+  plan_sp->AppendRow(std::move(row));
   plan_sp->SetSourceName("riscv default unwind plan");
   plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
@@ -784,21 +783,22 @@ bool ABISysV_riscv::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   bool is_callee_saved =
       llvm::StringSwitch<bool>(name)
           // integer ABI names
-          .Cases("ra", "sp", "fp", true)
-          .Cases("s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9",
+          .Cases({"ra", "sp", "fp"}, true)
+          .Cases({"s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"},
                  true)
-          .Cases("s10", "s11", true)
+          .Cases({"s10", "s11"}, true)
           // integer hardware names
-          .Cases("x1", "x2", "x8", "x9", "x18", "x19", "x20", "x21", "x22",
+          .Cases({"x1", "x2", "x8", "x9", "x18", "x19", "x20", "x21", "x22"},
                  true)
-          .Cases("x23", "x24", "x25", "x26", "x27", true)
+          .Cases({"x23", "x24", "x25", "x26", "x27"}, true)
           // floating point ABI names
-          .Cases("fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7",
+          .Cases({"fs0", "fs1", "fs2", "fs3", "fs4", "fs5", "fs6", "fs7"},
                  is_hw_fp)
-          .Cases("fs8", "fs9", "fs10", "fs11", is_hw_fp)
+          .Cases({"fs8", "fs9", "fs10", "fs11"}, is_hw_fp)
           // floating point hardware names
-          .Cases("f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23", is_hw_fp)
-          .Cases("f24", "f25", "f26", "f27", is_hw_fp)
+          .Cases({"f8", "f9", "f18", "f19", "f20", "f21", "f22", "f23"},
+                 is_hw_fp)
+          .Cases({"f24", "f25", "f26", "f27"}, is_hw_fp)
           .Default(false);
 
   return is_callee_saved;

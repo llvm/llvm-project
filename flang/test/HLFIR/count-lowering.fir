@@ -92,7 +92,7 @@ func.func @_QPcount3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"}) 
 
 // CHECK-DAG:     %[[MASK_ADDR:.*]] = fir.address_of
 // CHECK-DAG:     %[[MASK_VAR:.*]]:2 = hlfir.declare %[[MASK_ADDR]](%[[MASK_SHAPE:.*]])
-// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#1(%[[MASK_SHAPE:.*]])
+// CHECK-DAG:     %[[MASK_BOX:.*]] = fir.embox %[[MASK_VAR]]#0(%[[MASK_SHAPE:.*]])
 
 // CHECK-DAG:     %[[DIM:.*]] = arith.constant 1 : i32
 

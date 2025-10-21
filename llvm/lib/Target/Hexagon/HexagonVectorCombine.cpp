@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -299,7 +300,6 @@ private:
     const_iterator end() const { return Blocks.end(); }
   };
 
-  Align getAlignFromValue(const Value *V) const;
   std::optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
   // This function is only used for assertions at the moment.
@@ -363,7 +363,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -374,7 +374,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -393,7 +393,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -407,7 +407,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
@@ -611,12 +611,6 @@ auto AlignVectors::ByteSpan::values() const -> SmallVector<Value *, 8> {
   return Values;
 }
 
-auto AlignVectors::getAlignFromValue(const Value *V) const -> Align {
-  const auto *C = dyn_cast<ConstantInt>(V);
-  assert(C && "Alignment must be a compile-time constant integer");
-  return C->getAlignValue();
-}
-
 auto AlignVectors::getAddrInfo(Instruction &In) const
     -> std::optional<AddrInfo> {
   if (auto *L = isCandidate<LoadInst>(&In))
@@ -630,11 +624,11 @@ auto AlignVectors::getAddrInfo(Instruction &In) const
     switch (ID) {
     case Intrinsic::masked_load:
       return AddrInfo(HVC, II, II->getArgOperand(0), II->getType(),
-                      getAlignFromValue(II->getArgOperand(1)));
+                      II->getParamAlign(0).valueOrOne());
     case Intrinsic::masked_store:
       return AddrInfo(HVC, II, II->getArgOperand(1),
                       II->getArgOperand(0)->getType(),
-                      getAlignFromValue(II->getArgOperand(2)));
+                      II->getParamAlign(1).valueOrOne());
     }
   }
   return std::nullopt;
@@ -659,9 +653,9 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::masked_load:
-      return II->getArgOperand(2);
+      return II->getArgOperand(1);
     case Intrinsic::masked_store:
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
     }
   }
 
@@ -674,7 +668,7 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     if (II->getIntrinsicID() == Intrinsic::masked_load)
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
   }
   return UndefValue::get(getPayload(Val)->getType());
 }
@@ -1676,9 +1670,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return m_CombineOr(m_LShr(V, S), m_AShr(V, S));
   };
 
-  const APInt *Qn = nullptr;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_APInt(Qn)))) {
-    Op.Frac = Qn->getZExtValue();
+  uint64_t Qn = 0;
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+    Op.Frac = Qn;
     Exp = T;
   } else {
     Op.Frac = 0;
@@ -1688,9 +1682,9 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
     return std::nullopt;
 
   // Check if there is rounding added.
-  const APInt *C = nullptr;
-  if (Value * T; Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_APInt(C)))) {
-    uint64_t CV = C->getZExtValue();
+  uint64_t CV;
+  if (Value *T;
+      Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
     if (CV != 0)
@@ -2317,9 +2311,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Undef = UndefValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
+  auto *Poison = PoisonValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2330,7 +2324,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Undef);
+  return vresize(Builder, P2Insert, DstLen, Poison);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2392,7 +2386,7 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
     Type *Int64Ty = Type::getInt64Ty(F.getContext());
     Value *Lo64 = Builder.CreateBitCast(Lo, Int64Ty, "cst");
     Value *Hi64 = Builder.CreateBitCast(Hi, Int64Ty, "cst");
-    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb, {},
+    Value *Call = Builder.CreateIntrinsic(Intrinsic::hexagon_S2_valignrb,
                                           {Hi64, Lo64, Amt},
                                           /*FMFSource=*/nullptr, "cup");
     return Builder.CreateBitCast(Call, Lo->getType(), "cst");
@@ -2828,13 +2822,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {
@@ -2930,11 +2924,6 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
-
-namespace llvm {
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-FunctionPass *createHexagonVectorCombineLegacyPass();
-} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {

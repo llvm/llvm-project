@@ -79,10 +79,6 @@ STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
 
-// The max limit of the search depth in DecomposeGEPExpression() and
-// getUnderlyingObject().
-static const unsigned MaxLookupSearchDepth = 6;
-
 bool BasicAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                                FunctionAnalysisManager::Invalidator &Inv) {
   // We don't care if this analysis itself is preserved, it has no state. But
@@ -107,12 +103,15 @@ static std::optional<TypeSize> getObjectSize(const Value *V,
                                              const TargetLibraryInfo &TLI,
                                              bool NullIsValidLoc,
                                              bool RoundToAlign = false) {
-  uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.RoundToAlign = RoundToAlign;
   Opts.NullIsUnknownSize = NullIsValidLoc;
-  if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::getFixed(Size);
+  if (std::optional<TypeSize> Size = getBaseObjectSize(V, DL, &TLI, Opts)) {
+    // FIXME: Remove this check, only exists to preserve previous behavior.
+    if (Size->isScalable())
+      return std::nullopt;
+    return Size;
+  }
   return std::nullopt;
 }
 
@@ -196,10 +195,22 @@ static bool areBothVScale(const Value *V1, const Value *V2) {
 
 CaptureAnalysis::~CaptureAnalysis() = default;
 
-bool SimpleCaptureAnalysis::isNotCapturedBefore(const Value *Object,
-                                                const Instruction *I,
-                                                bool OrAt) {
-  return isNonEscapingLocalObject(Object, &IsCapturedCache);
+CaptureComponents SimpleCaptureAnalysis::getCapturesBefore(const Value *Object,
+                                                           const Instruction *I,
+                                                           bool OrAt) {
+  if (!isIdentifiedFunctionLocal(Object))
+    return CaptureComponents::Provenance;
+
+  auto [CacheIt, Inserted] =
+      IsCapturedCache.insert({Object, CaptureComponents::Provenance});
+  if (!Inserted)
+    return CacheIt->second;
+
+  CaptureComponents Ret = PointerMayBeCaptured(
+      Object, /*ReturnCaptures=*/false, CaptureComponents::Provenance,
+      [](CaptureComponents CC) { return capturesFullProvenance(CC); });
+  CacheIt->second = Ret;
+  return Ret;
 }
 
 static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
@@ -210,37 +221,44 @@ static bool isNotInCycle(const Instruction *I, const DominatorTree *DT,
          !isPotentiallyReachableFromMany(Succs, BB, nullptr, DT, LI);
 }
 
-bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
-                                                 const Instruction *I,
-                                                 bool OrAt) {
+CaptureComponents
+EarliestEscapeAnalysis::getCapturesBefore(const Value *Object,
+                                          const Instruction *I, bool OrAt) {
   if (!isIdentifiedFunctionLocal(Object))
-    return false;
+    return CaptureComponents::Provenance;
 
-  auto Iter = EarliestEscapes.insert({Object, nullptr});
+  auto Iter = EarliestEscapes.try_emplace(Object);
   if (Iter.second) {
-    Instruction *EarliestCapture = FindEarliestCapture(
-        Object, *const_cast<Function *>(DT.getRoot()->getParent()),
-        /*ReturnCaptures=*/false, DT, CaptureComponents::Provenance);
-    if (EarliestCapture)
-      Inst2Obj[EarliestCapture].push_back(Object);
+    std::pair<Instruction *, CaptureComponents> EarliestCapture =
+        FindEarliestCapture(Object, *DT.getRoot()->getParent(),
+                            /*ReturnCaptures=*/false, DT,
+                            CaptureComponents::Provenance);
+    if (EarliestCapture.first)
+      Inst2Obj[EarliestCapture.first].push_back(Object);
     Iter.first->second = EarliestCapture;
   }
 
-  // No capturing instruction.
-  if (!Iter.first->second)
-    return true;
+  auto IsNotCapturedBefore = [&]() {
+    // No capturing instruction.
+    Instruction *CaptureInst = Iter.first->second.first;
+    if (!CaptureInst)
+      return true;
 
-  // No context instruction means any use is capturing.
-  if (!I)
-    return false;
-
-  if (I == Iter.first->second) {
-    if (OrAt)
+    // No context instruction means any use is capturing.
+    if (!I)
       return false;
-    return isNotInCycle(I, &DT, LI);
-  }
 
-  return !isPotentiallyReachable(Iter.first->second, I, nullptr, &DT, LI);
+    if (I == CaptureInst) {
+      if (OrAt)
+        return false;
+      return isNotInCycle(I, &DT, LI);
+    }
+
+    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI);
+  };
+  if (IsNotCapturedBefore())
+    return CaptureComponents::None;
+  return Iter.first->second.second;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
@@ -824,6 +842,10 @@ MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
       FuncME |= MemoryEffects::readOnly();
     if (Call->hasClobberingOperandBundles())
       FuncME |= MemoryEffects::writeOnly();
+    if (Call->isVolatile()) {
+      // Volatile operations also access inaccessible memory.
+      FuncME |= MemoryEffects::inaccessibleMemOnly();
+    }
     Min &= FuncME;
   }
 
@@ -847,14 +869,14 @@ MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
 
 ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,
                                            unsigned ArgIdx) {
-  if (Call->paramHasAttr(ArgIdx, Attribute::WriteOnly))
+  if (Call->doesNotAccessMemory(ArgIdx))
+    return ModRefInfo::NoModRef;
+
+  if (Call->onlyWritesMemory(ArgIdx))
     return ModRefInfo::Mod;
 
-  if (Call->paramHasAttr(ArgIdx, Attribute::ReadOnly))
+  if (Call->onlyReadsMemory(ArgIdx))
     return ModRefInfo::Ref;
-
-  if (Call->paramHasAttr(ArgIdx, Attribute::ReadNone))
-    return ModRefInfo::NoModRef;
 
   return ModRefInfo::ModRef;
 }
@@ -921,65 +943,72 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     if (!AI->isStaticAlloca() && isIntrinsicCall(Call, Intrinsic::stackrestore))
       return ModRefInfo::Mod;
 
-  // A call can access a locally allocated object either because it is passed as
-  // an argument to the call, or because it has escaped prior to the call.
-  //
-  // Make sure the object has not escaped here, and then check that none of the
-  // call arguments alias the object below.
+  // We can completely ignore inaccessible memory here, because MemoryLocations
+  // can only reference accessible memory.
+  auto ME = AAQI.AAR.getMemoryEffects(Call, AAQI)
+                .getWithoutLoc(IRMemLocation::InaccessibleMem);
+  if (ME.doesNotAccessMemory())
+    return ModRefInfo::NoModRef;
+
+  ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
+
+  // An identified function-local object that does not escape can only be
+  // accessed via call arguments. Reduce OtherMR (which includes accesses to
+  // escaped memory) based on that.
   //
   // We model calls that can return twice (setjmp) as clobbering non-escaping
   // objects, to model any accesses that may occur prior to the second return.
   // As an exception, ignore allocas, as setjmp is not required to preserve
   // non-volatile stores for them.
-  if (!isa<Constant>(Object) && Call != Object &&
-      AAQI.CA->isNotCapturedBefore(Object, Call, /*OrAt*/ false) &&
+  if (isModOrRefSet(OtherMR) && !isa<Constant>(Object) && Call != Object &&
       (isa<AllocaInst>(Object) || !Call->hasFnAttr(Attribute::ReturnsTwice))) {
-
-    // Optimistically assume that call doesn't touch Object and check this
-    // assumption in the following loop.
-    ModRefInfo Result = ModRefInfo::NoModRef;
-
-    unsigned OperandNo = 0;
-    for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
-         CI != CE; ++CI, ++OperandNo) {
-      if (!(*CI)->getType()->isPointerTy())
-        continue;
-
-      // Call doesn't access memory through this operand, so we don't care
-      // if it aliases with Object.
-      if (Call->doesNotAccessMemory(OperandNo))
-        continue;
-
-      // If this is a no-capture pointer argument, see if we can tell that it
-      // is impossible to alias the pointer we're checking.
-      AliasResult AR =
-          AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(*CI),
-                         MemoryLocation::getBeforeOrAfter(Object), AAQI);
-      // Operand doesn't alias 'Object', continue looking for other aliases
-      if (AR == AliasResult::NoAlias)
-        continue;
-      // Operand aliases 'Object', but call doesn't modify it. Strengthen
-      // initial assumption and keep looking in case if there are more aliases.
-      if (Call->onlyReadsMemory(OperandNo)) {
-        Result |= ModRefInfo::Ref;
-        continue;
-      }
-      // Operand aliases 'Object' but call only writes into it.
-      if (Call->onlyWritesMemory(OperandNo)) {
-        Result |= ModRefInfo::Mod;
-        continue;
-      }
-      // This operand aliases 'Object' and call reads and writes into it.
-      // Setting ModRef will not yield an early return below, MustAlias is not
-      // used further.
-      Result = ModRefInfo::ModRef;
-      break;
-    }
-
-    // Early return if we improved mod ref information
-    if (!isModAndRefSet(Result))
-      return Result;
+    CaptureComponents CC =
+        AAQI.CA->getCapturesBefore(Object, Call, /*OrAt=*/false);
+    if (capturesNothing(CC))
+      OtherMR = ModRefInfo::NoModRef;
+    else if (capturesReadProvenanceOnly(CC))
+      OtherMR = ModRefInfo::Ref;
   }
+
+  // Refine the modref info for argument memory. We only bother to do this
+  // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
+  // on the final result.
+  if ((ArgMR | OtherMR) != OtherMR) {
+    ModRefInfo NewArgMR = ModRefInfo::NoModRef;
+    for (const Use &U : Call->data_ops()) {
+      const Value *Arg = U;
+      if (!Arg->getType()->isPointerTy())
+        continue;
+      unsigned ArgIdx = Call->getDataOperandNo(&U);
+      MemoryLocation ArgLoc =
+          Call->isArgOperand(&U)
+              ? MemoryLocation::getForArgument(Call, ArgIdx, TLI)
+              : MemoryLocation::getBeforeOrAfter(Arg);
+      AliasResult ArgAlias = AAQI.AAR.alias(ArgLoc, Loc, AAQI, Call);
+      if (ArgAlias != AliasResult::NoAlias)
+        NewArgMR |= ArgMR & AAQI.AAR.getArgModRefInfo(Call, ArgIdx);
+
+      // Exit early if we cannot improve over the original ArgMR.
+      if (NewArgMR == ArgMR)
+        break;
+    }
+    ArgMR = NewArgMR;
+  }
+
+  ModRefInfo Result = ArgMR | OtherMR;
+
+  // Refine accesses to errno memory.
+  if ((ErrnoMR | Result) != Result) {
+    if (AAQI.AAR.aliasErrno(Loc, Call->getModule()) != AliasResult::NoAlias) {
+      // Exclusion conditions do not hold, this memory location may alias errno.
+      Result |= ErrnoMR;
+    }
+  }
+
+  if (!isModAndRefSet(Result))
+    return Result;
 
   // If the call is malloc/calloc like, we can assume that it doesn't
   // modify any IR visible value.  This is only valid because we assume these
@@ -1245,8 +1274,11 @@ AliasResult BasicAAResult::aliasGEP(
   if (V1Size.isScalable() || V2Size.isScalable())
     return AliasResult::MayAlias;
 
-  // We need to know both acess sizes for all the following heuristics.
-  if (!V1Size.hasValue() || !V2Size.hasValue())
+  // We need to know both access sizes for all the following heuristics. Don't
+  // try to reason about sizes larger than the index space.
+  unsigned BW = DecompGEP1.Offset.getBitWidth();
+  if (!V1Size.hasValue() || !V2Size.hasValue() ||
+      !isUIntN(BW, V1Size.getValue()) || !isUIntN(BW, V2Size.getValue()))
     return AliasResult::MayAlias;
 
   APInt GCD;
@@ -1266,8 +1298,7 @@ AliasResult BasicAAResult::aliasGEP(
 
     ConstantRange CR = computeConstantRange(Index.Val.V, /* ForSigned */ false,
                                             true, &AC, Index.CxtI);
-    KnownBits Known =
-        computeKnownBits(Index.Val.V, DL, 0, &AC, Index.CxtI, DT);
+    KnownBits Known = computeKnownBits(Index.Val.V, DL, &AC, Index.CxtI, DT);
     CR = CR.intersectWith(
         ConstantRange::fromKnownBits(Known, /* Signed */ true),
         ConstantRange::Signed);
@@ -1301,13 +1332,29 @@ AliasResult BasicAAResult::aliasGEP(
 
   // Compute ranges of potentially accessed bytes for both accesses. If the
   // interseciton is empty, there can be no overlap.
-  unsigned BW = OffsetRange.getBitWidth();
   ConstantRange Range1 = OffsetRange.add(
       ConstantRange(APInt(BW, 0), APInt(BW, V1Size.getValue())));
   ConstantRange Range2 =
       ConstantRange(APInt(BW, 0), APInt(BW, V2Size.getValue()));
   if (Range1.intersectWith(Range2).isEmptySet())
     return AliasResult::NoAlias;
+
+  // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
+  // potentially wrapping math.
+  auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
+    if (Var.IsNSW)
+      return true;
+
+    int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+    // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+    // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+    // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+    int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+    if (MaxScaleValueBW <= 0)
+      return false;
+    return Var.Scale.ule(
+        APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+  };
 
   // Try to determine the range of values for VarIndex such that
   // VarIndex <= -MinAbsVarIndex || MinAbsVarIndex <= VarIndex.
@@ -1317,22 +1364,6 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, SimplifyQuery(DL, DT, &AC, Var.CxtI))) {
-      // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
-      // potentially wrapping math.
-      auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
-        if (Var.IsNSW)
-          return true;
-
-        int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
-        // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
-        // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
-        // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
-        int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
-        if (MaxScaleValueBW <= 0)
-          return false;
-        return Var.Scale.ule(
-            APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
-      };
       // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
       // presence of potentially wrapping math.
       if (MultiplyByScaleNoWrap(Var)) {
@@ -1349,6 +1380,7 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var1 = DecompGEP1.VarIndices[1];
     if (Var0.hasNegatedScaleOf(Var1) && Var0.Val.TruncBits == 0 &&
         Var0.Val.hasSameCastsAs(Var1.Val) && !AAQI.MayBeCrossIteration &&
+        MultiplyByScaleNoWrap(Var0) && MultiplyByScaleNoWrap(Var1) &&
         isKnownNonEqual(Var0.Val.V, Var1.Val.V,
                         SimplifyQuery(DL, DT, &AC, /*CxtI=*/Var0.CxtI
                                                        ? Var0.CxtI
@@ -1541,6 +1573,16 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   return Alias;
 }
 
+// Return true for an Argument or extractvalue(Argument). These are all known
+// to not alias with FunctionLocal objects and can come up from coerced function
+// arguments.
+static bool isArgumentOrArgumentLike(const Value *V) {
+  if (isa<Argument>(V))
+    return true;
+  auto *E = dyn_cast<ExtractValueInst>(V);
+  return E && isa<Argument>(E->getOperand(0));
+}
+
 /// Provides a bunch of ad-hoc rules to disambiguate in common cases, such as
 /// array references.
 AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
@@ -1570,9 +1612,6 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   if (isValueEqualInPotentialCycles(V1, V2, AAQI))
     return AliasResult::MustAlias;
 
-  if (!V1->getType()->isPointerTy() || !V2->getType()->isPointerTy())
-    return AliasResult::NoAlias; // Scalars cannot alias each other
-
   // Figure out what objects these things are pointing to if we can.
   const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
   const Value *O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
@@ -1593,8 +1632,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
-    if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
-        (isa<Argument>(O2) && isIdentifiedFunctionLocal(O1)))
+    if ((isArgumentOrArgumentLike(O1) && isIdentifiedFunctionLocal(O2)) ||
+        (isArgumentOrArgumentLike(O2) && isIdentifiedFunctionLocal(O1)))
       return AliasResult::NoAlias;
 
     // If one pointer is the result of a call/invoke or load and the other is a
@@ -1606,11 +1645,13 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
     // temporary store the nocapture argument's value in a temporary memory
     // location if that memory location doesn't escape. Or it may pass a
     // nocapture value to other functions as long as they don't capture it.
-    if (isEscapeSource(O1) && AAQI.CA->isNotCapturedBefore(
-                                  O2, dyn_cast<Instruction>(O1), /*OrAt*/ true))
+    if (isEscapeSource(O1) &&
+        capturesNothing(AAQI.CA->getCapturesBefore(
+            O2, dyn_cast<Instruction>(O1), /*OrAt*/ true)))
       return AliasResult::NoAlias;
-    if (isEscapeSource(O2) && AAQI.CA->isNotCapturedBefore(
-                                  O1, dyn_cast<Instruction>(O2), /*OrAt*/ true))
+    if (isEscapeSource(O2) &&
+        capturesNothing(AAQI.CA->getCapturesBefore(
+            O1, dyn_cast<Instruction>(O2), /*OrAt*/ true)))
       return AliasResult::NoAlias;
   }
 
@@ -1820,6 +1861,20 @@ AliasResult BasicAAResult::aliasCheckRecursive(
   return AliasResult::MayAlias;
 }
 
+AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
+                                      const Module *M) {
+  // There cannot be any alias with errno if the given memory location is an
+  // identified function-local object, or the size of the memory access is
+  // larger than the integer size.
+  if (Loc.Size.hasValue() &&
+      Loc.Size.getValue().getKnownMinValue() * 8 > TLI.getIntSize())
+    return AliasResult::NoAlias;
+
+  if (isIdentifiedFunctionLocal(getUnderlyingObject(Loc.Ptr)))
+    return AliasResult::NoAlias;
+  return AliasResult::MayAlias;
+}
+
 /// Check whether two Values can be considered equivalent.
 ///
 /// If the values may come from different cycle iterations, this will also
@@ -1966,9 +2021,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
   return BasicAAResult(F.getDataLayout(), F, TLI, AC, DT);
 }
 
-BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {
-  initializeBasicAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {}
 
 char BasicAAWrapperPass::ID = 0;
 
