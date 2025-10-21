@@ -521,9 +521,12 @@ void ARMPassConfig::addPreSched2() {
 void ARMPassConfig::addPreEmitPass() {
   addPass(createThumb2SizeReductionPass());
 
-  // Constant island pass work on unbundled instructions.
+  // Unpack bundles for:
+  // - Thumb2: Constant island pass requires unbundled instructions
+  // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
   addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
-    return MF.getSubtarget<ARMSubtarget>().isThumb2();
+    return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
+           MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));
 
   // Don't optimize barriers or block placement at -O0.
@@ -534,8 +537,6 @@ void ARMPassConfig::addPreEmitPass() {
 }
 
 void ARMPassConfig::addPreEmitPass2() {
-  // Unpack KCFI bundles before AsmPrinter
-  addPass(createUnpackMachineBundles(nullptr));
 
   // Inserts fixup instructions before unsafe AES operations. Instructions may
   // be inserted at the start of blocks and at within blocks so this pass has to

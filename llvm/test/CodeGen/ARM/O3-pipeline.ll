@@ -205,7 +205,6 @@
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      Stack Frame Layout Analysis
-; CHECK-NEXT:      Unpack machine instruction bundles
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM fix for Cortex-A57 AES Erratum 1742098
 ; CHECK-NEXT:      ARM Branch Targets
