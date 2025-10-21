@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace llvm::orc::detail {
 
