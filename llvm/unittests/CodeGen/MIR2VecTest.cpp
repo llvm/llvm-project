@@ -255,6 +255,10 @@ protected:
 
   void SetUp() override {
     MIR2VecVocabTestFixture::SetUp();
+    // If base class setup was skipped (TII not initialized), skip derived setup
+    if (!TII)
+      GTEST_SKIP() << "Failed to get target instruction info in "
+                      "the base class setup; Skipping test";
 
     // Create a dummy function for MachineFunction
     FunctionType *FT = FunctionType::get(Type::getVoidTy(*Ctx), false);
