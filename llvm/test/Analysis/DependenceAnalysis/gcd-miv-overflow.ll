@@ -12,23 +12,20 @@
 ;   offset1 += 3;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between the two
-; stores, but it does exist. E.g., consider `m` is 12297829382473034411, which
-; is a modular multiplicative inverse of 3 under modulo 2^64. Then `offset0` is
-; effectively `i + 4`, so accesses will be as follows:
+; Dependency exists between the two stores. E.g., consider `m` is
+; 12297829382473034411, which is a modular multiplicative inverse of 3 under
+; modulo 2^64. Then `offset0` is effectively `i + 4`, so accesses will be as
+; follows:
 ;
 ;   - A[offset0] : A[4], A[5], A[6], ...
 ;   - A[offset1] : A[0], A[3], A[6], ...
-;
-; The root cause is that DA assumes `3*m` begin a multiple of 3 in mathematical
-; sense, which isn't necessarily true due to overflow.
 ;
 define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-LABEL: 'gcdmiv_coef_ovfl'
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:    da analyze - output [*|<]!
 ; CHECK-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;
@@ -36,7 +33,7 @@ define void @gcdmiv_coef_ovfl(ptr %A, i64 %m) {
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 1, ptr %gep.0, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 1, ptr %gep.0, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
-; CHECK-GCD-MIV-NEXT:    da analyze - none!
+; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*|<]!
 ; CHECK-GCD-MIV-NEXT:  Src: store i8 2, ptr %gep.1, align 1 --> Dst: store i8 2, ptr %gep.1, align 1
 ; CHECK-GCD-MIV-NEXT:    da analyze - consistent output [*]!
 ;
