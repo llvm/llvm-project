@@ -19,7 +19,7 @@ void bm_make_exception_ptr(benchmark::State& state) {
 BENCHMARK(bm_make_exception_ptr)->ThreadRange(1, 8);
 
 static bool exception_ptr_moves_copies_swap(std::exception_ptr p1) {
-  // Taken from https://github.com/llvm/llvm-project/issues/44892
+  // Taken from https://llvm.org/PR45547
   std::exception_ptr p2(p1);            // Copy constructor
   std::exception_ptr p3(std::move(p2)); // Move constructor
   p2 = std::move(p1);                   // Move assignment
