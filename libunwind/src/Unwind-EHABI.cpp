@@ -23,6 +23,7 @@
 #include "config.h"
 #include "libunwind.h"
 #include "libunwind_ext.h"
+#include "unwind_itanium.h"
 #include "unwind.h"
 
 namespace {
