@@ -3599,10 +3599,9 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   // generate the code for .foo now:
   if (TOCRestoreNeededForCallToImplementation(GI)) {
     reportFatalUsageError(
-        "unimplemented: TOC register save/restore needed for function " +
-        Twine(GI.getName()) +
-        ", because couldn't prove all candidates are static or hidden/protected"
-        " visibility definitions");
+        "unimplemented: TOC register save/restore needed for ifunc \"" +
+        Twine(GI.getName()) + "\", because couldn't prove all candidates are "
+        "static or hidden/protected visibility definitions");
     return;
   }
 
