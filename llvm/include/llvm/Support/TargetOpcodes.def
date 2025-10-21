@@ -692,6 +692,9 @@ HANDLE_TARGET_OPCODE(G_FPEXT)
 /// Generic float to signed-int conversion
 HANDLE_TARGET_OPCODE(G_FPTRUNC)
 
+/// Generic float to signed-int conversion using round to odd
+HANDLE_TARGET_OPCODE(G_FPTRUNC_ODD)
+
 /// Generic float to signed-int conversion
 HANDLE_TARGET_OPCODE(G_FPTOSI)
 

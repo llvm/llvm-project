@@ -5595,6 +5595,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_ANYEXT:
   case G_FPEXT:
   case G_FPTRUNC:
+  case G_FPTRUNC_ODD:
   case G_SITOFP:
   case G_UITOFP:
   case G_FPTOSI:

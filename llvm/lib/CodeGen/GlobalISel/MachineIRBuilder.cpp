@@ -936,6 +936,12 @@ MachineIRBuilder::buildFPTrunc(const DstOp &Res, const SrcOp &Op,
   return buildInstr(TargetOpcode::G_FPTRUNC, Res, Op, Flags);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildFPTruncOdd(const DstOp &Res, const SrcOp &Op,
+                               std::optional<unsigned> Flags) {
+  return buildInstr(TargetOpcode::G_FPTRUNC_ODD, Res, Op, Flags);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildICmp(CmpInst::Predicate Pred,
                                                 const DstOp &Res,
                                                 const SrcOp &Op0,
