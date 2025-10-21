@@ -384,15 +384,15 @@ for.inc26:
 ; conditional store to remain scalar. Since we can only type-shrink vector
 ; types, we shouldn't try to represent the expression in a smaller type.
 ;
-define void @minimal_bit_widths(i1 %c) {
+define void @minimal_bit_widths(ptr %p, i1 %c) {
 ; UNROLL-LABEL: @minimal_bit_widths(
 ; UNROLL-NEXT:  entry:
 ; UNROLL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL:       vector.body:
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; UNROLL-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP1]]
+; UNROLL-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; UNROLL-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
 ; UNROLL-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
@@ -415,8 +415,8 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY:       vector.body:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP1]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP3]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
@@ -442,16 +442,16 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC:       vector.body:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr undef, i64 [[INDEX]]
+; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[INDEX]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP1]], align 1
 ; VEC-NEXT:    br i1 [[C:%.*]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.if:
 ; VEC-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 0
-; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP8]]
+; VEC-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
 ; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 0
 ; VEC-NEXT:    store i8 [[TMP4]], ptr [[TMP3]], align 1
 ; VEC-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 1
-; VEC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr undef, i64 [[TMP5]]
+; VEC-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP5]]
 ; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[WIDE_LOAD]], i32 1
 ; VEC-NEXT:    store i8 [[TMP7]], ptr [[TMP6]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -468,7 +468,7 @@ entry:
 for.body:
   %tmp0 = phi i64 [ %tmp6, %for.inc ], [ 0, %entry ]
   %tmp1 = phi i64 [ %tmp7, %for.inc ], [ 1000, %entry ]
-  %tmp2 = getelementptr i8, ptr undef, i64 %tmp0
+  %tmp2 = getelementptr i8, ptr %p, i64 %tmp0
   %tmp3 = load i8, ptr %tmp2, align 1
   br i1 %c, label %if.then, label %for.inc
 
