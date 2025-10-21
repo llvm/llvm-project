@@ -118,14 +118,52 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   typedef LocalAddressSpace::pint_t pint_t;
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
-    co->setReg(regNum, (pint_t)value);
     // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;
       // First, get the FDE for the old location and then update it.
       co->getInfo(&info);
-      co->setInfoBasedOnIPRegister(false);
+
+      pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
+
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+      {
+        // It is only valid to set the IP within the current function. This is
+        // important for ptrauth, otherwise the IP cannot be correctly signed.
+        // The current signature of `value` is via the schema:
+        //   __ptrauth(ptrauth_key_return_address, <<sp>>, 0)
+        // For this to be generally usable we manually re-sign it to the
+        // directly supported schema:
+        //   __ptrauth(ptrauth_key_return_address, 1, 0)
+        unw_word_t
+              __unwind_ptrauth_restricted_intptr(ptrauth_key_return_address, 1,
+                                                 0) authenticated_value;
+        unw_word_t opaque_value = (uint64_t)ptrauth_auth_and_resign(
+            (void *)value, ptrauth_key_return_address, sp,
+            ptrauth_key_return_address, &authenticated_value);
+        memmove(reinterpret_cast<void *>(&authenticated_value),
+                reinterpret_cast<void *>(&opaque_value),
+                sizeof(authenticated_value));
+        if (authenticated_value < info.start_ip ||
+            authenticated_value > info.end_ip)
+          _LIBUNWIND_ABORT("PC vs frame info mismatch");
+
+        // PC should have been signed with the sp, so we verify that
+        // roundtripping does not fail.
+        pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
+        if (ptrauth_auth_and_resign((void *)pc, ptrauth_key_return_address, sp,
+                                    ptrauth_key_return_address,
+                                    sp) != (void *)pc) {
+          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%zX, 0x%zX)->0x%zX\n",
+                         pc, sp,
+                         (pint_t)ptrauth_auth_data(
+                             (void *)pc, ptrauth_key_return_address, sp));
+          _LIBUNWIND_ABORT("Bad unwind through arm64e");
+        }
+      }
+#endif
+
       // If the original call expects stack adjustment, perform this now.
       // Normal frame unwinding would have included the offset already in the
       // CFA computation.
@@ -133,7 +171,11 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // this should actually be - info.gp. LLVM doesn't currently support
       // any such platforms and Clang doesn't export a macro for them.
       if (info.gp)
-        co->setReg(UNW_REG_SP, co->getReg(UNW_REG_SP) + info.gp);
+        co->setReg(UNW_REG_SP, sp + info.gp);
+      co->setReg(UNW_REG_IP, value);
+      co->setInfoBasedOnIPRegister(false);
+    } else {
+      co->setReg(regNum, (pint_t)value);
     }
     return UNW_ESUCCESS;
   }
