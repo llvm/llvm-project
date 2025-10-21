@@ -146,7 +146,7 @@ static StringRef maxPlainSubstring(StringRef S) {
     S = S.drop_front(PrefixSize);
 
     // It's impossible, as the first and last characters of the input string
-    // must be Glob special characters, otherwise the would be parts of
+    // must be Glob special characters, otherwise they would be parts of
     // the prefix or the suffix.
     assert(!S.empty());
 
@@ -166,7 +166,7 @@ static StringRef maxPlainSubstring(StringRef S) {
     }
     case '{':
       // TODO: implement.
-      // Fallback to what ever is best for now.
+      // Fallback to whatever is best for now.
       return Best;
     default:
       S = S.drop_front(1);
