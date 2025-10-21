@@ -16,7 +16,6 @@ jobs:
           diff
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
       - run: |
-          subst S: ${{ github.workspace }}
-      - run: |
-          cd S:\llvm\utils\release\
+          #subst S: ${{ github.workspace }}
+          cd llvm\utils\release\
           .\build_llvm_release.bat --x64 --version 21.1.3 --local-python --skip-checkout
