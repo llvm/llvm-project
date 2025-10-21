@@ -793,7 +793,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get the unique identifier of the device.
   const char *getDeviceUid() const { return DeviceUid.c_str(); }
-  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
@@ -1295,6 +1294,9 @@ struct GenericPluginTy {
 
     return *Devices[DeviceId];
   }
+  const GenericDeviceTy &getDevice(int32_t DeviceId) const {
+    return cast<const GenericDeviceTy>(getDevice(DeviceId));
+  }
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
@@ -1304,6 +1306,14 @@ struct GenericPluginTy {
     assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
     return UserDeviceIds.at(DeviceId);
   }
+
+  /// Get the UID for the given device.
+  const char *getDeviceUid(int32_t DeviceId) const {
+    return getDevice(DeviceId).getDeviceUid();
+  }
+
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
