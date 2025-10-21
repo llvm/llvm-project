@@ -1917,6 +1917,17 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     const Decl *decl = globalDecl.getDecl();
     func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
   }
+
+  // If we plan on emitting this inline builtin, we can't treat it as a builtin.
+  const auto *fd = cast<FunctionDecl>(globalDecl.getDecl());
+  if (fd->isInlineBuiltinDeclaration()) {
+    const FunctionDecl *fdBody;
+    bool hasBody = fd->hasBody(fdBody);
+    (void)hasBody;
+    assert(hasBody && "Inline builtin declarations should always have an "
+                      "available body!");
+    assert(!cir::MissingFeatures::attributeNoBuiltin());
+  }
 }
 
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
