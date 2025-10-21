@@ -200,7 +200,7 @@ Consensus and Time Limits
 
 Discussions remain open until a clear consensus emerges, meaning no sustained objections have been raised after reasonable discussion.
 
-To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the moderator (typically the person who started the thread) may take one of the following actions:
+To prevent open-ended debates, if no new viewpoints are expressed after an agreed period (e.g., 2 weeks), the moderator (typically the person who started the discussion thread) may take one of the following actions:
 
 * **Summarize the apparent consensus** and close the discussion, or
 * **Postpone the topic** to the next sync-up meeting if the outcome remains unclear, or
@@ -211,7 +211,7 @@ Voting Procedure
 
 When consensus cannot be reached or when a clear yes/no decision is needed:
 
-* The chair (or moderator) may call for a **simple vote** using emoji reactions on Discord or a similar visible method.
+* The moderator may call for a **simple vote** using emoji reactions on Discord or a similar visible method.
 * A decision passes if it receives a **majority (>50%)** of votes among **participants who voted.** Non-votes are **not counted** in the total.
 * To ensure decisions reflect the collective position of the group, **at least three-quarters of the total core members** must participate in the vote for it to be considered valid.
 * If results are evenly split **(50/50)**, or if participation falls below this threshold, the topic may be postponed to the next sync-up meeting for further discussion.
