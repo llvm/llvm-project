@@ -1471,6 +1471,17 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
 // instructions) auto-generated.
 #include "ARMGenMCPseudoLowering.inc"
 
+// Helper function to check if a register is live (used as an implicit operand)
+// in the given call instruction.
+static bool isRegisterLiveInCall(const MachineInstr &Call, MCRegister Reg) {
+  for (const MachineOperand &MO : Call.implicit_operands()) {
+    if (MO.isReg() && MO.getReg() == Reg && MO.isUse()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
                                          const MachineInstr &Call,
                                          int64_t PrefixNops) {
@@ -1488,17 +1499,8 @@ void ARMAsmPrinter::EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
   unsigned ESR = 0x8000 | (31 << 5) | (AddrIndex & 31);
 
   // Check if r3 is live and needs to be spilled.
-  bool NeedSpillR3 = false;
-  if (ScratchReg == ARM::R3) {
-    // Check if r3 is live (used as implicit operand in the call).
-    // If so, we need to spill/restore it.
-    for (const MachineOperand &MO : Call.implicit_operands()) {
-      if (MO.isReg() && MO.getReg() == ARM::R3 && MO.isUse()) {
-        NeedSpillR3 = true;
-        break;
-      }
-    }
-  }
+  bool NeedSpillR3 =
+      (ScratchReg == ARM::R3) && isRegisterLiveInCall(Call, ARM::R3);
 
   // If we need to spill r3, push it first.
   if (NeedSpillR3) {
@@ -1599,17 +1601,8 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
   unsigned ESR = 0x80 | (AddrIndex & 0x1F);
 
   // Check if r3 is live and needs to be spilled.
-  bool NeedSpillR3 = false;
-  if (ScratchReg == ARM::R3) {
-    // Check if r3 is live (used as implicit operand in the call).
-    // If so, we need to spill/restore it.
-    for (const MachineOperand &MO : Call.implicit_operands()) {
-      if (MO.isReg() && MO.getReg() == ARM::R3 && MO.isUse()) {
-        NeedSpillR3 = true;
-        break;
-      }
-    }
-  }
+  bool NeedSpillR3 =
+      (ScratchReg == ARM::R3) && isRegisterLiveInCall(Call, ARM::R3);
 
   // If we need to spill r3, push it first.
   if (NeedSpillR3) {
@@ -1693,15 +1686,8 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb1(Register AddrReg, int64_t Type,
   unsigned ScratchReg = ARM::R2;
   unsigned TempReg = ARM::R3;
 
-  // Check if r3 is live (used as implicit operand in the call).
-  // If so, we need to spill/restore it.
-  bool NeedSpillR3 = false;
-  for (const MachineOperand &MO : Call.implicit_operands()) {
-    if (MO.isReg() && MO.getReg() == ARM::R3 && MO.isUse()) {
-      NeedSpillR3 = true;
-      break;
-    }
-  }
+  // Check if r3 is live and needs to be spilled.
+  bool NeedSpillR3 = isRegisterLiveInCall(Call, ARM::R3);
 
   // Spill r3 if needed
   if (NeedSpillR3) {
@@ -1710,14 +1696,8 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb1(Register AddrReg, int64_t Type,
         MCInstBuilder(ARM::tPUSH).addImm(ARMCC::AL).addReg(0).addReg(ARM::R3));
   }
 
-  // Check if r2 is live (used as implicit operand in the call).
-  bool NeedSpillR2 = false;
-  for (const MachineOperand &MO : Call.implicit_operands()) {
-    if (MO.isReg() && MO.getReg() == ARM::R2 && MO.isUse()) {
-      NeedSpillR2 = true;
-      break;
-    }
-  }
+  // Check if r2 is live and needs to be spilled.
+  bool NeedSpillR2 = isRegisterLiveInCall(Call, ARM::R2);
 
   // Push R2 if it's live
   if (NeedSpillR2) {
