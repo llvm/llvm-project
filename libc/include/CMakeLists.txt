@@ -218,6 +218,9 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.complex_macros
+    .llvm-libc-types.float128
+    .llvm-libc-types.cfloat128
+    .llvm-libc-types.cfloat16
 )
 
 add_header_macro(
