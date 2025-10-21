@@ -203,7 +203,7 @@ TEST(ParsedASTTest,
                         AllOf(declNamed("foo"), withTemplateArgs("<bool>"))}));
 }
 
-TEST(ParsedASTTest, IgnoresDelayedTemplateParsing) {
+TEST(ParsedASTTest, WorksEvenWithDelayedTemplateParsing) {
   auto TU = TestTU::withCode(R"cpp(
     template <typename T> void xxx() {
       int yyy = 0;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s bugprone-move-forwarding-reference %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later %s bugprone-move-forwarding-reference %t
 
 namespace std {
 template <typename> struct remove_reference;

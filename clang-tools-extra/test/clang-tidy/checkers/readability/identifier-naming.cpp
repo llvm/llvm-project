@@ -82,7 +82,7 @@
 // RUN:     readability-identifier-naming.LocalPointerPrefix: 'l_', \
 // RUN:     readability-identifier-naming.LocalConstantPointerCase: CamelCase, \
 // RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
-// RUN:   }}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   }}' -- -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 

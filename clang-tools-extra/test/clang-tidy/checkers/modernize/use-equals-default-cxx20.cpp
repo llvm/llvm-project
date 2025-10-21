@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s modernize-use-equals-default %t -- -- -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-equals-default %t -- -- -fexceptions
 
 // Private constructor/destructor.
 class Priv {

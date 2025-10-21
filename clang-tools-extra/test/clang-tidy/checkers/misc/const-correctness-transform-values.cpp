@@ -4,7 +4,7 @@
 // RUN:   misc-const-correctness.WarnPointersAsValues: false, \
 // RUN:   misc-const-correctness.WarnPointersAsPointers: false, \
 // RUN:   misc-const-correctness.TransformPointersAsValues: false} \
-// RUN:   }" -- -fno-delayed-template-parsing
+// RUN:   }"
 
 bool global;
 char np_global = 0; // globals can't be known to be const

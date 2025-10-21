@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s misc-unconventional-assign-operator %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later %s misc-unconventional-assign-operator %t
 
 struct BadModifier {
   BadModifier& operator=(const BadModifier&) const;

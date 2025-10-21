@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++14-or-later %s readability-container-size-empty %t -- \
 // RUN: -config="{CheckOptions: {readability-container-size-empty.ExcludedComparisonTypes: '::std::array;::IgnoredDummyType'}}" \
-// RUN: -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
+// RUN: -- -isystem %clang_tidy_headers
 #include <string>
 
 namespace std {

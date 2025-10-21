@@ -4,7 +4,7 @@
 // RUN:     readability-identifier-naming.ParameterCase: CamelCase, \
 // RUN:     readability-identifier-naming.MethodCase: camelBack, \
 // RUN:     readability-identifier-naming.AggressiveDependentMemberLookup: true \
-// RUN:  }}' -- -fno-delayed-template-parsing
+// RUN:  }}'
 
 int set_up(int);
 int clear(int);

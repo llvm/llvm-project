@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s portability-std-allocator-const %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11-or-later %s portability-std-allocator-const %t
 
 namespace std {
 typedef unsigned size_t;

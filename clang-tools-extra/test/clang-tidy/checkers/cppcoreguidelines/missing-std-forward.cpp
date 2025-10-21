@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-missing-std-forward %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s cppcoreguidelines-missing-std-forward %t
 
 // NOLINTBEGIN
 namespace std {

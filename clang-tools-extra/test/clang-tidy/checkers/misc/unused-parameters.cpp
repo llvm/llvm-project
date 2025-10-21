@@ -1,7 +1,7 @@
 // RUN: mkdir -p %t.dir
 // RUN: echo "static void staticFunctionHeader(int i) {;}" > %t.dir/header.h
 // RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %t.dir/header-fixed.h
-// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t.dir/code -- -header-filter='.*' -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t.dir/code -- -header-filter='.*'
 // RUN: diff %t.dir/header.h %t.dir/header-fixed.h
 // FIXME: Make the test work in all language modes.
 

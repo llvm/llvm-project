@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s misc-unused-using-decls %t -- --fix-notes -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s misc-unused-using-decls %t -- --fix-notes
 
 namespace ns {
 

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s readability-use-std-min-max %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-use-std-min-max %t
 #define MY_MACRO_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 constexpr int myConstexprMin(int a, int b) {

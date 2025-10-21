@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables -fix-errors %t -- -- -fno-delayed-template-parsing -fexceptions
+// RUN: %check_clang_tidy %s cppcoreguidelines-init-variables -fix-errors %t -- -- -fexceptions
 // CHECK-FIXES: #include <math.h>
 
 // Ensure that function declarations are not changed.

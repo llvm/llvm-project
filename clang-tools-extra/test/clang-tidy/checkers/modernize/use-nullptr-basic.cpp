@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s modernize-use-nullptr %t
 
 const unsigned int g_null = 0;
 #define NULL 0

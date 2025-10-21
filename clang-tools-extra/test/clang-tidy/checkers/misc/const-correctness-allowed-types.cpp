@@ -5,7 +5,7 @@
 // RUN:     misc-const-correctness.TransformReferences: true, \
 // RUN:     misc-const-correctness.WarnPointersAsValues: true, \
 // RUN:     misc-const-correctness.WarnPointersAsPointers: false } \
-// RUN:   }" -- -fno-delayed-template-parsing
+// RUN:   }"
 
 struct SmartPointer {
 };

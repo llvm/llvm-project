@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fdelayed-template-parsing
+// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t
 
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {

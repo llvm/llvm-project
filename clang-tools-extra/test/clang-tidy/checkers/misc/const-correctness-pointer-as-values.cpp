@@ -3,8 +3,7 @@
 // RUN:  {misc-const-correctness.AnalyzeValues: true,\
 // RUN:   misc-const-correctness.WarnPointersAsValues: true,\
 // RUN:   misc-const-correctness.WarnPointersAsPointers: false,\
-// RUN:   misc-const-correctness.TransformPointersAsValues: true}}' \
-// RUN: -- -fno-delayed-template-parsing
+// RUN:   misc-const-correctness.TransformPointersAsValues: true}}'
 
 void potential_const_pointer() {
   double np_local0[10] = {0., 1., 2., 3., 4., 5., 6., 7., 8., 9.};

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-scoped-lock %t -- -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-scoped-lock %t -- -- -isystem %clang_tidy_headers
 
 #include <mutex>
 

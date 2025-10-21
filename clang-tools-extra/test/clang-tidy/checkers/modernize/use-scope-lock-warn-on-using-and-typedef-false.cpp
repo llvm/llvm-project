@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-scoped-lock %t -- \
 // RUN:   -config="{CheckOptions: {modernize-use-scoped-lock.WarnOnUsingAndTypedef: false}}" \
-// RUN:   -- -isystem %clang_tidy_headers -fno-delayed-template-parsing
+// RUN:   -- -isystem %clang_tidy_headers
 
 #include <mutex>
 

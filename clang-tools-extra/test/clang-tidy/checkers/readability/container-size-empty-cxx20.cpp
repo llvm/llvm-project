@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s readability-container-size-empty %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20 %s readability-container-size-empty %t
 
 namespace std {
 struct strong_ordering {
