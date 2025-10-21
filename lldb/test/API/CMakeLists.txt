@@ -78,7 +78,7 @@ find_program(LLDB_DIRNAME_PATH dirname)
 if(LLDB_DIRNAME_PATH)
   message(STATUS "Found dirname: ${LLDB_DIRNAME_PATH}")
 else()
-  message(STATUS "Did not find 'dirname'.")
+  message(STATUS "Could NOT find 'dirname'")
   message(WARNING
         "Many LLDB API tests require the 'dirname' tool. Please provide it in Path.")
 endif()
