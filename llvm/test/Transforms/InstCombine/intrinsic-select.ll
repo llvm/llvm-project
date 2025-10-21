@@ -370,3 +370,15 @@ define float @test_fabs_select_multiuse_both_constant(i1 %cond, float %x) {
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
+
+; Negative test: Don't replace with select between vector mask and zeroinitializer.
+define <16 x i1> @test_select_of_active_lane_mask_bound(i64 %base, i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_active_lane_mask_bound(
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[COND:%.*]], i64 [[N:%.*]], i64 0
+; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 [[BASE:%.*]], i64 [[S]])
+; CHECK-NEXT:    ret <16 x i1> [[MASK]]
+;
+  %s = select i1 %cond, i64 %n, i64 0
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %s)
+  ret <16 x i1> %mask
+}
