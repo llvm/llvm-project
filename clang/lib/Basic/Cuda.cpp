@@ -44,6 +44,7 @@ static const CudaVersionMapEntry CudaNameVersionMap[] = {
     CUDA_ENTRY(12, 5),
     CUDA_ENTRY(12, 6),
     CUDA_ENTRY(12, 8),
+    CUDA_ENTRY(12, 9),
     {"", CudaVersion::NEW, llvm::VersionTuple(std::numeric_limits<int>::max())},
     {"unknown", CudaVersion::UNKNOWN, {}} // End of list tombstone.
 };
@@ -119,6 +120,11 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
   case OffloadArch::SM_120:
   case OffloadArch::SM_120a:
     return CudaVersion::CUDA_128;
+  case OffloadArch::SM_103:
+  case OffloadArch::SM_103a:
+  case OffloadArch::SM_121:
+  case OffloadArch::SM_121a:
+    return CudaVersion::CUDA_129;
   default:
     llvm_unreachable("invalid enum");
   }

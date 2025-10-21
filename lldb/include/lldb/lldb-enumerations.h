@@ -130,6 +130,8 @@ FLAGS_ENUM(LaunchFlags){
     eLaunchFlagInheritTCCFromParent =
         (1u << 12), ///< Don't make the inferior responsible for its own TCC
                     ///< permissions but instead inherit them from its parent.
+    eLaunchFlagMemoryTagging =
+        (1u << 13), ///< Launch process with memory tagging explicitly enabled.
 };
 
 /// Thread Run Modes.
@@ -198,11 +200,15 @@ enum Format {
                          ///< character arrays that can contain non printable
                          ///< characters
   eFormatAddressInfo,    ///< Describe what an address points to (func + offset
-                      ///< with file/line, symbol + offset, data, etc)
-  eFormatHexFloat,    ///< ISO C99 hex float string
-  eFormatInstruction, ///< Disassemble an opcode
-  eFormatVoid,        ///< Do not print this
+                         ///< with file/line, symbol + offset, data, etc)
+  eFormatHexFloat,       ///< ISO C99 hex float string
+  eFormatInstruction,    ///< Disassemble an opcode
+  eFormatVoid,           ///< Do not print this
   eFormatUnicode8,
+  eFormatFloat128, ///< Disambiguate between 128-bit `long double` (which uses
+                   ///< `eFormatFloat`) and `__float128` (which uses
+                   ///< `eFormatFloat128`). If the value being formatted is not
+                   ///< 128 bits, then this is identical to `eFormatFloat`.
   kNumFormats
 };
 
@@ -518,6 +524,7 @@ enum LanguageType {
   eLanguageTypeAssembly = 0x0031,
   eLanguageTypeC_sharp = 0x0032,
   eLanguageTypeMojo = 0x0033,
+  eLanguageTypeLastStandardLanguage = eLanguageTypeMojo,
 
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
@@ -525,8 +532,6 @@ enum LanguageType {
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
   eLanguageTypeMipsAssembler, ///< Mips_Assembler.
-  // Mojo will move to the common list of languages once the DWARF committee
-  // creates a language code for it.
   eNumLanguageTypes
 };
 
@@ -774,6 +779,7 @@ enum SectionType {
   eSectionTypeLLDBTypeSummaries,
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
+  eSectionTypeWasmName,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -839,7 +845,8 @@ enum BasicType {
   eBasicTypeObjCClass,
   eBasicTypeObjCSel,
   eBasicTypeNullPtr,
-  eBasicTypeOther
+  eBasicTypeOther,
+  eBasicTypeFloat128
 };
 
 /// Deprecated
@@ -1321,10 +1328,11 @@ enum CompletionType {
   eTypeCategoryNameCompletion = (1ul << 24),
   eCustomCompletion = (1ul << 25),
   eThreadIDCompletion = (1ul << 26),
+  eManagedPluginCompletion = (1ul << 27),
   // This last enum element is just for input validation.
   // Add new completions before this element,
   // and then increment eTerminatorCompletion's shift value
-  eTerminatorCompletion = (1ul << 27)
+  eTerminatorCompletion = (1ul << 28)
 };
 
 /// Specifies if children need to be re-computed

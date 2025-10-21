@@ -20,8 +20,12 @@
 
 using namespace llvm;
 
+// There are numerous MCSymbol objects, so keeping sizeof(MCSymbol) small is
+// crucial for minimizing peak memory usage.
+static_assert(sizeof(MCSymbol) <= 24, "Keep the base symbol small");
+
 // Only the address of this fragment is ever actually used.
-static MCDataFragment SentinelFragment;
+static MCFragment SentinelFragment;
 
 // Sentinel value for the absolute pseudo fragment.
 MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
@@ -44,13 +48,12 @@ void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
 }
 
 void MCSymbol::setVariableValue(const MCExpr *Value) {
-  assert(Value && "Invalid variable value!");
-  assert((SymbolContents == SymContentsUnset ||
-          SymbolContents == SymContentsVariable) &&
-         "Cannot give common/offset symbol a variable value");
+  assert(Value && "Invalid equated expression");
+  assert((kind == Kind::Regular || kind == Kind::Equated) &&
+         "Cannot equate a common symbol");
   this->Value = Value;
-  SymbolContents = SymContentsVariable;
-  setUndefined();
+  kind = Kind::Equated;
+  Fragment = nullptr;
 }
 
 void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {

@@ -33,7 +33,7 @@ int main(int argc, char const *argv[]) {
   if (foo == nullptr) {
     fprintf(stderr, "%s\n", dlerror());
     exit(2);
-  }
+  } // break non-breakpointable line
   foo(12); // before loop
 
   for (int i = 0; i < 10; ++i) {

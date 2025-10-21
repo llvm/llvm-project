@@ -41,12 +41,12 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp fast ogt <4 x double> [[TMP7]], zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast <4 x double> [[TMP6]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <4 x double> [[TMP7]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP8]], <4 x double> [[TMP6]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP9]], <4 x double> [[TMP7]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP12:%.*]] = select ninf <4 x i1> [[TMP8]], <4 x double> [[TMP6]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP13:%.*]] = select ninf <4 x i1> [[TMP9]], <4 x double> [[TMP7]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP14]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI16]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI17]], [[TMP13]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP8]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP9]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP16:%.*]] = select ninf <4 x i1> [[TMP8]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = select ninf <4 x i1> [[TMP9]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI15]], [[TMP17]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 8
@@ -75,9 +75,9 @@ define nofpclass(nan inf) double @monte_simple(i32 noundef %nblocks, i32 noundef
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub fast double [[MUL]], [[Z]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast ogt double [[SUB]], 0.000000e+00
 ; CHECK-NEXT:    [[MUL3:%.*]] = fmul fast double [[SUB]], [[SUB]]
-; CHECK-NEXT:    [[ADD8:%.*]] = select i1 [[CMP1]], double [[SUB]], double -0.000000e+00
+; CHECK-NEXT:    [[ADD8:%.*]] = select ninf i1 [[CMP1]], double [[SUB]], double -0.000000e+00
 ; CHECK-NEXT:    [[V0_2]] = fadd reassoc arcp contract afn double [[V0_011]], [[ADD8]]
-; CHECK-NEXT:    [[ADD4:%.*]] = select i1 [[CMP1]], double [[MUL3]], double -0.000000e+00
+; CHECK-NEXT:    [[ADD4:%.*]] = select ninf i1 [[CMP1]], double [[MUL3]], double -0.000000e+00
 ; CHECK-NEXT:    [[V1_2]] = fadd reassoc arcp contract afn double [[V1_012]], [[ADD4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -108,13 +108,13 @@ entry:
   store ptr %samples, ptr %samples.addr, align 8
   store double %Y, ptr %Y.addr, align 8
   store double %Z, ptr %Z.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %block) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %rngVal) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %callValue) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v0) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %block) #2
+  call void @llvm.lifetime.start.p0(ptr %rngVal) #2
+  call void @llvm.lifetime.start.p0(ptr %callValue) #2
+  call void @llvm.lifetime.start.p0(ptr %v0) #2
   store double 0.000000e+00, ptr %v0, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v1) #2
+  call void @llvm.lifetime.start.p0(ptr %v1) #2
   store double 0.000000e+00, ptr %v1, align 8
   store i32 0, ptr %i, align 4
   br label %for.cond
@@ -169,12 +169,12 @@ for.end:                                          ; preds = %for.cond
   %15 = load double, ptr %v0, align 8
   %16 = load double, ptr %v1, align 8
   %add5 = fadd fast double %15, %16
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v1) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v0) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %callValue) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %rngVal) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %block) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %v1) #2
+  call void @llvm.lifetime.end.p0(ptr %v0) #2
+  call void @llvm.lifetime.end.p0(ptr %callValue) #2
+  call void @llvm.lifetime.end.p0(ptr %rngVal) #2
+  call void @llvm.lifetime.end.p0(ptr %block) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   ret double %add5
 }
 
@@ -229,12 +229,12 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[TMP13:%.*]] = fcmp fast ogt <4 x double> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x double> [[TMP10]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x double> [[TMP11]], [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <4 x i1> [[TMP13]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP16:%.*]] = select ninf <4 x i1> [[TMP12]], <4 x double> [[TMP10]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = select ninf <4 x i1> [[TMP13]], <4 x double> [[TMP11]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP18]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI32]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP19]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI33]], [[TMP17]]
-; CHECK-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP12]], <4 x double> [[TMP14]], <4 x double> splat (double -0.000000e+00)
-; CHECK-NEXT:    [[TMP21:%.*]] = select <4 x i1> [[TMP13]], <4 x double> [[TMP15]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP20:%.*]] = select ninf <4 x i1> [[TMP12]], <4 x double> [[TMP14]], <4 x double> splat (double -0.000000e+00)
+; CHECK-NEXT:    [[TMP21:%.*]] = select ninf <4 x i1> [[TMP13]], <4 x double> [[TMP15]], <4 x double> splat (double -0.000000e+00)
 ; CHECK-NEXT:    [[TMP22]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP23]] = fadd reassoc arcp contract afn <4 x double> [[VEC_PHI31]], [[TMP21]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDVARS_IV1]], 8
@@ -263,9 +263,9 @@ define nofpclass(nan inf) double @monte_exp(i32 noundef %nblocks, i32 noundef %R
 ; CHECK-NEXT:    [[SUB_US:%.*]] = fsub fast double [[MUL_US]], [[Z]]
 ; CHECK-NEXT:    [[CMP4_US:%.*]] = fcmp fast ogt double [[SUB_US]], 0.000000e+00
 ; CHECK-NEXT:    [[ADD7_US:%.*]] = fmul fast double [[SUB_US]], [[SUB_US]]
-; CHECK-NEXT:    [[ADD12_US:%.*]] = select i1 [[CMP4_US]], double [[SUB_US]], double -0.000000e+00
+; CHECK-NEXT:    [[ADD12_US:%.*]] = select ninf i1 [[CMP4_US]], double [[SUB_US]], double -0.000000e+00
 ; CHECK-NEXT:    [[V0_2_US]] = fadd reassoc arcp contract afn double [[V0_115_US]], [[ADD12_US]]
-; CHECK-NEXT:    [[ADD7_US1:%.*]] = select i1 [[CMP4_US]], double [[ADD7_US]], double -0.000000e+00
+; CHECK-NEXT:    [[ADD7_US1:%.*]] = select ninf i1 [[CMP4_US]], double [[ADD7_US]], double -0.000000e+00
 ; CHECK-NEXT:    [[V1_2_US]] = fadd reassoc arcp contract afn double [[V1_116_US]], [[ADD7_US1]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND25_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
@@ -305,13 +305,13 @@ entry:
   store ptr %samples, ptr %samples.addr, align 8
   store double %Y, ptr %Y.addr, align 8
   store double %Z, ptr %Z.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %block) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %rngVal) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %callValue) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v0) #4
+  call void @llvm.lifetime.start.p0(ptr %i) #4
+  call void @llvm.lifetime.start.p0(ptr %block) #4
+  call void @llvm.lifetime.start.p0(ptr %rngVal) #4
+  call void @llvm.lifetime.start.p0(ptr %callValue) #4
+  call void @llvm.lifetime.start.p0(ptr %v0) #4
   store double 0.000000e+00, ptr %v0, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v1) #4
+  call void @llvm.lifetime.start.p0(ptr %v1) #4
   store double 0.000000e+00, ptr %v1, align 8
   store i32 0, ptr %block, align 4
   br label %for.cond
@@ -389,19 +389,19 @@ for.end10:                                        ; preds = %for.cond
   %21 = load double, ptr %v0, align 8
   %22 = load double, ptr %v1, align 8
   %add11 = fadd fast double %21, %22
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v1) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v0) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %callValue) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %rngVal) #4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %block) #4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #4
+  call void @llvm.lifetime.end.p0(ptr %v1) #4
+  call void @llvm.lifetime.end.p0(ptr %v0) #4
+  call void @llvm.lifetime.end.p0(ptr %callValue) #4
+  call void @llvm.lifetime.end.p0(ptr %rngVal) #4
+  call void @llvm.lifetime.end.p0(ptr %block) #4
+  call void @llvm.lifetime.end.p0(ptr %i) #4
   ret double %add11
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @resample(i32 noundef, ptr noundef)
 declare double @llvm.exp2.f64(double)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}

@@ -73,6 +73,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_macros
+  HDRS
+    pthread_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
+    libc.include.pthread
+)
+
+add_proxy_header_library(
   sched_macros
   HDRS
     sched_macros.h
@@ -241,6 +250,15 @@ add_proxy_header_library(
     offsetof_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.offsetof_macro
+)
+
+# stdint.h header.
+add_proxy_header_library(
+  stdint_proxy
+  HDRS
+    stdint_proxy.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdint
 )
 
 add_subdirectory(types)

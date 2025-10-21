@@ -39,64 +39,48 @@ RT_API_ATTRS int Initialize(const Descriptor &instance,
 }
 
 RT_API_ATTRS int InitializeTicket::Begin(WorkQueue &) {
-  // Initialize procedure pointer components in each element
-  const Descriptor &procPtrDesc{derived_.procPtr()};
-  if (std::size_t numProcPtrs{procPtrDesc.Elements()}) {
-    for (std::size_t k{0}; k < numProcPtrs; ++k) {
-      const auto &comp{
-          *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
-      // Loop only over elements
-      if (k > 0) {
-        Elementwise::Reset();
-      }
-      for (; !Elementwise::IsComplete(); Elementwise::Advance()) {
-        auto &pptr{*instance_.ElementComponent<typeInfo::ProcedurePointer>(
-            subscripts_, comp.offset)};
-        pptr = comp.procInitialization;
-      }
+  if (elements_ == 0) {
+    return StatOk;
+  } else {
+    // Initialize procedure pointer components in the first element,
+    // whence they will be copied later into all others.
+    const Descriptor &procPtrDesc{derived_.procPtr()};
+    std::size_t numProcPtrs{procPtrDesc.InlineElements()};
+    char *raw{instance_.OffsetElement<char>()};
+    const auto *ppComponent{
+        procPtrDesc.OffsetElement<typeInfo::ProcPtrComponent>()};
+    for (std::size_t k{0}; k < numProcPtrs; ++k, ++ppComponent) {
+      auto &pptr{*reinterpret_cast<typeInfo::ProcedurePointer *>(
+          raw + ppComponent->offset)};
+      pptr = ppComponent->procInitialization;
     }
-    if (IsComplete()) {
-      return StatOk;
-    }
-    Elementwise::Reset();
+    return StatContinue;
   }
-  return StatContinue;
 }
 
 RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
-  while (!IsComplete()) {
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
-      // Establish allocatable descriptors
-      for (; !Elementwise::IsComplete(); Elementwise::Advance()) {
-        Descriptor &allocDesc{*instance_.ElementComponent<Descriptor>(
-            subscripts_, component_->offset())};
-        component_->EstablishDescriptor(
-            allocDesc, instance_, workQueue.terminator());
-        allocDesc.raw().attribute = CFI_attribute_allocatable;
-      }
-      SkipToNextComponent();
+  // Initialize the data components of the first element.
+  char *rawInstance{instance_.OffsetElement<char>()};
+  for (; !Componentwise::IsComplete(); SkipToNextComponent()) {
+    char *rawComponent{rawInstance + component_->offset()};
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
+      Descriptor &allocDesc{*reinterpret_cast<Descriptor *>(rawComponent)};
+      component_->EstablishDescriptor(
+          allocDesc, instance_, workQueue.terminator());
     } else if (const void *init{component_->initialization()}) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      for (; !Elementwise::IsComplete(); Elementwise::Advance()) {
-        char *ptr{instance_.ElementComponent<char>(
-            subscripts_, component_->offset())};
-        std::memcpy(ptr, init, bytes);
-      }
-      SkipToNextComponent();
-    } else if (component_->genre() == typeInfo::Component::Genre::Pointer) {
+      runtime::memcpy(rawComponent, init, bytes);
+    } else if (component_->genre() == typeInfo::Component::Genre::Pointer ||
+        component_->genre() == typeInfo::Component::Genre::PointerDevice) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
       // assignment statements.
-      for (; !Elementwise::IsComplete(); Elementwise::Advance()) {
-        Descriptor &ptrDesc{*instance_.ElementComponent<Descriptor>(
-            subscripts_, component_->offset())};
-        component_->EstablishDescriptor(
-            ptrDesc, instance_, workQueue.terminator());
-        ptrDesc.raw().attribute = CFI_attribute_pointer;
-      }
-      SkipToNextComponent();
+      Descriptor &ptrDesc{*reinterpret_cast<Descriptor *>(rawComponent)};
+      component_->EstablishDescriptor(
+          ptrDesc, instance_, workQueue.terminator());
     } else if (component_->genre() == typeInfo::Component::Genre::Data &&
         component_->derivedType() &&
         !component_->derivedType()->noInitializationNeeded()) {
@@ -106,16 +90,41 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       GetComponentExtents(extents, *component_, instance_);
       Descriptor &compDesc{componentDescriptor_.descriptor()};
       const typeInfo::DerivedType &compType{*component_->derivedType()};
-      compDesc.Establish(compType,
-          instance_.ElementComponent<char>(subscripts_, component_->offset()),
-          component_->rank(), extents);
-      Advance();
+      compDesc.Establish(compType, rawComponent, component_->rank(), extents);
       if (int status{workQueue.BeginInitialize(compDesc, compType)};
           status != StatOk) {
+        SkipToNextComponent();
         return status;
       }
-    } else {
-      SkipToNextComponent();
+    }
+  }
+  // The first element is now complete.  Copy it into the others.
+  if (elements_ < 2) {
+  } else {
+    auto elementBytes{static_cast<SubscriptValue>(instance_.ElementBytes())};
+    if (auto stride{instance_.FixedStride()}) {
+      if (*stride == elementBytes) { // contiguous
+        for (std::size_t done{1}; done < elements_;) {
+          std::size_t chunk{elements_ - done};
+          if (chunk > done) {
+            chunk = done;
+          }
+          char *uninitialized{rawInstance + done * *stride};
+          runtime::memcpy(uninitialized, rawInstance, chunk * *stride);
+          done += chunk;
+        }
+      } else {
+        for (std::size_t done{1}; done < elements_; ++done) {
+          char *uninitialized{rawInstance + done * *stride};
+          runtime::memcpy(uninitialized, rawInstance, elementBytes);
+        }
+      }
+    } else { // one at a time with subscription
+      for (Elementwise::Advance(); !Elementwise::IsComplete();
+          Elementwise::Advance()) {
+        char *element{instance_.Element<char>(subscripts_)};
+        runtime::memcpy(element, rawInstance, elementBytes);
+      }
     }
   }
   return StatOk;
@@ -136,7 +145,8 @@ RT_API_ATTRS int InitializeClone(const Descriptor &clone,
 
 RT_API_ATTRS int InitializeCloneTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable) {
+    if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
       Descriptor &origDesc{*instance_.ElementComponent<Descriptor>(
           subscripts_, component_->offset())};
       if (origDesc.IsAllocated()) {
@@ -237,7 +247,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
     const typeInfo::DerivedType &derived, Terminator &terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
-      std::size_t elements{descriptor.Elements()};
+      std::size_t elements{descriptor.InlineElements()};
       SubscriptValue at[maxRank];
       descriptor.GetLowerBounds(at);
       if (special->IsArgDescriptor(0)) {
@@ -263,7 +273,7 @@ static RT_API_ATTRS void CallFinalSubroutine(const Descriptor &descriptor,
       StaticDescriptor<maxRank, true, 10> statDesc;
       Descriptor &copy{statDesc.descriptor()};
       const Descriptor *argDescriptor{&descriptor};
-      if (descriptor.rank() > 0 && special->IsArgContiguous(0) &&
+      if (descriptor.rank() > 0 && special->specialCaseFlag() &&
           !descriptor.IsContiguous()) {
         // The FINAL subroutine demands a contiguous array argument, but
         // this INTENT(OUT) or intrinsic assignment LHS isn't contiguous.
@@ -313,7 +323,9 @@ RT_API_ATTRS int FinalizeTicket::Begin(WorkQueue &workQueue) {
 
 RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
-    if (component_->genre() == typeInfo::Component::Genre::Allocatable &&
+    if ((component_->genre() == typeInfo::Component::Genre::Allocatable ||
+            component_->genre() ==
+                typeInfo::Component::Genre::AllocatableDevice) &&
         component_->category() == TypeCategory::Derived) {
       // Component may be polymorphic or unlimited polymorphic. Need to use the
       // dynamic type to check whether finalization is needed.
@@ -335,6 +347,7 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
         }
       }
     } else if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice ||
         component_->genre() == typeInfo::Component::Genre::Automatic) {
       if (const typeInfo::DerivedType *compType{component_->derivedType()};
           compType && !compType->noFinalizationNeeded()) {
@@ -353,6 +366,8 @@ RT_API_ATTRS int FinalizeTicket::Continue(WorkQueue &workQueue) {
     } else if (component_->genre() == typeInfo::Component::Genre::Data &&
         component_->derivedType() &&
         !component_->derivedType()->noFinalizationNeeded()) {
+      // todo: calculate and use fixedStride_ here as in DestroyTicket to
+      // avoid subscripts and repeated descriptor establishment.
       SubscriptValue extents[maxRank];
       GetComponentExtents(extents, *component_, instance_);
       Descriptor &compDesc{componentDescriptor_.descriptor()};
@@ -416,25 +431,53 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
   while (!IsComplete()) {
     const auto *componentDerived{component_->derivedType()};
     if (component_->genre() == typeInfo::Component::Genre::Allocatable ||
-        component_->genre() == typeInfo::Component::Genre::Automatic) {
-      Descriptor *d{instance_.ElementComponent<Descriptor>(
-          subscripts_, component_->offset())};
-      if (d->IsAllocated()) {
-        if (phase_ == 0) {
-          ++phase_;
-          if (componentDerived && !componentDerived->noDestructionNeeded()) {
+        component_->genre() == typeInfo::Component::Genre::AllocatableDevice) {
+      if (fixedStride_ &&
+          (!componentDerived || componentDerived->noDestructionNeeded())) {
+        // common fast path, just deallocate in every element
+        char *p{instance_.OffsetElement<char>(component_->offset())};
+        for (std::size_t j{0}; j < elements_; ++j, p += *fixedStride_) {
+          Descriptor &d{*reinterpret_cast<Descriptor *>(p)};
+          d.Deallocate();
+        }
+        SkipToNextComponent();
+      } else {
+        Descriptor &d{*instance_.ElementComponent<Descriptor>(
+            subscripts_, component_->offset())};
+        if (d.IsAllocated()) {
+          if (componentDerived && !componentDerived->noDestructionNeeded() &&
+              phase_ == 0) {
             if (int status{workQueue.BeginDestroy(
-                    *d, *componentDerived, /*finalize=*/false)};
+                    d, *componentDerived, /*finalize=*/false)};
                 status != StatOk) {
+              ++phase_;
               return status;
             }
           }
+          d.Deallocate();
         }
-        d->Deallocate();
+        Advance();
       }
-      Advance();
     } else if (component_->genre() == typeInfo::Component::Genre::Data) {
       if (!componentDerived || componentDerived->noDestructionNeeded()) {
+        SkipToNextComponent();
+      } else if (fixedStride_) {
+        // faster path, no need for subscripts, can reuse descriptor
+        char *p{instance_.OffsetElement<char>(
+            elementAt_ * *fixedStride_ + component_->offset())};
+        Descriptor &compDesc{componentDescriptor_.descriptor()};
+        const typeInfo::DerivedType &compType{*componentDerived};
+        compDesc.UncheckedScalarEstablish(compType, p);
+        for (std::size_t j{elementAt_}; j < elements_;
+            ++j, p += *fixedStride_) {
+          compDesc.set_base_addr(p);
+          ++elementAt_;
+          if (int status{workQueue.BeginDestroy(
+                  compDesc, compType, /*finalize=*/false)};
+              status != StatOk) {
+            return status;
+          }
+        }
         SkipToNextComponent();
       } else {
         SubscriptValue extents[maxRank];
@@ -445,8 +488,8 @@ RT_API_ATTRS int DestroyTicket::Continue(WorkQueue &workQueue) {
             instance_.ElementComponent<char>(subscripts_, component_->offset()),
             component_->rank(), extents);
         Advance();
-        if (int status{workQueue.BeginDestroy(
-                compDesc, *componentDerived, /*finalize=*/false)};
+        if (int status{
+                workQueue.BeginDestroy(compDesc, compType, /*finalize=*/false)};
             status != StatOk) {
           return status;
         }

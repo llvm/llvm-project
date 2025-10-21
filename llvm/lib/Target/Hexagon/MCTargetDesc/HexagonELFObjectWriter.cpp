@@ -50,13 +50,13 @@ unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case HexagonMCExpr::VK_IE:
   case HexagonMCExpr::VK_IE_GOT:
   case HexagonMCExpr::VK_TPREL:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     report_fatal_error("Unrecognized relocation type");
     break;

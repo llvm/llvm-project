@@ -672,15 +672,14 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
   // need to be adapted.
   Style = getLLVMStyle();
 
-  const StringRef Code{"      class Foo {\n"
-                       "            void test() {\n"
-                       "    #ifdef 1\n"
-                       "                #define some\n" // format this line
-                       "         #endif\n"
-                       "    }};"};
+  constexpr StringRef Code("      class Foo {\n"
+                           "            void test() {\n"
+                           "    #ifdef 1\n"
+                           "                #define some\n" // format this line
+                           "         #endif\n"
+                           "    }};");
 
-  EXPECT_EQ(Style.IndentPPDirectives,
-            FormatStyle::PPDirectiveIndentStyle::PPDIS_None);
+  EXPECT_EQ(Style.IndentPPDirectives, FormatStyle::PPDIS_None);
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -689,8 +688,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "            }};", // Ditto: Bug?
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_BeforeHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"
@@ -699,8 +697,7 @@ TEST_F(FormatTestSelective, FormatMacroRegardlessOfPreviousIndent) {
             "    }};",
             format(Code, 57, 0));
 
-  Style.IndentPPDirectives =
-      FormatStyle::PPDirectiveIndentStyle::PPDIS_AfterHash;
+  Style.IndentPPDirectives = FormatStyle::PPDIS_AfterHash;
   EXPECT_EQ("      class Foo {\n"
             "            void test() {\n"
             "    #ifdef 1\n"

@@ -88,23 +88,32 @@ static inline RT_API_ATTRS bool MustDeallocateLHS(
 // originally deallocated or because it required reallocation
 static RT_API_ATTRS int AllocateAssignmentLHS(
     Descriptor &to, const Descriptor &from, Terminator &terminator, int flags) {
-  to.raw().type = from.raw().type;
-  if (!(flags & ExplicitLengthCharacterLHS)) {
-    to.raw().elem_len = from.ElementBytes();
-  }
-  const typeInfo::DerivedType *derived{nullptr};
   DescriptorAddendum *toAddendum{to.Addendum()};
+  const typeInfo::DerivedType *derived{nullptr};
+  if (toAddendum) {
+    derived = toAddendum->derivedType();
+  }
   if (const DescriptorAddendum * fromAddendum{from.Addendum()}) {
-    derived = fromAddendum->derivedType();
-    if (toAddendum) {
-      toAddendum->set_derivedType(derived);
-      std::size_t lenParms{derived ? derived->LenParameters() : 0};
+    if (!derived || (flags & PolymorphicLHS)) {
+      derived = fromAddendum->derivedType();
+    }
+    if (toAddendum && derived) {
+      std::size_t lenParms{derived->LenParameters()};
       for (std::size_t j{0}; j < lenParms; ++j) {
         toAddendum->SetLenParameterValue(j, fromAddendum->LenParameterValue(j));
       }
     }
-  } else if (toAddendum) {
-    toAddendum->set_derivedType(nullptr);
+  } else {
+    derived = nullptr;
+  }
+  if (toAddendum) {
+    toAddendum->set_derivedType(derived);
+  }
+  to.raw().type = from.raw().type;
+  if (derived) {
+    to.raw().elem_len = derived->sizeInBytes();
+  } else if (!(flags & ExplicitLengthCharacterLHS)) {
+    to.raw().elem_len = from.ElementBytes();
   }
   // subtle: leave bounds in place when "from" is scalar (10.2.1.3(3))
   int rank{from.rank()};
@@ -217,8 +226,8 @@ static RT_API_ATTRS void DoElementalDefinedAssignment(const Descriptor &to,
   toElementDesc.Establish(derived, nullptr, 0, nullptr, CFI_attribute_pointer);
   fromElementDesc.Establish(
       derived, nullptr, 0, nullptr, CFI_attribute_pointer);
-  for (std::size_t toElements{to.Elements()}; toElements-- > 0;
-       to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+  for (std::size_t toElements{to.InlineElements()}; toElements-- > 0;
+      to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     toElementDesc.set_base_addr(to.Element<char>(toAt));
     fromElementDesc.set_base_addr(from.Element<char>(fromAt));
     DoScalarDefinedAssignment(toElementDesc, fromElementDesc, derived, special);
@@ -235,7 +244,7 @@ static RT_API_ATTRS void BlankPadCharacterAssignment(Descriptor &to,
   for (; elements-- > 0;
        to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
     CHAR *p{to.Element<CHAR>(toAt)};
-    Fortran::runtime::memmove(
+    runtime::memmove(
         p, from.Element<std::add_const_t<CHAR>>(fromAt), fromElementBytes);
     p += copiedCharacters;
     for (auto n{padding}; n-- > 0;) {
@@ -279,13 +288,15 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
     if (mustDeallocateLHS) {
       // Convert the LHS into a temporary, then make it look deallocated.
       toDeallocate_ = &tempDescriptor_.descriptor();
-      persist_ = true; // tempDescriptor_ state must outlive child tickets
-      std::memcpy(
+      runtime::memcpy(
           reinterpret_cast<void *>(toDeallocate_), &to_, to_.SizeInBytes());
       to_.set_base_addr(nullptr);
       if (toDerived_ && (flags_ & NeedFinalization)) {
-        if (int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
-            status != StatOk && status != StatContinue) {
+        int status{workQueue.BeginFinalize(*toDeallocate_, *toDerived_)};
+        if (status == StatContinue) {
+          // tempDescriptor_ state must outlive pending child ticket
+          persist_ = true;
+        } else if (status != StatOk) {
           return status;
         }
         flags_ &= ~NeedFinalization;
@@ -296,7 +307,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       auto descBytes{from_->SizeInBytes()};
       Descriptor &newFrom{tempDescriptor_.descriptor()};
       persist_ = true; // tempDescriptor_ state must outlive child tickets
-      std::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
+      runtime::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.
@@ -304,6 +315,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       if (int stat{ReturnError(
               workQueue.terminator(), newFrom.Allocate(kNoAsyncObject))};
           stat != StatOk) {
+        if (stat == StatContinue) {
+          persist_ = true;
+        }
         return stat;
       }
       if (HasDynamicComponent(*from_)) {
@@ -364,6 +378,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         return status;
       }
     } else if (!toDerived_->noDestructionNeeded()) {
+      // F'2023 9.7.3.2 p7: "When an intrinsic assignment statement (10.2.1.3)
+      // is executed, any noncoarray allocated allocatable subobject of the
+      // variable is deallocated before the assignment takes place."
       if (int status{
               workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
           status != StatOk && status != StatContinue) {
@@ -431,11 +448,14 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
   }
   // Intrinsic assignment
-  std::size_t toElements{to_.Elements()};
-  if (from_->rank() > 0 && toElements != from_->Elements()) {
-    workQueue.terminator().Crash("Assign: mismatching element counts in array "
-                                 "assignment (to %zd, from %zd)",
-        toElements, from_->Elements());
+  std::size_t toElements{to_.InlineElements()};
+  if (from_->rank() > 0) {
+    std::size_t fromElements{from_->InlineElements()};
+    if (toElements != fromElements) {
+      workQueue.terminator().Crash("Assign: mismatching element counts in "
+                                   "array assignment (to %zd, from %zd)",
+          toElements, fromElements);
+    }
   }
   if (to_.type() != from_->type()) {
     workQueue.terminator().Crash(
@@ -504,6 +524,7 @@ RT_API_ATTRS int AssignTicket::Continue(WorkQueue &workQueue) {
     }
   }
   if (persist_) {
+    // tempDescriptor_ must outlive pending child ticket(s)
     done_ = true;
     return StatContinue;
   } else {
@@ -529,7 +550,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Begin(
       // allocatable components or defined ASSIGNMENT(=) at any level.
       memmoveFct_(this->instance_.template OffsetElement<char>(),
           this->from_->template OffsetElement<const char *>(),
-          this->instance_.Elements() * elementBytes);
+          this->instance_.InlineElements() * elementBytes);
       return StatOk;
     }
   }
@@ -544,7 +565,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Begin(
   // Copy procedure pointer components
   const Descriptor &procPtrDesc{this->derived_.procPtr()};
   bool noDataComponents{this->IsComplete()};
-  if (std::size_t numProcPtrs{procPtrDesc.Elements()}) {
+  if (std::size_t numProcPtrs{procPtrDesc.InlineElements()}) {
     for (std::size_t k{0}; k < numProcPtrs; ++k) {
       const auto &procPtr{
           *procPtrDesc.ZeroBasedIndexedElement<typeInfo::ProcPtrComponent>(k)};
@@ -615,7 +636,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
               memmoveFct_(to, from, componentByteSize);
             }
           }
-          this->Componentwise::Advance();
+          this->SkipToNextComponent();
         } else {
           memmoveFct_(
               this->instance_.template Element<char>(this->subscripts_) +
@@ -627,7 +648,8 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         }
       }
       break;
-    case typeInfo::Component::Genre::Pointer: {
+    case typeInfo::Component::Genre::Pointer:
+    case typeInfo::Component::Genre::PointerDevice: {
       std::size_t componentByteSize{
           this->component_->SizeInBytes(this->instance_)};
       if (IS_COMPONENTWISE && toIsContiguous_ && fromIsContiguous_) {
@@ -648,7 +670,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
             memmoveFct_(to, from, componentByteSize);
           }
         }
-        this->Componentwise::Advance();
+        this->SkipToNextComponent();
       } else {
         memmoveFct_(this->instance_.template Element<char>(this->subscripts_) +
                 this->component_->offset(),
@@ -659,6 +681,7 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       }
     } break;
     case typeInfo::Component::Genre::Allocatable:
+    case typeInfo::Component::Genre::AllocatableDevice:
     case typeInfo::Component::Genre::Automatic: {
       auto *toDesc{reinterpret_cast<Descriptor *>(
           this->instance_.template Element<char>(this->subscripts_) +
@@ -670,11 +693,11 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
       if (toDesc->IsAllocatable() && !fromDesc->IsAllocated()) {
         if (toDesc->IsAllocated()) {
           if (this->phase_ == 0) {
-            this->phase_++;
             if (componentDerived && !componentDerived->noDestructionNeeded()) {
               if (int status{workQueue.BeginDestroy(
                       *toDesc, *componentDerived, /*finalize=*/false)};
                   status != StatOk) {
+                this->phase_++;
                 return status;
               }
             }
@@ -722,22 +745,35 @@ RT_API_ATTRS void DoFromSourceAssign(Descriptor &alloc,
   if (alloc.rank() > 0 && source.rank() == 0) {
     // The value of each element of allocate object becomes the value of source.
     DescriptorAddendum *allocAddendum{alloc.Addendum()};
-    const typeInfo::DerivedType *allocDerived{
-        allocAddendum ? allocAddendum->derivedType() : nullptr};
     SubscriptValue allocAt[maxRank];
     alloc.GetLowerBounds(allocAt);
-    if (allocDerived) {
-      for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
-        Descriptor allocElement{*Descriptor::Create(*allocDerived,
-            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0)};
+    std::size_t allocElementBytes{alloc.ElementBytes()};
+    if (const typeInfo::DerivedType *allocDerived{
+            allocAddendum ? allocAddendum->derivedType() : nullptr}) {
+      // Handle derived type or short character source
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(*allocDerived,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
         Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
       }
-    } else { // intrinsic type
-      for (std::size_t n{alloc.Elements()}; n-- > 0;
-           alloc.IncrementSubscripts(allocAt)) {
+    } else if (allocElementBytes > source.ElementBytes()) {
+      // Scalar expansion of short character source
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &allocElement{statDesc.descriptor()};
+        allocElement.Establish(source.type(), allocElementBytes,
+            reinterpret_cast<void *>(alloc.Element<char>(allocAt)), 0);
+        Assign(allocElement, source, terminator, NoAssignFlags, memmoveFct);
+      }
+    } else { // intrinsic type scalar expansion, same data size
+      for (std::size_t n{alloc.InlineElements()}; n-- > 0;
+          alloc.IncrementSubscripts(allocAt)) {
         memmoveFct(alloc.Element<char>(allocAt), source.raw().base_addr,
-            alloc.ElementBytes());
+            allocElementBytes);
       }
     }
   } else {

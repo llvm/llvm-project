@@ -1,5 +1,5 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx942 -run-pass machineverifier -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx942 --passes='machine-function(verify)' -o /dev/null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx942 -run-pass machineverifier -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
+# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx942 --passes='machine-function(verify)' -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code"  %s
 
 # CHECK: *** Bad machine code: sext, abs and neg are not allowed on this instruction ***
 # CHECK: $vgpr0 = V_CVT_F32_FP8_sdwa 1, $vgpr0, 0, 0, 4, implicit $mode, implicit $exec

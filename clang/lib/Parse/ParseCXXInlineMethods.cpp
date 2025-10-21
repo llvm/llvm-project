@@ -1161,6 +1161,12 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
 
   while (true) {
     switch (Tok.getKind()) {
+    case tok::ellipsis:
+      // We found an elipsis at the end of the parameter list;
+      // it is not part of a parameter declaration.
+      if (ParenCount == 1 && NextToken().is(tok::r_paren))
+        return true;
+      goto consume_token;
     case tok::comma:
       // If we might be in a template, perform a tentative parse to check.
       if (!AngleCount)

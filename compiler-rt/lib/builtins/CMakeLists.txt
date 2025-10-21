@@ -591,9 +591,15 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
   cpu_model/aarch64.c
-  aarch64/emupac.cpp
   aarch64/fp_mode.c
 )
+
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
+endif()
 
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 
@@ -666,6 +672,11 @@ if (MINGW)
     ${aarch64_SOURCES}
     aarch64/chkstk.S
   )
+endif()
+
+# Don't build enable_execute_stack on arm64 darwin.
+if (APPLE)
+  list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
@@ -805,14 +816,15 @@ set(s390x_SOURCES
   ${GENERIC_TF_SOURCES}
 )
 
-set(wasm32_SOURCES
+
+set(wasm_SOURCES
+  wasm/__c_longjmp.S
+  wasm/__cpp_exception.S
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
 )
-set(wasm64_SOURCES
-  ${GENERIC_TF_SOURCES}
-  ${GENERIC_SOURCES}
-)
+set(wasm32_SOURCES ${wasm_SOURCES})
+set(wasm64_SOURCES ${wasm_SOURCES})
 
 set(ve_SOURCES
   ve/grow_stack.S

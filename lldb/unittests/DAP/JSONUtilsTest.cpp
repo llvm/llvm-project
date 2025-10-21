@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "JSONUtils.h"
-#include "lldb/API/SBModule.h"
-#include "lldb/API/SBTarget.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -181,4 +181,67 @@ TEST(JSONUtilsTest, GetStrings_NestedArray) {
   auto result = GetStrings(&obj, "key");
   ASSERT_EQ(result.size(), 1UL);
   EXPECT_EQ(result[0], "string");
+}
+
+TEST(JSONUtilsTest, DecodeMemoryReference) {
+  EXPECT_EQ(DecodeMemoryReference(""), std::nullopt);
+  EXPECT_EQ(DecodeMemoryReference("123"), std::nullopt);
+  EXPECT_EQ(DecodeMemoryReference("0o123"), std::nullopt);
+  EXPECT_EQ(DecodeMemoryReference("0b1010101"), std::nullopt);
+  EXPECT_EQ(DecodeMemoryReference("0x123"), 291u);
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_TRUE(DecodeMemoryReference(json::Object{{"mem_ref", "0x123"}},
+                                      "mem_ref", addr, root,
+                                      /*required=*/true));
+    EXPECT_EQ(addr, 291u);
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_TRUE(DecodeMemoryReference(json::Object{}, "mem_ref", addr, root,
+                                      /*required=*/false));
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_FALSE(DecodeMemoryReference(json::Value{"string"}, "mem_ref", addr,
+                                       root,
+                                       /*required=*/true));
+    EXPECT_THAT_ERROR(root.getError(), FailedWithMessage("expected object"));
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_FALSE(DecodeMemoryReference(json::Object{}, "mem_ref", addr, root,
+                                       /*required=*/true));
+    EXPECT_THAT_ERROR(root.getError(),
+                      FailedWithMessage("missing value at (root).mem_ref"));
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_FALSE(DecodeMemoryReference(json::Object{{"mem_ref", 123}},
+                                       "mem_ref", addr, root,
+                                       /*required=*/true));
+    EXPECT_THAT_ERROR(root.getError(),
+                      FailedWithMessage("expected string at (root).mem_ref"));
+  }
+
+  {
+    addr_t addr = LLDB_INVALID_ADDRESS;
+    json::Path::Root root;
+    EXPECT_FALSE(DecodeMemoryReference(json::Object{{"mem_ref", "123"}},
+                                       "mem_ref", addr, root,
+                                       /*required=*/true));
+    EXPECT_THAT_ERROR(
+        root.getError(),
+        FailedWithMessage("malformed memory reference at (root).mem_ref"));
+  }
 }

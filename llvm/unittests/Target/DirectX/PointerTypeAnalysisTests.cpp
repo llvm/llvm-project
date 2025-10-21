@@ -8,6 +8,7 @@
 
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -121,6 +122,33 @@ TEST(PointerTypeAnalysis, DiscoverGEP) {
               Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
   EXPECT_THAT(Map, Contains(Pair(IsA<Argument>(), I64Ptr)));
   EXPECT_THAT(Map, Contains(Pair(IsA<GetElementPtrInst>(), I64Ptr)));
+}
+
+TEST(PointerTypeAnalysis, DiscoverConstantExprGEP) {
+  StringRef Assembly = R"(
+    @g = internal global [10 x i32] zeroinitializer
+    define i32 @test() {
+      %i = load i32, ptr getelementptr ([10 x i32], ptr @g, i64 0, i64 1)
+      ret i32 %i
+    }
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  PointerTypeMap Map = PointerTypeAnalysis::run(*M);
+  ASSERT_EQ(Map.size(), 3u);
+  Type *I32Ty = Type::getInt32Ty(Context);
+  Type *I32Ptr = TypedPointerType::get(I32Ty, 0);
+  Type *I32ArrPtr = TypedPointerType::get(ArrayType::get(I32Ty, 10), 0);
+  Type *FnTy = FunctionType::get(I32Ty, {}, false);
+
+  EXPECT_THAT(Map, Contains(Pair(IsA<GlobalVariable>(), I32ArrPtr)));
+  EXPECT_THAT(Map,
+              Contains(Pair(IsA<Function>(), TypedPointerType::get(FnTy, 0))));
+  EXPECT_THAT(Map, Contains(Pair(IsA<ConstantExpr>(), I32Ptr)));
 }
 
 TEST(PointerTypeAnalysis, TraceIndirect) {

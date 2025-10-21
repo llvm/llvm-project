@@ -94,6 +94,7 @@ static bool DeprecatedDriverCommand;
 static ResourceDirRecipeKind ResourceDirRecipe;
 static bool Verbose;
 static bool PrintTiming;
+static bool EmitVisibleModules;
 static llvm::BumpPtrAllocator Alloc;
 static llvm::StringSaver Saver{Alloc};
 static std::vector<const char *> CommandLine;
@@ -231,6 +232,8 @@ static void ParseArgs(int argc, char **argv) {
   }
 
   PrintTiming = Args.hasArg(OPT_print_timing);
+
+  EmitVisibleModules = Args.hasArg(OPT_emit_visible_modules);
 
   Verbose = Args.hasArg(OPT_verbose);
 
@@ -380,6 +383,14 @@ static auto toJSONSorted(llvm::json::OStream &JOS,
   };
 }
 
+static auto toJSONSorted(llvm::json::OStream &JOS, std::vector<std::string> V) {
+  llvm::sort(V);
+  return [&JOS, V = std::move(V)] {
+    for (const StringRef Entry : V)
+      JOS.value(Entry);
+  };
+}
+
 // Thread safe.
 class FullDeps {
 public:
@@ -396,6 +407,7 @@ public:
     ID.NamedModule = std::move(TUDeps.ID.ModuleName);
     ID.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
     ID.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
+    ID.VisibleModules = std::move(TUDeps.VisibleModules);
     ID.DriverCommandLine = std::move(TUDeps.DriverCommandLine);
     ID.Commands = std::move(TUDeps.Commands);
 
@@ -408,7 +420,7 @@ public:
     std::vector<ModuleDeps *> NewMDs;
     {
       std::unique_lock<std::mutex> ul(Lock);
-      for (const ModuleDeps &MD : Graph) {
+      for (ModuleDeps &MD : Graph) {
         auto I = Modules.find({MD.ID, 0});
         if (I != Modules.end()) {
           I->first.InputIndex = std::min(I->first.InputIndex, InputIndex);
@@ -417,12 +429,12 @@ public:
         auto Res = Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
         NewMDs.push_back(&Res->second);
       }
-      // First call to \c getBuildArguments is somewhat expensive. Let's call it
-      // on the current thread (instead of the main one), and outside the
-      // critical section.
-      for (ModuleDeps *MD : NewMDs)
-        (void)MD->getBuildArguments();
     }
+    // First call to \c getBuildArguments is somewhat expensive. Let's call it
+    // on the current thread (instead of the main one), and outside the
+    // critical section.
+    for (ModuleDeps *MD : NewMDs)
+      (void)MD->getBuildArguments();
   }
 
   bool roundTripCommand(ArrayRef<std::string> ArgStrs,
@@ -525,6 +537,9 @@ public:
                     JOS.attributeArray("file-deps",
                                        toJSONStrings(JOS, I.FileDeps));
                     JOS.attribute("input-file", StringRef(I.FileName));
+                    if (EmitVisibleModules)
+                      JOS.attributeArray("visible-clang-modules",
+                                         toJSONSorted(JOS, I.VisibleModules));
                   });
                 }
               } else {
@@ -545,6 +560,9 @@ public:
                   JOS.attributeArray("file-deps",
                                      toJSONStrings(JOS, I.FileDeps));
                   JOS.attribute("input-file", StringRef(I.FileName));
+                  if (EmitVisibleModules)
+                    JOS.attributeArray("visible-clang-modules",
+                                       toJSONSorted(JOS, I.VisibleModules));
                 });
               }
             });
@@ -596,6 +614,7 @@ private:
     std::string NamedModule;
     std::vector<std::string> NamedModuleDeps;
     std::vector<ModuleID> ClangModuleDeps;
+    std::vector<std::string> VisibleModules;
     std::vector<std::string> DriverCommandLine;
     std::vector<Command> Commands;
   };
@@ -623,11 +642,12 @@ static bool handleTranslationUnitResult(
   return false;
 }
 
-static bool handleModuleResult(
-    StringRef ModuleName, llvm::Expected<ModuleDepsGraph> &MaybeModuleGraph,
-    FullDeps &FD, size_t InputIndex, SharedStream &OS, SharedStream &Errs) {
-  if (!MaybeModuleGraph) {
-    llvm::handleAllErrors(MaybeModuleGraph.takeError(),
+static bool handleModuleResult(StringRef ModuleName,
+                               llvm::Expected<TranslationUnitDeps> &MaybeTUDeps,
+                               FullDeps &FD, size_t InputIndex,
+                               SharedStream &OS, SharedStream &Errs) {
+  if (!MaybeTUDeps) {
+    llvm::handleAllErrors(MaybeTUDeps.takeError(),
                           [&ModuleName, &Errs](llvm::StringError &Err) {
                             Errs.applyLocked([&](raw_ostream &OS) {
                               OS << "Error while scanning dependencies for "
@@ -637,7 +657,7 @@ static bool handleModuleResult(
                           });
     return true;
   }
-  FD.mergeDeps(std::move(*MaybeModuleGraph), InputIndex);
+  FD.mergeDeps(std::move(MaybeTUDeps->ModuleGraph), InputIndex);
   return false;
 }
 

@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- < %s | FileCheck -enable-var-scope --check-prefixes=GCN,SI,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX89,FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX9,GFX89,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600-- -mcpu=cypress < %s | FileCheck -enable-var-scope --check-prefixes=EG,FUNC %s
 
 ; FIXME: i16 promotion pass ruins the scalar cases when legal.

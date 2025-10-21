@@ -39,6 +39,7 @@ Example
   void bad_foo() {
     int *a = (int*)malloc(40);
     a[10] = 1;
+    free(a);
   }
   int main() { bad_foo(); }
   $ cat ignorelist.txt
@@ -127,7 +128,7 @@ precedence. Here are a few examples.
   type:T
 
   $ cat ignorelist4.txt
-  # Function `bad_bar`` will be instrumented.
+  # Function `bad_bar` will be instrumented.
   # Function `good_bar` will not be instrumented.
   fun:*
   fun:*bar

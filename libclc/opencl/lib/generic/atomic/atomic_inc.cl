@@ -6,15 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/atomic/clc_atomic_inc.h>
 #include <clc/opencl/atomic/atomic_inc.h>
 
-#define IMPL(TYPE, AS)                                                         \
-  _CLC_OVERLOAD _CLC_DEF TYPE atomic_inc(volatile AS TYPE *p) {                \
-    return __sync_fetch_and_add(p, (TYPE)1);                                   \
-  }
+#define __CLC_FUNCTION atomic_inc
+#define __CLC_IMPL_FUNCTION __clc_atomic_inc
 
-IMPL(int, global)
-IMPL(unsigned int, global)
-IMPL(int, local)
-IMPL(unsigned int, local)
-#undef IMPL
+#define __CLC_BODY <atomic_inc_dec.inc>
+#include <clc/integer/gentype.inc>

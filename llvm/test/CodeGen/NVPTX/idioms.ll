@@ -3,7 +3,7 @@
 
 ; RUN: llc < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 %struct.S16 = type { i16, i16 }
@@ -173,8 +173,8 @@ define %struct.S16 @i32_to_2xi16_shr(i32 noundef %i){
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    shr.s32 %r2, %r1, 16;
 ; CHECK-NEXT:    shr.u32 %r3, %r2, 16;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %r2;
 ; CHECK-NEXT:    st.param.b16 [func_retval0+2], %r3;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   call void @escape_int(i32 %i); // Force %i to be loaded completely.
   %i1 = ashr i32 %i, 16

@@ -46,12 +46,31 @@ public:
   enum class CompatibilityKind {
     /// Does affect the construction of the AST in a way that does prevent
     /// module interoperability.
-    Affecting,
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
     /// Does not affect the construction of the AST in any way (that is, the
     /// value can be different between an implicit module and the user of that
     /// module).
     Benign,
   };
+
+  using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+  using ProfileInstrKind = llvm::driver::ProfileInstrKind;
+  using AsanDetectStackUseAfterReturnMode =
+      llvm::AsanDetectStackUseAfterReturnMode;
+  using AsanDtorKind = llvm::AsanDtorKind;
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
+  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+
+  using DebugCompressionType = llvm::DebugCompressionType;
+  using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
+  using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  using DebuggerKind = llvm::DebuggerKind;
 
 #define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
@@ -115,6 +134,7 @@ public:
     DSH_MD5,
     DSH_SHA1,
     DSH_SHA256,
+    DSH_NONE,
   };
 
   // This field stores one of the allowed values for the option
@@ -156,6 +176,9 @@ public:
     llvm_unreachable("invalid FramePointerKind");
   }
 
+  /// Possible exception handling behavior.
+  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
     Always, // Unconditionally emit Swift async extended frame info.
@@ -173,6 +196,16 @@ public:
     Disabled,
     Enabled,
     Forced,
+  };
+
+  enum SanitizeDebugTrapReasonKind {
+    None,  ///< Trap Messages are omitted. This offers the smallest debug info
+           ///< size but at the cost of making traps hard to debug.
+    Basic, ///< Trap Message is fixed per SanitizerKind. Produces smaller debug
+           ///< info than `Detailed` but is not as helpful for debugging.
+    Detailed, ///< Trap Message includes more context (e.g. the expression being
+              ///< overflowed). This is more helpful for debugging but produces
+              ///< larger debug info than `Basic`.
   };
 
   /// The code model to use (-mcmodel).
@@ -414,6 +447,10 @@ public:
 
   std::optional<double> AllowRuntimeCheckSkipHotCutoff;
 
+  /// Maximum number of allocation tokens (0 = no max), nullopt if none set (use
+  /// pass default).
+  std::optional<uint64_t> AllocTokenMax;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
@@ -530,6 +567,22 @@ public:
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;
+  }
+
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
   }
 
   /// Check if Clang profile instrumenation is on.

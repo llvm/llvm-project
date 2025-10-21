@@ -13,9 +13,10 @@ define i16 @test(ptr %i) {
 ; CHECK-NEXT:    br label %[[FOR_COND5_US:.*]]
 ; CHECK:       [[FOR_COND5_US]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[GEP_US154_2]], i64 4914, <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> [[TMP3]], i32 2, <4 x i1> splat (i1 true), <4 x i16> poison)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> poison, <4 x i16> [[TMP4]], i64 0)
-; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i16> @llvm.vector.insert.v8i16.v4i16(<8 x i16> [[TMP6]], <4 x i16> [[TMP5]], i64 4)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 [[TMP3]], <4 x i1> splat (i1 true), <4 x i16> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i16 @llvm.umax.i16(i16 [[TMP8]], i16 0)
 ; CHECK-NEXT:    ret i16 [[TMP9]]

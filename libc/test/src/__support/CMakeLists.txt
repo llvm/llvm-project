@@ -123,6 +123,8 @@ add_libc_test(
     str_to_float_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
+  HDRS
+    str_to_fp_test.h
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_float
@@ -139,6 +141,17 @@ add_libc_test(
   DEPENDS
     libc.src.__support.integer_literals
     libc.src.__support.str_to_integer
+)
+
+add_libc_test(
+  wcs_to_integer_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wcs_to_integer_test.cpp
+  DEPENDS
+    libc.src.__support.integer_literals
+    libc.src.__support.wcs_to_integer
 )
 
 add_libc_test(
@@ -254,6 +267,7 @@ add_libc_test(
   SRCS
     str_to_float_comparison_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.stdio.printf
     libc.src.stdio.fopen
     libc.src.stdio.fclose

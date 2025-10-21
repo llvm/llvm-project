@@ -2,7 +2,7 @@
 
 target triple = "dxil-unknown-shadermodel6.0-compute"
 
-; CHECK: error: Invalid Root Signature Element: NOTRootFlags
+; CHECK: error: Invalid Root Signature Element
 ; CHECK-NOT: Root Signature Definitions
 
 

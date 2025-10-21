@@ -65,10 +65,10 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
   // Deal with various aggregate types as special cases:
 
   // Record types.
-  if (auto recType = type->getAs<RecordType>()) {
+  if (auto recType = type->getAsCanonical<RecordType>()) {
     addTypedData(recType->getDecl(), begin);
 
-  // Array types.
+    // Array types.
   } else if (type->isArrayType()) {
     // Incomplete array types (flexible array members?) don't provide
     // data to lay out, and the other cases shouldn't be possible.

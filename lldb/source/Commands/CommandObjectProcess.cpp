@@ -259,7 +259,7 @@ protected:
         if (!exe_module_sp)
           exe_module_sp = target->GetExecutableModule();
         if (!exe_module_sp) {
-          result.AppendWarning("Could not get executable module after launch.");
+          result.AppendWarning("could not get executable module after launch");
         } else {
 
           const char *archname =
@@ -1354,7 +1354,8 @@ protected:
         FileSystem::Instance().Resolve(output_file);
         auto &core_dump_options = m_options.m_core_dump_options;
         core_dump_options.SetOutputFile(output_file);
-        Status error = PluginManager::SaveCore(process_sp, core_dump_options);
+        core_dump_options.SetProcess(process_sp);
+        Status error = PluginManager::SaveCore(core_dump_options);
         if (error.Success()) {
           if (core_dump_options.GetStyle() ==
                   SaveCoreStyle::eSaveCoreDirtyOnly ||

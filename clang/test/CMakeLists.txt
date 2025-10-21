@@ -26,7 +26,6 @@ llvm_canonicalize_cmake_booleans(
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
-  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
 # Run tests requiring Z3 headers only if LLVM was built with Z3
@@ -104,7 +103,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-linker-wrapper
   clang-nvlink-wrapper
   clang-offload-bundler
-  clang-offload-packager
   clang-sycl-linker
   diagtool
   hmaptool
@@ -174,6 +172,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-strip
     llvm-symbolizer
     llvm-windres
+    llvm-offload-binary
     obj2yaml
     opt
     split-file
@@ -234,3 +233,5 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests)
     add_subdirectory(debuginfo-tests)
   endif()
 endif()
+
+add_subdirectory(Analysis/LifetimeSafety)

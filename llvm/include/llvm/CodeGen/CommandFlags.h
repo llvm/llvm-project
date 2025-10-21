@@ -66,8 +66,6 @@ LLVM_ABI bool getEnableNoNaNsFPMath();
 
 LLVM_ABI bool getEnableNoSignedZerosFPMath();
 
-LLVM_ABI bool getEnableApproxFuncFPMath();
-
 LLVM_ABI bool getEnableNoTrappingFPMath();
 
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
@@ -132,6 +130,8 @@ LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
 LLVM_ABI bool getEnableStackSizeSection();
 
 LLVM_ABI bool getEnableAddrsig();
+
+LLVM_ABI bool getEnableCallGraphSection();
 
 LLVM_ABI bool getEmitCallSiteInfo();
 

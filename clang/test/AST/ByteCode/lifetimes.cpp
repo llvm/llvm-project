@@ -31,8 +31,7 @@ struct S {
                                 // expected-note {{read of temporary whose lifetime has ended}}
 };
 constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
-                          // ref-note {{in call to}} \
-                          // expected-note {{in call to}}
+                          // both-note {{in call to}}
 
 
 namespace MoveFnWorks {
@@ -95,14 +94,25 @@ namespace CallScope {
     int n = 0;
     constexpr int f() const { return 0; }
   };
-  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}}
+  constexpr Q *out_of_lifetime(Q q) { return &q; } // both-warning {{address of stack}} \
+                                                   // expected-note 2{{declared here}}
   constexpr int k3 = out_of_lifetime({})->n; // both-error {{must be initialized by a constant expression}} \
-                                             // expected-note {{read of temporary whose lifetime has ended}} \
-                                             // expected-note {{temporary created here}} \
+                                             // expected-note {{read of variable whose lifetime has ended}} \
                                              // ref-note {{read of object outside its lifetime}}
 
   constexpr int k4 = out_of_lifetime({})->f(); // both-error {{must be initialized by a constant expression}} \
-                                               // expected-note {{member call on temporary whose lifetime has ended}} \
-                                               // expected-note {{temporary created here}} \
+                                               // expected-note {{member call on variable whose lifetime has ended}} \
                                                // ref-note {{member call on object outside its lifetime}}
+}
+
+namespace ExprDoubleDestroy {
+  template <typename T>
+  constexpr bool test() {
+    T{}.~T(); // both-note {{lifetime has already ended}}
+    return true;
+  }
+
+  struct S { int x; };
+  constexpr bool t = test<S>(); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to}}
 }

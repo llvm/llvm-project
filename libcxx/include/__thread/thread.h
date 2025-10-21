@@ -155,8 +155,8 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
-inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>) {
-  std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
+inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __index_sequence<_Indices...>) {
+  std::__invoke(std::move(std::get<_Indices + 1>(__t))...);
 }
 
 template <class _Fp>
@@ -164,8 +164,7 @@ _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
   // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
   unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
   __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
-  typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
-  std::__thread_execute(*__p.get(), _Index());
+  std::__thread_execute(*__p.get(), __make_index_sequence<tuple_size<_Fp>::value - 1>());
   return nullptr;
 }
 

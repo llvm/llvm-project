@@ -408,6 +408,10 @@ public:
                    bool IsMustTailCall, const BasicBlock *EHPadBB = nullptr,
                    const TargetLowering::PtrAuthInfo *PAI = nullptr);
 
+  // Check some of the target-independent constraints for tail calls. This does
+  // not iterate over the call arguments.
+  bool canTailCall(const CallBase &CB) const;
+
   // Lower range metadata from 0 to N to assert zext to an integer of nearest
   // floor power of two.
   SDValue lowerRangeToAssertZExt(SelectionDAG &DAG, const Instruction &I,
@@ -574,6 +578,7 @@ private:
   void visitFPToSI(const User &I);
   void visitUIToFP(const User &I);
   void visitSIToFP(const User &I);
+  void visitPtrToAddr(const User &I);
   void visitPtrToInt(const User &I);
   void visitIntToPtr(const User &I);
   void visitBitCast(const User &I);
@@ -631,6 +636,8 @@ private:
   void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPLoadFF(const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,

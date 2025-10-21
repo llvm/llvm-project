@@ -1,4 +1,5 @@
 // RUN: mlir-opt --convert-to-llvm="filter-dialects=vector" --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=vector allow-pattern-rollback=0" --split-input-file %s | FileCheck %s
 // RUN: mlir-opt %s -convert-vector-to-llvm -split-input-file | FileCheck %s
 
 //===========================================================================//
@@ -130,6 +131,48 @@ func.func @broadcast_vec1d_from_vec1d_scalable(%arg0: vector<[2]xf32>) -> vector
 
 // -----
 
+// CHECK-LABEL: @broadcast_vec0d_from_scalar
+// CHECK-SAME: %[[ELT:.*]]: f32
+func.func @broadcast_vec0d_from_scalar(%elt: f32) -> vector<f32> {
+  %v = vector.broadcast %elt : f32 to vector<f32>
+  return %v : vector<f32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<1xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
+// CHECK-NEXT: %[[VCAST:[0-9]+]] = builtin.unrealized_conversion_cast %[[V]] : vector<1xf32> to vector<f32>
+// CHECK-NEXT: return %[[VCAST]] : vector<f32>
+
+// -----
+
+// CHECK-LABEL: @broadcast_vec1d_from_scalar
+// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<4xf32>
+// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
+func.func @broadcast_vec1d_from_scalar(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
+  %vb = vector.broadcast %elt : f32 to vector<4xf32>
+  return %vb : vector<4xf32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<4xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
+// CHECK-NEXT: return %[[SPLAT]] : vector<4xf32>
+
+// -----
+
+// CHECK-LABEL: @broadcast_scalable_vec1d_from_scalar
+// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<[4]xf32>
+// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
+func.func @broadcast_scalable_vec1d_from_scalar(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
+  %vb = vector.broadcast %elt : f32 to vector<[4]xf32>
+  return %vb : vector<[4]xf32>
+}
+// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<[4]xf32>
+// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
+// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
+// CHECK-NEXT: return %[[SPLAT]] : vector<[4]xf32>
+
 //===----------------------------------------------------------------------===//
 // vector.shuffle
 //===----------------------------------------------------------------------===//
@@ -140,8 +183,7 @@ func.func @shuffle_0D_direct(%arg0: vector<f32>) -> vector<3xf32> {
 }
 // CHECK-LABEL: @shuffle_0D_direct(
 //  CHECK-SAME:     %[[A:.*]]: vector<f32>
-//       CHECK:   %[[c:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
-//       CHECK:   %[[s:.*]] = llvm.shufflevector %[[c]], %[[c]] [0, 1, 0] : vector<1xf32>
+//       CHECK:   %[[s:.*]] = llvm.shufflevector %{{.*}}, %{{.*}} [0, 1, 0] : vector<1xf32>
 //       CHECK:   return %[[s]] : vector<3xf32>
 
 // -----
@@ -228,73 +270,6 @@ func.func @shuffle_2D(%a: vector<1x4xf32>, %b: vector<2x4xf32>) -> vector<3x4xf3
 //       CHECK:   %[[I3:.*]] = llvm.insertvalue %[[E3]], %[[I2]][2] : !llvm.array<3 x vector<4xf32>>
 //       CHECK:   %[[VAL_3:.*]] = builtin.unrealized_conversion_cast %[[I3]] : !llvm.array<3 x vector<4xf32>> to vector<3x4xf32>
 //       CHECK:   return %[[VAL_3]] : vector<3x4xf32>
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// vector.extractelement
-//===----------------------------------------------------------------------===//
-
-func.func @extractelement_from_vec_0d_f32(%arg0: vector<f32>) -> f32 {
-  %1 = vector.extractelement %arg0[] : vector<f32>
-  return %1 : f32
-}
-// CHECK-LABEL: @extractelement_from_vec_0d_f32
-//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
-//       CHECK:   llvm.extractelement %{{.*}}[%[[C0]] : {{.*}}] : vector<1xf32>
-
-// -----
-
-func.func @extractelement_from_vec_1d_f32_idx_as_i32(%arg0: vector<16xf32>) -> f32 {
-  %0 = arith.constant 15 : i32
-  %1 = vector.extractelement %arg0[%0 : i32]: vector<16xf32>
-  return %1 : f32
-}
-// CHECK-LABEL: @extractelement_from_vec_1d_f32_idx_as_i32(
-//  CHECK-SAME:   %[[A:.*]]: vector<16xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 15 : i32
-//       CHECK:   %[[X:.*]] = llvm.extractelement %[[A]][%[[C]] : i32] : vector<16xf32>
-//       CHECK:   return %[[X]] : f32
-
-// -----
-
-func.func @extractelement_from_vec_1d_f32_idx_as_i32_scalable(%arg0: vector<[16]xf32>) -> f32 {
-  %0 = arith.constant 15 : i32
-  %1 = vector.extractelement %arg0[%0 : i32]: vector<[16]xf32>
-  return %1 : f32
-}
-// CHECK-LABEL: @extractelement_from_vec_1d_f32_idx_as_i32_scalable(
-//  CHECK-SAME:   %[[A:.*]]: vector<[16]xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 15 : i32
-//       CHECK:   %[[X:.*]] = llvm.extractelement %[[A]][%[[C]] : i32] : vector<[16]xf32>
-//       CHECK:   return %[[X]] : f32
-
-// -----
-func.func @extractelement_from_vec_1d_f32_idx_as_index(%arg0: vector<16xf32>) -> f32 {
-  %0 = arith.constant 15 : index
-  %1 = vector.extractelement %arg0[%0 : index]: vector<16xf32>
-  return %1 : f32
-}
-// CHECK-LABEL: @extractelement_from_vec_1d_f32_idx_as_index(
-//  CHECK-SAME:   %[[A:.*]]: vector<16xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 15 : index
-//       CHECK:   %[[I:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
-//       CHECK:   %[[X:.*]] = llvm.extractelement %[[A]][%[[I]] : i64] : vector<16xf32>
-//       CHECK:   return %[[X]] : f32
-
-// -----
-
-func.func @extractelement_from_vec_1d_f32_idx_as_index_scalable(%arg0: vector<[16]xf32>) -> f32 {
-  %0 = arith.constant 15 : index
-  %1 = vector.extractelement %arg0[%0 : index]: vector<[16]xf32>
-  return %1 : f32
-}
-// CHECK-LABEL: @extractelement_from_vec_1d_f32_idx_as_index_scalable(
-//  CHECK-SAME:   %[[A:.*]]: vector<[16]xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 15 : index
-//       CHECK:   %[[I:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
-//       CHECK:   %[[X:.*]] = llvm.extractelement %[[A]][%[[I]] : i64] : vector<[16]xf32>
-//       CHECK:   return %[[X]] : f32
 
 // -----
 
@@ -546,81 +521,6 @@ func.func @extract_scalar_from_vec_2d_f32_dynamic_idxs_compile_time_const(%arg :
 //       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : i64) : i64
 //       CHECK:   %[[RES:.*]] = llvm.extractelement %[[VEC_0]]{{\[}}%[[C0]] : i64] : vector<1xf32>
 //       CHECK:   return %[[RES]] : f32
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// vector.insertelement
-//===----------------------------------------------------------------------===//
-
-func.func @insertelement_into_vec_0d_f32(%arg0: f32, %arg1: vector<f32>) -> vector<f32> {
-  %1 = vector.insertelement %arg0, %arg1[] : vector<f32>
-  return %1 : vector<f32>
-}
-// CHECK-LABEL: @insertelement_into_vec_0d_f32
-//  CHECK-SAME:   %[[A:.*]]: f32,
-//       CHECK:   %[[B:.*]] =  builtin.unrealized_conversion_cast %{{.*}} :
-//       CHECK:   vector<f32> to vector<1xf32>
-//       CHECK:   %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
-//       CHECK:   %[[X:.*]] = llvm.insertelement %[[A]], %[[B]][%[[C0]] : {{.*}}] : vector<1xf32>
-
-// -----
-
-func.func @insertelement_into_vec_1d_f32_idx_as_i32(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
-  %0 = arith.constant 3 : i32
-  %1 = vector.insertelement %arg0, %arg1[%0 : i32] : vector<4xf32>
-  return %1 : vector<4xf32>
-}
-// CHECK-LABEL: @insertelement_into_vec_1d_f32_idx_as_i32(
-//  CHECK-SAME:   %[[A:.*]]: f32,
-//  CHECK-SAME:   %[[B:.*]]: vector<4xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 3 : i32
-//       CHECK:   %[[X:.*]] = llvm.insertelement %[[A]], %[[B]][%[[C]] : i32] : vector<4xf32>
-//       CHECK:   return %[[X]] : vector<4xf32>
-
-// -----
-
-func.func @insertelement_into_vec_1d_f32_idx_as_i32_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<[4]xf32> {
-  %0 = arith.constant 3 : i32
-  %1 = vector.insertelement %arg0, %arg1[%0 : i32] : vector<[4]xf32>
-  return %1 : vector<[4]xf32>
-}
-// CHECK-LABEL: @insertelement_into_vec_1d_f32_idx_as_i32_scalable(
-//  CHECK-SAME:   %[[A:.*]]: f32,
-//  CHECK-SAME:   %[[B:.*]]: vector<[4]xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 3 : i32
-//       CHECK:   %[[X:.*]] = llvm.insertelement %[[A]], %[[B]][%[[C]] : i32] : vector<[4]xf32>
-//       CHECK:   return %[[X]] : vector<[4]xf32>
-
-// -----
-
-func.func @insertelement_into_vec_1d_f32_scalable_idx_as_index(%arg0: f32, %arg1: vector<4xf32>) -> vector<4xf32> {
-  %0 = arith.constant 3 : index
-  %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<4xf32>
-  return %1 : vector<4xf32>
-}
-// CHECK-LABEL: @insertelement_into_vec_1d_f32_scalable_idx_as_index(
-//  CHECK-SAME:   %[[A:.*]]: f32,
-//  CHECK-SAME:   %[[B:.*]]: vector<4xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 3 : index
-//       CHECK:   %[[I:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
-//       CHECK:   %[[X:.*]] = llvm.insertelement %[[A]], %[[B]][%[[I]] : i64] : vector<4xf32>
-//       CHECK:   return %[[X]] : vector<4xf32>
-
-// -----
-
-func.func @insertelement_into_vec_1d_f32_scalable_idx_as_index_scalable(%arg0: f32, %arg1: vector<[4]xf32>) -> vector<[4]xf32> {
-  %0 = arith.constant 3 : index
-  %1 = vector.insertelement %arg0, %arg1[%0 : index] : vector<[4]xf32>
-  return %1 : vector<[4]xf32>
-}
-// CHECK-LABEL: @insertelement_into_vec_1d_f32_scalable_idx_as_index_scalable(
-//  CHECK-SAME:   %[[A:.*]]: f32,
-//  CHECK-SAME:   %[[B:.*]]: vector<[4]xf32>)
-//       CHECK:   %[[C:.*]] = arith.constant 3 : index
-//       CHECK:   %[[I:.*]] = builtin.unrealized_conversion_cast %[[C]] : index to i64
-//       CHECK:   %[[X:.*]] = llvm.insertelement %[[A]], %[[B]][%[[I]] : i64] : vector<[4]xf32>
-//       CHECK:   return %[[X]] : vector<[4]xf32>
 
 // -----
 
@@ -1779,6 +1679,16 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 
 // -----
 
+func.func @load_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] { alignment = 8 } : memref<200x100xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @load_with_alignment
+// CHECK: llvm.load {{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.store
 //===----------------------------------------------------------------------===//
@@ -1885,6 +1795,16 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 
 // -----
 
+func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index, %val : vector<4xf32>) {
+  vector.store %val, %memref[%i, %j] {alignment = 8} : memref<200x100xf32>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: func @store_with_alignment
+// CHECK: llvm.store %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.maskedload
 //===----------------------------------------------------------------------===//
@@ -1939,6 +1859,16 @@ func.func @masked_load_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16]
 
 // -----
 
+func.func @masked_load_with_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) -> vector<16xf32> {
+  %0 = vector.maskedload %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// CHECK-LABEL: func @masked_load_with_alignment
+// CHECK: llvm.intr.masked.load %{{.*}} {alignment = 2 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.maskedstore
 //===----------------------------------------------------------------------===//
@@ -1988,6 +1918,16 @@ func.func @masked_store_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16
 }
 // CHECK-LABEL: func @masked_store_index_scalable
 // CHECK: llvm.intr.masked.store %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<[16]xi64>, vector<[16]xi1> into !llvm.ptr
+
+// -----
+
+func.func @masked_store_with_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) {
+  vector.maskedstore %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  return
+}
+
+// CHECK-LABEL: func @masked_store_with_alignment
+// CHECK: llvm.intr.masked.store %{{.*}} {alignment = 2 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
 
 // -----
 
@@ -2102,6 +2042,16 @@ func.func @gather_1d_from_2d_scalable(%arg0: memref<4x?xf32>, %arg1: vector<[4]x
 
 // -----
 
+func.func @gather_with_alignment(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xf32>, %0: index) -> vector<3xf32> {
+  %1 = vector.gather %arg0[%0][%arg1], %arg2, %arg3 {alignment = 8} : memref<?xf32>, vector<3xi32>, vector<3xi1>, vector<3xf32> into vector<3xf32>
+  return %1 : vector<3xf32>
+}
+
+// CHECK-LABEL: func @gather_with_alignment
+// CHECK: llvm.intr.masked.gather %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : (vector<3x!llvm.ptr>, vector<3xi1>, vector<3xf32>) -> vector<3xf32>
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.scatter
 //===----------------------------------------------------------------------===//
@@ -2180,6 +2130,17 @@ func.func @scatter_1d_into_2d_scalable(%arg0: memref<4x?xf32>, %arg1: vector<[4]
 
 // -----
 
+func.func @scatter_with_alignment(%arg0: memref<?xf32>, %arg1: vector<3xi32>, %arg2: vector<3xi1>, %arg3: vector<3xf32>, %0: index) {
+  vector.scatter %arg0[%0][%arg1], %arg2, %arg3 { alignment = 8 } : memref<?xf32>, vector<3xi32>, vector<3xi1>, vector<3xf32>
+  return
+}
+
+// CHECK-LABEL: func @scatter_with_alignment
+// CHECK: llvm.intr.masked.scatter %{{.*}}, %{{.*}}, %{{.*}} {alignment = 8 : i32} : vector<3xf32>, vector<3xi1> into vector<3x!llvm.ptr>
+
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.expandload
 //===----------------------------------------------------------------------===//
@@ -2206,6 +2167,15 @@ func.func @expand_load_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %a
 }
 // CHECK-LABEL: func @expand_load_op_index
 // CHECK: %{{.*}} = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, vector<11xi1>, vector<11xi64>) -> vector<11xi64>
+
+// -----
+
+func.func @expand_load_op_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) -> vector<11xindex> {
+  %0 = vector.expandload %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xindex>, vector<11xi1>, vector<11xindex> into vector<11xindex>
+  return %0 : vector<11xindex>
+}
+// CHECK-LABEL: func @expand_load_op_with_alignment
+// CHECK: %{{.*}} = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}]}> : (!llvm.ptr, vector<11xi1>, vector<11xi64>) -> vector<11xi64>
 
 // -----
 
@@ -2237,55 +2207,12 @@ func.func @compress_store_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>,
 
 // -----
 
-//===----------------------------------------------------------------------===//
-// vector.splat
-//===----------------------------------------------------------------------===//
-
-// CHECK-LABEL: @splat_0d
-// CHECK-SAME: %[[ELT:.*]]: f32
-func.func @splat_0d(%elt: f32) -> vector<f32> {
-  %v = vector.splat %elt : vector<f32>
-  return %v : vector<f32>
+func.func @compress_store_op_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) {
+  vector.compressstore %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xindex>, vector<11xi1>, vector<11xindex>
+  return
 }
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<1xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<1xf32>
-// CHECK-NEXT: %[[VCAST:[0-9]+]] = builtin.unrealized_conversion_cast %[[V]] : vector<1xf32> to vector<f32>
-// CHECK-NEXT: return %[[VCAST]] : vector<f32>
-
-// -----
-
-// CHECK-LABEL: @splat
-// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<4xf32>
-// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @splat(%vec: vector<4xf32>, %elt: f32) -> vector<4xf32> {
-  %vb = vector.splat %elt : vector<4xf32>
-  %r = arith.mulf %vec, %vb : vector<4xf32>
-  return %r : vector<4xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<4xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<4xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<4xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<4xf32>
-
-// -----
-
-// CHECK-LABEL: @splat_scalable
-// CHECK-SAME: %[[VEC:[0-9a-zA-Z]+]]: vector<[4]xf32>
-// CHECK-SAME: %[[ELT:[0-9a-zA-Z]+]]: f32
-func.func @splat_scalable(%vec: vector<[4]xf32>, %elt: f32) -> vector<[4]xf32> {
-  %vb = vector.splat %elt : vector<[4]xf32>
-  %r = arith.mulf %vec, %vb : vector<[4]xf32>
-  return %r : vector<[4]xf32>
-}
-// CHECK-NEXT: %[[UNDEF:[0-9]+]] = llvm.mlir.poison : vector<[4]xf32>
-// CHECK-NEXT: %[[ZERO:[0-9]+]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT: %[[V:[0-9]+]] = llvm.insertelement %[[ELT]], %[[UNDEF]][%[[ZERO]] : i32] : vector<[4]xf32>
-// CHECK-NEXT: %[[SPLAT:[0-9]+]] = llvm.shufflevector %[[V]], %[[UNDEF]] [0, 0, 0, 0]
-// CHECK-NEXT: %[[SCALE:[0-9]+]] = arith.mulf %[[VEC]], %[[SPLAT]] : vector<[4]xf32>
-// CHECK-NEXT: return %[[SCALE]] : vector<[4]xf32>
+// CHECK-LABEL: func @compress_store_op_with_alignment
+// CHECK: "llvm.intr.masked.compressstore"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<11xi64>, !llvm.ptr, vector<11xi1>) -> ()
 
 // -----
 

@@ -12,12 +12,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/Value.h"
+#include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "llvm/ADT/StringExtras.h"
 #include <cassert>
 #include <utility>
+
+using namespace clang;
 
 namespace {
 
@@ -98,8 +101,8 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (Ctx.hasSameType(QT, Ctx.VoidTy))
     return Value::K_Void;
 
-  if (const auto *ET = QT->getAs<EnumType>())
-    QT = ET->getDecl()->getIntegerType();
+  if (const auto *ED = QT->getAsEnumDecl())
+    QT = ED->getIntegerType();
 
   const auto *BT = QT->getAs<BuiltinType>();
   if (!BT || BT->isNullPtrType())
@@ -117,8 +120,9 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   }
 }
 
-Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
-  setKind(ConvertQualTypeToKind(getASTContext(), getType()));
+Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
+  const ASTContext &C = getASTContext();
+  setKind(ConvertQualTypeToKind(C, getType()));
   if (ValueKind == K_PtrOrObj) {
     QualType Canon = getType().getCanonicalType();
     if ((Canon->isPointerType() || Canon->isObjectType() ||
@@ -127,7 +131,7 @@ Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
          Canon->isMemberPointerType())) {
       IsManuallyAlloc = true;
       // Compile dtor function.
-      Interpreter &Interp = getInterpreter();
+      const Interpreter &Interp = getInterpreter();
       void *DtorF = nullptr;
       size_t ElementsSize = 1;
       QualType DtorTy = getType();
@@ -143,15 +147,12 @@ Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
         } while (ArrTy);
         ElementsSize = static_cast<size_t>(ArrSize.getZExtValue());
       }
-      if (const auto *RT = DtorTy->getAs<RecordType>()) {
-        if (CXXRecordDecl *CXXRD =
-                llvm::dyn_cast<CXXRecordDecl>(RT->getDecl())) {
-          if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
-                  Interp.CompileDtorCall(CXXRD))
-            DtorF = reinterpret_cast<void *>(Addr->getValue());
-          else
-            llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
-        }
+      if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
+        if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
+                Interp.CompileDtorCall(CXXRD))
+          DtorF = reinterpret_cast<void *>(Addr->getValue());
+        else
+          llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
       }
 
       size_t AllocSize =
@@ -228,14 +229,13 @@ void *Value::getPtr() const {
   return Data.m_Ptr;
 }
 
-QualType Value::getType() const {
-  return QualType::getFromOpaquePtr(OpaqueType);
+void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
+  assert(NBits <= sizeof(Storage) && "Greater than the total size");
+  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
 }
 
-Interpreter &Value::getInterpreter() {
-  assert(Interp != nullptr &&
-         "Can't get interpreter from a default constructed value");
-  return *Interp;
+QualType Value::getType() const {
+  return QualType::getFromOpaquePtr(OpaqueType);
 }
 
 const Interpreter &Value::getInterpreter() const {
@@ -244,8 +244,6 @@ const Interpreter &Value::getInterpreter() const {
   return *Interp;
 }
 
-ASTContext &Value::getASTContext() { return getInterpreter().getASTContext(); }
-
 const ASTContext &Value::getASTContext() const {
   return getInterpreter().getASTContext();
 }
@@ -253,14 +251,32 @@ const ASTContext &Value::getASTContext() const {
 void Value::dump() const { print(llvm::outs()); }
 
 void Value::printType(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << Interp->ValueTypeToString(*this);
 }
+
 void Value::printData(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << Interp->ValueDataToString(*this);
 }
+// FIXME: We do not support the multiple inheritance case where one of the base
+// classes has a pretty-printer and the other does not.
 void Value::print(llvm::raw_ostream &Out) const {
   assert(OpaqueType != nullptr && "Can't print default Value");
-  Out << "Not implement yet.\n";
+
+  // Don't even try to print a void or an invalid type, it doesn't make sense.
+  if (getType()->isVoidType() || !isValid())
+    return;
+
+  // We need to get all the results together then print it, since `printType` is
+  // much faster than `printData`.
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+
+  SS << "(";
+  printType(SS);
+  SS << ") ";
+  printData(SS);
+  SS << "\n";
+  Out << Str;
 }
 
 } // namespace clang

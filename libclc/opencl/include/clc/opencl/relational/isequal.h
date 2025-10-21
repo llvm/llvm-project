@@ -12,7 +12,7 @@
 #include <clc/opencl/opencl-base.h>
 
 #define _CLC_ISEQUAL_DECL(TYPE, RETTYPE)                                       \
-  _CLC_OVERLOAD _CLC_DECL RETTYPE isequal(TYPE x, TYPE y);
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL RETTYPE isequal(TYPE x, TYPE y);
 
 #define _CLC_VECTOR_ISEQUAL_DECL(TYPE, RETTYPE)                                \
   _CLC_ISEQUAL_DECL(TYPE##2, RETTYPE##2)                                       \

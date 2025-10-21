@@ -48,12 +48,6 @@ static std::string &prepareParamName(std::string &Name) {
   return Name;
 }
 
-namespace llvm {
-template <> struct enum_iteration_traits<omp::Directive> {
-  static constexpr bool is_iterable = true;
-};
-} // namespace llvm
-
 // Test tokenizing.
 
 class Tokenize : public testing::TestWithParam<omp::Directive> {};
@@ -87,12 +81,10 @@ getParamName1(const testing::TestParamInfo<Tokenize::ParamType> &Info) {
   return prepareParamName(Name);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    DirectiveNameParserTest, Tokenize,
-    testing::ValuesIn(
-        llvm::enum_seq(static_cast<omp::Directive>(0),
-                       static_cast<omp::Directive>(omp::Directive_enumSize))),
-    getParamName1);
+INSTANTIATE_TEST_SUITE_P(DirectiveNameParserTest, Tokenize,
+                         testing::ValuesIn(llvm::enum_seq_inclusive(
+                             omp::Directive::First_, omp::Directive::Last_)),
+                         getParamName1);
 
 // Test parsing of valid names.
 
@@ -131,9 +123,8 @@ getParamName2(const testing::TestParamInfo<ParseValid::ParamType> &Info) {
 
 INSTANTIATE_TEST_SUITE_P(
     DirectiveNameParserTest, ParseValid,
-    testing::Combine(testing::ValuesIn(llvm::enum_seq(
-                         static_cast<omp::Directive>(0),
-                         static_cast<omp::Directive>(omp::Directive_enumSize))),
+    testing::Combine(testing::ValuesIn(llvm::enum_seq_inclusive(
+                         omp::Directive::First_, omp::Directive::Last_)),
                      testing::ValuesIn(omp::getOpenMPVersions())),
     getParamName2);
 

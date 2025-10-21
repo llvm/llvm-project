@@ -324,7 +324,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
     // symbols is limited to specific cases where the fragments between two
     // symbols (including the fragments the symbols are defined in) are
     // fixed-size fragments so the difference can be calculated. For example,
-    // this is important when the Subtarget is changed and a new MCDataFragment
+    // this is important when the Subtarget is changed and a new MCFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
     if (SA.isVariable() || SB.isVariable())
@@ -346,22 +346,21 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       Displacement *= -1;
     }
 
-    // Track whether B is before a relaxable instruction and whether A is after
-    // a relaxable instruction. If SA and SB are separated by a linker-relaxable
-    // instruction, the difference cannot be resolved as it may be changed by
-    // the linker.
+    // Track whether B is before a relaxable instruction/alignment and whether A
+    // is after a relaxable instruction/alignment. If SA and SB are separated by
+    // a linker-relaxable instruction/alignment, the difference cannot be
+    // resolved as it may be changed by the linker.
     bool BBeforeRelax = false, AAfterRelax = false;
-    for (auto FI = FB; FI; FI = FI->getNext()) {
-      auto DF = dyn_cast<MCDataFragment>(FI);
-      if (DF && DF->isLinkerRelaxable()) {
-        if (&*FI != FB || SBOffset != DF->getContents().size())
+    for (auto F = FB; F; F = F->getNext()) {
+      if (F && F->isLinkerRelaxable()) {
+        if (&*F != FB || SBOffset != F->getSize())
           BBeforeRelax = true;
-        if (&*FI != FA || SAOffset == DF->getContents().size())
+        if (&*F != FA || SAOffset == F->getSize())
           AAfterRelax = true;
         if (BBeforeRelax && AAfterRelax)
           return;
       }
-      if (&*FI == FA) {
+      if (&*F == FA) {
         // If FA and FB belong to the same subsection, the loop will find FA and
         // we can resolve the difference.
         Addend += Reverse ? -Displacement : Displacement;
@@ -370,21 +369,16 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       }
 
       int64_t Num;
-      unsigned Count;
-      if (DF) {
-        Displacement += DF->getContents().size();
-      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
-                 RF && Asm->hasFinalLayout()) {
+      if (F->getKind() == MCFragment::FT_Data) {
+        Displacement += F->getFixedSize();
+      } else if ((F->getKind() == MCFragment::FT_Relaxable ||
+                  F->getKind() == MCFragment::FT_Align) &&
+                 Asm->hasFinalLayout()) {
         // Before finishLayout, a relaxable fragment's size is indeterminate.
         // After layout, during relocation generation, it can be treated as a
         // data fragment.
-        Displacement += RF->getContents().size();
-      } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
-                 AF && Layout && AF->hasEmitNops() &&
-                 !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
-                     *AF, Count)) {
-        Displacement += Asm->computeFragmentSize(*AF);
-      } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
+        Displacement += F->getSize();
+      } else if (auto *FF = dyn_cast<MCFillFragment>(F);
                  FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
         Displacement += Num * FF->getValueSize();
       } else {

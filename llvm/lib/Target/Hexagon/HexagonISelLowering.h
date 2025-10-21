@@ -31,6 +31,7 @@ namespace llvm {
 
 namespace HexagonISD {
 
+// clang-format off
 enum NodeType : unsigned {
   OP_BEGIN = ISD::BUILTIN_OP_END,
 
@@ -78,6 +79,7 @@ enum NodeType : unsigned {
   DCFETCH,
   READCYCLE,
   READTIMER,
+  THREAD_POINTER,
   PTRUE,
   PFALSE,
   D2P,         // Convert 8-byte value to 8-bit predicate register. [*]
@@ -121,6 +123,7 @@ enum NodeType : unsigned {
 };
 
 } // end namespace HexagonISD
+// clang-format on
 
 class HexagonSubtarget;
 
@@ -574,6 +577,8 @@ private:
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 
