@@ -8426,33 +8426,6 @@ void SelectionDAGBuilder::pushFPOpOutChain(SDValue Result,
   }
 }
 
-void SelectionDAGBuilder::pushOutChain(SDValue Result,
-                                       fp::ExceptionBehavior EB) {
-  assert(Result.getNode()->getNumValues() == 2);
-
-  // Push node to the appropriate list so that future instructions can be
-  // chained up correctly.
-  SDValue OutChain = Result.getValue(1);
-  switch (EB) {
-  case fp::ExceptionBehavior::ebIgnore:
-    // The only reason why ebIgnore nodes still need to be chained is that
-    // they might depend on the current rounding mode, and therefore must
-    // not be moved across instruction that may change that mode.
-    [[fallthrough]];
-  case fp::ExceptionBehavior::ebMayTrap:
-    // These must not be moved across calls or instructions that may change
-    // floating-point exception masks.
-    PendingConstrainedFP.push_back(OutChain);
-    break;
-  case fp::ExceptionBehavior::ebStrict:
-    // These must not be moved across calls or instructions that may change
-    // floating-point exception masks or read floating-point exception flags.
-    // In addition, they cannot be optimized out even if unused.
-    PendingConstrainedFPStrict.push_back(OutChain);
-    break;
-  }
-}
-
 void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     const ConstrainedFPIntrinsic &FPI) {
   SDLoc sdl = getCurSDLoc();
@@ -9572,7 +9545,7 @@ bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
   SDLoc sdl = getCurSDLoc();
   SDValue Result = DAG.getNode(Opcode, sdl, NodeVT, Operands, Flags);
   if (HasChain)
-    pushOutChain(Result, EB);
+    pushFPOpOutChain(Result, EB);
 
   SDValue FPResult = Result.getValue(0);
   setValue(&I, FPResult);
