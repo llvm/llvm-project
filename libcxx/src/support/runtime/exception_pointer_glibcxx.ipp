@@ -35,10 +35,6 @@ struct exception_ptr {
 
 [[noreturn]] void rethrow_exception(__exception_ptr::exception_ptr);
 
-void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
-  reinterpret_cast<__exception_ptr::exception_ptr*>(this)->_M_release();
-}
-
 exception_ptr::~exception_ptr() noexcept { reinterpret_cast<__exception_ptr::exception_ptr*>(this)->~exception_ptr(); }
 
 exception_ptr::exception_ptr(const exception_ptr& other) noexcept : __ptr_(other.__ptr_) {

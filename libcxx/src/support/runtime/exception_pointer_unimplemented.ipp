@@ -11,11 +11,6 @@
 
 namespace std {
 
-void exception_ptr::__do_decrement_refcount(void* __ptr) noexcept {
-#warning exception_ptr not yet implemented
-  __libcpp_verbose_abort("exception_ptr not yet implemented\n");
-}
-
 exception_ptr::~exception_ptr() noexcept {
 #warning exception_ptr not yet implemented
   __libcpp_verbose_abort("exception_ptr not yet implemented\n");
