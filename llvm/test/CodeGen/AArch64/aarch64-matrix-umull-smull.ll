@@ -1371,11 +1371,10 @@ define noundef <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %sc
 ; CHECK-SD-NEXT:    lsr x9, x0, #16
 ; CHECK-SD-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-SD-NEXT:    dup v4.8h, w0
-; CHECK-SD-NEXT:    dup v1.8h, w9
-; CHECK-SD-NEXT:    fmov s3, w9
-; CHECK-SD-NEXT:    sqneg v2.8h, v1.8h
-; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-SD-NEXT:    tbl v1.16b, { v2.16b, v3.16b }, v1.16b
+; CHECK-SD-NEXT:    ldr q3, [x8, :lo12:.LCPI14_0]
+; CHECK-SD-NEXT:    dup v2.8h, w9
+; CHECK-SD-NEXT:    sqneg v1.8h, v2.8h
+; CHECK-SD-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v3.16b
 ; CHECK-SD-NEXT:    rev32 v2.8h, v0.8h
 ; CHECK-SD-NEXT:    sqdmull v3.4s, v0.4h, v4.4h
 ; CHECK-SD-NEXT:    sqdmull2 v0.4s, v0.8h, v4.8h
