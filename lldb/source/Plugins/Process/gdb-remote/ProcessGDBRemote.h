@@ -138,7 +138,7 @@ public:
                       Status &error) override;
 
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
-  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> vm_addrs,
+  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buf) override;
 
 private:

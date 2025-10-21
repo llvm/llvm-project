@@ -2832,7 +2832,8 @@ ProcessGDBRemote::ParseMultiMemReadPacket(llvm::StringRef response_str,
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
     return llvm::createStringError(llvm::formatv(
-        "MultiMemRead response missing field separator: '{0}'", response_str));
+        "MultiMemRead response missing field separator ';' in: '{0}'",
+        response_str));
 
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results;
 
