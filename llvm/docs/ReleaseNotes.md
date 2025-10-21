@@ -63,6 +63,8 @@ Changes to the LLVM IR
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 * Floating-point operand bundles have been added.
+* Calls to floating-point intrinsics can have operand bundles "fp.round" and
+  "fp.except", which specify effective rounding mode and exception behavior.
 
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
