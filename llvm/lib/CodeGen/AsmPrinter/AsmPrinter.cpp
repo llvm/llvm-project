@@ -1432,9 +1432,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
   bool PropellerCFGEnabled =
       FuncCFGProfile &&
-      (AllFeatures ||
-       (!NoFeatures &&
-        PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::PropellerCFG)));
+      (AllFeatures || (!NoFeatures && PgoAnalysisMapFeatures.isSet(
+                                          PGOMapFeaturesEnum::PropellerCFG)));
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
@@ -1473,8 +1472,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features =
-      getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls, FuncCFGProfile);
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls,
+                                      FuncCFGProfile);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {

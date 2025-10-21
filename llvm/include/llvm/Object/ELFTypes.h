@@ -840,7 +840,9 @@ struct BBAddrMap {
       return FuncEntryCount || BBFreq || BrProb || PropellerCFG;
     }
 
-    bool hasPGOAnalysisBBData() const { return BBFreq || BrProb || PropellerCFG; }
+    bool hasPGOAnalysisBBData() const {
+      return BBFreq || BrProb || PropellerCFG;
+    }
 
     // Encodes to minimum bit width representation.
     uint8_t encode() const {
@@ -871,10 +873,12 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteEndOffsets, BBHash, PropellerCFG) ==
+                      OmitBBEntries, CallsiteEndOffsets, BBHash,
+                      PropellerCFG) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
-                      Other.CallsiteEndOffsets, Other.BBHash, Other.PropellerCFG);
+                      Other.CallsiteEndOffsets, Other.BBHash,
+                      Other.PropellerCFG);
     }
   };
 
