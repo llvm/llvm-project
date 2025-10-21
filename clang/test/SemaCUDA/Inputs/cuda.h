@@ -13,6 +13,8 @@
 #define __managed__ __attribute__((managed))
 #define __grid_constant__ __attribute__((grid_constant))
 #define __launch_bounds__(...) __attribute__((launch_bounds(__VA_ARGS__)))
+#define __cluster_dims__(...) __attribute__((cluster_dims(__VA_ARGS__)))
+#define __no_cluster__ __attribute__((no_cluster))
 
 struct dim3 {
   unsigned x, y, z;

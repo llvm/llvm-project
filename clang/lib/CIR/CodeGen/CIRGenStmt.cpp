@@ -475,8 +475,8 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
       }
       break;
     case cir::TEK_Complex:
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "complex function return type");
+      emitComplexExprIntoLValue(rv, makeAddrLValue(returnValue, rv->getType()),
+                                /*isInit=*/true);
       break;
     case cir::TEK_Aggregate:
       assert(!cir::MissingFeatures::aggValueSlotGC());
@@ -536,7 +536,7 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   mlir::Block *currBlock = builder.getBlock();
   mlir::Block *labelBlock = currBlock;
 
-  if (!currBlock->empty()) {
+  if (!currBlock->empty() || currBlock->isEntryBlock()) {
     {
       mlir::OpBuilder::InsertionGuard guard(builder);
       labelBlock = builder.createBlock(builder.getBlock()->getParent());
