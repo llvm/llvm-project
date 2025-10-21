@@ -339,7 +339,6 @@ RunLivenessAnalysis::RunLivenessAnalysis(Operation *op) {
              << " has no liveness info (unreachable), mark dead";
       solver.getOrCreateState<Liveness>(result.value());
     }
-
     for (auto &region : op->getRegions()) {
       for (auto &block : region) {
         for (auto blockArg : llvm::enumerate(block.getArguments())) {
