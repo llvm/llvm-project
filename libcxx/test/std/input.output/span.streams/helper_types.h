@@ -124,10 +124,6 @@ static_assert(!std::constructible_from<std::span<const wchar_t>, const NonReadOn
 static_assert(!std::convertible_to<const NonReadOnlySpan<wchar_t>, std::span<const wchar_t>>);
 #endif
 
-// Mode types
-
-struct NonMode {};
-
 // Spanbuffer wrapper
 
 template <typename CharT, typename TraitsT>

@@ -41,6 +41,7 @@ void test_sfinae() {
   static_assert(!test_convertible<SpanBuf, const std::span<CharT>, std::ios_base::openmode>());
 
   // Non-mode
+  struct NonMode {};
   static_assert(!std::constructible_from<SpanBuf, const std::span<CharT>, const NonMode>);
   static_assert(!test_convertible<SpanBuf, const std::span<CharT>, const NonMode>());
 }

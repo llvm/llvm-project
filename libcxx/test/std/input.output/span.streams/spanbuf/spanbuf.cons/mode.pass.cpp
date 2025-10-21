@@ -39,6 +39,7 @@ void test_sfinae() {
   static_assert(!test_convertible<SpanBuf, std::ios_base::openmode>());
 
   // Non-mode
+  struct NonMode {};
   static_assert(!std::constructible_from<SpanBuf, const NonMode>);
   static_assert(!test_convertible<SpanBuf, const NonMode>());
 }
