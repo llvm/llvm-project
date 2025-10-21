@@ -278,7 +278,7 @@ cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
@@ -312,7 +312,7 @@ cmake -GNinja %cmake_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || ninja || ninja || exit /b 1
-ninja check-llvm || ninja check-llvm || ninja check-llvm || exit /b 1
+ninja check-llvm || exit /b 1
 ninja check-clang || ninja check-clang || ninja check-clang || exit /b 1
 ninja check-lld || ninja check-lld || ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
