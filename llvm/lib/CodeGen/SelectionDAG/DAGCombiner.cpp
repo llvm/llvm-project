@@ -2486,9 +2486,8 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
 
   SDValue Cond, TVal, FVal;
   if (!sd_match(N1, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(TVal),
-                                          m_Value(FVal))))) {
+                                          m_Value(FVal)))))
     return SDValue();
-  }
 
   // We can't hoist all instructions because of immediate UB (not speculatable).
   // For example div/rem by zero.
@@ -13858,9 +13857,8 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
 
   SDValue Cond, Op1, Op2;
   if (!sd_match(N0, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(Op1),
-                                          m_Value(Op2))))) {
+                                          m_Value(Op2)))))
     return SDValue();
-  }
 
   if (!isCompatibleLoad(Op1, Opcode) || !isCompatibleLoad(Op2, Opcode))
     return SDValue();
