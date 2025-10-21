@@ -24,7 +24,7 @@ end subroutine test_non_refernece
 ! CHECK: omp.map.info var_ptr(%{{.*}} : !fir.ref<index>, index)
 
 ! CHECK:      %[[DIM_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<index>, index)
-! CHECK-SAME:                     map_clauses(implicit, exit_release_or_enter_alloc)
+! CHECK-SAME:                     map_clauses(implicit)
 ! CHECK-SAME:                     capture(ByCopy) -> !fir.ref<index> {name = ""}
 
 

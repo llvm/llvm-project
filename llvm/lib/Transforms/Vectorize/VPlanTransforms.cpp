@@ -372,7 +372,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *Exiting =
       Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   VPRegionBlock *Region =
-      Plan.createVPRegionBlock(Entry, Exiting, RegionName, true);
+      Plan.createReplicateRegion(Entry, Exiting, RegionName);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.

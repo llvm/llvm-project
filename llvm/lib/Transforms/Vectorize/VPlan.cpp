@@ -742,8 +742,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
-  auto *NewRegion = getPlan()->createVPRegionBlock(NewEntry, NewExiting,
-                                                   getName(), isReplicator());
+  VPlan &Plan = *getPlan();
+  VPRegionBlock *NewRegion =
+      isReplicator()
+          ? Plan.createReplicateRegion(NewEntry, NewExiting, getName())
+          : Plan.createLoopRegion(getName(), NewEntry, NewExiting);
+
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
   return NewRegion;

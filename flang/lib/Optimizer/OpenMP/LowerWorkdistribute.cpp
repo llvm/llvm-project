@@ -719,10 +719,9 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   SmallVector<Value> outerMapInfos;
   // Create new mapinfo ops for the inner target region
   for (auto mapInfo : mapInfos) {
-    auto originalMapType =
-        (llvm::omp::OpenMPOffloadMappingFlags)(mapInfo.getMapType());
+    mlir::omp::ClauseMapFlags originalMapType = mapInfo.getMapType();
     auto originalCaptureType = mapInfo.getMapCaptureType();
-    llvm::omp::OpenMPOffloadMappingFlags newMapType;
+    mlir::omp::ClauseMapFlags newMapType;
     mlir::omp::VariableCaptureKind newCaptureType;
     // For bycopy, we keep the same map type and capture type
     // For byref, we change the map type to none and keep the capture type
@@ -730,7 +729,7 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       newMapType = originalMapType;
       newCaptureType = originalCaptureType;
     } else if (originalCaptureType == mlir::omp::VariableCaptureKind::ByRef) {
-      newMapType = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+      newMapType = mlir::omp::ClauseMapFlags::storage;
       newCaptureType = originalCaptureType;
       outerMapInfos.push_back(mapInfo);
     } else {
@@ -738,11 +737,8 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
       return failure();
     }
     auto innerMapInfo = cast<omp::MapInfoOp>(rewriter.clone(*mapInfo));
-    innerMapInfo.setMapTypeAttr(rewriter.getIntegerAttr(
-        rewriter.getIntegerType(64, false),
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            newMapType)));
+    innerMapInfo.setMapTypeAttr(
+        rewriter.getAttr<omp::ClauseMapFlagsAttr>(newMapType));
     innerMapInfo.setMapCaptureType(newCaptureType);
     innerMapInfos.push_back(innerMapInfo.getResult());
   }
@@ -834,11 +830,11 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
     alloc = rewriter.create<fir::AllocaOp>(loc, allocType);
   }
   // Lambda to create mapinfo ops
-  auto getMapInfo = [&](uint64_t mappingFlags, const char *name) {
+  auto getMapInfo = [&](mlir::omp::ClauseMapFlags mappingFlags,
+                        const char *name) {
     return rewriter.create<omp::MapInfoOp>(
         loc, alloc.getType(), alloc, TypeAttr::get(allocType),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(64, /*isSigned=*/false),
-                                mappingFlags),
+        rewriter.getAttr<omp::ClauseMapFlagsAttr>(mappingFlags),
         rewriter.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
         /*varPtrPtr=*/Value{},
@@ -849,14 +845,10 @@ static TempOmpVar allocateTempOmpVar(Location loc, Type ty,
         /*name=*/rewriter.getStringAttr(name), rewriter.getBoolAttr(false));
   };
   // Create mapinfo ops.
-  uint64_t mapFrom =
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-  uint64_t mapTo =
-      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-  auto mapInfoFrom = getMapInfo(mapFrom, "__flang_workdistribute_from");
-  auto mapInfoTo = getMapInfo(mapTo, "__flang_workdistribute_to");
+  auto mapInfoFrom = getMapInfo(mlir::omp::ClauseMapFlags::from,
+                                "__flang_workdistribute_from");
+  auto mapInfoTo =
+      getMapInfo(mlir::omp::ClauseMapFlags::to, "__flang_workdistribute_to");
   return TempOmpVar{mapInfoFrom, mapInfoTo};
 }
 
