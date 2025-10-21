@@ -464,25 +464,27 @@ class EventPoolTy {
 
 public:
   /// Initialize context, flags, and mutex
-  void init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
+  Error init(ze_context_handle_t ContextIn, uint32_t FlagsIn) {
     Context = ContextIn;
     Flags = FlagsIn;
     Mtx.reset(new std::mutex);
+    return Plugin::success();
   }
 
   /// Destroys L0 resources
-  void deinit() {
+  Error deinit() {
     for (auto E : Events)
-      CALL_ZE_RET_VOID(zeEventDestroy, E);
+      CALL_ZE_RET_ERROR(zeEventDestroy, E);
     for (auto P : Pools)
-      CALL_ZE_RET_VOID(zeEventPoolDestroy, P);
+      CALL_ZE_RET_ERROR(zeEventPoolDestroy, P);
+    return Plugin::success();
   }
 
   /// Get a free event from the pool
-  ze_event_handle_t getEvent();
+  Expected<ze_event_handle_t> getEvent();
 
   /// Return an event to the pool
-  void releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device);
+  Error releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device);
 };
 
 /// Staging buffer

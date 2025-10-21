@@ -27,10 +27,10 @@ using namespace error;
 // Common data across all possible plugin instantiations
 L0OptionsTy LevelZeroPluginTy::Options;
 
-int32_t LevelZeroPluginTy::findDevices() {
-  CALL_ZE_RET_ZERO(zeInit, ZE_INIT_FLAG_GPU_ONLY);
+Expected<int32_t> LevelZeroPluginTy::findDevices() {
+  CALL_ZE_RET_ERROR(zeInit, ZE_INIT_FLAG_GPU_ONLY);
   uint32_t NumDrivers = 0;
-  CALL_ZE_RET_ZERO(zeDriverGet, &NumDrivers, nullptr);
+  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, nullptr);
   if (NumDrivers == 0) {
     DP("Cannot find any drivers.\n");
     return 0;
@@ -39,7 +39,7 @@ int32_t LevelZeroPluginTy::findDevices() {
   // We expect multiple drivers on Windows to support different device types,
   // so we need to maintain multiple drivers and contexts in general.
   llvm::SmallVector<ze_driver_handle_t> FoundDrivers(NumDrivers);
-  CALL_ZE_RET_ZERO(zeDriverGet, &NumDrivers, FoundDrivers.data());
+  CALL_ZE_RET_ERROR(zeDriverGet, &NumDrivers, FoundDrivers.data());
 
   struct RootInfoTy {
     uint32_t OrderId;
@@ -62,8 +62,10 @@ int32_t LevelZeroPluginTy::findDevices() {
     // We have a driver that supports at least one device
     ContextList.emplace_back(*this, Driver, DriverId);
     auto &DrvInfo = ContextList.back();
+    if (auto Err = DrvInfo.init())
+      return std::move(Err);
     llvm::SmallVector<ze_device_handle_t> FoundDevices(DeviceCount);
-    CALL_ZE_RET_ZERO(zeDeviceGet, Driver, &DeviceCount, FoundDevices.data());
+    CALL_ZE_RET_ERROR(zeDeviceGet, Driver, &DeviceCount, FoundDevices.data());
 
     for (auto &zeDevice : FoundDevices)
       RootDevices.push_back(

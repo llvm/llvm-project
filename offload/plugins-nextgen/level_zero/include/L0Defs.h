@@ -42,16 +42,6 @@ using namespace error;
 /// Generic L0 handle type
 using ZeHandleTy = void *;
 
-template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
-
-  if (Code == OFFLOAD_SUCCESS)
-    return Plugin::success();
-  const char *Desc = "Unknown error";
-  return createStringError<ArgsTy..., const char *>(inconvertibleErrorCode(),
-                                                    ErrFmt, Args..., Desc);
-}
-
 } // namespace llvm::omp::target::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H

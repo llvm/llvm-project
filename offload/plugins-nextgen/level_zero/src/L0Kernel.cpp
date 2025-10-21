@@ -557,7 +557,10 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   if (UseImmCmdList) {
     INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
          "Using immediate command list for kernel submission.\n");
-    auto Event = Device.getEvent();
+    auto EventOrError = Device.getEvent();
+    if (!EventOrError)
+      return EventOrError.takeError();
+    ze_event_handle_t Event = *EventOrError;
     size_t NumWaitEvents = 0;
     ze_event_handle_t *WaitEvents = nullptr;
     if (IsAsync && !AsyncQueue->WaitEvents.empty()) {
@@ -584,7 +587,8 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
       AsyncQueue->KernelEvent = Event;
     } else {
       CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
-      Device.releaseEvent(Event);
+      if (auto Err = Device.releaseEvent(Event))
+        return Err;
     }
   } else {
     ze_event_handle_t Event = nullptr;
@@ -603,7 +607,8 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
     CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, UINT64_MAX);
     CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
     if (Event) {
-      Device.releaseEvent(Event);
+      if (auto Err = Device.releaseEvent(Event))
+        return Err;
     }
   }
 

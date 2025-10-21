@@ -174,7 +174,7 @@ void L0DeviceTy::reportDeviceInfo() const {
   DP("-- Max clock frequency (MHz)    : %" PRIu32 "\n", getClockRate());
 }
 
-Error L0DeviceTy::internalInit() {
+Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   const auto &Options = getPlugin().getOptions();
 
   uint32_t Count = 1;
@@ -216,10 +216,6 @@ Error L0DeviceTy::internalInit() {
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
   MemAllocator.initDevicePools(*this, getPlugin().getOptions());
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
-  return Plugin::success();
-}
-
-Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
@@ -293,7 +289,8 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
         CALL_ZE_RET_ERROR(zeEventHostSynchronize, KE, UINT64_MAX);
       }
       for (auto &Event : WaitEvents) {
-        releaseEvent(Event);
+        if (auto Err = releaseEvent(Event))
+          return Err;
       }
     } else { // Async
       // Wait for all events. We should wait and reset events in reverse order
@@ -308,7 +305,8 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
           if (*Itr == AsyncQueue->KernelEvent)
             WaitDone = true;
         }
-        releaseEvent(*Itr);
+        if (auto Err = releaseEvent(*Itr))
+          return Err;
       }
     }
   }
@@ -507,13 +505,13 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
   const bool UseCopyEngine = getZeDevice() != L0DstDev.getZeDevice();
 
   if (asyncEnabled() && AsyncInfoWrapper.hasQueue()) {
-    if (enqueueMemCopyAsync(DstPtr, SrcPtr, Size,
-                            (__tgt_async_info *)AsyncInfoWrapper))
-      return Plugin::error(ErrorCode::UNKNOWN, "dataExchangeImpl failed");
+    if (auto Err = enqueueMemCopyAsync(DstPtr, SrcPtr, Size,
+                                       (__tgt_async_info *)AsyncInfoWrapper))
+      return Err;
   } else {
-    if (enqueueMemCopy(DstPtr, SrcPtr, Size,
-                       /* AsyncInfo */ nullptr, UseCopyEngine))
-      return Plugin::error(ErrorCode::UNKNOWN, "dataExchangeImpl failed");
+    if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
+                                  /* AsyncInfo */ nullptr, UseCopyEngine))
+      return Err;
   }
   return Plugin::success();
 }
@@ -708,7 +706,10 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
                                       bool CopyTo) {
   const bool Ordered =
       (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
-  ze_event_handle_t SignalEvent = getEvent();
+  auto EventOrErr = getEvent();
+  if (!EventOrErr)
+    return EventOrErr.takeError();
+  ze_event_handle_t SignalEvent = *EventOrErr;
   size_t NumWaitEvents = 0;
   ze_event_handle_t *WaitEvents = nullptr;
   AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo->Queue);
@@ -734,7 +735,10 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                                  size_t PatternSize, size_t Size) {
   if (useImmForCopy()) {
     const auto CmdList = getImmCopyCmdList();
-    auto Event = getEvent();
+    auto EventOrErr = getEvent();
+    if (!EventOrErr)
+      return EventOrErr.takeError();
+    ze_event_handle_t Event = *EventOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
                       PatternSize, Size, Event, 0, nullptr);
     CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);

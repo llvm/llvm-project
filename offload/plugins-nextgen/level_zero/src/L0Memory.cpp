@@ -647,7 +647,7 @@ Expected<void *> MemAllocatorTy::allocL0(size_t Size, size_t Align,
   return Mem;
 }
 
-ze_event_handle_t EventPoolTy::getEvent() {
+Expected<ze_event_handle_t> EventPoolTy::getEvent() {
   std::lock_guard<std::mutex> Lock(*Mtx);
 
   if (Events.empty()) {
@@ -656,7 +656,7 @@ ze_event_handle_t EventPoolTy::getEvent() {
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
     Desc.count = PoolSize;
     ze_event_pool_handle_t Pool;
-    CALL_ZE_RET_NULL(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
+    CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
     Pools.push_back(Pool);
 
     // Create events
@@ -666,7 +666,7 @@ ze_event_handle_t EventPoolTy::getEvent() {
     for (uint32_t I = 0; I < PoolSize; I++) {
       EventDesc.index = I;
       ze_event_handle_t Event;
-      CALL_ZE_RET_NULL(zeEventCreate, Pool, &EventDesc, &Event);
+      CALL_ZE_RET_ERROR(zeEventCreate, Pool, &EventDesc, &Event);
       Events.push_back(Event);
     }
   }
@@ -678,10 +678,11 @@ ze_event_handle_t EventPoolTy::getEvent() {
 }
 
 /// Return an event to the pool
-void EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
+Error EventPoolTy::releaseEvent(ze_event_handle_t Event, L0DeviceTy &Device) {
   std::lock_guard<std::mutex> Lock(*Mtx);
-  CALL_ZE_RET_VOID(zeEventHostReset, Event);
+  CALL_ZE_RET_ERROR(zeEventHostReset, Event);
   Events.push_back(Event);
+  return Plugin::success();
 }
 
 } // namespace llvm::omp::target::plugin

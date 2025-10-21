@@ -267,8 +267,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   /// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair
   std::pair<uint32_t, uint32_t> findCopyOrdinal(bool LinkCopy = false);
 
-  Error internalInit();
-
 public:
   L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
              ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
@@ -284,11 +282,6 @@ public:
     MemoryProperties.pNext = nullptr;
     CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
     CacheProperties.pNext = nullptr;
-
-    auto Err = internalInit();
-    if (Err)
-      FATAL_MESSAGE(DeviceId, "Couldn't initialize device: %s\n",
-                    toString(std::move(Err)).c_str());
   }
 
   static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
@@ -507,11 +500,13 @@ public:
   }
 
   /// Return an event from the driver associated to this device
-  ze_event_handle_t getEvent() { return l0Context.getEventPool().getEvent(); }
+  Expected<ze_event_handle_t> getEvent() {
+    return l0Context.getEventPool().getEvent();
+  }
 
   /// Release event to the pool associated to this device
-  void releaseEvent(ze_event_handle_t Event) {
-    l0Context.getEventPool().releaseEvent(Event, *this);
+  Error releaseEvent(ze_event_handle_t Event) {
+    return l0Context.getEventPool().releaseEvent(Event, *this);
   }
 
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }

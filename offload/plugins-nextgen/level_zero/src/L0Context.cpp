@@ -15,17 +15,26 @@
 
 namespace llvm::omp::target::plugin {
 
-L0ContextTy::L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-                         int32_t /*DriverId*/)
-    : Plugin(Plugin), zeDriver(zeDriver) {
-  CALL_ZE_RET_VOID(zeDriverGetApiVersion, zeDriver, &APIVersion);
+Error L0ContextTy::init() {
+  CALL_ZE_RET_ERROR(zeDriverGetApiVersion, zeDriver, &APIVersion);
   DP("Driver API version is %" PRIx32 "\n", APIVersion);
 
   ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  CALL_ZE_RET_VOID(zeContextCreate, zeDriver, &Desc, &zeContext);
-
-  EventPool.init(zeContext, 0);
+  CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);
+  if (auto Err = EventPool.init(zeContext, 0))
+    return Err;
   HostMemAllocator.initHostPool(*this, Plugin.getOptions());
+  return Plugin::success();
+}
+
+Error L0ContextTy::deinit() {
+  if (auto Err = EventPool.deinit())
+    return Err;
+  if (auto Err = HostMemAllocator.deinit())
+    return Err;
+  if (zeContext)
+    CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
+  return Plugin::success();
 }
 
 StagingBufferTy &L0ContextTy::getStagingBuffer() {

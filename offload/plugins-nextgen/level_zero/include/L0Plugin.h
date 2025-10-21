@@ -81,7 +81,7 @@ public:
 
   /// Find L0 devices and initialize device properties.
   /// Returns number of devices reported to omptarget.
-  int32_t findDevices();
+  Expected<int32_t> findDevices();
 
   L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
     assert("Invalid device ID" && DeviceId >= 0 &&

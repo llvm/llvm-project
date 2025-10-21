@@ -71,7 +71,8 @@ public:
 
   /// Create context, initialize event pool and extension functions
   L0ContextTy(LevelZeroPluginTy &Plugin, ze_driver_handle_t zeDriver,
-              int32_t DriverId);
+              int32_t DriverId)
+      : Plugin(Plugin), zeDriver(zeDriver) {}
 
   L0ContextTy(const L0ContextTy &) = delete;
   L0ContextTy(L0ContextTy &&) = delete;
@@ -81,15 +82,8 @@ public:
   /// Release resources
   ~L0ContextTy() {}
 
-  Error deinit() {
-    EventPool.deinit();
-    auto Err = HostMemAllocator.deinit();
-    if (Err)
-      return Err;
-    if (zeContext)
-      CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
-    return Error::success();
-  }
+  Error init();
+  Error deinit();
 
   auto &getPlugin() const { return Plugin; }
 
