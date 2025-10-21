@@ -30,9 +30,9 @@ void bm_exception_ptr_copy_ctor_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr excptr_copy(excptr);
-    benchmark::DoNotOptimize(excptr_copy);
     // The compiler should be able to constant-fold the comparison
     benchmark::DoNotOptimize(excptr_copy == nullptr);
+    benchmark::DoNotOptimize(excptr_copy);
   }
 }
 BENCHMARK(bm_exception_ptr_copy_ctor_null);
@@ -52,9 +52,9 @@ void bm_exception_ptr_move_ctor_null(benchmark::State& state) {
   std::exception_ptr excptr = nullptr;
   for (auto _ : state) {
     std::exception_ptr new_excptr(std::move(excptr));
-    benchmark::DoNotOptimize(new_excptr);
     // The compiler should be able to constant-fold the comparison
     benchmark::DoNotOptimize(new_excptr == nullptr);
+    benchmark::DoNotOptimize(new_excptr);
   }
 }
 BENCHMARK(bm_exception_ptr_move_ctor_null);
@@ -74,9 +74,9 @@ void bm_exception_ptr_copy_assign_null(benchmark::State& state) {
   for (auto _ : state) {
     std::exception_ptr new_excptr;
     new_excptr = excptr;
-    benchmark::DoNotOptimize(new_excptr);
     // The compiler should be able to constant-fold the comparison
     benchmark::DoNotOptimize(new_excptr == nullptr);
+    benchmark::DoNotOptimize(new_excptr);
   }
 }
 BENCHMARK(bm_exception_ptr_copy_assign_null);
@@ -99,9 +99,9 @@ void bm_exception_ptr_move_assign_null(benchmark::State& state) {
   for (auto _ : state) {
     std::exception_ptr new_excptr;
     new_excptr = std::move(excptr);
-    benchmark::DoNotOptimize(new_excptr);
     // The compiler should be able to constant-fold the comparison
     benchmark::DoNotOptimize(new_excptr == nullptr);
+    benchmark::DoNotOptimize(new_excptr);
   }
 }
 BENCHMARK(bm_exception_ptr_move_assign_null);
@@ -122,8 +122,6 @@ void bm_exception_ptr_swap_null(benchmark::State& state) {
   std::exception_ptr excptr2 = nullptr;
   for (auto _ : state) {
     swap(excptr1, excptr2);
-    benchmark::DoNotOptimize(excptr1);
-    benchmark::DoNotOptimize(excptr2);
     // The compiler should be able to constant-fold those comparisons
     benchmark::DoNotOptimize(excptr1 == nullptr);
     benchmark::DoNotOptimize(excptr2 == nullptr);
