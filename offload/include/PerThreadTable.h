@@ -14,6 +14,7 @@
 #define OFFLOAD_PERTHREADTABLE_H
 
 #include <list>
+#include <llvm/Support/Error.h>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -203,6 +204,24 @@ public:
       ThData->NElements = 0;
     }
     ThreadDataList.clear();
+  }
+
+  template <class F> llvm::Error deinit(F f) {
+    std::lock_guard<std::mutex> Lock(Mtx);
+    for (auto ThData : ThreadDataList) {
+      if (!ThData->ThEntry || ThData->NElements == 0)
+        continue;
+      for (auto &Obj : *ThData->ThEntry) {
+        if constexpr (is_associative<ContainerType>::value) {
+          if (auto Err = f(Obj.second))
+            return Err;
+        } else {
+          if (auto Err = f(Obj))
+            return Err;
+        }
+      }
+    }
+    return llvm::Error::success();
   }
 };
 

@@ -148,7 +148,8 @@ Expected<int32_t> LevelZeroPluginTy::initImpl() {
 
 Error LevelZeroPluginTy::deinitImpl() {
   DP("Deinit Level0 plugin!\n");
-  ContextTLSTable.clear();
+  if (auto Err = ContextTLSTable.deinit())
+    return Err;
   DeviceTLSTable.clear();
   ThreadTLSTable.clear();
   for (auto &Context : ContextList)

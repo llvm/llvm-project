@@ -547,11 +547,20 @@ Error L0KernelTy::runTargetTeamRegion(L0DeviceTy &l0Device,
   const bool UseImmCmdList = Device.useImmForCompute();
 
   if (UseImmCmdList) {
-    CmdList = Device.getImmCmdList();
+    auto CmdListOrErr = Device.getImmCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
     // Command queue is not used with immediate command list
   } else {
-    CmdList = Device.getCmdList();
-    CmdQueue = Device.getCmdQueue();
+    auto CmdListOrErr = Device.getCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
+    auto CmdQueueOrErr = Device.getCmdQueue();
+    if (!CmdQueueOrErr)
+      return CmdQueueOrErr.takeError();
+    CmdQueue = *CmdQueueOrErr;
   }
 
   if (UseImmCmdList) {

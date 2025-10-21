@@ -410,7 +410,10 @@ Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
     if (isDiscreteDevice() &&
         static_cast<size_t>(Size) <= Plugin.getOptions().StagingBufferSize &&
         getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      SrcPtr = getStagingBuffer().get(IsAsync);
+      auto PtrOrErr = getStagingBuffer().get(IsAsync);
+      if (!PtrOrErr)
+        return PtrOrErr.takeError();
+      SrcPtr = *PtrOrErr;
       std::copy_n(static_cast<const char *>(HstPtr), Size,
                   static_cast<char *>(const_cast<void *>(SrcPtr)));
     }
@@ -469,7 +472,10 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
         static_cast<size_t>(Size) <=
             getPlugin().getOptions().StagingBufferSize &&
         getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      DstPtr = getStagingBuffer().get(IsAsync);
+      auto PtrOrErr = getStagingBuffer().get(IsAsync);
+      if (!PtrOrErr)
+        return PtrOrErr.takeError();
+      DstPtr = *PtrOrErr;
     }
     if (IsAsync) {
       if (auto Err = enqueueMemCopyAsync(DstPtr, TgtPtr, Size, AsyncInfo,
@@ -632,11 +638,20 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
     if (useImmForInterop()) {
-      auto CmdList = createImmCmdList(InOrder);
-      Ret->async_info->Queue = CmdList;
-      L0->ImmCmdList = CmdList;
+      auto CmdListOrErr = createImmCmdList(InOrder);
+      if (!CmdListOrErr) {
+        delete Ret;
+        return CmdListOrErr.takeError();
+      }
+      Ret->async_info->Queue = *CmdListOrErr;
+      L0->ImmCmdList = *CmdListOrErr;
     } else {
-      Ret->async_info->Queue = createCommandQueue(InOrder);
+      auto QueueOrErr = createCommandQueue(InOrder);
+      if (!QueueOrErr) {
+        delete Ret;
+        return QueueOrErr.takeError();
+      }
+      Ret->async_info->Queue = *QueueOrErr;
       L0->CommandQueue =
           static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
     }
@@ -676,17 +691,32 @@ Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
   ze_command_queue_handle_t CmdQueue = nullptr;
 
   if (useImmForCopy()) {
-    CmdList = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
+    auto CmdListOrErr = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                       nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, UINT64_MAX);
   } else {
     if (UseCopyEngine) {
-      CmdList = getCopyCmdList();
-      CmdQueue = getCopyCmdQueue();
+      auto CmdListOrErr = getCopyCmdList();
+      if (!CmdListOrErr)
+        return CmdListOrErr.takeError();
+      CmdList = *CmdListOrErr;
+      auto CmdQueueOrErr = getCopyCmdQueue();
+      if (!CmdQueueOrErr)
+        return CmdQueueOrErr.takeError();
+      CmdQueue = *CmdQueueOrErr;
     } else {
-      CmdList = getCmdList();
-      CmdQueue = getCmdQueue();
+      auto CmdListOrErr = getCmdList();
+      if (!CmdListOrErr)
+        return CmdListOrErr.takeError();
+      CmdList = *CmdListOrErr;
+      auto CmdQueueOrErr = getCmdQueue();
+      if (!CmdQueueOrErr)
+        return CmdQueueOrErr.takeError();
+      CmdQueue = *CmdQueueOrErr;
     }
 
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
@@ -724,7 +754,10 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
     else
       NumWaitEvents = 0;
   }
-  auto CmdList = getImmCopyCmdList();
+  auto CmdListOrError = getImmCopyCmdList();
+  if (!CmdListOrError)
+    return CmdListOrError.takeError();
+  const auto CmdList = *CmdListOrError;
   CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
                     SignalEvent, NumWaitEvents, WaitEvents);
   AsyncQueue->WaitEvents.push_back(SignalEvent);
@@ -735,7 +768,10 @@ Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
 Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                                  size_t PatternSize, size_t Size) {
   if (useImmForCopy()) {
-    const auto CmdList = getImmCopyCmdList();
+    auto CmdListOrErr = getImmCopyCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    const auto CmdList = *CmdListOrErr;
     auto EventOrErr = getEvent();
     if (!EventOrErr)
       return EventOrErr.takeError();
@@ -744,8 +780,14 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
                       PatternSize, Size, Event, 0, nullptr);
     CALL_ZE_RET_ERROR(zeEventHostSynchronize, Event, UINT64_MAX);
   } else {
-    auto CmdList = getCopyCmdList();
-    const auto CmdQueue = getCopyCmdQueue();
+    auto CmdListOrErr = getCopyCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    auto CmdList = *CmdListOrErr;
+    auto CmdQueueOrErr = getCopyCmdQueue();
+    if (!CmdQueueOrErr)
+      return CmdQueueOrErr.takeError();
+    const auto CmdQueue = *CmdQueueOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
                       PatternSize, Size, nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
@@ -800,15 +842,15 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 
 // Command queues related functions
 /// Create a command list with given ordinal and flags
-ze_command_list_handle_t L0DeviceTy::createCmdList(
+Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
     ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
   ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
                                         nullptr, // extension
                                         Ordinal, Flags};
   ze_command_list_handle_t cmdList;
-  CALL_ZE_RET_NULL(zeCommandListCreate, Context, Device, &cmdListDesc,
-                   &cmdList);
+  CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
+                    &cmdList);
   DP("Created a command list " DPxMOD " (Ordinal: %" PRIu32
      ") for device %s.\n",
      DPxPTR(cmdList), Ordinal, DeviceIdStr.data());
@@ -816,7 +858,7 @@ ze_command_list_handle_t L0DeviceTy::createCmdList(
 }
 
 /// Create a command list with default flags
-ze_command_list_handle_t
+Expected<ze_command_list_handle_t>
 L0DeviceTy::createCmdList(ze_context_handle_t Context,
                           ze_device_handle_t Device, uint32_t Ordinal,
                           const std::string_view DeviceIdStr) {
@@ -825,19 +867,22 @@ L0DeviceTy::createCmdList(ze_context_handle_t Context,
              : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
 }
 
-ze_command_list_handle_t L0DeviceTy::getCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::getCmdList() {
   auto &TLS = getTLS();
   auto CmdList = TLS.getCmdList();
   if (!CmdList) {
-    CmdList = createCmdList(getZeContext(), getZeDevice(), getComputeEngine(),
-                            getZeId());
+    auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
+                                      getComputeEngine(), getZeId());
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
     TLS.setCmdList(CmdList);
   }
   return CmdList;
 }
 
 /// Create a command queue with given ordinal and flags
-ze_command_queue_handle_t
+Expected<ze_command_queue_handle_t>
 L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
                            ze_device_handle_t Device, uint32_t Ordinal,
                            uint32_t Index, ze_command_queue_flags_t Flags,
@@ -850,8 +895,8 @@ L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
                                           ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                           ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_queue_handle_t cmdQueue;
-  CALL_ZE_RET_NULL(zeCommandQueueCreate, Context, Device, &cmdQueueDesc,
-                   &cmdQueue);
+  CALL_ZE_RET_ERROR(zeCommandQueueCreate, Context, Device, &cmdQueueDesc,
+                    &cmdQueue);
   DP("Created a command queue " DPxMOD " (Ordinal: %" PRIu32 ", Index: %" PRIu32
      ", Flags: %" PRIu32 ") for device %s.\n",
      DPxPTR(cmdQueue), Ordinal, Index, Flags, DeviceIdStr.data());
@@ -859,7 +904,7 @@ L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
 }
 
 /// Create a command queue with default flags
-ze_command_queue_handle_t L0DeviceTy::createCmdQueue(
+Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
     ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
     uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
@@ -869,7 +914,8 @@ ze_command_queue_handle_t L0DeviceTy::createCmdQueue(
 }
 
 /// Create a new command queue for the given OpenMP device ID
-ze_command_queue_handle_t L0DeviceTy::createCommandQueue(bool InOrder) {
+Expected<ze_command_queue_handle_t>
+L0DeviceTy::createCommandQueue(bool InOrder) {
   auto cmdQueue =
       createCmdQueue(getZeContext(), getZeDevice(), getComputeEngine(),
                      getComputeIndex(), getZeId(), InOrder);
@@ -877,7 +923,7 @@ ze_command_queue_handle_t L0DeviceTy::createCommandQueue(bool InOrder) {
 }
 
 /// Create an immediate command list
-ze_command_list_handle_t
+Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
   ze_command_queue_desc_t Desc{ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
@@ -888,8 +934,8 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
-  CALL_ZE_RET_NULL(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
-                   &Desc, &CmdList);
+  CALL_ZE_RET_ERROR(zeCommandListCreateImmediate, getZeContext(), getZeDevice(),
+                    &Desc, &CmdList);
   DP("Created an immediate command list " DPxMOD " (Ordinal: %" PRIu32
      ", Index: %" PRIu32 ", Flags: %" PRIu32 ") for device %s.\n",
      DPxPTR(CmdList), Ordinal, Index, Flags, getZeIdCStr());
@@ -897,7 +943,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
 }
 
 /// Create an immediate command list for copying
-ze_command_list_handle_t L0DeviceTy::createImmCopyCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   uint32_t Ordinal = getMainCopyEngine();
   if (Ordinal == UINT32_MAX)
     Ordinal = getLinkCopyEngine();
@@ -906,24 +952,30 @@ ze_command_list_handle_t L0DeviceTy::createImmCopyCmdList() {
   return createImmCmdList(Ordinal, /*Index*/ 0);
 }
 
-ze_command_queue_handle_t L0DeviceTy::getCmdQueue() {
+Expected<ze_command_queue_handle_t> L0DeviceTy::getCmdQueue() {
   auto &TLS = getTLS();
   auto CmdQueue = TLS.getCmdQueue();
   if (!CmdQueue) {
-    CmdQueue = createCommandQueue();
+    auto CmdQueueOrErr = createCommandQueue();
+    if (!CmdQueueOrErr)
+      return CmdQueueOrErr.takeError();
+    CmdQueue = *CmdQueueOrErr;
     TLS.setCmdQueue(CmdQueue);
   }
   return CmdQueue;
 }
 
-ze_command_list_handle_t L0DeviceTy::getCopyCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
   // Use main copy engine if available
   if (hasMainCopyEngine()) {
     auto &TLS = getTLS();
     auto CmdList = TLS.getCopyCmdList();
     if (!CmdList) {
-      CmdList = createCmdList(getZeContext(), getZeDevice(),
-                              getMainCopyEngine(), getZeId());
+      auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
+                                        getMainCopyEngine(), getZeId());
+      if (!CmdListOrErr)
+        return CmdListOrErr.takeError();
+      CmdList = *CmdListOrErr;
       TLS.setCopyCmdList(CmdList);
     }
     return CmdList;
@@ -935,14 +987,17 @@ ze_command_list_handle_t L0DeviceTy::getCopyCmdList() {
   return getCmdList();
 }
 
-ze_command_queue_handle_t L0DeviceTy::getCopyCmdQueue() {
+Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
   // Use main copy engine if available
   if (hasMainCopyEngine()) {
     auto &TLS = getTLS();
     auto CmdQueue = TLS.getCopyCmdQueue();
     if (!CmdQueue) {
-      CmdQueue = createCmdQueue(getZeContext(), getZeDevice(),
-                                getMainCopyEngine(), 0, getZeId());
+      auto CmdQueueOrErr = createCmdQueue(getZeContext(), getZeDevice(),
+                                          getMainCopyEngine(), 0, getZeId());
+      if (!CmdQueueOrErr)
+        return CmdQueueOrErr.takeError();
+      CmdQueue = *CmdQueueOrErr;
       TLS.setCopyCmdQueue(CmdQueue);
     }
     return CmdQueue;
@@ -954,15 +1009,18 @@ ze_command_queue_handle_t L0DeviceTy::getCopyCmdQueue() {
   return getCmdQueue();
 }
 
-ze_command_list_handle_t L0DeviceTy::getLinkCopyCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::getLinkCopyCmdList() {
   // Use link copy engine if available
   if (hasLinkCopyEngine()) {
     auto &TLS = getTLS();
     auto CmdList = TLS.getLinkCopyCmdList();
     if (!CmdList) {
-      CmdList =
+      auto CmdListOrErr =
           createCmdList(getZeContext(), getZeDevice(), getLinkCopyEngine(),
                         ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY, getZeId());
+      if (!CmdListOrErr)
+        return CmdListOrErr.takeError();
+      CmdList = *CmdListOrErr;
       TLS.setLinkCopyCmdList(CmdList);
     }
     return CmdList;
@@ -974,7 +1032,7 @@ ze_command_list_handle_t L0DeviceTy::getLinkCopyCmdList() {
   return getCmdList();
 }
 
-ze_command_queue_handle_t L0DeviceTy::getLinkCopyCmdQueue() {
+Expected<ze_command_queue_handle_t> L0DeviceTy::getLinkCopyCmdQueue() {
   // Use link copy engine if available
   if (hasLinkCopyEngine()) {
     auto &TLS = getTLS();
@@ -983,9 +1041,12 @@ ze_command_queue_handle_t L0DeviceTy::getLinkCopyCmdQueue() {
       // Try to use different copy engines for multiple threads
       uint32_t Index =
           __kmpc_global_thread_num(nullptr) % getNumLinkCopyQueues();
-      CmdQueue =
+      auto CmdQueueOrErr =
           createCmdQueue(getZeContext(), getZeDevice(), getLinkCopyEngine(),
                          Index, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY, getZeId());
+      if (!CmdQueueOrErr)
+        return CmdQueueOrErr.takeError();
+      CmdQueue = *CmdQueueOrErr;
       TLS.setLinkCopyCmdQueue(CmdQueue);
     }
     return CmdQueue;
@@ -997,21 +1058,27 @@ ze_command_queue_handle_t L0DeviceTy::getLinkCopyCmdQueue() {
   return getCmdQueue();
 }
 
-ze_command_list_handle_t L0DeviceTy::getImmCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::getImmCmdList() {
   auto &TLS = getTLS();
   auto CmdList = TLS.getImmCmdList();
   if (!CmdList) {
-    CmdList = createImmCmdList();
+    auto CmdListOrErr = createImmCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
     TLS.setImmCmdList(CmdList);
   }
   return CmdList;
 }
 
-ze_command_list_handle_t L0DeviceTy::getImmCopyCmdList() {
+Expected<ze_command_list_handle_t> L0DeviceTy::getImmCopyCmdList() {
   auto &TLS = getTLS();
   auto CmdList = TLS.getImmCopyCmdList();
   if (!CmdList) {
-    CmdList = createImmCopyCmdList();
+    auto CmdListOrErr = createImmCopyCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    CmdList = *CmdListOrErr;
     TLS.setImmCopyCmdList(CmdList);
   }
   return CmdList;
@@ -1029,11 +1096,21 @@ Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
   ze_command_queue_handle_t CmdQueue = nullptr;
 
   if (useImmForCopy()) {
-    CmdList = getImmCopyCmdList();
+    auto CmdListOrErr = getImmCopyCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    auto CmdList = *CmdListOrErr;
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
   } else {
-    CmdList = getCopyCmdList();
-    CmdQueue = getCopyCmdQueue();
+    auto CmdListOrErr = getCopyCmdList();
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    auto CmdQueueOrerr = getCopyCmdQueue();
+    if (!CmdQueueOrerr)
+      return CmdQueueOrerr.takeError();
+
+    CmdList = *CmdListOrErr;
+    CmdQueue = *CmdQueueOrerr;
     CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
     CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
     CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,

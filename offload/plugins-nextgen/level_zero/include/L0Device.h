@@ -423,55 +423,55 @@ public:
 
   // Command queues related functions
   /// Create a command list with given ordinal and flags
-  ze_command_list_handle_t createCmdList(ze_context_handle_t Context,
+  Expected<ze_command_list_handle_t> createCmdList(ze_context_handle_t Context,
                                          ze_device_handle_t Device,
                                          uint32_t Ordinal,
                                          ze_command_list_flags_t Flags,
                                          const std::string_view DeviceIdStr);
 
   /// Create a command list with default flags
-  ze_command_list_handle_t createCmdList(ze_context_handle_t Context,
+  Expected<ze_command_list_handle_t> createCmdList(ze_context_handle_t Context,
                                          ze_device_handle_t Device,
                                          uint32_t Ordinal,
                                          const std::string_view DeviceIdStr);
 
-  ze_command_list_handle_t getCmdList();
+  Expected<ze_command_list_handle_t> getCmdList();
 
   /// Create a command queue with given ordinal and flags
-  ze_command_queue_handle_t createCmdQueue(ze_context_handle_t Context,
+  Expected<ze_command_queue_handle_t> createCmdQueue(ze_context_handle_t Context,
                                            ze_device_handle_t Device,
                                            uint32_t Ordinal, uint32_t Index,
                                            ze_command_queue_flags_t Flags,
                                            const std::string_view DeviceIdStr);
 
   /// Create a command queue with default flags
-  ze_command_queue_handle_t createCmdQueue(ze_context_handle_t Context,
+  Expected<ze_command_queue_handle_t> createCmdQueue(ze_context_handle_t Context,
                                            ze_device_handle_t Device,
                                            uint32_t Ordinal, uint32_t Index,
                                            const std::string_view DeviceIdStr,
                                            bool InOrder = false);
 
   /// Create a new command queue for the given OpenMP device ID
-  ze_command_queue_handle_t createCommandQueue(bool InOrder = false);
+  Expected<ze_command_queue_handle_t> createCommandQueue(bool InOrder = false);
 
   /// Create an immediate command list
-  ze_command_list_handle_t createImmCmdList(uint32_t Ordinal, uint32_t Index,
+  Expected<ze_command_list_handle_t> createImmCmdList(uint32_t Ordinal, uint32_t Index,
                                             bool InOrder = false);
 
   /// Create an immediate command list for computing
-  ze_command_list_handle_t createImmCmdList(bool InOrder = false) {
+  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
     return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
   }
 
   /// Create an immediate command list for copying
-  ze_command_list_handle_t createImmCopyCmdList();
-  ze_command_queue_handle_t getCmdQueue();
-  ze_command_list_handle_t getCopyCmdList();
-  ze_command_queue_handle_t getCopyCmdQueue();
-  ze_command_list_handle_t getLinkCopyCmdList();
-  ze_command_queue_handle_t getLinkCopyCmdQueue();
-  ze_command_list_handle_t getImmCmdList();
-  ze_command_list_handle_t getImmCopyCmdList();
+  Expected<ze_command_list_handle_t> createImmCopyCmdList();
+  Expected<ze_command_queue_handle_t> getCmdQueue();
+  Expected<ze_command_list_handle_t> getCopyCmdList();
+  Expected<ze_command_queue_handle_t> getCopyCmdQueue();
+  Expected<ze_command_list_handle_t> getLinkCopyCmdList();
+  Expected<ze_command_queue_handle_t> getLinkCopyCmdQueue();
+  Expected<ze_command_list_handle_t> getImmCmdList();
+  Expected<ze_command_list_handle_t> getImmCopyCmdList();
 
   /// Enqueue copy command
   Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,

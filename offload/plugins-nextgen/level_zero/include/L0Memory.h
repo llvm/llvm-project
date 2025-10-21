@@ -502,13 +502,13 @@ class StagingBufferTy {
   /// Next buffer location in the buffers
   size_t Offset = 0;
 
-  void *addBuffers() {
+  Expected<void *> addBuffers() {
     ze_host_mem_alloc_desc_t AllocDesc{ZE_STRUCTURE_TYPE_HOST_MEM_ALLOC_DESC,
                                        nullptr, 0};
     void *Ret = nullptr;
     size_t AllocSize = Size * Count;
-    CALL_ZE_RET_NULL(zeMemAllocHost, Context, &AllocDesc, AllocSize,
-                     L0DefaultAlignment, &Ret);
+    CALL_ZE_RET_ERROR(zeMemAllocHost, Context, &AllocDesc, AllocSize,
+                      L0DefaultAlignment, &Ret);
     Buffers.push_back(Ret);
     return Ret;
   }
@@ -522,12 +522,13 @@ public:
 
   ~StagingBufferTy() {}
 
-  void clear() {
+  Error clear() {
     ze_result_t Rc;
     (void)Rc; // GCC build compiler thinks Rc is unused for some reason.
     for (auto Ptr : Buffers)
-      CALL_ZE(Rc, zeMemFree, Context, Ptr);
+      CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
     Context = nullptr;
+    return Plugin::success();
   }
 
   bool initialized() const { return Context != nullptr; }
@@ -541,23 +542,26 @@ public:
   void reset() { Offset = 0; }
 
   /// Always return the first buffer
-  void *get() {
+  Expected<void *> get() {
     if (Size == 0 || Count == 0)
       return nullptr;
     return Buffers.empty() ? addBuffers() : Buffers.front();
   }
 
   /// Return the next available buffer
-  void *getNext() {
+  Expected<void *> getNext() {
     void *Ret = nullptr;
     if (Size == 0 || Count == 0)
       return Ret;
 
     size_t AllocSize = Size * Count;
     bool NeedToGrow = Buffers.empty() || Offset >= Buffers.size() * AllocSize;
-    if (NeedToGrow)
-      Ret = addBuffers();
-    else
+    if (NeedToGrow) {
+      auto PtrOrErr = addBuffers();
+      if (!PtrOrErr)
+        return PtrOrErr.takeError();
+      Ret = *PtrOrErr;
+    } else
       Ret = reinterpret_cast<void *>(
           reinterpret_cast<uintptr_t>(Buffers.back()) + (Offset % AllocSize));
 
@@ -569,7 +573,7 @@ public:
   }
 
   /// Return either a fixed buffer or next buffer
-  void *get(bool Next) { return Next ? getNext() : get(); }
+  Expected<void *> get(bool Next) { return Next ? getNext() : get(); }
 };
 
 } // namespace llvm::omp::target::plugin

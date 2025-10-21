@@ -27,14 +27,15 @@ public:
   auto &getStagingBuffer() { return StagingBuffer; }
   const auto &getStagingBuffer() const { return StagingBuffer; }
 
-  void clear() { StagingBuffer.clear(); }
+  Error deinit() { return StagingBuffer.clear(); }
 };
 
 struct L0ContextTLSTableTy
     : public PerThreadContainer<
           std::unordered_map<ze_context_handle_t, L0ContextTLSTy>> {
-  void clear() {
-    PerThreadTable::clear([](L0ContextTLSTy &Entry) { Entry.clear(); });
+  Error deinit() {
+    return PerThreadTable::deinit(
+        [](L0ContextTLSTy &Entry) -> auto { return Entry.deinit(); });
   }
 };
 
