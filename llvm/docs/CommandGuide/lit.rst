@@ -628,7 +628,7 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
+ %t                      the path of a temporary file unique to the test
  %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
