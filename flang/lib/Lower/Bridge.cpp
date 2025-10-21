@@ -4730,14 +4730,23 @@ private:
     if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
             assign.rhs))
       return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType, {});
-    hlfir::Entity rhs{fir::getBase(genExprBox(loc, assign.rhs, rhsContext))};
-    auto rhsBoxType =
-        llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(rhs.getType()));
+    hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
+        loc, *this, assign.rhs, localSymbols, rhsContext);
+    auto rhsBoxType = rhs.getBoxType();
     // Create pointer descriptor value from the RHS.
     if (rhs.isMutableBox())
       rhs = hlfir::Entity{fir::LoadOp::create(*builder, loc, rhs)};
-    mlir::Value rhsBox = hlfir::genVariableBox(
-        loc, *builder, rhs, rhsBoxType.getBoxTypeWithNewShape(rhs.getRank()));
+
+    // Use LHS type if LHS is not polymorphic.
+    fir::BaseBoxType targetBoxType;
+    if (assign.lhs.GetType()->IsPolymorphic())
+      targetBoxType = rhsBoxType.getBoxTypeWithNewAttr(
+          fir::BaseBoxType::Attribute::Pointer);
+    else
+      targetBoxType = lhsBoxType.getBoxTypeWithNewShape(rhs.getRank());
+    mlir::Value rhsBox =
+        hlfir::genVariableBox(loc, *builder, rhs, targetBoxType);
+
     // Apply lower bounds or reshaping if any.
     if (const auto *lbExprs =
             std::get_if<Fortran::evaluate::Assignment::BoundsSpec>(&assign.u);
