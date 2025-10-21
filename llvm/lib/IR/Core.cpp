@@ -1573,6 +1573,13 @@ LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy, const char Str[],
   return wrap(ConstantFP::get(unwrap(RealTy), StringRef(Str, SLen)));
 }
 
+LLVMValueRef LLVMConstFP128(LLVMContextRef C, const uint64_t N[2]) {
+  Type *Ty = Type::getFP128Ty(*unwrap(C));
+  APInt AI(128, ArrayRef<uint64_t>(N, 2));
+  APFloat Quad(APFloat::IEEEquad(), AI);
+  return wrap(ConstantFP::get(Ty, Quad));
+}
+
 unsigned long long LLVMConstIntGetZExtValue(LLVMValueRef ConstantVal) {
   return unwrap<ConstantInt>(ConstantVal)->getZExtValue();
 }

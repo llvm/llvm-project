@@ -2340,6 +2340,13 @@ LLVM_C_ABI LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy,
                                                      unsigned SLen);
 
 /**
+ * Obtain a constant for a floating point FP128 value from 2 64 bit values.
+ * (112 bit mantissa)
+ */
+
+LLVMValueRef LLVMConstFP128(LLVMContextRef C, const uint64_t N[2]);
+
+/**
  * Obtain the zero extended value for an integer constant value.
  *
  * @see llvm::ConstantInt::getZExtValue()
