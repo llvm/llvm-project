@@ -223,6 +223,13 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   return Plugin::success();
 }
 
+Error L0DeviceTy::deinitImpl() {
+  for (auto &PGM : Programs)
+    if (auto Err = PGM.deinit())
+      return Err;
+  return MemAllocator.deinit();
+}
+
 int32_t L0DeviceTy::synchronize(__tgt_async_info *AsyncInfo,
                                 bool ReleaseQueue) {
   bool IsAsync = AsyncInfo && asyncEnabled();

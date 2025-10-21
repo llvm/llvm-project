@@ -75,13 +75,14 @@ public:
   L0ProgramTy(int32_t ImageId, GenericDeviceTy &Device,
               std::unique_ptr<MemoryBuffer> Image)
       : DeviceImageTy(ImageId, Device, std::move(Image)) {}
-
-  ~L0ProgramTy();
+  ~L0ProgramTy() {}
 
   L0ProgramTy(const L0ProgramTy &other) = delete;
   L0ProgramTy(L0ProgramTy &&) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &&) = delete;
+
+  Error deinit();
 
   static L0ProgramTy &makeL0Program(DeviceImageTy &Device) {
     return static_cast<L0ProgramTy &>(Device);

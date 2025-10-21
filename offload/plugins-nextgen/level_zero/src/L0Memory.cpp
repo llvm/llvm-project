@@ -233,7 +233,7 @@ void MemAllocatorTy::MemPoolTy::printUsage() {
 }
 
 /// Release resources used in the pool.
-MemAllocatorTy::MemPoolTy::~MemPoolTy() {
+Error MemAllocatorTy::MemPoolTy::deinit() {
   const int DebugLevel = getDebugLevel();
   if (DebugLevel > 0)
     printUsage();
@@ -241,11 +241,12 @@ MemAllocatorTy::MemPoolTy::~MemPoolTy() {
     for (auto *Block : Bucket) {
       if (DebugLevel > 0)
         Allocator->log(0, Block->Size, AllocKind);
-      CALL_ZE_RET_VOID(zeMemFree, Allocator->L0Context->getZeContext(),
-                       reinterpret_cast<void *>(Block->Base));
+      CALL_ZE_RET_ERROR(zeMemFree, Allocator->L0Context->getZeContext(),
+                        reinterpret_cast<void *>(Block->Base));
       delete Block;
     }
   }
+  return Plugin::success();
 }
 
 /// Allocate the requested size of memory from this pool.
@@ -419,8 +420,23 @@ Error MemAllocatorTy::deinit() {
     if (Err)
       return Err;
   }
-  ReductionPool.reset(nullptr);
-  CounterPool.reset(nullptr);
+  for (auto &Pool : Pools) {
+    if (Pool) {
+      if (auto Err = Pool->deinit())
+        return Err;
+      Pool.reset(nullptr);
+    }
+  }
+  if (ReductionPool) {
+    if (auto Err = ReductionPool->deinit())
+      return Err;
+    ReductionPool.reset(nullptr);
+  }
+  if (CounterPool) {
+    if (auto Err = CounterPool->deinit())
+      return Err;
+    CounterPool.reset(nullptr);
+  }
   // Report memory usage if requested
   if (getDebugLevel() > 0) {
     for (auto &Stat : Stats) {

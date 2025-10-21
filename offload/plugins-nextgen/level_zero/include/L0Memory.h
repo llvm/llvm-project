@@ -218,10 +218,11 @@ class MemAllocatorTy {
     MemPoolTy(MemPoolTy &&) = delete;
     MemPoolTy &operator=(const MemPoolTy &) = delete;
     MemPoolTy &operator=(const MemPoolTy &&) = delete;
+    ~MemPoolTy() {}
 
     void printUsage();
     /// Release resources used in the pool.
-    ~MemPoolTy();
+    Error deinit();
 
     /// Allocate the requested size of memory from this pool.
     /// AllocSize is the chunk size internally used for the returned memory.
@@ -313,7 +314,6 @@ public:
   MemAllocatorTy(MemAllocatorTy &&) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &) = delete;
   MemAllocatorTy &operator=(const MemAllocatorTy &&) = delete;
-
   ~MemAllocatorTy() {}
 
   /// Release resources and report statistics if requested
@@ -517,10 +517,7 @@ public:
   StagingBufferTy &operator=(const StagingBufferTy &) = delete;
   StagingBufferTy &operator=(const StagingBufferTy &&) = delete;
 
-  ~StagingBufferTy() {
-    if (initialized())
-      clear();
-  }
+  ~StagingBufferTy() { }
 
   void clear() {
     ze_result_t Rc;

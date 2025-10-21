@@ -149,6 +149,9 @@ Error LevelZeroPluginTy::deinitImpl() {
   ContextTLSTable.clear();
   DeviceTLSTable.clear();
   ThreadTLSTable.clear();
+  for (auto &Context : ContextList)
+    if (auto Err = Context.deinit())
+      return Err;
   ContextList.clear();
   DP("Level0 plugin deinitialized successfully\n");
   return Plugin::success();

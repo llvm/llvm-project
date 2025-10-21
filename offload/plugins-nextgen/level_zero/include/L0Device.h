@@ -306,11 +306,7 @@ public:
 
   Error setContext() override { return Plugin::success(); }
   Error initImpl(GenericPluginTy &Plugin) override;
-  Error deinitImpl() override {
-    Programs.clear();
-    return MemAllocator.deinit();
-  }
-
+  Error deinitImpl() override;
   auto getZeDevice() const { return zeDevice; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }

@@ -47,16 +47,16 @@ inline L0DeviceTy &L0ProgramTy::getL0Device() const {
   return L0DeviceTy::makeL0Device(getDevice());
 }
 
-L0ProgramTy::~L0ProgramTy() {
+Error L0ProgramTy::deinit() {
   for (auto *Kernel : Kernels) {
-    // We need explicit destructor and deallocate calls to release the kernels
-    // created by `GenericDeviceTy::constructKernel()`.
-    Kernel->~L0KernelTy();
+    if (auto Err = Kernel->deinit())
+      return Err;
     getL0Device().getPlugin().free(Kernel);
   }
   for (auto Module : Modules) {
-    CALL_ZE_RET_VOID(zeModuleDestroy, Module);
+    CALL_ZE_RET_ERROR(zeModuleDestroy, Module);
   }
+  return Plugin::success();
 }
 
 void L0ProgramTy::setLibModule() {

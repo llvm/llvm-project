@@ -132,10 +132,7 @@ class L0KernelTy : public GenericKernelTy {
 public:
   /// Create a L0 kernel with a name and an execution mode.
   L0KernelTy(const char *Name) : GenericKernelTy(Name), zeKernel(nullptr) {}
-  ~L0KernelTy() {
-    if (zeKernel)
-      CALL_ZE_RET_VOID(zeKernelDestroy, zeKernel);
-  }
+  ~L0KernelTy() {}
   L0KernelTy(const L0KernelTy &) = delete;
   L0KernelTy(L0KernelTy &&) = delete;
   L0KernelTy &operator=(const L0KernelTy &) = delete;
@@ -150,6 +147,10 @@ public:
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
+  Error deinit() {
+    CALL_ZE_RET_ERROR(zeKernelDestroy, zeKernel);
+    return Plugin::success();
+  }
 
   Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
                                   uint64_t DynamicMemSize) const override {

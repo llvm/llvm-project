@@ -79,13 +79,16 @@ public:
   L0ContextTy &operator=(const L0ContextTy &&) = delete;
 
   /// Release resources
-  ~L0ContextTy() {
+  ~L0ContextTy() {}
+
+  Error deinit() {
     EventPool.deinit();
     auto Err = HostMemAllocator.deinit();
     if (Err)
-      consumeError(std::move(Err));
+      return Err;
     if (zeContext)
-      CALL_ZE_RET_VOID(zeContextDestroy, zeContext);
+      CALL_ZE_RET_ERROR(zeContextDestroy, zeContext);
+    return Error::success();
   }
 
   auto &getPlugin() const { return Plugin; }
