@@ -1,5 +1,5 @@
 /*
- * z_Linux_util.cpp -- platform specific routines.
+ * z_OS_util.cpp -- platform specific routines.
  */
 
 //===----------------------------------------------------------------------===//
