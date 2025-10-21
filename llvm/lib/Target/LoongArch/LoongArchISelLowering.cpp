@@ -2103,12 +2103,6 @@ static SDValue
 lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                             SDValue V1, SelectionDAG &DAG,
                             const LoongArchSubtarget &Subtarget) {
-  // Before selecting XVPERMI_D, always try to widen vectors to gain more
-  // optimization opportunities.
-  if (SDValue NewShuffle = widenShuffleMask(
-          DL, Mask, VT, V1, DAG.getUNDEF(V1.getValueType()), DAG))
-    return NewShuffle;
-
   // Only consider XVPERMI_D.
   if (Mask.size() != 4 || (VT != MVT::v4i64 && VT != MVT::v4f64))
     return SDValue();
@@ -2620,6 +2614,10 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
+    // Try to widen vectors to gain more optimization opportunities.
+    if (SDValue NewShuffle = widenShuffleMask(
+            DL, Mask, VT, V1, DAG.getUNDEF(V1.getValueType()), DAG))
+      return NewShuffle;
     if ((Result =
              lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
