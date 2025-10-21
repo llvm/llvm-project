@@ -1528,21 +1528,21 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
 }
 
 Expected<InfoTreeNode> GenericDeviceTy::obtainInfo() {
-  Expected<InfoTreeNode> Info = obtainInfoImpl();
-  if (Info)
-    Info->add("UID", DeviceUid, "", DeviceInfo::UID);
-  return Info;
+  auto InfoOrErr = obtainInfoImpl();
+  if (InfoOrErr)
+    InfoOrErr->add("UID", getDeviceUid(), "", DeviceInfo::UID);
+  return InfoOrErr;
 }
 
 Error GenericDeviceTy::printInfo() {
-  Expected<InfoTreeNode> Info = obtainInfo();
+  auto InfoOrErr = obtainInfo();
 
   // Get the vendor-specific info entries describing the device properties.
-  if (Error Err = Info.takeError())
+  if (auto Err = InfoOrErr.takeError())
     return Err;
 
   // Print all info entries.
-  Info->print();
+  InfoOrErr->print();
 
   return Plugin::success();
 }
