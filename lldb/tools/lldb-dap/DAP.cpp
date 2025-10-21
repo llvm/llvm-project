@@ -270,7 +270,8 @@ Id DAP::Send(const Message &message) {
   std::lock_guard<std::mutex> guard(call_mutex);
   if (const protocol::Event *e = std::get_if<protocol::Event>(&message)) {
     protocol::Event event = *e;
-    event.seq = seq++;
+    if (event.seq == kCalculateSeq)
+      event.seq = seq++;
     if (llvm::Error err = transport.Send(event))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending event failed",
                     m_client_name);
@@ -279,7 +280,8 @@ Id DAP::Send(const Message &message) {
 
   if (const Request *r = std::get_if<Request>(&message)) {
     Request req = *r;
-    req.seq = seq++;
+    if (req.seq == kCalculateSeq)
+      req.seq = seq++;
     if (llvm::Error err = transport.Send(req))
       DAP_LOG_ERROR(log, std::move(err), "({0}) sending request failed",
                     m_client_name);
@@ -288,19 +290,20 @@ Id DAP::Send(const Message &message) {
 
   if (const Response *r = std::get_if<Response>(&message)) {
     Response resp = *r;
-    resp.seq = seq++;
+    if (resp.seq == kCalculateSeq)
+      resp.seq = seq++;
     // FIXME: After all the requests have migrated from LegacyRequestHandler >
     // RequestHandler<> this should be handled in RequestHandler<>::operator().
     // If the debugger was interrupted, convert this response into a
     // 'cancelled' response because we might have a partial result.
     llvm::Error err = (debugger.InterruptRequested())
                           ? transport.Send({
-                                /*seq=*/resp.seq,
                                 /*request_seq=*/resp.request_seq,
                                 /*command=*/resp.command,
                                 /*success=*/false,
                                 /*message=*/eResponseMessageCancelled,
                                 /*body=*/std::nullopt,
+                                /*seq=*/resp.seq,
                             })
                           : transport.Send(resp);
     if (err)
@@ -1460,20 +1463,17 @@ void DAP::EventThread() {
             if (remove_module && module_exists) {
               modules.erase(module_id);
               Send(protocol::Event{
-                  0, "module",
-                  ModuleEventBody{std::move(p_module).value(),
-                                  ModuleEventBody::eReasonRemoved}});
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonRemoved}});
             } else if (module_exists) {
               Send(protocol::Event{
-                  0, "module",
-                  ModuleEventBody{std::move(p_module).value(),
-                                  ModuleEventBody::eReasonChanged}});
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonChanged}});
             } else if (!remove_module) {
               modules.insert(module_id);
               Send(protocol::Event{
-                  0, "module",
-                  ModuleEventBody{std::move(p_module).value(),
-                                  ModuleEventBody::eReasonNew}});
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonNew}});
             }
           }
         }

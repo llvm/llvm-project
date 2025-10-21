@@ -354,7 +354,6 @@ struct DAP final : public DAPTransport::MessageHandler {
   void SendReverseRequest(llvm::StringRef command,
                           llvm::json::Value arguments) {
     protocol::Id id = Send(protocol::Request{
-        0,
         command.str(),
         std::move(arguments),
     });
