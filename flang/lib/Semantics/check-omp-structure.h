@@ -347,8 +347,6 @@ private:
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
 
-  void CheckAlignValue(const parser::OmpClause &);
-
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
