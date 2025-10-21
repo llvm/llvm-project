@@ -53,9 +53,14 @@ static cl::alias BasicAggregationAlias("ba",
                                        cl::desc("Alias for --basic-events"),
                                        cl::aliasopt(BasicAggregation));
 
-static cl::alias BasicAggregationAliasNlDeprecated(
+static cl::opt<bool> DeprecatedBasicAggregationNl(
     "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
-    cl::aliasopt(BasicAggregation), llvm::cl::ReallyHidden);
+    cl::cat(AggregatorCategory), cl::ReallyHidden,
+    cl::callback([](const bool &Enabled) {
+      errs()
+          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+      BasicAggregation = Enabled;
+    }));
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
