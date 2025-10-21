@@ -11,7 +11,7 @@
 ; ISEL:     BLX %0, csr_aapcs,{{.*}} cfi-type 12345678
 
 ; KCFI:       BUNDLE{{.*}} {
-; KCFI-NEXT:    KCFI_CHECK $r0, 12345678
+; KCFI-NEXT:    KCFI_CHECK_ARM $r0, 12345678
 ; KCFI-NEXT:    BLX killed $r0, csr_aapcs,{{.*}}
 ; KCFI-NEXT:  }
 
@@ -21,7 +21,7 @@
 ; ISEL:     TCRETURNri %0, 0, csr_aapcs, implicit $sp, cfi-type 12345678
 
 ; KCFI:       BUNDLE{{.*}} {
-; KCFI-NEXT:    KCFI_CHECK $r0, 12345678
+; KCFI-NEXT:    KCFI_CHECK_ARM $r0, 12345678
 ; KCFI-NEXT:    TAILJMPr killed $r0, csr_aapcs, implicit $sp, implicit $sp
 ; KCFI-NEXT:  }
 

@@ -12058,7 +12058,19 @@ ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
   assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
   TargetOp->setIsRenamable(false);
 
-  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(ARM::KCFI_CHECK))
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
       .addReg(TargetOp->getReg())
       .addImm(MBBI->getCFIType())
       .getInstr();

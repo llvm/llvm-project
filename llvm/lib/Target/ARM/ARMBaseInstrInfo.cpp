@@ -616,35 +616,6 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // contrast to AArch64 instructions which have a default size of 4 bytes for
     // example.
     return MCID.getSize();
-  case ARM::KCFI_CHECK: {
-    // KCFI_CHECK is a pseudo-instruction that expands to a sequence of
-    // instructions during AsmPrinter. We need to return the size of the
-    // expanded sequence so that branch distance calculations are correct.
-    //
-    // The expansion depends on the target architecture:
-    // - ARM32: 7 instructions = 28 bytes
-    //   (bic, ldr, 4x eor, beq, udf)
-    // - Thumb2: 7-9 instructions = 28-32 bytes
-    //   (optional push, bic, ldr, 4x eor, optional pop, beq.w, udf)
-    // - Thumb1: 22-25 instructions = 44-50 bytes
-    //   (pushes, bic, movs, lsls, adds, cmp, pops)
-    //
-    // We return a conservative estimate to ensure branch distance calculations
-    // don't underestimate the size.
-    const ARMSubtarget &STI = MF->getSubtarget<ARMSubtarget>();
-    if (STI.isThumb()) {
-      if (STI.isThumb2()) {
-        // Thumb2 (worst case)
-        return 32;
-      } else {
-        // Thumb1 (worst case)
-        return 50;
-      }
-    } else {
-      // ARM32
-      return 28;
-    }
-  }
   case TargetOpcode::BUNDLE:
     return getInstBundleLength(MI);
   case ARM::CONSTPOOL_ENTRY:

@@ -1885,16 +1885,19 @@ void ARMAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
       .getValueAsString()
       .getAsInteger(10, PrefixNops);
 
-  // Emit ARM32 or Thumb (Thumb1/Thumb2) instruction sequence.
-  const ARMSubtarget &STI = MI.getMF()->getSubtarget<ARMSubtarget>();
-  if (STI.isThumb()) {
-    if (STI.isThumb2()) {
-      EmitKCFI_CHECK_Thumb2(AddrReg, Type, Call, PrefixNops);
-    } else {
-      EmitKCFI_CHECK_Thumb1(AddrReg, Type, Call, PrefixNops);
-    }
-  } else {
+  // Emit the appropriate instruction sequence based on the opcode variant.
+  switch (MI.getOpcode()) {
+  case ARM::KCFI_CHECK_ARM:
     EmitKCFI_CHECK_ARM32(AddrReg, Type, Call, PrefixNops);
+    break;
+  case ARM::KCFI_CHECK_Thumb2:
+    EmitKCFI_CHECK_Thumb2(AddrReg, Type, Call, PrefixNops);
+    break;
+  case ARM::KCFI_CHECK_Thumb1:
+    EmitKCFI_CHECK_Thumb1(AddrReg, Type, Call, PrefixNops);
+    break;
+  default:
+    llvm_unreachable("Unexpected KCFI_CHECK opcode");
   }
 }
 
@@ -1931,7 +1934,9 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   switch (Opc) {
   case ARM::t2MOVi32imm: llvm_unreachable("Should be lowered by thumb2it pass");
   case ARM::DBG_VALUE: llvm_unreachable("Should be handled by generic printing");
-  case ARM::KCFI_CHECK:
+  case ARM::KCFI_CHECK_ARM:
+  case ARM::KCFI_CHECK_Thumb2:
+  case ARM::KCFI_CHECK_Thumb1:
     LowerKCFI_CHECK(*MI);
     return;
   case ARM::LEApcrel:
