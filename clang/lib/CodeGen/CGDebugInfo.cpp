@@ -219,17 +219,18 @@ ApplyAtomGroup::~ApplyAtomGroup() {
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
                                        SourceLocation TemporaryLocation)
     : CGF(&CGF) {
-  init(TemporaryLocation);
+  SourceManager &SM = CGF.getContext().getSourceManager();
+  init(SM.getPresumedLoc(SM.getFileLoc(TemporaryLocation)));
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF,
                                        bool DefaultToEmpty,
-                                       SourceLocation TemporaryLocation)
+                                       const PresumedLoc &TemporaryPLocation)
     : CGF(&CGF) {
-  init(TemporaryLocation, DefaultToEmpty);
+  init(TemporaryPLocation, DefaultToEmpty);
 }
 
-void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
+void ApplyDebugLocation::init(const PresumedLoc &TemporaryPLocation,
                               bool DefaultToEmpty) {
   auto *DI = CGF->getDebugInfo();
   if (!DI) {
@@ -242,8 +243,8 @@ void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
   if (OriginalLocation && !DI->CGM.getExpressionLocationsEnabled())
     return;
 
-  if (TemporaryLocation.isValid()) {
-    DI->EmitLocation(CGF->Builder, TemporaryLocation);
+  if (TemporaryPLocation.isValid()) {
+    DI->EmitLocation(CGF->Builder, TemporaryPLocation);
     return;
   }
 
@@ -261,7 +262,8 @@ void ApplyDebugLocation::init(SourceLocation TemporaryLocation,
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, const Expr *E)
     : CGF(&CGF) {
-  init(E->getExprLoc());
+  SourceManager &SM = CGF.getContext().getSourceManager();
+  init(SM.getPresumedLoc(SM.getFileLoc(E->getExprLoc())));
 }
 
 ApplyDebugLocation::ApplyDebugLocation(CodeGenFunction &CGF, llvm::DebugLoc Loc)
@@ -313,13 +315,12 @@ ApplyInlineDebugLocation::~ApplyInlineDebugLocation() {
   DI.EmitLocation(CGF->Builder, SavedLocation);
 }
 
-void CGDebugInfo::setLocation(SourceLocation Loc) {
+void CGDebugInfo::setLocation(const PresumedLoc &PLoc) {
   // If the new location isn't valid return.
-  if (Loc.isInvalid())
+  if (PLoc.isInvalid())
     return;
 
-  SourceManager &SM = CGM.getContext().getSourceManager();
-  CurLoc = SM.getFileLoc(Loc);
+  CurPLoc = PLoc;
 
   // If we've changed files in the middle of a lexical scope go ahead
   // and create a new lexical scope with file node if it's different
@@ -328,19 +329,18 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     return;
 
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
-  if (PCLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurLoc))
+  if (CurPLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurPLoc))
     return;
 
   if (auto *LBF = dyn_cast<llvm::DILexicalBlockFile>(Scope)) {
     LexicalBlockStack.pop_back();
     LexicalBlockStack.emplace_back(DBuilder.createLexicalBlockFile(
-        LBF->getScope(), getOrCreateFile(CurLoc)));
+        LBF->getScope(), getOrCreateFile(CurPLoc)));
   } else if (isa<llvm::DILexicalBlock>(Scope) ||
              isa<llvm::DISubprogram>(Scope)) {
     LexicalBlockStack.pop_back();
     LexicalBlockStack.emplace_back(
-        DBuilder.createLexicalBlockFile(Scope, getOrCreateFile(CurLoc)));
+        DBuilder.createLexicalBlockFile(Scope, getOrCreateFile(CurPLoc)));
   }
 }
 
@@ -532,21 +532,18 @@ std::optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
   return Source;
 }
 
-llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
-  SourceManager &SM = CGM.getContext().getSourceManager();
+llvm::DIFile *CGDebugInfo::getOrCreateFile(const PresumedLoc &PLoc) {
   StringRef FileName;
   FileID FID;
   std::optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
 
-  if (Loc.isInvalid()) {
+  if (PLoc.isInvalid()) {
     // The DIFile used by the CU is distinct from the main source file. Call
     // createFile() below for canonicalization if the source file was specified
     // with an absolute path.
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    assert(Loc.isFileID());
-    PresumedLoc PLoc = SM.getPresumedLoc(Loc);
     FileName = PLoc.getFilename();
 
     if (FileName.empty()) {
@@ -573,7 +570,8 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
+  SourceManager &SM = CGM.getContext().getSourceManager();
+  return createFile(FileName, CSInfo, getSource(SM, PLoc.getFileID()));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -624,25 +622,20 @@ std::string CGDebugInfo::remapDIPath(StringRef Path) const {
   return P.str().str();
 }
 
-unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
-  if (Loc.isInvalid())
+unsigned CGDebugInfo::getLineNumber(const PresumedLoc &PLoc) const {
+  if (PLoc.isInvalid())
     return 0;
-  SourceManager &SM = CGM.getContext().getSourceManager();
-  assert(Loc.isFileID());
-  return SM.getPresumedLoc(Loc).getLine();
+  return PLoc.getLine();
 }
 
-unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
+unsigned CGDebugInfo::getColumnNumber(const PresumedLoc & PLoc, bool Force) const {
   // We may not want column information at all.
   if (!Force && !CGM.getCodeGenOpts().DebugColumnInfo)
     return 0;
 
   // If the location is invalid then use the current column.
-  if (Loc.isInvalid() && CurLoc.isInvalid())
+  if (PLoc.isInvalid() && CurPLoc.isInvalid())
     return 0;
-  SourceManager &SM = CGM.getContext().getSourceManager();
-  assert(Loc.isFileID());
-  PresumedLoc PLoc = SM.getPresumedLoc(Loc.isValid() ? Loc : CurLoc);
   return PLoc.isValid() ? PLoc.getColumn() : 0;
 }
 
@@ -1395,9 +1388,9 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   const RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
   if (llvm::DIType *T = getTypeOrNull(QualType(Ty, 0)))
     return cast<llvm::DICompositeType>(T);
-  SourceLocation Loc = getFileLocation(RD->getLocation());
-  llvm::DIFile *DefUnit = getOrCreateFile(Loc);
-  const unsigned Line = getLineNumber(Loc.isValid() ? Loc : CurLoc);
+  PresumedLoc PLoc = getFileLocation(RD->getLocation());
+  llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
+  const unsigned Line = getLineNumber(PLoc.isValid() ? PLoc : CurPLoc);
   StringRef RDName = getClassName(RD);
 
   uint64_t Size = 0;
@@ -1624,7 +1617,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
   auto PP = getPrintingPolicy();
   Ty->getTemplateName().print(OS, PP, TemplateName::Qualified::None);
 
-  SourceLocation Loc = getFileLocation(AliasDecl->getLocation());
+  PresumedLoc PLoc = getFileLocation(AliasDecl->getLocation());
 
   if (CGM.getCodeGenOpts().DebugTemplateAlias) {
     auto ArgVector = ::GetTemplateArgs(TD, Ty);
@@ -1644,15 +1637,15 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
       printTemplateArgumentList(OS, Args.Args, PP);
 
     llvm::DIDerivedType *AliasTy = DBuilder.createTemplateAlias(
-        Src, Name, getOrCreateFile(Loc), getLineNumber(Loc),
+        Src, Name, getOrCreateFile(PLoc), getLineNumber(PLoc),
         getDeclContextDescriptor(AliasDecl), CollectTemplateParams(Args, Unit));
     return AliasTy;
   }
 
   printTemplateArgumentList(OS, Ty->template_arguments(), PP,
                             TD->getTemplateParameters());
-  return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(Loc),
-                                getLineNumber(Loc),
+  return DBuilder.createTypedef(Src, OS.str(), getOrCreateFile(PLoc),
+                                getLineNumber(PLoc),
                                 getDeclContextDescriptor(AliasDecl));
 }
 
@@ -1693,7 +1686,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
 
   // We don't set size information, but do specify where the typedef was
   // declared.
-  SourceLocation Loc = getFileLocation(Ty->getDecl()->getLocation());
+  PresumedLoc PLoc = getFileLocation(Ty->getDecl()->getLocation());
 
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
   // Typedefs are derived from some other type.
@@ -1705,7 +1698,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
     Flags = getAccessFlag(Ty->getDecl()->getAccess(), cast<RecordDecl>(DC));
 
   return DBuilder.createTypedef(Underlying, Ty->getDecl()->getName(),
-                                getOrCreateFile(Loc), getLineNumber(Loc),
+                                getOrCreateFile(PLoc), getLineNumber(PLoc),
                                 getDeclContextDescriptor(Ty->getDecl()), Align,
                                 Flags, Annotations);
 }
@@ -1827,13 +1820,13 @@ CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
   QualType Ty = BitFieldDecl->getType();
   if (BitFieldDecl->hasAttr<PreferredTypeAttr>())
     Ty = BitFieldDecl->getAttr<PreferredTypeAttr>()->getType();
-  SourceLocation Loc = getFileLocation(BitFieldDecl->getLocation());
-  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(BitFieldDecl->getLocation());
+  llvm::DIFile *VUnit = getOrCreateFile(PLoc);
   llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
 
   // Get the location for the field.
-  llvm::DIFile *File = getOrCreateFile(Loc);
-  unsigned Line = getLineNumber(Loc);
+  llvm::DIFile *File = getOrCreateFile(PLoc);
+  unsigned Line = getLineNumber(PLoc);
 
   const CGBitFieldInfo &BitFieldInfo =
       CGM.getTypes().getCGRecordLayout(RD).getBitFieldInfo(BitFieldDecl);
@@ -1905,13 +1898,13 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
     return nullptr;
 
   QualType Ty = PreviousBitfield->getType();
-  SourceLocation Loc = getFileLocation(PreviousBitfield->getLocation());
-  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(PreviousBitfield->getLocation());
+  llvm::DIFile *VUnit = getOrCreateFile(PLoc);
   llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
   llvm::DIScope *RecordTy = BitFieldDI->getScope();
 
-  llvm::DIFile *File = getOrCreateFile(Loc);
-  unsigned Line = getLineNumber(Loc);
+  llvm::DIFile *File = getOrCreateFile(PLoc);
+  unsigned Line = getLineNumber(PLoc);
 
   uint64_t StorageOffsetInBits =
       cast<llvm::ConstantInt>(BitFieldDI->getStorageOffsetInBits())
@@ -1927,14 +1920,14 @@ llvm::DIDerivedType *CGDebugInfo::createBitFieldSeparatorIfNeeded(
 }
 
 llvm::DIType *CGDebugInfo::createFieldType(
-    StringRef name, QualType type, SourceLocation loc, AccessSpecifier AS,
+    StringRef name, QualType type, const PresumedLoc &PLoc, AccessSpecifier AS,
     uint64_t offsetInBits, uint32_t AlignInBits, llvm::DIFile *tunit,
     llvm::DIScope *scope, const RecordDecl *RD, llvm::DINodeArray Annotations) {
   llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
-  llvm::DIFile *file = getOrCreateFile(loc);
-  const unsigned line = getLineNumber(loc.isValid() ? loc : CurLoc);
+  llvm::DIFile *file = getOrCreateFile(PLoc);
+  const unsigned line = getLineNumber(PLoc.isValid() ? PLoc : CurPLoc);
 
   uint64_t SizeInBits = 0;
   auto Align = AlignInBits;
@@ -2024,11 +2017,11 @@ void CGDebugInfo::CollectRecordLambdaFields(
       continue;
     }
 
-    Loc = getFileLocation(Loc);
-    llvm::DIFile *VUnit = getOrCreateFile(Loc);
+    PresumedLoc PLoc = getFileLocation(Loc);
+    llvm::DIFile *VUnit = getOrCreateFile(PLoc);
 
     elements.push_back(createFieldType(
-        GetLambdaCaptureName(Capture), Field->getType(), Loc,
+        GetLambdaCaptureName(Capture), Field->getType(), PLoc,
         Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
   }
 }
@@ -2039,11 +2032,11 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
   // Create the descriptor for the static variable, with or without
   // constant initializers.
   Var = Var->getCanonicalDecl();
-  SourceLocation Loc = getFileLocation(Var->getLocation());
-  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(Var->getLocation());
+  llvm::DIFile *VUnit = getOrCreateFile(PLoc);
   llvm::DIType *VTy = getOrCreateType(Var->getType(), VUnit);
 
-  unsigned LineNumber = getLineNumber(Loc);
+  unsigned LineNumber = getLineNumber(PLoc);
   StringRef VName = Var->getName();
 
   // FIXME: to avoid complications with type merging we should
@@ -2107,8 +2100,8 @@ void CGDebugInfo::CollectRecordNestedType(
   // instead?
   if (isa<InjectedClassNameType>(Ty))
     return;
-  SourceLocation Loc = getFileLocation(TD->getLocation());
-  if (llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc)))
+  PresumedLoc PLoc = getFileLocation(TD->getLocation());
+  if (llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(PLoc)))
     elements.push_back(nestedType);
 }
 
@@ -2311,9 +2304,9 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DIFile *MethodDefUnit = nullptr;
   unsigned MethodLine = 0;
   if (!Method->isImplicit()) {
-    SourceLocation Loc = getFileLocation(Method->getLocation());
-    MethodDefUnit = getOrCreateFile(Loc);
-    MethodLine = getLineNumber(Loc);
+    PresumedLoc PLoc = getFileLocation(Method->getLocation());
+    MethodDefUnit = getOrCreateFile(PLoc);
+    MethodLine = getLineNumber(PLoc);
   }
 
   // Collect virtual method info.
@@ -2764,7 +2757,6 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
 
   ASTContext &Context = CGM.getContext();
   StringRef SymbolName = "_vtable$";
-  SourceLocation InvalidLoc;
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
 
   // We deal with two different contexts:
@@ -2776,7 +2768,8 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
   // placed inside the scope of the C++ class/structure.
   llvm::DIScope *DContext = getContextDescriptor(RD, TheCU);
   auto *Ctxt = cast<llvm::DICompositeType>(DContext);
-  llvm::DIFile *Unit = getOrCreateFile(InvalidLoc);
+  PresumedLoc InvalidPLoc = PresumedLoc();
+  llvm::DIFile *Unit = getOrCreateFile(InvalidPLoc);
   llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
   llvm::DINode::DIFlags Flags = getAccessFlag(AccessSpecifier::AS_private, RD) |
                                 llvm::DINode::FlagArtificial;
@@ -2913,8 +2906,8 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
 llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
                                                  SourceLocation Loc) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  Loc = getFileLocation(Loc);
-  llvm::DIType *T = getOrCreateType(RTy, getOrCreateFile(Loc));
+  PresumedLoc PLoc = getFileLocation(Loc);
+  llvm::DIType *T = getOrCreateType(RTy, getOrCreateFile(PLoc));
   return T;
 }
 
@@ -2927,8 +2920,8 @@ llvm::DIType *CGDebugInfo::getOrCreateStandaloneType(QualType D,
                                                      SourceLocation Loc) {
   assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
   assert(!D.isNull() && "null type");
-  Loc = getFileLocation(Loc);
-  llvm::DIType *T = getOrCreateType(D, getOrCreateFile(Loc));
+  PresumedLoc PLoc = getFileLocation(Loc);
+  llvm::DIType *T = getOrCreateType(D, getOrCreateFile(PLoc));
   assert(T && "could not create debug info for type");
 
   RetainedTypes.push_back(D.getAsOpaquePtr());
@@ -3178,9 +3171,9 @@ std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
 
-  SourceLocation Loc = getFileLocation(RD->getLocation());
+  PresumedLoc PLoc = getFileLocation(RD->getLocation());
   // Get overall information about the record type for the debug info.
-  llvm::DIFile *DefUnit = getOrCreateFile(Loc);
+  llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
 
   // Records and classes and unions can all be recursive.  To handle them, we
   // first generate a debug descriptor for the struct as a forward declaration.
@@ -3248,12 +3241,12 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCObjectType *Ty,
 llvm::DIType *CGDebugInfo::CreateType(const ObjCTypeParamType *Ty,
                                       llvm::DIFile *Unit) {
   // Ignore protocols.
-  SourceLocation Loc = getFileLocation(Ty->getDecl()->getLocation());
+  PresumedLoc PLoc = getFileLocation(Ty->getDecl()->getLocation());
 
   // Use Typedefs to represent ObjCTypeParamType.
   return DBuilder.createTypedef(
       getOrCreateType(Ty->getDecl()->getUnderlyingType(), Unit),
-      Ty->getDecl()->getName(), getOrCreateFile(Loc), getLineNumber(Loc),
+      Ty->getDecl()->getName(), getOrCreateFile(PLoc), getLineNumber(PLoc),
       getDeclContextDescriptor(Ty->getDecl()));
 }
 
@@ -3299,10 +3292,10 @@ llvm::DIType *CGDebugInfo::CreateType(const ObjCInterfaceType *Ty,
         llvm::dwarf::DW_TAG_structure_type, ID->getName(),
         getDeclContextDescriptor(ID), Unit, 0, RuntimeLang);
 
-  SourceLocation Loc = getFileLocation(ID->getLocation());
+  PresumedLoc PLoc = getFileLocation(ID->getLocation());
   // Get overall information about the record type for the debug info.
-  llvm::DIFile *DefUnit = getOrCreateFile(Loc);
-  unsigned Line = getLineNumber(Loc);
+  llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
+  unsigned Line = getLineNumber(PLoc);
 
   // If this is just a forward declaration return a special forward-declaration
   // debug type since we won't be able to lay out the entire type.
@@ -3423,9 +3416,9 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
 llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
                                                 llvm::DIFile *Unit) {
   ObjCInterfaceDecl *ID = Ty->getDecl();
-  SourceLocation Loc = getFileLocation(ID->getLocation());
-  llvm::DIFile *DefUnit = getOrCreateFile(Loc);
-  unsigned Line = getLineNumber(Loc);
+  PresumedLoc PLoc = getFileLocation(ID->getLocation());
+  llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
+  unsigned Line = getLineNumber(PLoc);
 
   unsigned RuntimeLang = TheCU->getSourceLanguage().getUnversionedName();
 
@@ -3466,9 +3459,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
   // Create entries for all of the properties.
   auto AddProperty = [&](const ObjCPropertyDecl *PD) {
-    SourceLocation Loc = PD->getLocation();
-    llvm::DIFile *PUnit = getOrCreateFile(Loc);
-    unsigned PLine = getLineNumber(Loc);
+    PresumedLoc PLoc = getFileLocation(PD->getLocation());
+    llvm::DIFile *PUnit = getOrCreateFile(PLoc);
+    unsigned PLine = getLineNumber(PLoc);
     ObjCMethodDecl *Getter = PD->getGetterMethodDecl();
     ObjCMethodDecl *Setter = PD->getSetterMethodDecl();
     llvm::MDNode *PropertyNode = DBuilder.createObjCProperty(
@@ -3520,10 +3513,10 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
     if (FieldName.empty())
       continue;
 
-    SourceLocation Loc = getFileLocation(Field->getLocation());
+    PresumedLoc PLoc = getFileLocation(Field->getLocation());
     // Get the location for the field.
-    llvm::DIFile *FieldDefUnit = getOrCreateFile(Loc);
-    unsigned FieldLine = getLineNumber(Loc);
+    llvm::DIFile *FieldDefUnit = getOrCreateFile(PLoc);
+    unsigned FieldLine = getLineNumber(PLoc);
     QualType FType = Field->getType();
     uint64_t FieldSize = 0;
     uint32_t FieldAlign = 0;
@@ -3568,9 +3561,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
-          SourceLocation Loc = getFileLocation(PD->getLocation());
-          llvm::DIFile *PUnit = getOrCreateFile(Loc);
-          unsigned PLine = getLineNumber(Loc);
+          PresumedLoc PLoc = getFileLocation(PD->getLocation());
+          llvm::DIFile *PUnit = getOrCreateFile(PLoc);
+          unsigned PLine = getLineNumber(PLoc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
@@ -3850,12 +3843,12 @@ llvm::DIType *CGDebugInfo::CreateEnumType(const EnumType *Ty) {
     // FwdDecl with the second and then replace the second with
     // complete type.
     llvm::DIScope *EDContext = getDeclContextDescriptor(ED);
-    SourceLocation Loc = getFileLocation(ED->getLocation());
-    llvm::DIFile *DefUnit = getOrCreateFile(Loc);
+    PresumedLoc PLoc = getFileLocation(ED->getLocation());
+    llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
     llvm::TempDIScope TmpContext(DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, "", TheCU, DefUnit, 0));
 
-    unsigned Line = getLineNumber(Loc);
+    unsigned Line = getLineNumber(PLoc);
     StringRef EDName = ED->getName();
     llvm::DIType *RetTy = DBuilder.createReplaceableCompositeType(
         llvm::dwarf::DW_TAG_enumeration_type, EDName, EDContext, DefUnit, Line,
@@ -3888,9 +3881,9 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   // Return a CompositeType for the enum itself.
   llvm::DINodeArray EltArray = DBuilder.getOrCreateArray(Enumerators);
 
-  SourceLocation Loc = getFileLocation(ED->getLocation());
-  llvm::DIFile *DefUnit = getOrCreateFile(Loc);
-  unsigned Line = getLineNumber(Loc);
+  PresumedLoc PLoc = getFileLocation(ED->getLocation());
+  llvm::DIFile *DefUnit = getOrCreateFile(PLoc);
+  unsigned Line = getLineNumber(PLoc);
   llvm::DIScope *EnumContext = getDeclContextDescriptor(ED);
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
@@ -3901,7 +3894,8 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
                                         unsigned MType, SourceLocation LineLoc,
                                         StringRef Name, StringRef Value) {
-  unsigned Line = LineLoc.isInvalid() ? 0 : getLineNumber(LineLoc);
+  unsigned Line =
+      LineLoc.isInvalid() ? 0 : getLineNumber(getFileLocation(LineLoc));
   return DBuilder.createMacro(Parent, Line, MType, Name, Value);
 }
 
@@ -4233,12 +4227,12 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
 
   // Get overall information about the record type for the debug info.
   StringRef RDName = getClassName(RD);
-  const SourceLocation Loc = getFileLocation(RD->getLocation());
+  PresumedLoc PLoc = getFileLocation(RD->getLocation());
   llvm::DIFile *DefUnit = nullptr;
   unsigned Line = 0;
-  if (Loc.isValid()) {
-    DefUnit = getOrCreateFile(Loc);
-    Line = getLineNumber(Loc);
+  if (PLoc.isValid()) {
+    DefUnit = getOrCreateFile(PLoc);
+    Line = getLineNumber(PLoc);
   }
 
   llvm::DIScope *RDContext = getDeclContextDescriptor(RD);
@@ -4347,8 +4341,8 @@ void CGDebugInfo::CollectContainingType(const CXXRecordDecl *RD,
         break;
     }
     CanQualType T = CGM.getContext().getCanonicalTagType(PBase);
-    SourceLocation Loc = getFileLocation(RD->getLocation());
-    ContainingType = getOrCreateType(T, getOrCreateFile(Loc));
+    PresumedLoc PLoc = getFileLocation(RD->getLocation());
+    ContainingType = getOrCreateType(T, getOrCreateFile(PLoc));
   } else if (RD->isDynamicClass())
     ContainingType = RealDecl;
 
@@ -4419,11 +4413,11 @@ void CGDebugInfo::collectVarDeclProps(const VarDecl *VD, llvm::DIFile *&Unit,
                                       StringRef &Name, StringRef &LinkageName,
                                       llvm::MDTuple *&TemplateParameters,
                                       llvm::DIScope *&VDContext) {
-  SourceLocation Loc = getFileLocation(VD->getLocation());
-  Unit = getOrCreateFile(Loc);
-  LineNo = getLineNumber(Loc);
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
+  Unit = getOrCreateFile(PLoc);
+  LineNo = getLineNumber(PLoc);
 
-  setLocation(Loc);
+  setLocation(PLoc);
 
   T = VD->getType();
   if (T->isIncompleteArrayType()) {
@@ -4476,10 +4470,10 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
   StringRef Name, LinkageName;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
-  SourceLocation Loc = getFileLocation(GD.getDecl()->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(GD.getDecl()->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   llvm::DIScope *DContext = Unit;
-  unsigned Line = getLineNumber(Loc);
+  unsigned Line = getLineNumber(PLoc);
   collectFunctionDeclProps(GD, Unit, Name, LinkageName, DContext, TParamsArray,
                            Flags);
   auto *FD = cast<FunctionDecl>(GD.getDecl());
@@ -4531,10 +4525,10 @@ llvm::DIGlobalVariable *
 CGDebugInfo::getGlobalVariableForwardDeclaration(const VarDecl *VD) {
   QualType T;
   StringRef Name, LinkageName;
-  SourceLocation Loc = getFileLocation(VD->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   llvm::DIScope *DContext = Unit;
-  unsigned Line = getLineNumber(Loc);
+  unsigned Line = getLineNumber(PLoc);
   llvm::MDTuple *TemplateParameters = nullptr;
 
   collectVarDeclProps(VD, Unit, Line, T, Name, LinkageName, TemplateParameters,
@@ -4557,8 +4551,8 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
   // in unlimited debug info)
   if (const auto *TD = dyn_cast<TypeDecl>(D)) {
     QualType Ty = CGM.getContext().getTypeDeclType(TD);
-    SourceLocation Loc = getFileLocation(TD->getLocation());
-    return getOrCreateType(Ty, getOrCreateFile(Loc));
+    PresumedLoc PLoc = getFileLocation(TD->getLocation());
+    return getOrCreateType(Ty, getOrCreateFile(PLoc));
   }
   auto I = DeclCache.find(D->getCanonicalDecl());
 
@@ -4604,8 +4598,8 @@ llvm::DISubprogram *CGDebugInfo::getFunctionDeclaration(const Decl *D) {
   auto MI = SPCache.find(FD->getCanonicalDecl());
   if (MI == SPCache.end()) {
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD->getCanonicalDecl())) {
-      SourceLocation Loc = getFileLocation(MD->getLocation());
-      return CreateCXXMemberFunction(MD, getOrCreateFile(Loc),
+      PresumedLoc PLoc = getFileLocation(MD->getLocation());
+      return CreateCXXMemberFunction(MD, getOrCreateFile(PLoc),
                                      cast<llvm::DICompositeType>(S));
     }
   }
@@ -4767,11 +4761,11 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   const Decl *D = GD.getDecl();
   bool HasDecl = (D != nullptr);
-  Loc = getFileLocation(Loc);
+  PresumedLoc PLoc = getFileLocation(Loc);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   llvm::DIScope *FDContext = Unit;
   llvm::DINodeArray TParamsArray;
   bool KeyInstructions = CGM.getCodeGenOpts().DebugKeyInstructions;
@@ -4820,7 +4814,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
       isa<VarDecl>(D) || isa<CapturedDecl>(D)) {
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions should not silently reuse CurLoc.
-    CurLoc = SourceLocation();
+    CurPLoc = PresumedLoc();
   }
 
   if (CurFuncIsThunk)
@@ -4835,7 +4829,7 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
       SPFlags | llvm::DISubprogram::SPFlagDefinition;
 
-  const unsigned LineNo = getLineNumber(Loc.isValid() ? Loc : CurLoc);
+  const unsigned LineNo = getLineNumber(PLoc.isValid() ? PLoc : CurPLoc);
   unsigned ScopeLine = getLineNumber(getFileLocation(ScopeLoc));
   llvm::DISubroutineType *DIFnType = getOrCreateFunctionType(D, FnType, Unit);
   llvm::DISubprogram *Decl = nullptr;
@@ -4884,10 +4878,10 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     return GetName(D, true);
   });
 
-  Loc = getFileLocation(Loc);
+  PresumedLoc PLoc = getFileLocation(Loc);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   bool IsDeclForCallSite = Fn ? true : false;
   llvm::DIScope *FDContext =
       IsDeclForCallSite ? Unit : getDeclContextDescriptor(D);
@@ -4907,10 +4901,10 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (D->isImplicit()) {
     Flags |= llvm::DINode::FlagArtificial;
     // Artificial functions without a location should not silently reuse CurLoc.
-    if (Loc.isInvalid())
-      CurLoc = SourceLocation();
+    if (PLoc.isInvalid())
+      CurPLoc = PLoc;
   }
-  unsigned LineNo = getLineNumber(Loc);
+  unsigned LineNo = getLineNumber(PLoc);
   unsigned ScopeLine = 0;
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
   if (CGM.getCodeGenOpts().OptimizationLevel != 0)
@@ -4992,29 +4986,34 @@ void CGDebugInfo::EmitInlineFunctionEnd(CGBuilderTy &Builder) {
 }
 
 void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
-  // Update our current location
-  setLocation(Loc);
+  EmitLocation(Builder, getFileLocation(Loc));
+}
 
-  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
+void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, const PresumedLoc &PLoc) {
+  // Update our current location
+  setLocation(PLoc);
+
+  if (CurPLoc.isInvalid() || LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
   Builder.SetCurrentDebugLocation(
-      llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(CurLoc),
-                            getColumnNumber(CurLoc), Scope, CurInlinedAt));
+      llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(CurPLoc),
+                            getColumnNumber(CurPLoc), Scope, CurInlinedAt));
 }
 
-void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
+void CGDebugInfo::CreateLexicalBlock(const PresumedLoc &PLoc) {
   llvm::MDNode *Back = nullptr;
   if (!LexicalBlockStack.empty())
     Back = LexicalBlockStack.back().get();
   LexicalBlockStack.emplace_back(DBuilder.createLexicalBlock(
-      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), getLineNumber(CurLoc),
-      getColumnNumber(CurLoc)));
+      cast<llvm::DIScope>(Back), getOrCreateFile(CurPLoc), getLineNumber(CurPLoc),
+      getColumnNumber(CurPLoc)));
 }
 
-SourceLocation CGDebugInfo::getFileLocation(SourceLocation Loc) const {
-  return CGM.getContext().getSourceManager().getFileLoc(Loc);
+PresumedLoc CGDebugInfo::getFileLocation(SourceLocation Loc) const {
+  const SourceManager &SM = CGM.getContext().getSourceManager();
+  return SM.getPresumedLoc(SM.getFileLoc(Loc));
 }
 
 void CGDebugInfo::AppendAddressSpaceXDeref(
@@ -5033,19 +5032,19 @@ void CGDebugInfo::AppendAddressSpaceXDeref(
 void CGDebugInfo::EmitLexicalBlockStart(CGBuilderTy &Builder,
                                         SourceLocation Loc) {
   // Set our current location.
-  Loc = getFileLocation(Loc);
-  setLocation(Loc);
+  PresumedLoc PLoc = getFileLocation(Loc);
+  setLocation(PLoc);
 
   // Emit a line table change for the current location inside the new scope.
   Builder.SetCurrentDebugLocation(llvm::DILocation::get(
-      CGM.getLLVMContext(), getLineNumber(Loc), getColumnNumber(Loc),
+      CGM.getLLVMContext(), getLineNumber(PLoc), getColumnNumber(PLoc),
       LexicalBlockStack.back(), CurInlinedAt));
 
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
 
   // Create a new lexical block and push it on the stack.
-  CreateLexicalBlock(Loc);
+  CreateLexicalBlock(PLoc);
 }
 
 void CGDebugInfo::EmitLexicalBlockEnd(CGBuilderTy &Builder,
@@ -5069,7 +5068,7 @@ void CGDebugInfo::EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn) {
   // Pop all regions for this function.
   while (LexicalBlockStack.size() != RCount) {
     // Provide an entry in the line table for the end of the block.
-    EmitLocation(Builder, CurLoc);
+    EmitLocation(Builder, CurPLoc);
     LexicalBlockStack.pop_back();
   }
   FnBeginRegionCount.pop_back();
@@ -5086,8 +5085,8 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
   uint64_t FieldSize, FieldOffset;
   uint32_t FieldAlign;
 
-  SourceLocation Loc = getFileLocation(VD->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   QualType Type = VD->getType();
 
   FieldOffset = 0;
@@ -5163,9 +5162,9 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   const bool VarIsArtificial = IsArtificial(VD);
 
   llvm::DIFile *Unit = nullptr;
-  SourceLocation Loc = getFileLocation(VD->getLocation());
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
   if (!VarIsArtificial)
-    Unit = getOrCreateFile(Loc);
+    Unit = getOrCreateFile(PLoc);
   llvm::DIType *Ty;
   uint64_t XOffset = 0;
   if (VD->hasAttr<BlocksAttr>())
@@ -5182,8 +5181,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   unsigned Line = 0;
   unsigned Column = 0;
   if (!VarIsArtificial) {
-    Line = getLineNumber(Loc);
-    Column = getColumnNumber(Loc);
+    Line = getLineNumber(PLoc);
+    Column = getColumnNumber(PLoc);
   }
   SmallVector<uint64_t, 13> Expr;
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
@@ -5349,8 +5348,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
   if (isa<DeclRefExpr>(BD->getBinding()))
     return nullptr;
 
-  SourceLocation Loc = getFileLocation(BD->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(BD->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   llvm::DIType *Ty = getOrCreateType(BD->getType(), Unit);
 
   // If there is no debug info for this type then do not emit debug info
@@ -5373,8 +5372,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const BindingDecl *BD,
     Expr.push_back(llvm::dwarf::DW_OP_deref);
   }
 
-  unsigned Line = getLineNumber(Loc);
-  unsigned Column = getColumnNumber(Loc);
+  unsigned Line = getLineNumber(PLoc);
+  unsigned Column = getColumnNumber(PLoc);
   StringRef Name = BD->getName();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
   // Create the descriptor for the variable.
@@ -5468,12 +5467,12 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
     return;
 
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
-  SourceLocation Loc = getFileLocation(D->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(D->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
 
   // Get location information.
-  unsigned Line = getLineNumber(Loc);
-  unsigned Column = getColumnNumber(Loc);
+  unsigned Line = getLineNumber(PLoc);
+  unsigned Column = getColumnNumber(PLoc);
 
   StringRef Name = D->getName();
 
@@ -5512,8 +5511,8 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   bool isByRef = VD->hasAttr<BlocksAttr>();
 
   uint64_t XOffset = 0;
-  SourceLocation Loc = getFileLocation(VD->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   llvm::DIType *Ty;
   if (isByRef)
     Ty = EmitTypeForVarWithBlocksAttr(VD, &XOffset).WrappedType;
@@ -5527,8 +5526,8 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
       Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.
-  const unsigned Line = getLineNumber(Loc.isValid() ? Loc : CurLoc);
-  unsigned Column = getColumnNumber(Loc);
+  const unsigned Line = getLineNumber(PLoc.isValid() ? PLoc : CurPLoc);
+  unsigned Column = getColumnNumber(PLoc);
 
   const llvm::DataLayout &target = CGM.getDataLayout();
 
@@ -5589,32 +5588,33 @@ bool operator<(const BlockLayoutChunk &l, const BlockLayoutChunk &r) {
 } // namespace
 
 void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
-    const CGBlockInfo &Block, const ASTContext &Context, SourceLocation Loc,
-    const llvm::StructLayout &BlockLayout, llvm::DIFile *Unit,
+    const CGBlockInfo &Block, const ASTContext &Context,
+    const PresumedLoc &PLoc, const llvm::StructLayout &BlockLayout,
+    llvm::DIFile *Unit,
     SmallVectorImpl<llvm::Metadata *> &Fields) {
   // Blocks in OpenCL have unique constraints which make the standard fields
   // redundant while requiring size and align fields for enqueue_kernel. See
   // initializeForBlockHeader in CGBlocks.cpp
   if (CGM.getLangOpts().OpenCL) {
-    Fields.push_back(createFieldType("__size", Context.IntTy, Loc, AS_public,
+    Fields.push_back(createFieldType("__size", Context.IntTy, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(0),
                                      Unit, Unit));
-    Fields.push_back(createFieldType("__align", Context.IntTy, Loc, AS_public,
+    Fields.push_back(createFieldType("__align", Context.IntTy, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
                                      Unit, Unit));
   } else {
-    Fields.push_back(createFieldType("__isa", Context.VoidPtrTy, Loc, AS_public,
+    Fields.push_back(createFieldType("__isa", Context.VoidPtrTy, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(0),
                                      Unit, Unit));
-    Fields.push_back(createFieldType("__flags", Context.IntTy, Loc, AS_public,
+    Fields.push_back(createFieldType("__flags", Context.IntTy, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
                                      Unit, Unit));
     Fields.push_back(
-        createFieldType("__reserved", Context.IntTy, Loc, AS_public,
+        createFieldType("__reserved", Context.IntTy, PLoc, AS_public,
                         BlockLayout.getElementOffsetInBits(2), Unit, Unit));
     auto *FnTy = Block.getBlockExpr()->getFunctionType();
     auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
-    Fields.push_back(createFieldType("__FuncPtr", FnPtrType, Loc, AS_public,
+    Fields.push_back(createFieldType("__FuncPtr", FnPtrType, PLoc, AS_public,
                                      BlockLayout.getElementOffsetInBits(3),
                                      Unit, Unit));
     Fields.push_back(createFieldType(
@@ -5622,7 +5622,7 @@ void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
         Context.getPointerType(Block.NeedsCopyDispose
                                    ? Context.getBlockDescriptorExtendedType()
                                    : Context.getBlockDescriptorType()),
-        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit));
+        PLoc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit));
   }
 }
 
@@ -5636,10 +5636,10 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   const BlockDecl *blockDecl = block.getBlockDecl();
 
   // Collect some general information about the block's location.
-  SourceLocation loc = getFileLocation(blockDecl->getCaretLocation());
-  llvm::DIFile *tunit = getOrCreateFile(loc);
-  unsigned line = getLineNumber(loc);
-  unsigned column = getColumnNumber(loc);
+  PresumedLoc PLoc = getFileLocation(blockDecl->getCaretLocation());
+  llvm::DIFile *tunit = getOrCreateFile(PLoc);
+  unsigned line = getLineNumber(PLoc);
+  unsigned column = getColumnNumber(PLoc);
 
   // Build the debug-info type for the block literal.
   getDeclContextDescriptor(blockDecl);
@@ -5648,7 +5648,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  collectDefaultFieldsForBlockLiteralDeclare(block, C, loc, *blockLayout, tunit,
+  collectDefaultFieldsForBlockLiteralDeclare(block, C, PLoc, *blockLayout, tunit,
                                              fields);
 
   // We want to sort the captures by offset, not because DWARF
@@ -5698,7 +5698,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       else
         llvm_unreachable("unexpected block declcontext");
 
-      fields.push_back(createFieldType("this", type, loc, AS_public,
+      fields.push_back(createFieldType("this", type, PLoc, AS_public,
                                        offsetInBits, tunit, tunit));
       continue;
     }
@@ -5720,7 +5720,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
                                             llvm::DINode::FlagZero, fieldType);
     } else {
       auto Align = getDeclAlignIfRequired(variable, CGM.getContext());
-      fieldType = createFieldType(name, variable->getType(), loc, AS_public,
+      fieldType = createFieldType(name, variable->getType(), PLoc, AS_public,
                                   offsetInBits, Align, tunit, tunit);
     }
     fields.push_back(fieldType);
@@ -6107,9 +6107,9 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
   });
 
   auto Align = getDeclAlignIfRequired(VD, CGM.getContext());
-  SourceLocation Loc = getFileLocation(VD->getLocation());
+  PresumedLoc PLoc = getFileLocation(VD->getLocation());
   // Create the descriptor for the variable.
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   StringRef Name = VD->getName();
   llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
 
@@ -6167,7 +6167,7 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD, const APValue &Init) {
     }
 
   GV.reset(DBuilder.createGlobalVariableExpression(
-      DContext, Name, StringRef(), Unit, getLineNumber(Loc), Ty, true, true,
+      DContext, Name, StringRef(), Unit, getLineNumber(PLoc), Ty, true, true,
       InitExpr, getOrCreateStaticDataMemberDeclarationOrNull(VarD),
       TemplateParameters, Align));
 }
@@ -6179,15 +6179,15 @@ void CGDebugInfo::EmitExternalVariable(llvm::GlobalVariable *Var,
     return;
 
   auto Align = getDeclAlignIfRequired(D, CGM.getContext());
-  SourceLocation Loc = getFileLocation(D->getLocation());
-  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  PresumedLoc PLoc = getFileLocation(D->getLocation());
+  llvm::DIFile *Unit = getOrCreateFile(PLoc);
   StringRef Name = D->getName();
   llvm::DIType *Ty = getOrCreateType(D->getType(), Unit);
 
   llvm::DIScope *DContext = getDeclContextDescriptor(D);
   llvm::DIGlobalVariableExpression *GVE =
       DBuilder.createGlobalVariableExpression(
-          DContext, Name, StringRef(), Unit, getLineNumber(Loc), Ty, false,
+          DContext, Name, StringRef(), Unit, getLineNumber(PLoc), Ty, false,
           false, nullptr, nullptr, nullptr, Align);
   Var->addDebugInfo(GVE);
 }
@@ -6265,10 +6265,10 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
     return;
 
   llvm::DIScope *DContext = getDeclContextDescriptor(D);
-  SourceLocation Loc = getFileLocation(D->getLocation());
+  PresumedLoc PLoc = getFileLocation(D->getLocation());
 
   llvm::DIImportedEntity *ImportDI = DBuilder.createImportedDeclaration(
-      DContext, DI, getOrCreateFile(Loc), getLineNumber(Loc), D->getName());
+      DContext, DI, getOrCreateFile(PLoc), getLineNumber(PLoc), D->getName());
 
   // Record this DIE in the cache for nested declaration reference.
   ImportedDeclCache[GD.getCanonicalDecl().getDecl()].reset(ImportDI);
@@ -6276,15 +6276,14 @@ void CGDebugInfo::EmitGlobalAlias(const llvm::GlobalValue *GV,
 
 void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
-  SourceLocation Loc = getFileLocation(S->getStrTokenLoc(0));
-  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
+  PresumedLoc PLoc = getFileLocation(S->getStrTokenLoc(0));
   if (!PLoc.isValid())
     return;
 
-  llvm::DIFile *File = getOrCreateFile(Loc);
+  llvm::DIFile *File = getOrCreateFile(PLoc);
   llvm::DIGlobalVariableExpression *Debug =
       DBuilder.createGlobalVariableExpression(
-          nullptr, StringRef(), StringRef(), File, getLineNumber(Loc),
+          nullptr, StringRef(), StringRef(), File, getLineNumber(PLoc),
           getOrCreateType(S->getType(), File), true);
   GV->addDebugInfo(Debug);
 }
@@ -6302,22 +6301,22 @@ void CGDebugInfo::EmitUsingDirective(const UsingDirectiveDecl &UD) {
   const NamespaceDecl *NSDecl = UD.getNominatedNamespace();
   if (!NSDecl->isAnonymousNamespace() ||
       CGM.getCodeGenOpts().DebugExplicitImport) {
-    SourceLocation Loc = getFileLocation(UD.getLocation());
-    if (!Loc.isValid())
-      Loc = CurLoc;
+    PresumedLoc PLoc = getFileLocation(UD.getLocation());
+    if (!PLoc.isValid())
+      PLoc = CurPLoc;
     DBuilder.createImportedModule(
         getCurrentContextDescriptor(cast<Decl>(UD.getDeclContext())),
-        getOrCreateNamespace(NSDecl), getOrCreateFile(Loc), getLineNumber(Loc));
+        getOrCreateNamespace(NSDecl), getOrCreateFile(PLoc), getLineNumber(PLoc));
   }
 }
 
 void CGDebugInfo::EmitUsingShadowDecl(const UsingShadowDecl &USD) {
   if (llvm::DINode *Target =
           getDeclarationOrDefinition(USD.getUnderlyingDecl())) {
-    SourceLocation Loc = getFileLocation(USD.getLocation());
+    PresumedLoc PLoc = getFileLocation(USD.getLocation());
     DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(USD.getDeclContext())), Target,
-        getOrCreateFile(Loc), getLineNumber(Loc));
+        getOrCreateFile(PLoc), getLineNumber(PLoc));
   }
 }
 
@@ -6378,19 +6377,19 @@ CGDebugInfo::EmitNamespaceAlias(const NamespaceAliasDecl &NA) {
   if (VH)
     return cast<llvm::DIImportedEntity>(VH);
   llvm::DIImportedEntity *R;
-  auto Loc = getFileLocation(NA.getLocation());
+  auto PLoc = getFileLocation(NA.getLocation());
   if (const auto *Underlying =
           dyn_cast<NamespaceAliasDecl>(NA.getAliasedNamespace()))
     // This could cache & dedup here rather than relying on metadata deduping.
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
-        EmitNamespaceAlias(*Underlying), getOrCreateFile(Loc),
-        getLineNumber(Loc), NA.getName());
+        EmitNamespaceAlias(*Underlying), getOrCreateFile(PLoc),
+        getLineNumber(PLoc), NA.getName());
   else
     R = DBuilder.createImportedDeclaration(
         getCurrentContextDescriptor(cast<Decl>(NA.getDeclContext())),
         getOrCreateNamespace(cast<NamespaceDecl>(NA.getAliasedNamespace())),
-        getOrCreateFile(Loc), getLineNumber(Loc), NA.getName());
+        getOrCreateFile(PLoc), getLineNumber(PLoc), NA.getName());
   VH.reset(R);
   return R;
 }
@@ -6510,10 +6509,10 @@ llvm::DebugLoc CGDebugInfo::SourceLocToDebugLoc(SourceLocation Loc) {
   if (LexicalBlockStack.empty())
     return llvm::DebugLoc();
 
-  Loc = getFileLocation(Loc);
+  PresumedLoc PLoc = getFileLocation(Loc);
   llvm::MDNode *Scope = LexicalBlockStack.back();
-  return llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(Loc),
-                               getColumnNumber(Loc), Scope);
+  return llvm::DILocation::get(CGM.getLLVMContext(), getLineNumber(PLoc),
+                               getColumnNumber(PLoc), Scope);
 }
 
 llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
