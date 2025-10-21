@@ -127,6 +127,10 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case RISCV::PseudoCCAND:
   case RISCV::PseudoCCOR:
   case RISCV::PseudoCCXOR:
+  case RISCV::PseudoCCMAX:
+  case RISCV::PseudoCCMAXU:
+  case RISCV::PseudoCCMIN:
+  case RISCV::PseudoCCMINU:
   case RISCV::PseudoCCADDW:
   case RISCV::PseudoCCSUBW:
   case RISCV::PseudoCCSLL:
@@ -228,6 +232,18 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
     case RISCV::PseudoCCAND:   NewOpc = RISCV::AND;   break;
     case RISCV::PseudoCCOR:    NewOpc = RISCV::OR;    break;
     case RISCV::PseudoCCXOR:   NewOpc = RISCV::XOR;   break;
+    case RISCV::PseudoCCMAX:
+      NewOpc = RISCV::MAX;
+      break;
+    case RISCV::PseudoCCMIN:
+      NewOpc = RISCV::MIN;
+      break;
+    case RISCV::PseudoCCMAXU:
+      NewOpc = RISCV::MAXU;
+      break;
+    case RISCV::PseudoCCMINU:
+      NewOpc = RISCV::MINU;
+      break;
     case RISCV::PseudoCCADDI:  NewOpc = RISCV::ADDI;  break;
     case RISCV::PseudoCCSLLI:  NewOpc = RISCV::SLLI;  break;
     case RISCV::PseudoCCSRLI:  NewOpc = RISCV::SRLI;  break;
