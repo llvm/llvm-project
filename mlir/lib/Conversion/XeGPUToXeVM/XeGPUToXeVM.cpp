@@ -151,6 +151,21 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
   }
 }
 
+// Compute the product of sizes in the range [lo, hi) from the sizes array.
+static Value getProductOfSizes(ConversionPatternRewriter &rewriter,
+                               Location loc, ArrayRef<OpFoldResult> sizes,
+                               size_t lo, size_t hi) {
+  Type indexTy = rewriter.getIndexType();
+  Value product = arith::ConstantIndexOp::create(rewriter, loc, 1);
+  for (size_t idx = lo; idx < hi; idx++) {
+    OpFoldResult ofr = sizes[idx];
+    Value sizeVal = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
+    sizeVal = getValueOrCreateCastToIndexLike(rewriter, loc, indexTy, sizeVal);
+    product = rewriter.createOrFold<arith::MulIOp>(loc, product, sizeVal);
+  }
+  return product;
+}
+
 class CreateNdDescToXeVMPattern
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -184,10 +199,9 @@ class CreateNdDescToXeVMPattern
 
     // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
     SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
-    // Descriptor shape is expected to be 2D.
-    int64_t rank = mixedSizes.size();
-    if (rank != 2)
-      return rewriter.notifyMatchFailure(op, "Expected 2D shape.");
+    auto srcRank = mixedSizes.size();
+    if (srcRank < 2)
+      return rewriter.notifyMatchFailure(op, "Expected at least 2D source.");
 
     auto sourceTy = source.getType();
     auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
@@ -203,9 +217,8 @@ class CreateNdDescToXeVMPattern
       baseAddr = adaptor.getSource();
     }
     // Utility for creating offset values from op fold result.
-    auto createOffset = [&](SmallVector<OpFoldResult> &ofrVec,
-                            unsigned idx) -> Value {
-      Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofrVec[idx]);
+    auto createOffset = [&](OpFoldResult ofr) -> Value {
+      Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
@@ -213,8 +226,14 @@ class CreateNdDescToXeVMPattern
     offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
     offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
     // Get shape values from op fold results.
-    baseShapeW = createOffset(mixedSizes, 1);
-    baseShapeH = createOffset(mixedSizes, 0);
+    baseShapeW = createOffset(mixedSizes[srcRank - 1]);
+    if (srcRank == 2) {
+      baseShapeH = createOffset(mixedSizes[0]);
+    } else {
+      // Generate compute chain for height (product of sizes of all but the last
+      // dimension).
+      baseShapeH = getProductOfSizes(rewriter, loc, mixedSizes, 0, srcRank - 1);
+    }
     if (sourceMemrefTy) {
       // Cast index to i64.
       baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
@@ -255,10 +274,18 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
   LogicalResult
   matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto tdVal = op.getTensorDesc();
+    xegpu::CreateNdDescOp descOp =
+        tdVal.template getDefiningOp<xegpu::CreateNdDescOp>();
+    auto mixedStrides = descOp.getMixedStrides();
     auto mixedOffsets = op.getMixedOffsets();
-    int64_t opOffsetsSize = mixedOffsets.size();
-    if (opOffsetsSize != 2)
-      return rewriter.notifyMatchFailure(op, "Expected 2D offsets.");
+    auto mixedSizes = descOp.getMixedSizes();
+    size_t opOffsetsSize = mixedOffsets.size();
+    if (opOffsetsSize != mixedStrides.size())
+      return rewriter.notifyMatchFailure(
+          op, "Offsets size should match base memory rank.");
+    if (opOffsetsSize < 2)
+      return rewriter.notifyMatchFailure(op, "Expected at least 2D offset.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
 
@@ -283,12 +310,35 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
     // Offsets are provided by the op.
     // convert them to i32.
-    Value offsetW =
-        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+    // Offset computation assumes base memory layout is row major.
+    Value offsetW = getValueOrCreateConstantIntOp(
+        rewriter, loc, mixedOffsets[opOffsetsSize - 1]);
     offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
                                               rewriter.getI32Type(), offsetW);
-    Value offsetH =
-        getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+    Value offsetH;
+    if (opOffsetsSize == 2)
+      offsetH = getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+    else {
+      offsetH = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      Value tmpStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
+      // offsetH requires computing the linear offset using the strides.
+      for (size_t idx = 0; idx < opOffsetsSize - 1; idx++) {
+        size_t revIdx = opOffsetsSize - 2 - idx;
+        Value offsetVal =
+            getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[revIdx]);
+        offsetVal = getValueOrCreateCastToIndexLike(
+            rewriter, loc, rewriter.getIndexType(), offsetVal);
+        Value mul =
+            rewriter.createOrFold<arith::MulIOp>(loc, tmpStride, offsetVal);
+        Value dimSize =
+            getValueOrCreateConstantIntOp(rewriter, loc, mixedSizes[revIdx]);
+        dimSize = getValueOrCreateCastToIndexLike(
+            rewriter, loc, rewriter.getIndexType(), dimSize);
+        tmpStride =
+            rewriter.createOrFold<arith::MulIOp>(loc, tmpStride, dimSize);
+        offsetH = rewriter.createOrFold<arith::AddIOp>(loc, offsetH, mul);
+      }
+    }
     offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                               rewriter.getI32Type(), offsetH);
     // Get address space from tensor descriptor memory space.
