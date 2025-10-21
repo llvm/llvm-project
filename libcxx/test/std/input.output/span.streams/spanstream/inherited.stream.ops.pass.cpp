@@ -26,7 +26,7 @@
 
 #include "../helper_macros.h"
 
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT>
 void initialize_array(CharT* arr, std::basic_string_view<CharT, TraitsT> sv) {
   if constexpr (std::same_as<CharT, char>)
     strncpy(arr, sv.data(), sv.size() + 1);
@@ -34,7 +34,7 @@ void initialize_array(CharT* arr, std::basic_string_view<CharT, TraitsT> sv) {
     wcsncpy(arr, sv.data(), sv.size() + 1);
 }
 
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT>
 void test() {
   using SpStream = std::basic_spanstream<CharT, TraitsT>;
 
@@ -299,9 +299,9 @@ void test() {
 }
 
 int main(int, char**) {
-  test<char>();
+  test<char, std::char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
+  test<wchar_t, std::char_traits<wchar_t>>();
 #endif
 
   return 0;

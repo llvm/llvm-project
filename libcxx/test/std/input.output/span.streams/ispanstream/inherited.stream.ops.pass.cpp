@@ -70,7 +70,7 @@ void test_ispanstream(std::basic_ispanstream<CharT, TraitsT>& spSt, std::size_t 
   assert(spSt.good());
 }
 
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT>
 void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
@@ -116,9 +116,9 @@ void test() {
 }
 
 int main(int, char**) {
-  test<char>();
+  test<char, std::char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  // test<wchar_t>();
+  // test<wchar_t, std::char_traits<wchar_t>>();
 #endif
 
   return 0;

@@ -31,7 +31,7 @@
 #include "nasty_string.h"
 #include "test_macros.h"
 
-template <typename CharT, typename TraitsT = std::char_traits<CharT>>
+template <typename CharT, typename TraitsT>
 void test() {
   using SpStream = std::basic_ispanstream<CharT, TraitsT>;
 
@@ -64,11 +64,11 @@ void test() {
   test<nasty_char, nasty_char_traits>();
 #endif
 
-  test<char>();
   test<char, constexpr_char_traits<char>>();
+  test<char, std::char_traits<char>>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  test<wchar_t>();
   test<wchar_t, constexpr_char_traits<wchar_t>>();
+  test<wchar_t, std::char_traits<wchar_t>>();
 #endif
 }
 
