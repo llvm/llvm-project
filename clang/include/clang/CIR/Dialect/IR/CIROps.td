@@ -4557,4 +4557,66 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   }];
 }
 
+def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
+  let summary = "Atomic test and set";
+  let description = [{
+    C/C++ atomic test and set operation. Implements the builtin function
+    `__atomic_test_and_set`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically set the integer to an implementation-
+    defined non-zero "set" value. The result of the operation is a boolean value
+    indicating whether the previous value of the integer was the "set" value.
+
+    Example:
+    ```mlir
+      %res = cir.atomic.test_and_set seq_cst %ptr : !cir.ptr<!s8i> -> !cir.bool
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
+  let summary = "Atomic clear";
+  let description = [{
+    C/C++ atomic clear operation. Implements the builtin function
+    `__atomic_clear`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically sets the integer to zero.
+
+    Example:
+    ```mlir
+      cir.atomic.clear seq_cst %ptr : !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) attr-dict
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

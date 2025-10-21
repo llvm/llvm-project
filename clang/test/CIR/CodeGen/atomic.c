@@ -514,3 +514,73 @@ void atomic_exchange_n(int *ptr, int value) {
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acq_rel, align 4
   // OGCG: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} seq_cst, align 4
 }
+
+void test_and_set(void *p) {
+  // CIR-LABEL: @test_and_set
+  // LLVM-LABEL: @test_and_set
+  // OGCG-LABEL: @test_and_set
+
+  __atomic_test_and_set(p, __ATOMIC_SEQ_CST);
+  // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
+  // CIR-NEXT: %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] : !cir.ptr<!s8i> -> !cir.bool
+  // CIR-NEXT: cir.store align(1) %[[RES]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i8 1 seq_cst, align 1
+  // LLVM-NEXT: %{{.+}} = icmp ne i8 %[[RES]], 0
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT: %[[RES:.+]] = atomicrmw xchg ptr %[[PTR]], i8 1 seq_cst, align 1
+  // OGCG-NEXT: %{{.+}} = icmp ne i8 %[[RES]], 0
+}
+
+void test_and_set_volatile(volatile void *p) {
+  // CIR-LABEL: @test_and_set_volatile
+  // LLVM-LABEL: @test_and_set_volatile
+  // OGCG-LABEL: @test_and_set_volatile
+
+  __atomic_test_and_set(p, __ATOMIC_SEQ_CST);
+  // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
+  // CIR-NEXT: %[[RES:.+]] = cir.atomic.test_and_set seq_cst %[[PTR]] volatile : !cir.ptr<!s8i> -> !cir.bool
+  // CIR-NEXT: cir.store align(1) %[[RES]], %{{.+}} : !cir.bool, !cir.ptr<!cir.bool>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: %[[RES:.+]] = atomicrmw volatile xchg ptr %[[PTR]], i8 1 seq_cst, align 1
+  // LLVM-NEXT: %{{.+}} = icmp ne i8 %[[RES]], 0
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT: %[[RES:.+]] = atomicrmw volatile xchg ptr %[[PTR]], i8 1 seq_cst, align 1
+  // OGCG-NEXT: %{{.+}} = icmp ne i8 %[[RES]], 0
+}
+
+void clear(void *p) {
+  // CIR-LABEL: @clear
+  // LLVM-LABEL: @clear
+  // OGCG-LABEL: @clear
+
+  __atomic_clear(p, __ATOMIC_SEQ_CST);
+  // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
+  // CIR:      cir.atomic.clear seq_cst %[[PTR]] : !cir.ptr<!s8i>
+
+  // LLVM: store atomic i8 0, ptr %{{.+}} seq_cst, align 1
+
+  // OGCG: store atomic i8 0, ptr %{{.+}} seq_cst, align 1
+}
+
+void clear_volatile(volatile void *p) {
+  // CIR-LABEL: @clear_volatile
+  // LLVM-LABEL: @clear_volatile
+  // OGCG-LABEL: @clear_volatile
+
+  __atomic_clear(p, __ATOMIC_SEQ_CST);
+  // CIR:      %[[VOID_PTR:.+]] = cir.load align(8) %{{.+}} : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+  // CIR-NEXT: %[[PTR:.+]] = cir.cast bitcast %[[VOID_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s8i>
+  // CIR:      cir.atomic.clear seq_cst %[[PTR]] volatile : !cir.ptr<!s8i>
+
+  // LLVM: store atomic volatile i8 0, ptr %{{.+}} seq_cst, align 1
+
+  // OGCG: store atomic volatile i8 0, ptr %{{.+}} seq_cst, align 1
+}
