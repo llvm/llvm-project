@@ -1011,6 +1011,10 @@ public:
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, ElementCount VF) const {
+    // Truncs must truncate at most to their destination type.
+    if (isa_and_nonnull<TruncInst>(I) && MinBWs.contains(I) &&
+        I->getType()->getScalarSizeInBits() < MinBWs.lookup(I))
+      return false;
     return VF.isVector() && MinBWs.contains(I) &&
            !isProfitableToScalarize(I, VF) &&
            !isScalarAfterVectorization(I, VF);
@@ -7227,9 +7231,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
-      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
@@ -8198,6 +8199,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       if (CM.foldTailWithEVL())
         VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
                                  *Plan, CM.getMaxSafeElements());
+
+      if (auto P = VPlanTransforms::narrowInterleaveGroups(*Plan, TTI))
+        VPlans.push_back(std::move(P));
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }

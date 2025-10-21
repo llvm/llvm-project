@@ -182,7 +182,7 @@ mlir::LogicalResult CIRToLLVMCopyOpLowering::matchAndRewrite(
       rewriter, op.getLoc(), rewriter.getI32Type(), op.getLength(layout));
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
-      op, adaptor.getDst(), adaptor.getSrc(), length, /*isVolatile=*/false);
+      op, adaptor.getDst(), adaptor.getSrc(), length, op.getIsVolatile());
   return mlir::success();
 }
 
@@ -727,6 +727,46 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
       op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
       llvmOrder);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicTestAndSetOpLowering::matchAndRewrite(
+    cir::AtomicTestAndSetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+
+  auto one = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                            rewriter.getI8Type(), 1);
+  auto rmw = mlir::LLVM::AtomicRMWOp::create(
+      rewriter, op.getLoc(), mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(),
+      one, llvmOrder, /*syncscope=*/llvm::StringRef(),
+      adaptor.getAlignment().value_or(0), op.getIsVolatile());
+
+  auto zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI8Type(), 0);
+  auto cmp = mlir::LLVM::ICmpOp::create(
+      rewriter, op.getLoc(), mlir::LLVM::ICmpPredicate::ne, rmw, zero);
+
+  rewriter.replaceOp(op, cmp);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMAtomicClearOpLowering::matchAndRewrite(
+    cir::AtomicClearOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::atomicSyncScopeID());
+
+  mlir::LLVM::AtomicOrdering llvmOrder = getLLVMMemOrder(op.getMemOrder());
+  auto zero = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI8Type(), 0);
+  auto store = mlir::LLVM::StoreOp::create(
+      rewriter, op.getLoc(), zero, adaptor.getPtr(),
+      adaptor.getAlignment().value_or(0), op.getIsVolatile(),
+      /*isNonTemporal=*/false, /*isInvariantGroup=*/false, llvmOrder);
+
+  rewriter.replaceOp(op, store);
   return mlir::success();
 }
 
