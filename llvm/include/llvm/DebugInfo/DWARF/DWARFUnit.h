@@ -143,6 +143,8 @@ public:
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
 
   LLVM_ABI DWARFUnit *getUnitForOffset(uint64_t Offset) const;
+  /// Returns the Unit from the .debug_info or .debug_types section by the index
+  /// entry.
   LLVM_ABI DWARFUnit *
   getUnitForIndexEntry(const DWARFUnitIndex::Entry &E, DWARFSectionKind Sec,
                        const DWARFSection *Section = nullptr);

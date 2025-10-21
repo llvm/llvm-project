@@ -1,3 +1,6 @@
+## This test uses TU index for type parsing in dwp and makes sure the DWARF4 type is
+## successfully retrieved.
+
 # RUN: llvm-mc %s --split-dwarf-file=test.dwo -filetype obj -triple x86_64 -o test.o
 # RUN: llvm-dwp -e test.o -o test.dwp
 # RUN: llvm-dwarfdump test.dwp | FileCheck %s

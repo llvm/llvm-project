@@ -1345,10 +1345,10 @@ DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint64_t Hash, bool IsDWO) {
   DWARFUnitVector &DWOUnits = State->getDWOUnits();
   if (const auto &TUI = getTUIndex()) {
     if (const auto *R = TUI.getFromHash(Hash)) {
-      if (TUI.getVersion() >= 5)
+      if (TUI.getVersion() >= 5) {
         return dyn_cast_or_null<DWARFTypeUnit>(
             DWOUnits.getUnitForIndexEntry(*R, DW_SECT_INFO));
-      else {
+      } else {
         DWARFUnit *TypesUnit = nullptr;
         getDWARFObj().forEachTypesDWOSections([&](const DWARFSection &S) {
           if (!TypesUnit)
