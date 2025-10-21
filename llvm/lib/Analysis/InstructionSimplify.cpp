@@ -4866,35 +4866,35 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
   return nullptr;
 }
 
-// Look for the following pattern and simplify %1 to %identicalPhi.
-// Here %phi, %1 and %phi.next perform the same functionality as
-// %identicalPhi and hence the select instruction %1 can be folded
-// into %identicalPhi.
-//
-// BB1:
-//   %identicalPhi = phi [ X, %BB0 ], [ %identicalPhi.next, %BB1 ]
-//   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
-//   ...
-//   %identicalPhi.next = select %cmp, %val, %identicalPhi
-//                      (or select %cmp, %identicalPhi, %val)
-//   %1 = select %cmp2, %identicalPhi, %phi
-//   %phi.next = select %cmp, %val, %1
-//             (or select %cmp, %1, %val)
-//
-// Prove that %phi and %identicalPhi are the same by induction:
-//
-// Base case: Both %phi and %identicalPhi are equal on entry to the loop.
-// Inductive case:
-// Suppose %phi and %identicalPhi are equal at iteration i.
-// We look at their values at iteration i+1 which are %phi.next and
-// %identicalPhi.next. They would have become different only when %cmp is
-// false and the corresponding values %1 and %identicalPhi differ
-// (similar reason for the other "or" case in the bracket).
-//
-// The only condition when %1 and %identicalPh could differ is when %cmp2
-// is false and %1 is %phi, which contradicts our inductive hypothesis
-// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
-// always equal at iteration i+1.
+/// Look for the following pattern and simplify %1 to %identicalPhi.
+/// Here %phi, %1 and %phi.next perform the same functionality as
+/// %identicalPhi and hence the select instruction %1 can be folded
+/// into %identicalPhi.
+///
+/// BB1:
+///   %identicalPhi = phi [ X, %BB0 ], [ %identicalPhi.next, %BB1 ]
+///   %phi = phi [ X, %BB0 ], [ %phi.next, %BB1 ]
+///   ...
+///   %identicalPhi.next = select %cmp, %val, %identicalPhi
+///                      (or select %cmp, %identicalPhi, %val)
+///   %1 = select %cmp2, %identicalPhi, %phi
+///   %phi.next = select %cmp, %val, %1
+///             (or select %cmp, %1, %val)
+///
+/// Prove that %phi and %identicalPhi are the same by induction:
+///
+/// Base case: Both %phi and %identicalPhi are equal on entry to the loop.
+/// Inductive case:
+/// Suppose %phi and %identicalPhi are equal at iteration i.
+/// We look at their values at iteration i+1 which are %phi.next and
+/// %identicalPhi.next. They would have become different only when %cmp is
+/// false and the corresponding values %1 and %identicalPhi differ
+/// (similar reason for the other "or" case in the bracket).
+///
+/// The only condition when %1 and %identicalPh could differ is when %cmp2
+/// is false and %1 is %phi, which contradicts our inductive hypothesis
+/// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
+/// always equal at iteration i+1.
 bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
   if (PN.getParent() != IdenticalPN.getParent())
     return false;
@@ -4922,9 +4922,7 @@ bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
       dyn_cast<SelectInst>(IdenticalPN.getIncomingValueForBlock(DiffValBB));
   if (!SI || !IdenticalSI)
     return false;
-  if (SI->getCondition() != IdenticalSI->getCondition() ||
-      (SI->getTrueValue() != IdenticalSI->getTrueValue() &&
-       SI->getFalseValue() != IdenticalSI->getFalseValue()))
+  if (SI->getCondition() != IdenticalSI->getCondition())
     return false;
 
   SelectInst *SIOtherVal = nullptr;
@@ -4932,9 +4930,11 @@ bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
   if (SI->getTrueValue() == IdenticalSI->getTrueValue()) {
     SIOtherVal = dyn_cast<SelectInst>(SI->getFalseValue());
     IdenticalSIOtherVal = IdenticalSI->getFalseValue();
-  } else {
+  } else if (SI->getFalseValue() == IdenticalSI->getFalseValue()) {
     SIOtherVal = dyn_cast<SelectInst>(SI->getTrueValue());
     IdenticalSIOtherVal = IdenticalSI->getTrueValue();
+  } else {
+    return false;
   }
 
   // Now check that the other values in select, i.e., %1 and %identicalPhi,
