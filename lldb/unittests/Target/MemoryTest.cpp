@@ -275,7 +275,6 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
       std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
   ASSERT_TRUE(process_sp);
 
-
   {
     llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
     // Read 8 ranges of 128 bytes with arbitrary base addresses.
@@ -295,7 +294,7 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
     }
   }
 
-  auto &dummy_process = static_cast<DummyReaderProcess&>(*process_sp);
+  auto &dummy_process = static_cast<DummyReaderProcess &>(*process_sp);
   dummy_process.read_less_than_requested = true;
   {
     llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
