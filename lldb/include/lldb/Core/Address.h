@@ -30,7 +30,7 @@ class Stream;
 class Symbol;
 class SymbolContext;
 class Target;
-struct LineEntry;
+class LineEntry;
 
 /// \class Address Address.h "lldb/Core/Address.h"
 /// A section + offset based address class.

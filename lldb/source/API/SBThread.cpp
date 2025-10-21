@@ -515,9 +515,14 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   if (frame_sp && frame_sp->HasDebugInformation()) {
     SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
     AddressRange range;
-    if (end_line == LLDB_INVALID_LINE_NUMBER)
-      range = sc.line_entry.range;
-    else {
+    if (end_line == LLDB_INVALID_LINE_NUMBER) {
+      if (sc.line_entry.HasValidRange())
+        range = sc.line_entry.GetRange();
+      else {
+        error = Status::FromErrorString("No valid range for line entry");
+        return;
+      }
+    } else {
       llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
       if (err) {
         error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
@@ -787,7 +792,7 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
                                              eSymbolContextLineEntry, sc_list);
     for (const SymbolContext &sc : sc_list) {
       addr_t step_addr =
-          sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
+          sc.line_entry.GetRange().GetBaseAddress().GetLoadAddress(target);
       if (step_addr != LLDB_INVALID_ADDRESS) {
         AddressRange unused_range;
         if (frame_sc.function->GetRangeContainingLoadAddress(step_addr, *target,

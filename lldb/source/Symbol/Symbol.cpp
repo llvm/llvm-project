@@ -330,7 +330,7 @@ uint32_t Symbol::GetPrologueByteSize() {
               base_address, eSymbolContextLineEntry, sc);
           if (resolved_flags & eSymbolContextLineEntry) {
             // Default to the end of the first line entry.
-            m_type_data = sc.line_entry.range.GetByteSize();
+            m_type_data = sc.line_entry.GetRange().GetByteSize();
 
             // Set address for next line.
             Address addr(base_address);
@@ -356,8 +356,9 @@ uint32_t Symbol::GetPrologueByteSize() {
               }
 
               // Slide addr up to the next line address.
-              addr.Slide(sc_temp.line_entry.range.GetByteSize());
-              total_offset += sc_temp.line_entry.range.GetByteSize();
+              addr_t slide_amount = sc_temp.line_entry.GetRange().GetByteSize();
+              addr.Slide(slide_amount);
+              total_offset += slide_amount;
               // If we've gone too far, bail out.
               if (total_offset >= m_addr_range.GetByteSize())
                 break;
