@@ -1089,7 +1089,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+      TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -20575,7 +20575,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
           Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-          Subtarget->isTargetWindows()) &&
+          Subtarget->isTargetFuchsia() || Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
