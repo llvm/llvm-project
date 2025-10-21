@@ -127,8 +127,7 @@ define <vscale x 8 x i1> @try_combine_svbool_binop_orr(<vscale x 8 x i1> %a, <vs
 ; Verify predicate cast does not hinder "isAllActive" knowledge.
 define <vscale x 8 x half> @try_combine_svbool_binop_fadd(<vscale x 8 x half> %a, <vscale x 8 x half> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_fadd(
-; CHECK-NEXT:    [[T1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> splat (i1 true))
-; CHECK-NEXT:    [[T2:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fadd.nxv8f16(<vscale x 8 x i1> [[T1]], <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]])
+; CHECK-NEXT:    [[T2:%.*]] = fadd <vscale x 8 x half> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <vscale x 8 x half> [[T2]]
 ;
   %t1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> splat (i1 true))
@@ -139,8 +138,7 @@ define <vscale x 8 x half> @try_combine_svbool_binop_fadd(<vscale x 8 x half> %a
 ; Verify predicate cast does not hinder "isAllActive" knowledge.
 define <vscale x 4 x float> @try_combine_svbool_binop_fmul(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_fmul(
-; CHECK-NEXT:    [[T1:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
-; CHECK-NEXT:    [[T2:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fmul.nxv4f32(<vscale x 4 x i1> [[T1]], <vscale x 4 x float> [[A:%.*]], <vscale x 4 x float> [[B:%.*]])
+; CHECK-NEXT:    [[T2:%.*]] = fmul <vscale x 4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[T2]]
 ;
   %t1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> splat (i1 true))
@@ -151,8 +149,7 @@ define <vscale x 4 x float> @try_combine_svbool_binop_fmul(<vscale x 4 x float> 
 ; Verify predicate cast does not hinder "isAllActive" knowledge.
 define <vscale x 2 x double> @try_combine_svbool_binop_fsub(<vscale x 2 x double> %a, <vscale x 2 x double> %b) {
 ; CHECK-LABEL: @try_combine_svbool_binop_fsub(
-; CHECK-NEXT:    [[T1:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))
-; CHECK-NEXT:    [[T2:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fsub.nxv2f64(<vscale x 2 x i1> [[T1]], <vscale x 2 x double> [[A:%.*]], <vscale x 2 x double> [[B:%.*]])
+; CHECK-NEXT:    [[T2:%.*]] = fsub <vscale x 2 x double> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[T2]]
 ;
   %t1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> splat (i1 true))

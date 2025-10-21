@@ -1577,18 +1577,26 @@ static SVEIntrinsicInfo constructSVEIntrinsicInfo(IntrinsicInst &II) {
 }
 
 static bool isAllActivePredicate(Value *Pred) {
-  // Look through convert.from.svbool(convert.to.svbool(...) chain.
   Value *UncastedPred;
+
+  // Look through predicate casts that only remove lanes.
   if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_from_svbool>(
-                      m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
-                          m_Value(UncastedPred)))))
-    // If the predicate has the same or less lanes than the uncasted
-    // predicate then we know the casting has no effect.
-    if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
-        cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
-      Pred = UncastedPred;
+                      m_Value(UncastedPred)))) {
+    auto *OrigPredTy = cast<ScalableVectorType>(Pred->getType());
+    Pred = UncastedPred;
+
+    if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
+                        m_Value(UncastedPred))))
+      // If the predicate has the same or less lanes than the uncasted predicate
+      // then we know the casting has no effect.
+      if (OrigPredTy->getMinNumElements() <=
+          cast<ScalableVectorType>(UncastedPred->getType())
+              ->getMinNumElements())
+        Pred = UncastedPred;
+  }
+
   auto *C = dyn_cast<Constant>(Pred);
-  return (C && C->isAllOnesValue());
+  return C && C->isAllOnesValue();
 }
 
 // Simplify `V` by only considering the operations that affect active lanes.
