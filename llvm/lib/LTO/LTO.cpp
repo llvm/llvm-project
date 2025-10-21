@@ -457,7 +457,7 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+    for (auto &S : I.second.getSummaryList())
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
@@ -1182,7 +1182,7 @@ Error LTO::checkPartiallySplit() {
   // Otherwise check if there are any recorded in the combined summary from the
   // ThinLTO modules.
   for (auto &P : ThinLTO.CombinedIndex) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;

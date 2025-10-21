@@ -2130,7 +2130,7 @@ bool LowerTypeTestsModule::lower() {
       // A set of all functions that are address taken by a live global object.
       DenseSet<GlobalValue::GUID> AddressTaken;
       for (auto &I : *ExportSummary)
-        for (auto &GVS : I.second.SummaryList)
+        for (auto &GVS : I.second.getSummaryList())
           if (GVS->isLive())
             for (const auto &Ref : GVS->refs()) {
               AddressTaken.insert(Ref.getGUID());
@@ -2409,7 +2409,7 @@ bool LowerTypeTestsModule::lower() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second.SummaryList) {
+      for (auto &S : P.second.getSummaryList()) {
         if (!ExportSummary->isGlobalValueLive(S.get()))
           continue;
         if (auto *FS = dyn_cast<FunctionSummary>(S->getBaseObject()))
