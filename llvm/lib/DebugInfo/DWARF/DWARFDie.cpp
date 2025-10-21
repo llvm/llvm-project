@@ -178,7 +178,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
 
   llvm::StringRef PrettyVersionName =
       prettyLanguageVersionString(AttrValue, Die);
-  const bool ShouldDumpRawLanguageVersion =
+  bool ShouldDumpRawLanguageVersion =
       Attr == DW_AT_language_version &&
       (DumpOpts.Verbose || PrettyVersionName.empty());
 
