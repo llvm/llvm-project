@@ -87,11 +87,15 @@ bool StopInfo::HasTargetRunSinceMe() {
 namespace lldb_private {
 class StopInfoBreakpoint : public StopInfo {
 public:
+  // We use a "breakpoint preserving BreakpointLocationCollection because we
+  // may need to hand out the "breakpoint hit" list as any point, potentially
+  // after the breakpoint has been deleted.  But we still need to refer to them.
   StopInfoBreakpoint(Thread &thread, break_id_t break_id)
       : StopInfo(thread, break_id), m_should_stop(false),
         m_should_stop_is_valid(false), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false),
+        m_async_stopped_locs(true) {
     StoreBPInfo();
   }
 
@@ -99,7 +103,8 @@ public:
       : StopInfo(thread, break_id), m_should_stop(should_stop),
         m_should_stop_is_valid(true), m_should_perform_action(true),
         m_address(LLDB_INVALID_ADDRESS), m_break_id(LLDB_INVALID_BREAK_ID),
-        m_was_all_internal(false), m_was_one_shot(false) {
+        m_was_all_internal(false), m_was_one_shot(false),
+        m_async_stopped_locs(true) {
     StoreBPInfo();
   }
 
@@ -699,6 +704,10 @@ private:
   lldb::break_id_t m_break_id;
   bool m_was_all_internal;
   bool m_was_one_shot;
+  /// The StopInfoBreakpoint lives after the stop, and could get queried
+  /// at any time so we need to make sure that it keeps the breakpoints for
+  /// each of the locations it records alive while it is around.  That's what
+  /// The BreakpointPreservingLocationCollection does.
   BreakpointLocationCollection m_async_stopped_locs;
 };
 

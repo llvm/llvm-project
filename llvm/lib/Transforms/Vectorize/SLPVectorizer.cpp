@@ -5578,7 +5578,7 @@ private:
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
           auto DecrUnschedForInst = [&](Instruction *I, TreeEntry *UserTE,
-                                        unsigned OpIdx) {
+                                        unsigned OpIdx, bool FirstRun = false) {
             if (!ScheduleCopyableDataMap.empty()) {
               const EdgeInfo EI = {UserTE, OpIdx};
               if (ScheduleCopyableData *CD = getScheduleCopyableData(EI, I)) {
@@ -5586,6 +5586,8 @@ private:
                 return;
               }
             }
+            if (!FirstRun)
+              return;
             auto It = OperandsUses.find(I);
             assert(It != OperandsUses.end() && "Operand not found");
             if (It->second > 0) {
@@ -5602,37 +5604,48 @@ private:
               break;
             // Need to search for the lane since the tree entry can be
             // reordered.
-            int Lane = std::distance(Bundle->getTreeEntry()->Scalars.begin(),
-                                     find(Bundle->getTreeEntry()->Scalars, In));
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(In) &&
-                !Bundle->getTreeEntry()->ReorderIndices.empty())
-              Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(
-                              Bundle->getTreeEntry()->Scalars.size()) &&
-                   "Couldn't find extract lane");
+            auto *It = find(Bundle->getTreeEntry()->Scalars, In);
+            bool FirstRun = true;
+            do {
+              int Lane =
+                  std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
+              assert(Lane >= 0 && "Lane not set");
+              if (isa<StoreInst>(In) &&
+                  !Bundle->getTreeEntry()->ReorderIndices.empty())
+                Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
+              assert(Lane < static_cast<int>(
+                                Bundle->getTreeEntry()->Scalars.size()) &&
+                     "Couldn't find extract lane");
 
-            // Since vectorization tree is being built recursively this
-            // assertion ensures that the tree entry has all operands set before
-            // reaching this code. Couple of exceptions known at the moment are
-            // extracts where their second (immediate) operand is not added.
-            // Since immediates do not affect scheduler behavior this is
-            // considered okay.
-            assert(In &&
-                   (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
-                    In->getNumOperands() ==
-                        Bundle->getTreeEntry()->getNumOperands() ||
-                    Bundle->getTreeEntry()->isCopyableElement(In)) &&
-                   "Missed TreeEntry operands?");
+              // Since vectorization tree is being built recursively this
+              // assertion ensures that the tree entry has all operands set
+              // before reaching this code. Couple of exceptions known at the
+              // moment are extracts where their second (immediate) operand is
+              // not added. Since immediates do not affect scheduler behavior
+              // this is considered okay.
+              assert(In &&
+                     (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
+                      In->getNumOperands() ==
+                          Bundle->getTreeEntry()->getNumOperands() ||
+                      Bundle->getTreeEntry()->isCopyableElement(In)) &&
+                     "Missed TreeEntry operands?");
 
-            for (unsigned OpIdx :
-                 seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
-              if (auto *I = dyn_cast<Instruction>(
-                      Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
-                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
-                                  << "\n");
-                DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx);
-              }
+              for (unsigned OpIdx :
+                   seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
+                if (auto *I = dyn_cast<Instruction>(
+                        Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
+                  LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
+                                    << *I << "\n");
+                  DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx,
+                                     FirstRun);
+                }
+              // If parent node is schedulable, it will be handle correctly.
+              if (!Bundle->getTreeEntry()->doesNotNeedToSchedule())
+                break;
+              It = std::find(std::next(It),
+                             Bundle->getTreeEntry()->Scalars.end(), In);
+              FirstRun = false;
+            } while (It != Bundle->getTreeEntry()->Scalars.end());
           }
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
