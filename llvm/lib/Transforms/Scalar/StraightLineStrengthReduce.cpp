@@ -313,7 +313,7 @@ public:
 
     // Evaluate the rewrite efficiency of this candidate with a given delta
     EfficiencyLevel getRewriteEfficiency(const Value *Delta,
-                                     const DKind DeltaKind) const {
+                                         const DKind DeltaKind) const {
       switch (DeltaKind) {
       case BaseDelta: // [X + Delta]
         return getComputationEfficiency(
@@ -779,8 +779,8 @@ void StraightLineStrengthReduce::setBasisAndDeltaFor(Candidate &C) {
 // Z = A + 3
 // Return the delta info for C aginst the new Basis
 auto StraightLineStrengthReduce::compressPath(Candidate &C,
-  Candidate *Basis) const
--> DeltaInfo {
+                                              Candidate *Basis) const
+    -> DeltaInfo {
   if (!Basis || !Basis->Basis || C.CandidateKind == Candidate::Mul)
     return {};
   Candidate *Root = Basis;
