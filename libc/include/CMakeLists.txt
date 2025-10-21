@@ -771,6 +771,14 @@ add_header_macro(
     .llvm-libc-macros.poll-macros
   )
 
+add_header_macro(
+  nl_types
+  ../libc/include/nl_types.yaml
+  nl_types.h
+  DEPENDS
+    .llvm-libc-types.nl_catd
+  )
+
 # UEFI spec references "Uefi.h" so we use that name for compatibility
 add_header_macro(
   uefi
