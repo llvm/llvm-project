@@ -472,6 +472,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::LIFETIME_END:               return "lifetime.end";
   case ISD::FAKE_USE:
     return "fake_use";
+  case ISD::RELOC_NONE:
+    return "reloc_none";
   case ISD::PSEUDO_PROBE:
     return "pseudoprobe";
   case ISD::GC_TRANSITION_START:        return "gc_transition.start";
