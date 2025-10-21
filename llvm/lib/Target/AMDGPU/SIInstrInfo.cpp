@@ -10635,30 +10635,30 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def || Def->getParent() != CmpInstr.getParent())
       return false;
 
-    bool CanOptimize = false;
+    const auto foldableSelect = [](MachineInstr *Def) -> bool {
+      if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+          Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+        bool Op1IsNonZeroImm =
+            Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+        bool Op2IsZeroImm =
+            Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+        if (Op1IsNonZeroImm && Op2IsZeroImm)
+          return true;
+      }
+      return false;
+    };
 
     // For S_OP that set SCC = DST!=0, do the transformation
     //
     //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
-    if (setsSCCifResultIsNonZero(*Def))
-      CanOptimize = true;
 
-    // s_cmp_lg_* is redundant because the SCC input value for S_CSELECT* has
-    // the same value that will be calculated by s_cmp_lg_*
+    // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
+    // for S_CSELECT* already has the same value that will be calculated by
+    // s_cmp_lg_*
     //
     //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
     //   imm), 0)
-    if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
-        Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
-      bool Op1IsNonZeroImm =
-          Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
-      bool Op2IsZeroImm =
-          Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
-      if (Op1IsNonZeroImm && Op2IsZeroImm)
-        CanOptimize = true;
-    }
-
-    if (!CanOptimize)
+    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(Def))
       return false;
 
     MachineInstr *KillsSCC = nullptr;
