@@ -1,4 +1,5 @@
-# Demonstrate dumping DW_AT_language_version.
+# Demonstrate dumping DW_AT_language_version without an
+# accompanying DW_AT_language_name.
 # RUN: llvm-mc -triple=x86_64--linux -filetype=obj -o %t.o < %s
 # RUN: llvm-dwarfdump -v %t.o | FileCheck %s --check-prefix=VERBOSE
 # RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=NO-VERBOSE
