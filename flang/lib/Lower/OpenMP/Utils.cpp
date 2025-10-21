@@ -20,11 +20,6 @@
 #include <flang/Lower/DirectivesCommon.h>
 #include <flang/Lower/OpenMP/Clauses.h>
 #include <flang/Lower/PFTBuilder.h>
-//<<<<<<< HEAD
-//#include <flang/Lower/StatementContext.h>
-//#include <flang/Lower/Support/PrivateReductionUtils.h>
-//#include <flang/Lower/SymbolMap.h>
-//=======
 #include <flang/Lower/Support/PrivateReductionUtils.h>
 #include <flang/Optimizer/Builder/FIRBuilder.h>
 #include <flang/Optimizer/Builder/Todo.h>
