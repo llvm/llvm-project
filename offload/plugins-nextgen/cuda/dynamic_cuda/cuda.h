@@ -33,6 +33,7 @@ typedef struct CUfunc_st *CUfunction;
 typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
+typedef struct CUuuid_st *CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
 
@@ -301,6 +302,7 @@ CUresult cuFuncSetAttribute(CUfunction, CUfunction_attribute, int);
 
 // Device info
 CUresult cuDeviceGetName(char *, int, CUdevice);
+CUresult cuDeviceGetUuid(CUuuid *, CUdevice);
 CUresult cuDeviceTotalMem(size_t *, CUdevice);
 CUresult cuDriverGetVersion(int *);
 

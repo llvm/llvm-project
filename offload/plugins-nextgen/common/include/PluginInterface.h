@@ -1216,6 +1216,8 @@ protected:
   /// combined with the plugin name, since the offload device id may overlap
   /// between different plugins.
   std::string DeviceUid;
+  /// Construct the device UID from the vendor (U)UID.
+  void setDeviceUidFromVendorUid(const char *VendorUid);
 
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;

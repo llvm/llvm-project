@@ -2095,7 +2095,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, Uuid))
       return Err;
     if (strcmp(Uuid + 3, "-XX") != 0)
-      DeviceUid = std::string(Plugin.getName()) + "-" + std::string(Uuid);
+      setDeviceUidFromVendorUid(Uuid);
 
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;

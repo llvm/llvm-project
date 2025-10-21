@@ -293,6 +293,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
 
+    char Uuid[16];
+    Res = cuDeviceGetUuid(Uuid, Device);
+    if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
+      return Err;
+    setDeviceUidFromVendorUid(Uuid);
+
     // Query the current flags of the primary context and set its flags if
     // it is inactive.
     unsigned int FormerPrimaryCtxFlags = 0;
