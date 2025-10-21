@@ -1978,7 +1978,7 @@ Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
   // In production builds, gracefully fail by returning empty chunks.
-  assert(buffer.size() >= total_ranges_len);
+  assert(buffer.size() >= total_ranges_len && "provided buffer is too short");
   if (buffer.size() < total_ranges_len) {
     llvm::MutableArrayRef<uint8_t> empty;
     return {ranges.size(), empty};

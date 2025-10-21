@@ -236,11 +236,14 @@ public:
   // Process::ReadMemoryFromInferior tries to fulfill the entire request by
   // reading smaller chunks until it gets nothing back.
   bool read_less_than_requested = false;
+  bool read_more_than_requested = false;
 
   size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                       Status &error) override {
     if (read_less_than_requested && size > 0)
       size--;
+    if (read_more_than_requested)
+      size *= 2;
     uint8_t *buffer = static_cast<uint8_t *>(buf);
     for (size_t addr = vm_addr; addr < vm_addr + size; addr++)
       buffer[addr - vm_addr] = static_cast<uint8_t>(addr); // LSB of addr.
@@ -307,4 +310,46 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
         ASSERT_EQ(byte, static_cast<uint8_t>(range_base + idx));
     }
   }
+}
+
+using MemoryDeathTest = MemoryTest;
+
+TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  auto &dummy_process = static_cast<DummyReaderProcess &>(*process_sp);
+  dummy_process.read_more_than_requested = true;
+  llvm::SmallVector<uint8_t, 0> buffer(1024, 0);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x12345, 128}};
+  ASSERT_DEATH(
+      { process_sp->ReadMemoryRanges(ranges, buffer); },
+      "read more than requested bytes");
+}
+
+TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  llvm::SmallVector<uint8_t, 0> too_short_buffer(10, 0);
+  llvm::SmallVector<Range<addr_t, size_t>> ranges = {{0x12345, 128}};
+  ASSERT_DEATH(
+      { process_sp->ReadMemoryRanges(ranges, too_short_buffer); },
+      "provided buffer is too short");
 }
