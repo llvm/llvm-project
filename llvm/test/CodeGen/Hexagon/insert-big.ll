@@ -1,3 +1,6 @@
+; HexagonGenInsert.cpp has custom debug output control, which is only enabled in builds with assertions.
+; REQUIRES: asserts
+
 ; Check that llc does not abort, which happened due to incorrect MIR.
 ; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=1 < %s
 ; RUN: llc -O2 -mtriple=hexagon -insert-max-ifmap=2 < %s
