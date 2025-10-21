@@ -12,8 +12,10 @@
 #include <cstddef>
 #include <deque>
 #include <list>
+#include <map>
 #include <ranges>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <benchmark/benchmark.h>
@@ -23,7 +25,7 @@ int main(int argc, char** argv) {
 
   // {std,ranges}::for_each
   {
-    auto bm = []<class Container>(std::string name, auto for_each) {
+    auto sequence_bm = []<class Container>(std::string name, auto for_each) {
       using ElemType = typename Container::value_type;
       benchmark::RegisterBenchmark(
           name,
@@ -44,12 +46,59 @@ int main(int argc, char** argv) {
           ->Arg(50) // non power-of-two
           ->Arg(8192);
     };
-    bm.operator()<std::vector<int>>("std::for_each(vector<int>)", std_for_each);
-    bm.operator()<std::deque<int>>("std::for_each(deque<int>)", std_for_each);
-    bm.operator()<std::list<int>>("std::for_each(list<int>)", std_for_each);
-    bm.operator()<std::vector<int>>("rng::for_each(vector<int>)", std::ranges::for_each);
-    bm.operator()<std::deque<int>>("rng::for_each(deque<int>)", std::ranges::for_each);
-    bm.operator()<std::list<int>>("rng::for_each(list<int>)", std::ranges::for_each);
+    sequence_bm.operator()<std::vector<int>>("std::for_each(vector<int>)", std_for_each);
+    sequence_bm.operator()<std::deque<int>>("std::for_each(deque<int>)", std_for_each);
+    sequence_bm.operator()<std::list<int>>("std::for_each(list<int>)", std_for_each);
+    sequence_bm.operator()<std::vector<int>>("rng::for_each(vector<int>)", std::ranges::for_each);
+    sequence_bm.operator()<std::deque<int>>("rng::for_each(deque<int>)", std::ranges::for_each);
+    sequence_bm.operator()<std::list<int>>("rng::for_each(list<int>)", std::ranges::for_each);
+
+    auto associative_bm = []<class Container>(std::type_identity<Container>, std::string name, auto for_each) {
+      benchmark::RegisterBenchmark(
+          name,
+          [for_each](auto& st) {
+            Container c;
+            for (int64_t i = 0; i != st.range(0); ++i) {
+              if constexpr (std::is_same_v<typename Container::value_type, int>)
+                c.emplace(i);
+              else
+                c.emplace(i, i);
+            }
+
+            for (auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              for_each(c.begin(), c.end(), [](auto v) { benchmark::DoNotOptimize(&v); });
+            }
+          })
+          ->Arg(8)
+          ->Arg(32)
+          ->Arg(50) // non power-of-two
+          ->Arg(8192);
+    };
+    associative_bm(std::type_identity<std::set<int>>{}, "rng::for_each(set<int>::iterator)", std::ranges::for_each);
+    associative_bm(std::type_identity<std::multiset<int>>{}, "rng::for_each(multiset<int>::iterator)", std::ranges::for_each);
+    associative_bm(std::type_identity<std::map<int, int>>{}, "rng::for_each(map<int>::iterator)", std::ranges::for_each);
+    associative_bm(std::type_identity<std::multimap<int, int>>{}, "rng::for_each(multimap<int>::iterator)", std::ranges::for_each);
+
+    auto associative_ranges_bm = []<class Container>(std::type_identity<Container>, std::string name, auto for_each) {
+      benchmark::RegisterBenchmark(
+          name,
+          [for_each](auto& st) {
+            Container c;
+            for (int64_t i = 0; i != st.range(0); ++i)
+              c.insert(i);
+
+            for (auto _ : st) {
+              benchmark::DoNotOptimize(c);
+              for_each(c, [](auto v) { benchmark::DoNotOptimize(v); });
+            }
+          })
+          ->Arg(8)
+          ->Arg(32)
+          ->Arg(50) // non power-of-two
+          ->Arg(8192);
+    };
+    associative_ranges_bm(std::type_identity<std::set<int>>{}, "rng::for_each(set<int>)", std::ranges::for_each);
   }
 
   // {std,ranges}::for_each for join_view
