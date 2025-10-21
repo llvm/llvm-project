@@ -1711,18 +1711,15 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb1(Register AddrReg, int64_t Type,
   }
 
   // Check if r2 is live (used as implicit operand in the call).
-  // Only matters if R2 is the scratch register.
   bool NeedSpillR2 = false;
-  if (ScratchReg == ARM::R2) {
-    for (const MachineOperand &MO : Call.implicit_operands()) {
-      if (MO.isReg() && MO.getReg() == ARM::R2 && MO.isUse()) {
-        NeedSpillR2 = true;
-        break;
-      }
+  for (const MachineOperand &MO : Call.implicit_operands()) {
+    if (MO.isReg() && MO.getReg() == ARM::R2 && MO.isUse()) {
+      NeedSpillR2 = true;
+      break;
     }
   }
 
-  // Push R2 if it's the scratch register and it's live
+  // Push R2 if it's live
   if (NeedSpillR2) {
     EmitToStreamer(
         *OutStreamer,
