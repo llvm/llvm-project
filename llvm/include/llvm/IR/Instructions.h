@@ -3556,9 +3556,10 @@ public:
   /// correspondent branch weight.
   LLVM_ABI SwitchInst::CaseIt removeCase(SwitchInst::CaseIt I);
 
-  /// Delegate the call to the underlying SwitchInst::setDefaultCase and
-  /// remove correspondent branch weight.
-  LLVM_ABI void setDefaultDest(SwitchInst::CaseIt I);
+  /// Replace the default destination by given case. Delegate the call to
+  /// the underlying SwitchInst::setDefaultDest and remove correspondent branch
+  /// weight.
+  LLVM_ABI void replaceDefaultDest(SwitchInst::CaseIt I);
 
   /// Delegate the call to the underlying SwitchInst::addCase() and set the
   /// specified branch weight for the added case.

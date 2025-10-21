@@ -7583,7 +7583,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   SwitchInstProfUpdateWrapper SIW(*SI);
 
   BasicBlock *Unreachable = SI->getDefaultDest();
-  SIW.setDefaultDest(Case);
+  SIW.replaceDefaultDest(Case);
   SIW.removeCase(Case);
   SIW->setCondition(A);
 
@@ -7593,11 +7593,9 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
 
   // A case is dead when its value is higher than the Constant.
   SmallVector<ConstantInt *, 4> DeadCases;
-  for (auto Case : SI->cases()) {
-    if (Case.getCaseValue()->getValue().ugt(Constant->getValue())) {
+  for (auto Case : SI->cases())
+    if (Case.getCaseValue()->getValue().ugt(Constant->getValue()))
       DeadCases.push_back(Case.getCaseValue());
-    }
-  }
 
   for (ConstantInt *DeadCaseVal : DeadCases) {
     SwitchInst::CaseIt DeadCase = SIW->findCaseValue(DeadCaseVal);
