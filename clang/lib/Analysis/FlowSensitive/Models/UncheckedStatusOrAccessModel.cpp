@@ -24,6 +24,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
+#include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"
@@ -93,6 +94,18 @@ getStatusOrBaseClass(const QualType &Ty) {
 
 static QualType getStatusOrValueType(ClassTemplateSpecializationDecl *TRD) {
   return TRD->getTemplateArgs().get(0).getAsType();
+}
+
+static auto ofClassStatus() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return ofClass(hasName("::absl::Status"));
+}
+
+static auto isStatusMemberCallWithName(llvm::StringRef member_name) {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxMemberCallExpr(
+      on(expr(unless(cxxThisExpr()))),
+      callee(cxxMethodDecl(hasName(member_name), ofClassStatus())));
 }
 
 static auto isStatusOrMemberCallWithName(llvm::StringRef member_name) {
@@ -244,6 +257,61 @@ static void transferStatusOrOkCall(const CXXMemberCallExpr *Expr,
   State.Env.setValue(*Expr, OkVal);
 }
 
+static void transferStatusCall(const CXXMemberCallExpr *Expr,
+                               const MatchFinder::MatchResult &,
+                               LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusOrLoc == nullptr)
+    return;
+
+  RecordStorageLocation &StatusLoc = locForStatus(*StatusOrLoc);
+
+  if (State.Env.getValue(locForOk(StatusLoc)) == nullptr)
+    initializeStatusOr(*StatusOrLoc, State.Env);
+
+  if (Expr->isPRValue())
+    copyRecord(StatusLoc, State.Env.getResultObjectLocation(*Expr), State.Env);
+  else
+    State.Env.setStorageLocation(*Expr, StatusLoc);
+}
+
+static void transferStatusOkCall(const CXXMemberCallExpr *Expr,
+                                 const MatchFinder::MatchResult &,
+                                 LatticeTransferState &State) {
+  RecordStorageLocation *StatusLoc =
+      getImplicitObjectLocation(*Expr, State.Env);
+  if (StatusLoc == nullptr)
+    return;
+
+  if (Value *Val = State.Env.getValue(locForOk(*StatusLoc)))
+    State.Env.setValue(*Expr, *Val);
+}
+
+static void transferStatusUpdateCall(const CXXMemberCallExpr *Expr,
+                                     const MatchFinder::MatchResult &,
+                                     LatticeTransferState &State) {
+  // S.Update(OtherS) sets S to the error code of OtherS if it is OK,
+  // otherwise does nothing.
+  assert(Expr->getNumArgs() == 1);
+  auto *Arg = Expr->getArg(0);
+  RecordStorageLocation *ArgRecord =
+      Arg->isPRValue() ? &State.Env.getResultObjectLocation(*Arg)
+                       : State.Env.get<RecordStorageLocation>(*Arg);
+  RecordStorageLocation *ThisLoc = getImplicitObjectLocation(*Expr, State.Env);
+  if (ThisLoc == nullptr || ArgRecord == nullptr)
+    return;
+
+  auto &ThisOkVal = valForOk(*ThisLoc, State.Env);
+  auto &ArgOkVal = valForOk(*ArgRecord, State.Env);
+  auto &A = State.Env.arena();
+  auto &NewVal = State.Env.makeAtomicBoolValue();
+  State.Env.assume(A.makeImplies(A.makeNot(ThisOkVal.formula()),
+                                 A.makeNot(NewVal.formula())));
+  State.Env.assume(A.makeImplies(NewVal.formula(), ArgOkVal.formula()));
+  State.Env.setValue(locForOk(*ThisLoc), NewVal);
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -251,6 +319,12 @@ buildTransferMatchSwitch(ASTContext &Ctx,
   return std::move(Builder)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("ok"),
                                         transferStatusOrOkCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusOrMemberCallWithName("status"),
+                                        transferStatusCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusMemberCallWithName("ok"),
+                                        transferStatusOkCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isStatusMemberCallWithName("Update"),
+                                        transferStatusUpdateCall)
       .Build();
 }
 
