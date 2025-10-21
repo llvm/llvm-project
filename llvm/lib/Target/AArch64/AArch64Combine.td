@@ -332,13 +332,6 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
-// def lower_fptrunc_fptrunc: GICombineRule<
-//   (defs root:$root),
-//   (match (wip_match_opcode G_FPTRUNC):$root,
-//         [{ return matchFpTruncFpTrunc(*${root}, MRI); }]),
-//   (apply [{ applyFpTruncFpTrunc(*${root}, MRI, B); }])
-// >;
-
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
