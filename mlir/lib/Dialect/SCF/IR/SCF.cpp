@@ -292,9 +292,10 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
   }
 };
 
-// Pattern to eliminate ExecuteRegionOp results when it only forwards external
-// values. It operates only on execute regions with single terminator yield
-// operation.
+// Pattern to eliminate ExecuteRegionOp results which forward external
+// values from the region. In case there are multiple yield operations,
+// all of them must have the same operands iin order for the pattern to be
+// applicable.
 struct ExecuteRegionForwardingEliminator
     : public OpRewritePattern<ExecuteRegionOp> {
   using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
@@ -306,11 +307,8 @@ struct ExecuteRegionForwardingEliminator
 
     SmallVector<Operation *> yieldOps;
     for (Block &block : op.getRegion()) {
-      if (auto yield = dyn_cast<scf::YieldOp>(block.getTerminator())) {
-        if (yield.getOperands().empty())
-          continue;
+      if (auto yield = dyn_cast<scf::YieldOp>(block.getTerminator()))
         yieldOps.push_back(yield.getOperation());
-      }
     }
 
     if (yieldOps.empty())
@@ -323,36 +321,52 @@ struct ExecuteRegionForwardingEliminator
         return failure();
     }
 
-    // Check if all yielded values are from outside the region
-    bool allExternal = true;
-    for (Value yieldedValue : yieldOpsOperands) {
+    SmallVector<Value> externalValues;
+    SmallVector<Value> internalValues;
+    SmallVector<Value> opResultsToReplaceWithExternalValues;
+    SmallVector<Value> opResultsToKeep;
+    for (auto [index, yieldedValue] : llvm::enumerate(yieldOpsOperands)) {
       if (isValueFromInsideRegion(yieldedValue, op)) {
-        allExternal = false;
-        break;
+        internalValues.push_back(yieldedValue);
+        opResultsToKeep.push_back(op.getResult(index));
+      } else {
+        externalValues.push_back(yieldedValue);
+        opResultsToReplaceWithExternalValues.push_back(op.getResult(index));
       }
     }
-
-    if (!allExternal)
+    // No yeilded external values - nothing to do.
+    if (externalValues.empty())
       return failure();
 
-    // All yielded values are external - create a new execute_region with no
-    // results.
-    auto newOp = rewriter.create<ExecuteRegionOp>(op.getLoc(), TypeRange{});
+    // There are yielded external values - create a new execute_region returning
+    // just the internal values.
+    SmallVector<Type> resultTypes;
+    for (Value value : internalValues)
+      resultTypes.push_back(value.getType());
+    auto newOp =
+        rewriter.create<ExecuteRegionOp>(op.getLoc(), TypeRange(resultTypes));
     newOp->setAttrs(op->getAttrs());
 
-    // Move the region content to the new operation
-    newOp.getRegion().takeBody(op.getRegion());
+    // Move old op's region to the new operation.
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
 
-    // Replace all yield operations with a new yield operation with no results.
-    // scf.execute_region must have at least one yield operation.
+    // Replace all yield operations with a new yield operation with updated
+    // results. scf.execute_region must have at least one yield operation.
     for (auto *yieldOp : yieldOps) {
       rewriter.setInsertionPoint(yieldOp);
       rewriter.eraseOp(yieldOp);
-      rewriter.create<scf::YieldOp>(yieldOp->getLoc());
+      rewriter.create<scf::YieldOp>(yieldOp->getLoc(),
+                                    ValueRange(internalValues));
     }
 
     // Replace the old operation with the external values directly.
-    rewriter.replaceOp(op, yieldOpsOperands);
+    rewriter.replaceAllUsesWith(opResultsToReplaceWithExternalValues,
+                                externalValues);
+    // Replace the old operation's remaining results with the new operation's
+    // results.
+    rewriter.replaceAllUsesWith(opResultsToKeep, newOp.getResults());
+    rewriter.eraseOp(op);
     return success();
   }
 

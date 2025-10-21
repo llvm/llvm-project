@@ -1608,6 +1608,7 @@ func.func @func_execute_region_inline_multi_yield() {
 // Make scf.execute_region not to return anything.
 
 // CHECK:           scf.execute_region no_inline {
+// CHECK:             func.call @foo() : () -> ()
 // CHECK:             scf.yield
 // CHECK:           }
 
@@ -1627,11 +1628,13 @@ func.func private @execute_region_yeilding_external_value() -> memref<1x60xui8> 
 
 // Test case with scf.yield op inside execute_region with multiple operands.
 // One of operands is defined outside the execute_region op.
-// In this case scf.execute_region doesn't change.
+// Remove just this operand from the op results.
 
-// CHECK:           %[[VAL_1:.*]]:2 = scf.execute_region -> (memref<1x60xui8>, memref<1x120xui8>) no_inline {
-// CHECK:             scf.yield %{{.*}}, %{{.*}} : memref<1x60xui8>, memref<1x120xui8>
-
+// CHECK:           %[[VAL_1:.*]] = scf.execute_region -> memref<1x120xui8> no_inline {
+// CHECK:             %[[VAL_2:.*]] = memref.alloc() {alignment = 64 : i64} : memref<1x120xui8>
+// CHECK:             func.call @foo() : () -> ()
+// CHECK:             scf.yield %[[VAL_2]] : memref<1x120xui8>
+// CHECK:           }
 module {
 func.func private @foo()->()
 func.func private @execute_region_yeilding_external_and_local_values() -> (memref<1x60xui8>, memref<1x120xui8>) {

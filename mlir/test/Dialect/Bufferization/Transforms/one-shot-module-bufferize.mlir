@@ -379,6 +379,23 @@ func.func private @execute_region_test(%t1 : tensor<?xf32>)
 }
 // -----
 
+// CHECK-LABEL: func @no_inline_execute_region_not_canonicalized
+module {
+  func.func private @foo()->()
+  func.func @no_inline_execute_region_not_canonicalized() {
+    %c = arith.constant 42 : i32
+    // CHECK: scf.execute_region
+    // CHECK-SAME: no_inline
+    %v = scf.execute_region -> i32 no_inline {
+      func.call @foo():()->()
+      scf.yield %c : i32
+    }
+    // CHECK: return
+    return
+  }
+}
+// -----
+
 //      CHECK:  func private @some_external_func(memref<?xf32, strided<[?], offset: ?>>)
 func.func private @some_external_func(tensor<?xf32>)
 
