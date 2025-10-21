@@ -1444,8 +1444,8 @@ public:
 
   private:
     StringList m_commands;
-    // Use CreateStopHook to make a new empty stop hook. The SetActionFromString
-    // and fill it with commands, and SetSpecifier to set the specifier shared
+    // Use CreateStopHook to make a new empty stop hook. Use SetActionFromString
+    // to fill it with commands, and SetSpecifier to set the specifier shared
     // pointer (can be null, that will match anything.)
     StopHookCommandLine(lldb::TargetSP target_sp, lldb::user_id_t uid)
         : StopHook(target_sp, uid) {}
@@ -1519,7 +1519,7 @@ public:
   typedef std::shared_ptr<StopHook> StopHookSP;
 
   /// Add an empty stop hook to the Target's stop hook list, and returns a
-  /// shared pointer to it in new_hook.
+  /// shared pointer to the new hook.
   StopHookSP CreateStopHook(StopHook::StopHookKind kind, bool internal = false);
 
   /// If you tried to create a stop hook, and that failed, call this to
