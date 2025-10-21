@@ -3435,7 +3435,7 @@ convertMLOADToLoadWithUsedBytesMask(MemSDNode *N, SelectionDAG &DAG) {
   uint32_t ElementSizeInBytes = ElementSizeInBits / 8;
   uint32_t ElementMask = (1u << ElementSizeInBytes) - 1u;
 
-  for (SDValue Op : llvm::reverse(Mask->ops())) {
+  for (SDValue Op : reverse(Mask->ops())) {
     // We technically only want to do this shift for every
     // iteration *but* the first, but in the first iteration NewMask is 0, so
     // this shift is a no-op.
@@ -3624,8 +3624,7 @@ SDValue NVPTXTargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   // will validate alignment. Therefore, we do not need to special case handle
   // them here.
   EVT VT = Op.getValueType();
-  if (NVPTX::isPackedVectorTy(VT) &&
-      (VT != MVT::v2f32 || STI.hasF32x2Instructions())) {
+  if (NVPTX::isPackedVectorTy(VT)) {
     auto Result =
         convertMLOADToLoadWithUsedBytesMask(cast<MemSDNode>(Op.getNode()), DAG);
     MemSDNode *LD = std::get<0>(Result);
@@ -5564,7 +5563,6 @@ combineUnpackingMovIntoLoad(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     Operands.push_back(DCI.DAG.getIntPtrConstant(
         cast<LoadSDNode>(LD)->getExtensionType(), DL));
     break;
-  // TODO do we need to support MLoadV1 here?
   case NVPTXISD::LoadV2:
     OldNumOutputs = 2;
     Opcode = NVPTXISD::LoadV4;
