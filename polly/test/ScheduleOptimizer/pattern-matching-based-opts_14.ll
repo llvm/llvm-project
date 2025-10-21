@@ -12,11 +12,12 @@
 ; Check that we disable the Loop Vectorizer.
 ;
 ; CHECK: !{!"llvm.loop.vectorize.enable", i1 false}
-;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
 
-define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, ptr %A, ptr %B, ptr %C, ptr %C1) {
+@A = common global [1024 x [1024 x double]] zeroinitializer
+@B = common global [1024 x [1024 x double]] zeroinitializer
+@C = common global [1024 x [1024 x double]] zeroinitializer
+
+define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, ptr %C1) {
 entry:
   br label %entry.split
 
@@ -34,13 +35,13 @@ for.body3:                                        ; preds = %for.inc19, %for.bod
 for.body6:                                        ; preds = %for.body6, %for.body3
   %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body6 ]
   %tmp = load double, ptr %C1, align 8
-  %arrayidx9 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv43, i64 %indvars.iv
+  %arrayidx9 = getelementptr inbounds [1024 x double], ptr @A, i64 %indvars.iv43, i64 %indvars.iv
   %tmp1 = load double, ptr %arrayidx9, align 8
-  %arrayidx13 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv40
+  %arrayidx13 = getelementptr inbounds [1024 x double], ptr @B, i64 %indvars.iv, i64 %indvars.iv40
   %tmp2 = load double, ptr %arrayidx13, align 8
   %mul = fmul double %tmp1, %tmp2
   %add = fadd double %tmp, %mul
-  %arrayidx17 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv43, i64 %indvars.iv40
+  %arrayidx17 = getelementptr inbounds [1024 x double], ptr @C, i64 %indvars.iv43, i64 %indvars.iv40
   %tmp3 = load double, ptr %arrayidx17, align 8
   %add18 = fadd double %tmp3, %add
   store double %add18, ptr %arrayidx17, align 8

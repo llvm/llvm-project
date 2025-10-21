@@ -12,11 +12,12 @@
 ; when the AccMap cannot be reduced to a single disjunct.
 ;
 ; CHECK: The matrix multiplication pattern was detected
-;
-; ModuleID = 'pattern_matching_based_opts_splitmap.ll'
-;
-; Function Attrs: noinline nounwind uwtable
-define void @pattern_matching_based_opts_splitmap(ptr noalias dereferenceable(32) %C, ptr noalias dereferenceable(12544) %A, ptr noalias dereferenceable(12544) %B) {
+
+@A = common global [2 x [784 x double]] zeroinitializer
+@B = common global [784 x [2 x double]] zeroinitializer
+@C = common global [2 x [2 x double]] zeroinitializer
+
+define void @pattern_matching_based_opts_splitmap() {
 entry:
   br label %for.body
 
@@ -30,12 +31,12 @@ for.body3:                                        ; preds = %for.body, %for.inc1
 
 for.body6:                                        ; preds = %for.body3, %for.body6
   %k = phi i64 [ 0, %for.body3 ], [ %add17, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [784 x double], ptr %A, i64 %i, i64 %k
+  %arrayidx8 = getelementptr inbounds [784 x double], ptr @A, i64 %i, i64 %k
   %tmp6 = load double, ptr %arrayidx8, align 8
-  %arrayidx12 = getelementptr inbounds [2 x double], ptr %B, i64 %k, i64 %j
+  %arrayidx12 = getelementptr inbounds [2 x double], ptr @B, i64 %k, i64 %j
   %tmp10 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %tmp6, %tmp10
-  %arrayidx16 = getelementptr inbounds [2 x double], ptr %C, i64 %i, i64 %j
+  %arrayidx16 = getelementptr inbounds [2 x double], ptr @C, i64 %i, i64 %j
   %tmp14 = load double, ptr %arrayidx16, align 8
   %add = fadd double %tmp14, %mul
   store double %add, ptr %arrayidx16, align 8

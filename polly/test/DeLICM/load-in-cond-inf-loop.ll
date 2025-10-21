@@ -10,8 +10,6 @@
 ;
 ; Test case reduced from llvm.org/PR48445.
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-
 @arr_18 = external dso_local local_unnamed_addr global [0 x i16], align 2
 
 define void @func(i64 %b, ptr %c) {
@@ -60,11 +58,11 @@ for.cond.cleanup:
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [b] -> { Stmt_for_body13[i0, i1, i2] -> MemRef_c[b] };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 [b] -> { Stmt_for_body13[i0, i1, i2] -> MemRef1[] };
+; CHECK-NEXT:                 [b] -> { Stmt_for_body13[i0, i1, i2] -> MemRef2[] };
 ; CHECK-NEXT:            new: [b] -> { Stmt_for_body13[i0, i1, i2] -> MemRef_arr_18[i0] : i0 < b; Stmt_for_body13[0, i1, i2] -> MemRef_arr_18[0] : b < 0 };
 ; CHECK-NEXT:     Stmt_for_cond_cleanup6
 ; CHECK-NEXT:             ReadAccess :=       [Reduction Type: NONE] [Scalar: 1]
-; CHECK-NEXT:                 [b] -> { Stmt_for_cond_cleanup6[i0] -> MemRef1[] };
+; CHECK-NEXT:                 [b] -> { Stmt_for_cond_cleanup6[i0] -> MemRef2[] };
 ; CHECK-NEXT:            new: [b] -> { Stmt_for_cond_cleanup6[i0] -> MemRef_arr_18[i0] : i0 < b; Stmt_for_cond_cleanup6[0] -> MemRef_arr_18[0] : b < 0 };
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [b] -> { Stmt_for_cond_cleanup6[i0] -> MemRef_arr_18[i0] };

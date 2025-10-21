@@ -405,15 +405,14 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
                                   << "', AccessFn: " << *AccessFn << "\n");
     }
 
-    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
-
-    // Try to delinearize parametric-size arrays.
     if (!IsFixedSize) {
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
       llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
                         SE.getElementSize(&StoreOrLoadInst));
     }
+
+    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
     if (Subscripts.empty() || Sizes.empty() ||
         Subscripts.size() != Sizes.size()) {

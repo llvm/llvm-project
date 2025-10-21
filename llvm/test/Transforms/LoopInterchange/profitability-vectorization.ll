@@ -39,6 +39,7 @@
 ; PROFIT-VEC-NEXT: ...
 define void @f() {
 entry:
+
   br label %for.i.header
 
 for.i.header:

@@ -2,6 +2,8 @@
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s
 
+@test_array_40x40 = global [40 x [40 x float]] zeroinitializer
+
 ; Test for a bug, which caused an assert when an invalid
 ; SCEVAddRecExpr is created in addToCoefficient.
 
@@ -16,7 +18,7 @@
 ;   return res;
 ; }
 
-define float @foo(float %g, ptr %rr) nounwind {
+define float @foo(float %g) nounwind {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Src: %0 = load float, ptr %arrayidx4, align 4 --> Dst: %0 = load float, ptr %arrayidx4, align 4
 ; CHECK-NEXT:    da analyze - consistent input [S 0]!
@@ -26,6 +28,7 @@ define float @foo(float %g, ptr %rr) nounwind {
 ; CHECK-NEXT:    da analyze - none!
 ;
 entry:
+  %rr = getelementptr inbounds [40 x [40 x float]], ptr @test_array_40x40, i32 0, i32 0
   br label %for.cond1.preheader
 
 for.cond1.preheader:

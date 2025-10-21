@@ -318,6 +318,16 @@ public:
   /// Return the isl id for the base pointer.
   isl::id getBasePtrId() const;
 
+  /// Mark this array as delinearized using array_info extraction.
+  void setUsedArrayInfoDelinearization(bool Used = true) {
+    UsedArrayInfoDelinearization = Used;
+  }
+
+  /// Check if this array was delinearized using array_info extraction.
+  bool usedArrayInfoDelinearization() const {
+    return UsedArrayInfoDelinearization;
+  }
+
   /// Return what kind of memory this represents.
   MemoryKind getKind() const { return Kind; }
 
@@ -425,6 +435,9 @@ private:
 
   /// The scop this SAI object belongs to.
   Scop &S;
+
+  /// True if this array was delinearized using array_info extraction.
+  bool UsedArrayInfoDelinearization = false;
 };
 
 /// Represent memory accesses in statements.

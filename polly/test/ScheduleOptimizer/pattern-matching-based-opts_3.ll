@@ -140,11 +140,12 @@
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:        }
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:      }
 ; EXTRACTION-OF-MACRO-KERNEL-NEXT:    }
-;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
 
-define internal void @kernel_gemm(i32 %arg, i32 %arg1, i32 %arg2, double %arg3, double %arg4, ptr %arg5, ptr %arg6, ptr %arg7) #0 {
+@arg5 = common global [100 x [1056 x double]] zeroinitializer
+@arg6 = common global [100 x [1024 x double]] zeroinitializer
+@arg7 = common global [100 x [1056 x double]] zeroinitializer
+
+define internal void @kernel_gemm(double %arg3, double %arg4) {
 bb:
   br label %bb8
 
@@ -154,7 +155,7 @@ bb8:                                              ; preds = %bb29, %bb
 
 bb9:                                              ; preds = %bb26, %bb8
   %tmp10 = phi i64 [ 0, %bb8 ], [ %tmp27, %bb26 ]
-  %tmp11 = getelementptr inbounds [1056 x double], ptr %arg5, i64 %tmp, i64 %tmp10
+  %tmp11 = getelementptr inbounds [1056 x double], ptr @arg5, i64 %tmp, i64 %tmp10
   %tmp12 = load double, ptr %tmp11, align 8
   %tmp13 = fmul double %tmp12, %arg4
   store double %tmp13, ptr %tmp11, align 8
@@ -162,10 +163,10 @@ bb9:                                              ; preds = %bb26, %bb8
 
 Copy_0:                                             ; preds = %Copy_0, %bb9
   %tmp15 = phi i64 [ 0, %bb9 ], [ %tmp24, %Copy_0 ]
-  %tmp16 = getelementptr inbounds [1024 x double], ptr %arg6, i64 %tmp, i64 %tmp15
+  %tmp16 = getelementptr inbounds [1024 x double], ptr @arg6, i64 %tmp, i64 %tmp15
   %tmp17 = load double, ptr %tmp16, align 8
   %tmp18 = fmul double %tmp17, %arg3
-  %tmp19 = getelementptr inbounds [1056 x double], ptr %arg7, i64 %tmp15, i64 %tmp10
+  %tmp19 = getelementptr inbounds [1056 x double], ptr @arg7, i64 %tmp15, i64 %tmp10
   %tmp20 = load double, ptr %tmp19, align 8
   %tmp21 = fmul double %tmp18, %tmp20
   %tmp22 = load double, ptr %tmp11, align 8

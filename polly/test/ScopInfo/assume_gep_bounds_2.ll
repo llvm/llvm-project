@@ -1,8 +1,8 @@
 ; RUN: opt %loadNPMPolly -aa-pipeline=basic-aa '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 \
 ; RUN:  -polly-precise-inbounds | FileCheck %s
 ;
-;    void foo(float A[restrict][20], float B[restrict][20], long n, long m,
-;             long p) {
+;    float A[10][20], B[10][20];
+;    void foo(long n, long m, long p) {
 ;      for (long i = 0; i < n; i++)
 ;        for (long j = 0; j < m; j++)
 ;          A[i][j] = i + j;
@@ -19,9 +19,10 @@
 ; CHECK:      Assumed Context:
 ; CHECK-NEXT: [n, m, p] -> {  : p <= 20 and (n <= 0 or (n > 0 and m <= 20)) }
 
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+@A = common global [10 x [20 x float]] zeroinitializer
+@B = common global [10 x [20 x float]] zeroinitializer
 
-define void @foo(ptr noalias %A, ptr noalias %B, i64 %n, i64 %m, i64 %p) {
+define void @foo(i64 %n, i64 %m, i64 %p) {
 entry:
   br label %for.cond
 
@@ -41,7 +42,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 for.body3:                                        ; preds = %for.cond1
   %add = add nsw i64 %i.0, %j.0
   %conv = sitofp i64 %add to float
-  %arrayidx4 = getelementptr inbounds [20 x float], ptr %A, i64 %i.0, i64 %j.0
+  %arrayidx4 = getelementptr inbounds [20 x float], ptr @A, i64 %i.0, i64 %j.0
   store float %conv, ptr %arrayidx4, align 4
   br label %for.inc
 
@@ -75,7 +76,7 @@ for.cond14:                                       ; preds = %for.inc22, %for.bod
 for.body17:                                       ; preds = %for.cond14
   %add18 = add nsw i64 %i8.0, %j13.0
   %conv19 = sitofp i64 %add18 to float
-  %arrayidx21 = getelementptr inbounds [20 x float], ptr %B, i64 %i8.0, i64 %j13.0
+  %arrayidx21 = getelementptr inbounds [20 x float], ptr @B, i64 %i8.0, i64 %j13.0
   store float %conv19, ptr %arrayidx21, align 4
   br label %for.inc22
 

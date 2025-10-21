@@ -20,10 +20,11 @@
 ; CHECK: The tensor contraction pattern was detected
 ; CHECK: The matrix multiplication pattern was detected
 ;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-unknown"
 
-define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %A, ptr %B, ptr %C) {
+@B = common global [1024 x [1024 x double]] zeroinitializer
+@C = common global [1024 x [1024 x double]] zeroinitializer
+
+define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %A) {
 entry:
   br label %entry.split
 
@@ -40,10 +41,10 @@ for.cond4.preheader:                              ; preds = %for.inc13, %for.con
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv32
+  %arrayidx8 = getelementptr inbounds [1024 x double], ptr @B, i64 %indvars.iv, i64 %indvars.iv32
   %tmp = load double, ptr %arrayidx8, align 8
   %mul = fmul double %tmp, %A
-  %arrayidx12 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv35, i64 %indvars.iv32
+  %arrayidx12 = getelementptr inbounds [1024 x double], ptr @C, i64 %indvars.iv35, i64 %indvars.iv32
   %tmp1 = load double, ptr %arrayidx12, align 8
   %add = fadd double %tmp1, %mul
   store double %add, ptr %arrayidx12, align 8

@@ -20,7 +20,6 @@
 ;        A[i] += I[(signed char)(c + (unsigned char)1)];
 ;    }
 ;
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @GI = common global [256 x i32] zeroinitializer, align 16
 

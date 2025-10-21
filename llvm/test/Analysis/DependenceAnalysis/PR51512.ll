@@ -10,7 +10,7 @@ define void @foo() {
 ; CHECK-NEXT:  Src: store i32 42, ptr %getelementptr, align 1 --> Dst: store i32 42, ptr %getelementptr, align 1
 ; CHECK-NEXT:    da analyze - consistent output [0 S]!
 ; CHECK-NEXT:  Src: store i32 42, ptr %getelementptr, align 1 --> Dst: store i32 0, ptr %getelementptr5, align 1
-; CHECK-NEXT:    da analyze - output [0 *|<]!
+; CHECK-NEXT:    da analyze - output [0 <=|<]!
 ; CHECK-NEXT:  Src: store i32 0, ptr %getelementptr5, align 1 --> Dst: store i32 0, ptr %getelementptr5, align 1
 ; CHECK-NEXT:    da analyze - none!
 ;

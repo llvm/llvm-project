@@ -112,6 +112,13 @@ void delinearize(ScalarEvolution &SE, const SCEV *Expr,
                  SmallVectorImpl<const SCEV *> &Subscripts,
                  SmallVectorImpl<const SCEV *> &Sizes, const SCEV *ElementSize);
 
+/// Same as delinearize.  TODO: only use delinearize() instead of other internal
+/// functions.
+bool delinearizeUsingArrayInfo(ScalarEvolution &SE, const SCEV *AccessFn,
+                               SmallVectorImpl<const SCEV *> &Subscripts,
+                               SmallVectorImpl<const SCEV *> &Sizes,
+                               const SCEV *ElementSize);
+
 /// Compute the dimensions of fixed size array from \Expr and save the results
 /// in \p Sizes.
 bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
@@ -154,6 +161,17 @@ bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                 const GetElementPtrInst *GEP,
                                 SmallVectorImpl<const SCEV *> &Subscripts,
                                 SmallVectorImpl<int> &Sizes);
+
+/// Compute access functions for each subscript in a delinearized array access.
+void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
+                            SmallVectorImpl<const SCEV *> &Subscripts,
+                            SmallVectorImpl<const SCEV *> &Sizes,
+                            const SCEV *ElementSize);
+
+/// Backward compatibility wrapper for computeAccessFunctions.
+void computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
+                            SmallVectorImpl<const SCEV *> &Subscripts,
+                            SmallVectorImpl<const SCEV *> &Sizes);
 
 /// Implementation of fixed size array delinearization. Try to delinearize
 /// access function for a fixed size multi-dimensional array, by deriving
