@@ -29,6 +29,8 @@ namespace llvm {
 /// an assertion.
 template <typename T, unsigned BitNum, typename BitVectorTy = BitVector>
 class PackedVector {
+  static_assert(BitNum > 0, "BitNum must be > 0");
+
   BitVectorTy Bits;
   // Keep track of the number of elements on our own.
   // We always maintain Bits.size() == NumElements * BitNum.
@@ -132,9 +134,6 @@ public:
   const BitVectorTy &raw_bits() const { return Bits; }
   BitVectorTy &raw_bits() { return Bits; }
 };
-
-// Leave BitNum=0 undefined.
-template <typename T> class PackedVector<T, 0>;
 
 } // end namespace llvm
 

@@ -39,10 +39,12 @@ static_assert(__builtin_infer_alloc_token(sizeof(NoPtr)) == 7465259095297095368U
 static_assert(__builtin_infer_alloc_token(sizeof(WithPtr)) == 11898882936532569145ULL);
 #endif
 
+// Template function.
 template <typename T>
-constexpr unsigned long long get_token() {
+constexpr unsigned long get_token() {
   return __builtin_infer_alloc_token(sizeof(T));
 }
+static_assert(__builtin_infer_alloc_token(sizeof(int)) == get_token<int>());
 
 // Test complex expressions.
 static_assert(__builtin_constant_p(__builtin_infer_alloc_token(sizeof(int))));
@@ -50,9 +52,28 @@ static_assert(__builtin_infer_alloc_token(sizeof(NoPtr) * 2, 1) == get_token<NoP
 static_assert(__builtin_infer_alloc_token(1, 4 + sizeof(NoPtr)) == get_token<NoPtr>());
 static_assert(__builtin_infer_alloc_token(sizeof(NoPtr) << 8) == get_token<NoPtr>());
 
+// Test usable as a template param.
+template <unsigned long ID, typename T>
+struct token_for_type {
+  static_assert(ID == get_token<T>());
+  static constexpr unsigned long value = ID;
+};
+static_assert(token_for_type<__builtin_infer_alloc_token(sizeof(int)), int>::value == get_token<int>());
+
+template <typename T = void>
+void template_test() {
+  __builtin_infer_alloc_token(T()); // no error if not instantiated
+}
+
+template <typename T>
+void negative_template_test() {
+  __builtin_infer_alloc_token(T()); // expected-error {{argument may not have 'void' type}}
+}
+
 void negative_tests() {
   __builtin_infer_alloc_token(); // expected-error {{too few arguments to function call}}
   __builtin_infer_alloc_token((void)0); // expected-error {{argument may not have 'void' type}}
+  negative_template_test<void>(); // expected-note {{in instantiation of function template specialization 'negative_template_test<void>' requested here}}
   constexpr auto inference_fail = __builtin_infer_alloc_token(123); // expected-error {{must be initialized by a constant expression}} \
                                                                     // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
 }
