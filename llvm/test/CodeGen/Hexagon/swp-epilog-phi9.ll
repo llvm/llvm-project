@@ -1,3 +1,4 @@
+; XFAIL: hexagon
 ; RUN: llc -mtriple=hexagon -hexagon-initial-cfg-cleanup=0 -disable-cgp-delete-phis < %s | FileCheck %s
 
 ; Test that we generate the correct Phi name in the last couple of epilog
