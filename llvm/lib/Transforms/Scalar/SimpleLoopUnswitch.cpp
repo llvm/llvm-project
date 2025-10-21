@@ -3195,10 +3195,15 @@ injectPendingInvariantConditions(NonTrivialUnswitchCandidate Candidate, Loop &L,
   Builder.SetInsertPoint(TI);
   auto *InvariantBr =
       Builder.CreateCondBr(InjectedCond, InLoopSucc, CheckBlock);
+  // We don't know anything about the relation between the limits.
+  setExplicitlyUnknownBranchWeightsIfProfiled(
+      *InvariantBr, *InvariantBr->getParent()->getParent(), DEBUG_TYPE);
 
   Builder.SetInsertPoint(CheckBlock);
-  Builder.CreateCondBr(TI->getCondition(), TI->getSuccessor(0),
-                       TI->getSuccessor(1));
+  Builder.CreateCondBr(
+      TI->getCondition(), TI->getSuccessor(0), TI->getSuccessor(1),
+      !ProfcheckDisableMetadataFixes ? TI->getMetadata(LLVMContext::MD_prof)
+                                     : nullptr);
   TI->eraseFromParent();
 
   // Fixup phis.
