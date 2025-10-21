@@ -943,7 +943,6 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
-namespace {
 /// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
 /// Returns an optional pair, where the first element indicates whether it is
 /// an intrinsic ID.
@@ -966,7 +965,6 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       })
       .Default([](auto *) { return std::nullopt; });
 }
-} // namespace
 
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr Value for a handled opcode or intrinsic ID if corresponding \p
