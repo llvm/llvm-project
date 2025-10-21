@@ -2707,7 +2707,19 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   if (!ctx.bitcodeFiles.empty())
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
 
-  ltoObjectFiles = lto->compile();
+  llvm::Triple tt(ctx.bitcodeFiles.front()->obj->getTargetTriple());
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<const char *> bitcodeLibFuncs;
+  for (const char *libFunc : lto::LTO::getLibFuncSymbols(tt, saver)) {
+    Symbol *sym = ctx.symtab->find(libFunc);
+    if (!sym)
+      continue;
+    if (isa<BitcodeFile>(sym->file))
+      bitcodeLibFuncs.push_back(libFunc);
+  }
+
+  ltoObjectFiles = lto->compile(bitcodeLibFuncs);
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);

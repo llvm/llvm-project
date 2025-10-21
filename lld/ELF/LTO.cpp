@@ -234,6 +234,8 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     const lto::InputFile::Symbol &objSym = objSyms[i];
     lto::SymbolResolution &r = resols[i];
 
+    dbgs() << sym->
+
     // Ideally we shouldn't check for SF_Undefined but currently IRObjectFile
     // reports two symbols for module ASM defined. Without this check, lld
     // flags an undefined in IR with a definition in ASM as prevailing.
@@ -310,7 +312,8 @@ static void thinLTOCreateEmptyIndexFiles(Ctx &ctx) {
 
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile(s).
-SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
+SmallVector<std::unique_ptr<InputFile>, 0>
+BitcodeCompiler::compile(const SmallVector<const char *> &bitcodeLibfuncs) {
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
