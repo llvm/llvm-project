@@ -20,7 +20,6 @@
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -151,6 +150,7 @@ enum class PGOMapFeaturesEnum {
   FuncEntryCount,
   BBFreq,
   BrProb,
+  PropellerCFG,
   All,
 };
 static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
@@ -162,16 +162,12 @@ static cl::bits<PGOMapFeaturesEnum> PgoAnalysisMapFeatures(
         clEnumValN(PGOMapFeaturesEnum::BBFreq, "bb-freq",
                    "Basic Block Frequency"),
         clEnumValN(PGOMapFeaturesEnum::BrProb, "br-prob", "Branch Probability"),
+        clEnumValN(PGOMapFeaturesEnum::PropellerCFG, "propeller-cfg",
+                   "Propeller CFG"),
         clEnumValN(PGOMapFeaturesEnum::All, "all", "Enable all options")),
     cl::desc(
         "Enable extended information within the SHT_LLVM_BB_ADDR_MAP that is "
         "extracted from PGO related analysis."));
-
-static cl::opt<bool> PgoAnalysisMapUsePropellerCfg(
-    "pgo-analysis-map-use-propeller-cfg",
-    cl::desc(
-        "If available, use the Propeller cfg profile in the PGO analysis map."),
-    cl::Hidden, cl::init(false));
 
 static cl::opt<bool> BBAddrMapSkipEmitBBEntries(
     "basic-block-address-map-skip-bb-entries",
@@ -1419,7 +1415,7 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 
 static llvm::object::BBAddrMap::Features
 getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
-                    bool HasCalls) {
+                    bool HasCalls, const CFGProfile *FuncCFGProfile) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1441,17 +1437,33 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
   bool BrProbEnabled =
       AllFeatures ||
       (!NoFeatures && PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::BrProb));
+  bool PropellerCFGEnabled =
+      FuncCFGProfile &&
+      (AllFeatures ||
+       (!NoFeatures &&
+        PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::PropellerCFG)));
 
   if ((BBFreqEnabled || BrProbEnabled) && BBAddrMapSkipEmitBBEntries) {
     MF.getFunction().getContext().emitError(
-        "BB entries info is required for BBFreq and BrProb "
-        "features");
+        "BB entries info is required for BBFreq and BrProb features");
   }
+<<<<<<< HEAD
   return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
           static_cast<bool>(EmitBBHash), false};
+=======
+
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
+          MF.hasBBSections() && NumMBBSectionRanges > 1,
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          HasCalls,
+          false,
+          PropellerCFGEnabled};
+>>>>>>> 7e89984eb0b3 (Emit the Propeller CFG frequencies.)
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1459,6 +1471,14 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
   bool HasCalls = !CurrentFnCallsiteEndSymbols.empty();
+
+  const BasicBlockSectionsProfileReader *BBSPR = nullptr;
+  if (auto *BBSPRPass =
+          getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>())
+    BBSPR = &BBSPRPass->getBBSPR();
+  const CFGProfile *FuncCFGProfile = nullptr;
+  if (BBSPR)
+    FuncCFGProfile = BBSPR->getFunctionCFGProfile(MF.getFunction().getName());
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
 
@@ -1468,7 +1488,8 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
+  auto Features =
+      getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls, FuncCFGProfile);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1552,16 +1573,12 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     assert(BBAddrMapVersion >= 2 &&
            "PGOAnalysisMap only supports version 2 or later");
 
-    // We will emit the BBSPR profile data if requested and availale. Otherwise,
-    // we fall back to MBFI and MBPI.
-    const CfgProfile *FuncCfgProfile = nullptr;
-    if (PgoAnalysisMapUsePropellerCfg) {
-      if (auto *BBSPR = getAnalysisIfAvailable<
-              BasicBlockSectionsProfileReaderWrapperPass>())
-        FuncCfgProfile =
-            BBSPR->getFunctionCfgProfile(MF.getFunction().getName());
+    if (Features.FuncEntryCount) {
+      OutStreamer->AddComment("function entry count");
+      auto MaybeEntryCount = MF.getFunction().getEntryCount();
+      OutStreamer->emitULEB128IntValue(
+          MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
     }
-
     const MachineBlockFrequencyInfo *MBFI =
         Features.BBFreq
             ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
@@ -1571,43 +1588,33 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
             ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
             : nullptr;
 
-    if (Features.FuncEntryCount) {
-      OutStreamer->AddComment("function entry count");
-      uint64_t EntryCount = 0;
-      if (FuncCfgProfile) {
-        EntryCount = FuncCfgProfile->getNodeCount(*MF.front().getBBID());
-      } else {
-        auto MaybeEntryCount = MF.getFunction().getEntryCount();
-        EntryCount = MaybeEntryCount ? MaybeEntryCount->getCount() : 0;
-      }
-      OutStreamer->emitULEB128IntValue(EntryCount);
-    }
-
     if (Features.BBFreq || Features.BrProb) {
       for (const MachineBasicBlock &MBB : MF) {
-
         if (Features.BBFreq) {
           OutStreamer->AddComment("basic block frequency");
-          uint64_t BlockFrequency =
-              FuncCfgProfile ? FuncCfgProfile->getNodeCount(*MBB.getBBID())
-                             : MBFI->getBlockFreq(&MBB).getFrequency();
-          OutStreamer->emitULEB128IntValue(BlockFrequency);
+          OutStreamer->emitULEB128IntValue(
+              MBFI->getBlockFreq(&MBB).getFrequency());
+          if (Features.PropellerCFG) {
+            OutStreamer->AddComment("basic block frequency (propeller)");
+            OutStreamer->emitULEB128IntValue(
+                FuncCFGProfile->getBlockCount(*MBB.getBBID()));
+          }
         }
         if (Features.BrProb) {
+          unsigned SuccCount = MBB.succ_size();
           OutStreamer->AddComment("basic block successor count");
-          OutStreamer->emitULEB128IntValue(MBB.succ_size());
+          OutStreamer->emitULEB128IntValue(SuccCount);
           for (const MachineBasicBlock *SuccMBB : MBB.successors()) {
             OutStreamer->AddComment("successor BB ID");
             OutStreamer->emitULEB128IntValue(SuccMBB->getBBID()->BaseID);
             OutStreamer->AddComment("successor branch probability");
-            // For MPBI, we emit the numerator of the probability. For BBSPR, we
-            // emit the raw edge count.
-            uint64_t EdgeFrequency =
-                FuncCfgProfile
-                    ? FuncCfgProfile->getEdgeCount(*MBB.getBBID(),
-                                                   *SuccMBB->getBBID())
-                    : MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator();
-            OutStreamer->emitULEB128IntValue(EdgeFrequency);
+            OutStreamer->emitULEB128IntValue(
+                MBPI->getEdgeProbability(&MBB, SuccMBB).getNumerator());
+            if (Features.PropellerCFG) {
+              OutStreamer->AddComment("successor branch frequency (propeller)");
+              OutStreamer->emitULEB128IntValue(FuncCFGProfile->getEdgeCount(
+                  *MBB.getBBID(), *SuccMBB->getBBID()));
+            }
           }
         }
       }
