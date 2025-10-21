@@ -2560,6 +2560,9 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   }
 
   bool SeenLoc = false;
+  bool SeenTargetMemLoc0 = false;
+  bool SeenTargetMemLoc1 = false;
+  bool SeenInaccessibleMemLoc = false;
   do {
     std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
     if (Loc) {
@@ -2592,8 +2595,28 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
       ME = MemoryEffects(*MR);
     }
 
-    if (EatIfPresent(lltok::rparen))
+    SeenTargetMemLoc0 =
+        Loc == IRMemLocation::TargetMem0 ? true : SeenTargetMemLoc0;
+    SeenTargetMemLoc1 =
+        Loc == IRMemLocation::TargetMem1 ? true : SeenTargetMemLoc1;
+    SeenInaccessibleMemLoc =
+        Loc == IRMemLocation::InaccessibleMem ? true : SeenInaccessibleMemLoc;
+
+    if (EatIfPresent(lltok::rparen)) {
+      if (SeenInaccessibleMemLoc) {
+        // Set target memory as inaccessible memory, but only if not already
+        // set. Parser only prints target memory if it is different from
+        // inacessiblemem or different from the default none
+        ModRefInfo InaccessibleMR =
+            ME.getModRef(IRMemLocation::InaccessibleMem);
+        if (!SeenTargetMemLoc0)
+          ME = ME.getWithModRef(IRMemLocation::TargetMem0, InaccessibleMR);
+        if (!SeenTargetMemLoc1)
+          ME = ME.getWithModRef(IRMemLocation::TargetMem1, InaccessibleMR);
+      }
       return ME;
+    }
+
   } while (EatIfPresent(lltok::comma));
 
   tokError("unterminated memory attribute");

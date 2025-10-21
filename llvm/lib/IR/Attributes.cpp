@@ -638,12 +638,16 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
     for (auto Loc : MemoryEffects::locations()) {
       ModRefInfo MR = ME.getModRef(Loc);
-      if (MR == OtherMR)
+      // Skip target memory location
+      if (MR == OtherMR && !ME.isTargetMemLoc(Loc))
         continue;
 
-      // Only prints Target Location if InaccessibleMem and Target_MemX
-      // ModRefInfo is different. Otherwise skpit Target_Mem print
-      if (ME.isTargetMemLoc(Loc) && MR == InaccessibleMemMR)
+      // Prints Target Memory Location if ModRefInfo from InaccessibleMem
+      // differs from Target_MemX
+      // or ModRefInfo from Target Memory Location is NoModRef as OtherMR
+      // Otherwise skip Target_Mem print
+      if ((ME.isTargetMemLoc(Loc) && MR == InaccessibleMemMR) ||
+          (MR == OtherMR && OtherMR == ModRefInfo::NoModRef))
         continue;
 
       if (!First)
