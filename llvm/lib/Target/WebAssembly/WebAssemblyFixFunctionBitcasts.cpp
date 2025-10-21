@@ -167,8 +167,6 @@ static Function *createWrapper(Function *F, FunctionType *Ty) {
 
     CallInst *Call = Builder.CreateCall(F, Args);
 
-    Type *ExpectedRtnType = F->getFunctionType()->getReturnType();
-    Type *RtnType = Ty->getReturnType();
     // Determine what value to return.
     if (RtnType->isVoidTy()) {
       Builder.CreateRetVoid();
