@@ -4456,6 +4456,10 @@ public:
       NamedDecl *New, Decl *Old,
       AvailabilityMergeKind AMK = AvailabilityMergeKind::Redeclaration);
 
+  /// CheckAttributesOnDeducedType - Calls Sema functions for attributes that
+  /// requires the type to be deduced.
+  void CheckAttributesOnDeducedType(Expr *E, Decl *D);
+
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
   /// how to resolve this situation, merging decls or emitting
@@ -15468,6 +15472,8 @@ public:
   /// optional on error.
   std::optional<FunctionEffectMode>
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
+
+  void ActOnCleanupAttr(Expr *E, Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

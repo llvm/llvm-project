@@ -3355,6 +3355,21 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
+void Sema::CheckAttributesOnDeducedType(Expr *E, Decl *D) {
+  if (!D->hasAttrs())
+    return;
+
+  for (const Attr *A : D->getAttrs()) {
+    switch (A->getKind()) {
+    case attr::Cleanup:
+      ActOnCleanupAttr(E, D, A);
+      break;
+    default:
+      continue;
+    }
+  }
+}
+
 // Returns the number of added attributes.
 template <class T>
 static unsigned propagateAttribute(ParmVarDecl *To, const ParmVarDecl *From,
@@ -13809,6 +13824,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
   }
 
+  this->CheckAttributesOnDeducedType(Init, RealDecl);
+
   // dllimport cannot be used on variable definitions.
   if (VDecl->hasAttr<DLLImportAttr>() && !VDecl->isStaticDataMember()) {
     Diag(VDecl->getLocation(), diag::err_attribute_dllimport_data_definition);
@@ -14599,6 +14616,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInit(RecoveryExpr.get());
     }
 
+    this->CheckAttributesOnDeducedType(Init.get(), RealDecl);
     CheckCompleteVariableDeclaration(Var);
   }
 }
