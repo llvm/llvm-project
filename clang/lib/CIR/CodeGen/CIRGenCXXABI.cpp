@@ -37,6 +37,10 @@ CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
                                 addedArgs.suffix.size());
 }
 
+CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
+  return CatchTypeInfo{{}, 0};
+}
+
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                   FunctionArgList &params) {
   const auto *md = cast<CXXMethodDecl>(cgf.curGD.getDecl());
