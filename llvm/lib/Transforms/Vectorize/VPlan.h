@@ -3912,21 +3912,28 @@ public:
 };
 
 /// Track information about the canonical IV value of a region.
-struct VPCanonicalIVInfo {
-  VPRegionValue *CanIV = nullptr;
+class VPCanonicalIVInfo {
+  /// VPRegionValue for the canonical IV. The allocation is managed by
+  /// VPCanonicalIVInfo.
+  std::unique_ptr<VPRegionValue> CanIV;
   Type *Ty = nullptr;
   bool HasNUW = true;
   DebugLoc DL = DebugLoc::getUnknown();
 
-  VPCanonicalIVInfo(VPRegionValue *CanIV, Type *Ty, bool HasNUW, DebugLoc DL)
-      : CanIV(CanIV), Ty(Ty), HasNUW(HasNUW), DL(DL) {}
+public:
+  VPCanonicalIVInfo(Type *Ty, DebugLoc DL, bool HasNUW = true)
+      : CanIV(std::make_unique<VPRegionValue>()), Ty(Ty), HasNUW(HasNUW),
+        DL(DL) {}
 
-  VPCanonicalIVInfo() {}
-
-  ~VPCanonicalIVInfo() {
-    if (CanIV)
-      delete CanIV;
+  VPCanonicalIVInfo *clone() const {
+    return new VPCanonicalIVInfo(Ty, DL, HasNUW);
   }
+
+  VPRegionValue *getVPValue() { return CanIV.get(); }
+  Type *getType() const { return Ty; }
+  DebugLoc getDebugLoc() const { return DL; }
+  bool hasNUW() const { return HasNUW; }
+  void clearNUW() { HasNUW = false; }
 };
 
 /// VPRegionBlock represents a collection of VPBasicBlocks and VPRegionBlocks
@@ -3947,38 +3954,33 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   /// VPRegionBlock.
   VPBlockBase *Exiting;
 
-  /// Canonical IV of the loop region. If CanIV is nullptr, the region is a
-  /// replicating region.
-  VPCanonicalIVInfo CanIVInfo;
+  /// Holds the Canonical IV of the loop region along with additional
+  /// information. If CanIV is nullptr, the region is a replicating region.
+  VPCanonicalIVInfo *CanIVInfo = nullptr;
 
   /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "")
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
-        CanIVInfo() {
-    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
-    Entry->setParent(this);
-    Exiting->setParent(this);
+      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting) {
+    if (Entry) {
+      assert(Entry->getPredecessors().empty() &&
+             "Entry block has predecessors.");
+      Entry->setParent(this);
+    }
+    if (Exiting) {
+      assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
+      Exiting->setParent(this);
+    }
   }
 
-  VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                const VPCanonicalIVInfo &CanIVInfo,
-                const std::string &Name = "")
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting),
-        CanIVInfo(CanIVInfo) {
-    assert(Entry->getPredecessors().empty() && "Entry block has predecessors.");
-    assert(Exiting->getSuccessors().empty() && "Exit block has successors.");
-    Entry->setParent(this);
-    Exiting->setParent(this);
+  VPRegionBlock(Type *CanIVTy, DebugLoc DL, VPBlockBase *Entry,
+                VPBlockBase *Exiting, const std::string &Name = "")
+      : VPRegionBlock(Entry, Exiting, Name) {
+    CanIVInfo = new VPCanonicalIVInfo(CanIVTy, DL);
   }
-
-  VPRegionBlock(Type *CanIVTy, DebugLoc DL, const std::string &Name = "")
-      : VPBlockBase(VPRegionBlockSC, Name), Entry(nullptr), Exiting(nullptr),
-        CanIVInfo(new VPRegionValue(), CanIVTy, true, DL) {}
 
 public:
-  ~VPRegionBlock() override {}
+  ~VPRegionBlock() override { delete CanIVInfo; }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPBlockBase *V) {
@@ -4017,7 +4019,7 @@ public:
 
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
-  bool isReplicator() const { return !getCanonicalIV(); }
+  bool isReplicator() const { return !CanIVInfo; }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPRegionBlock, thereby "executing" the VPlan.
@@ -4046,15 +4048,23 @@ public:
   /// its entry, and its exiting block to its successor.
   void dissolveToCFGLoop();
 
+  /// Get the canonical IV increment instruction. If the exiting terminator
+  /// is a BranchOnCount with an IV increment, return it. Otherwise, create
+  /// a new IV increment and return it.
+  VPInstruction *getCanonicalIVIncrement();
+
   /// Return the canonical induction variable of the region, null for
   /// replicating regions.
-  VPValue *getCanonicalIV() { return CanIVInfo.CanIV; }
-  const VPValue *getCanonicalIV() const { return CanIVInfo.CanIV; }
+  VPValue *getCanonicalIV() { return CanIVInfo->getVPValue(); }
+  const VPValue *getCanonicalIV() const { return CanIVInfo->getVPValue(); }
 
-  Type *getCanonicalIVType() { return CanIVInfo.Ty; }
-  const Type *getCanonicalIVType() const { return CanIVInfo.Ty; }
+  Type *getCanonicalIVType() const { return CanIVInfo->getType(); }
 
-  VPCanonicalIVInfo &getCanonicalIVInfo() { return CanIVInfo; }
+  const VPCanonicalIVInfo &getCanonicalIVInfo() const { return *CanIVInfo; }
+
+  DebugLoc getCanonicalIVDebugLoc() const { return CanIVInfo->getDebugLoc(); }
+  bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
+  void clearCanonicalIVNUW() { CanIVInfo->clearNUW(); }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {
@@ -4376,12 +4386,6 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  /// Returns the canonical induction VPValue of the vector loop.
-  VPValue *getCanonicalIV() { return getVectorLoopRegion()->getCanonicalIV(); }
-  VPCanonicalIVInfo &getCanonicalIVInfo() {
-    return getVectorLoopRegion()->getCanonicalIVInfo();
-  }
-
   VPValue *getSCEVExpansion(const SCEV *S) const {
     return SCEVToExpansion.lookup(S);
   }
@@ -4408,19 +4412,19 @@ public:
   /// Create a new replicate VPRegionBlock with \p Entry, \p Exiting and \p
   /// Name. The returned block is owned by the VPlan and deleted once the VPlan
   /// is destroyed.
-  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                     const std::string &Name = "") {
+  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                       const std::string &Name = "") {
     auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p StartV and \p Name, and entry and
-  /// exiting blocks set to nullptr. The returned block is owned by the VPlan
-  /// and deleted once the VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(Type *CanIVTy, DebugLoc DL,
-                                     const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(CanIVTy, DL, Name);
+  /// Create a new loop VPRegionBlock with canonical IV information and \p Name,
+  /// with entry and exiting blocks set to nullptr. The returned block is owned
+  /// by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(Type *CanIVTy, DebugLoc DL,
+                                  const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(CanIVTy, DL, nullptr, nullptr, Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

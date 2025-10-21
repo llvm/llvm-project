@@ -769,16 +769,12 @@ static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry) {
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = cloneFrom(getEntry());
   auto *NewRegion =
-      getPlan()->createVPRegionBlock(NewEntry, NewExiting, getName());
+      getPlan()->createReplicateRegion(NewEntry, NewExiting, getName());
   for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
     Block->setParent(NewRegion);
 
-  if (CanIVInfo.CanIV) {
-    NewRegion->CanIVInfo.CanIV = new VPRegionValue();
-    NewRegion->CanIVInfo.Ty = CanIVInfo.Ty;
-    NewRegion->CanIVInfo.HasNUW = CanIVInfo.HasNUW;
-    NewRegion->CanIVInfo.DL = CanIVInfo.DL;
-  }
+  if (CanIVInfo)
+    NewRegion->CanIVInfo = CanIVInfo->clone();
 
   return NewRegion;
 }
@@ -864,9 +860,9 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
   auto NewIndent = Indent + "  ";
-  if (auto *CanIV = getCanonicalIV()) {
+  if (!isReplicator()) {
     O << '\n';
-    CanIV->print(O, SlotTracker);
+    getCanonicalIV()->print(O, SlotTracker);
     O << " = CANONICAL-IV\n";
   }
   for (auto *BlockBase : vp_depth_first_shallow(Entry)) {
@@ -884,30 +880,23 @@ void VPRegionBlock::dissolveToCFGLoop() {
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPValue *CanIV = getCanonicalIV();
   if (CanIV && CanIV->getNumUsers() > 0) {
-    auto *ExitingTerm = ExitingLatch->getTerminator();
-    VPInstruction *CanIVInc = nullptr;
-    // Check if there's a canonical IV increment via an existing terminator.
-    if (match(ExitingTerm,
-              m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
-      assert(match(CanIVInc,
-                   m_Add(m_CombineOr(m_Specific(CanIV),
-                                     m_Add(m_Specific(CanIV), m_LiveIn())),
-                         m_VPValue())) &&
-             "invalid existing IV increment");
-    }
     VPlan &Plan = *getPlan();
+    VPInstruction *CanIVInc = getCanonicalIVIncrement();
+    // If the increment doesn't exist yet, create it.
     if (!CanIVInc) {
-      CanIVInc = VPBuilder(ExitingTerm)
-                     .createOverflowingOp(
-                         Instruction::Add, {CanIV, &Plan.getVFxUF()},
-                         {CanIVInfo.HasNUW, false}, CanIVInfo.DL, "index.next");
+      auto *ExitingTerm = ExitingLatch->getTerminator();
+      CanIVInc =
+          VPBuilder(ExitingTerm)
+              .createOverflowingOp(Instruction::Add, {CanIV, &Plan.getVFxUF()},
+                                   {CanIVInfo->hasNUW(), /* HasNSW */ false},
+                                   CanIVInfo->getDebugLoc(), "index.next");
     }
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
             .createScalarPhi(
-                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo.Ty, 0)),
+                {Plan.getOrAddLiveIn(ConstantInt::get(CanIVInfo->getType(), 0)),
                  CanIVInc},
-                CanIVInfo.DL, "index");
+                CanIVInfo->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
   }
 
@@ -922,6 +911,24 @@ void VPRegionBlock::dissolveToCFGLoop() {
   VPBlockUtils::connectBlocks(Preheader, Header);
   VPBlockUtils::connectBlocks(ExitingLatch, Middle);
   VPBlockUtils::connectBlocks(ExitingLatch, Header);
+}
+
+VPInstruction *VPRegionBlock::getCanonicalIVIncrement() {
+  auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
+  VPValue *CanIV = getCanonicalIV();
+  assert(CanIV && "Expected a canonical IV");
+
+  auto *ExitingTerm = ExitingLatch->getTerminator();
+  VPInstruction *CanIVInc = nullptr;
+  if (match(ExitingTerm,
+            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
+    assert(match(CanIVInc,
+                 m_c_Add(m_CombineOr(m_Specific(CanIV),
+                                     m_c_Add(m_Specific(CanIV), m_LiveIn())),
+                         m_VPValue())) &&
+           "invalid existing IV increment");
+  }
+  return CanIVInc;
 }
 
 VPlan::VPlan(Loop *L) {
@@ -948,8 +955,9 @@ VPlan::~VPlan() {
         for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
           R.setOperand(I, &DummyValue);
       }
-    } else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV()) {
-      CanIV->replaceAllUsesWith(&DummyValue);
+    } else if (!cast<VPRegionBlock>(VPB)->isReplicator()) {
+      cast<VPRegionBlock>(VPB)->getCanonicalIV()->replaceAllUsesWith(
+          &DummyValue);
     }
 
     delete VPB;
@@ -1558,8 +1566,8 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   for (const VPBlockBase *VPB : RPOT) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB))
       assignNames(VPBB);
-    else if (auto *CanIV = cast<VPRegionBlock>(VPB)->getCanonicalIV())
-      assignName(CanIV);
+    else if (!cast<VPRegionBlock>(VPB)->isReplicator())
+      assignName(cast<VPRegionBlock>(VPB)->getCanonicalIV());
   }
 }
 

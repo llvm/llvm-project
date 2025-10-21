@@ -402,45 +402,22 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
   assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
+  VPPhi *ScalarCanIV = nullptr;
+  Type *CanIVTy = nullptr;
+  DebugLoc DL = DebugLoc::getCompilerGenerated();
+  // Get type info and debug location from the scalar phi corresponding to the
+  // canonical IV for outermost loops.
+  if (PreheaderVPBB->getSinglePredecessor() == Plan.getEntry()) {
+    ScalarCanIV = cast<VPPhi>(&*cast<VPBasicBlock>(HeaderVPB)->begin());
+    CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+    DL = ScalarCanIV->getDebugLoc();
+  }
+
   // Create an empty region first and insert it between PreheaderVPBB and
   // LatchExitVPB, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
-  VPPhi *ScalarCanIV = nullptr;
-  if (PreheaderVPBB->getSinglePredecessor() == Plan.getEntry())
-    ScalarCanIV = cast<VPPhi>(&*cast<VPBasicBlock>(HeaderVPB)->begin());
-
-  // Get the canonical IV type. For the top-level loop, use the ScalarCanIV.
-  // For nested loops, find any VPPhi with a LiveIn integer operand to get the type.
-  Type *CanIVTy = nullptr;
-  if (ScalarCanIV) {
-    CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
-  } else {
-    // For nested loops, search for an existing VPPhi with a LiveIn operand.
-    for (VPBlockBase *Block : vp_depth_first_deep(Plan.getEntry())) {
-      if (auto *VPBB = dyn_cast<VPBasicBlock>(Block)) {
-        for (VPRecipeBase &R : VPBB->phis()) {
-          if (auto *Phi = dyn_cast<VPPhi>(&R)) {
-            if (Phi->getNumOperands() > 0) {
-              if (auto *LiveIn = Phi->getOperand(0)->getLiveInIRValue()) {
-                if (LiveIn->getType()->isIntegerTy()) {
-                  CanIVTy = LiveIn->getType();
-                  break;
-                }
-              }
-            }
-          }
-        }
-        if (CanIVTy)
-          break;
-      }
-    }
-  }
-  assert(CanIVTy && "Could not determine canonical IV type");
-
-  DebugLoc DL = ScalarCanIV ? ScalarCanIV->getDebugLoc()
-                            : DebugLoc::getCompilerGenerated();
-  auto *R = Plan.createVPRegionBlock(CanIVTy, DL);
+  auto *R = Plan.createLoopRegion(CanIVTy, DL);
   VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
   VPBlockUtils::disconnectBlocks(LatchVPBB, R);
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
@@ -694,8 +671,9 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   VPIRMetadata VPBranchWeights;
   auto *Term =
       VPBuilder(CheckBlockVPBB)
-          .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
-                        Plan.getVectorLoopRegion()->getCanonicalIVInfo().DL);
+          .createNaryOp(
+              VPInstruction::BranchOnCond, {CondVPV},
+              Plan.getVectorLoopRegion()->getCanonicalIVInfo().getDebugLoc());
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =

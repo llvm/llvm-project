@@ -8250,7 +8250,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                      m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
            "Did not find the canonical IV increment");
     cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
-    Plan->getCanonicalIVInfo().HasNUW = false;
+    LoopRegion->clearCanonicalIVNUW();
   }
 
   // ---------------------------------------------------------------------------

@@ -92,8 +92,8 @@ public:
     VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
                /// that defines multiple values.
     VPVRecipeSC,     /// A VPValue sub-class that is a VPRecipeBase.
-    VPRegionValueSC, /// A VPValue sub-class defines the canonical IV of a loop
-                     /// region.
+    VPRegionValueSC, /// A VPValue sub-class that is defined by a region, like
+                     /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -170,12 +170,13 @@ public:
 
   /// Returns true if this VPValue is defined by a recipe.
   bool hasDefiningRecipe() const {
-    return SubclassID != VPRegionValueSC && getDefiningRecipe();
+    return SubclassID == VPVRecipeSC ||
+           (SubclassID == VPValueSC && getDefiningRecipe());
   }
 
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
   bool isLiveIn() const {
-    return !hasDefiningRecipe() && SubclassID != VPRegionValueSC;
+    return SubclassID == VPValueSC && !getDefiningRecipe();
   }
 
   /// Returns the underlying IR value, if this VPValue is defined outside the

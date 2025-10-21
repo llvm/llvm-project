@@ -208,6 +208,7 @@ define void @scalable_wide_active_lane_mask_double(ptr noalias %dst, ptr readonl
 ; CHECK-UF4-NEXT:    [[TMP39:%.*]] = mul nuw i64 [[TMP38]], 6
 ; CHECK-UF4-NEXT:    [[TMP40:%.*]] = getelementptr inbounds double, ptr [[TMP30]], i64 [[TMP39]]
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP16]], ptr align 8 [[TMP30]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
+; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP17]], ptr align 8 [[TMP34]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK6]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP18]], ptr align 8 [[TMP37]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK7]])
 ; CHECK-UF4-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP19]], ptr align 8 [[TMP40]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK8]])
 ; CHECK-UF4-NEXT:    [[ACTIVE_LANE_MASK_NEXT:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[INDEX]], i64 [[WIDE_TRIP_COUNT]])
