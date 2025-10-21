@@ -22,7 +22,7 @@ TEST(LlvmLibcFOpenTest, PrintToFile) {
 
   static constexpr char STRING[] = "A simple string written to a file\n";
   size_t result = LIBC_NAMESPACE::fwrite(STRING, 1, sizeof(STRING) - 1, file);
-  EXPECT_GE(result, size_t(0));
+  EXPECT_GE(result, static_cast<size_t>(0));
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
