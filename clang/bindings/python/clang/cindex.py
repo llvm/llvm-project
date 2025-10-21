@@ -2367,7 +2367,6 @@ class Cursor(Structure):
         """
         Check if the function is inlined.
         """
-        assert self.kind == TypeKind.FUNCTIONPROTO
         return conf.lib.clang_Cursor_isFunctionInlined(self)  # type: ignore [no-any-return]
 
     @cursor_null_guard
