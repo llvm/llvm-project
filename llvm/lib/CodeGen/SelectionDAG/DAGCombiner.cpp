@@ -6579,12 +6579,25 @@ static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
 
+/// Returns an appropriate FP min/max opcode for clamping operations.
+static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
+                                        SDValue Operand2, SelectionDAG &DAG,
+                                        const TargetLowering &TLI) {
+  EVT VT = Operand1.getValueType();
+  unsigned IEEEOp = IsMin ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
+  if (TLI.isOperationLegalOrCustom(IEEEOp, VT) &&
+      arebothOperandsNotNan(Operand1, Operand2, DAG))
+    return IEEEOp;
+  unsigned PreferredOp = IsMin ? ISD::FMINNUM : ISD::FMAXNUM;
+  if (TLI.isOperationLegalOrCustom(PreferredOp, VT))
+    return PreferredOp;
+  return ISD::DELETED_NODE;
+}
+
 // FIXME: use FMINIMUMNUM if possible, such as for RISC-V.
-static unsigned getMinMaxOpcodeForFP(SDValue Operand1, SDValue Operand2,
-                                     ISD::CondCode CC, unsigned OrAndOpcode,
-                                     SelectionDAG &DAG,
-                                     bool isFMAXNUMFMINNUM_IEEE,
-                                     bool isFMAXNUMFMINNUM) {
+static unsigned getMinMaxOpcodeForCompareFold(
+    SDValue Operand1, SDValue Operand2, ISD::CondCode CC, unsigned OrAndOpcode,
+    SelectionDAG &DAG, bool isFMAXNUMFMINNUM_IEEE, bool isFMAXNUMFMINNUM) {
   // The optimization cannot be applied for all the predicates because
   // of the way FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle
   // NaNs. For FMINNUM_IEEE/FMAXNUM_IEEE, the optimization cannot be
@@ -6742,9 +6755,9 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
         else
           NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
       } else if (OpVT.isFloatingPoint())
-        NewOpcode =
-            getMinMaxOpcodeForFP(Operand1, Operand2, CC, LogicOp->getOpcode(),
-                                 DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
+        NewOpcode = getMinMaxOpcodeForCompareFold(
+            Operand1, Operand2, CC, LogicOp->getOpcode(), DAG,
+            isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
 
       if (NewOpcode != ISD::DELETED_NODE) {
         SDValue MinMaxValue =
@@ -19067,29 +19080,27 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   if (IsUnsigned && !IsSignedZeroSafe && !TLI.isFAbsFree(VT))
     return SDValue();
 
-  // Collect potential clamp operations (innermost to outermost) and peel.
-  struct ClampOp {
-    unsigned Opcode;
+  // Collect potential clamp operations (outermost to innermost) and peel.
+  struct ClampInfo {
+    bool IsMin;
     SDValue Constant;
   };
-  SmallVector<ClampOp, 2> Clamps;
+  constexpr unsigned MaxClamps = 2;
+  SmallVector<ClampInfo, MaxClamps> Clamps;
   unsigned MinOp = IsUnsigned ? ISD::UMIN : ISD::SMIN;
   unsigned MaxOp = IsUnsigned ? ISD::UMAX : ISD::SMAX;
   SDValue IntVal = N->getOperand(0);
-  constexpr unsigned MaxClampLevels = 2;
-  for (unsigned Level = 0; Level < MaxClampLevels; ++Level) {
+  for (unsigned Level = 0; Level < MaxClamps; ++Level) {
     if (!IntVal.hasOneUse() ||
         (IntVal.getOpcode() != MinOp && IntVal.getOpcode() != MaxOp))
       break;
-    unsigned FPClampOp =
-        (IntVal.getOpcode() == MinOp) ? ISD::FMINNUM : ISD::FMAXNUM;
-    if (!TLI.isOperationLegal(FPClampOp, VT))
-      return SDValue();
-    auto *IntConstNode = dyn_cast<ConstantSDNode>(IntVal.getOperand(1));
-    if (!IntConstNode)
+    SDValue RHS = IntVal.getOperand(1);
+    APInt IntConst;
+    if (auto *IntConstNode = dyn_cast<ConstantSDNode>(RHS))
+      IntConst = IntConstNode->getAPIntValue();
+    else if (!ISD::isConstantSplatVector(RHS.getNode(), IntConst))
       return SDValue();
     APFloat FPConst(VT.getFltSemantics());
-    APInt IntConst = IntConstNode->getAPIntValue();
     FPConst.convertFromAPInt(IntConst, IsSigned, APFloat::rmNearestTiesToEven);
     // Verify roundtrip exactness.
     APSInt RoundTrip(IntConst.getBitWidth(), IsUnsigned);
@@ -19098,11 +19109,12 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
             APFloat::opOK ||
         !IsExact || static_cast<const APInt &>(RoundTrip) != IntConst)
       return SDValue();
-    Clamps.push_back({FPClampOp, DAG.getConstantFP(FPConst, DL, VT)});
+    bool IsMin = IntVal.getOpcode() == MinOp;
+    Clamps.push_back({IsMin, DAG.getConstantFP(FPConst, DL, VT)});
     IntVal = IntVal.getOperand(0);
   }
 
-  // Check that the sequence ends with a FPTo[us]i of the right type.
+  // Check that the sequence ends with the correct kind of fpto[us]i.
   unsigned FPToIntOp = IsUnsigned ? ISD::FP_TO_UINT : ISD::FP_TO_SINT;
   if (IntVal.getOpcode() != FPToIntOp ||
       IntVal.getOperand(0).getValueType() != VT)
@@ -19113,8 +19125,13 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
     Result = DAG.getNode(ISD::FABS, DL, VT, Result);
   Result = DAG.getNode(ISD::FTRUNC, DL, VT, Result);
   // Apply clamps, if any, in reverse order (innermost first).
-  for (auto I = Clamps.rbegin(), E = Clamps.rend(); I != E; ++I)
-    Result = DAG.getNode(I->Opcode, DL, VT, Result, I->Constant);
+  for (const ClampInfo &Clamp : reverse(Clamps)) {
+    unsigned FPClampOp =
+        getMinMaxOpcodeForClamp(Clamp.IsMin, Result, Clamp.Constant, DAG, TLI);
+    if (FPClampOp == ISD::DELETED_NODE)
+      return SDValue();
+    Result = DAG.getNode(FPClampOp, DL, VT, Result, Clamp.Constant);
+  }
   return Result;
 }
 
