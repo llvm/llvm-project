@@ -451,6 +451,7 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX90A-LABEL: v32_asm_def_use:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_accvgpr_read_b32 v35, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_mov_b32_e32 v34, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v33, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -478,8 +479,8 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v35, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a32, a1
+; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v34, v33, a[16:31]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy
@@ -1056,6 +1057,7 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-LABEL: no_free_vgprs_at_sgpr_to_agpr_copy:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -1077,8 +1079,7 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a18, s2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a17, s1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a16, s0
-; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a32 ; Reload Reuse
-; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 10
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill

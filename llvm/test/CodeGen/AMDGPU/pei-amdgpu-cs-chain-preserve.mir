@@ -145,6 +145,7 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr104
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr105
     ; GCN-NEXT: SCRATCH_STORE_DWORD_ST killed $vgpr10, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr10, 32, $exec_lo, 32, 0
     ; GCN-NEXT: renamable $vgpr10 = V_MOV_B32_e32 10, implicit $exec
     ; GCN-NEXT: $vgpr8 = COPY killed renamable $vgpr10
     ; GCN-NEXT: renamable $sgpr4_sgpr5 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @callee + 4, target-flags(amdgpu-gotprel32-hi) @callee + 12, implicit-def dead $scc

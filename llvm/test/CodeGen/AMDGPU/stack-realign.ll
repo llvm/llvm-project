@@ -293,26 +293,26 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 3
 ; GCN-NEXT:    s_mov_b32 s34, s32
+; GCN-NEXT:    v_writelane_b32 v40, s30, 0
+; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    v_mov_b32_e32 v32, 0
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s34
 ; GCN-NEXT:    buffer_load_dword v33, off, s[0:3], s34 offset:4
-; GCN-NEXT:    s_add_i32 s32, s32, 0x30000
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, extern_func@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, extern_func@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    v_readlane_b32 s34, v40, 3
@@ -453,7 +453,7 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; GCN-NEXT:    v_writelane_b32 v39, s4, 32
 ; GCN-NEXT:    v_writelane_b32 v39, s34, 33
 ; GCN-NEXT:    s_mov_b32 s34, s32
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    s_addk_i32 s32, 0x6000
 ; GCN-NEXT:    v_writelane_b32 v39, s39, 0
 ; GCN-NEXT:    v_writelane_b32 v39, s48, 1
 ; GCN-NEXT:    v_writelane_b32 v39, s49, 2
@@ -485,8 +485,8 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; GCN-NEXT:    v_writelane_b32 v39, s99, 28
 ; GCN-NEXT:    v_writelane_b32 v39, s100, 29
 ; GCN-NEXT:    v_writelane_b32 v39, s101, 30
-; GCN-NEXT:    s_addk_i32 s32, 0x6000
 ; GCN-NEXT:    v_writelane_b32 v39, s102, 31
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s34, v39, 33
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -576,7 +576,7 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN-NEXT:    v_writelane_b32 v39, s4, 32
 ; GCN-NEXT:    v_writelane_b32 v39, s34, 33
 ; GCN-NEXT:    s_mov_b32 s34, s32
-; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    s_add_i32 s32, s32, 0x46000
 ; GCN-NEXT:    v_writelane_b32 v39, s39, 0
 ; GCN-NEXT:    v_writelane_b32 v39, s48, 1
 ; GCN-NEXT:    v_writelane_b32 v39, s49, 2
@@ -608,9 +608,9 @@ define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i
 ; GCN-NEXT:    v_writelane_b32 v39, s99, 28
 ; GCN-NEXT:    v_writelane_b32 v39, s100, 29
 ; GCN-NEXT:    v_writelane_b32 v39, s101, 30
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x1080
-; GCN-NEXT:    s_add_i32 s32, s32, 0x46000
 ; GCN-NEXT:    v_writelane_b32 v39, s102, 31
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s34 offset:4
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x1080
 ; GCN-NEXT:    s_mov_b32 s32, s34
 ; GCN-NEXT:    v_readlane_b32 s34, v39, 33
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

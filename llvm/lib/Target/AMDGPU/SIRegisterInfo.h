@@ -121,6 +121,13 @@ public:
   void addImplicitUsesForBlockCSRLoad(MachineInstrBuilder &MIB,
                                       Register BlockReg) const;
 
+  // Iterate over all VGPRs in the given BlockReg and emit CFI for each VGPR
+  // as-needed depending on the (statically known) mask, relative to the given
+  // base Offset.
+  void buildCFIForBlockCSRStore(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI,
+                                Register BlockReg, int64_t Offset) const;
+
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
@@ -176,8 +183,8 @@ public:
   /// free VGPR lane to spill.
   bool spillSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                  SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
-                 bool OnlyToVGPR = false,
-                 bool SpillToPhysVGPRLane = false) const;
+                 bool OnlyToVGPR = false, bool SpillToPhysVGPRLane = false,
+                 bool NeedsCFI = false) const;
 
   bool restoreSGPR(MachineBasicBlock::iterator MI, int FI, RegScavenger *RS,
                    SlotIndexes *Indexes = nullptr, LiveIntervals *LIS = nullptr,
@@ -459,8 +466,8 @@ public:
                            unsigned LoadStoreOp, int Index, Register ValueReg,
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
-                           RegScavenger *RS,
-                           LiveRegUnits *LiveUnits = nullptr) const;
+                           RegScavenger *RS, LiveRegUnits *LiveUnits = nullptr,
+                           bool NeedsCFI = false) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {

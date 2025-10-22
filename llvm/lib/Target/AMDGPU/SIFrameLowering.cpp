@@ -2244,17 +2244,49 @@ bool SIFrameLowering::allocateScavengingFrameIndexesNearIncomingSP(
   return true;
 }
 
+static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
+                          const TargetRegisterInfo *TRI) {
+  for (MCRegAliasIterator R(Reg, TRI, true); R.isValid(); ++R) {
+    if (MBB.isLiveIn(*R)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool SIFrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-  if (!ST.useVGPRBlockOpsForCSR())
-    return false;
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *SITRI = static_cast<const SIRegisterInfo *>(TRI);
+
+  if (!ST.useVGPRBlockOpsForCSR()) {
+    for (const CalleeSavedInfo &CS : CSI) {
+      // Insert the spill to the stack frame.
+      unsigned Reg = CS.getReg();
+
+      if (CS.isSpilledToReg()) {
+        BuildMI(MBB, MI, DebugLoc(), TII->get(TargetOpcode::COPY),
+                CS.getDstReg())
+            .addReg(Reg, getKillRegState(true));
+      } else {
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
+            Reg, Reg == SITRI->getReturnAddressReg(*MF) ? MVT::i64 : MVT::i32);
+        // If this value was already livein, we probably have a direct use of
+        // the incoming register value, so don't kill at the spill point. This
+        // happens since we pass some special inputs (workgroup IDs) in the
+        // callee saved range.
+        const bool IsLiveIn = isLiveIntoMBB(Reg, MBB, TRI);
+        TII->storeRegToStackSlotCFI(MBB, MI, Reg, !IsLiveIn, CS.getFrameIdx(),
+                                    RC, TRI);
+      }
+    }
+    return true;
+  }
 
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  const SIInstrInfo *TII = ST.getInstrInfo();
   SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   const TargetRegisterClass *BlockRegClass =
@@ -2278,10 +2310,10 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
                                  FrameInfo.getObjectAlign(FrameIndex));
 
     BuildMI(MBB, MI, MI->getDebugLoc(),
-            TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_SAVE))
+            TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE))
         .addReg(Reg, getKillRegState(false))
         .addFrameIndex(FrameIndex)
-        .addReg(MFI->getStackPtrOffsetReg())
+        .addReg(FuncInfo->getStackPtrOffsetReg())
         .addImm(0)
         .addImm(Mask)
         .addMemOperand(MMO);
@@ -2467,6 +2499,22 @@ MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
       .setMIFlag(flag);
 }
 
+MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, const Register Reg, const Register RegCopy) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  unsigned MaskReg = MCRI.getDwarfRegNum(
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
+  auto CFIInst = MCCFIInstruction::createLLVMVectorRegisterMask(
+      nullptr, MCRI.getDwarfRegNum(Reg, false),
+      MCRI.getDwarfRegNum(RegCopy, false), VGPRLaneBitSize, MaskReg,
+      ST.getWavefrontSize());
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
+}
+
 MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const Register SGPR, const Register VGPR,
@@ -2515,6 +2563,34 @@ MachineInstr *SIFrameLowering::buildCFIForSGPRToVGPRSpill(
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }
 
+MachineInstr *SIFrameLowering::buildCFIForSGPRToVMEMSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, unsigned SGPR, int64_t Offset) const {
+  MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  return buildCFI(MBB, MBBI, DL,
+                  llvm::MCCFIInstruction::createOffset(
+                      nullptr, MCRI.getDwarfRegNum(SGPR, false), Offset));
+}
+
+MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    const DebugLoc &DL, unsigned VGPR, int64_t Offset) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
+  assert(DwarfVGPR != -1);
+
+  unsigned MaskReg = MCRI.getDwarfRegNum(
+      ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
+  auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
+      nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),
+      Offset);
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
+}
+
 MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     const DebugLoc &DL, const Register Reg, const Register SGPRPair) const {
@@ -2533,5 +2609,16 @@ MachineInstr *SIFrameLowering::buildCFIForRegToSGPRPairSpill(
 
   auto CFIInst = MCCFIInstruction::createLLVMRegisterPair(
       nullptr, DwarfReg, DwarfSGPR0, SGPRBitSize, DwarfSGPR1, SGPRBitSize);
+  return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
+}
+
+MachineInstr *
+SIFrameLowering::buildCFIForSameValue(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      const DebugLoc &DL, Register Reg) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
+  int DwarfReg = MCRI.getDwarfRegNum(Reg, /*isEH=*/false);
+  auto CFIInst = MCCFIInstruction::createSameValue(nullptr, DwarfReg);
   return buildCFI(MBB, MBBI, DL, std::move(CFIInst));
 }

@@ -212,118 +212,231 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900-NEXT:    .cfi_register 65, 72
 ; GFX900-NEXT:    s_mov_b32 s33, s32
 ; GFX900-NEXT:    .cfi_def_cfa_register 65
+; GFX900-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 28416
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 28160
 ; GFX900-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2602, 32, 17, 64, 27904
 ; GFX900-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:432 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2603, 32, 17, 64, 27648
 ; GFX900-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:428 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2604, 32, 17, 64, 27392
 ; GFX900-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:424 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2605, 32, 17, 64, 27136
 ; GFX900-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:420 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2606, 32, 17, 64, 26880
 ; GFX900-NEXT:    buffer_store_dword v47, off, s[0:3], s33 offset:416 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2607, 32, 17, 64, 26624
 ; GFX900-NEXT:    buffer_store_dword v56, off, s[0:3], s33 offset:412 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2616, 32, 17, 64, 26368
 ; GFX900-NEXT:    buffer_store_dword v57, off, s[0:3], s33 offset:408 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2617, 32, 17, 64, 26112
 ; GFX900-NEXT:    buffer_store_dword v58, off, s[0:3], s33 offset:404 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2618, 32, 17, 64, 25856
 ; GFX900-NEXT:    buffer_store_dword v59, off, s[0:3], s33 offset:400 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2619, 32, 17, 64, 25600
 ; GFX900-NEXT:    buffer_store_dword v60, off, s[0:3], s33 offset:396 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2620, 32, 17, 64, 25344
 ; GFX900-NEXT:    buffer_store_dword v61, off, s[0:3], s33 offset:392 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2621, 32, 17, 64, 25088
 ; GFX900-NEXT:    buffer_store_dword v62, off, s[0:3], s33 offset:388 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2622, 32, 17, 64, 24832
 ; GFX900-NEXT:    buffer_store_dword v63, off, s[0:3], s33 offset:384 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2623, 32, 17, 64, 24576
 ; GFX900-NEXT:    buffer_store_dword v72, off, s[0:3], s33 offset:380 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2632, 32, 17, 64, 24320
 ; GFX900-NEXT:    buffer_store_dword v73, off, s[0:3], s33 offset:376 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2633, 32, 17, 64, 24064
 ; GFX900-NEXT:    buffer_store_dword v74, off, s[0:3], s33 offset:372 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2634, 32, 17, 64, 23808
 ; GFX900-NEXT:    buffer_store_dword v75, off, s[0:3], s33 offset:368 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2635, 32, 17, 64, 23552
 ; GFX900-NEXT:    buffer_store_dword v76, off, s[0:3], s33 offset:364 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2636, 32, 17, 64, 23296
 ; GFX900-NEXT:    buffer_store_dword v77, off, s[0:3], s33 offset:360 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2637, 32, 17, 64, 23040
 ; GFX900-NEXT:    buffer_store_dword v78, off, s[0:3], s33 offset:356 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2638, 32, 17, 64, 22784
 ; GFX900-NEXT:    buffer_store_dword v79, off, s[0:3], s33 offset:352 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2639, 32, 17, 64, 22528
 ; GFX900-NEXT:    buffer_store_dword v88, off, s[0:3], s33 offset:348 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2648, 32, 17, 64, 22272
 ; GFX900-NEXT:    buffer_store_dword v89, off, s[0:3], s33 offset:344 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2649, 32, 17, 64, 22016
 ; GFX900-NEXT:    buffer_store_dword v90, off, s[0:3], s33 offset:340 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2650, 32, 17, 64, 21760
 ; GFX900-NEXT:    buffer_store_dword v91, off, s[0:3], s33 offset:336 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2651, 32, 17, 64, 21504
 ; GFX900-NEXT:    buffer_store_dword v92, off, s[0:3], s33 offset:332 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2652, 32, 17, 64, 21248
 ; GFX900-NEXT:    buffer_store_dword v93, off, s[0:3], s33 offset:328 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2653, 32, 17, 64, 20992
 ; GFX900-NEXT:    buffer_store_dword v94, off, s[0:3], s33 offset:324 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2654, 32, 17, 64, 20736
 ; GFX900-NEXT:    buffer_store_dword v95, off, s[0:3], s33 offset:320 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2655, 32, 17, 64, 20480
 ; GFX900-NEXT:    buffer_store_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2664, 32, 17, 64, 20224
 ; GFX900-NEXT:    buffer_store_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2665, 32, 17, 64, 19968
 ; GFX900-NEXT:    buffer_store_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2666, 32, 17, 64, 19712
 ; GFX900-NEXT:    buffer_store_dword v107, off, s[0:3], s33 offset:304 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2667, 32, 17, 64, 19456
 ; GFX900-NEXT:    buffer_store_dword v108, off, s[0:3], s33 offset:300 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2668, 32, 17, 64, 19200
 ; GFX900-NEXT:    buffer_store_dword v109, off, s[0:3], s33 offset:296 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2669, 32, 17, 64, 18944
 ; GFX900-NEXT:    buffer_store_dword v110, off, s[0:3], s33 offset:292 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2670, 32, 17, 64, 18688
 ; GFX900-NEXT:    buffer_store_dword v111, off, s[0:3], s33 offset:288 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2671, 32, 17, 64, 18432
 ; GFX900-NEXT:    buffer_store_dword v120, off, s[0:3], s33 offset:284 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2680, 32, 17, 64, 18176
 ; GFX900-NEXT:    buffer_store_dword v121, off, s[0:3], s33 offset:280 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2681, 32, 17, 64, 17920
 ; GFX900-NEXT:    buffer_store_dword v122, off, s[0:3], s33 offset:276 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2682, 32, 17, 64, 17664
 ; GFX900-NEXT:    buffer_store_dword v123, off, s[0:3], s33 offset:272 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2683, 32, 17, 64, 17408
 ; GFX900-NEXT:    buffer_store_dword v124, off, s[0:3], s33 offset:268 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2684, 32, 17, 64, 17152
 ; GFX900-NEXT:    buffer_store_dword v125, off, s[0:3], s33 offset:264 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2685, 32, 17, 64, 16896
 ; GFX900-NEXT:    buffer_store_dword v126, off, s[0:3], s33 offset:260 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2686, 32, 17, 64, 16640
 ; GFX900-NEXT:    buffer_store_dword v127, off, s[0:3], s33 offset:256 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2687, 32, 17, 64, 16384
 ; GFX900-NEXT:    buffer_store_dword v136, off, s[0:3], s33 offset:252 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2696, 32, 17, 64, 16128
 ; GFX900-NEXT:    buffer_store_dword v137, off, s[0:3], s33 offset:248 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2697, 32, 17, 64, 15872
 ; GFX900-NEXT:    buffer_store_dword v138, off, s[0:3], s33 offset:244 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2698, 32, 17, 64, 15616
 ; GFX900-NEXT:    buffer_store_dword v139, off, s[0:3], s33 offset:240 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2699, 32, 17, 64, 15360
 ; GFX900-NEXT:    buffer_store_dword v140, off, s[0:3], s33 offset:236 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2700, 32, 17, 64, 15104
 ; GFX900-NEXT:    buffer_store_dword v141, off, s[0:3], s33 offset:232 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2701, 32, 17, 64, 14848
 ; GFX900-NEXT:    buffer_store_dword v142, off, s[0:3], s33 offset:228 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2702, 32, 17, 64, 14592
 ; GFX900-NEXT:    buffer_store_dword v143, off, s[0:3], s33 offset:224 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2703, 32, 17, 64, 14336
 ; GFX900-NEXT:    buffer_store_dword v152, off, s[0:3], s33 offset:220 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2712, 32, 17, 64, 14080
 ; GFX900-NEXT:    buffer_store_dword v153, off, s[0:3], s33 offset:216 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2713, 32, 17, 64, 13824
 ; GFX900-NEXT:    buffer_store_dword v154, off, s[0:3], s33 offset:212 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2714, 32, 17, 64, 13568
 ; GFX900-NEXT:    buffer_store_dword v155, off, s[0:3], s33 offset:208 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2715, 32, 17, 64, 13312
 ; GFX900-NEXT:    buffer_store_dword v156, off, s[0:3], s33 offset:204 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2716, 32, 17, 64, 13056
 ; GFX900-NEXT:    buffer_store_dword v157, off, s[0:3], s33 offset:200 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2717, 32, 17, 64, 12800
 ; GFX900-NEXT:    buffer_store_dword v158, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2718, 32, 17, 64, 12544
 ; GFX900-NEXT:    buffer_store_dword v159, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2719, 32, 17, 64, 12288
 ; GFX900-NEXT:    buffer_store_dword v168, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2728, 32, 17, 64, 12032
 ; GFX900-NEXT:    buffer_store_dword v169, off, s[0:3], s33 offset:184 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2729, 32, 17, 64, 11776
 ; GFX900-NEXT:    buffer_store_dword v170, off, s[0:3], s33 offset:180 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2730, 32, 17, 64, 11520
 ; GFX900-NEXT:    buffer_store_dword v171, off, s[0:3], s33 offset:176 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2731, 32, 17, 64, 11264
 ; GFX900-NEXT:    buffer_store_dword v172, off, s[0:3], s33 offset:172 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2732, 32, 17, 64, 11008
 ; GFX900-NEXT:    buffer_store_dword v173, off, s[0:3], s33 offset:168 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2733, 32, 17, 64, 10752
 ; GFX900-NEXT:    buffer_store_dword v174, off, s[0:3], s33 offset:164 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2734, 32, 17, 64, 10496
 ; GFX900-NEXT:    buffer_store_dword v175, off, s[0:3], s33 offset:160 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2735, 32, 17, 64, 10240
 ; GFX900-NEXT:    buffer_store_dword v184, off, s[0:3], s33 offset:156 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2744, 32, 17, 64, 9984
 ; GFX900-NEXT:    buffer_store_dword v185, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2745, 32, 17, 64, 9728
 ; GFX900-NEXT:    buffer_store_dword v186, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2746, 32, 17, 64, 9472
 ; GFX900-NEXT:    buffer_store_dword v187, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2747, 32, 17, 64, 9216
 ; GFX900-NEXT:    buffer_store_dword v188, off, s[0:3], s33 offset:140 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2748, 32, 17, 64, 8960
 ; GFX900-NEXT:    buffer_store_dword v189, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2749, 32, 17, 64, 8704
 ; GFX900-NEXT:    buffer_store_dword v190, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2750, 32, 17, 64, 8448
 ; GFX900-NEXT:    buffer_store_dword v191, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2751, 32, 17, 64, 8192
 ; GFX900-NEXT:    buffer_store_dword v200, off, s[0:3], s33 offset:124 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2760, 32, 17, 64, 7936
 ; GFX900-NEXT:    buffer_store_dword v201, off, s[0:3], s33 offset:120 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2761, 32, 17, 64, 7680
 ; GFX900-NEXT:    buffer_store_dword v202, off, s[0:3], s33 offset:116 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2762, 32, 17, 64, 7424
 ; GFX900-NEXT:    buffer_store_dword v203, off, s[0:3], s33 offset:112 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2763, 32, 17, 64, 7168
 ; GFX900-NEXT:    buffer_store_dword v204, off, s[0:3], s33 offset:108 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2764, 32, 17, 64, 6912
 ; GFX900-NEXT:    buffer_store_dword v205, off, s[0:3], s33 offset:104 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2765, 32, 17, 64, 6656
 ; GFX900-NEXT:    buffer_store_dword v206, off, s[0:3], s33 offset:100 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2766, 32, 17, 64, 6400
 ; GFX900-NEXT:    buffer_store_dword v207, off, s[0:3], s33 offset:96 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2767, 32, 17, 64, 6144
 ; GFX900-NEXT:    buffer_store_dword v216, off, s[0:3], s33 offset:92 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2776, 32, 17, 64, 5888
 ; GFX900-NEXT:    buffer_store_dword v217, off, s[0:3], s33 offset:88 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2777, 32, 17, 64, 5632
 ; GFX900-NEXT:    buffer_store_dword v218, off, s[0:3], s33 offset:84 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2778, 32, 17, 64, 5376
 ; GFX900-NEXT:    buffer_store_dword v219, off, s[0:3], s33 offset:80 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2779, 32, 17, 64, 5120
 ; GFX900-NEXT:    buffer_store_dword v220, off, s[0:3], s33 offset:76 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2780, 32, 17, 64, 4864
 ; GFX900-NEXT:    buffer_store_dword v221, off, s[0:3], s33 offset:72 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2781, 32, 17, 64, 4608
 ; GFX900-NEXT:    buffer_store_dword v222, off, s[0:3], s33 offset:68 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2782, 32, 17, 64, 4352
 ; GFX900-NEXT:    buffer_store_dword v223, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2783, 32, 17, 64, 4096
 ; GFX900-NEXT:    buffer_store_dword v232, off, s[0:3], s33 offset:60 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2792, 32, 17, 64, 3840
 ; GFX900-NEXT:    buffer_store_dword v233, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2793, 32, 17, 64, 3584
 ; GFX900-NEXT:    buffer_store_dword v234, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2794, 32, 17, 64, 3328
 ; GFX900-NEXT:    buffer_store_dword v235, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2795, 32, 17, 64, 3072
 ; GFX900-NEXT:    buffer_store_dword v236, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2796, 32, 17, 64, 2816
 ; GFX900-NEXT:    buffer_store_dword v237, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2797, 32, 17, 64, 2560
 ; GFX900-NEXT:    buffer_store_dword v238, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2798, 32, 17, 64, 2304
 ; GFX900-NEXT:    buffer_store_dword v239, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2799, 32, 17, 64, 2048
 ; GFX900-NEXT:    buffer_store_dword v248, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2808, 32, 17, 64, 1792
 ; GFX900-NEXT:    buffer_store_dword v249, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2809, 32, 17, 64, 1536
 ; GFX900-NEXT:    buffer_store_dword v250, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2810, 32, 17, 64, 1280
 ; GFX900-NEXT:    buffer_store_dword v251, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2811, 32, 17, 64, 1024
 ; GFX900-NEXT:    buffer_store_dword v252, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2812, 32, 17, 64, 768
 ; GFX900-NEXT:    buffer_store_dword v253, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2813, 32, 17, 64, 512
 ; GFX900-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2814, 32, 17, 64, 256
 ; GFX900-NEXT:    buffer_store_dword v255, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2815, 32, 17, 64, 0
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; clobber nonpreserved SGPRs
 ; GFX900-NEXT:    ;;#ASMEND
@@ -442,7 +555,6 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
-; GFX900-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX900-NEXT:    s_mov_b32 s32, s33
 ; GFX900-NEXT:    .cfi_def_cfa_register 64
 ; GFX900-NEXT:    s_mov_b32 s33, s40
@@ -630,118 +742,231 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 65
+; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 28416
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 28160
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2602, 32, 17, 64, 27904
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:432 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2603, 32, 17, 64, 27648
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:428 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2604, 32, 17, 64, 27392
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:424 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2605, 32, 17, 64, 27136
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:420 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2606, 32, 17, 64, 26880
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v47, off, s[0:3], s33 offset:416 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2607, 32, 17, 64, 26624
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v56, off, s[0:3], s33 offset:412 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2616, 32, 17, 64, 26368
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v57, off, s[0:3], s33 offset:408 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2617, 32, 17, 64, 26112
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v58, off, s[0:3], s33 offset:404 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2618, 32, 17, 64, 25856
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v59, off, s[0:3], s33 offset:400 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2619, 32, 17, 64, 25600
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v60, off, s[0:3], s33 offset:396 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2620, 32, 17, 64, 25344
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v61, off, s[0:3], s33 offset:392 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2621, 32, 17, 64, 25088
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v62, off, s[0:3], s33 offset:388 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2622, 32, 17, 64, 24832
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v63, off, s[0:3], s33 offset:384 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2623, 32, 17, 64, 24576
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v72, off, s[0:3], s33 offset:380 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2632, 32, 17, 64, 24320
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v73, off, s[0:3], s33 offset:376 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2633, 32, 17, 64, 24064
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v74, off, s[0:3], s33 offset:372 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2634, 32, 17, 64, 23808
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v75, off, s[0:3], s33 offset:368 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2635, 32, 17, 64, 23552
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v76, off, s[0:3], s33 offset:364 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2636, 32, 17, 64, 23296
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v77, off, s[0:3], s33 offset:360 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2637, 32, 17, 64, 23040
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v78, off, s[0:3], s33 offset:356 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2638, 32, 17, 64, 22784
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v79, off, s[0:3], s33 offset:352 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2639, 32, 17, 64, 22528
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v88, off, s[0:3], s33 offset:348 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2648, 32, 17, 64, 22272
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v89, off, s[0:3], s33 offset:344 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2649, 32, 17, 64, 22016
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v90, off, s[0:3], s33 offset:340 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2650, 32, 17, 64, 21760
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v91, off, s[0:3], s33 offset:336 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2651, 32, 17, 64, 21504
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v92, off, s[0:3], s33 offset:332 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2652, 32, 17, 64, 21248
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v93, off, s[0:3], s33 offset:328 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2653, 32, 17, 64, 20992
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v94, off, s[0:3], s33 offset:324 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2654, 32, 17, 64, 20736
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v95, off, s[0:3], s33 offset:320 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2655, 32, 17, 64, 20480
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2664, 32, 17, 64, 20224
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2665, 32, 17, 64, 19968
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2666, 32, 17, 64, 19712
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v107, off, s[0:3], s33 offset:304 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2667, 32, 17, 64, 19456
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v108, off, s[0:3], s33 offset:300 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2668, 32, 17, 64, 19200
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v109, off, s[0:3], s33 offset:296 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2669, 32, 17, 64, 18944
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v110, off, s[0:3], s33 offset:292 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2670, 32, 17, 64, 18688
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v111, off, s[0:3], s33 offset:288 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2671, 32, 17, 64, 18432
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v120, off, s[0:3], s33 offset:284 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2680, 32, 17, 64, 18176
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v121, off, s[0:3], s33 offset:280 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2681, 32, 17, 64, 17920
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v122, off, s[0:3], s33 offset:276 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2682, 32, 17, 64, 17664
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v123, off, s[0:3], s33 offset:272 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2683, 32, 17, 64, 17408
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v124, off, s[0:3], s33 offset:268 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2684, 32, 17, 64, 17152
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v125, off, s[0:3], s33 offset:264 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2685, 32, 17, 64, 16896
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v126, off, s[0:3], s33 offset:260 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2686, 32, 17, 64, 16640
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v127, off, s[0:3], s33 offset:256 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2687, 32, 17, 64, 16384
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v136, off, s[0:3], s33 offset:252 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2696, 32, 17, 64, 16128
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v137, off, s[0:3], s33 offset:248 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2697, 32, 17, 64, 15872
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v138, off, s[0:3], s33 offset:244 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2698, 32, 17, 64, 15616
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v139, off, s[0:3], s33 offset:240 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2699, 32, 17, 64, 15360
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v140, off, s[0:3], s33 offset:236 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2700, 32, 17, 64, 15104
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v141, off, s[0:3], s33 offset:232 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2701, 32, 17, 64, 14848
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v142, off, s[0:3], s33 offset:228 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2702, 32, 17, 64, 14592
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v143, off, s[0:3], s33 offset:224 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2703, 32, 17, 64, 14336
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v152, off, s[0:3], s33 offset:220 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2712, 32, 17, 64, 14080
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v153, off, s[0:3], s33 offset:216 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2713, 32, 17, 64, 13824
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v154, off, s[0:3], s33 offset:212 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2714, 32, 17, 64, 13568
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v155, off, s[0:3], s33 offset:208 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2715, 32, 17, 64, 13312
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v156, off, s[0:3], s33 offset:204 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2716, 32, 17, 64, 13056
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v157, off, s[0:3], s33 offset:200 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2717, 32, 17, 64, 12800
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v158, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2718, 32, 17, 64, 12544
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v159, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2719, 32, 17, 64, 12288
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v168, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2728, 32, 17, 64, 12032
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v169, off, s[0:3], s33 offset:184 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2729, 32, 17, 64, 11776
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v170, off, s[0:3], s33 offset:180 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2730, 32, 17, 64, 11520
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v171, off, s[0:3], s33 offset:176 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2731, 32, 17, 64, 11264
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v172, off, s[0:3], s33 offset:172 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2732, 32, 17, 64, 11008
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v173, off, s[0:3], s33 offset:168 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2733, 32, 17, 64, 10752
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v174, off, s[0:3], s33 offset:164 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2734, 32, 17, 64, 10496
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v175, off, s[0:3], s33 offset:160 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2735, 32, 17, 64, 10240
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v184, off, s[0:3], s33 offset:156 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2744, 32, 17, 64, 9984
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v185, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2745, 32, 17, 64, 9728
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v186, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2746, 32, 17, 64, 9472
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v187, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2747, 32, 17, 64, 9216
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v188, off, s[0:3], s33 offset:140 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2748, 32, 17, 64, 8960
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v189, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2749, 32, 17, 64, 8704
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v190, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2750, 32, 17, 64, 8448
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v191, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2751, 32, 17, 64, 8192
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v200, off, s[0:3], s33 offset:124 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2760, 32, 17, 64, 7936
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v201, off, s[0:3], s33 offset:120 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2761, 32, 17, 64, 7680
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v202, off, s[0:3], s33 offset:116 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2762, 32, 17, 64, 7424
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v203, off, s[0:3], s33 offset:112 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2763, 32, 17, 64, 7168
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v204, off, s[0:3], s33 offset:108 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2764, 32, 17, 64, 6912
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v205, off, s[0:3], s33 offset:104 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2765, 32, 17, 64, 6656
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v206, off, s[0:3], s33 offset:100 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2766, 32, 17, 64, 6400
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v207, off, s[0:3], s33 offset:96 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2767, 32, 17, 64, 6144
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v216, off, s[0:3], s33 offset:92 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2776, 32, 17, 64, 5888
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v217, off, s[0:3], s33 offset:88 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2777, 32, 17, 64, 5632
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v218, off, s[0:3], s33 offset:84 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2778, 32, 17, 64, 5376
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v219, off, s[0:3], s33 offset:80 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2779, 32, 17, 64, 5120
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v220, off, s[0:3], s33 offset:76 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2780, 32, 17, 64, 4864
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v221, off, s[0:3], s33 offset:72 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2781, 32, 17, 64, 4608
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v222, off, s[0:3], s33 offset:68 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2782, 32, 17, 64, 4352
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v223, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2783, 32, 17, 64, 4096
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v232, off, s[0:3], s33 offset:60 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2792, 32, 17, 64, 3840
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v233, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2793, 32, 17, 64, 3584
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v234, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2794, 32, 17, 64, 3328
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v235, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2795, 32, 17, 64, 3072
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v236, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2796, 32, 17, 64, 2816
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v237, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2797, 32, 17, 64, 2560
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v238, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2798, 32, 17, 64, 2304
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v239, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2799, 32, 17, 64, 2048
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v248, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2808, 32, 17, 64, 1792
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v249, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2809, 32, 17, 64, 1536
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v250, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2810, 32, 17, 64, 1280
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v251, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2811, 32, 17, 64, 1024
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v252, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2812, 32, 17, 64, 768
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v253, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2813, 32, 17, 64, 512
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2814, 32, 17, 64, 256
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v255, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2815, 32, 17, 64, 0
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-DIS-NEXT:    ; clobber nonpreserved SGPRs
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMEND
@@ -860,7 +1085,6 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
-; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 64
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s40
@@ -1080,118 +1304,231 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 65
+; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x5100
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2600, 3072, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2601, 3073, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a2, v42 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2602, 3074, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a3, v43 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2603, 3075, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a4, v44 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2604, 3076, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a5, v45 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2605, 3077, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a6, v46 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2606, 3078, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a7, v47 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2607, 3079, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a8, v56 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2616, 3080, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a9, v57 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2617, 3081, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a10, v58 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2618, 3082, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a11, v59 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2619, 3083, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a12, v60 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2620, 3084, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a13, v61 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2621, 3085, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a14, v62 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2622, 3086, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a15, v63 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2623, 3087, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a16, v72 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2632, 3088, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a17, v73 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2633, 3089, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a18, v74 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2634, 3090, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a19, v75 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2635, 3091, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a20, v76 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2636, 3092, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a21, v77 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2637, 3093, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a22, v78 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2638, 3094, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a23, v79 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2639, 3095, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a24, v88 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2648, 3096, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a25, v89 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2649, 3097, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a26, v90 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2650, 3098, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a27, v91 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2651, 3099, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a28, v92 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2652, 3100, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a29, v93 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2653, 3101, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a30, v94 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2654, 3102, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a31, v95 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2655, 3103, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2664, 32, 17, 64, 20224
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2665, 32, 17, 64, 19968
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2666, 32, 17, 64, 19712
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v107, off, s[0:3], s33 offset:304 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2667, 32, 17, 64, 19456
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v108, off, s[0:3], s33 offset:300 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2668, 32, 17, 64, 19200
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v109, off, s[0:3], s33 offset:296 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2669, 32, 17, 64, 18944
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v110, off, s[0:3], s33 offset:292 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2670, 32, 17, 64, 18688
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v111, off, s[0:3], s33 offset:288 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2671, 32, 17, 64, 18432
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v120, off, s[0:3], s33 offset:284 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2680, 32, 17, 64, 18176
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v121, off, s[0:3], s33 offset:280 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2681, 32, 17, 64, 17920
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v122, off, s[0:3], s33 offset:276 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2682, 32, 17, 64, 17664
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v123, off, s[0:3], s33 offset:272 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2683, 32, 17, 64, 17408
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v124, off, s[0:3], s33 offset:268 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2684, 32, 17, 64, 17152
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v125, off, s[0:3], s33 offset:264 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2685, 32, 17, 64, 16896
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v126, off, s[0:3], s33 offset:260 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2686, 32, 17, 64, 16640
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v127, off, s[0:3], s33 offset:256 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2687, 32, 17, 64, 16384
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v136, off, s[0:3], s33 offset:252 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2696, 32, 17, 64, 16128
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v137, off, s[0:3], s33 offset:248 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2697, 32, 17, 64, 15872
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v138, off, s[0:3], s33 offset:244 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2698, 32, 17, 64, 15616
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v139, off, s[0:3], s33 offset:240 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2699, 32, 17, 64, 15360
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v140, off, s[0:3], s33 offset:236 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2700, 32, 17, 64, 15104
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v141, off, s[0:3], s33 offset:232 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2701, 32, 17, 64, 14848
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v142, off, s[0:3], s33 offset:228 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2702, 32, 17, 64, 14592
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v143, off, s[0:3], s33 offset:224 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2703, 32, 17, 64, 14336
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v152, off, s[0:3], s33 offset:220 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2712, 32, 17, 64, 14080
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v153, off, s[0:3], s33 offset:216 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2713, 32, 17, 64, 13824
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v154, off, s[0:3], s33 offset:212 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2714, 32, 17, 64, 13568
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v155, off, s[0:3], s33 offset:208 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2715, 32, 17, 64, 13312
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v156, off, s[0:3], s33 offset:204 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2716, 32, 17, 64, 13056
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v157, off, s[0:3], s33 offset:200 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2717, 32, 17, 64, 12800
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v158, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2718, 32, 17, 64, 12544
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v159, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2719, 32, 17, 64, 12288
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v168, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2728, 32, 17, 64, 12032
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v169, off, s[0:3], s33 offset:184 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2729, 32, 17, 64, 11776
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v170, off, s[0:3], s33 offset:180 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2730, 32, 17, 64, 11520
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v171, off, s[0:3], s33 offset:176 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2731, 32, 17, 64, 11264
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v172, off, s[0:3], s33 offset:172 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2732, 32, 17, 64, 11008
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v173, off, s[0:3], s33 offset:168 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2733, 32, 17, 64, 10752
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v174, off, s[0:3], s33 offset:164 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2734, 32, 17, 64, 10496
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v175, off, s[0:3], s33 offset:160 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2735, 32, 17, 64, 10240
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v184, off, s[0:3], s33 offset:156 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2744, 32, 17, 64, 9984
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v185, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2745, 32, 17, 64, 9728
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v186, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2746, 32, 17, 64, 9472
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v187, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2747, 32, 17, 64, 9216
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v188, off, s[0:3], s33 offset:140 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2748, 32, 17, 64, 8960
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v189, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2749, 32, 17, 64, 8704
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v190, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2750, 32, 17, 64, 8448
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v191, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2751, 32, 17, 64, 8192
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v200, off, s[0:3], s33 offset:124 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2760, 32, 17, 64, 7936
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v201, off, s[0:3], s33 offset:120 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2761, 32, 17, 64, 7680
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v202, off, s[0:3], s33 offset:116 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2762, 32, 17, 64, 7424
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v203, off, s[0:3], s33 offset:112 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2763, 32, 17, 64, 7168
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v204, off, s[0:3], s33 offset:108 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2764, 32, 17, 64, 6912
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v205, off, s[0:3], s33 offset:104 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2765, 32, 17, 64, 6656
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v206, off, s[0:3], s33 offset:100 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2766, 32, 17, 64, 6400
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v207, off, s[0:3], s33 offset:96 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2767, 32, 17, 64, 6144
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v216, off, s[0:3], s33 offset:92 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2776, 32, 17, 64, 5888
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v217, off, s[0:3], s33 offset:88 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2777, 32, 17, 64, 5632
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v218, off, s[0:3], s33 offset:84 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2778, 32, 17, 64, 5376
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v219, off, s[0:3], s33 offset:80 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2779, 32, 17, 64, 5120
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v220, off, s[0:3], s33 offset:76 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2780, 32, 17, 64, 4864
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v221, off, s[0:3], s33 offset:72 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2781, 32, 17, 64, 4608
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v222, off, s[0:3], s33 offset:68 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2782, 32, 17, 64, 4352
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v223, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2783, 32, 17, 64, 4096
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v232, off, s[0:3], s33 offset:60 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2792, 32, 17, 64, 3840
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v233, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2793, 32, 17, 64, 3584
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v234, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2794, 32, 17, 64, 3328
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v235, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2795, 32, 17, 64, 3072
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v236, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2796, 32, 17, 64, 2816
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v237, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2797, 32, 17, 64, 2560
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v238, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2798, 32, 17, 64, 2304
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v239, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2799, 32, 17, 64, 2048
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v248, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2808, 32, 17, 64, 1792
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v249, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2809, 32, 17, 64, 1536
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v250, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2810, 32, 17, 64, 1280
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v251, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2811, 32, 17, 64, 1024
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v252, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2812, 32, 17, 64, 768
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v253, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2813, 32, 17, 64, 512
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2814, 32, 17, 64, 256
 ; GFX90A-V2A-EN-NEXT:    buffer_store_dword v255, off, s[0:3], s33 ; 4-byte Folded Spill
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_offset 2815, 32, 17, 64, 0
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-EN-NEXT:    ; clobber nonpreserved SGPRs
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMEND
@@ -1278,7 +1615,6 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Reload
-; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x5100
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v95, a31 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v94, a30 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v93, a29 ; Reload Reuse
@@ -1498,118 +1834,231 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    .cfi_register 65, 72
 ; WAVE32-NEXT:    s_mov_b32 s33, s32
 ; WAVE32-NEXT:    .cfi_def_cfa_register 65
+; WAVE32-NEXT:    s_addk_i32 s32, 0x3880
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1576, 32, 1, 32, 14208
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1577, 32, 1, 32, 14080
 ; WAVE32-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1578, 32, 1, 32, 13952
 ; WAVE32-NEXT:    buffer_store_dword v43, off, s[0:3], s33 offset:432 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1579, 32, 1, 32, 13824
 ; WAVE32-NEXT:    buffer_store_dword v44, off, s[0:3], s33 offset:428 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1580, 32, 1, 32, 13696
 ; WAVE32-NEXT:    buffer_store_dword v45, off, s[0:3], s33 offset:424 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1581, 32, 1, 32, 13568
 ; WAVE32-NEXT:    buffer_store_dword v46, off, s[0:3], s33 offset:420 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1582, 32, 1, 32, 13440
 ; WAVE32-NEXT:    buffer_store_dword v47, off, s[0:3], s33 offset:416 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1583, 32, 1, 32, 13312
 ; WAVE32-NEXT:    buffer_store_dword v56, off, s[0:3], s33 offset:412 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1592, 32, 1, 32, 13184
 ; WAVE32-NEXT:    buffer_store_dword v57, off, s[0:3], s33 offset:408 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1593, 32, 1, 32, 13056
 ; WAVE32-NEXT:    buffer_store_dword v58, off, s[0:3], s33 offset:404 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1594, 32, 1, 32, 12928
 ; WAVE32-NEXT:    buffer_store_dword v59, off, s[0:3], s33 offset:400 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1595, 32, 1, 32, 12800
 ; WAVE32-NEXT:    buffer_store_dword v60, off, s[0:3], s33 offset:396 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1596, 32, 1, 32, 12672
 ; WAVE32-NEXT:    buffer_store_dword v61, off, s[0:3], s33 offset:392 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1597, 32, 1, 32, 12544
 ; WAVE32-NEXT:    buffer_store_dword v62, off, s[0:3], s33 offset:388 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1598, 32, 1, 32, 12416
 ; WAVE32-NEXT:    buffer_store_dword v63, off, s[0:3], s33 offset:384 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1599, 32, 1, 32, 12288
 ; WAVE32-NEXT:    buffer_store_dword v72, off, s[0:3], s33 offset:380 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1608, 32, 1, 32, 12160
 ; WAVE32-NEXT:    buffer_store_dword v73, off, s[0:3], s33 offset:376 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1609, 32, 1, 32, 12032
 ; WAVE32-NEXT:    buffer_store_dword v74, off, s[0:3], s33 offset:372 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1610, 32, 1, 32, 11904
 ; WAVE32-NEXT:    buffer_store_dword v75, off, s[0:3], s33 offset:368 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1611, 32, 1, 32, 11776
 ; WAVE32-NEXT:    buffer_store_dword v76, off, s[0:3], s33 offset:364 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1612, 32, 1, 32, 11648
 ; WAVE32-NEXT:    buffer_store_dword v77, off, s[0:3], s33 offset:360 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1613, 32, 1, 32, 11520
 ; WAVE32-NEXT:    buffer_store_dword v78, off, s[0:3], s33 offset:356 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1614, 32, 1, 32, 11392
 ; WAVE32-NEXT:    buffer_store_dword v79, off, s[0:3], s33 offset:352 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1615, 32, 1, 32, 11264
 ; WAVE32-NEXT:    buffer_store_dword v88, off, s[0:3], s33 offset:348 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1624, 32, 1, 32, 11136
 ; WAVE32-NEXT:    buffer_store_dword v89, off, s[0:3], s33 offset:344 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1625, 32, 1, 32, 11008
 ; WAVE32-NEXT:    buffer_store_dword v90, off, s[0:3], s33 offset:340 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1626, 32, 1, 32, 10880
 ; WAVE32-NEXT:    buffer_store_dword v91, off, s[0:3], s33 offset:336 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1627, 32, 1, 32, 10752
 ; WAVE32-NEXT:    buffer_store_dword v92, off, s[0:3], s33 offset:332 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1628, 32, 1, 32, 10624
 ; WAVE32-NEXT:    buffer_store_dword v93, off, s[0:3], s33 offset:328 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1629, 32, 1, 32, 10496
 ; WAVE32-NEXT:    buffer_store_dword v94, off, s[0:3], s33 offset:324 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1630, 32, 1, 32, 10368
 ; WAVE32-NEXT:    buffer_store_dword v95, off, s[0:3], s33 offset:320 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1631, 32, 1, 32, 10240
 ; WAVE32-NEXT:    buffer_store_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1640, 32, 1, 32, 10112
 ; WAVE32-NEXT:    buffer_store_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1641, 32, 1, 32, 9984
 ; WAVE32-NEXT:    buffer_store_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1642, 32, 1, 32, 9856
 ; WAVE32-NEXT:    buffer_store_dword v107, off, s[0:3], s33 offset:304 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1643, 32, 1, 32, 9728
 ; WAVE32-NEXT:    buffer_store_dword v108, off, s[0:3], s33 offset:300 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1644, 32, 1, 32, 9600
 ; WAVE32-NEXT:    buffer_store_dword v109, off, s[0:3], s33 offset:296 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1645, 32, 1, 32, 9472
 ; WAVE32-NEXT:    buffer_store_dword v110, off, s[0:3], s33 offset:292 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1646, 32, 1, 32, 9344
 ; WAVE32-NEXT:    buffer_store_dword v111, off, s[0:3], s33 offset:288 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1647, 32, 1, 32, 9216
 ; WAVE32-NEXT:    buffer_store_dword v120, off, s[0:3], s33 offset:284 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1656, 32, 1, 32, 9088
 ; WAVE32-NEXT:    buffer_store_dword v121, off, s[0:3], s33 offset:280 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1657, 32, 1, 32, 8960
 ; WAVE32-NEXT:    buffer_store_dword v122, off, s[0:3], s33 offset:276 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1658, 32, 1, 32, 8832
 ; WAVE32-NEXT:    buffer_store_dword v123, off, s[0:3], s33 offset:272 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1659, 32, 1, 32, 8704
 ; WAVE32-NEXT:    buffer_store_dword v124, off, s[0:3], s33 offset:268 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1660, 32, 1, 32, 8576
 ; WAVE32-NEXT:    buffer_store_dword v125, off, s[0:3], s33 offset:264 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1661, 32, 1, 32, 8448
 ; WAVE32-NEXT:    buffer_store_dword v126, off, s[0:3], s33 offset:260 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1662, 32, 1, 32, 8320
 ; WAVE32-NEXT:    buffer_store_dword v127, off, s[0:3], s33 offset:256 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1663, 32, 1, 32, 8192
 ; WAVE32-NEXT:    buffer_store_dword v136, off, s[0:3], s33 offset:252 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1672, 32, 1, 32, 8064
 ; WAVE32-NEXT:    buffer_store_dword v137, off, s[0:3], s33 offset:248 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1673, 32, 1, 32, 7936
 ; WAVE32-NEXT:    buffer_store_dword v138, off, s[0:3], s33 offset:244 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1674, 32, 1, 32, 7808
 ; WAVE32-NEXT:    buffer_store_dword v139, off, s[0:3], s33 offset:240 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1675, 32, 1, 32, 7680
 ; WAVE32-NEXT:    buffer_store_dword v140, off, s[0:3], s33 offset:236 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1676, 32, 1, 32, 7552
 ; WAVE32-NEXT:    buffer_store_dword v141, off, s[0:3], s33 offset:232 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1677, 32, 1, 32, 7424
 ; WAVE32-NEXT:    buffer_store_dword v142, off, s[0:3], s33 offset:228 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1678, 32, 1, 32, 7296
 ; WAVE32-NEXT:    buffer_store_dword v143, off, s[0:3], s33 offset:224 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1679, 32, 1, 32, 7168
 ; WAVE32-NEXT:    buffer_store_dword v152, off, s[0:3], s33 offset:220 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1688, 32, 1, 32, 7040
 ; WAVE32-NEXT:    buffer_store_dword v153, off, s[0:3], s33 offset:216 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1689, 32, 1, 32, 6912
 ; WAVE32-NEXT:    buffer_store_dword v154, off, s[0:3], s33 offset:212 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1690, 32, 1, 32, 6784
 ; WAVE32-NEXT:    buffer_store_dword v155, off, s[0:3], s33 offset:208 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1691, 32, 1, 32, 6656
 ; WAVE32-NEXT:    buffer_store_dword v156, off, s[0:3], s33 offset:204 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1692, 32, 1, 32, 6528
 ; WAVE32-NEXT:    buffer_store_dword v157, off, s[0:3], s33 offset:200 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1693, 32, 1, 32, 6400
 ; WAVE32-NEXT:    buffer_store_dword v158, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1694, 32, 1, 32, 6272
 ; WAVE32-NEXT:    buffer_store_dword v159, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1695, 32, 1, 32, 6144
 ; WAVE32-NEXT:    buffer_store_dword v168, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1704, 32, 1, 32, 6016
 ; WAVE32-NEXT:    buffer_store_dword v169, off, s[0:3], s33 offset:184 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1705, 32, 1, 32, 5888
 ; WAVE32-NEXT:    buffer_store_dword v170, off, s[0:3], s33 offset:180 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1706, 32, 1, 32, 5760
 ; WAVE32-NEXT:    buffer_store_dword v171, off, s[0:3], s33 offset:176 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1707, 32, 1, 32, 5632
 ; WAVE32-NEXT:    buffer_store_dword v172, off, s[0:3], s33 offset:172 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1708, 32, 1, 32, 5504
 ; WAVE32-NEXT:    buffer_store_dword v173, off, s[0:3], s33 offset:168 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1709, 32, 1, 32, 5376
 ; WAVE32-NEXT:    buffer_store_dword v174, off, s[0:3], s33 offset:164 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1710, 32, 1, 32, 5248
 ; WAVE32-NEXT:    buffer_store_dword v175, off, s[0:3], s33 offset:160 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1711, 32, 1, 32, 5120
 ; WAVE32-NEXT:    buffer_store_dword v184, off, s[0:3], s33 offset:156 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1720, 32, 1, 32, 4992
 ; WAVE32-NEXT:    buffer_store_dword v185, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1721, 32, 1, 32, 4864
 ; WAVE32-NEXT:    buffer_store_dword v186, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1722, 32, 1, 32, 4736
 ; WAVE32-NEXT:    buffer_store_dword v187, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1723, 32, 1, 32, 4608
 ; WAVE32-NEXT:    buffer_store_dword v188, off, s[0:3], s33 offset:140 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1724, 32, 1, 32, 4480
 ; WAVE32-NEXT:    buffer_store_dword v189, off, s[0:3], s33 offset:136 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1725, 32, 1, 32, 4352
 ; WAVE32-NEXT:    buffer_store_dword v190, off, s[0:3], s33 offset:132 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1726, 32, 1, 32, 4224
 ; WAVE32-NEXT:    buffer_store_dword v191, off, s[0:3], s33 offset:128 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1727, 32, 1, 32, 4096
 ; WAVE32-NEXT:    buffer_store_dword v200, off, s[0:3], s33 offset:124 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1736, 32, 1, 32, 3968
 ; WAVE32-NEXT:    buffer_store_dword v201, off, s[0:3], s33 offset:120 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1737, 32, 1, 32, 3840
 ; WAVE32-NEXT:    buffer_store_dword v202, off, s[0:3], s33 offset:116 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1738, 32, 1, 32, 3712
 ; WAVE32-NEXT:    buffer_store_dword v203, off, s[0:3], s33 offset:112 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1739, 32, 1, 32, 3584
 ; WAVE32-NEXT:    buffer_store_dword v204, off, s[0:3], s33 offset:108 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1740, 32, 1, 32, 3456
 ; WAVE32-NEXT:    buffer_store_dword v205, off, s[0:3], s33 offset:104 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1741, 32, 1, 32, 3328
 ; WAVE32-NEXT:    buffer_store_dword v206, off, s[0:3], s33 offset:100 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1742, 32, 1, 32, 3200
 ; WAVE32-NEXT:    buffer_store_dword v207, off, s[0:3], s33 offset:96 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1743, 32, 1, 32, 3072
 ; WAVE32-NEXT:    buffer_store_dword v216, off, s[0:3], s33 offset:92 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1752, 32, 1, 32, 2944
 ; WAVE32-NEXT:    buffer_store_dword v217, off, s[0:3], s33 offset:88 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1753, 32, 1, 32, 2816
 ; WAVE32-NEXT:    buffer_store_dword v218, off, s[0:3], s33 offset:84 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1754, 32, 1, 32, 2688
 ; WAVE32-NEXT:    buffer_store_dword v219, off, s[0:3], s33 offset:80 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1755, 32, 1, 32, 2560
 ; WAVE32-NEXT:    buffer_store_dword v220, off, s[0:3], s33 offset:76 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1756, 32, 1, 32, 2432
 ; WAVE32-NEXT:    buffer_store_dword v221, off, s[0:3], s33 offset:72 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1757, 32, 1, 32, 2304
 ; WAVE32-NEXT:    buffer_store_dword v222, off, s[0:3], s33 offset:68 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1758, 32, 1, 32, 2176
 ; WAVE32-NEXT:    buffer_store_dword v223, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1759, 32, 1, 32, 2048
 ; WAVE32-NEXT:    buffer_store_dword v232, off, s[0:3], s33 offset:60 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1768, 32, 1, 32, 1920
 ; WAVE32-NEXT:    buffer_store_dword v233, off, s[0:3], s33 offset:56 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1769, 32, 1, 32, 1792
 ; WAVE32-NEXT:    buffer_store_dword v234, off, s[0:3], s33 offset:52 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1770, 32, 1, 32, 1664
 ; WAVE32-NEXT:    buffer_store_dword v235, off, s[0:3], s33 offset:48 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1771, 32, 1, 32, 1536
 ; WAVE32-NEXT:    buffer_store_dword v236, off, s[0:3], s33 offset:44 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1772, 32, 1, 32, 1408
 ; WAVE32-NEXT:    buffer_store_dword v237, off, s[0:3], s33 offset:40 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1773, 32, 1, 32, 1280
 ; WAVE32-NEXT:    buffer_store_dword v238, off, s[0:3], s33 offset:36 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1774, 32, 1, 32, 1152
 ; WAVE32-NEXT:    buffer_store_dword v239, off, s[0:3], s33 offset:32 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1775, 32, 1, 32, 1024
 ; WAVE32-NEXT:    buffer_store_dword v248, off, s[0:3], s33 offset:28 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1784, 32, 1, 32, 896
 ; WAVE32-NEXT:    buffer_store_dword v249, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1785, 32, 1, 32, 768
 ; WAVE32-NEXT:    buffer_store_dword v250, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1786, 32, 1, 32, 640
 ; WAVE32-NEXT:    buffer_store_dword v251, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1787, 32, 1, 32, 512
 ; WAVE32-NEXT:    buffer_store_dword v252, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1788, 32, 1, 32, 384
 ; WAVE32-NEXT:    buffer_store_dword v253, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1789, 32, 1, 32, 256
 ; WAVE32-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1790, 32, 1, 32, 128
 ; WAVE32-NEXT:    buffer_store_dword v255, off, s[0:3], s33 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1791, 32, 1, 32, 0
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber nonpreserved SGPRs
 ; WAVE32-NEXT:    ;;#ASMEND
@@ -1730,7 +2179,6 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436
 ; WAVE32-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444
-; WAVE32-NEXT:    s_addk_i32 s32, 0x3880
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-NEXT:    .cfi_def_cfa_register 64
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
@@ -1998,15 +2446,16 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX900-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
 ; GFX900-NEXT:    .cfi_def_cfa_register 65
-; GFX900-NEXT:    s_addk_i32 s32, 0x400
 ; GFX900-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX900-NEXT:    s_addk_i32 s32, 0x400
+; GFX900-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX900-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
 ; GFX900-NEXT:    s_getpc_b64 s[16:17]
 ; GFX900-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX900-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
-; GFX900-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX900-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX900-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX900-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX900-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX900-NEXT:    s_mov_b32 s32, s33
 ; GFX900-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX900-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2271,15 +2720,16 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
 ; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 65
-; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x400
+; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
 ; GFX90A-V2A-DIS-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-V2A-DIS-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX90A-V2A-DIS-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
-; GFX90A-V2A-DIS-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-V2A-DIS-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-V2A-DIS-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX90A-V2A-DIS-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2544,15 +2994,16 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s16, 2
 ; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_registers 65, 2600, 2, 32
 ; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 65
-; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x400
 ; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s30, 0
+; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x400
+; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s31, 1
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_registers 16, 2815, 0, 32, 2815, 1, 32
 ; GFX90A-V2A-EN-NEXT:    s_getpc_b64 s[16:17]
 ; GFX90A-V2A-EN-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; GFX90A-V2A-EN-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
-; GFX90A-V2A-EN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-V2A-EN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s32, s33
 ; GFX90A-V2A-EN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GFX90A-V2A-EN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -2788,13 +3239,14 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32-NEXT:    .cfi_def_cfa_register 65
 ; WAVE32-NEXT:    v_writelane_b32 v40, s30, 0
 ; WAVE32-NEXT:    s_addk_i32 s32, 0x200
+; WAVE32-NEXT:    v_writelane_b32 v40, s31, 1
+; WAVE32-NEXT:    .cfi_llvm_vector_registers 16, 1791, 0, 32, 1791, 1, 32
 ; WAVE32-NEXT:    s_getpc_b64 s[16:17]
 ; WAVE32-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
 ; WAVE32-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
-; WAVE32-NEXT:    v_writelane_b32 v40, s31, 1
 ; WAVE32-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; WAVE32-NEXT:    v_readlane_b32 s31, v40, 1
 ; WAVE32-NEXT:    v_readlane_b32 s30, v40, 0
+; WAVE32-NEXT:    v_readlane_b32 s31, v40, 1
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
 ; WAVE32-NEXT:    v_readlane_b32 s4, v40, 2
 ; WAVE32-NEXT:    s_or_saveexec_b32 s5, -1
@@ -2819,7 +3271,9 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 256
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 0
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; clobber
 ; GFX900-NEXT:    ;;#ASMEND
@@ -2845,9 +3299,13 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 768
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 512
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword a32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 3104, 32, 17, 64, 256
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword a33, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 3105, 32, 17, 64, 0
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-DIS-NEXT:    ; clobber
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMEND
@@ -2879,9 +3337,13 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2600, 3072, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2601, 3073, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v0, a32 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 3104, 2560, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v1, a33 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 3105, 2561, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-EN-NEXT:    ; clobber
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMEND
@@ -2908,7 +3370,9 @@ define hidden void @func_spill_vgpr_to_vmem() #0 {
 ; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1576, 32, 1, 32, 128
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1577, 32, 1, 32, 0
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber
 ; WAVE32-NEXT:    ;;#ASMEND
@@ -2943,7 +3407,9 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX900-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 256
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX900-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 0
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; clobber
 ; GFX900-NEXT:    ;;#ASMEND
@@ -2969,9 +3435,13 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 768
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2601, 32, 17, 64, 512
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword a32, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 3104, 32, 17, 64, 256
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword a33, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 3105, 32, 17, 64, 0
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-DIS-NEXT:    ; clobber
 ; GFX90A-V2A-DIS-NEXT:    ;;#ASMEND
@@ -3003,9 +3473,13 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 3073
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2600, 3072, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2601, 3073, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v0, a32 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 3104, 2560, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v1, a33 ; Reload Reuse
+; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 3105, 2561, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMSTART
 ; GFX90A-V2A-EN-NEXT:    ; clobber
 ; GFX90A-V2A-EN-NEXT:    ;;#ASMEND
@@ -3032,7 +3506,9 @@ define hidden void @func_spill_vgpr_to_agpr() #2 {
 ; WAVE32-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1576, 32, 1, 32, 128
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s32 ; 4-byte Folded Spill
+; WAVE32-NEXT:    .cfi_llvm_vector_offset 1577, 32, 1, 32, 0
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber
 ; WAVE32-NEXT:    ;;#ASMEND

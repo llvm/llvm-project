@@ -232,18 +232,18 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, pt
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
-; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
+; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_byval_i32@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_byval_i32@rel32@hi+12
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_dword v1, off, s[0:3], s32
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -383,13 +383,14 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:4
 ; GCN-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:8
@@ -422,11 +423,10 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v28, 0
 ; GCN-NEXT:    v_mov_b32_e32 v29, 0
 ; GCN-NEXT:    v_mov_b32_e32 v30, 0
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
+; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -452,14 +452,14 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
 ; GCN-NEXT:    v_writelane_b32 v42, s4, 2
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT:    v_writelane_b32 v42, s30, 0
+; GCN-NEXT:    v_writelane_b32 v42, s31, 1
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_i32@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
-; GCN-NEXT:    v_writelane_b32 v42, s30, 0
-; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-NEXT:    v_writelane_b32 v42, s31, 1
 ; GCN-NEXT:    v_mov_b32_e32 v40, v1
 ; GCN-NEXT:    v_mov_b32_e32 v41, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -469,11 +469,11 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
 ; GCN-NEXT:    v_mov_b32_e32 v1, v40
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GCN-NEXT:    v_readlane_b32 s30, v42, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, sibling_call_i32_fastcc_i32_i32@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
 ; GCN-NEXT:    v_readlane_b32 s31, v42, 1
-; GCN-NEXT:    v_readlane_b32 s30, v42, 0
 ; GCN-NEXT:    s_mov_b32 s32, s33
 ; GCN-NEXT:    v_readlane_b32 s6, v42, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
@@ -603,23 +603,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; FIJI-NEXT:    s_mov_b64 exec, s[18:19]
 ; FIJI-NEXT:    v_writelane_b32 v40, s16, 18
-; FIJI-NEXT:    v_writelane_b32 v40, s30, 0
-; FIJI-NEXT:    v_writelane_b32 v40, s31, 1
-; FIJI-NEXT:    v_writelane_b32 v40, s34, 2
-; FIJI-NEXT:    v_writelane_b32 v40, s35, 3
-; FIJI-NEXT:    v_writelane_b32 v40, s36, 4
-; FIJI-NEXT:    v_writelane_b32 v40, s37, 5
-; FIJI-NEXT:    v_writelane_b32 v40, s38, 6
-; FIJI-NEXT:    v_writelane_b32 v40, s39, 7
-; FIJI-NEXT:    v_writelane_b32 v40, s48, 8
-; FIJI-NEXT:    v_writelane_b32 v40, s49, 9
-; FIJI-NEXT:    v_writelane_b32 v40, s50, 10
-; FIJI-NEXT:    v_writelane_b32 v40, s51, 11
-; FIJI-NEXT:    v_writelane_b32 v40, s52, 12
-; FIJI-NEXT:    v_writelane_b32 v40, s53, 13
-; FIJI-NEXT:    v_writelane_b32 v40, s54, 14
-; FIJI-NEXT:    v_writelane_b32 v40, s55, 15
-; FIJI-NEXT:    v_writelane_b32 v40, s64, 16
+; FIJI-NEXT:    s_addk_i32 s32, 0x400
+; FIJI-NEXT:    v_writelane_b32 v40, s34, 0
+; FIJI-NEXT:    v_writelane_b32 v40, s35, 1
+; FIJI-NEXT:    v_writelane_b32 v40, s36, 2
+; FIJI-NEXT:    v_writelane_b32 v40, s37, 3
+; FIJI-NEXT:    v_writelane_b32 v40, s38, 4
+; FIJI-NEXT:    v_writelane_b32 v40, s39, 5
+; FIJI-NEXT:    v_writelane_b32 v40, s48, 6
+; FIJI-NEXT:    v_writelane_b32 v40, s49, 7
+; FIJI-NEXT:    v_writelane_b32 v40, s50, 8
+; FIJI-NEXT:    v_writelane_b32 v40, s51, 9
+; FIJI-NEXT:    v_writelane_b32 v40, s52, 10
+; FIJI-NEXT:    v_writelane_b32 v40, s53, 11
+; FIJI-NEXT:    v_writelane_b32 v40, s54, 12
+; FIJI-NEXT:    v_writelane_b32 v40, s55, 13
+; FIJI-NEXT:    v_writelane_b32 v40, s64, 14
+; FIJI-NEXT:    v_writelane_b32 v40, s65, 15
+; FIJI-NEXT:    v_writelane_b32 v40, s30, 16
+; FIJI-NEXT:    v_writelane_b32 v40, s31, 17
 ; FIJI-NEXT:    s_mov_b32 s50, s15
 ; FIJI-NEXT:    s_mov_b32 s51, s14
 ; FIJI-NEXT:    s_mov_b32 s52, s13
@@ -630,8 +632,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; FIJI-NEXT:    v_add_u32_e32 v3, vcc, v3, v4
 ; FIJI-NEXT:    s_mov_b64 s[54:55], exec
-; FIJI-NEXT:    s_addk_i32 s32, 0x400
-; FIJI-NEXT:    v_writelane_b32 v40, s65, 17
 ; FIJI-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; FIJI-NEXT:    v_readfirstlane_b32 s16, v0
 ; FIJI-NEXT:    v_readfirstlane_b32 s17, v1
@@ -657,25 +657,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    s_cbranch_execnz .LBB18_1
 ; FIJI-NEXT:  ; %bb.2:
 ; FIJI-NEXT:    s_mov_b64 exec, s[54:55]
+; FIJI-NEXT:    v_readlane_b32 s30, v40, 16
 ; FIJI-NEXT:    v_mov_b32_e32 v0, v4
-; FIJI-NEXT:    v_readlane_b32 s65, v40, 17
-; FIJI-NEXT:    v_readlane_b32 s64, v40, 16
-; FIJI-NEXT:    v_readlane_b32 s55, v40, 15
-; FIJI-NEXT:    v_readlane_b32 s54, v40, 14
-; FIJI-NEXT:    v_readlane_b32 s53, v40, 13
-; FIJI-NEXT:    v_readlane_b32 s52, v40, 12
-; FIJI-NEXT:    v_readlane_b32 s51, v40, 11
-; FIJI-NEXT:    v_readlane_b32 s50, v40, 10
-; FIJI-NEXT:    v_readlane_b32 s49, v40, 9
-; FIJI-NEXT:    v_readlane_b32 s48, v40, 8
-; FIJI-NEXT:    v_readlane_b32 s39, v40, 7
-; FIJI-NEXT:    v_readlane_b32 s38, v40, 6
-; FIJI-NEXT:    v_readlane_b32 s37, v40, 5
-; FIJI-NEXT:    v_readlane_b32 s36, v40, 4
-; FIJI-NEXT:    v_readlane_b32 s35, v40, 3
-; FIJI-NEXT:    v_readlane_b32 s34, v40, 2
-; FIJI-NEXT:    v_readlane_b32 s31, v40, 1
-; FIJI-NEXT:    v_readlane_b32 s30, v40, 0
+; FIJI-NEXT:    v_readlane_b32 s31, v40, 17
+; FIJI-NEXT:    v_readlane_b32 s65, v40, 15
+; FIJI-NEXT:    v_readlane_b32 s64, v40, 14
+; FIJI-NEXT:    v_readlane_b32 s55, v40, 13
+; FIJI-NEXT:    v_readlane_b32 s54, v40, 12
+; FIJI-NEXT:    v_readlane_b32 s53, v40, 11
+; FIJI-NEXT:    v_readlane_b32 s52, v40, 10
+; FIJI-NEXT:    v_readlane_b32 s51, v40, 9
+; FIJI-NEXT:    v_readlane_b32 s50, v40, 8
+; FIJI-NEXT:    v_readlane_b32 s49, v40, 7
+; FIJI-NEXT:    v_readlane_b32 s48, v40, 6
+; FIJI-NEXT:    v_readlane_b32 s39, v40, 5
+; FIJI-NEXT:    v_readlane_b32 s38, v40, 4
+; FIJI-NEXT:    v_readlane_b32 s37, v40, 3
+; FIJI-NEXT:    v_readlane_b32 s36, v40, 2
+; FIJI-NEXT:    v_readlane_b32 s35, v40, 1
+; FIJI-NEXT:    v_readlane_b32 s34, v40, 0
 ; FIJI-NEXT:    s_mov_b32 s32, s33
 ; FIJI-NEXT:    v_readlane_b32 s4, v40, 18
 ; FIJI-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -694,23 +694,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; HAWAII-NEXT:    s_mov_b64 exec, s[18:19]
 ; HAWAII-NEXT:    v_writelane_b32 v40, s16, 18
-; HAWAII-NEXT:    v_writelane_b32 v40, s30, 0
-; HAWAII-NEXT:    v_writelane_b32 v40, s31, 1
-; HAWAII-NEXT:    v_writelane_b32 v40, s34, 2
-; HAWAII-NEXT:    v_writelane_b32 v40, s35, 3
-; HAWAII-NEXT:    v_writelane_b32 v40, s36, 4
-; HAWAII-NEXT:    v_writelane_b32 v40, s37, 5
-; HAWAII-NEXT:    v_writelane_b32 v40, s38, 6
-; HAWAII-NEXT:    v_writelane_b32 v40, s39, 7
-; HAWAII-NEXT:    v_writelane_b32 v40, s48, 8
-; HAWAII-NEXT:    v_writelane_b32 v40, s49, 9
-; HAWAII-NEXT:    v_writelane_b32 v40, s50, 10
-; HAWAII-NEXT:    v_writelane_b32 v40, s51, 11
-; HAWAII-NEXT:    v_writelane_b32 v40, s52, 12
-; HAWAII-NEXT:    v_writelane_b32 v40, s53, 13
-; HAWAII-NEXT:    v_writelane_b32 v40, s54, 14
-; HAWAII-NEXT:    v_writelane_b32 v40, s55, 15
-; HAWAII-NEXT:    v_writelane_b32 v40, s64, 16
+; HAWAII-NEXT:    s_addk_i32 s32, 0x400
+; HAWAII-NEXT:    v_writelane_b32 v40, s34, 0
+; HAWAII-NEXT:    v_writelane_b32 v40, s35, 1
+; HAWAII-NEXT:    v_writelane_b32 v40, s36, 2
+; HAWAII-NEXT:    v_writelane_b32 v40, s37, 3
+; HAWAII-NEXT:    v_writelane_b32 v40, s38, 4
+; HAWAII-NEXT:    v_writelane_b32 v40, s39, 5
+; HAWAII-NEXT:    v_writelane_b32 v40, s48, 6
+; HAWAII-NEXT:    v_writelane_b32 v40, s49, 7
+; HAWAII-NEXT:    v_writelane_b32 v40, s50, 8
+; HAWAII-NEXT:    v_writelane_b32 v40, s51, 9
+; HAWAII-NEXT:    v_writelane_b32 v40, s52, 10
+; HAWAII-NEXT:    v_writelane_b32 v40, s53, 11
+; HAWAII-NEXT:    v_writelane_b32 v40, s54, 12
+; HAWAII-NEXT:    v_writelane_b32 v40, s55, 13
+; HAWAII-NEXT:    v_writelane_b32 v40, s64, 14
+; HAWAII-NEXT:    v_writelane_b32 v40, s65, 15
+; HAWAII-NEXT:    v_writelane_b32 v40, s30, 16
+; HAWAII-NEXT:    v_writelane_b32 v40, s31, 17
 ; HAWAII-NEXT:    s_mov_b32 s50, s15
 ; HAWAII-NEXT:    s_mov_b32 s51, s14
 ; HAWAII-NEXT:    s_mov_b32 s52, s13
@@ -721,8 +723,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; HAWAII-NEXT:    v_add_i32_e32 v3, vcc, v3, v4
 ; HAWAII-NEXT:    s_mov_b64 s[54:55], exec
-; HAWAII-NEXT:    s_addk_i32 s32, 0x400
-; HAWAII-NEXT:    v_writelane_b32 v40, s65, 17
 ; HAWAII-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; HAWAII-NEXT:    v_readfirstlane_b32 s16, v0
 ; HAWAII-NEXT:    v_readfirstlane_b32 s17, v1
@@ -748,25 +748,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    s_cbranch_execnz .LBB18_1
 ; HAWAII-NEXT:  ; %bb.2:
 ; HAWAII-NEXT:    s_mov_b64 exec, s[54:55]
+; HAWAII-NEXT:    v_readlane_b32 s30, v40, 16
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, v4
-; HAWAII-NEXT:    v_readlane_b32 s65, v40, 17
-; HAWAII-NEXT:    v_readlane_b32 s64, v40, 16
-; HAWAII-NEXT:    v_readlane_b32 s55, v40, 15
-; HAWAII-NEXT:    v_readlane_b32 s54, v40, 14
-; HAWAII-NEXT:    v_readlane_b32 s53, v40, 13
-; HAWAII-NEXT:    v_readlane_b32 s52, v40, 12
-; HAWAII-NEXT:    v_readlane_b32 s51, v40, 11
-; HAWAII-NEXT:    v_readlane_b32 s50, v40, 10
-; HAWAII-NEXT:    v_readlane_b32 s49, v40, 9
-; HAWAII-NEXT:    v_readlane_b32 s48, v40, 8
-; HAWAII-NEXT:    v_readlane_b32 s39, v40, 7
-; HAWAII-NEXT:    v_readlane_b32 s38, v40, 6
-; HAWAII-NEXT:    v_readlane_b32 s37, v40, 5
-; HAWAII-NEXT:    v_readlane_b32 s36, v40, 4
-; HAWAII-NEXT:    v_readlane_b32 s35, v40, 3
-; HAWAII-NEXT:    v_readlane_b32 s34, v40, 2
-; HAWAII-NEXT:    v_readlane_b32 s31, v40, 1
-; HAWAII-NEXT:    v_readlane_b32 s30, v40, 0
+; HAWAII-NEXT:    v_readlane_b32 s31, v40, 17
+; HAWAII-NEXT:    v_readlane_b32 s65, v40, 15
+; HAWAII-NEXT:    v_readlane_b32 s64, v40, 14
+; HAWAII-NEXT:    v_readlane_b32 s55, v40, 13
+; HAWAII-NEXT:    v_readlane_b32 s54, v40, 12
+; HAWAII-NEXT:    v_readlane_b32 s53, v40, 11
+; HAWAII-NEXT:    v_readlane_b32 s52, v40, 10
+; HAWAII-NEXT:    v_readlane_b32 s51, v40, 9
+; HAWAII-NEXT:    v_readlane_b32 s50, v40, 8
+; HAWAII-NEXT:    v_readlane_b32 s49, v40, 7
+; HAWAII-NEXT:    v_readlane_b32 s48, v40, 6
+; HAWAII-NEXT:    v_readlane_b32 s39, v40, 5
+; HAWAII-NEXT:    v_readlane_b32 s38, v40, 4
+; HAWAII-NEXT:    v_readlane_b32 s37, v40, 3
+; HAWAII-NEXT:    v_readlane_b32 s36, v40, 2
+; HAWAII-NEXT:    v_readlane_b32 s35, v40, 1
+; HAWAII-NEXT:    v_readlane_b32 s34, v40, 0
 ; HAWAII-NEXT:    s_mov_b32 s32, s33
 ; HAWAII-NEXT:    v_readlane_b32 s4, v40, 18
 ; HAWAII-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -785,23 +785,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GFX9-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX9-NEXT:    v_writelane_b32 v40, s16, 18
-; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
-; GFX9-NEXT:    v_writelane_b32 v40, s34, 2
-; GFX9-NEXT:    v_writelane_b32 v40, s35, 3
-; GFX9-NEXT:    v_writelane_b32 v40, s36, 4
-; GFX9-NEXT:    v_writelane_b32 v40, s37, 5
-; GFX9-NEXT:    v_writelane_b32 v40, s38, 6
-; GFX9-NEXT:    v_writelane_b32 v40, s39, 7
-; GFX9-NEXT:    v_writelane_b32 v40, s48, 8
-; GFX9-NEXT:    v_writelane_b32 v40, s49, 9
-; GFX9-NEXT:    v_writelane_b32 v40, s50, 10
-; GFX9-NEXT:    v_writelane_b32 v40, s51, 11
-; GFX9-NEXT:    v_writelane_b32 v40, s52, 12
-; GFX9-NEXT:    v_writelane_b32 v40, s53, 13
-; GFX9-NEXT:    v_writelane_b32 v40, s54, 14
-; GFX9-NEXT:    v_writelane_b32 v40, s55, 15
-; GFX9-NEXT:    v_writelane_b32 v40, s64, 16
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
+; GFX9-NEXT:    v_writelane_b32 v40, s34, 0
+; GFX9-NEXT:    v_writelane_b32 v40, s35, 1
+; GFX9-NEXT:    v_writelane_b32 v40, s36, 2
+; GFX9-NEXT:    v_writelane_b32 v40, s37, 3
+; GFX9-NEXT:    v_writelane_b32 v40, s38, 4
+; GFX9-NEXT:    v_writelane_b32 v40, s39, 5
+; GFX9-NEXT:    v_writelane_b32 v40, s48, 6
+; GFX9-NEXT:    v_writelane_b32 v40, s49, 7
+; GFX9-NEXT:    v_writelane_b32 v40, s50, 8
+; GFX9-NEXT:    v_writelane_b32 v40, s51, 9
+; GFX9-NEXT:    v_writelane_b32 v40, s52, 10
+; GFX9-NEXT:    v_writelane_b32 v40, s53, 11
+; GFX9-NEXT:    v_writelane_b32 v40, s54, 12
+; GFX9-NEXT:    v_writelane_b32 v40, s55, 13
+; GFX9-NEXT:    v_writelane_b32 v40, s64, 14
+; GFX9-NEXT:    v_writelane_b32 v40, s65, 15
+; GFX9-NEXT:    v_writelane_b32 v40, s30, 16
+; GFX9-NEXT:    v_writelane_b32 v40, s31, 17
 ; GFX9-NEXT:    s_mov_b32 s50, s15
 ; GFX9-NEXT:    s_mov_b32 s51, s14
 ; GFX9-NEXT:    s_mov_b32 s52, s13
@@ -812,8 +814,6 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; GFX9-NEXT:    v_add_u32_e32 v3, v3, v4
 ; GFX9-NEXT:    s_mov_b64 s[54:55], exec
-; GFX9-NEXT:    s_addk_i32 s32, 0x400
-; GFX9-NEXT:    v_writelane_b32 v40, s65, 17
 ; GFX9-NEXT:  .LBB18_1: ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    v_readfirstlane_b32 s16, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s17, v1
@@ -839,25 +839,25 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX9-NEXT:  ; %bb.2:
 ; GFX9-NEXT:    s_mov_b64 exec, s[54:55]
+; GFX9-NEXT:    v_readlane_b32 s30, v40, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
-; GFX9-NEXT:    v_readlane_b32 s65, v40, 17
-; GFX9-NEXT:    v_readlane_b32 s64, v40, 16
-; GFX9-NEXT:    v_readlane_b32 s55, v40, 15
-; GFX9-NEXT:    v_readlane_b32 s54, v40, 14
-; GFX9-NEXT:    v_readlane_b32 s53, v40, 13
-; GFX9-NEXT:    v_readlane_b32 s52, v40, 12
-; GFX9-NEXT:    v_readlane_b32 s51, v40, 11
-; GFX9-NEXT:    v_readlane_b32 s50, v40, 10
-; GFX9-NEXT:    v_readlane_b32 s49, v40, 9
-; GFX9-NEXT:    v_readlane_b32 s48, v40, 8
-; GFX9-NEXT:    v_readlane_b32 s39, v40, 7
-; GFX9-NEXT:    v_readlane_b32 s38, v40, 6
-; GFX9-NEXT:    v_readlane_b32 s37, v40, 5
-; GFX9-NEXT:    v_readlane_b32 s36, v40, 4
-; GFX9-NEXT:    v_readlane_b32 s35, v40, 3
-; GFX9-NEXT:    v_readlane_b32 s34, v40, 2
-; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
-; GFX9-NEXT:    v_readlane_b32 s30, v40, 0
+; GFX9-NEXT:    v_readlane_b32 s31, v40, 17
+; GFX9-NEXT:    v_readlane_b32 s65, v40, 15
+; GFX9-NEXT:    v_readlane_b32 s64, v40, 14
+; GFX9-NEXT:    v_readlane_b32 s55, v40, 13
+; GFX9-NEXT:    v_readlane_b32 s54, v40, 12
+; GFX9-NEXT:    v_readlane_b32 s53, v40, 11
+; GFX9-NEXT:    v_readlane_b32 s52, v40, 10
+; GFX9-NEXT:    v_readlane_b32 s51, v40, 9
+; GFX9-NEXT:    v_readlane_b32 s50, v40, 8
+; GFX9-NEXT:    v_readlane_b32 s49, v40, 7
+; GFX9-NEXT:    v_readlane_b32 s48, v40, 6
+; GFX9-NEXT:    v_readlane_b32 s39, v40, 5
+; GFX9-NEXT:    v_readlane_b32 s38, v40, 4
+; GFX9-NEXT:    v_readlane_b32 s37, v40, 3
+; GFX9-NEXT:    v_readlane_b32 s36, v40, 2
+; GFX9-NEXT:    v_readlane_b32 s35, v40, 1
+; GFX9-NEXT:    v_readlane_b32 s34, v40, 0
 ; GFX9-NEXT:    s_mov_b32 s32, s33
 ; GFX9-NEXT:    v_readlane_b32 s4, v40, 18
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1

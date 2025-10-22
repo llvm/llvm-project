@@ -30553,14 +30553,14 @@ define <32 x i8> @bitcast_v16i16_to_v32i8(<16 x i16> %a, i32 %b) {
 ; SI-LABEL: bitcast_v16i16_to_v32i8:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v48, v15
-; SI-NEXT:    v_mov_b32_e32 v49, v11
-; SI-NEXT:    v_mov_b32_e32 v50, v7
-; SI-NEXT:    v_mov_b32_e32 v51, v3
 ; SI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    v_mov_b32_e32 v48, v15
+; SI-NEXT:    v_mov_b32_e32 v49, v11
+; SI-NEXT:    v_mov_b32_e32 v50, v7
+; SI-NEXT:    v_mov_b32_e32 v51, v3
 ; SI-NEXT:    v_mov_b32_e32 v32, v14
 ; SI-NEXT:    v_mov_b32_e32 v37, v12
 ; SI-NEXT:    v_mov_b32_e32 v33, v10
@@ -40102,11 +40102,11 @@ define inreg <32 x i8> @bitcast_v16bf16_to_v32i8_scalar(<16 x bfloat> inreg %a, 
 ; SI-LABEL: bitcast_v16bf16_to_v32i8_scalar:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; SI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; SI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 ; 4-byte Folded Spill
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; SI-NEXT:    s_and_b64 s[4:5], vcc, exec
 ; SI-NEXT:    v_mul_f32_e64 v24, 1.0, s17
 ; SI-NEXT:    v_mul_f32_e64 v32, 1.0, s16

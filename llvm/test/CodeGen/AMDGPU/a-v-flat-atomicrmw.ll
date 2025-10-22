@@ -337,7 +337,6 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-LABEL: flat_atomic_xchg_i32_ret_av_av_no_agprs:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
@@ -354,6 +353,7 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31]
@@ -464,7 +464,6 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-LABEL: flat_atomic_xchg_i32_ret_av_av_no_agprs:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX950-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
@@ -481,6 +480,7 @@ define void @flat_atomic_xchg_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX950-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[0:31]
@@ -4006,7 +4006,6 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-LABEL: flat_atomic_xor_i32_ret_av_av_no_agprs:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
@@ -4023,6 +4022,7 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
+; GFX90A-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; def v[0:31]
@@ -4131,7 +4131,6 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-LABEL: flat_atomic_xor_i32_ret_av_av_no_agprs:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX950-NEXT:    v_accvgpr_write_b32 a3, v40 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a4, v41 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a5, v42 ; Reload Reuse
@@ -4148,6 +4147,7 @@ define void @flat_atomic_xor_i32_ret_av_av_no_agprs(ptr %ptr) #0 {
 ; GFX950-NEXT:    v_accvgpr_write_b32 a16, v61 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a17, v62 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_write_b32 a18, v63 ; Reload Reuse
+; GFX950-NEXT:    v_accvgpr_write_b32 a0, v0
 ; GFX950-NEXT:    v_accvgpr_write_b32 a1, v1
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; def v[0:31]
