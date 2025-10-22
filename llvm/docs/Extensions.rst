@@ -618,9 +618,9 @@ For example:
   .quad   .Lball
   .quad   0
   .byte   3
-  .quad foo
-  .quad bar
-  .quad baz
+  .quad   foo
+  .quad   bar
+  .quad   baz
   .byte   3
   .quad   4524972987496481828
   .quad   3498816979441845844
