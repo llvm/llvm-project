@@ -10748,6 +10748,59 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2 && !getFoldableImm(SrcReg2, *MRI, CmpValue))
     return false;
 
+  const auto optimizeCmpSelect = [&CmpInstr, SrcReg, CmpValue, MRI,
+                                  this]() -> bool {
+    if (CmpValue != 0)
+      return false;
+
+    MachineInstr *Def = MRI->getUniqueVRegDef(SrcReg);
+    if (!Def || Def->getParent() != CmpInstr.getParent())
+      return false;
+
+    const auto foldableSelect = [](MachineInstr *Def) -> bool {
+      if (Def->getOpcode() == AMDGPU::S_CSELECT_B32 ||
+          Def->getOpcode() == AMDGPU::S_CSELECT_B64) {
+        bool Op1IsNonZeroImm =
+            Def->getOperand(1).isImm() && Def->getOperand(1).getImm() != 0;
+        bool Op2IsZeroImm =
+            Def->getOperand(2).isImm() && Def->getOperand(2).getImm() == 0;
+        if (Op1IsNonZeroImm && Op2IsZeroImm)
+          return true;
+      }
+      return false;
+    };
+
+    // For S_OP that set SCC = DST!=0, do the transformation
+    //
+    //   s_cmp_lg_* (S_OP ...), 0 => (S_OP ...)
+
+    // If foldableSelect, s_cmp_lg_* is redundant because the SCC input value
+    // for S_CSELECT* already has the same value that will be calculated by
+    // s_cmp_lg_*
+    //
+    //   s_cmp_lg_* (S_CSELECT* (non-zero imm), 0), 0 => (S_CSELECT* (non-zero
+    //   imm), 0)
+    if (!setsSCCifResultIsNonZero(*Def) && !foldableSelect(Def))
+      return false;
+
+    MachineInstr *KillsSCC = nullptr;
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
+        return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
+    }
+
+    if (MachineOperand *SccDef =
+            Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr))
+      SccDef->setIsDead(false);
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
+    CmpInstr.eraseFromParent();
+    return true;
+  };
+
   const auto optimizeCmpAnd = [&CmpInstr, SrcReg, CmpValue, MRI,
                                this](int64_t ExpectedValue, unsigned SrcSize,
                                      bool IsReversible, bool IsSigned) -> bool {
@@ -10822,16 +10875,20 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (IsReversedCC && !MRI->hasOneNonDBGUse(DefReg))
       return false;
 
-    for (auto I = std::next(Def->getIterator()), E = CmpInstr.getIterator();
-         I != E; ++I) {
-      if (I->modifiesRegister(AMDGPU::SCC, &RI) ||
-          I->killsRegister(AMDGPU::SCC, &RI))
+    MachineInstr *KillsSCC = nullptr;
+    for (MachineInstr &MI :
+         make_range(std::next(Def->getIterator()), CmpInstr.getIterator())) {
+      if (MI.modifiesRegister(AMDGPU::SCC, &RI))
         return false;
+      if (MI.killsRegister(AMDGPU::SCC, &RI))
+        KillsSCC = &MI;
     }
 
     MachineOperand *SccDef =
         Def->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr);
     SccDef->setIsDead(false);
+    if (KillsSCC)
+      KillsSCC->clearRegisterKills(AMDGPU::SCC, /*TRI=*/nullptr);
     CmpInstr.eraseFromParent();
 
     if (!MRI->use_nodbg_empty(DefReg)) {
@@ -10875,7 +10932,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
   case AMDGPU::S_CMPK_LG_I32:
-    return optimizeCmpAnd(0, 32, true, false);
+    return optimizeCmpAnd(0, 32, true, false) || optimizeCmpSelect();
   case AMDGPU::S_CMP_GT_U32:
   case AMDGPU::S_CMPK_GT_U32:
     return optimizeCmpAnd(0, 32, false, false);
@@ -10883,7 +10940,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false);
+    return optimizeCmpAnd(0, 64, true, false) || optimizeCmpSelect();
   }
 
   return false;
