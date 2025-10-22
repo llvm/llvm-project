@@ -64,7 +64,7 @@ define i8 @negate_zero_or_minsigned(i8 %x) {
 
 define <2 x i8> @negate_zero_or_minsigned_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @negate_zero_or_minsigned_vec(
-; CHECK-NEXT:    [[SIGNBIT:%.*]] = and <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[SIGNBIT:%.*]] = and <2 x i8> [[X:%.*]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i8> [[SIGNBIT]]
 ;
   %signbit = and <2 x i8> %x, <i8 128, i8 128>

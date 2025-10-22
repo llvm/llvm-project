@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -disable-cgp < %s
+; RUN: llc -mtriple=hexagon -O2 -disable-cgp < %s
 ; REQUIRES: asserts
 ;
 ; Tail duplication can ignore subregister information on PHI nodes, and as

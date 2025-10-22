@@ -330,8 +330,29 @@ def testConcreteShapedType():
         print("dim size:", vector.get_dim_size(1))
         # CHECK: is_dynamic_size: False
         print("is_dynamic_size:", vector.is_dynamic_size(3))
+        # CHECK: is_static_size: True
+        print("is_static_size:", vector.is_static_size(3))
         # CHECK: is_dynamic_stride_or_offset: False
         print("is_dynamic_stride_or_offset:", vector.is_dynamic_stride_or_offset(1))
+        # CHECK: is_static_stride_or_offset: True
+        print("is_static_stride_or_offset:", vector.is_static_stride_or_offset(1))
+
+        dynamic_size_val = vector.get_dynamic_size()
+        dynamic_stride_val = vector.get_dynamic_stride_or_offset()
+        # CHECK: is_dynamic_size_with_dynamic: True
+        print("is_dynamic_size_with_dynamic:", vector.is_dynamic_size(dynamic_size_val))
+        # CHECK: is_static_size_with_dynamic: False
+        print("is_static_size_with_dynamic:", vector.is_static_size(dynamic_size_val))
+        # CHECK: is_dynamic_stride_or_offset_with_dynamic: True
+        print(
+            "is_dynamic_stride_or_offset_with_dynamic:",
+            vector.is_dynamic_stride_or_offset(dynamic_stride_val),
+        )
+        # CHECK: is_static_stride_or_offset_with_dynamic: False
+        print(
+            "is_static_stride_or_offset_with_dynamic:",
+            vector.is_static_stride_or_offset(dynamic_stride_val),
+        )
         # CHECK: isinstance(ShapedType): True
         print("isinstance(ShapedType):", isinstance(vector, ShapedType))
 
@@ -350,18 +371,23 @@ def testAbstractShapedType():
 # CHECK-LABEL: TEST: testVectorType
 @run
 def testVectorType():
+    shape = [2, 3]
+    with Context():
+        f32 = F32Type.get()
+        # CHECK: unchecked vector type: vector<2x3xf32>
+        print("unchecked vector type:", VectorType.get_unchecked(shape, f32))
+
     with Context(), Location.unknown():
         f32 = F32Type.get()
-        shape = [2, 3]
-        # CHECK: vector type: vector<2x3xf32>
-        print("vector type:", VectorType.get(shape, f32))
+        # CHECK: checked vector type: vector<2x3xf32>
+        print("checked vector type:", VectorType.get(shape, f32))
 
         none = NoneType.get()
         try:
             VectorType.get(shape, none)
         except MLIRError as e:
             # CHECK: Invalid type:
-            # CHECK: error: unknown: failed to verify 'elementType': integer or index or floating-point
+            # CHECK: error: unknown: failed to verify 'elementType': VectorElementTypeInterface instance
             print(e)
         else:
             print("Exception not produced")
@@ -639,6 +665,7 @@ def testTypeIDs():
             (BF16Type, BF16Type.get()),
             (F16Type, F16Type.get()),
             (F32Type, F32Type.get()),
+            (FloatTF32Type, FloatTF32Type.get()),
             (F64Type, F64Type.get()),
             (NoneType, NoneType.get()),
             (ComplexType, ComplexType.get(f32)),
@@ -668,6 +695,7 @@ def testTypeIDs():
         # CHECK: BF16Type(bf16)
         # CHECK: F16Type(f16)
         # CHECK: F32Type(f32)
+        # CHECK: FloatTF32Type(tf32)
         # CHECK: F64Type(f64)
         # CHECK: NoneType(none)
         # CHECK: ComplexType(complex<f32>)
@@ -734,6 +762,9 @@ def testConcreteTypesRoundTrip():
         # CHECK: F32Type
         # CHECK: F32Type(f32)
         print_downcasted(F32Type.get())
+        # CHECK: FloatTF32Type
+        # CHECK: FloatTF32Type(tf32)
+        print_downcasted(FloatTF32Type.get())
         # CHECK: F64Type
         # CHECK: F64Type(f64)
         print_downcasted(F64Type.get())

@@ -6,25 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_UNIQUE_COPY_H
-#define _LIBCPP___ALGORITHM_UNIQUE_COPY_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_UNIQUE_COPY_H
+#define _LIBCPP___CXX03___ALGORITHM_UNIQUE_COPY_H
 
-#include <__algorithm/comp.h>
-#include <__algorithm/iterator_operations.h>
-#include <__config>
-#include <__iterator/iterator_traits.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/is_base_of.h>
-#include <__type_traits/is_same.h>
-#include <__utility/move.h>
-#include <__utility/pair.h>
+#include <__cxx03/__algorithm/comp.h>
+#include <__cxx03/__algorithm/iterator_operations.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/is_base_of.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -37,7 +37,7 @@ struct __read_from_tmp_value_tag {};
 } // namespace __unique_copy_tags
 
 template <class _AlgPolicy, class _BinaryPredicate, class _InputIterator, class _Sent, class _OutputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _OutputIterator>
+_LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _OutputIterator>
 __unique_copy(_InputIterator __first,
               _Sent __last,
               _OutputIterator __result,
@@ -59,7 +59,7 @@ __unique_copy(_InputIterator __first,
 }
 
 template <class _AlgPolicy, class _BinaryPredicate, class _ForwardIterator, class _Sent, class _OutputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _OutputIterator>
+_LIBCPP_HIDE_FROM_ABI pair<_ForwardIterator, _OutputIterator>
 __unique_copy(_ForwardIterator __first,
               _Sent __last,
               _OutputIterator __result,
@@ -81,7 +81,7 @@ __unique_copy(_ForwardIterator __first,
 }
 
 template <class _AlgPolicy, class _BinaryPredicate, class _InputIterator, class _Sent, class _InputAndOutputIterator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _InputAndOutputIterator>
+_LIBCPP_HIDE_FROM_ABI pair<_InputIterator, _InputAndOutputIterator>
 __unique_copy(_InputIterator __first,
               _Sent __last,
               _InputAndOutputIterator __result,
@@ -98,7 +98,7 @@ __unique_copy(_InputIterator __first,
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryPredicate>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result, _BinaryPredicate __pred) {
   using __algo_tag = __conditional_t<
       is_base_of<forward_iterator_tag, typename iterator_traits<_InputIterator>::iterator_category>::value,
@@ -115,7 +115,7 @@ unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator
+inline _LIBCPP_HIDE_FROM_ABI _OutputIterator
 unique_copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   return std::unique_copy(std::move(__first), std::move(__last), std::move(__result), __equal_to());
 }
@@ -124,4 +124,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___ALGORITHM_UNIQUE_COPY_H
+#endif // _LIBCPP___CXX03___ALGORITHM_UNIQUE_COPY_H

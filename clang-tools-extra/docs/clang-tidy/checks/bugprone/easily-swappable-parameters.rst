@@ -169,7 +169,7 @@ noisiness.
     * Separate ``return`` statements return either of the parameters on
       different code paths.
 
-.. option:: NamePrefixSuffixSilenceDissimilarityTreshold
+.. option:: NamePrefixSuffixSilenceDissimilarityThreshold
 
     The number of characters two parameter names might be different on *either*
     the head or the tail end with the rest of the name the same so that the

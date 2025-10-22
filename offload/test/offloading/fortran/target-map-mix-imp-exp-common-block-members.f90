@@ -1,7 +1,5 @@
-! Offloading test checking interaction of
-! mapping all the members of a common block
-! with a mix of explicit and implicit
-! mapping to a target region
+! Offloading test checking interaction of mapping all the members of a common
+! block with a mix of explicit and implicit mapping to a target region
 ! REQUIRES: flang, amdgcn-amd-amdhsa
 ! UNSUPPORTED: nvptx64-nvidia-cuda
 ! UNSUPPORTED: nvptx64-nvidia-cuda-LTO

@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefix=32
-; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 < %s | FileCheck %s -check-prefix=64
-; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 < %s | FileCheck %s -check-prefix=64
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefix=32
+; RUN: llc -mtriple=mips64el -mcpu=mips4 -target-abi=n64 < %s | FileCheck %s -check-prefix=64
+; RUN: llc -mtriple=mips64el -mcpu=mips64 -target-abi=n64 < %s | FileCheck %s -check-prefix=64
 
 define void @f0() nounwind {
 entry:

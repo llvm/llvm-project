@@ -30,6 +30,14 @@ def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<(all_of FeatureBulkMemory), "bulk-memory">;
 
+def HasBulkMemoryOpt :
+    Predicate<"Subtarget->hasBulkMemoryOpt()">,
+    AssemblerPredicate<(all_of FeatureBulkMemoryOpt), "bulk-memory-opt">;
+
+def HasCallIndirectOverlong :
+    Predicate<"Subtarget->hasCallIndirectOverlong()">,
+    AssemblerPredicate<(all_of FeatureCallIndirectOverlong), "call-indirect-overlong">;
+
 def HasExceptionHandling :
     Predicate<"Subtarget->hasExceptionHandling()">,
     AssemblerPredicate<(all_of FeatureExceptionHandling), "exception-handling">;
@@ -41,6 +49,9 @@ def HasExtendedConst :
 def HasFP16 :
     Predicate<"Subtarget->hasFP16()">,
     AssemblerPredicate<(all_of FeatureFP16), "fp16">;
+
+def HasGC : Predicate<"Subtarget->hasGC()">,
+            AssemblerPredicate<(all_of FeatureGC), "gc">;
 
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
@@ -231,7 +242,7 @@ def TypeIndex : Operand<i32>;
 
 // TODO: Find more places to use this.
 def bool_node : PatLeaf<(i32 I32:$cond), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMinLeadingZeros() == 31;
+  return CurDAG->computeKnownBits(Op).countMinLeadingZeros() == 31;
 }]>;
 
 //===----------------------------------------------------------------------===//

@@ -176,8 +176,7 @@ bool SBBlock::GetDescription(SBStream &description) {
     m_opaque_ptr->CalculateSymbolContext(&sc);
     if (sc.function) {
       m_opaque_ptr->DumpAddressRanges(
-          &strm,
-          sc.function->GetAddressRange().GetBaseAddress().GetFileAddress());
+          &strm, sc.function->GetAddress().GetFileAddress());
     }
   } else
     strm.PutCString("No value");

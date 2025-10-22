@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-func-erase-result -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-func-erase-result -split-input-file -verify-diagnostics | FileCheck %s
 
 // CHECK: func private @f(){{$}}
 // CHECK-NOT: attributes{{.*}}result
@@ -66,3 +66,8 @@ func.func private @f() -> (
   f32 {test.erase_this_result},
   tensor<3xf32>
 )
+
+// -----
+
+// expected-error @below {{failed to erase results}}
+llvm.func @llvm_func(!llvm.ptr, i64)

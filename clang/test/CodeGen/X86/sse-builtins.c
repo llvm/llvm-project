@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror | FileCheck %s
 
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -fms-extensions -fms-compatibility -ffreestanding %s -triple=x86_64-windows-msvc -target-feature +sse -emit-llvm -o - -Wall -Werror  -fexperimental-new-constant-interpreter | FileCheck %s
+
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
@@ -31,15 +36,15 @@ __m128 test_mm_and_ps(__m128 A, __m128 B) {
   // CHECK: and <4 x i32>
   return _mm_and_ps(A, B);
 }
-TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), -0.0f, -0.0f, +0.0f, +7.0f));
+TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, -0.0f, +0.0f, +7.0f));
 
 __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_andnot_ps
-  // CHECK: xor <4 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: xor <4 x i32> %{{.*}}, splat (i32 -1)
   // CHECK: and <4 x i32>
   return _mm_andnot_ps(A, B);
 }
-TEST_CONSTEXPR(match_m128(_mm_andnot_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_andnot_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, +0.0f, -0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_eq_oq
@@ -556,6 +561,8 @@ int test_mm_movemask_ps(__m128 A) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse.movmsk.ps(<4 x float> %{{.*}})
   return _mm_movemask_ps(A);
 }
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-2.0f, 3.0f, -5.5f, -0.0f}) == 0xD);
+TEST_CONSTEXPR(_mm_movemask_ps((__m128)(__v4sf){-7.348215e5, 0.00314159, -12.789, 2.7182818}) == 0x5);
 
 __m128 test_mm_mul_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_mul_ps

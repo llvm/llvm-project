@@ -1,4 +1,4 @@
-# XFAIL: system-windows
+# XFAIL: target-windows
 # RUN: echo quit | %lldb -o "expression a+b" \
 # RUN:   | FileCheck %s --strict-whitespace --check-prefix=CHECK1
 #            (lldb) expression a+b

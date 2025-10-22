@@ -56,6 +56,9 @@ class ParamNativeTypeTrait<string prop, string params>
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
+// Trait required to be added to any type which is mutable.
+def MutableType : NativeTypeTrait<"IsMutable">;
+
 //===----------------------------------------------------------------------===//
 // Builders
 //===----------------------------------------------------------------------===//
@@ -246,6 +249,9 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // generated code is placed inside the class's C++ namespace. `$cppClass` is
   // replaced by the class name.
   code extraClassDefinition = [{}];
+
+  // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
+  bit genMnemonicAlias = 0;
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
@@ -378,6 +384,14 @@ class StringRefParameter<string desc = "", string value = ""> :
   let printer = [{$_printer.printString($_self);}];
   let cppStorageType = "std::string";
   let defaultValue = value;
+}
+
+// For APInts, which require comparison supporting different bitwidths. The
+// default APInt comparison operator asserts when the bitwidths differ, so
+// a custom implementation is necessary.
+class APIntParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APInt", desc> {
+  let comparator = "$_lhs.getBitWidth() == $_rhs.getBitWidth() && $_lhs == $_rhs";
 }
 
 // For APFloats, which require comparison.

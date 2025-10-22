@@ -18,6 +18,7 @@ unittest("SemaTests") {
     "CodeCompleteTest.cpp",
     "ExternalSemaSourceTest.cpp",
     "GslOwnerPointerInference.cpp",
+    "HeuristicResolverTest.cpp",
     "SemaLookupTest.cpp",
     "SemaNoloadLookupTest.cpp",
   ]

@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s
+; RUN: llc -O2 -mtriple=hexagon < %s
 ; REQUIRES: asserts
 
 ; Test that the final instruction ordering code does not result in infinite

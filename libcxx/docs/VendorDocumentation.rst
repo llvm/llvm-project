@@ -244,7 +244,8 @@ General purpose options
 
   **Default**: ``ON`` (or value of ``LLVM_INCLUDE_TESTS``)
 
-  Build the libc++ tests.
+  Build the libc++ test suite, which includes various types of tests like conformance
+  tests, vendor-specific tests and benchmarks.
 
 .. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
 
@@ -252,15 +253,6 @@ General purpose options
 
   Build the libc++ benchmark tests and the Google Benchmark library needed
   to support them.
-
-.. option:: LIBCXX_BENCHMARK_TEST_ARGS:STRING
-
-  **Default**: ``--benchmark_min_time=0.01``
-
-  A semicolon list of arguments to pass when running the libc++ benchmarks using the
-  ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
-  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
-  get accurate measurements.
 
 .. option:: LIBCXX_ASSERTION_HANDLER_FILE:PATH
 
@@ -451,7 +443,7 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
           -DLLVM_ENABLE_LLD=ON                                                        \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"                         \
           -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
           -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
   > ninja -C build cxx
@@ -590,3 +582,8 @@ situations will give the same result:
   $ clang++ -stdlib=libc++ helloworld.cpp -lcxxrt
 
 .. _`libcxxrt`: https://github.com/libcxxrt/libcxxrt
+
+libc++'s ABI guarantees
+=======================
+
+Libc++ provides several ABI guarantees, which are documented :ref:`here <ABIGuarantees>`.

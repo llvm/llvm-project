@@ -1,3 +1,5 @@
+# This test intentionally checks for fatal errors, and fatal errors aren't supported for testing when main is run twice.
+# XFAIL: main-run-twice
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: echo > %t/empty.o
 # RUN: llvm-ar --format=gnu cr %t/not-elf.a %t/empty.o

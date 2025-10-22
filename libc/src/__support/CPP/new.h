@@ -9,12 +9,15 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_NEW_H
 
+#include "hdr/func/aligned_alloc.h"
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/os.h"
 
 #include <stddef.h> // For size_t
-#include <stdlib.h> // For malloc, free etc.
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -26,6 +29,14 @@ enum class align_val_t : size_t {};
 } // namespace std
 
 namespace LIBC_NAMESPACE_DECL {
+
+namespace cpp {
+template <class T> [[nodiscard]] constexpr T *launder(T *p) {
+  static_assert(__has_builtin(__builtin_launder),
+                "cpp::launder requires __builtin_launder");
+  return __builtin_launder(p);
+}
+} // namespace cpp
 
 class AllocChecker {
   bool success = false;
@@ -99,8 +110,12 @@ LIBC_INLINE void *operator new[](size_t, void *p) { return p; }
 // header file in all libc source files where operator delete is called ensures
 // that only libc call sites use these replacement operator delete functions.
 
+#ifndef LIBC_COMPILER_IS_MSVC
 #define DELETE_NAME(name)                                                      \
   __asm__(LIBC_MACRO_TO_STRING(LIBC_NAMESPACE) "_" LIBC_MACRO_TO_STRING(name))
+#else
+#define DELETE_NAME(name)
+#endif // LIBC_COMPILER_IS_MSVC
 
 void operator delete(void *) noexcept DELETE_NAME(delete);
 void operator delete(void *, std::align_val_t) noexcept

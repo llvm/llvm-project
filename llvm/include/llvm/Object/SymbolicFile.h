@@ -16,6 +16,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -71,7 +72,7 @@ template <class content_type> class content_iterator {
 
 public:
   using iterator_category = std::forward_iterator_tag;
-  using value_type = content_type;
+  using value_type = const content_type;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;
@@ -142,7 +143,7 @@ public:
 
 using basic_symbol_iterator = content_iterator<BasicSymbolRef>;
 
-class SymbolicFile : public Binary {
+class LLVM_ABI SymbolicFile : public Binary {
 public:
   SymbolicFile(unsigned int Type, MemoryBufferRef Source);
   ~SymbolicFile() override;

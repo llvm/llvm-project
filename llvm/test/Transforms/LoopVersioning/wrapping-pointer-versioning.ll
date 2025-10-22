@@ -29,16 +29,19 @@ define void @f1(ptr noalias %a,
 ; LV-LABEL: @f1(
 ; LV-NEXT:  for.body.lver.check:
 ; LV-NEXT:    [[TMP0:%.*]] = add i64 [[N:%.*]], -1
+; LV-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP0]] to i32
+; LV-NEXT:    [[MUL2:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[TMP5]])
+; LV-NEXT:    [[MUL_OVERFLOW1:%.*]] = extractvalue { i32, i1 } [[MUL2]], 1
 ; LV-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; LV-NEXT:    [[TMP8:%.*]] = or i1 [[MUL_OVERFLOW1]], [[TMP1]]
 ; LV-NEXT:    [[MUL1:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL1]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL1]], 1
-; LV-NEXT:    [[TMP2:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT]]
 ; LV-NEXT:    [[TMP4:%.*]] = icmp ult ptr [[TMP3]], [[A]]
-; LV-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
-; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP1]], [[TMP5]]
-; LV-NEXT:    br i1 [[TMP6]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
+; LV-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
+; LV-NEXT:    [[TMP7:%.*]] = or i1 [[TMP8]], [[TMP6]]
+; LV-NEXT:    br i1 [[TMP7]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
 ; LV:       for.body.lver.orig:
@@ -75,7 +78,7 @@ define void @f1(ptr noalias %a,
 ; LV-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT2:%.*]], label [[FOR_BODY]]
 ; LV:       for.end.loopexit:
 ; LV-NEXT:    br label [[FOR_END:%.*]]
-; LV:       for.end.loopexit2:
+; LV:       for.end.loopexit5:
 ; LV-NEXT:    br label [[FOR_END]]
 ; LV:       for.end:
 ; LV-NEXT:    ret void
@@ -259,7 +262,6 @@ define void @f3(ptr noalias %a,
 ; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
 ; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; LV-NEXT:    [[TMP6:%.*]] = sub i64 0, [[MUL_RESULT3]]
 ; LV-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[MUL_RESULT3]]
 ; LV-NEXT:    [[TMP8:%.*]] = icmp ult ptr [[TMP7]], [[A]]
 ; LV-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[MUL_OVERFLOW4]]
@@ -458,18 +460,7 @@ define void @f5(ptr noalias %a,
 ; LV-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[TMP3]], [[TMP1]]
 ; LV-NEXT:    [[TMP5:%.*]] = or i1 [[TMP4]], [[MUL_OVERFLOW]]
 ; LV-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
-; LV-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; LV-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP1]] to i64
-; LV-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP8]], 1
-; LV-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[TMP9]]
-; LV-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[TMP0]])
-; LV-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
-; LV-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; LV-NEXT:    [[TMP10:%.*]] = sub i64 0, [[MUL_RESULT3]]
-; LV-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP10]]
-; LV-NEXT:    [[TMP12:%.*]] = icmp ugt ptr [[TMP11]], [[SCEVGEP]]
-; LV-NEXT:    [[TMP13:%.*]] = or i1 [[TMP12]], [[MUL_OVERFLOW4]]
-; LV-NEXT:    [[TMP14:%.*]] = or i1 [[TMP7]], [[TMP13]]
+; LV-NEXT:    [[TMP14:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; LV-NEXT:    br i1 [[TMP14]], label [[FOR_BODY_PH_LVER_ORIG:%.*]], label [[FOR_BODY_PH:%.*]]
 ; LV:       for.body.ph.lver.orig:
 ; LV-NEXT:    br label [[FOR_BODY_LVER_ORIG:%.*]]
@@ -477,7 +468,7 @@ define void @f5(ptr noalias %a,
 ; LV-NEXT:    [[IND_LVER_ORIG:%.*]] = phi i64 [ 0, [[FOR_BODY_PH_LVER_ORIG]] ], [ [[INC_LVER_ORIG:%.*]], [[FOR_BODY_LVER_ORIG]] ]
 ; LV-NEXT:    [[IND1_LVER_ORIG:%.*]] = phi i32 [ [[TRUNCN]], [[FOR_BODY_PH_LVER_ORIG]] ], [ [[DEC_LVER_ORIG:%.*]], [[FOR_BODY_LVER_ORIG]] ]
 ; LV-NEXT:    [[MUL_LVER_ORIG:%.*]] = mul i32 [[IND1_LVER_ORIG]], 2
-; LV-NEXT:    [[ARRAYIDXA_LVER_ORIG:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[MUL_LVER_ORIG]]
+; LV-NEXT:    [[ARRAYIDXA_LVER_ORIG:%.*]] = getelementptr inbounds i16, ptr [[A:%.*]], i32 [[MUL_LVER_ORIG]]
 ; LV-NEXT:    [[LOADA_LVER_ORIG:%.*]] = load i16, ptr [[ARRAYIDXA_LVER_ORIG]], align 2
 ; LV-NEXT:    [[ARRAYIDXB_LVER_ORIG:%.*]] = getelementptr inbounds i16, ptr [[B:%.*]], i64 [[IND_LVER_ORIG]]
 ; LV-NEXT:    [[LOADB_LVER_ORIG:%.*]] = load i16, ptr [[ARRAYIDXB_LVER_ORIG]], align 2
@@ -505,7 +496,7 @@ define void @f5(ptr noalias %a,
 ; LV-NEXT:    br i1 [[EXITCOND]], label [[FOR_END_LOOPEXIT5:%.*]], label [[FOR_BODY]]
 ; LV:       for.end.loopexit:
 ; LV-NEXT:    br label [[FOR_END:%.*]]
-; LV:       for.end.loopexit5:
+; LV:       for.end.loopexit2:
 ; LV-NEXT:    br label [[FOR_END]]
 ; LV:       for.end:
 ; LV-NEXT:    ret void

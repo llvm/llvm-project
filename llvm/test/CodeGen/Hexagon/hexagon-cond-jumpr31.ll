@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O3 < %s | FileCheck %s
 ; CHECK: if (!p{{[0-3]}}.new) jumpr:nt r31
 ; CHECK-NOT: .falign
 

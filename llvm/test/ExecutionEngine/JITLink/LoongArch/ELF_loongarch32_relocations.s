@@ -103,6 +103,30 @@ test_gotoffset12_external:
     ld.w $a0, $a0, %got_pc_lo12(external_data)
     .size test_gotoffset12_external, .-test_gotoffset12_external
 
+## Check R_LARCH_B16 relocation for compare and branch instructions.
+
+# jitlink-check: decode_operand(test_br16, 2)[17:0] = \
+# jitlink-check:   (test_br16_target - test_br16)[17:0]
+    .globl test_br16, test_br16_target
+    .p2align 2
+test_br16:
+    beq $t1, $t2, %b16(test_br16_target)
+    .skip (1 << 16)
+test_br16_target:
+    .size test_br16, .-test_br16
+
+## Check R_LARCH_B21 relocation for compare and branch instructions.
+
+# jitlink-check: decode_operand(test_br21, 1)[22:0] = \
+# jitlink-check:   (test_br21_target - test_br21)[22:0]
+    .globl test_br21, test_br21_target
+    .p2align 2
+test_br21:
+    beqz $t1, %b21(test_br21_target)
+    .skip (1 << 21)
+test_br21_target:
+    .size test_br21, .-test_br21
+
 
     .globl named_data
     .p2align 4

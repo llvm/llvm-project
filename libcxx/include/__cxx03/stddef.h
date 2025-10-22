@@ -24,7 +24,7 @@ Types:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -34,11 +34,11 @@ Types:
 //       with different defines and the underlying <stddef.h> will know how to deal with that.
 #include_next <stddef.h>
 
-#ifndef _LIBCPP_STDDEF_H
-#  define _LIBCPP_STDDEF_H
+#ifndef _LIBCPP___CXX03_STDDEF_H
+#  define _LIBCPP___CXX03_STDDEF_H
 
 #  ifdef __cplusplus
 typedef decltype(nullptr) nullptr_t;
 #  endif
 
-#endif // _LIBCPP_STDDEF_H
+#endif // _LIBCPP___CXX03_STDDEF_H

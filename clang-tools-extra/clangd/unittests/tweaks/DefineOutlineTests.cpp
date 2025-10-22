@@ -15,6 +15,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
@@ -111,11 +113,11 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
     template <typename> struct Foo { void fo^o(){} };
     )cpp");
 
-  // Not available on function templates and specializations, as definition must
-  // be visible to all translation units.
+  // Not available on function template specializations and free function
+  // templates.
   EXPECT_UNAVAILABLE(R"cpp(
-    template <typename> void fo^o() {};
-    template <> void fo^o<int>() {};
+    template <typename T> void fo^o() {}
+    template <> void fo^o<int>() {}
   )cpp");
 
   // Not available on methods of unnamed classes.
@@ -237,7 +239,7 @@ TEST_F(DefineOutlineTest, ApplyTest) {
                 Foo(T z) __attribute__((weak)) ;
                 int bar;
               };template <typename T>
-Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
+inline Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
 )cpp",
           ""},
       // Virt specifiers.
@@ -390,7 +392,7 @@ Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
               };
             };template <typename T, typename ...U>
 template <class V, int A>
-typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>::I::foo(T, U..., V, E) { return E1; }
+inline typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>::I::foo(T, U..., V, E) { return E1; }
 )cpp",
           ""},
       // Destructors
@@ -399,6 +401,37 @@ typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>::I::fo
           "class A { ~A(); };",
           "A::~A(){} ",
       },
+
+      // Member template
+      {
+          R"cpp(
+            struct Foo {
+              template <typename T, typename, bool B = true>
+              T ^bar() { return {}; }
+            };)cpp",
+          R"cpp(
+            struct Foo {
+              template <typename T, typename, bool B = true>
+              T bar() ;
+            };template <typename T, typename, bool B>
+inline T Foo::bar() { return {}; }
+)cpp",
+          ""},
+
+      // Class template with member template
+      {
+          R"cpp(
+            template <typename T> struct Foo {
+              template <typename U, bool> T ^bar(const T& t, const U& u) { return {}; }
+            };)cpp",
+          R"cpp(
+            template <typename T> struct Foo {
+              template <typename U, bool> T bar(const T& t, const U& u) ;
+            };template <typename T>
+template <typename U, bool>
+inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
+)cpp",
+          ""},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Test);
@@ -714,6 +747,43 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
   for (const auto &Case : Cases) {
     EXPECT_EQ(apply(Case.first), Case.second);
   }
+}
+
+TWEAK_WORKSPACE_TEST(DefineOutline);
+
+// Test that DefineOutline's use of getCorrespondingHeaderOrSource()
+// to find the source file corresponding to a header file in which the
+// tweak is invoked is working as intended.
+TEST_F(DefineOutlineWorkspaceTest, FindsCorrespondingSource) {
+  llvm::Annotations HeaderBefore(R"cpp(
+class A {
+  void bar();
+  void f^oo(){}
+};
+)cpp");
+  std::string SourceBefore(R"cpp(
+#include "a.hpp"
+void A::bar(){}
+)cpp");
+  std::string HeaderAfter = R"cpp(
+class A {
+  void bar();
+  void foo();
+};
+)cpp";
+  std::string SourceAfter = R"cpp(
+#include "a.hpp"
+void A::bar(){}
+void A::foo(){}
+)cpp";
+  Workspace.addSource("a.hpp", HeaderBefore.code());
+  Workspace.addMainFile("a.cpp", SourceBefore);
+  auto Result = apply("a.hpp", {HeaderBefore.point(), HeaderBefore.point()});
+  EXPECT_THAT(Result,
+              AllOf(withStatus("success"),
+                    editedFiles(UnorderedElementsAre(
+                        FileWithContents(testPath("a.hpp"), HeaderAfter),
+                        FileWithContents(testPath("a.cpp"), SourceAfter)))));
 }
 
 } // namespace

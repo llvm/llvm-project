@@ -58,11 +58,18 @@ namespace __asan {
 
 static inline uptr MaybeRealStrnlen(const char *s, uptr maxlen) {
 #if SANITIZER_INTERCEPT_STRNLEN
-  if (REAL(strnlen)) {
+  if (REAL(strnlen))
     return REAL(strnlen)(s, maxlen);
-  }
-#endif
+#  endif
   return internal_strnlen(s, maxlen);
+}
+
+static inline uptr MaybeRealWcsnlen(const wchar_t* s, uptr maxlen) {
+#  if SANITIZER_INTERCEPT_WCSNLEN
+  if (REAL(wcsnlen))
+    return REAL(wcsnlen)(s, maxlen);
+#  endif
+  return internal_wcsnlen(s, maxlen);
 }
 
 void SetThreadName(const char *name) {
@@ -85,7 +92,7 @@ int OnExit() {
 // ---------------------- Wrappers ---------------- {{{1
 using namespace __asan;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
@@ -365,7 +372,7 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
-  // increase args size if neccecary.
+  // increase args size if necessary.
   CHECK_LE(argc, ARRAY_SIZE(args));
   internal_memset(args, 0, sizeof(args));
   va_start(ap, argc);
@@ -529,13 +536,13 @@ DEFINE_REAL(char*, index, const char *string, int c)
     return REAL(strcat)(to, from);
   }
 
-INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncat);
   AsanInitFromRtl();
   if (flags()->replace_str) {
     uptr from_length = MaybeRealStrnlen(from, size);
-    uptr copy_length = Min(size, from_length + 1);
+    uptr copy_length = Min<uptr>(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
     uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
@@ -570,6 +577,20 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
   return REAL(strcpy)(to, from);
 }
 
+INTERCEPTOR(wchar_t*, wcscpy, wchar_t* to, const wchar_t* from) {
+  void* ctx;
+  ASAN_INTERCEPTOR_ENTER(ctx, wcscpy);
+  if (!TryAsanInitFromRtl())
+    return REAL(wcscpy)(to, from);
+  if (flags()->replace_str) {
+    uptr size = (internal_wcslen(from) + 1) * sizeof(wchar_t);
+    CHECK_RANGES_OVERLAP("wcscpy", to, size, from, size);
+    ASAN_READ_RANGE(ctx, from, size);
+    ASAN_WRITE_RANGE(ctx, to, size);
+  }
+  return REAL(wcscpy)(to, from);
+}
+
 // Windows doesn't always define the strdup identifier,
 // and when it does it's a macro defined to either _strdup
 // or _strdup_dbg, _strdup_dbg ends up calling _strdup, so
@@ -584,6 +605,9 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
+  // Allowing null input is Windows-specific
+  if (SANITIZER_WINDOWS && UNLIKELY(!s))
+    return nullptr;
   if (UNLIKELY(!TryAsanInitFromRtl()))
     return internal_strdup(s);
   uptr length = internal_strlen(s);
@@ -617,17 +641,31 @@ INTERCEPTOR(char*, __strdup, const char *s) {
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-INTERCEPTOR(char*, strncpy, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
   AsanInitFromRtl();
   if (flags()->replace_str) {
-    uptr from_size = Min(size, MaybeRealStrnlen(from, size) + 1);
+    uptr from_size = Min<uptr>(size, MaybeRealStrnlen(from, size) + 1);
     CHECK_RANGES_OVERLAP("strncpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, size);
   }
   return REAL(strncpy)(to, from, size);
+}
+
+INTERCEPTOR(wchar_t*, wcsncpy, wchar_t* to, const wchar_t* from, uptr size) {
+  void* ctx;
+  ASAN_INTERCEPTOR_ENTER(ctx, wcsncpy);
+  AsanInitFromRtl();
+  if (flags()->replace_str) {
+    uptr from_size =
+        Min(size, MaybeRealWcsnlen(from, size) + 1) * sizeof(wchar_t);
+    CHECK_RANGES_OVERLAP("wcsncpy", to, from_size, from, from_size);
+    ASAN_READ_RANGE(ctx, from, from_size);
+    ASAN_WRITE_RANGE(ctx, to, size * sizeof(wchar_t));
+  }
+  return REAL(wcsncpy)(to, from, size);
 }
 
 template <typename Fn>
@@ -806,6 +844,11 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(strncat);
   ASAN_INTERCEPT_FUNC(strncpy);
   ASAN_INTERCEPT_FUNC(strdup);
+
+  // Intercept wcs* functions.
+  ASAN_INTERCEPT_FUNC(wcscpy);
+  ASAN_INTERCEPT_FUNC(wcsncpy);
+
 #  if ASAN_INTERCEPT___STRDUP
   ASAN_INTERCEPT_FUNC(__strdup);
 #endif
@@ -823,7 +866,7 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(__isoc23_strtoll);
 #  endif
 
-  // Intecept jump-related functions.
+  // Intercept jump-related functions.
   ASAN_INTERCEPT_FUNC(longjmp);
 
 #  if ASAN_INTERCEPT_SWAPCONTEXT

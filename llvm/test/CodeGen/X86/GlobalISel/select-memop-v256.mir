@@ -38,7 +38,8 @@ regBankSelected: true
 #
 # AVX512ALL:        registers:
 # AVX512ALL-NEXT:     - { id: 0, class: gr64, preferred-register: '', flags: [   ] }
-# AVX512ALL-NEXT:     - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512F-NEXT:       - { id: 1, class: vr256, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:      - { id: 1, class: vr256x, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: gpr }
   - { id: 1, class: vecr }
@@ -48,7 +49,7 @@ registers:
 # NO_AVX512F-NEXT:      RET 0, implicit $ymm0
 #
 # AVX512F:              %0:gr64 = COPY $rdi
-# AVX512F-NEXT:         %1:vr256x = VMOVUPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1, align 1)
+# AVX512F-NEXT:         %1:vr256 = VMOVUPSYrm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1, align 1)
 # AVX512F-NEXT:         $ymm0 = COPY %1
 # AVX512F-NEXT:         RET 0, implicit $ymm0
 #
@@ -81,7 +82,7 @@ registers:
 # NO_AVX512F-NEXT:      RET 0, implicit $ymm0
 #
 # AVX512F:              %0:gr64 = COPY $rdi
-# AVX512F-NEXT:         %1:vr256x = VMOVAPSZ256rm_NOVLX %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1)
+# AVX512F-NEXT:         %1:vr256 = VMOVAPSYrm %0, 1, $noreg, 0, $noreg :: (load (<8 x s32>) from %ir.p1)
 # AVX512F-NEXT:         $ymm0 = COPY %1
 # AVX512F-NEXT:         RET 0, implicit $ymm0
 #
@@ -110,7 +111,8 @@ regBankSelected: true
 # NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 # AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512F-NEXT:       - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:      - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
 # AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
@@ -120,9 +122,9 @@ registers:
 # NO_AVX512F-NEXT:      VMOVUPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
 # NO_AVX512F-NEXT:      RET 0
 #
-# AVX512F:              %0:vr256x = COPY $ymm0
+# AVX512F:              %0:vr256 = COPY $ymm0
 # AVX512F-NEXT:         %1:gr64 = COPY $rdi
-# AVX512F-NEXT:         VMOVUPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
+# AVX512F-NEXT:         VMOVUPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1, align 1)
 # AVX512F-NEXT:         RET 0
 #
 # AVX512VL:             %0:vr256x = COPY $ymm0
@@ -150,7 +152,8 @@ regBankSelected: true
 # NO_AVX512F-NEXT:    - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 #
 # AVX512ALL:        registers:
-# AVX512ALL-NEXT:     - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
+# AVX512F-NEXT:       - { id: 0, class: vr256, preferred-register: '', flags: [   ] }
+# AVX512VL-NEXT:      - { id: 0, class: vr256x, preferred-register: '', flags: [   ] }
 # AVX512ALL-NEXT:     - { id: 1, class: gr64, preferred-register: '', flags: [   ] }
 registers:
   - { id: 0, class: vecr }
@@ -160,9 +163,9 @@ registers:
 # NO_AVX512F-NEXT:      VMOVAPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
 # NO_AVX512F-NEXT:      RET 0
 #
-# AVX512F:              %0:vr256x = COPY $ymm0
+# AVX512F:              %0:vr256 = COPY $ymm0
 # AVX512F-NEXT:         %1:gr64 = COPY $rdi
-# AVX512F-NEXT:         VMOVAPSZ256mr_NOVLX %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
+# AVX512F-NEXT:         VMOVAPSYmr %1, 1, $noreg, 0, $noreg, %0 :: (store (<8 x s32>) into %ir.p1)
 # AVX512F-NEXT:         RET 0
 #
 # AVX512VL:             %0:vr256x = COPY $ymm0

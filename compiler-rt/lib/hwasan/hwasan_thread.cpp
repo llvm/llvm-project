@@ -119,10 +119,64 @@ void Thread::Destroy() {
   *GetCurrentThreadLongPtr() = 0;
 }
 
+void Thread::StartSwitchFiber(uptr bottom, uptr size) {
+  if (atomic_load(&stack_switching_, memory_order_acquire)) {
+    Report("ERROR: starting fiber switch while in fiber switch\n");
+    Die();
+  }
+
+  next_stack_bottom_ = bottom;
+  next_stack_top_ = bottom + size;
+  atomic_store(&stack_switching_, 1, memory_order_release);
+}
+
+void Thread::FinishSwitchFiber(uptr *bottom_old, uptr *size_old) {
+  if (!atomic_load(&stack_switching_, memory_order_acquire)) {
+    Report("ERROR: finishing a fiber switch that has not started\n");
+    Die();
+  }
+
+  if (bottom_old)
+    *bottom_old = stack_bottom_;
+  if (size_old)
+    *size_old = stack_top_ - stack_bottom_;
+  stack_bottom_ = next_stack_bottom_;
+  stack_top_ = next_stack_top_;
+  atomic_store(&stack_switching_, 0, memory_order_release);
+  next_stack_top_ = 0;
+  next_stack_bottom_ = 0;
+}
+
+inline Thread::StackBounds Thread::GetStackBounds() const {
+  if (!atomic_load(&stack_switching_, memory_order_acquire)) {
+    // Make sure the stack bounds are fully initialized.
+    if (stack_bottom_ >= stack_top_)
+      return {0, 0};
+    return {stack_bottom_, stack_top_};
+  }
+  const uptr cur_stack = (uptr)__builtin_frame_address(0);
+  // Note: need to check next stack first, because FinishSwitchFiber
+  // may be in process of overwriting stack_top_/bottom_. But in such case
+  // we are already on the next stack.
+  if (cur_stack >= next_stack_bottom_ && cur_stack < next_stack_top_)
+    return {next_stack_bottom_, next_stack_top_};
+  return {stack_bottom_, stack_top_};
+}
+
+uptr Thread::stack_top() { return GetStackBounds().top; }
+
+uptr Thread::stack_bottom() { return GetStackBounds().bottom; }
+
+uptr Thread::stack_size() {
+  const auto bounds = GetStackBounds();
+  return bounds.top - bounds.bottom;
+}
+
 void Thread::Print(const char *Prefix) {
-  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix, unique_id_,
-         (void *)this, stack_bottom(), stack_top(),
-         stack_top() - stack_bottom(), tls_begin(), tls_end());
+  Printf("%sT%zd %p stack: [%p,%p) sz: %zd tls: [%p,%p)\n", Prefix,
+         (ssize)unique_id_, (void *)this, (void *)stack_bottom(),
+         (void *)stack_top(), stack_top() - stack_bottom(), (void *)tls_begin(),
+         (void *)tls_end());
 }
 
 static u32 xorshift(u32 state) {
@@ -174,7 +228,7 @@ static __hwasan::HwasanThreadList *GetHwasanThreadListLocked() {
   return &tl;
 }
 
-static __hwasan::Thread *GetThreadByOsIDLocked(tid_t os_id) {
+static __hwasan::Thread *GetThreadByOsIDLocked(ThreadID os_id) {
   return GetHwasanThreadListLocked()->FindThreadLocked(
       [os_id](__hwasan::Thread *t) { return t->os_id() == os_id; });
 }
@@ -191,7 +245,7 @@ void UnlockThreads() {
 
 void EnsureMainThreadIDIsCorrect() { __hwasan::EnsureMainThreadIDIsCorrect(); }
 
-bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
+bool GetThreadRangesLocked(ThreadID os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls) {
   auto *t = GetThreadByOsIDLocked(os_id);
@@ -210,7 +264,7 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
 
-void GetThreadExtraStackRangesLocked(tid_t os_id,
+void GetThreadExtraStackRangesLocked(ThreadID os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
@@ -218,7 +272,7 @@ void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
   __hwasan::hwasanThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+void GetRunningThreadsLocked(InternalMmapVector<ThreadID> *threads) {
   // TODO: implement.
 }
 void PrintThreads() {
@@ -226,3 +280,25 @@ void PrintThreads() {
 }
 
 }  // namespace __lsan
+
+// ---------------------- Interface ---------------- {{{1
+using namespace __hwasan;
+
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_start_switch_fiber(void **, const void *bottom, uptr size) {
+  if (auto *t = GetCurrentThread())
+    t->StartSwitchFiber((uptr)bottom, size);
+  else
+    VReport(1, "__hwasan_start_switch_fiber called from unknown thread\n");
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_finish_switch_fiber(void *, const void **bottom_old,
+                                     uptr *size_old) {
+  if (auto *t = GetCurrentThread())
+    t->FinishSwitchFiber((uptr *)bottom_old, size_old);
+  else
+    VReport(1, "__hwasan_finish_switch_fiber called from unknown thread\n");
+}
+}

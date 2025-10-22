@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,29 +29,25 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``-z nosectionheader`` has been implemented to omit the section header table.
-  The operation is similar to ``llvm-objcopy --strip-sections``.
-  (`#101286 <https://github.com/llvm/llvm-project/pull/101286>`_)
-* Section ``CLASS`` linker script syntax binds input sections to named classes,
-  which are referenced later one or more times. This provides access to the
-  automatic spilling mechanism of `--enable-non-contiguous-regions` without
-  globally changing the semantics of section matching. It also independently
-  increases the expressive power of linker scripts.
-  (`#95323 <https://github.com/llvm/llvm-project/pull/95323>`_)
+* ``--print-gc-sections=<file>`` prints garbage collection section listing to a file.
+  (`#159706 <https://github.com/llvm/llvm-project/pull/159706>`_)
 
 Breaking changes
 ----------------
 
 COFF Improvements
 -----------------
-* ``/includeglob`` has been implemented to match the behavior of ``--undefined-glob`` available for ELF.
 
 MinGW Improvements
 ------------------
-* ``--undefined-glob`` is now supported by translating into the ``/includeglob`` flag.
 
 MachO Improvements
 ------------------
+
+* ``--separate-cstring-literal-sections`` emits cstring literal sections into sections defined by their section name.
+  (`#158720 <https://github.com/llvm/llvm-project/pull/158720>`_)
+* ``--tail-merge-strings`` enables tail merging of cstring literals.
+  (`#161262 <https://github.com/llvm/llvm-project/pull/161262>`_)
 
 WebAssembly Improvements
 ------------------------

@@ -7,33 +7,28 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Options.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/OptTable.h"
-#include "llvm/Option/Option.h"
 #include <cassert>
 
 using namespace clang::driver;
 using namespace clang::driver::options;
 using namespace llvm::opt;
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "clang/Driver/Options.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 #define OPTTABLE_VALUES_CODE
 #include "clang/Driver/Options.inc"
 #undef OPTTABLE_VALUES_CODE
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "clang/Driver/Options.inc"
-#undef PREFIX
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
-static constexpr const llvm::StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_UNION_CODE
 #include "clang/Driver/Options.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const llvm::ArrayRef<llvm::StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 static constexpr OptTable::Info InfoTable[] = {
 #define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
@@ -45,7 +40,9 @@ namespace {
 
 class DriverOptTable : public PrecomputedOptTable {
 public:
-  DriverOptTable() : PrecomputedOptTable(InfoTable, PrefixTable) {}
+  DriverOptTable()
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion) {}
 };
 }
 

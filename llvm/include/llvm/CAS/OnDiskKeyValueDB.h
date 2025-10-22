@@ -1,15 +1,21 @@
-//===- OnDiskKeyValueDB.h ---------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file
+/// This declares OnDiskKeyValueDB, a key value storage database of fixed size
+/// key and value.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CAS_ONDISKKEYVALUEDB_H
 #define LLVM_CAS_ONDISKKEYVALUEDB_H
 
-#include "llvm/CAS/OnDiskHashMappedTrie.h"
+#include "llvm/CAS/OnDiskTrieRawHashMap.h"
 
 namespace llvm::cas::ondisk {
 
@@ -37,6 +43,13 @@ public:
   /// \returns Total size of stored data.
   size_t getStorageSize() const { return Cache.size(); }
 
+  /// \returns The precentage of space utilization of hard space limits.
+  ///
+  /// Return value is an integer between 0 and 100 for percentage.
+  unsigned getHardStorageLimitUtilization() const {
+    return Cache.size() * 100ULL / Cache.capacity();
+  }
+
   /// Open the on-disk store from a directory.
   ///
   /// \param Path directory for the on-disk store. The directory will be created
@@ -50,12 +63,18 @@ public:
   open(StringRef Path, StringRef HashName, unsigned KeySize,
        StringRef ValueName, size_t ValueSize);
 
+  using CheckValueT =
+      function_ref<Error(FileOffset Offset, ArrayRef<char> Data)>;
+  /// Validate the storage with a callback \p CheckValue to check the stored
+  /// value.
+  Error validate(CheckValueT CheckValue) const;
+
 private:
-  OnDiskKeyValueDB(size_t ValueSize, OnDiskHashMappedTrie Cache)
+  OnDiskKeyValueDB(size_t ValueSize, OnDiskTrieRawHashMap Cache)
       : ValueSize(ValueSize), Cache(std::move(Cache)) {}
 
   const size_t ValueSize;
-  OnDiskHashMappedTrie Cache;
+  OnDiskTrieRawHashMap Cache;
 };
 
 } // namespace llvm::cas::ondisk

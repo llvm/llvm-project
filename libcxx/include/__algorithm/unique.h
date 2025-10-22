@@ -13,6 +13,7 @@
 #include <__algorithm/comp.h>
 #include <__algorithm/iterator_operations.h>
 #include <__config>
+#include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -31,7 +32,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Iter, class _Sent, class _BinaryPredicate>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 std::pair<_Iter, _Iter>
 __unique(_Iter __first, _Sent __last, _BinaryPredicate&& __pred) {
-  __first = std::__adjacent_find(__first, __last, __pred);
+  __identity __proj;
+  __first = std::__adjacent_find(__first, __last, __pred, __proj);
   if (__first != __last) {
     // ...  a  a  ?  ...
     //      f     i

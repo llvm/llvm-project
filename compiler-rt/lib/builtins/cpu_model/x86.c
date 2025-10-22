@@ -103,6 +103,8 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ARROWLAKE_S,
   INTEL_COREI7_PANTHERLAKE,
   AMDFAM1AH_ZNVER5,
+  INTEL_COREI7_DIAMONDRAPIDS,
+  INTEL_COREI7_NOVALAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -327,7 +329,7 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   const char *CPU = 0;
 
   switch (Family) {
-  case 6:
+  case 0x6:
     switch (Model) {
     case 0x0f: // Intel Core 2 Duo processor, Intel Core 2 Duo mobile
                // processor, Intel Core 2 Quad processor, Intel Core 2 Quad
@@ -460,16 +462,31 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Alderlake:
     case 0x97:
     case 0x9a:
+      CPU = "alderlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Raptorlake:
     case 0xb7:
     case 0xba:
     case 0xbf:
+      CPU = "raptorlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Meteorlake:
     case 0xaa:
     case 0xac:
+      CPU = "meteorlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ALDERLAKE;
+      break;
+
     // Gracemont:
     case 0xbe:
-      CPU = "alderlake";
+      CPU = "gracemont";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
       break;
@@ -485,9 +502,14 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Arrowlake S:
     case 0xc6:
+      CPU = "arrowlake-s";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_ARROWLAKE_S;
+      break;
+
     // Lunarlake:
     case 0xbd:
-      CPU = "arrowlake-s";
+      CPU = "lunarlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
@@ -495,6 +517,13 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
     // Pantherlake:
     case 0xcc:
       CPU = "pantherlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      break;
+
+    // Wildcatlake:
+    case 0xd5:
+      CPU = "wildcatlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_PANTHERLAKE;
       break;
@@ -509,6 +538,11 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
 
     // Emerald Rapids:
     case 0xcf:
+      CPU = "emeraldrapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
     // Sapphire Rapids:
     case 0x8f:
       CPU = "sapphirerapids";
@@ -600,6 +634,32 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
     }
     break;
+  case 0x13:
+    switch (Model) {
+    // Diamond Rapids:
+    case 0x01:
+      CPU = "diamondrapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_DIAMONDRAPIDS;
+      break;
+
+    default: // Unknown family 19 CPU.
+      break;
+    }
+    break;
+  case 0x12:
+    switch (Model) {
+    case 0x1:
+    case 0x3:
+      CPU = "novalake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_NOVALAKE;
+      break;
+    default: // Unknown family 0x12 CPU.
+      break;
+    }
+    break;
+
   default:
     break; // Unknown.
   }
@@ -1054,6 +1114,12 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_CLZERO);
   if (HasExtLeaf8 && ((EBX >> 9) & 1))
     setFeature(FEATURE_WBNOINVD);
+
+  bool HasExtLeaf21 = MaxExtLevel >= 0x80000021 &&
+                      !getX86CpuIDAndInfo(0x80000021, &EAX, &EBX, &ECX, &EDX);
+  // AMD cpuid bit for prefetchi is different from Intel
+  if (HasExtLeaf21 && ((EAX >> 20) & 1))
+    setFeature(FEATURE_PREFETCHI);
 
   bool HasLeaf14 = MaxLevel >= 0x14 &&
                    !getX86CpuIDAndInfoEx(0x14, 0x0, &EAX, &EBX, &ECX, &EDX);

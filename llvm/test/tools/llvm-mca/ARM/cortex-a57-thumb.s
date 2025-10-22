@@ -1594,14 +1594,14 @@
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r8, [r8, r2, lsl #2]
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r7, [sp, r2, lsl #1]
 # CHECK-NEXT:  1      1     1.00           *            strh.w	r7, [sp, r2]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r2]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8, #3]
-# CHECK-NEXT:  2      1     1.00                  U     strht	r1, [r8, #255]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r2]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8, #3]
-# CHECK-NEXT:  1      1     1.00                  U     strt	r1, [r8, #255]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r2]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8, #3]
+# CHECK-NEXT:  2      1     1.00           *            strht	r1, [r8, #255]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r2]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8, #3]
+# CHECK-NEXT:  1      1     1.00           *            strt	r1, [r8, #255]
 # CHECK-NEXT:  0      0     0.00                  U     itet	eq
 # CHECK-NEXT:  1      1     0.50                        subeq	r1, r2, #4
 # CHECK-NEXT:  1      1     0.50                        subwne	r5, r3, #1023

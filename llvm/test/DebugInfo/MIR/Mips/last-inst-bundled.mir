@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=mips -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -mtriple=mips -o - %s | FileCheck %s
 #
 #"last-instr-bundled.c"
 #extern void set_cond(int, int*);
@@ -134,8 +134,8 @@ frameInfo:
   hasOpaqueSPAdjustment: false
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: condition, type: default, offset: -12, size: 4, alignment: 4,

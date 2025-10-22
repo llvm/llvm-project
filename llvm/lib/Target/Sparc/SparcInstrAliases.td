@@ -286,11 +286,11 @@ multiclass cp_cond_alias<string cond, int condVal> {
 
   // cb<cond> $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), " $imm"),
-                  (CBCOND brtarget:$imm, condVal), 0>;
+                  (CPBCOND brtarget:$imm, condVal), 0>;
 
   // cb<cond>,a $imm
   def : InstAlias<!strconcat(!strconcat("cb", cond), ",a $imm"),
-                  (CBCONDA brtarget:$imm, condVal), 0>;
+                  (CPBCONDA brtarget:$imm, condVal), 0>;
 }
 
 // Instruction aliases for register conditional branches and moves.
@@ -329,6 +329,25 @@ multiclass reg_cond_alias<string rcond, int condVal> {
                             MOVRrr, MOVRri,
                             FMOVRS, FMOVRD, FMOVRQ>,
                             Requires<[Is64Bit]>;
+}
+
+// Instruction aliases for compare-and-branch.
+multiclass cwb_cond_alias<string cond, int condVal> {
+  def : InstAlias<"cwb" # cond # " $rs1, $rs2, $imm",
+                  (CWBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
+                  Requires<[HasOSA2011]>;
+  def : InstAlias<"cwb" # cond # " $rs1, $simm5, $imm",
+                  (CWBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
+                  Requires<[HasOSA2011]>;
+}
+
+multiclass cxb_cond_alias<string cond, int condVal> {
+  def : InstAlias<"cxb" # cond # " $rs1, $rs2, $imm",
+                  (CXBCONDrr cbtarget:$imm, condVal, IntRegs:$rs1, IntRegs:$rs2)>,
+                  Requires<[HasOSA2011]>;
+  def : InstAlias<"cxb" # cond # " $rs1, $simm5, $imm",
+                  (CXBCONDri cbtarget:$imm, condVal, IntRegs:$rs1, simm5Op:$simm5)>,
+                  Requires<[HasOSA2011]>;
 }
 
 defm : int_cond_alias<"a",    0b1000>;
@@ -408,6 +427,44 @@ defm : reg_cond_alias<"ne",   0b101>;
 defm : reg_cond_alias<"gz",   0b110>;
 defm : reg_cond_alias<"gez",  0b111>;
 
+defm : cwb_cond_alias<"ne",   0b1001>;
+defm : cwb_cond_alias<"e",    0b0001>;
+defm : cwb_cond_alias<"g",    0b1010>;
+defm : cwb_cond_alias<"le",   0b0010>;
+defm : cwb_cond_alias<"ge",   0b1011>;
+defm : cwb_cond_alias<"l",    0b0011>;
+defm : cwb_cond_alias<"gu",   0b1100>;
+defm : cwb_cond_alias<"leu",  0b0100>;
+defm : cwb_cond_alias<"cc",   0b1101>;
+defm : cwb_cond_alias<"cs",   0b0101>;
+defm : cwb_cond_alias<"pos",  0b1110>;
+defm : cwb_cond_alias<"neg",  0b0110>;
+defm : cwb_cond_alias<"vc",   0b1111>;
+defm : cwb_cond_alias<"vs",   0b0111>;
+let EmitPriority = 0 in {
+  defm : cwb_cond_alias<"geu",  0b1101>; // same as cc
+  defm : cwb_cond_alias<"lu",   0b0101>; // same as cs
+}
+
+defm : cxb_cond_alias<"ne",   0b1001>;
+defm : cxb_cond_alias<"e",    0b0001>;
+defm : cxb_cond_alias<"g",    0b1010>;
+defm : cxb_cond_alias<"le",   0b0010>;
+defm : cxb_cond_alias<"ge",   0b1011>;
+defm : cxb_cond_alias<"l",    0b0011>;
+defm : cxb_cond_alias<"gu",   0b1100>;
+defm : cxb_cond_alias<"leu",  0b0100>;
+defm : cxb_cond_alias<"cc",   0b1101>;
+defm : cxb_cond_alias<"cs",   0b0101>;
+defm : cxb_cond_alias<"pos",  0b1110>;
+defm : cxb_cond_alias<"neg",  0b0110>;
+defm : cxb_cond_alias<"vc",   0b1111>;
+defm : cxb_cond_alias<"vs",   0b0111>;
+let EmitPriority = 0 in {
+  defm : cxb_cond_alias<"geu",  0b1101>; // same as cc
+  defm : cxb_cond_alias<"lu",   0b0101>; // same as cs
+}
+
 // Section A.3 Synthetic Instructions
 
 // Most are marked as Emit=0, so that they are not used for disassembly. This is
@@ -449,6 +506,10 @@ def : InstAlias<"save", (SAVErr G0, G0, G0)>;
 // (turns into a sequence of sethi+or, depending on the value)
 // def : InstAlias<"set $val, $rd", (ORri IntRegs:$rd, (SETHIi (HI22 imm:$val)), (LO10 imm:$val))>;
 def SET : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "set $val, $rd">;
+
+// setsw value, rd
+// (turns into a sequence of sethi+or+sra, depending on the value)
+def SETSW : AsmPseudoInst<(outs IntRegs:$rd), (ins i32imm:$val), "setsw $val, $rd">, Requires<[HasV9]>;
 
 // setx value, tmp, rd
 // (turns into a sequence of sethi+or+shift, depending on the value)
@@ -605,6 +666,8 @@ def : InstAlias<"unimp", (UNIMP 0), 0>;
 // interchangeable with `unimp` all the time.
 def : MnemonicAlias<"illtrap", "unimp">;
 
+def : MnemonicAlias<"setuw", "set">, Requires<[HasV9]>;
+
 def : MnemonicAlias<"iflush", "flush">;
 
 def : MnemonicAlias<"stub", "stb">;
@@ -659,3 +722,9 @@ def : InstAlias<"signx $rs1, $rd", (SRArr IntRegs:$rd, IntRegs:$rs1, G0), 0>, Re
 
 // sir -> sir 0
 def : InstAlias<"sir", (SIR 0), 0>;
+
+// pause reg_or_imm -> wrasr %g0, reg_or_imm, %asr27
+let Predicates = [HasOSA2011] in {
+  def : InstAlias<"pause $rs2", (WRASRrr ASR27, G0, IntRegs:$rs2), 1>;
+  def : InstAlias<"pause $simm13", (WRASRri ASR27, G0, simm13Op:$simm13), 1>;
+} // Predicates = [HasOSA2011]

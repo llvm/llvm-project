@@ -1,14 +1,19 @@
-//===- llvm/unittest/CAS/OnDiskCommonUtils.h --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+/// \file Helper functions to test OnDiskCASDatabases.
+//
+//===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Testing/Support/Error.h"
 
 namespace llvm::unittest::cas {
 
@@ -30,7 +35,9 @@ inline ObjectID digest(OnDiskGraphDB &DB, StringRef Data,
   for (ObjectID Ref : Refs)
     RefHashes.push_back(DB.getDigest(Ref));
   HashType Digest = digest(Data, RefHashes);
-  return DB.getReference(Digest);
+  std::optional<ObjectID> ID;
+  EXPECT_THAT_ERROR(DB.getReference(Digest).moveInto(ID), Succeeded());
+  return *ID;
 }
 
 inline HashType digest(StringRef Data) {

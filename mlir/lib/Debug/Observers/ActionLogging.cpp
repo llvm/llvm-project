@@ -9,6 +9,7 @@
 #include "mlir/Debug/Observers/ActionLogging.h"
 #include "mlir/Debug/BreakpointManager.h"
 #include "mlir/IR/Action.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,11 +56,9 @@ void ActionLogger::beforeExecute(const ActionActiveStack *action,
     action->getAction().print(os);
   else
     os << action->getAction().getTag();
-  if (printIRUnits) {
-    os << " (";
-    interleaveComma(action->getAction().getContextIRUnits(), os);
-    os << ")";
-  }
+  if (printIRUnits)
+    os << " (" << llvm::interleaved(action->getAction().getContextIRUnits())
+       << ")";
   os << "`\n";
 }
 

@@ -38,8 +38,7 @@ Error XCOFFReader::readSections(Object &Obj) const {
           XCOFFObj.relocations<XCOFFSectionHeader32, XCOFFRelocation32>(Sec);
       if (!Relocations)
         return Relocations.takeError();
-      for (const XCOFFRelocation32 &Rel : Relocations.get())
-        ReadSec.Relocations.push_back(Rel);
+      llvm::append_range(ReadSec.Relocations, Relocations.get());
     }
 
     Obj.Sections.push_back(std::move(ReadSec));

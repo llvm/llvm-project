@@ -92,7 +92,7 @@ define i32 @test_rauw(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[CALL49:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[A:%.*]])
 ; CHECK-NEXT:    [[ADD180:%.*]] = add i64 [[CALL49]], 1
 ; CHECK-NEXT:    [[YO107:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[B:%.*]], i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[CALL50:%.*]] = call ptr @__memmove_chk(ptr [[B]], ptr [[A]], i64 [[ADD180]], i64 [[YO107]])
+; CHECK-NEXT:    [[CALL50:%.*]] = call ptr @__memmove_chk(ptr [[B]], ptr nonnull [[A]], i64 [[ADD180]], i64 [[YO107]])
 ; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[B]])
 ; CHECK-NEXT:    [[STRCHR1:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[STRLEN]]
 ; CHECK-NEXT:    [[D:%.*]] = load ptr, ptr [[C:%.*]], align 8
@@ -100,7 +100,7 @@ define i32 @test_rauw(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[SUB183:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[SUB184:%.*]] = sub i64 [[SUB182]], [[SUB183]]
 ; CHECK-NEXT:    [[ADD52_I_I:%.*]] = add nsw i64 [[SUB184]], 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[STRCHR1]], i8 0, i64 [[ADD52_I_I]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr nonnull align 1 [[STRCHR1]], i8 0, i64 [[ADD52_I_I]], i1 false)
 ; CHECK-NEXT:    ret i32 4
 ;
 entry:

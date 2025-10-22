@@ -12,6 +12,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -20,7 +21,6 @@ void CASContext::anchor() {}
 void ObjectStore::anchor() {}
 
 LLVM_DUMP_METHOD void CASID::dump() const { print(dbgs()); }
-LLVM_DUMP_METHOD void ObjectStore::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void ObjectRef::dump() const { print(dbgs()); }
 LLVM_DUMP_METHOD void ObjectHandle::dump() const { print(dbgs()); }
 
@@ -121,20 +121,14 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
 Expected<ObjectRef>
 ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
                                    std::optional<sys::fs::file_status> Status) {
-  // Copy the file into an immutable memory buffer and call \c store on that.
-  // Using \c mmap would be unsafe because there's a race window between when we
-  // get the digest hash for the \c mmap contents and when we store the data; if
-  // the file changes in-between we will create an invalid object.
-
-  // FIXME: For the on-disk CAS implementation use cloning to store it as a
+  // TODO: For the on-disk CAS implementation use cloning to store it as a
   // standalone file if the file-system supports it and the file is large.
+  uint64_t Size = Status ? Status->getSize() : -1;
+  auto Buffer = MemoryBuffer::getOpenFile(FD, /*Filename=*/"", Size);
+  if (!Buffer)
+    return errorCodeToError(Buffer.getError());
 
-  constexpr size_t ChunkSize = 4 * 4096;
-  SmallString<0> Data;
-  Data.reserve(ChunkSize * 2);
-  if (Error E = sys::fs::readNativeFileToEOF(FD, Data, ChunkSize))
-    return std::move(E);
-  return store(std::nullopt, ArrayRef(Data.data(), Data.size()));
+  return store({}, arrayRefFromStringRef<char>((*Buffer)->getBuffer()));
 }
 
 Error ObjectStore::validateTree(ObjectRef Root) {
