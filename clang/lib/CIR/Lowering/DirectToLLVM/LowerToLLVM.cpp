@@ -3322,14 +3322,14 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
   auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
   mlir::Type complexElemTy =
       getTypeConverter()->convertType(complexType.getElementType());
-  auto lhsReal =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, 0);
-  auto lhsImag =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, 1);
-  auto rhsReal =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, 0);
-  auto rhsImag =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, 1);
+  auto lhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{0}));
+  auto lhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{1}));
+  auto rhsReal = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{0}));
+  auto rhsImag = mlir::LLVM::ExtractValueOp::create(
+      rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
 
   mlir::Value newReal;
   mlir::Value newImag;
@@ -3404,13 +3404,13 @@ mlir::LogicalResult CIRToLLVMComplexSubOpLowering::matchAndRewrite(
   mlir::Type complexElemTy =
       getTypeConverter()->convertType(complexType.getElementType());
   auto lhsReal =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, 0);
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{0}));
   auto lhsImag =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, 1);
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, lhs, ArrayRef(int64_t{1}));
   auto rhsReal =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, 0);
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{0}));
   auto rhsImag =
-      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, 1);
+      mlir::LLVM::ExtractValueOp::create(rewriter, loc, complexElemTy, rhs, ArrayRef(int64_t{1}));
 
   mlir::Value newReal;
   mlir::Value newImag;
@@ -3434,10 +3434,10 @@ mlir::LogicalResult CIRToLLVMComplexSubOpLowering::matchAndRewrite(
       mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), complexLLVMTy);
 
   auto realComplex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), initialComplex, newReal, 0);
+      rewriter, op->getLoc(), initialComplex, newReal, ArrayRef(int64_t{0}));
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(op, realComplex,
-                                                         newImag, 1);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, realComplex, newImag, ArrayRef(int64_t{1}));
 
   return mlir::success();
 }
