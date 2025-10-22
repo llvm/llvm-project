@@ -35,7 +35,6 @@ use AllocateModule
 
   !$omp allocate(w) allocator(custom_allocator)
 
-  !ERROR: If a list item is a named common block or has SAVE attribute, only a predefined allocator may be used on the ALLOCATOR clause
   !$omp allocate(x) allocator(custom_allocator)
   !ERROR: A variable that is part of a common block may not be specified as a list item in an ALLOCATE directive, except implicitly via the named common block
   !$omp allocate(y) allocator(custom_allocator)

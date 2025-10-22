@@ -1717,13 +1717,16 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
   SymbolSourceMap symbols;
   GetSymbolsInObjectList(objects, symbols);
 
-  auto hasPredefinedAllocator{[&](const parser::OmpClause *c) {
-    if (!c) {
-      return std::make_optional(false);
+  auto maybeHasPredefinedAllocator{[&](const parser::OmpClause *calloc) {
+    // Return "true" if the ALLOCATOR clause was provided with an argument
+    // that is either a prefdefined allocator, or a run-time value.
+    // Otherwise return "false".
+    if (!calloc) {
+      return false;
     }
-    auto *allocator{std::get_if<parser::OmpClause::Allocator>(&c->u)};
-    if (auto val{ToInt64(GetEvaluateExpr(allocator->v))}) {
-      // Predefined allocators:
+    auto *allocator{std::get_if<parser::OmpClause::Allocator>(&calloc->u)};
+    if (auto val{ToInt64(GetEvaluateExpr(DEREF(allocator).v))}) {
+      // Predefined allocators (defined in OpenMP 6.0 20.8.1):
       //   omp_null_allocator = 0,
       //   omp_default_mem_alloc = 1,
       //   omp_large_cap_mem_alloc = 2,
@@ -1733,9 +1736,9 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
       //   omp_cgroup_mem_alloc = 6,
       //   omp_pteam_mem_alloc = 7,
       //   omp_thread_mem_alloc = 8
-      return std::make_optional(*val >= 0 && *val <= 8);
+      return *val >= 0 && *val <= 8;
     }
-    return std::optional<bool>{};
+    return true;
   }};
 
   const auto *allocator{FindClause(llvm::omp::Clause::OMPC_allocator)};
@@ -1748,7 +1751,7 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
     }
   }
 
-  bool isPredefined{hasPredefinedAllocator(allocator).value_or(false)};
+  auto maybePredefined{maybeHasPredefinedAllocator(allocator)};
 
   for (auto &[symbol, source] : symbols) {
     if (!inExecutableAllocate_) {
@@ -1769,9 +1772,9 @@ void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
       if (!allocator) {
         context_.Say(source,
             "If a list item is a named common block or has SAVE attribute, an ALLOCATOR clause must be present with a predefined allocator"_err_en_US);
-      } else if (!isPredefined) {
+      } else if (!maybePredefined) {
         context_.Say(source,
-            "If a list item is a named common block or has SAVE attribute, only a predefined allocator may be used on the ALLOCATOR clause"_warn_en_US);
+            "If a list item is a named common block or has SAVE attribute, only a predefined allocator may be used on the ALLOCATOR clause"_err_en_US);
       }
     }
     if (FindCommonBlockContaining(*symbol)) {
