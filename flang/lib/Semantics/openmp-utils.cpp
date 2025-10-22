@@ -218,7 +218,7 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-std::optional<SomeExpr> GetEvaluateExpr(const parser::Expr &parserExpr) {
+MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr) {
   const parser::TypedExpr &typedExpr{parserExpr.typedExpr};
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()

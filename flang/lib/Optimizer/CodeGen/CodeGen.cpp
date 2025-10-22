@@ -1151,7 +1151,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
     if (auto scaleSize =
             fir::genAllocationScaleSize(loc, heap.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size,
                                        integerCast(loc, rewriter, ity, opnd));

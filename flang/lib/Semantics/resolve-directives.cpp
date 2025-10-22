@@ -3094,26 +3094,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
         AddAllocateName(name);
       }
     }
-    if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-        IsAllocatable(*symbol) &&
-        !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
-      context_.Say(designator.source,
-          "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
-    }
-    bool checkScope{ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective};
-    // In 5.1 the scope check only applies to declarative allocate.
-    if (version == 50 && !checkScope) {
-      checkScope = ompFlag == Symbol::Flag::OmpExecutableAllocateDirective;
-    }
-    if (checkScope) {
-      if (omp::GetScopingUnit(GetContext().scope) !=
-          omp::GetScopingUnit(symbol->GetUltimate().owner())) {
-        context_.Say(designator.source, // 2.15.3
-            "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
-            parser::ToUpperCaseLetters(
-                llvm::omp::getOpenMPDirectiveName(directive, version)));
-      }
-    }
     if (ompFlag == Symbol::Flag::OmpReduction) {
       // Using variables inside of a namelist in OpenMP reductions
       // is allowed by the standard, but is not allowed for

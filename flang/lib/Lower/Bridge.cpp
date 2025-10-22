@@ -1766,7 +1766,7 @@ private:
       // to a crash due to a block with no terminator. See issue #126452.
       mlir::FunctionType funcType = builder->getFunction().getFunctionType();
       mlir::Type resultType = funcType.getResult(0);
-      mlir::Value undefResult = builder->create<fir::UndefOp>(loc, resultType);
+      mlir::Value undefResult = fir::UndefOp::create(*builder, loc, resultType);
       genExitRoutine(false, undefResult);
       return;
     }

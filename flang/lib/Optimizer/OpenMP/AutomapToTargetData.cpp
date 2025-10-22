@@ -130,8 +130,8 @@ class AutomapToTargetDataPass
           builder.getBoolAttr(false));
       clauses.mapVars.push_back(mapInfo);
       isa<fir::StoreOp>(memOp)
-          ? builder.create<omp::TargetEnterDataOp>(memOp.getLoc(), clauses)
-          : builder.create<omp::TargetExitDataOp>(memOp.getLoc(), clauses);
+          ? omp::TargetEnterDataOp::create(builder, memOp.getLoc(), clauses)
+          : omp::TargetExitDataOp::create(builder, memOp.getLoc(), clauses);
     };
 
     for (fir::GlobalOp globalOp : automapGlobals) {
