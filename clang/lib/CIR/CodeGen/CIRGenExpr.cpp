@@ -1821,9 +1821,11 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     const auto *funcDecl = cast<FunctionDecl>(declRef->getDecl());
     return emitDirectCallee(funcDecl);
   } else if (auto me = dyn_cast<MemberExpr>(e)) {
-    const auto *fd = cast<FunctionDecl>(me->getMemberDecl());
-    emitIgnoredExpr(me->getBase());
-    return emitDirectCallee(fd);
+    if (const auto *fd = dyn_cast<FunctionDecl>(me->getMemberDecl())) {
+      emitIgnoredExpr(me->getBase());
+      return emitDirectCallee(fd);
+    }
+    // Else fall through to the indirect reference handling below.
   } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
     return CIRGenCallee::forPseudoDestructor(pde);
   }
