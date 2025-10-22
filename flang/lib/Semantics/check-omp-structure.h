@@ -19,7 +19,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
