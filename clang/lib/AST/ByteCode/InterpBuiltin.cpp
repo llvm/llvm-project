@@ -4193,8 +4193,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           if (I < Shift) {
             return APInt(8, 0);
           }
-          return APInt(
-              8, static_cast<uint8_t>(Src.elem<uint8_t>(Lane + I - Shift)));
+          return APInt(8, Src.elem<uint8_t>(Lane + I - Shift));
         });
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
@@ -4207,8 +4206,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, BuiltinID,
         [](const Pointer &Src, unsigned Lane, unsigned I, unsigned Shift) {
           if (I + Shift < 16) {
-            return APInt(
-                8, static_cast<uint8_t>(Src.elem<uint8_t>(Lane + I + Shift)));
+            return APInt(8, Src.elem<uint8_t>(Lane + I + Shift));
           }
 
           return APInt(8, 0);
