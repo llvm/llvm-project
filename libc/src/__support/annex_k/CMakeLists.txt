@@ -12,6 +12,15 @@ add_header_library(
 )
 
 add_header_library(
+  constraint_macros
+  HDRS
+    constraint_macros.h
+  DEPENDS
+    .libc_constraint_handler
+    libc.src.__support.libc_errno
+)
+
+add_header_library(
   libc_constraint_handler
   HDRS
     libc_constraint_handler.h
