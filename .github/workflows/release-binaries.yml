@@ -258,7 +258,7 @@ jobs:
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
         tar zxf libxml2-v2.9.12.tar.gz
 
-        cmake -S libxml2-v2.9.12 -G Ninja -B build `
+        cmake -S libxml2-v2.9.12 -G Ninja -B libxml-build `
         -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install `
         -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF `
         -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF `
@@ -273,7 +273,7 @@ jobs:
         -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF `
         -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF `
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded 
-        ninja -C build install
+        ninja -C libxml-build install
 
     - name: Configure
       id: build
