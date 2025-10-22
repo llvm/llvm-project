@@ -30,10 +30,16 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
-set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir;flang")
+set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra;polly;mlir")
 # bolt only supports ELF, so only enable it for Linux.
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   list(APPEND DEFAULT_PROJECTS "bolt")
+endif()
+
+# Disable flang on Darwin due to:
+# https://github.com/llvm/llvm-project/issues/160546
+if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+  list(APPEND DEFAULT_PROJECT "flang")
 endif()
 
 set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
@@ -44,6 +50,16 @@ set(LLVM_RELEASE_ENABLE_LTO THIN CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PGO ON CACHE BOOL "")
 set(LLVM_RELEASE_ENABLE_RUNTIMES ${DEFAULT_RUNTIMES} CACHE STRING "")
 set(LLVM_RELEASE_ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
+
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+  # Don't link against the just built runtimes due to:
+  # https://github.com/llvm/llvm-project/issues/77653
+  set(DEFAULT_LINK_LOCAL_RUNTIMES OFF)
+else()
+  set(DEFAULT_LINK_LOCAL_RUNTIMES ON)
+endif()
+set(LLVM_RELEASE_LINK_LOCAL_RUNTIMES ${DEFAULT_LINK_LOCAL_RUNTIMES} CACHE BOOL "")
+
 # Note we don't need to add install here, since it is one of the pre-defined
 # steps.
 set(LLVM_RELEASE_FINAL_STAGE_TARGETS "clang;package;check-all;check-llvm;check-clang" CACHE STRING "")
@@ -55,8 +71,12 @@ set(CLANG_ENABLE_BOOTSTRAP ON CACHE BOOL "")
 
 set(STAGE1_PROJECTS "clang")
 
+# Need to build compiler-rt in order to use PGO for later stages.
+set(STAGE1_RUNTIMES "compiler-rt")
 # Build all runtimes so we can statically link them into the stage2 compiler.
-set(STAGE1_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind")
+if(DEFAULT_LINK_LOCAL_RUNTIMES)
+  list(APPEND STAGE1_RUNTIMES "libcxx;libcxxabi;libunwind")
+endif()
 
 if (LLVM_RELEASE_ENABLE_PGO)
   list(APPEND STAGE1_PROJECTS "lld")
@@ -118,11 +138,13 @@ set_instrument_and_final_stage_var(LLVM_ENABLE_LTO "${LLVM_RELEASE_ENABLE_LTO}" 
 if (LLVM_RELEASE_ENABLE_LTO)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LLD "ON" BOOL)
 endif()
-set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
-set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
-set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
-if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
-  set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
+if(DEFAULT_LINK_LOCAL_RUNTIMES)
+  set_instrument_and_final_stage_var(LLVM_ENABLE_LIBCXX "ON" BOOL)
+  set_instrument_and_final_stage_var(LLVM_STATIC_LINK_CXX_STDLIB "ON" BOOL)
+  set(RELEASE_LINKER_FLAGS "-rtlib=compiler-rt --unwindlib=libunwind")
+  if(NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
+    set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -static-libgcc")
+  endif()
 endif()
 
 # Set flags for bolt
@@ -130,9 +152,11 @@ if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
   set(RELEASE_LINKER_FLAGS "${RELEASE_LINKER_FLAGS} -Wl,--emit-relocs,-znow")
 endif()
 
-set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
-set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
-set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+if (RELEASE_LINKER_FLAGS)
+  set_instrument_and_final_stage_var(CMAKE_EXE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+  set_instrument_and_final_stage_var(CMAKE_SHARED_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+  set_instrument_and_final_stage_var(CMAKE_MODULE_LINKER_FLAGS ${RELEASE_LINKER_FLAGS} STRING)
+endif()
 
 # Final Stage Config (stage2)
 set_final_stage_var(LLVM_ENABLE_RUNTIMES "${LLVM_RELEASE_ENABLE_RUNTIMES}" STRING)
