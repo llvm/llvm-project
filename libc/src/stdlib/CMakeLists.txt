@@ -665,6 +665,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  set_constraint_handler_s
+  SRCS
+    set_constraint_handler_s.cpp
+  HDRS
+    set_constraint_handler_s.h
+  DEPENDS
+    libc.src.__support.annex_k.abort_handler_s
+    libc.src.__support.annex_k.libc_constraint_handler
+)
+
+add_entrypoint_object(
   ignore_handler_s
   HDRS
     ignore_handler_s.h
