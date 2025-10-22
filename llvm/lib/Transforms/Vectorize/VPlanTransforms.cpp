@@ -6121,10 +6121,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       assert(StrideInElement && ElementTy);
 
       // Create a new vector pointer for strided access.
-      auto *GEP = dyn_cast<GetElementPtrInst>(PtrUV->stripPointerCasts());
       auto *NewPtr = new VPVectorPointerRecipe(
-          BasePtr, ElementTy, StrideInElement,
-          GEP ? GEP->getNoWrapFlags() : GEPNoWrapFlags::none(),
+          BasePtr, ElementTy, StrideInElement, Ptr->getGEPNoWrapFlags(),
           Ptr->getDebugLoc());
       NewPtr->insertBefore(MemR);
 
