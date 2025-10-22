@@ -56,7 +56,7 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
       return ExprError();
 
     if (!TSI)
-      TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, /*Loc=*/OpLoc);
+      TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
     return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
   }
