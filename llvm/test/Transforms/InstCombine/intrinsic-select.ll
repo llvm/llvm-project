@@ -392,3 +392,14 @@ define <16 x i1> @test_select_of_active_lane_mask_bound_both_constant(i64 %base,
   %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 %s)
   ret <16 x i1> %mask
 }
+
+define { i64, i1 } @test_select_of_overflow_intrinsic_operand(i64 %n, i1 %cond) {
+; CHECK-LABEL: @test_select_of_overflow_intrinsic_operand(
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[N:%.*]], i64 42)
+; CHECK-NEXT:    [[ADD_OVERFLOW:%.*]] = select i1 [[COND:%.*]], { i64, i1 } [[TMP1]], { i64, i1 } { i64 42, i1 false }
+; CHECK-NEXT:    ret { i64, i1 } [[ADD_OVERFLOW]]
+;
+  %s = select i1 %cond, i64 %n, i64 0
+  %add_overflow = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %s, i64 42)
+  ret { i64, i1 } %add_overflow
+}

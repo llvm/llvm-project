@@ -3051,6 +3051,31 @@ join:
   ret i32 %sum
 }
 
+define { i64, i1 } @overflow_intrinsic_over_phi(i1 %c, i64 %a) {
+; CHECK-LABEL: @overflow_intrinsic_over_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 1)
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i64, i1 } [ [[TMP0]], [[IF]] ], [ { i64 1, i1 false }, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @may_exit()
+; CHECK-NEXT:    ret { i64, i1 } [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi i64 [ %a, %if ], [ 0, %entry ]
+  call void @may_exit()
+  %add_overflow = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %phi, i64 1)
+  ret { i64, i1 } %add_overflow
+}
+
 define i32 @multiple_intrinsics_with_multiple_phi_uses(i1 %c, i32 %arg) {
 ; CHECK-LABEL: @multiple_intrinsics_with_multiple_phi_uses(
 ; CHECK-NEXT:  entry:
