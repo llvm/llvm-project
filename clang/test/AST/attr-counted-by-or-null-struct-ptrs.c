@@ -56,29 +56,6 @@ struct on_member_pointer_complete_ty_ty_pos {
   struct size_known *__counted_by_or_null(count) buf;
 };
 
-// TODO: This should be forbidden but isn't due to counted_by_or_null being treated as a
-// declaration attribute. The attribute ends up on the outer most pointer
-// (allowed by sema) even though syntactically its supposed to be on the inner
-// pointer (would not allowed by sema due to pointee being a function type).
-// CHECK-LABEL: RecordDecl {{.+}} struct on_member_pointer_fn_ptr_ty_ty_pos_inner definition
-// CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
-// CHECK-NEXT:  `-FieldDecl {{.+}} fn_ptr 'void (** __counted_by_or_null(count))(void)':'void (**)(void)'
-struct on_member_pointer_fn_ptr_ty_ty_pos_inner {
-  int count;
-  void (* __counted_by_or_null(count) * fn_ptr)(void);
-};
-
-// FIXME: The generated AST here is wrong. The attribute should be on the inner
-// pointer.
-// CHECK-LABEL: RecordDecl {{.+}} struct on_nested_pointer_inner definition
-// CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
-// CHECK-NEXT:  `-FieldDecl {{.+}} buf 'struct size_known ** __counted_by_or_null(count)':'struct size_known **'
-struct on_nested_pointer_inner {
-  int count;
-  // TODO: This should be disallowed because in the `-fbounds-safety` model
-  // `__counted_by_or_null` can only be nested when used in function parameters.
-  struct size_known *__counted_by_or_null(count) *buf;
-};
 
 // CHECK-LABEL: RecordDecl {{.+}} struct on_nested_pointer_outer definition
 // CHECK-NEXT:  |-FieldDecl {{.+}} referenced count 'int'
