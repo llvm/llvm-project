@@ -256,6 +256,7 @@ protected:
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
   virtual uint32_t getSymbolAlignment(DataRefImpl Symb) const;
   virtual uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const = 0;
+  virtual uint64_t getSymbolSizeImpl(DataRefImpl Symb) const { return 0; }
   virtual Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const = 0;
   virtual Expected<section_iterator>
   getSymbolSection(DataRefImpl Symb) const = 0;
@@ -484,7 +485,7 @@ inline uint64_t SymbolRef::getCommonSize() const {
 }
 
 inline uint64_t SymbolRef::getSize() const {
-  return getObject()->getCommonSymbolSizeImpl(getRawDataRefImpl());
+  return getObject()->getSymbolSizeImpl(getRawDataRefImpl());
 }
 
 inline Expected<section_iterator> SymbolRef::getSection() const {

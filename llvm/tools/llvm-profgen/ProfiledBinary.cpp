@@ -824,6 +824,8 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
 
 void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
   // Load binary functions from symbol table when Debug info is incomplete
+  const char *Suffixes[] = {".destroy", ".resume", ".llvm.",
+                            ".cold",    ".warm",   nullptr};
   StringRef FileName = Obj->getFileName();
   for (const SymbolRef &Symbol : Obj->symbols()) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
@@ -834,8 +836,6 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     if (Size == 0 || Type != SymbolRef::ST_Function)
       continue;
 
-    const char *Suffixes[] = {".destroy", ".resume", ".llvm.",
-                              ".cold",    ".warm",   nullptr};
     const StringRef SymName =
         FunctionSamples::getCanonicalFnName(Name, Suffixes);
 
