@@ -401,9 +401,10 @@ static bool updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
   return true;
 }
 
-static bool isaDepthwiseConv1DNwcWcOp(LinalgOp op,
-                                      SmallVector<int64_t> *dilations,
-                                      SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv1DNwcWcOp>(op))
     return true;
 
@@ -432,9 +433,10 @@ static bool isaDepthwiseConv1DNwcWcOp(LinalgOp op,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaDepthwiseConv2DNchwChwOp(LinalgOp op,
-                                        SmallVector<int64_t> *dilations,
-                                        SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv2DNchwChwOp>(op))
     return true;
 
@@ -466,9 +468,10 @@ static bool isaDepthwiseConv2DNchwChwOp(LinalgOp op,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
-                                           SmallVector<int64_t> *dilations,
-                                           SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op))
     return true;
 
@@ -507,8 +510,10 @@ static bool isaDepthwiseConv3DNdhwcDhwcmOp(LinalgOp op,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMaxOp>(op))
     return true;
 
@@ -543,8 +548,10 @@ static bool isaPoolingNhwcMaxOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMinOp>(op))
     return true;
 
@@ -579,8 +586,10 @@ static bool isaPoolingNhwcMinOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
-                                SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcSumOp>(op))
     return true;
 
@@ -615,9 +624,10 @@ static bool isaPoolingNhwcSumOp(LinalgOp op, SmallVector<int64_t> *dilations,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op,
-                                        SmallVector<int64_t> *dilations,
-                                        SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op))
     return true;
 
@@ -652,9 +662,10 @@ static bool isaPoolingNhwcMaxUnsignedOp(LinalgOp op,
                                                     tempDilations, tempStrides);
 }
 
-static bool isaPoolingNhwcMinUnsignedOp(LinalgOp op,
-                                        SmallVector<int64_t> *dilations,
-                                        SmallVector<int64_t> *strides) {
+template <>
+bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
+    LinalgOp op, SmallVector<int64_t> *dilations,
+    SmallVector<int64_t> *strides) {
   if (isa<linalg::PoolingNhwcMinUnsignedOp>(op))
     return true;
 
@@ -687,62 +698,6 @@ static bool isaPoolingNhwcMinUnsignedOp(LinalgOp op,
        bodyMatcherForMinUnsignedPoolOps(yieldVal, body));
   return returnVal && updateConvDilationsAndStrides(dilations, strides,
                                                     tempDilations, tempStrides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaDepthwiseConv1DNwcWcOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaDepthwiseConv2DNchwChwOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaDepthwiseConv3DNdhwcDhwcmOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaPoolingNhwcMaxOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaPoolingNhwcMinOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaPoolingNhwcSumOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaPoolingNhwcMaxUnsignedOp(op, dilations, strides);
-}
-
-template <>
-bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
-    LinalgOp op, SmallVector<int64_t> *dilations,
-    SmallVector<int64_t> *strides) {
-  return isaPoolingNhwcMinUnsignedOp(op, dilations, strides);
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,

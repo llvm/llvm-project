@@ -264,14 +264,6 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
   return namedOp;
 }
 
-/// TODO(avarma): Convolution ops which rank-2 iteratory types array will be
-/// added here incrementally in follow-up PRs.
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank2ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
-  return failure();
-}
-
 static FailureOr<LinalgOp>
 inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter,
                                                 GenericOp genericOp) {
@@ -280,14 +272,6 @@ inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter,
           genericOp, &dilations, &strides))
     return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(
         rewriter, genericOp, dilations, strides);
-  return failure();
-}
-
-/// TODO(avarma): Convolution ops which rank-5 iteratory types array will be
-/// added here incrementally in follow-up PRs.
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank5ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
   return failure();
 }
 
@@ -322,22 +306,6 @@ inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter,
   return failure();
 }
 
-/// TODO(avarma): Convolution ops which rank-7 iteratory types array will be
-/// added here incrementally in follow-up PRs.
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank7ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
-  return failure();
-}
-
-/// TODO(avarma): Convolution ops which rank-8 iteratory types array will be
-/// added here incrementally in follow-up PRs.
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank8ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
-  return failure();
-}
-
 static FailureOr<LinalgOp>
 inferAndSpecializeBasedOnRank9ConvIteratorTypes(RewriterBase &rewriter,
                                                 GenericOp genericOp) {
@@ -358,18 +326,10 @@ inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
       genericOp.getIteratorTypesArray();
   unsigned totalIterators = iteratorTypes.size();
   switch (totalIterators) {
-  case 2:
-    return inferAndSpecializeBasedOnRank2ConvIteratorTypes(rewriter, genericOp);
   case 4:
     return inferAndSpecializeBasedOnRank4ConvIteratorTypes(rewriter, genericOp);
-  case 5:
-    return inferAndSpecializeBasedOnRank5ConvIteratorTypes(rewriter, genericOp);
   case 6:
     return inferAndSpecializeBasedOnRank6ConvIteratorTypes(rewriter, genericOp);
-  case 7:
-    return inferAndSpecializeBasedOnRank7ConvIteratorTypes(rewriter, genericOp);
-  case 8:
-    return inferAndSpecializeBasedOnRank8ConvIteratorTypes(rewriter, genericOp);
   case 9:
     return inferAndSpecializeBasedOnRank9ConvIteratorTypes(rewriter, genericOp);
   }
