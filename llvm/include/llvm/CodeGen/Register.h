@@ -92,8 +92,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(
-        SignExtend64<MaxFrameIndexBitwidth>(Reg & Register::StackSlotMask));
+    return SignExtend32<MaxFrameIndexBitwidth>(Reg & Register::StackSlotMask);
   }
 
   constexpr operator unsigned() const { return Reg; }
