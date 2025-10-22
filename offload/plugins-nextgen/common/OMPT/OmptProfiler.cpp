@@ -90,7 +90,7 @@ void llvm::omp::target::ompt::OmptProfilerTy::handlePreKernelLaunch(
 void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
     uint64_t StartNanos, uint64_t EndNanos, void *Data) {
 
-  if (!shouldEnableProfiling())
+  if (!isProfilingEnabled())
     return;
 
   DP("OMPT-Async: Time kernel for asynchronous execution (Plugin): Start %lu "
@@ -112,7 +112,7 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
 void llvm::omp::target::ompt::OmptProfilerTy::handleDataTransfer(
     uint64_t StartNanos, uint64_t EndNanos, void *Data) {
 
-  if (!shouldEnableProfiling())
+  if (!isProfilingEnabled())
     return;
 
   auto OmptEventInfo = reinterpret_cast<ompt::OmptEventInfoTy *>(Data);
@@ -126,7 +126,7 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleDataTransfer(
   freeProfilerDataEntry(OmptEventInfo);
 }
 
-bool llvm::omp::target::ompt::OmptProfilerTy::shouldEnableProfiling() {
+bool llvm::omp::target::ompt::OmptProfilerTy::isProfilingEnabled() {
   return llvm::omp::target::ompt::TracingActive;
 }
 

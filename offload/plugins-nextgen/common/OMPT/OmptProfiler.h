@@ -80,7 +80,7 @@ public:
 #undef bindOmptTracingFunction
   }
 
-  bool shouldEnableProfiling() override;
+  bool isProfilingEnabled() override;
 
   void handleInit(plugin::GenericDeviceTy *Device,
                   plugin::GenericPluginTy *Plugin) override;
