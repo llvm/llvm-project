@@ -351,22 +351,21 @@ define noundef i32 @zext_v4i8_all_lanes_used_no_freeze(<4 x i8> %src) {
 ; CHECK-LABEL: define noundef i32 @zext_v4i8_all_lanes_used_no_freeze(
 ; CHECK-SAME: <4 x i8> [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i8> [[SRC]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 24
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[TMP1]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 255
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP5]], 255
-; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i8> [[SRC]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 24
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP4]], 255
+; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP0]], 255
 ; CHECK-NEXT:    [[EXT:%.*]] = zext nneg <4 x i8> [[SRC]] to <4 x i32>
 ; CHECK-NEXT:    [[EXT_0:%.*]] = extractelement <4 x i32> [[EXT]], i64 0
 ; CHECK-NEXT:    [[EXT_1:%.*]] = extractelement <4 x i32> [[EXT]], i64 1
 ; CHECK-NEXT:    [[EXT_2:%.*]] = extractelement <4 x i32> [[EXT]], i64 2
 ; CHECK-NEXT:    [[EXT_3:%.*]] = extractelement <4 x i32> [[EXT]], i64 3
-; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP7]], [[TMP6]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP4]]
-; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP2]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[TMP3]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD3]]
 ;
 entry:
