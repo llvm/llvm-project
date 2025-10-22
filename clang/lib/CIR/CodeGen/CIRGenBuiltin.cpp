@@ -46,9 +46,9 @@ static RValue emitBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
   Op op;
   if constexpr (std::is_same_v<Op, cir::BitClzOp> ||
                 std::is_same_v<Op, cir::BitCtzOp>)
-    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg, poisonZero);
+    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg, poisonZero);
   else
-    op = builder.create<Op>(cgf.getLoc(e->getSourceRange()), arg);
+    op = Op::create(builder, cgf.getLoc(e->getSourceRange()), arg);
 
   mlir::Value result = op.getResult();
   mlir::Type exprTy = cgf.convertType(e->getType());
@@ -67,8 +67,8 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   // to the type of input when necessary.
   assert(!cir::MissingFeatures::msvcBuiltins());
 
-  auto r = builder.create<cir::RotateOp>(getLoc(e->getSourceRange()), input,
-                                         amount, isRotateLeft);
+  auto r = cir::RotateOp::create(builder, getLoc(e->getSourceRange()), input,
+                                 amount, isRotateLeft);
   return RValue::get(r);
 }
 
@@ -227,14 +227,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    builder.create<cir::AssumeOp>(loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue);
     return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    builder.create<cir::AssumeSepStorageOp>(loc, value0, value1);
+    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
     return RValue::get(nullptr);
   }
 
@@ -363,8 +363,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                       probability);
     }
 
-    auto result = builder.create<cir::ExpectOp>(
-        loc, argValue.getType(), argValue, expectedValue, probAttr);
+    auto result = cir::ExpectOp::create(builder, loc, argValue.getType(),
+                                        argValue, expectedValue, probAttr);
     return RValue::get(result);
   }
 
@@ -375,7 +375,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI_byteswap_ulong:
   case Builtin::BI_byteswap_uint64: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    return RValue::get(builder.create<cir::ByteSwapOp>(loc, arg));
+    return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
   }
 
   case Builtin::BI__builtin_bitreverse8:
@@ -383,7 +383,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_bitreverse32:
   case Builtin::BI__builtin_bitreverse64: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
-    return RValue::get(builder.create<cir::BitReverseOp>(loc, arg));
+    return RValue::get(cir::BitReverseOp::create(builder, loc, arg));
   }
 
   case Builtin::BI__builtin_rotateleft8:

@@ -725,8 +725,9 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Emit the constructor call that will execute for every array element.
     mlir::Value arrayOp =
         builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-    builder.create<cir::ArrayCtor>(
-        *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
+    cir::ArrayCtor::create(
+        builder, *currSrcLoc, arrayOp,
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
           mlir::BlockArgument arg =
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
@@ -738,7 +739,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           emitCXXConstructorCall(ctor, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, currAVS, e);
-          builder.create<cir::YieldOp>(loc);
+          cir::YieldOp::create(builder, loc);
         });
   }
 }

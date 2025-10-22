@@ -34,8 +34,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::ConstantOp>(getLoc(),
-                                         cir::UndefAttr::get(slot.elemType));
+  return cir::ConstantOp::create(builder, getLoc(),
+                                 cir::UndefAttr::get(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,

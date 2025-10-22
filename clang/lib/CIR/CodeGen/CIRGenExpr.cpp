@@ -251,8 +251,8 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
       const mlir::Location loc = dst.getVectorPointer().getLoc();
       const mlir::Value vector =
           builder.createLoad(loc, dst.getVectorAddress());
-      const mlir::Value newVector = builder.create<cir::VecInsertOp>(
-          loc, vector, src.getValue(), dst.getVectorIdx());
+      const mlir::Value newVector = cir::VecInsertOp::create(
+          builder, loc, vector, src.getValue(), dst.getVectorIdx());
       builder.createStore(loc, newVector, dst.getVectorAddress());
       return;
     }
@@ -615,8 +615,8 @@ RValue CIRGenFunction::emitLoadOfLValue(LValue lv, SourceLocation loc) {
   if (lv.isVectorElt()) {
     const mlir::Value load =
         builder.createLoad(getLoc(loc), lv.getVectorAddress());
-    return RValue::get(builder.create<cir::VecExtractOp>(getLoc(loc), load,
-                                                         lv.getVectorIdx()));
+    return RValue::get(cir::VecExtractOp::create(builder, getLoc(loc), load,
+                                                 lv.getVectorIdx()));
   }
 
   cgm.errorNYI(loc, "emitLoadOfLValue");
@@ -1685,8 +1685,8 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToStart(cgm.getModule().getBody());
 
-        clone = builder.create<cir::FuncOp>(calleeFunc.getLoc(), fdInlineName,
-                                            calleeFunc.getFunctionType());
+        clone = cir::FuncOp::create(builder, calleeFunc.getLoc(), fdInlineName,
+                                    calleeFunc.getFunctionType());
         clone.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
             &cgm.getMLIRContext(), cir::GlobalLinkageKind::InternalLinkage));
         clone.setSymVisibility("private");
@@ -1778,8 +1778,8 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
     mlir::Operation *fn = callee.getFunctionPointer();
     mlir::Value addr;
     if (auto funcOp = mlir::dyn_cast<cir::FuncOp>(fn)) {
-      addr = builder.create<cir::GetGlobalOp>(
-          getLoc(e->getSourceRange()),
+      addr = cir::GetGlobalOp::create(
+          builder, getLoc(e->getSourceRange()),
           cir::PointerType::get(funcOp.getFunctionType()), funcOp.getSymName());
     } else {
       addr = fn->getResult(0);
@@ -1996,9 +1996,9 @@ cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
 
   // Emit the code with the fully general case.
   mlir::Value condV = emitOpOnBoolExpr(loc, cond);
-  return builder.create<cir::IfOp>(loc, condV, elseLoc.has_value(),
-                                   /*thenBuilder=*/thenBuilder,
-                                   /*elseBuilder=*/elseBuilder);
+  return cir::IfOp::create(builder, loc, condV, elseLoc.has_value(),
+                           /*thenBuilder=*/thenBuilder,
+                           /*elseBuilder=*/elseBuilder);
 }
 
 /// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
@@ -2025,12 +2025,12 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
                 loc, condV, /*thenBuilder=*/
                 [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
                   mlir::Value lhs = emitScalarExpr(trueExpr);
-                  b.create<cir::YieldOp>(loc, lhs);
+                  cir::YieldOp::create(b, loc, lhs);
                 },
                 /*elseBuilder=*/
                 [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
                   mlir::Value rhs = emitScalarExpr(falseExpr);
-                  b.create<cir::YieldOp>(loc, rhs);
+                  cir::YieldOp::create(b, loc, rhs);
                 })
             .getResult();
 
@@ -2211,8 +2211,8 @@ Address CIRGenFunction::emitLoadOfReference(LValue refLVal, mlir::Location loc,
     cgm.errorNYI(loc, "load of volatile reference");
 
   cir::LoadOp load =
-      builder.create<cir::LoadOp>(loc, refLVal.getAddress().getElementType(),
-                                  refLVal.getAddress().getPointer());
+      cir::LoadOp::create(builder, loc, refLVal.getAddress().getElementType(),
+                          refLVal.getAddress().getPointer());
 
   assert(!cir::MissingFeatures::opTBAA());
 

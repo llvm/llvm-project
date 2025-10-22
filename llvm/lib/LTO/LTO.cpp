@@ -477,6 +477,10 @@ static void thinLTOInternalizeAndPromoteGUID(
                        return !GlobalValue::isLocalLinkage(Summary->linkage());
                      });
 
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
+
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
     // exported.

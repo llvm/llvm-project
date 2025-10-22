@@ -535,7 +535,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = builder.create<cir::GlobalOp>(loc, name, t, isConstant);
+    g = cir::GlobalOp::create(builder, loc, name, t, isConstant);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -739,8 +739,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
-  return builder.create<cir::GetGlobalOp>(getLoc(d->getSourceRange()), ptrTy,
-                                          g.getSymName());
+  return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
+                                  g.getSymName());
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -2176,7 +2176,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     if (cgf)
       builder.setInsertionPoint(cgf->curFn);
 
-    func = builder.create<cir::FuncOp>(loc, name, funcType);
+    func = cir::FuncOp::create(builder, loc, name, funcType);
 
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
 
