@@ -164,9 +164,24 @@ struct alignas(8) GlobalValueSummaryInfo {
 
   inline GlobalValueSummaryInfo(bool HaveGVs);
 
+  /// Access a read-only list of global value summary structures for a
+  /// particular value held in the GlobalValueMap.
+  ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
+    return SummaryList;
+  }
+
+  /// Add a summary corresponding to a global value definition in a module with
+  /// the corresponding GUID.
+  void addSummary(std::unique_ptr<GlobalValueSummary> Summary) {
+    return SummaryList.push_back(std::move(Summary));
+  }
+
+private:
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
-  /// COMDAT values of the same name.
+  /// COMDAT values of the same name, weak symbols, locals of the same name when
+  /// compiling without sufficient distinguishing path, or (theoretically) hash
+  /// collisions. Each summary is from a different module.
   GlobalValueSummaryList SummaryList;
 };
 
@@ -201,7 +216,7 @@ struct ValueInfo {
   }
 
   ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
-    return getRef()->second.SummaryList;
+    return getRef()->second.getSummaryList();
   }
 
   // Even if the index is built with GVs available, we may not have one for
@@ -1434,6 +1449,9 @@ private:
   /// every summary of a GV is synchronized.
   bool WithDSOLocalPropagation = false;
 
+  /// Indicates that summary-based internalization and promotion has run.
+  bool WithInternalizeAndPromote = false;
+
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
 
@@ -1607,8 +1625,8 @@ public:
 
     for (auto &S : *this) {
       // Skip external functions
-      if (!S.second.SummaryList.size() ||
-          !isa<FunctionSummary>(S.second.SummaryList.front().get()))
+      if (!S.second.getSummaryList().size() ||
+          !isa<FunctionSummary>(S.second.getSummaryList().front().get()))
         continue;
       discoverNodes(ValueInfo(HaveGVs, &S), FunctionHasParent);
     }
@@ -1637,6 +1655,9 @@ public:
 
   bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
   void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
+
+  bool withInternalizeAndPromote() const { return WithInternalizeAndPromote; }
+  void setWithInternalizeAndPromote() { WithInternalizeAndPromote = true; }
 
   bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
   void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }
@@ -1748,7 +1769,7 @@ public:
     // Here we have a notionally const VI, but the value it points to is owned
     // by the non-const *this.
     const_cast<GlobalValueSummaryMapTy::value_type *>(VI.getRef())
-        ->second.SummaryList.push_back(std::move(Summary));
+        ->second.addSummary(std::move(Summary));
   }
 
   /// Add an original name for the value of the given GUID.
@@ -1937,7 +1958,7 @@ public:
   collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
     for (const auto &GlobalList : *this) {
       auto GUID = GlobalList.first;
-      for (const auto &Summary : GlobalList.second.SummaryList) {
+      for (const auto &Summary : GlobalList.second.getSummaryList()) {
         ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
       }
     }
@@ -2035,7 +2056,7 @@ struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
     std::unique_ptr<GlobalValueSummary> Root =
         std::make_unique<FunctionSummary>(I->calculateCallGraphRoot());
     GlobalValueSummaryInfo G(I->haveGVs());
-    G.SummaryList.push_back(std::move(Root));
+    G.addSummary(std::move(Root));
     static auto P =
         GlobalValueSummaryMapTy::value_type(GlobalValue::GUID(0), std::move(G));
     return ValueInfo(I->haveGVs(), &P);

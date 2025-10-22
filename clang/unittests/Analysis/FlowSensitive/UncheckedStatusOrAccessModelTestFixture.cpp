@@ -2494,6 +2494,19 @@ TEST_P(UncheckedStatusOrAccessModelTest, UnwrapValueWithStatusPtrCheck) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, UnwrapValueWithMovedStatus) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      if (std::move(sor.status()).ok())
+        sor.value();
+      else
+        sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, MembersUsedInsideStatus) {
   ExpectDiagnosticsFor(R"cc(
     namespace absl {
