@@ -8,9 +8,8 @@ define void @redundant_unstrided_load(ptr %src) {
 ; CHECK-NEXT:    [[SRC_OFFSET:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 8
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[SRC]], i32 4, i1 false, i32 4, i32 2)
-; CHECK-NEXT:    [[L_2:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @use(<8 x double> [[L]])
-; CHECK-NEXT:    call void @use(<8 x double> [[L_2]])
+; CHECK-NEXT:    call void @use(<8 x double> [[L]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -30,9 +29,8 @@ define void @redundant_unstrided_load_non_matrix_store(ptr %src) {
 ; CHECK-NEXT:    [[SRC_OFFSET:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 1
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    store double 4.200000e+01, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[L_2:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 4, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @use(<8 x double> [[L]])
-; CHECK-NEXT:    call void @use(<8 x double> [[L_2]])
+; CHECK-NEXT:    call void @use(<8 x double> [[L]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -52,9 +50,8 @@ define void @redundant_strided_load(ptr %src) {
 ; CHECK-NEXT:    [[SRC_OFFSET:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 16
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
-; CHECK-NEXT:    [[L_2:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @use(<8 x double> [[L]])
-; CHECK-NEXT:    call void @use(<8 x double> [[L_2]])
+; CHECK-NEXT:    call void @use(<8 x double> [[L]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,9 +72,8 @@ define void @redundant_strided_load_non_matrix_store(ptr %src) {
 ; CHECK-NEXT:    [[SRC_OFFSET:%.*]] = getelementptr inbounds double, ptr [[SRC]], i32 16
 ; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    store double 4.200000e+01, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[L_2:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC_OFFSET]], i32 8, i1 false, i32 4, i32 2)
 ; CHECK-NEXT:    call void @use(<8 x double> [[L]])
-; CHECK-NEXT:    call void @use(<8 x double> [[L_2]])
+; CHECK-NEXT:    call void @use(<8 x double> [[L]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

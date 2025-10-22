@@ -50,15 +50,13 @@ TEST_F(LlvmLibcSendRecvTest, SendFails) {
   const char TEST_MESSAGE[] = "connection terminated";
   const size_t MESSAGE_LEN = sizeof(TEST_MESSAGE);
 
-  ASSERT_THAT(
-      static_cast<int>(LIBC_NAMESPACE::send(-1, TEST_MESSAGE, MESSAGE_LEN, 0)),
-      Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::send(-1, TEST_MESSAGE, MESSAGE_LEN, 0),
+              Fails(EBADF));
 }
 
 TEST_F(LlvmLibcSendRecvTest, RecvFails) {
   char buffer[256];
 
-  ASSERT_THAT(
-      static_cast<int>(LIBC_NAMESPACE::recv(-1, buffer, sizeof(buffer), 0)),
-      Fails(EBADF));
+  ASSERT_THAT(LIBC_NAMESPACE::recv(-1, buffer, sizeof(buffer), 0),
+              Fails(EBADF));
 }

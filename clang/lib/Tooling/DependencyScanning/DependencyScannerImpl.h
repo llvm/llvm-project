@@ -105,7 +105,8 @@ struct TextDiagnosticsPrinterWithOutput {
 
 std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
 buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
-                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                 llvm::BumpPtrAllocator &Alloc);
 
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,

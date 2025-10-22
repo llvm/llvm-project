@@ -23,7 +23,7 @@ TEST_F(LlvmLibcCtimeR, Nullptr) {
   result = LIBC_NAMESPACE::ctime_r(nullptr, buffer);
   ASSERT_STREQ(nullptr, result);
 
-  time_t t = 2147483648; // invalid argument
+  time_t t;
   result = LIBC_NAMESPACE::ctime_r(&t, nullptr);
   ASSERT_STREQ(nullptr, result);
 }
