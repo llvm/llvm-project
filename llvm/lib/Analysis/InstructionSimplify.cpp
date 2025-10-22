@@ -4895,7 +4895,7 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
 /// is false and %to_fold is %phi, which contradicts our inductive hypothesis
 /// that %phi and %identicalPhi are equal. Thus %phi and %identicalPhi are
 /// always equal at iteration i+1.
-bool isSimplifierIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
+bool isSelectWithIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
   if (PN.getParent() != IdenticalPN.getParent())
     return false;
   if (PN.getNumIncomingValues() != 2)
@@ -5127,9 +5127,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   // Look for same PHIs in the true and false values.
   if (auto *TruePHI = dyn_cast<PHINode>(TrueVal))
     if (auto *FalsePHI = dyn_cast<PHINode>(FalseVal)) {
-      if (isSimplifierIdenticalPHI(*TruePHI, *FalsePHI))
+      if (isSelectWithIdenticalPHI(*TruePHI, *FalsePHI))
         return FalseVal;
-      if (isSimplifierIdenticalPHI(*FalsePHI, *TruePHI))
+      if (isSelectWithIdenticalPHI(*FalsePHI, *TruePHI))
         return TrueVal;
     }
   return nullptr;
