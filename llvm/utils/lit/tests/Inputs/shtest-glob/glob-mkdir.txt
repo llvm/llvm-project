@@ -6,5 +6,5 @@
 # RUN: mkdir %S/example_dir1.new
 # RUN: mkdir %S/example_dir2.new
 
-## This mkdir should succeed (so RUN should fail) because the `example_dir*.new`s are directories already exist.
+## This mkdir should succeed (so RUN should fail) because the `example_dir*.news` that already exist are directories.
 # RUN: not mkdir %S/example_dir*.new
