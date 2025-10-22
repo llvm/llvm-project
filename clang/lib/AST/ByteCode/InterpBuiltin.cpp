@@ -3128,9 +3128,10 @@ static bool interp__builtin_ia32_vpconflict(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool interp__builtin_x86_pslldq_byteshift(InterpState &S, CodePtr OpPC,
+static bool interp__builtin_x86_byteshift(InterpState &S, CodePtr OpPC,
                                                  const CallExpr *Call,
-                                                 unsigned ID) {
+                                                 unsigned ID, 
+                                        llvm::function_ref<APInt(const Pointer &, PrimType ElemT, unsigned Lane, unsigned I, unsigned Shift)> Fn) {
   assert(Call->getNumArgs() == 2);
 
   APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
@@ -3144,45 +3145,13 @@ static bool interp__builtin_x86_pslldq_byteshift(InterpState &S, CodePtr OpPC,
   const Pointer &Dst = S.Stk.peek<Pointer>();
   PrimType ElemT = Src.getFieldDesc()->getPrimType();
 
-  TYPE_SWITCH(ElemT, {
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (I < Shift) {
-        Dst.elem<T>(I) = T();
-      } else {
-        Dst.elem<T>(I) = Src.elem<T>(I - Shift);
-      }
+  for (unsigned Lane = 0; Lane != NumElems; Lane += 16) {
+    for (unsigned I = 0; I != 16; ++I) {
+      unsigned Base = Lane + I;
+      APSInt Result = APSInt(Fn(Src, ElemT, Lane, I, Shift));
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {Dst.elem<T>(Base) = static_cast<T>(Result);});
     }
-  });
-
-  Dst.initializeAllElements();
-
-  return true;
-}
-
-static bool interp__builtin_x86_psrldq_byteshift(InterpState &S, CodePtr OpPC,
-                                                 const CallExpr *Call,
-                                                 unsigned ID) {
-  assert(Call->getNumArgs() == 2);
-
-  APSInt ImmAPS = popToAPSInt(S, Call->getArg(1));
-  uint64_t Shift = ImmAPS.getZExtValue();
-
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  if (!Src.getFieldDesc()->isPrimitiveArray())
-    return false;
-
-  unsigned NumElems = Src.getNumElems();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = Src.getFieldDesc()->getPrimType();
-
-  TYPE_SWITCH(ElemT, {
-    for (unsigned I = 0; I != NumElems; ++I) {
-      if (I + Shift < NumElems)
-        Dst.elem<T>(I) = Src.elem<T>(I + Shift);
-      else
-        Dst.elem<T>(I) = T();
-    }
-  });
+  }
 
   Dst.initializeAllElements();
 
@@ -4212,11 +4181,31 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
-    return interp__builtin_x86_pslldq_byteshift(S, OpPC, Call, BuiltinID);
+    return interp__builtin_x86_byteshift(S, OpPC, Call, BuiltinID, [](const Pointer &Src, PrimType ElemT, unsigned Lane, unsigned I, unsigned Shift) {
+      APInt v;
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        if(I < Shift) {
+          v = APInt(sizeof(T) * 8, 0);
+        } else {
+          v = APInt(sizeof(T) * 8, static_cast<uint64_t>(Src.elem<T>(Lane + I - Shift)));
+        }
+      });
+      return v;
+    });
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
-    return interp__builtin_x86_psrldq_byteshift(S, OpPC, Call, BuiltinID);
+    return interp__builtin_x86_byteshift(S, OpPC, Call, BuiltinID, [](const Pointer &Src, PrimType ElemT, unsigned Lane, unsigned I, unsigned Shift) {
+      APInt v;
+      INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+        if(I + Shift < 16) {
+          v = APInt(sizeof(T) * 8, static_cast<uint64_t>(Src.elem<T>(Lane + I + Shift)));
+        } else {
+          v = APInt(sizeof(T) * 8, 0);
+        }
+      });
+      return v;
+    });
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

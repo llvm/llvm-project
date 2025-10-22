@@ -12805,13 +12805,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned Shift = Imm.getZExtValue();
 
     SmallVector<APValue> ResultElements;
-    for (unsigned I = 0; I != VecLen; ++I) {
-      if (I < Shift) {
-        APSInt Zero(8, /*isUnsigned=*/true);
-        Zero = 0;
-        ResultElements.push_back(APValue(Zero));
-      } else {
-        ResultElements.push_back(Src.getVectorElt(I - Shift));
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I < Shift) {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        } else {
+          ResultElements.push_back(Src.getVectorElt(Lane + I - Shift));
+        }
       }
     }
 
@@ -12832,13 +12834,15 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     unsigned Shift = Imm.getZExtValue();
 
     SmallVector<APValue> ResultElements;
-    for (unsigned I = 0; I < VecLen; ++I) {
-      if (I + Shift < VecLen) {
-        ResultElements.push_back(Src.getVectorElt(I + Shift));
-      } else {
-        APSInt Zero(8, /*isUnsigned=*/true);
-        Zero = 0;
-        ResultElements.push_back(APValue(Zero));
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I + Shift < 16) {
+          ResultElements.push_back(Src.getVectorElt(Lane + I + Shift));
+        } else {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        }
       }
     }
 
