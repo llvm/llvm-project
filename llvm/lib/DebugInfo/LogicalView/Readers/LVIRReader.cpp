@@ -2024,7 +2024,7 @@ Error LVIRReader::createScopes() {
     });
 
     // Record if the current source language is Fortran.
-    mapFortranLanguage(CU->getSourceLanguage());
+    mapFortranLanguage(CU->getSourceLanguage().getUnversionedName());
 
     CompileUnit = static_cast<LVScopeCompileUnit *>(constructElement(CU));
     CUNode = const_cast<DICompileUnit *>(CU);
