@@ -143,7 +143,6 @@ translateStoreXeGPUCacheHint(std::optional<xegpu::CachePolicy> L1hint,
 }
 
 // Compute the product of sizes in the range [lo, hi) from the sizes array.
-// Note: all sizes are i64.
 static Value getProductOfSizes(ConversionPatternRewriter &rewriter,
                                Location loc, ArrayRef<OpFoldResult> sizes,
                                size_t lo, size_t hi) {
@@ -152,6 +151,8 @@ static Value getProductOfSizes(ConversionPatternRewriter &rewriter,
   for (size_t idx = lo; idx < hi; idx++) {
     OpFoldResult ofr = sizes[idx];
     Value sizeVal = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
+    sizeVal = getValueOrCreateCastToIndexLike(rewriter, loc,
+                                              rewriter.getI64Type(), sizeVal);
     product = rewriter.createOrFold<arith::MulIOp>(loc, product, sizeVal);
   }
   return product;
