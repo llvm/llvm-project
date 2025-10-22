@@ -368,14 +368,10 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
     if (Error E = getBootTime().moveInto(BootTime))
       return std::move(E);
 
-  bool Recovered = false;
-  bool Skipped = false;
   std::string LogValidationError;
 
-  if (ValidationBootTime == BootTime && !ForceValidation) {
-    Skipped = true;
+  if (ValidationBootTime == BootTime && !ForceValidation)
     return ValidationResult::Skipped;
-  }
 
   // Validate!
   bool NeedsRecovery = false;
@@ -438,7 +434,6 @@ UnifiedOnDiskCache::validateIfNeeded(StringRef RootPath, StringRef HashName,
         return createStringError(EC, "rename " + PathBuf + " to " + GCPath +
                                          " failed: " + EC.message());
     }
-    Recovered = true;
   }
 
   if (ValidationBootTime != BootTime) {
@@ -585,7 +580,7 @@ bool UnifiedOnDiskCache::hasExceededSizeLimit() const {
 Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   if (LockFD == -1)
     return Error::success(); // already closed.
-  auto _1 = make_scope_exit([&]() {
+  auto CloseLock = make_scope_exit([&]() {
     assert(LockFD >= 0);
     sys::fs::file_t LockFile = sys::fs::convertFDToNativeFile(LockFD);
     sys::fs::closeFile(LockFile);
@@ -613,7 +608,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
       return Error::success(); // couldn't get exclusive lock, give up.
     return createFileError(RootPath, EC);
   }
-  auto _2 = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
+  auto UnlockFile = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
 
   // Managed to get an exclusive lock which means there are no other open
   // \p UnifiedOnDiskCache instances for the same path, so we can safely start a

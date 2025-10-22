@@ -210,19 +210,3 @@ cas::builtin::createObjectStoreFromUnifiedOnDiskCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB) {
   return std::make_unique<OnDiskCAS>(std::move(UniDB));
 }
-
-static constexpr StringLiteral DefaultName = "cas";
-
-Error cas::getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path) {
-  if (!llvm::sys::path::cache_directory(Path))
-    return createStringError("cache directory is not available");
-  llvm::sys::path::append(Path, DefaultDir, DefaultName);
-  return Error::success();
-}
-
-Expected<std::string> cas::getDefaultOnDiskCASPath() {
-  SmallString<128> Path;
-  if (auto E = getDefaultOnDiskCASPath(Path))
-    return std::move(E);
-  return Path.str().str();
-}

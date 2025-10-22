@@ -17,7 +17,6 @@
 #include "llvm/CAS/UnifiedOnDiskCache.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BLAKE3.h"
-#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "cas-action-caches"
 
@@ -62,6 +61,7 @@ private:
   InMemoryCacheT Cache;
 };
 
+/// Builtin basic OnDiskActionCache that uses one underlying OnDiskKeyValueDB.
 class OnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
@@ -82,6 +82,8 @@ private:
   using DataT = CacheEntry<sizeof(HashType)>;
 };
 
+/// Builtin unified ActionCache that wraps around UnifiedOnDiskCache to privode
+/// access to its ActionCache.
 class UnifiedOnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
@@ -135,17 +137,7 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
                                         Observed.getValue());
 }
 
-static constexpr StringLiteral DefaultName = "actioncache";
-
 namespace llvm::cas {
-
-std::string getDefaultOnDiskActionCachePath() {
-  SmallString<128> Path;
-  if (!llvm::sys::path::cache_directory(Path))
-    report_fatal_error("cannot get default cache directory");
-  llvm::sys::path::append(Path, builtin::DefaultDir, DefaultName);
-  return Path.str().str();
-}
 
 std::unique_ptr<ActionCache> createInMemoryActionCache() {
   return std::make_unique<InMemoryActionCache>();

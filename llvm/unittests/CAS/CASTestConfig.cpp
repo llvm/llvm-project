@@ -14,14 +14,9 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-namespace llvm::unittest::cas {
-void MockEnv::anchor() {}
-MockEnv::~MockEnv() {}
-} // namespace llvm::unittest::cas
-
 static CASTestingEnv createInMemory(int I) {
   return CASTestingEnv{createInMemoryCAS(), createInMemoryActionCache(),
-                       nullptr, std::nullopt};
+                       std::nullopt};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
@@ -38,15 +33,14 @@ void setMaxOnDiskCASMappingSize() {
       Flag, [] { llvm::cas::ondisk::setMaxMappingSize(100 * 1024 * 1024); });
 }
 
-CASTestingEnv createOnDisk(int I) {
+static CASTestingEnv createOnDisk(int I) {
   unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS;
   EXPECT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
   std::unique_ptr<ActionCache> Cache;
   EXPECT_THAT_ERROR(createOnDiskActionCache(Temp.path()).moveInto(Cache),
                     Succeeded());
-  return CASTestingEnv{std::move(CAS), std::move(Cache), nullptr,
-                       std::move(Temp)};
+  return CASTestingEnv{std::move(CAS), std::move(Cache), std::move(Temp)};
 }
 INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASTest, ::testing::Values(createOnDisk));
 #else

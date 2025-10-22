@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-cir -fdump-record-layouts %s -o %t.cir 1> %t.cirlayout
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-cir -fdump-record-layouts %s -o %t.cir > %t.cirlayout
 // RUN: FileCheck --input-file=%t.cirlayout %s --check-prefix=CIR-LAYOUT
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 
-// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fdump-record-layouts %s -o %t.ll 1> %t.ogcglayout
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -fdump-record-layouts %s -o %t.ll > %t.ogcglayout
 // RUN: FileCheck --input-file=%t.ogcglayout %s --check-prefix=OGCG-LAYOUT
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
