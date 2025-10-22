@@ -110,12 +110,14 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
+  case VPInstruction::Unpack:
     return SetResultTyFromOp();
   case VPInstruction::ExtractLane:
     return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractLastLanePerPart:
   case VPInstruction::ExtractPenultimateElement: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
@@ -376,7 +378,7 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
 
 #ifndef NDEBUG
   auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
-    auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+    VPRegionBlock *Region = R->getRegion();
     if (Region && Region->isReplicator()) {
       assert(Region->getNumSuccessors() == 1 &&
              Region->getNumPredecessors() == 1 && "Expected SESE region!");
@@ -393,20 +395,6 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
          "No replicate regions expected at this point");
 #endif
   return Base::properlyDominates(ParentA, ParentB);
-}
-
-/// Get the VF scaling factor applied to the recipe's output, if the recipe has
-/// one.
-static unsigned getVFScaleFactor(VPValue *R) {
-  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
-    return RR->getVFScaleFactor();
-  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
-    return RR->getVFScaleFactor();
-  assert(
-      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
-                                     VPInstruction::ReductionStartVector) &&
-      "getting scaling factor of reduction-start-vector not implemented yet");
-  return 1;
 }
 
 bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
@@ -571,7 +559,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         } else {
           // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
-          unsigned ScaleFactor = getVFScaleFactor(VPV);
+          unsigned ScaleFactor =
+              vputils::getVFScaleFactor(VPV->getDefiningRecipe());
           ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF

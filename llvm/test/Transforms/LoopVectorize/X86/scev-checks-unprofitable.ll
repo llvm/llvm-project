@@ -29,12 +29,10 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> zeroinitializer, ptr [[DST]], i32 1, <16 x i1> [[TMP0]])
+; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> zeroinitializer, ptr align 1 [[DST]], <16 x i1> [[TMP0]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_1_LOOPEXIT1:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
 ; CHECK:       [[LOOP_2]]:
@@ -48,13 +46,6 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp ult i64 [[IV_2]], [[IV_1_LCSSA]]
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[LOOP_2]], label %[[EXIT_1_LOOPEXIT:.*]]
-; CHECK:       [[LOOP_3]]:
-; CHECK-NEXT:    [[IV_4:%.*]] = phi i64 [ [[IV_4_NEXT:%.*]], %[[LOOP_3]] ], [ 0, %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[GEP_DST_2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_4]]
-; CHECK-NEXT:    store i8 0, ptr [[GEP_DST_2]], align 1
-; CHECK-NEXT:    [[IV_4_NEXT]] = add i64 [[IV_4]], 1
-; CHECK-NEXT:    [[EC_3:%.*]] = icmp ult i64 [[IV_4_NEXT]], [[IV_1_LCSSA]]
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP_3]], label %[[EXIT_1_LOOPEXIT1]]
 ; CHECK:       [[EXIT_1_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT_1:.*]]
 ; CHECK:       [[EXIT_1_LOOPEXIT1]]:

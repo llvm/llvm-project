@@ -1075,7 +1075,7 @@ Register PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 // For opcodes with the ReMaterializable flag set, this function is called to
 // verify the instruction is really rematable.
-bool PPCInstrInfo::isReallyTriviallyReMaterializable(
+bool PPCInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
@@ -1112,7 +1112,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::DMXXSETACCZ:
     return true;
   }
-  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+  return TargetInstrInfo::isReMaterializableImpl(MI);
 }
 
 Register PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -2142,33 +2142,23 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   assert(UseIdx < UseMI.getNumOperands() && "Cannot find Reg in UseMI");
   assert(UseIdx < UseMCID.getNumOperands() && "No operand description for Reg");
 
-  const MCOperandInfo *UseInfo = &UseMCID.operands()[UseIdx];
-
   // We can fold the zero if this register requires a GPRC_NOR0/G8RC_NOX0
   // register (which might also be specified as a pointer class kind).
-  if (UseInfo->isLookupPtrRegClass()) {
-    if (UseInfo->RegClass /* Kind */ != 1)
-      return false;
-  } else {
-    if (UseInfo->RegClass != PPC::GPRC_NOR0RegClassID &&
-        UseInfo->RegClass != PPC::G8RC_NOX0RegClassID)
-      return false;
-  }
+
+  const MCOperandInfo &UseInfo = UseMCID.operands()[UseIdx];
+  int16_t RegClass = getOpRegClassID(UseInfo);
+  if (UseInfo.RegClass != PPC::GPRC_NOR0RegClassID &&
+      UseInfo.RegClass != PPC::G8RC_NOX0RegClassID)
+    return false;
 
   // Make sure this is not tied to an output register (or otherwise
   // constrained). This is true for ST?UX registers, for example, which
   // are tied to their output registers.
-  if (UseInfo->Constraints != 0)
+  if (UseInfo.Constraints != 0)
     return false;
 
-  MCRegister ZeroReg;
-  if (UseInfo->isLookupPtrRegClass()) {
-    bool isPPC64 = Subtarget.isPPC64();
-    ZeroReg = isPPC64 ? PPC::ZERO8 : PPC::ZERO;
-  } else {
-    ZeroReg = UseInfo->RegClass == PPC::G8RC_NOX0RegClassID ?
-              PPC::ZERO8 : PPC::ZERO;
-  }
+  MCRegister ZeroReg =
+      RegClass == PPC::G8RC_NOX0RegClassID ? PPC::ZERO8 : PPC::ZERO;
 
   LLVM_DEBUG(dbgs() << "Folded immediate zero for: ");
   LLVM_DEBUG(UseMI.dump());

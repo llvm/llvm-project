@@ -2070,7 +2070,7 @@ static const char *GetCompletionTypeString(QualType T, ASTContext &Context,
 
     // Anonymous tag types are constant strings.
     if (const TagType *TagT = dyn_cast<TagType>(T))
-      if (TagDecl *Tag = TagT->getOriginalDecl())
+      if (TagDecl *Tag = TagT->getDecl())
         if (!Tag->hasNameForLinkage()) {
           switch (Tag->getTagKind()) {
           case TagTypeKind::Struct:

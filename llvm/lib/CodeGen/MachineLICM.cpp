@@ -244,8 +244,6 @@ namespace {
 
     bool IsGuaranteedToExecute(MachineBasicBlock *BB, MachineLoop *CurLoop);
 
-    bool isTriviallyReMaterializable(const MachineInstr &MI) const;
-
     void EnterScope(MachineBasicBlock *MBB);
 
     void ExitScope(MachineBasicBlock *MBB);
@@ -771,23 +769,6 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
   return true;
 }
 
-/// Check if \p MI is trivially remateralizable and if it does not have any
-/// virtual register uses. Even though rematerializable RA might not actually
-/// rematerialize it in this scenario. In that case we do not want to hoist such
-/// instruction out of the loop in a belief RA will sink it back if needed.
-bool MachineLICMImpl::isTriviallyReMaterializable(
-    const MachineInstr &MI) const {
-  if (!TII->isTriviallyReMaterializable(MI))
-    return false;
-
-  for (const MachineOperand &MO : MI.all_uses()) {
-    if (MO.getReg().isVirtual())
-      return false;
-  }
-
-  return true;
-}
-
 void MachineLICMImpl::EnterScope(MachineBasicBlock *MBB) {
   LLVM_DEBUG(dbgs() << "Entering " << printMBBReference(*MBB) << '\n');
 
@@ -951,12 +932,11 @@ void MachineLICMImpl::InitRegPressure(MachineBasicBlock *BB) {
 void MachineLICMImpl::UpdateRegPressure(const MachineInstr *MI,
                                         bool ConsiderUnseenAsDef) {
   auto Cost = calcRegisterCost(MI, /*ConsiderSeen=*/true, ConsiderUnseenAsDef);
-  for (const auto &RPIdAndCost : Cost) {
-    unsigned Class = RPIdAndCost.first;
-    if (static_cast<int>(RegPressure[Class]) < -RPIdAndCost.second)
+  for (const auto &[Class, Weight] : Cost) {
+    if (static_cast<int>(RegPressure[Class]) < -Weight)
       RegPressure[Class] = 0;
     else
-      RegPressure[Class] += RPIdAndCost.second;
+      RegPressure[Class] += Weight;
   }
 }
 
@@ -1234,11 +1214,10 @@ bool MachineLICMImpl::IsCheapInstruction(MachineInstr &MI) const {
 /// given cost matrix can cause high register pressure.
 bool MachineLICMImpl::CanCauseHighRegPressure(
     const SmallDenseMap<unsigned, int> &Cost, bool CheapInstr) {
-  for (const auto &RPIdAndCost : Cost) {
-    if (RPIdAndCost.second <= 0)
+  for (const auto &[Class, Weight] : Cost) {
+    if (Weight <= 0)
       continue;
 
-    unsigned Class = RPIdAndCost.first;
     int Limit = RegLimit[Class];
 
     // Don't hoist cheap instructions if they would increase register pressure,
@@ -1247,7 +1226,7 @@ bool MachineLICMImpl::CanCauseHighRegPressure(
       return true;
 
     for (const auto &RP : BackTrace)
-      if (static_cast<int>(RP[Class]) + RPIdAndCost.second >= Limit)
+      if (static_cast<int>(RP[Class]) + Weight >= Limit)
         return true;
   }
 
@@ -1265,8 +1244,8 @@ void MachineLICMImpl::UpdateBackTraceRegPressure(const MachineInstr *MI) {
 
   // Update register pressure of blocks from loop header to current block.
   for (auto &RP : BackTrace)
-    for (const auto &RPIdAndCost : Cost)
-      RP[RPIdAndCost.first] += RPIdAndCost.second;
+    for (const auto &[Class, Weight] : Cost)
+      RP[Class] += Weight;
 }
 
 /// Return true if it is potentially profitable to hoist the given loop
@@ -1300,9 +1279,9 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
     return false;
   }
 
-  // Rematerializable instructions should always be hoisted providing the
-  // register allocator can just pull them down again when needed.
-  if (isTriviallyReMaterializable(MI))
+  // Trivially rematerializable instructions should always be hoisted
+  // providing the register allocator can just pull them down again when needed.
+  if (TII->isTriviallyReMaterializable(MI))
     return true;
 
   // FIXME: If there are long latency loop-invariant instructions inside the
@@ -1386,7 +1365,7 @@ bool MachineLICMImpl::IsProfitableToHoist(MachineInstr &MI,
 
   // High register pressure situation, only hoist if the instruction is going
   // to be remat'ed.
-  if (!isTriviallyReMaterializable(MI) &&
+  if (!TII->isTriviallyReMaterializable(MI) &&
       !MI.isDereferenceableInvariantLoad()) {
     LLVM_DEBUG(dbgs() << "Can't remat / high reg-pressure: " << MI);
     return false;

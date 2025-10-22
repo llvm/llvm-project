@@ -7,10 +7,8 @@ gpu.module @test {
     //CHECK: [[IDY:%.+]] = affine.apply #map()[[[sgId]]]
     //CHECK: [[c32:%.+]] = arith.constant 32 : index
     //CHECK: [[LOCALY:%.+]] = index.mul [[IDY]], [[c32]]
-    //CHECK: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK: [[MODY:%.+]] = index.remu [[LOCALY]], [[c128]]
     //CHECK: [[BASE:%.+]] = vector.step : vector<32xindex>
     //CHECK: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<32xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<32xindex>
@@ -23,10 +21,8 @@ gpu.module @test {
     //CHECK: [[IDY:%.+]] = affine.apply #map()[[[sgId]]]
     //CHECK: [[c32:%.+]] = arith.constant 32 : index
     //CHECK: [[LOCALY:%.+]] = index.mul [[IDY]], [[c32]]
-    //CHECK: [[c0:%.+]] = arith.constant 0 : index
-    //CHECK: [[Y:%.+]] = arith.addi [[LOCALY]], [[c0]] : index
     //CHECK: [[c128:%.+]] = arith.constant 128 : index
-    //CHECK: [[MODY:%.+]] = index.remu [[Y]], [[c128]]
+    //CHECK: [[MODY:%.+]] = index.remu [[LOCALY]], [[c128]]
     //CHECK: [[BASE:%.+]] = vector.step : vector<32xindex>
     //CHECK: [[CAST:%.+]] = vector.broadcast [[MODY]] : index to vector<32xindex>
     //CHECK: [[ADD:%.+]] = arith.addi [[BASE]], [[CAST]] : vector<32xindex>

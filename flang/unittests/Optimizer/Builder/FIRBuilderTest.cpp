@@ -644,3 +644,87 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   auto op4_ioff = op4_iofi.getOverflowAttr().getValue();
   EXPECT_EQ(op4_ioff, nsw);
 }
+
+TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+
+  // Build an input fir.box for a 1-D array of i64 with constant extent 10.
+  auto i64Ty = builder.getI64Type();
+  auto seqTy = fir::SequenceType::get({10}, i64Ty);
+  auto refArrTy = fir::ReferenceType::get(seqTy);
+  auto ptrTy = fir::PointerType::get(seqTy);
+  auto boxTy = fir::BoxType::get(ptrTy);
+  // Create an undef box descriptor value (descriptor contents are unspecified).
+  mlir::Value inputBox = fir::UndefOp::create(builder, loc, boxTy);
+
+  // New base address (same element type and properties).
+  mlir::Value addr2 = fir::UndefOp::create(builder, loc, refArrTy);
+
+  mlir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
+      builder, loc, inputBox, addr2);
+
+  // The returned descriptor must have the same type as the input box.
+  EXPECT_EQ(newBox.getType(), inputBox.getType());
+
+  // It must be constructed by an embox using the new base address.
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::EmboxOp>(newBox.getDefiningOp()));
+  auto embox = llvm::dyn_cast<fir::EmboxOp>(newBox.getDefiningOp());
+  EXPECT_EQ(embox.getMemref(), addr2);
+
+  // The shape should be derived from the input box; expect a fir.shape with one
+  // extent that comes from a fir.box_dims reading from the original input box.
+  mlir::Value shape = embox.getShape();
+  ASSERT_TRUE(shape);
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::ShapeShiftOp>(shape.getDefiningOp()));
+  auto shapeOp = llvm::dyn_cast<fir::ShapeShiftOp>(shape.getDefiningOp());
+  ASSERT_EQ(shapeOp.getExtents().size(), 1u);
+  mlir::Value extent0 = shapeOp.getExtents()[0];
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::BoxDimsOp>(extent0.getDefiningOp()));
+  auto dimOp = llvm::dyn_cast<fir::BoxDimsOp>(extent0.getDefiningOp());
+  EXPECT_EQ(dimOp.getVal(), inputBox);
+
+  // Also verify the origin comes from a BoxDims on the same input box.
+  ASSERT_EQ(shapeOp.getOrigins().size(), 1u);
+  mlir::Value origin0 = shapeOp.getOrigins()[0];
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::BoxDimsOp>(origin0.getDefiningOp()));
+  auto lbOp = llvm::dyn_cast<fir::BoxDimsOp>(origin0.getDefiningOp());
+  EXPECT_EQ(lbOp.getVal(), inputBox);
+}
+
+TEST_F(FIRBuilderTest, getDescriptorWithNewBaseAddress_PolymorphicScalar) {
+  auto builder = getBuilder();
+  auto loc = builder.getUnknownLoc();
+
+  // Build a polymorphic scalar: fir.class<ptr<!fir.type<rec>>>.
+  auto recTy = fir::RecordType::get(builder.getContext(), "poly_rec");
+  auto ptrRecTy = fir::PointerType::get(recTy);
+  auto classTy = fir::ClassType::get(ptrRecTy);
+
+  // Input descriptor is an undefined fir.class value.
+  mlir::Value inputBox = fir::UndefOp::create(builder, loc, classTy);
+
+  // New base address of the same element type (reference to the record).
+  auto refRecTy = fir::ReferenceType::get(recTy);
+  mlir::Value newAddr = fir::UndefOp::create(builder, loc, refRecTy);
+
+  mlir::Value newBox = fir::factory::getDescriptorWithNewBaseAddress(
+      builder, loc, inputBox, newAddr);
+
+  // Same descriptor type must be preserved.
+  EXPECT_EQ(newBox.getType(), inputBox.getType());
+
+  // Must be an embox using the new base address and carrying the original box
+  // as mold.
+  ASSERT_TRUE(llvm::isa_and_nonnull<fir::EmboxOp>(newBox.getDefiningOp()));
+  auto embox = llvm::dyn_cast<fir::EmboxOp>(newBox.getDefiningOp());
+  EXPECT_EQ(embox.getMemref(), newAddr);
+
+  // Polymorphic scalar should have no shape operand.
+  mlir::Value shape = embox.getShape();
+  EXPECT_TRUE(shape == nullptr);
+
+  // The type descriptor/mold must be the original input box.
+  mlir::Value tdesc = embox.getSourceBox();
+  EXPECT_EQ(tdesc, inputBox);
+}

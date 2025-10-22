@@ -28,7 +28,7 @@
 ; CHECK-NOT: vectorized loop
 ; CHECK-LABEL: fn1
 
-define i32 @fn1() {
+define void @fn1() {
 entry:
   %tmp2 = load i32, ptr @b, align 4
   %dec3 = add nsw i32 %tmp2, -1
@@ -67,5 +67,5 @@ while.cond.while.end_crit_edge:                   ; preds = %while.cond
   br label %while.end
 
 while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry
-  ret i32 undef
+  ret void
 }

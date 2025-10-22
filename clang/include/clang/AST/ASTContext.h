@@ -25,10 +25,12 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -50,6 +52,36 @@ class APFixedPoint;
 class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
+
+struct ScalableVecTyKey {
+  clang::QualType EltTy;
+  unsigned NumElts;
+  unsigned NumFields;
+
+  bool operator==(const ScalableVecTyKey &RHS) const {
+    return EltTy == RHS.EltTy && NumElts == RHS.NumElts &&
+           NumFields == RHS.NumFields;
+  }
+};
+
+// Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
+// as a key in DenseMap.
+template <> struct DenseMapInfo<ScalableVecTyKey> {
+  static inline ScalableVecTyKey getEmptyKey() {
+    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
+  }
+  static inline ScalableVecTyKey getTombstoneKey() {
+    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
+  }
+  static unsigned getHashValue(const ScalableVecTyKey &Val) {
+    return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
+                        Val.NumElts, Val.NumFields);
+  }
+  static bool isEqual(const ScalableVecTyKey &LHS,
+                      const ScalableVecTyKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 
@@ -504,6 +536,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const ObjCInterfaceDecl *,
                  SmallVector<const ObjCInterfaceDecl *, 4>>
       ObjCSubClasses;
+
+  // A mapping from Scalable Vector Type keys to their corresponding QualType.
+  mutable llvm::DenseMap<llvm::ScalableVecTyKey, QualType> ScalableVecTyMap;
 
   ASTContext &this_() { return *this; }
 
@@ -2839,11 +2874,11 @@ public:
   /// returned type is guaranteed to be free of any of these, allowing two
   /// canonical types to be compared for exact equality with a simple pointer
   /// comparison.
-  CanQualType getCanonicalType(QualType T) const {
+  static CanQualType getCanonicalType(QualType T) {
     return CanQualType::CreateUnsafe(T.getCanonicalType());
   }
 
-  const Type *getCanonicalType(const Type *T) const {
+  static const Type *getCanonicalType(const Type *T) {
     return T->getCanonicalTypeInternal().getTypePtr();
   }
 
@@ -2855,10 +2890,10 @@ public:
   CanQualType getCanonicalParamType(QualType T) const;
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
-  bool hasSameType(QualType T1, QualType T2) const {
+  static bool hasSameType(QualType T1, QualType T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
-  bool hasSameType(const Type *T1, const Type *T2) const {
+  static bool hasSameType(const Type *T1, const Type *T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
@@ -2886,7 +2921,7 @@ public:
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
-  bool hasSameUnqualifiedType(QualType T1, QualType T2) const {
+  static bool hasSameUnqualifiedType(QualType T1, QualType T2) {
     return getCanonicalType(T1).getTypePtr() ==
            getCanonicalType(T2).getTypePtr();
   }
@@ -3842,7 +3877,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
     return new (Ctx) LazyData(Source, Value);
   return Value;
 }
-
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
 

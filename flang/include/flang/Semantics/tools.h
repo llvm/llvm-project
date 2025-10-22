@@ -739,12 +739,6 @@ const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
     parser::CharBlock at, const char *what);
 
-inline const parser::Name *getDesignatorNameIfDataRef(
-    const parser::Designator &designator) {
-  const auto *dataRef{std::get_if<parser::DataRef>(&designator.u)};
-  return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
-}
-
 bool CouldBeDataPointerValuedFunction(const Symbol *);
 
 template <typename R, typename T>
@@ -769,6 +763,8 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
+
+bool AreSameModuleSymbol(const Symbol &, const Symbol &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

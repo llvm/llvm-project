@@ -120,6 +120,8 @@ STATISTIC(NumVirtConstProp1Bit,
           "Number of 1 bit virtual constant propagations");
 STATISTIC(NumVirtConstProp, "Number of virtual constant propagations");
 
+namespace llvm {
+
 static cl::opt<PassSummaryAction> ClSummaryAction(
     "wholeprogramdevirt-summary-action",
     cl::desc("What to do with the summary when running this pass"),
@@ -174,6 +176,8 @@ static cl::list<std::string>
                       cl::Hidden, cl::CommaSeparated);
 
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+} // end namespace llvm
 
 /// With Clang, a pure virtual class's deleting destructor is emitted as a
 /// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
@@ -368,9 +372,7 @@ struct VTableSlot {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-template <> struct DenseMapInfo<VTableSlot> {
+template <> struct llvm::DenseMapInfo<VTableSlot> {
   static VTableSlot getEmptyKey() {
     return {DenseMapInfo<Metadata *>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
@@ -389,7 +391,7 @@ template <> struct DenseMapInfo<VTableSlot> {
   }
 };
 
-template <> struct DenseMapInfo<VTableSlotSummary> {
+template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
   static VTableSlotSummary getEmptyKey() {
     return {DenseMapInfo<StringRef>::getEmptyKey(),
             DenseMapInfo<uint64_t>::getEmptyKey()};
@@ -407,8 +409,6 @@ template <> struct DenseMapInfo<VTableSlotSummary> {
     return LHS.TypeID == RHS.TypeID && LHS.ByteOffset == RHS.ByteOffset;
   }
 };
-
-} // end namespace llvm
 
 // Returns true if the function must be unreachable based on ValueInfo.
 //
@@ -928,7 +928,7 @@ void llvm::updateVCallVisibilityInIndex(
     // linker, as we have no information on their eventual use.
     if (DynamicExportSymbols.count(P.first))
       continue;
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
@@ -2413,7 +2413,7 @@ bool DevirtModule::run() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second.SummaryList) {
+      for (auto &S : P.second.getSummaryList()) {
         auto *FS = dyn_cast<FunctionSummary>(S.get());
         if (!FS)
           continue;
@@ -2564,7 +2564,7 @@ void DevirtIndex::run() {
 
   // Collect information from summary about which calls to try to devirtualize.
   for (auto &P : ExportSummary) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;

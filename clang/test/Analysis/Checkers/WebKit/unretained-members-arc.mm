@@ -84,6 +84,21 @@ namespace ptr_to_ptr_to_retained {
 @property(nonatomic, unsafe_unretained) NSString *prop_string3;
 // expected-warning@-1{{Property 'prop_string3' in 'AnotherObject' is a raw pointer to retainable type 'NSString'; member variables must be a RetainPtr}}
 @property(nonatomic, readonly) NSString *prop_string4;
+@property(nonatomic, readonly) NSString *prop_safe;
+@end
+
+@implementation AnotherObject
+- (NSString *)prop_safe {
+  return nil;
+}
+@end
+
+// No warnings for @interface declaration itself. 
+@interface InterfaceOnlyObject : NSObject
+@property(nonatomic, strong) NSString *prop_string1;
+@property(nonatomic, assign) NSString *prop_string2;
+@property(nonatomic, unsafe_unretained) NSString *prop_string3;
+@property(nonatomic, readonly) NSString *prop_string4;
 @property(nonatomic, readonly) dispatch_queue_t prop_string5;
 @end
 

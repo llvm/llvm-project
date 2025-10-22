@@ -71,6 +71,14 @@ TEST(PackedVectorTest, RawBitsSize) {
   EXPECT_EQ(12u, Vec.raw_bits().size());
 }
 
+TEST(PackedVectorTest, SignedValueOverwrite) {
+  PackedVector<signed, 4> Vec(1);
+  Vec[0] = -1;
+  EXPECT_EQ(-1, Vec[0]);
+  Vec[0] = 1;
+  EXPECT_EQ(1, Vec[0]);
+}
+
 #ifdef EXPECT_DEBUG_DEATH
 
 TEST(PackedVectorTest, UnsignedValues) {

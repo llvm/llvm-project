@@ -126,7 +126,7 @@ class LLVM_ABI raw_socket_stream : public raw_fd_stream {
 
 public:
   raw_socket_stream(int SocketFD);
-  ~raw_socket_stream();
+  ~raw_socket_stream() override;
 
   /// Create a \p raw_socket_stream connected to the UNIX domain socket at \p
   /// SocketPath.
