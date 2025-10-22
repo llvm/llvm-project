@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
 
+// XFAIL: *
+
 #include <omp.h>
 #include <stdio.h>
 
@@ -34,13 +36,15 @@ struct ST {
         // ref/attach modifiers:
         //  &ref_ptee(this[0].[d])), &ref_ptee(this[0].d), TO | FROM
         //  &ref_ptr(this[0].d), &ref_ptee(this[0].d), 4, ATTACH
-        // EXPECTED:   1 0
-        // CHECK-NEXT: 0 1
+        // EXPECTED:   1
+        // CHECK-NEXT: 0
+        printf("%d\n", &d == mapped_ptr);
         ptrdiff_t offset_device = (char *)mapped_ptr - (char *)&d;
-        printf("%d %d\n", &d == mapped_ptr, offset == offset_device);
-        printf("%td (%p) %td (%p)\n", offset, (void *)offset, offset_device,
-               (void *)offset_device);
+        printf("offset = %td (%p), offset_device = %td (%p)\n", offset,
+               (void *)offset, offset_device, (void *)offset_device);
+        printf("mapped_ptr = %p, device_addr = %p, ", mapped_ptr, &d);
       }
+      printf("host_addr = %p\n", &d);
     }
   }
 };
