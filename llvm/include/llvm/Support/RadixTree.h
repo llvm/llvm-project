@@ -65,8 +65,8 @@ namespace llvm {
 /// The `RadixTree` takes ownership of the `KeyType` and `T` objects
 /// inserted into it. When an element is removed or the tree is destroyed,
 /// these objects will be destructed.
-/// However, if `KeyType` is a reference-like type, e.g. StrignRef or range,
-/// User must guaranty that destination has lifetime longer than the tree.
+/// However, if `KeyType` is a reference-like type, e.g. StringRef or range,
+/// User must guarantee that destination has lifetime longer than the tree.
 template <typename KeyType, typename T> class RadixTree {
 public:
   using key_type = KeyType;
@@ -81,7 +81,7 @@ private:
       remove_cvref_t<decltype(*adl_begin(std::declval<key_type &>()))>;
   using ContainerType = std::list<value_type>;
 
-  /// Represents a internal node in the Radix Tree.
+  /// Represents an internal node in the Radix Tree.
   struct Node {
     KeyConstIteratorRangeType Key = {KeyConstIteratorType{},
                                      KeyConstIteratorType{}};
@@ -110,12 +110,12 @@ private:
     Node &operator=(const Node &) = delete;
 
     const Node *findChild(const KeyConstIteratorRangeType &Key) const {
-      if (!Key.empty()) {
-        for (const auto &Child : Children) {
-          assert(!Child.Key.empty()); // Only root can be empty.
-          if (Child.KeyFront == *Key.begin())
-            return &Child;
-        }
+      if (Key.empty())
+        return nullptr;
+      for (const auto &Child : Children) {
+        assert(!Child.Key.empty()); // Only root can be empty.
+        if (Child.KeyFront == *Key.begin())
+          return &Child;
       }
       return nullptr;
     }
@@ -167,12 +167,12 @@ private:
       Key = make_range(I1, Key.end());
 
       if (I2 != Curr->Key.end()) {
-        // Match is partial. Either query is too short, or there is missmatching
+        // Match is partial. Either query is too short, or there is mismatching
         // character. Split either way, and put new node in between of the
         // current and its children.
         Curr->split(I2);
 
-        // Split was caused by mismatch, we can't 'findChild' will fail.
+        // Split was caused by mismatch, so `findChild` will fail.
         break;
       }
 
@@ -196,7 +196,7 @@ private:
   }
 
   ///
-  /// An iterator for traversing prefixes searche results.
+  /// An iterator for traversing prefixes search results.
   ///
   /// This iterator is used by `find_prefixes` to traverse the tree and find
   /// elements that are prefixes to the given key. It's a forward iterator.
@@ -278,7 +278,7 @@ public:
 
   /// Returns the number of nodes in the tree.
   ///
-  /// This function counts all internal in the tree. It can be useful for
+  /// This function counts all internal nodes in the tree. It can be useful for
   /// understanding the memory footprint or complexity of the tree structure.
   size_t countNodes() const { return Root.countNodes(); }
 
@@ -322,7 +322,7 @@ public:
   ///
   /// This function returns an iterator range over all elements in the tree
   /// whose keys are prefixes of the provided `Key`. For example, if the tree
-  /// contains "abcde", "abc", "abcdefgh, and `Key` is "abcde", this function
+  /// contains "abcde", "abc", "abcdefgh", and `Key` is "abcde", this function
   /// would return iterators to "abcde" and "abc".
   ///
   /// \param Key The key to search for prefixes of.
