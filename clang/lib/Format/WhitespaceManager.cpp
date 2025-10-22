@@ -399,15 +399,6 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       }
     }
   }
-
-  // The scope to be aligned may not occupy entire lines. The rest of the line
-  // needs some book-keeping.
-  for (unsigned i = End; i < Changes.size() && Changes[i].NewlinesBefore == 0;
-       ++i) {
-    Changes[i].StartOfTokenColumn += Shift;
-    if (i + 1 != Changes.size())
-      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
-  }
 }
 
 // Walk through a subset of the changes, starting at StartAt, and find
@@ -659,8 +650,16 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
     MatchedIndices.push_back(I);
   }
 
+  // Pass to the function entire lines, so it can update the state of all tokens
+  // that move.
   EndOfSequence = I;
+  while (EndOfSequence < Changes.size() &&
+         Changes[EndOfSequence].NewlinesBefore == 0) {
+    ++EndOfSequence;
+  }
   AlignCurrentSequence();
+  // The return value should still be where the level ends. The rest of the line
+  // may contain stuff to be aligned within the parent level.
   return I;
 }
 
