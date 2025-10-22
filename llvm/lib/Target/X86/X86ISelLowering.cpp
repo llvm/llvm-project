@@ -29516,11 +29516,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
 
-  if (DAG.isKnownNeverNaN(NewX))
-    NewX = NewY;
-
-  SDValue IsNaN =
-      DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
+  SDValue NaNSrc = IsNum ? MinMax : NewX;
+  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NaNSrc, NaNSrc, ISD::SETUO);
 
   return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
 }
@@ -41846,7 +41843,7 @@ static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
     if (!X86::mayFoldLoad(peekThroughOneUseBitcasts(N0), Subtarget) ||
         X86::mayFoldLoad(peekThroughOneUseBitcasts(N1), Subtarget))
       return SDValue();
-    Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
+    Imm = llvm::rotl<uint8_t>(Imm, 4);
     return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
                        DAG.getTargetConstant(Imm, DL, MVT::i8));
   };
@@ -44813,10 +44810,16 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
   }
   case X86ISD::PCMPGT:
     // icmp sgt(0, R) == ashr(R, BitWidth-1).
-    // iff we only need the sign bit then we can use R directly.
-    if (OriginalDemandedBits.isSignMask() &&
-        ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()))
-      return TLO.CombineTo(Op, Op.getOperand(1));
+    if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode())) {
+      // iff we only need the signbit then we can use R directly.
+      if (OriginalDemandedBits.isSignMask())
+        return TLO.CombineTo(Op, Op.getOperand(1));
+      // otherwise we just need R's signbit for the comparison.
+      APInt SignMask = APInt::getSignMask(BitWidth);
+      if (SimplifyDemandedBits(Op.getOperand(1), SignMask, OriginalDemandedElts,
+                               Known, TLO, Depth + 1))
+        return true;
+    }
     break;
   case X86ISD::MOVMSK: {
     SDValue Src = Op.getOperand(0);

@@ -508,6 +508,10 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::WavefrontScope:
     Name = "wavefront";
     break;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
+    break;
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:
