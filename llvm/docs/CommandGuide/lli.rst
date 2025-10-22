@@ -107,11 +107,6 @@ FLOATING POINT OPTIONS
 
  Enable optimizations that assume no NAN values.
 
-.. option:: -enable-unsafe-fp-math
-
- Causes :program:`lli` to enable optimizations that may decrease floating point
- precision.
-
 .. option:: -soft-float
 
  Causes :program:`lli` to generate software floating point library calls instead of

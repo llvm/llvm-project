@@ -550,6 +550,31 @@ TEST_F(SelectionDAGPatternMatchTest, matchNode) {
   EXPECT_FALSE(sd_match(Add, m_Node(ISD::ADD, m_ConstInt(), m_Value())));
 }
 
+TEST_F(SelectionDAGPatternMatchTest, matchSelectLike) {
+  SDLoc DL;
+  auto Int32VT = EVT::getIntegerVT(Context, 32);
+  auto VInt32VT = EVT::getVectorVT(Context, Int32VT, 4);
+
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, Int32VT);
+  SDValue TVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
+  SDValue FVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, Int32VT);
+
+  SDValue VCond = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 0, VInt32VT);
+  SDValue VTVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, VInt32VT);
+  SDValue VFVal = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 2, VInt32VT);
+
+  SDValue Select = DAG->getNode(ISD::SELECT, DL, Int32VT, Cond, TVal, FVal);
+  SDValue VSelect =
+      DAG->getNode(ISD::VSELECT, DL, Int32VT, VCond, VTVal, VFVal);
+
+  using namespace SDPatternMatch;
+  EXPECT_TRUE(sd_match(Select, m_SelectLike(m_Specific(Cond), m_Specific(TVal),
+                                            m_Specific(FVal))));
+  EXPECT_TRUE(
+      sd_match(VSelect, m_SelectLike(m_Specific(VCond), m_Specific(VTVal),
+                                     m_Specific(VFVal))));
+}
+
 namespace {
 struct VPMatchContext : public SDPatternMatch::BasicMatchContext {
   using SDPatternMatch::BasicMatchContext::BasicMatchContext;
