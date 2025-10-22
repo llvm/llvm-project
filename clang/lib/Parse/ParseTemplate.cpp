@@ -533,6 +533,12 @@ bool Parser::isTypeConstraintAnnotation() {
 bool Parser::TryAnnotateTypeConstraint() {
   if (!getLangOpts().CPlusPlus20)
     return false;
+  // The type constraint may declare template parameters, notably
+  // if it contains a generic lambda, so we need to increment
+  // the template depth as these parameters would not be instantiated
+  // at the current depth.
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  ++CurTemplateDepthTracker;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,

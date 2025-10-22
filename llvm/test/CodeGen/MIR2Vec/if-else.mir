@@ -1,0 +1,144 @@
+# REQUIRES: x86-registered-target
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  
+  define dso_local i32 @abc(i32 noundef %a, i32 noundef %b) {
+  entry:
+    %retval = alloca i32, align 4
+    %a.addr = alloca i32, align 4
+    %b.addr = alloca i32, align 4
+    store i32 %a, ptr %a.addr, align 4
+    store i32 %b, ptr %b.addr, align 4
+    %0 = load i32, ptr %a.addr, align 4
+    %1 = load i32, ptr %b.addr, align 4
+    %cmp = icmp sgt i32 %0, %1
+    br i1 %cmp, label %if.then, label %if.else
+  
+  if.then:                                          ; preds = %entry
+    %2 = load i32, ptr %b.addr, align 4
+    store i32 %2, ptr %retval, align 4
+    br label %return
+  
+  if.else:                                          ; preds = %entry
+    %3 = load i32, ptr %a.addr, align 4
+    store i32 %3, ptr %retval, align 4
+    br label %return
+  
+  return:                                           ; preds = %if.else, %if.then
+    %4 = load i32, ptr %retval, align 4
+    ret i32 %4
+  }
+...
+---
+name:            abc
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHContTarget: false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   true
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: gr32, preferred-register: '', flags: [  ] }
+  - { id: 5, class: gr32, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  isCalleeSavedInfoValid: false
+  localFrameSize:  0
+fixedStack:      []
+stack:
+  - { id: 0, name: retval, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: a.addr, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: b.addr, type: default, offset: 0, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  amxProgModel:    None
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    MOV32mr %stack.1.a.addr, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.a.addr)
+    MOV32mr %stack.2.b.addr, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %ir.b.addr)
+    %2:gr32 = SUB32rr %0, %1, implicit-def $eflags
+    JCC_1 %bb.2, 14, implicit $eflags
+    JMP_1 %bb.1
+  
+  bb.1.if.then:
+    successors: %bb.3(0x80000000)
+  
+    %4:gr32 = MOV32rm %stack.2.b.addr, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.b.addr)
+    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, killed %4 :: (store (s32) into %ir.retval)
+    JMP_1 %bb.3
+  
+  bb.2.if.else:
+    successors: %bb.3(0x80000000)
+  
+    %3:gr32 = MOV32rm %stack.1.a.addr, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.a.addr)
+    MOV32mr %stack.0.retval, 1, $noreg, 0, $noreg, killed %3 :: (store (s32) into %ir.retval)
+  
+  bb.3.return:
+    %5:gr32 = MOV32rm %stack.0.retval, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from %ir.retval)
+    $eax = COPY %5
+    RET 0, $eax
+...
+
+# CHECK: Machine basic block vectors:
+# CHECK-NEXT: Machine basic block: abc:entry:
+# CHECK-NEXT:  [ 23.60  24.20  24.80 ]
+# CHECK-NEXT: Machine basic block: abc:if.then:
+# CHECK-NEXT:  [ 7.30  7.60  7.90 ]
+# CHECK-NEXT: Machine basic block: abc:if.else:
+# CHECK-NEXT:  [ 3.40  3.60  3.80 ]
+# CHECK-NEXT: Machine basic block: abc:return:
+# CHECK-NEXT:  [ 8.80  9.10  9.40 ]

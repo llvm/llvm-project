@@ -28,10 +28,13 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
   return Node.hasDefaultConstructor();
 }
 
+} // namespace
+
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
 // if the record contains an anonymous struct).
 template <typename T, typename Func>
-void forEachField(const RecordDecl &Record, const T &Fields, const Func &Fn) {
+static void forEachField(const RecordDecl &Record, const T &Fields,
+                         const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl())
@@ -43,8 +46,9 @@ void forEachField(const RecordDecl &Record, const T &Fields, const Func &Fn) {
 }
 
 template <typename T, typename Func>
-void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
-                            bool &AnyMemberHasInitPerUnion, const Func &Fn) {
+static void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
+                                   bool &AnyMemberHasInitPerUnion,
+                                   const Func &Fn) {
   for (const FieldDecl *F : Fields) {
     if (F->isAnonymousStructOrUnion()) {
       if (const CXXRecordDecl *R = F->getType()->getAsCXXRecordDecl()) {
@@ -59,8 +63,9 @@ void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
   }
 }
 
-void removeFieldInitialized(const FieldDecl *M,
-                            SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
+static void
+removeFieldInitialized(const FieldDecl *M,
+                       SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
   const RecordDecl *R = M->getParent();
   if (R && R->isUnion()) {
     // Erase all members in a union if any member of it is initialized.
@@ -70,9 +75,9 @@ void removeFieldInitialized(const FieldDecl *M,
     FieldDecls.erase(M);
 }
 
-void removeFieldsInitializedInBody(
-    const Stmt &Stmt, ASTContext &Context,
-    SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
+static void
+removeFieldsInitializedInBody(const Stmt &Stmt, ASTContext &Context,
+                              SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
   auto Matches =
       match(findAll(binaryOperator(
                 hasOperatorName("="),
@@ -82,9 +87,9 @@ void removeFieldsInitializedInBody(
     removeFieldInitialized(Match.getNodeAs<FieldDecl>("fieldDecl"), FieldDecls);
 }
 
-StringRef getName(const FieldDecl *Field) { return Field->getName(); }
+static StringRef getName(const FieldDecl *Field) { return Field->getName(); }
 
-StringRef getName(const RecordDecl *Record) {
+static StringRef getName(const RecordDecl *Record) {
   // Get the typedef name if this is a C-style anonymous struct and typedef.
   if (const TypedefNameDecl *Typedef = Record->getTypedefNameForAnonDecl())
     return Typedef->getName();
@@ -94,7 +99,7 @@ StringRef getName(const RecordDecl *Record) {
 // Creates comma separated list of decls requiring initialization in order of
 // declaration.
 template <typename R, typename T>
-std::string
+static std::string
 toCommaSeparatedString(const R &OrderedDecls,
                        const SmallPtrSetImpl<const T *> &DeclsToInit) {
   SmallVector<StringRef, 16> Names;
@@ -105,11 +110,13 @@ toCommaSeparatedString(const R &OrderedDecls,
   return llvm::join(Names.begin(), Names.end(), ", ");
 }
 
-SourceLocation getLocationForEndOfToken(const ASTContext &Context,
-                                        SourceLocation Location) {
+static SourceLocation getLocationForEndOfToken(const ASTContext &Context,
+                                               SourceLocation Location) {
   return Lexer::getLocForEndOfToken(Location, 0, Context.getSourceManager(),
                                     Context.getLangOpts());
 }
+
+namespace {
 
 // There are 3 kinds of insertion placements:
 enum class InitializerPlacement {
@@ -187,15 +194,17 @@ struct InitializerInsertion {
   SmallVector<std::string, 4> Initializers;
 };
 
+} // namespace
+
 // Convenience utility to get a RecordDecl from a QualType.
-const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
+static const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
   if (const auto *RT = Type->getAsCanonical<RecordType>())
     return RT->getDecl();
   return nullptr;
 }
 
 template <typename R, typename T>
-SmallVector<InitializerInsertion, 16>
+static SmallVector<InitializerInsertion, 16>
 computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
                   const R &OrderedDecls,
                   const SmallPtrSetImpl<const T *> &DeclsToInit) {
@@ -239,8 +248,9 @@ computeInsertions(const CXXConstructorDecl::init_const_range &Inits,
 
 // Gets the list of bases and members that could possibly be initialized, in
 // order as they appear in the class declaration.
-void getInitializationsInOrder(const CXXRecordDecl &ClassDecl,
-                               SmallVectorImpl<const NamedDecl *> &Decls) {
+static void
+getInitializationsInOrder(const CXXRecordDecl &ClassDecl,
+                          SmallVectorImpl<const NamedDecl *> &Decls) {
   Decls.clear();
   for (const auto &Base : ClassDecl.bases()) {
     // Decl may be null if the base class is a template parameter.
@@ -253,9 +263,10 @@ void getInitializationsInOrder(const CXXRecordDecl &ClassDecl,
 }
 
 template <typename T>
-void fixInitializerList(const ASTContext &Context, DiagnosticBuilder &Diag,
-                        const CXXConstructorDecl *Ctor,
-                        const SmallPtrSetImpl<const T *> &DeclsToInit) {
+static void fixInitializerList(const ASTContext &Context,
+                               DiagnosticBuilder &Diag,
+                               const CXXConstructorDecl *Ctor,
+                               const SmallPtrSetImpl<const T *> &DeclsToInit) {
   // Do not propose fixes in macros since we cannot place them correctly.
   if (Ctor->getBeginLoc().isMacroID())
     return;
@@ -270,8 +281,6 @@ void fixInitializerList(const ASTContext &Context, DiagnosticBuilder &Diag,
                                          Insertion.codeToInsert());
   }
 }
-
-} // anonymous namespace
 
 ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
                                                ClangTidyContext *Context)
