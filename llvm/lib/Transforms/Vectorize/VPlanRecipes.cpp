@@ -1176,7 +1176,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case Instruction::FCmp:
   case Instruction::ICmp:
-    return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
+    return getCostForRecipeWithOpcode(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
