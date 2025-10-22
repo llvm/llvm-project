@@ -1,8 +1,3 @@
-
-option(LLD_MACHO_SLOP_FACTOR
-    "Specify the slop factor. For very large build, the default of 256 might be too small, which can cause thunk-range overrun. Recommend increasing this value to 1024 or higher as needed.", 256)
-add_definitions("-DLLD_MACHO_SLOP_FACTOR=${LLD_MACHO_SLOP_FACTOR}")
-    
 set(LLVM_TARGET_DEFINITIONS Options.td)
 tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(MachOOptionsTableGen)
