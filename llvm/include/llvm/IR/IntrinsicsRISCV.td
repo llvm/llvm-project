@@ -1953,13 +1953,20 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 
-// Zihintpause extensions
 //===----------------------------------------------------------------------===//
+// Zihintpause extensions
 let TargetPrefix = "riscv" in
 def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
-// Vendor extensions
 //===----------------------------------------------------------------------===//
+// Cache Management
+let TargetPrefix = "riscv" in {
+// Zicboz
+def int_riscv_cbo_zero : Intrinsic<[], [llvm_anyptr_ty], [IntrWriteMem]>;
+} // TargetPrefix = "riscv"
+
+//===----------------------------------------------------------------------===//
+// Vendor extensions
 include "llvm/IR/IntrinsicsRISCVXTHead.td"
 include "llvm/IR/IntrinsicsRISCVXsf.td"
 include "llvm/IR/IntrinsicsRISCVXCV.td"

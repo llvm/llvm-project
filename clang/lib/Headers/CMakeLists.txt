@@ -125,6 +125,7 @@ set(ppc_htm_files
 
 set(riscv_files
   riscv_bitmanip.h
+  riscv_cmo.h
   riscv_corev_alu.h
   riscv_crypto.h
   riscv_nds.h

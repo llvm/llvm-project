@@ -1296,6 +1296,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Fn, {});
   }
 
+  // Zicboz
+  case RISCV::BI__builtin_riscv_cbo_zero:
+    ID = Intrinsic::riscv_cbo_zero;
+    IntrinsicTypes = {Int8PtrTy};
+    break;
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;
