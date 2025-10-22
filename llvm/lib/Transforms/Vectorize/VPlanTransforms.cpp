@@ -5987,8 +5987,8 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
   if (Opcode != Instruction::Shl && Opcode != Instruction::Mul)
     return {nullptr, nullptr};
 
-  // Match the pattern binop(variant, invariant), or binop(invariant, variant)
-  // if the binary operator is commutative.
+  // Match the pattern binop(variant, uniform), or binop(uniform, variant) if
+  // the binary operator is commutative.
   bool IsLHSUniform = vputils::isSingleScalar(WidenR->getOperand(0));
   if (IsLHSUniform == vputils::isSingleScalar(WidenR->getOperand(1)) ||
       (IsLHSUniform && !Instruction::isCommutative(Opcode)))
@@ -6015,6 +6015,10 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
   return {StartR, StrideR};
 }
 
+/// Checks if the given VPWidenGEPRecipe \p WidenGEP represents a strided
+/// access. If so, it creates recipes representing the base pointer and stride
+/// in element type, and returns a tuple of {base pointer, stride, element
+/// type}. Otherwise, returns a tuple where all elements are nullptr.
 static std::tuple<VPValue *, VPValue *, Type *>
 determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
   // TODO: Check if the base pointer is strided.
