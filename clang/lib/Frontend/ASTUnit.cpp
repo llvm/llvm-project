@@ -863,8 +863,11 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   // explicitly forward the buffer.
   if (Filename == "-")
     if (auto FE = llvm::expectedToOptional(TmpFileMgr.getSTDIN()))
-      if (auto Buf = TmpFileMgr.getBufferForFile(*FE))
-        AST->Reader->getModuleManager().addInMemoryBuffer("-", std::move(*Buf));
+      if (auto BufRef = TmpFileMgr.getBufferForFile(*FE)) {
+        auto Buf = llvm::MemoryBuffer::getMemBufferCopy(
+            (*BufRef)->getBuffer(), (*BufRef)->getBufferIdentifier());
+        AST->Reader->getModuleManager().addInMemoryBuffer("-", std::move(Buf));
+      }
 
   // Reinstate the provided options that are relevant for reading AST files.
   AST->HSOpts->ForceCheckCXX20ModulesInputFiles =
