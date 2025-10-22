@@ -84,17 +84,11 @@ class L0DeviceTLSTy {
   /// Main copy command list for each device
   ze_command_list_handle_t CopyCmdList = nullptr;
 
-  /// Link copy command list for each device
-  ze_command_list_handle_t LinkCopyCmdList = nullptr;
-
   /// Command queue for each device
   ze_command_queue_handle_t CmdQueue = nullptr;
 
   /// Main copy command queue for each device
   ze_command_queue_handle_t CopyCmdQueue = nullptr;
-
-  /// Link copy command queues for each device
-  ze_command_queue_handle_t LinkCopyCmdQueue = nullptr;
 
   /// Immediate command list for each device
   ze_command_list_handle_t ImmCmdList = nullptr;
@@ -106,9 +100,8 @@ public:
   L0DeviceTLSTy() = default;
   ~L0DeviceTLSTy() {
     // assert all fields are nullptr on destruction
-    assert(!CmdList && !CopyCmdList && !LinkCopyCmdList && !CmdQueue &&
-           !CopyCmdQueue && !LinkCopyCmdQueue && !ImmCmdList &&
-           !ImmCopyCmdList &&
+    assert(!CmdList && !CopyCmdList && !CmdQueue && !CopyCmdQueue &&
+           !ImmCmdList && !ImmCopyCmdList &&
            "L0DeviceTLSTy destroyed without clearing resources");
   }
 
@@ -116,10 +109,8 @@ public:
   L0DeviceTLSTy(L0DeviceTLSTy &&Other) {
     CmdList = std::exchange(Other.CmdList, nullptr);
     CopyCmdList = std::exchange(Other.CopyCmdList, nullptr);
-    LinkCopyCmdList = std::exchange(Other.LinkCopyCmdList, nullptr);
     CmdQueue = std::exchange(Other.CmdQueue, nullptr);
     CopyCmdQueue = std::exchange(Other.CopyCmdQueue, nullptr);
-    LinkCopyCmdQueue = std::exchange(Other.LinkCopyCmdQueue, nullptr);
     ImmCmdList = std::exchange(Other.ImmCmdList, nullptr);
     ImmCopyCmdList = std::exchange(Other.ImmCopyCmdList, nullptr);
   }
@@ -130,8 +121,6 @@ public:
       CALL_ZE_EXIT_FAIL(zeCommandListDestroy, CmdList);
     if (CopyCmdList)
       CALL_ZE_EXIT_FAIL(zeCommandListDestroy, CopyCmdList);
-    if (LinkCopyCmdList)
-      CALL_ZE_EXIT_FAIL(zeCommandListDestroy, LinkCopyCmdList);
     if (ImmCmdList)
       CALL_ZE_EXIT_FAIL(zeCommandListDestroy, ImmCmdList);
     if (ImmCopyCmdList)
@@ -140,15 +129,11 @@ public:
       CALL_ZE_EXIT_FAIL(zeCommandQueueDestroy, CmdQueue);
     if (CopyCmdQueue)
       CALL_ZE_EXIT_FAIL(zeCommandQueueDestroy, CopyCmdQueue);
-    if (LinkCopyCmdQueue)
-      CALL_ZE_EXIT_FAIL(zeCommandQueueDestroy, LinkCopyCmdQueue);
 
     CmdList = nullptr;
     CopyCmdList = nullptr;
-    LinkCopyCmdList = nullptr;
     CmdQueue = nullptr;
     CopyCmdQueue = nullptr;
-    LinkCopyCmdQueue = nullptr;
     ImmCmdList = nullptr;
     ImmCopyCmdList = nullptr;
   }
@@ -162,13 +147,6 @@ public:
   ze_command_list_handle_t getCopyCmdList() const { return CopyCmdList; }
   void setCopyCmdList(ze_command_list_handle_t _CopyCmdList) {
     CopyCmdList = _CopyCmdList;
-  }
-
-  ze_command_list_handle_t getLinkCopyCmdList() const {
-    return LinkCopyCmdList;
-  }
-  void setLinkCopyCmdList(ze_command_list_handle_t _LinkCopyCmdList) {
-    LinkCopyCmdList = _LinkCopyCmdList;
   }
 
   ze_command_list_handle_t getImmCmdList() const { return ImmCmdList; }
@@ -189,13 +167,6 @@ public:
   ze_command_queue_handle_t getCopyCmdQueue() const { return CopyCmdQueue; }
   void setCopyCmdQueue(ze_command_queue_handle_t CopyCmdQueueIn) {
     CopyCmdQueue = CopyCmdQueueIn;
-  }
-
-  ze_command_queue_handle_t getLinkCopyCmdQueue() const {
-    return LinkCopyCmdQueue;
-  }
-  void setLinkCopyCmdQueue(ze_command_queue_handle_t LinkCopyCmdQueueIn) {
-    LinkCopyCmdQueue = LinkCopyCmdQueueIn;
   }
 };
 
@@ -238,8 +209,6 @@ class L0DeviceTy final : public GenericDeviceTy {
   std::pair<uint32_t, uint32_t> ComputeOrdinal{UINT32_MAX, 0};
   /// Command queue group ordinals for copying
   std::pair<uint32_t, uint32_t> CopyOrdinal{UINT32_MAX, 0};
-  /// Command queue group ordinals and number of queues for link copy engines
-  std::pair<uint32_t, uint32_t> LinkCopyOrdinal{UINT32_MAX, 0};
 
   /// Command queue index for each device
   uint32_t ComputeIndex = 0;
@@ -416,10 +385,6 @@ public:
   bool hasMainCopyEngine() const { return CopyOrdinal.first != UINT32_MAX; }
   uint32_t getMainCopyEngine() const { return CopyOrdinal.first; }
 
-  uint32_t getLinkCopyEngine() const { return LinkCopyOrdinal.first; }
-  uint32_t getNumLinkCopyQueues() const { return LinkCopyOrdinal.second; }
-  bool hasLinkCopyEngine() const { return getNumLinkCopyQueues() > 0; }
-
   bool deviceRequiresImmCmdList() const {
     return isDeviceIPorNewer(0x05004000);
   }
@@ -474,8 +439,6 @@ public:
   Expected<ze_command_queue_handle_t> getCmdQueue();
   Expected<ze_command_list_handle_t> getCopyCmdList();
   Expected<ze_command_queue_handle_t> getCopyCmdQueue();
-  Expected<ze_command_list_handle_t> getLinkCopyCmdList();
-  Expected<ze_command_queue_handle_t> getLinkCopyCmdQueue();
   Expected<ze_command_list_handle_t> getImmCmdList();
   Expected<ze_command_list_handle_t> getImmCopyCmdList();
 

@@ -211,7 +211,6 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
 
   CopyOrdinal = findCopyOrdinal();
 
-  LinkCopyOrdinal = findCopyOrdinal(true);
   IsAsyncEnabled =
       isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
   if (auto Err = MemAllocator.initDevicePools(*this, getPlugin().getOptions()))
@@ -946,8 +945,6 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
 Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
   uint32_t Ordinal = getMainCopyEngine();
   if (Ordinal == UINT32_MAX)
-    Ordinal = getLinkCopyEngine();
-  if (Ordinal == UINT32_MAX)
     Ordinal = getComputeEngine();
   return createImmCmdList(Ordinal, /*Index*/ 0);
 }
@@ -980,9 +977,6 @@ Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
     }
     return CmdList;
   }
-  // Use link copy engine if available
-  if (hasLinkCopyEngine())
-    return getLinkCopyCmdList();
   // Use compute engine otherwise
   return getCmdList();
 }
@@ -1002,58 +996,6 @@ Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
     }
     return CmdQueue;
   }
-  // Use link copy engine if available
-  if (hasLinkCopyEngine())
-    return getLinkCopyCmdQueue();
-  // Use compute engine otherwise
-  return getCmdQueue();
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getLinkCopyCmdList() {
-  // Use link copy engine if available
-  if (hasLinkCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdList = TLS.getLinkCopyCmdList();
-    if (!CmdList) {
-      auto CmdListOrErr =
-          createCmdList(getZeContext(), getZeDevice(), getLinkCopyEngine(),
-                        ZE_COMMAND_LIST_FLAG_EXPLICIT_ONLY, getZeId());
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      TLS.setLinkCopyCmdList(CmdList);
-    }
-    return CmdList;
-  }
-  // Use main copy engine if available
-  if (hasMainCopyEngine())
-    return getCopyCmdList();
-  // Use compute engine otherwise
-  return getCmdList();
-}
-
-Expected<ze_command_queue_handle_t> L0DeviceTy::getLinkCopyCmdQueue() {
-  // Use link copy engine if available
-  if (hasLinkCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdQueue = TLS.getLinkCopyCmdQueue();
-    if (!CmdQueue) {
-      // Try to use different copy engines for multiple threads
-      uint32_t Index =
-          __kmpc_global_thread_num(nullptr) % getNumLinkCopyQueues();
-      auto CmdQueueOrErr =
-          createCmdQueue(getZeContext(), getZeDevice(), getLinkCopyEngine(),
-                         Index, ZE_COMMAND_QUEUE_FLAG_EXPLICIT_ONLY, getZeId());
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-      TLS.setLinkCopyCmdQueue(CmdQueue);
-    }
-    return CmdQueue;
-  }
-  // Use main copy engine if available
-  if (hasMainCopyEngine())
-    return getCopyCmdQueue();
   // Use compute engine otherwise
   return getCmdQueue();
 }
