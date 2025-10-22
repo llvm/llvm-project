@@ -30,7 +30,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = builder.create<Op>(start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, dirLoc, clauses);
 
@@ -42,7 +42,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
     res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
-    builder.create<TermOp>(end);
+    TermOp::create(builder, end);
   }
   return res;
 }
@@ -73,7 +73,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
 
-  auto computeOp = builder.create<Op>(start, retTy, operands);
+  auto computeOp = Op::create(builder, start, retTy, operands);
   computeOp.setCombinedAttr(builder.getUnitAttr());
   mlir::acc::LoopOp loopOp;
 
@@ -85,7 +85,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
     builder.setInsertionPointToEnd(&block);
 
     LexicalScope ls{*this, start, builder.getInsertionBlock()};
-    auto loopOp = builder.create<LoopOp>(start, retTy, operands);
+    auto loopOp = LoopOp::create(builder, start, retTy, operands);
     loopOp.setCombinedAttr(mlir::acc::CombinedConstructsTypeAttr::get(
         builder.getContext(), CombinedType<Op>::value));
 
@@ -99,14 +99,14 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
       res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
-      builder.create<mlir::acc::YieldOp>(end);
+      mlir::acc::YieldOp::create(builder, end);
     }
 
     emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
 
     updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
 
-    builder.create<TermOp>(end);
+    TermOp::create(builder, end);
   }
 
   return res;
@@ -118,7 +118,7 @@ Op CIRGenFunction::emitOpenACCOp(
     llvm::ArrayRef<const OpenACCClause *> clauses) {
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
-  auto op = builder.create<Op>(start, retTy, operands);
+  auto op = Op::create(builder, start, retTy, operands);
 
   emitOpenACCClauses(op, dirKind, dirLoc, clauses);
   return op;
@@ -197,8 +197,8 @@ CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
             ? mlir::IntegerType::SignednessSemantics::Signed
             : mlir::IntegerType::SignednessSemantics::Unsigned);
 
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, expr);
+    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+        builder, exprLoc, targetType, expr);
     return conversionOp.getResult(0);
   };
 
@@ -294,9 +294,9 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
     CIRGenFunction::OpenACCDataOperandInfo opInfo =
         getOpenACCDataOperandInfo(var);
 
-    auto cacheOp = builder.create<CacheOp>(
-        opInfo.beginLoc, opInfo.varValue,
-        /*structured=*/false, /*implicit=*/false, opInfo.name, opInfo.bounds);
+    auto cacheOp = CacheOp::create(builder, opInfo.beginLoc, opInfo.varValue,
+                                   /*structured=*/false, /*implicit=*/false,
+                                   opInfo.name, opInfo.bounds);
 
     loopOp.getCacheOperandsMutable().append(cacheOp.getResult());
   }

@@ -151,7 +151,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // Don't confuse lexical cleanup.
     builder.clearInsertionPoint();
   } else {
-    builder.create<cir::YieldOp>(addr.getLoc());
+    cir::YieldOp::create(builder, addr.getLoc());
   }
 }
 
