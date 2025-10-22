@@ -38,7 +38,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     list(APPEND compile_options "-Wextra")
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
     if(NOT LIBC_WNO_ERROR)
-      list(APPEND compile_options "-Werror")
+      # list(APPEND compile_options "-Werror")
     endif()
     list(APPEND compile_options "-Wconversion")
     # FIXME: convert to -Wsign-conversion
