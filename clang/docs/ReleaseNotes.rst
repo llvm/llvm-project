@@ -447,6 +447,7 @@ Bug Fixes to Attribute Support
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
+- Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
