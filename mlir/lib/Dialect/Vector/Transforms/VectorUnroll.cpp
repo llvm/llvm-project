@@ -102,17 +102,13 @@ static Value createTileFromElements(PatternRewriter &rewriter, Location loc,
     // Calculate the global position in the result.
     SmallVector<int64_t> globalResultPos;
     globalResultPos.reserve(tileOffsets.size());
-    for (auto [offset, pos] : llvm::zip(tileOffsets, tilePosition)) {
+    for (auto [offset, pos] : llvm::zip_equal(tileOffsets, tilePosition)) {
       globalResultPos.push_back(offset + pos);
     }
 
-    // Convert result position to linear index.
     int64_t linearIndex = linearize(globalResultPos, resultStrides);
-    // Convert linear index to source position.
     SmallVector<int64_t> sourcePos = delinearize(linearIndex, sourceStrides);
-    // Extract element from source.
     Value element = vector::ExtractOp::create(rewriter, loc, source, sourcePos);
-    // Insert element into tile.
     tile = vector::InsertOp::create(rewriter, loc, element, tile, tilePosition);
   }
   return tile;
