@@ -5979,7 +5979,7 @@ static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
     return {WidenIV, WidenIV->getStepValue()};
 
   auto *WidenR = dyn_cast<VPWidenRecipe>(CurIndex);
-  if (!WidenR || !CurIndex->getUnderlyingValue())
+  if (!WidenR || !WidenR->getUnderlyingInstr())
     return {nullptr, nullptr};
 
   unsigned Opcode = WidenR->getOpcode();
