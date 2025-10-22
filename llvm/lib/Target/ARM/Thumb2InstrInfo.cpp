@@ -805,6 +805,16 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   return -1;
 }
 
+int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)
+      return i + ARM::SUBOP_vpred_r_inactive;
+
+  return -1;
+}
+
 ARMVCC::VPTCodes llvm::getVPTInstrPredicate(const MachineInstr &MI,
                                             Register &PredReg) {
   int PIdx = findFirstVPTPredOperandIdx(MI);

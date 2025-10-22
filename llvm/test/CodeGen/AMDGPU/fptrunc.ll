@@ -2,14 +2,14 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel=0 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI-SDAG,VI-SAFE-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel=1 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI-GISEL,VI-SAFE-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel=0 -mattr=-flat-for-global -enable-unsafe-fp-math < %s | FileCheck -check-prefixes=VI-SDAG,VI-UNSAFE-SDAG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -global-isel=0 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=VI-SDAG,VI-UNSAFE-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -global-isel=0 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX10-SDAG,GFX10-SAFE-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -global-isel=1 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX10-GISEL,GFX10-SAFE-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -global-isel=0 -mattr=-flat-for-global -enable-unsafe-fp-math < %s | FileCheck -check-prefixes=GFX10-SDAG,GFX10-UNSAFE-SDAG %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -global-isel=0 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX10-SDAG,GFX10-UNSAFE-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-SAFE-SDAG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-SAFE-GISEL %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global,+real-true16 -enable-unsafe-fp-math < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-UNSAFE-DAG-TRUE16 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global,-real-true16 -enable-unsafe-fp-math < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-UNSAFE-DAG-FAKE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-UNSAFE-DAG-TRUE16 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=0 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX11-SDAG,GFX11-UNSAFE-DAG-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=-flat-for-global,+real-true16 < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-UNSAFE-GISEL-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -global-isel=1 -mattr=-flat-for-global,-real-true16 < %s | FileCheck -check-prefixes=GFX11-GISEL,GFX11-UNSAFE-GISEL-FAKE16 %s
 

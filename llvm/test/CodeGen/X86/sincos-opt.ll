@@ -1,10 +1,10 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.9.0 -mcpu=core2 | FileCheck %s --check-prefix=OSX_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-apple-macosx10.8.0 -mcpu=core2 | FileCheck %s --check-prefix=OSX_NOOPT
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
-; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
-; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
+; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 ; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS
-; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 -enable-unsafe-fp-math | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
+; RUN: llc < %s -mtriple=x86_64-fuchsia -mcpu=core2 | FileCheck %s --check-prefix=GNU_SINCOS_FASTMATH
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 -mcpu=btver2 | FileCheck %s --check-prefix=PS4_SINCOS
 ; RUN: llc < %s -mtriple=x86_64-sie-ps5  -mcpu=znver2 | FileCheck %s --check-prefix=PS4_SINCOS
 
