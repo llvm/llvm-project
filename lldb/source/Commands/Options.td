@@ -1173,6 +1173,11 @@ let Command = "process launch" in {
         Arg<"Boolean">,
         Desc<"Set whether to shell expand arguments to the process when "
              "launching.">;
+  def process_launch_memory_tagging
+      : Option<"memory-tagging", "M">,
+        Desc<"Set whether to explicitly enable memory tagging when launching "
+             "the process.  Requires hardware support.  "
+             "(Only supported on Darwin.)">;
 }
 
 let Command = "process attach" in {

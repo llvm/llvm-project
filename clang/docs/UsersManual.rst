@@ -2325,7 +2325,7 @@ are listed below.
    devirtualization and virtual constant propagation, for classes with
    :doc:`hidden LTO visibility <LTOVisibility>`. Requires ``-flto``.
 
-.. option:: -f[no]split-lto-unit
+.. option:: -f[no-]split-lto-unit
 
    Controls splitting the :doc:`LTO unit <LTOVisibility>` into regular LTO and
    :doc:`ThinLTO` portions, when compiling with -flto=thin. Defaults to false
@@ -2518,7 +2518,7 @@ are listed below.
 
 .. _funique_internal_linkage_names:
 
-.. option:: -f[no]-unique-internal-linkage-names
+.. option:: -f[no-]unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
    linkage symbols.  When this option is set, compiler hashes the main source
@@ -2539,7 +2539,7 @@ are listed below.
      $ cd $P/bar && clang -c -funique-internal-linkage-names name_conflict.c
      $ cd $P && clang foo/name_conflict.o && bar/name_conflict.o
 
-.. option:: -f[no]-basic-block-address-map:
+.. option:: -f[no-]basic-block-address-map:
   Emits a ``SHT_LLVM_BB_ADDR_MAP`` section which includes address offsets for each
   basic block in the program, relative to the parent function address.
 
