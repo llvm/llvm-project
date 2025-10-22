@@ -5503,7 +5503,7 @@ class CXXReflectExpr : public Expr {
   SourceRange OperandRange;
 
   CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty);
-  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg, bool IsNamespace);
+  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
