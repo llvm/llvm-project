@@ -402,7 +402,13 @@ Error fixCFGForSESE(TargetMachine *TM, Function &F, FunctionAnalysisManager &AM,
           auto *IthValue = Phi.getIncomingValue(IOperand);
           auto *IthBlock = Phi.getIncomingBlock(IOperand);
           if (Clones.contains(IthBlock)) {
-            Phi.addIncoming(VMap.lookup(IthValue), Clones.at(IthBlock));
+            if (auto ClonedIthVal = VMap.find(IthValue); ClonedIthVal != VMap.end()) {
+              Phi.addIncoming(ClonedIthVal->second, Clones.at(IthBlock));
+            } else {
+              // Value defined in a dominator of IthBlock -> has not been
+              // changed during SESE-fication.
+              Phi.addIncoming(IthValue, Clones.at(IthBlock));
+            }
           }
         }
       }
