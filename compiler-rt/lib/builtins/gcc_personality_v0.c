@@ -30,7 +30,13 @@ EXCEPTION_DISPOSITION _GCC_specific_handler(PEXCEPTION_RECORD, void *, PCONTEXT,
                                             _Unwind_Personality_Fn);
 #endif
 
+#if defined(__has_feature)
 #if __has_feature(ptrauth_calls)
+#define __compiler_rt_use_ptrauth
+#endif
+#endif
+
+#ifdef __compiler_rt_use_ptrauth
 #include <ptrauth.h>
 
 // `__ptrauth_restricted_intptr` is a feature of apple clang that predates
@@ -292,7 +298,7 @@ COMPILER_RT_ABI _Unwind_Reason_Code __gcc_personality_v0(
       _Unwind_SetGR(context, __builtin_eh_return_data_regno(1), 0);
       size_t __ptrauth_gcc_personality_lpad landingPad =
           funcStart + landingPadOffset;
-#if __has_feature(ptrauth_calls)
+#ifdef __compiler_rt_use_ptrauth
       uintptr_t stackPointer = _Unwind_GetGR(context, -2);
       const uintptr_t existingDiscriminator = ptrauth_blend_discriminator(
           &landingPad, __ptrauth_gcc_personality_lpad_disc);
