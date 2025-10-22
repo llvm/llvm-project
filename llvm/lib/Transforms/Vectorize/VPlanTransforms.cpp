@@ -4051,7 +4051,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 static std::optional<ElementCount> isConsecutiveInterleaveGroup(
     VPInterleaveRecipe *InterleaveR, ArrayRef<ElementCount> VFs,
     VPTypeAnalysis &TypeInfo, const TargetTransformInfo &TTI) {
-  if (!InterleaveR)
+  if (!InterleaveR || InterleaveR->getMask())
     return std::nullopt;
 
   Type *GroupElementTy = nullptr;
