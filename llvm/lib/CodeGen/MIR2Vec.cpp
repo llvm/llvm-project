@@ -417,24 +417,39 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
 }
 
 //===----------------------------------------------------------------------===//
-// MIR2VecVocabLegacyAnalysis Implementation
+// MIR2VecVocabProvider and MIR2VecVocabLegacyAnalysis
 //===----------------------------------------------------------------------===//
 
-char MIR2VecVocabLegacyAnalysis::ID = 0;
-INITIALIZE_PASS_BEGIN(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
-                      "MIR2Vec Vocabulary Analysis", false, true)
-INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
-INITIALIZE_PASS_END(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
-                    "MIR2Vec Vocabulary Analysis", false, true)
+Expected<mir2vec::MIRVocabulary>
+MIR2VecVocabProvider::getVocabulary(const Module &M) {
+  VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
 
-StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
-  return "MIR2Vec Vocabulary Analysis";
+  if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
+                                 VirtRegVocabMap))
+    return std::move(Err);
+
+  for (const auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    if (auto *MF = MMI.getMachineFunction(F)) {
+      auto &Subtarget = MF->getSubtarget();
+      if (const auto *TII = Subtarget.getInstrInfo())
+        if (const auto *TRI = Subtarget.getRegisterInfo())
+          return mir2vec::MIRVocabulary::create(
+              std::move(OpcVocab), std::move(CommonOperandVocab),
+              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII, *TRI,
+              MF->getRegInfo());
+    }
+  }
+  return createStringError(errc::invalid_argument,
+                           "No machine functions found in module");
 }
 
-Error MIR2VecVocabLegacyAnalysis::readVocabulary(VocabMap &OpcodeVocab,
-                                                 VocabMap &CommonOperandVocab,
-                                                 VocabMap &PhyRegVocabMap,
-                                                 VocabMap &VirtRegVocabMap) {
+Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
+                                           VocabMap &CommonOperandVocab,
+                                           VocabMap &PhyRegVocabMap,
+                                           VocabMap &VirtRegVocabMap) {
   if (VocabFile.empty())
     return createStringError(
         errc::invalid_argument,
@@ -483,49 +498,15 @@ Error MIR2VecVocabLegacyAnalysis::readVocabulary(VocabMap &OpcodeVocab,
   return Error::success();
 }
 
-Expected<mir2vec::MIRVocabulary>
-MIR2VecVocabLegacyAnalysis::getMIR2VecVocabulary(const Module &M) {
-  if (Vocab.has_value())
-    return std::move(Vocab.value());
+char MIR2VecVocabLegacyAnalysis::ID = 0;
+INITIALIZE_PASS_BEGIN(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
+                      "MIR2Vec Vocabulary Analysis", false, true)
+INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
+INITIALIZE_PASS_END(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
+                    "MIR2Vec Vocabulary Analysis", false, true)
 
-  VocabMap OpcMap, CommonOperandMap, PhyRegMap, VirtRegMap;
-  if (Error Err =
-          readVocabulary(OpcMap, CommonOperandMap, PhyRegMap, VirtRegMap))
-    return std::move(Err);
-
-  // Get machine module info to access machine functions and target info
-  MachineModuleInfo &MMI = getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
-  // Find first available machine function to get target instruction info
-  for (const auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-
-    if (auto *MF = MMI.getMachineFunction(F)) {
-      auto &Subtarget = MF->getSubtarget();
-      const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-      if (!TII) {
-        return createStringError(errc::invalid_argument,
-                                 "No TargetInstrInfo available; cannot create "
-                                 "MIR2Vec vocabulary");
-      }
-
-      const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-      if (!TRI) {
-        return createStringError(errc::invalid_argument,
-                                 "No TargetRegisterInfo available; cannot "
-                                 "create MIR2Vec vocabulary");
-      }
-
-      return mir2vec::MIRVocabulary::create(
-          std::move(OpcMap), std::move(CommonOperandMap), std::move(PhyRegMap),
-          std::move(VirtRegMap), *TII, *TRI, MF->getRegInfo());
-    }
-  }
-
-  // No machine functions available - return error
-  return createStringError(errc::invalid_argument,
-                           "No machine functions found in module");
+StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
+  return "MIR2Vec Vocabulary Analysis";
 }
 
 //===----------------------------------------------------------------------===//

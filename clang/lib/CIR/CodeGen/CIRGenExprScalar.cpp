@@ -1568,8 +1568,9 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
   }
 
   assert(!cir::MissingFeatures::sanitizers());
-  return cgf.getBuilder().create<cir::PtrStrideOp>(
-      cgf.getLoc(op.e->getExprLoc()), pointer.getType(), pointer, index);
+  return cir::PtrStrideOp::create(cgf.getBuilder(),
+                                  cgf.getLoc(op.e->getExprLoc()),
+                                  pointer.getType(), pointer, index);
 }
 
 mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
@@ -2075,8 +2076,9 @@ mlir::Value ScalarExprEmitter::VisitInitListExpr(InitListExpr *e) {
                   vectorType.getSize() - numInitElements, zeroValue);
     }
 
-    return cgf.getBuilder().create<cir::VecCreateOp>(
-        cgf.getLoc(e->getSourceRange()), vectorType, elements);
+    return cir::VecCreateOp::create(cgf.getBuilder(),
+                                    cgf.getLoc(e->getSourceRange()), vectorType,
+                                    elements);
   }
 
   // C++11 value-initialization for the scalar.
@@ -2364,17 +2366,16 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
     }
   };
 
-  mlir::Value result = builder
-                           .create<cir::TernaryOp>(
-                               loc, condV,
-                               /*trueBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 emitBranch(b, loc, lhsExpr);
-                               },
-                               /*falseBuilder=*/
-                               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                                 emitBranch(b, loc, rhsExpr);
-                               })
+  mlir::Value result = cir::TernaryOp::create(
+                           builder, loc, condV,
+                           /*trueBuilder=*/
+                           [&](mlir::OpBuilder &b, mlir::Location loc) {
+                             emitBranch(b, loc, lhsExpr);
+                           },
+                           /*falseBuilder=*/
+                           [&](mlir::OpBuilder &b, mlir::Location loc) {
+                             emitBranch(b, loc, rhsExpr);
+                           })
                            .getResult();
 
   if (!insertPoints.empty()) {

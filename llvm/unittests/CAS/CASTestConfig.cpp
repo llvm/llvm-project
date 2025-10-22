@@ -9,6 +9,7 @@
 #include "CASTestConfig.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "gtest/gtest.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;

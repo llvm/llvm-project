@@ -2723,6 +2723,36 @@ TEST_P(UncheckedStatusOrAccessModelTest, EqualityCheck) {
       }
     }
   )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      if (sor.status() == absl::OkStatus())
+        sor.value();
+      else
+        sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      if (sor.status() != absl::OkStatus())
+        sor.value();  // [[unsafe]]
+      else
+        sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      if (sor.status() != absl::InvalidArgumentError("oh no"))
+        sor.value();  // [[unsafe]]
+      else
+        sor.value();  // [[unsafe]]
+    }
+  )cc");
   ExpectDiagnosticsFor(
       R"cc(
 #include "unchecked_statusor_access_test_defs.h"

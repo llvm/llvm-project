@@ -671,8 +671,8 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   mlir::Type fnTy = funcOp.getFunctionType();
   mlir::Type ptrTy = cir::PointerType::get(fnTy);
-  mlir::Value addr = cgf.getBuilder().create<cir::GetGlobalOp>(
-      loc, ptrTy, funcOp.getSymName());
+  mlir::Value addr = cir::GetGlobalOp::create(cgf.getBuilder(), loc, ptrTy,
+                                              funcOp.getSymName());
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
@@ -2020,18 +2020,17 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
     mlir::Value condV = emitOpOnBoolExpr(loc, condOp->getCond());
 
     mlir::Value ternaryOpRes =
-        builder
-            .create<cir::TernaryOp>(
-                loc, condV, /*thenBuilder=*/
-                [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
-                  mlir::Value lhs = emitScalarExpr(trueExpr);
-                  cir::YieldOp::create(b, loc, lhs);
-                },
-                /*elseBuilder=*/
-                [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
-                  mlir::Value rhs = emitScalarExpr(falseExpr);
-                  cir::YieldOp::create(b, loc, rhs);
-                })
+        cir::TernaryOp::create(
+            builder, loc, condV, /*thenBuilder=*/
+            [this, trueExpr](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value lhs = emitScalarExpr(trueExpr);
+              cir::YieldOp::create(b, loc, lhs);
+            },
+            /*elseBuilder=*/
+            [this, falseExpr](mlir::OpBuilder &b, mlir::Location loc) {
+              mlir::Value rhs = emitScalarExpr(falseExpr);
+              cir::YieldOp::create(b, loc, rhs);
+            })
             .getResult();
 
     return emitScalarConversion(ternaryOpRes, condOp->getType(),
