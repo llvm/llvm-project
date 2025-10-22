@@ -190,7 +190,7 @@ private:
   /// In most cases there should be only one, unless translation units with
   /// same-named locals were compiled without distinguishing path. And generally
   /// there should not be a mix of local and non-local summaries, because the
-  /// GUID for a local is computed with the path prepended and a ':' delimiter.
+  /// GUID for a local is computed with the path prepended and a ';' delimiter.
   /// In extremely rare cases there could be a GUID hash collision. Having the
   /// flag saves having to walk through all summaries to prove the existence or
   /// not of any locals.
