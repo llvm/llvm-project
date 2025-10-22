@@ -175,7 +175,7 @@ CGPointerAuthInfo CodeGenModule::getPointerAuthInfoForPointeeType(QualType T) {
 /// pointer type.
 static CGPointerAuthInfo getPointerAuthInfoForType(CodeGenModule &CGM,
                                                    QualType PointerType) {
-  assert(PointerType->isSignableType());
+  assert(PointerType->isSignableType(CGM.getContext()));
 
   // Block pointers are currently not signed.
   if (PointerType->isBlockPointerType())
@@ -209,7 +209,7 @@ emitLoadOfOrigPointerRValue(CodeGenFunction &CGF, const LValue &LV,
 /// needlessly resigning the pointer.
 std::pair<llvm::Value *, CGPointerAuthInfo>
 CodeGenFunction::EmitOrigPointerRValue(const Expr *E) {
-  assert(E->getType()->isSignableType());
+  assert(E->getType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
   if (const auto *Load = dyn_cast<ImplicitCastExpr>(E)) {
@@ -291,7 +291,10 @@ static bool equalAuthPolicies(const CGPointerAuthInfo &Left,
   if (Left.isSigned() != Right.isSigned())
     return false;
   return Left.getKey() == Right.getKey() &&
-         Left.getAuthenticationMode() == Right.getAuthenticationMode();
+         Left.getAuthenticationMode() == Right.getAuthenticationMode() &&
+         Left.isIsaPointer() == Right.isIsaPointer() &&
+         Left.authenticatesNullValues() == Right.authenticatesNullValues() &&
+         Left.getDiscriminator() == Right.getDiscriminator();
 }
 
 // Return the discriminator or return zero if the discriminator is null.
@@ -423,10 +426,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::ConstantInt *OtherDiscriminator) {
   llvm::Constant *AddressDiscriminator;
   if (StorageAddress) {
-    assert(StorageAddress->getType() == UnqualPtrTy);
+    assert(StorageAddress->getType() == DefaultPtrTy);
     AddressDiscriminator = StorageAddress;
   } else {
-    AddressDiscriminator = llvm::Constant::getNullValue(UnqualPtrTy);
+    AddressDiscriminator = llvm::Constant::getNullValue(DefaultPtrTy);
   }
 
   llvm::ConstantInt *IntegerDiscriminator;
@@ -461,6 +464,14 @@ llvm::Constant *CodeGenModule::getConstantSignedPointer(
 
   return getConstantSignedPointer(Pointer, Schema.getKey(), StorageAddress,
                                   OtherDiscriminator);
+}
+
+llvm::Constant *
+CodeGen::getConstantSignedPointer(CodeGenModule &CGM, llvm::Constant *Pointer,
+                                  unsigned Key, llvm::Constant *StorageAddress,
+                                  llvm::ConstantInt *OtherDiscriminator) {
+  return CGM.getConstantSignedPointer(Pointer, Key, StorageAddress,
+                                      OtherDiscriminator);
 }
 
 /// If applicable, sign a given constant function pointer with the ABI rules for
@@ -517,13 +528,18 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
         Pointer, PointerAuth.getKey(), nullptr,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
+  if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
+    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+      Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
+  }
+
   return Pointer;
 }
 
 llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
                                                         llvm::Type *Ty) {
   QualType FT = FD->getType();
-  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/nullptr,
+  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/std::nullopt,
                                          cast<CXXMethodDecl>(FD)->getParent());
   return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
 }
@@ -642,10 +658,10 @@ llvm::Value *CodeGenFunction::authPointerToPointerCast(llvm::Value *ResultPtr,
                                                        QualType SourceType,
                                                        QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)
@@ -667,10 +683,10 @@ Address CodeGenFunction::authPointerToPointerCast(Address Ptr,
                                                   QualType SourceType,
                                                   QualType DestType) {
   CGPointerAuthInfo CurAuthInfo, NewAuthInfo;
-  if (SourceType->isSignableType())
+  if (SourceType->isSignableType(getContext()))
     CurAuthInfo = getPointerAuthInfoForType(CGM, SourceType);
 
-  if (DestType->isSignableType())
+  if (DestType->isSignableType(getContext()))
     NewAuthInfo = getPointerAuthInfoForType(CGM, DestType);
 
   if (!CurAuthInfo && !NewAuthInfo)
@@ -724,7 +740,6 @@ Address Address::getResignedAddress(const CGPointerAuthInfo &NewInfo,
     Val = CGF.emitPointerAuthResign(getBasePointer(), QualType(), CurInfo,
                                     NewInfo, isKnownNonNull());
 
-  Val = CGF.Builder.CreateBitCast(Val, getType());
   return Address(Val, getElementType(), getAlignment(), NewInfo,
                  /*Offset=*/nullptr, isKnownNonNull());
 }

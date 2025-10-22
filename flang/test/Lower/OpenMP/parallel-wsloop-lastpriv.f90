@@ -108,7 +108,7 @@ subroutine omp_do_lastprivate_collapse2(a)
   ! CHECK-NEXT: %[[UB2:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
   ! CHECK-NEXT: %[[STEP2:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[A_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[I_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[J_PVT_REF:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
-  ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]], %[[ARG2:.*]]) : i32 = (%[[LB1]], %[[LB2]]) to (%[[UB1]], %[[UB2]]) inclusive step (%[[STEP1]], %[[STEP2]]) {
+  ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]], %[[ARG2:.*]]) : i32 = (%[[LB1]], %[[LB2]]) to (%[[UB1]], %[[UB2]]) inclusive step (%[[STEP1]], %[[STEP2]]) collapse(2) {
   ! CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse2Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -174,7 +174,7 @@ subroutine omp_do_lastprivate_collapse3(a)
   ! CHECK-NEXT: %[[UB3:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
   ! CHECK-NEXT: %[[STEP3:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[A_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[I_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[J_PVT_REF:.*]], @{{.*}} %{{.*}}#0 -> %[[K_PVT_REF:.*]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
-  ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]], %[[ARG2:.*]], %[[ARG3:.*]]) : i32 = (%[[LB1]], %[[LB2]], %[[LB3]]) to (%[[UB1]], %[[UB2]], %[[UB3]]) inclusive step (%[[STEP1]], %[[STEP2]], %[[STEP3]]) {
+  ! CHECK-NEXT: omp.loop_nest (%[[ARG1:.*]], %[[ARG2:.*]], %[[ARG3:.*]]) : i32 = (%[[LB1]], %[[LB2]], %[[LB3]]) to (%[[UB1]], %[[UB2]], %[[UB3]]) inclusive step (%[[STEP1]], %[[STEP2]], %[[STEP3]]) collapse(3) {
   ! CHECK:      %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse3Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse3Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK:      %[[J_PVT_DECL:.*]]:2 = hlfir.declare %[[J_PVT_REF]] {uniq_name = "_QFomp_do_lastprivate_collapse3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

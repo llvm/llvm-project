@@ -22,13 +22,14 @@ namespace lldb_dap {
 
 /// Launch request; value of command field is 'launch'.
 Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
+  // Validate that we have a well formed launch request.
+  if (!arguments.launchCommands.empty() &&
+      arguments.console != protocol::eConsoleInternal)
+    return make_error<DAPError>(
+        "'launchCommands' and non-internal 'console' are mutually exclusive");
+
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
-  dap.stop_at_entry = arguments.stopOnEntry;
-
-  if (!arguments.launchCommands.empty() && arguments.runInTerminal)
-    return make_error<DAPError>(
-        "launchCommands and runInTerminal are mutually exclusive");
 
   PrintWelcomeMessage();
 
@@ -36,9 +37,8 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
   // in the debug map of the main executable have relative paths which
   // require the lldb-dap binary to have its working directory set to that
   // relative root for the .o files in order to be able to load debug info.
-  const std::string debugger_root = dap.configuration.debuggerRoot.value_or("");
-  if (!debugger_root.empty())
-    sys::fs::set_current_path(debugger_root);
+  if (!dap.configuration.debuggerRoot.empty())
+    sys::fs::set_current_path(dap.configuration.debuggerRoot);
 
   // Run any initialize LLDB commands the user specified in the launch.json.
   // This is run before target is created, so commands can't do anything with
@@ -68,11 +68,6 @@ Error LaunchRequestHandler::Run(const LaunchRequestArguments &arguments) const {
 }
 
 void LaunchRequestHandler::PostRun() const {
-  if (dap.target.GetProcess().IsValid()) {
-    // Attach happens when launching with runInTerminal.
-    SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
-  }
-
   dap.SendJSON(CreateEventObject("initialized"));
 }
 

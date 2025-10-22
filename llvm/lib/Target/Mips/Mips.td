@@ -213,6 +213,22 @@ def FeatureStrictAlign
                        "Disable unaligned load store for r6">;
 
 //===----------------------------------------------------------------------===//
+// Mips Instruction Predicate Definitions.
+//===----------------------------------------------------------------------===//
+
+def IsPTR64bit    :   Predicate<"Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of FeaturePTR64Bit)>;
+def IsPTR32bit    :   Predicate<"!Subtarget->isABI_N64()">,
+                      AssemblerPredicate<(all_of (not FeaturePTR64Bit))>;
+
+//===----------------------------------------------------------------------===//
+// HwModes
+//===----------------------------------------------------------------------===//
+
+defvar MIPS32 = DefaultMode;
+def MIPS64 : HwMode<[IsPTR64bit]>;
+
+//===----------------------------------------------------------------------===//
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
@@ -243,11 +259,11 @@ def ImplP5600 : SubtargetFeature<"p5600", "ProcImpl",
 // same CPU architecture.
 def ImplI6400
     : SubtargetFeature<"i6400", "ProcImpl", "MipsSubtarget::CPU::I6400",
-                       "MIPS I6400 Processor", [FeatureMips64r6]>;
+                       "MIPS I6400 Processor", [FeatureMips64r6, FeatureMSA]>;
 
 def ImplI6500
     : SubtargetFeature<"i6500", "ProcImpl", "MipsSubtarget::CPU::I6500",
-                       "MIPS I6500 Processor", [FeatureMips64r6]>;
+                       "MIPS I6500 Processor", [FeatureMips64r6, FeatureMSA]>;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, MipsGenericModel, Features>;

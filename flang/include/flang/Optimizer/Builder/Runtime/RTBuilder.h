@@ -26,6 +26,7 @@
 #include "flang/Support/Fortran.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cstdint>
 #include <functional>
@@ -824,33 +825,23 @@ static mlir::func::FuncOp getIORuntimeFunc(mlir::Location loc,
   return getRuntimeFunc<E>(loc, builder, /*isIO=*/true);
 }
 
-namespace helper {
-template <int N, typename A>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg) {
-  result.emplace_back(
-      builder.createConvertWithVolatileCast(loc, fTy.getInput(N), arg));
+inline llvm::SmallVector<mlir::Value>
+createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::FunctionType fTy, llvm::ArrayRef<mlir::Value> args) {
+  return llvm::map_to_vector(llvm::zip_equal(fTy.getInputs(), args),
+                             [&](const auto &pair) -> mlir::Value {
+                               auto [type, argument] = pair;
+                               return builder.createConvertWithVolatileCast(
+                                   loc, type, argument);
+                             });
 }
-
-template <int N, typename A, typename... As>
-void createArguments(llvm::SmallVectorImpl<mlir::Value> &result,
-                     fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::FunctionType fTy, A arg, As... args) {
-  result.emplace_back(
-      builder.createConvertWithVolatileCast(loc, fTy.getInput(N), arg));
-  createArguments<N + 1>(result, builder, loc, fTy, args...);
-}
-} // namespace helper
 
 /// Create a SmallVector of arguments for a runtime call.
 template <typename... As>
 llvm::SmallVector<mlir::Value>
 createArguments(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::FunctionType fTy, As... args) {
-  llvm::SmallVector<mlir::Value> result;
-  helper::createArguments<0>(result, builder, loc, fTy, args...);
-  return result;
+  return createArguments(builder, loc, fTy, {args...});
 }
 
 } // namespace fir::runtime

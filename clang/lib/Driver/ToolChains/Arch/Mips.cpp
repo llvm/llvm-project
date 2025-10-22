@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Mips.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
@@ -255,6 +254,12 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     D.Diag(diag::err_drv_unsupported_noabicalls_pic);
   }
 
+  if (CPUName == "i6500" || CPUName == "i6400") {
+    // MIPS cpu i6400 and i6500 support MSA (Mips SIMD Architecture)
+    // by default.
+    Features.push_back("+msa");
+  }
+
   if (!UseAbiCalls)
     Features.push_back("+noabicalls");
   else
@@ -437,6 +442,8 @@ bool mips::hasCompactBranches(StringRef &CPU) {
   return llvm::StringSwitch<bool>(CPU)
       .Case("mips32r6", true)
       .Case("mips64r6", true)
+      .Case("i6400", true)
+      .Case("i6500", true)
       .Default(false);
 }
 
@@ -475,9 +482,9 @@ bool mips::isFPXXDefault(const llvm::Triple &Triple, StringRef CPUName,
     return false;
 
   return llvm::StringSwitch<bool>(CPUName)
-      .Cases("mips2", "mips3", "mips4", "mips5", true)
-      .Cases("mips32", "mips32r2", "mips32r3", "mips32r5", true)
-      .Cases("mips64", "mips64r2", "mips64r3", "mips64r5", true)
+      .Cases({"mips2", "mips3", "mips4", "mips5"}, true)
+      .Cases({"mips32", "mips32r2", "mips32r3", "mips32r5"}, true)
+      .Cases({"mips64", "mips64r2", "mips64r3", "mips64r5"}, true)
       .Default(false);
 }
 

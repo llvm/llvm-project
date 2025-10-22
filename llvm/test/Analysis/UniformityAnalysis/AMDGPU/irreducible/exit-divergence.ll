@@ -1,7 +1,7 @@
 ; RUN: opt %s -mtriple amdgcn-- -passes='print<uniformity>' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK=LABEL: UniformityInfo for function 'basic':
-; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
+; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:   depth=1: entries(P T) Q
 define amdgpu_kernel void @basic(i32 %a, i32 %b, i32 %c) {
@@ -39,7 +39,7 @@ exit:
 }
 
 ; CHECK-LABEL: UniformityInfo for function 'outer_reducible':
-; CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
+; CHECK-NOT: CYCLES ASSUMED DIVERGENT:
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
 ; CHECK:   depth=1: entries(H) P T R Q
 define amdgpu_kernel void @outer_reducible(i32 %a, i32 %b, i32 %c) {
@@ -96,7 +96,7 @@ exit:
 ; unless the def itself is divergent.
 ;
 ; CHECK-LABEL: UniformityInfo for function 'no_divergent_exit':
-; CHECK: CYCLES ASSSUMED DIVERGENT:
+; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(H B) C
 ; CHECK-NOT: CYCLES WITH DIVERGENT EXIT:
 define amdgpu_kernel void @no_divergent_exit(i32 %n, i32 %a, i32 %b) #0 {

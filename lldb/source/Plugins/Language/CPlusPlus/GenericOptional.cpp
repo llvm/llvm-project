@@ -9,6 +9,7 @@
 #include "Generic.h"
 #include "LibCxx.h"
 #include "LibStdcpp.h"
+#include "MsvcStl.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
@@ -32,6 +33,7 @@ public:
   enum class StdLib {
     LibCxx,
     LibStdcpp,
+    MsvcStl,
   };
 
   GenericOptionalFrontend(ValueObject &valobj, StdLib stdlib);
@@ -39,11 +41,12 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     if (name == "$$dereference$$")
       return 0;
-    size_t idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (idx == UINT32_MAX)
+    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+    if (!optional_idx) {
       return llvm::createStringError("Type has no child named '%s'",
                                      name.AsCString());
-    return idx;
+    }
+    return *optional_idx;
   }
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
@@ -73,9 +76,11 @@ lldb::ChildCacheState GenericOptionalFrontend::Update() {
 
   if (m_stdlib == StdLib::LibCxx)
     engaged_sp = m_backend.GetChildMemberWithName("__engaged_");
-  else if (m_stdlib == StdLib::LibStdcpp)
-    engaged_sp = m_backend.GetChildMemberWithName("_M_payload")
-                     ->GetChildMemberWithName("_M_engaged");
+  else if (m_stdlib == StdLib::LibStdcpp) {
+    if (ValueObjectSP payload = m_backend.GetChildMemberWithName("_M_payload"))
+      engaged_sp = payload->GetChildMemberWithName("_M_engaged");
+  } else if (m_stdlib == StdLib::MsvcStl)
+    engaged_sp = m_backend.GetChildMemberWithName("_Has_value");
 
   if (!engaged_sp)
     return lldb::ChildCacheState::eRefetch;
@@ -112,7 +117,12 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(uint32_t _idx) {
     ValueObjectSP candidate = val_sp->GetChildMemberWithName("_M_value");
     if (candidate)
       val_sp = candidate;
-  }
+  } else if (m_stdlib == StdLib::MsvcStl)
+    // Same issue as with LibCxx
+    val_sp = m_backend.GetChildMemberWithName("_Has_value")
+                 ->GetParent()
+                 ->GetChildAtIndex(0)
+                 ->GetChildMemberWithName("_Value");
 
   if (!val_sp)
     return ValueObjectSP();
@@ -139,5 +149,19 @@ SyntheticChildrenFrontEnd *formatters::LibcxxOptionalSyntheticFrontEndCreator(
   if (valobj_sp)
     return new GenericOptionalFrontend(*valobj_sp,
                                        GenericOptionalFrontend::StdLib::LibCxx);
+  return nullptr;
+}
+
+bool formatters::IsMsvcStlOptional(ValueObject &valobj) {
+  if (auto valobj_sp = valobj.GetNonSyntheticValue())
+    return valobj_sp->GetChildMemberWithName("_Has_value") != nullptr;
+  return false;
+}
+
+SyntheticChildrenFrontEnd *formatters::MsvcStlOptionalSyntheticFrontEndCreator(
+    CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
+  if (valobj_sp)
+    return new GenericOptionalFrontend(
+        *valobj_sp, GenericOptionalFrontend::StdLib::MsvcStl);
   return nullptr;
 }

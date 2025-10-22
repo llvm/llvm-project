@@ -2,18 +2,18 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
-; CHECK:  define internal fastcc void @f.resume(ptr noundef nonnull align 16 dereferenceable(80) %begin) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
+; CHECK:  define internal fastcc void @_Z3foov.resume(ptr noundef nonnull align 16 dereferenceable(80) %begin) !dbg ![[RESUME_FN_DBG_NUM:[0-9]+]]
 ; CHECK:       await.ready:
 ; CHECK:         #dbg_value(i32 poison, ![[IVAR_RESUME:[0-9]+]], !DIExpression(
 ; CHECK:         #dbg_value(i32 poison, ![[JVAR_RESUME:[0-9]+]], !DIExpression(
 ;
-; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov"
+; CHECK: ![[RESUME_FN_DBG_NUM]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov.resume"
 ; CHECK: ![[IVAR_RESUME]] = !DILocalVariable(name: "i"
 ; CHECK: ![[JVAR_RESUME]] = !DILocalVariable(name: "j"
 
 source_filename = "../llvm/test/Transforms/Coroutines/coro-debug-dbg.values-O2.ll"
 
-define void @f(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
+define void @_Z3foov(i32 %i, i32 %j) presplitcoroutine !dbg !8 {
 entry:
   %__promise = alloca i8, align 8
   %x = alloca [10 x i32], align 16
@@ -123,7 +123,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
   br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-  %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -155,7 +155,7 @@ declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
 
 ; Function Attrs: nounwind
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 
 declare ptr @new(i64)
 

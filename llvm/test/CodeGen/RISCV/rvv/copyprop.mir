@@ -47,7 +47,7 @@ body:             |
     %22:vr = PseudoVMSNE_VI_M1 %3, 0, 1, 6 /* e64 */
     %23:vmv0 = COPY %22
     %25:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %17, -1, %23, 1, 6 /* e64 */
-    %29:vr = PseudoVC_V_X_SE_M1 3, 31, %2, 1, 6 /* e64 */, implicit-def dead $sf_vcix_state, implicit $sf_vcix_state
+    %29:vr = PseudoSF_VC_V_X_SE_M1 3, 31, %2, 1, 6 /* e64 */, implicit-def dead $sf_vcix_state, implicit $sf_vcix_state
     %30:vr = PseudoVMV_V_I_M1 undef $noreg, 0, 1, 6 /* e64 */, 0
     BGEU %1, $x0, %bb.2
 

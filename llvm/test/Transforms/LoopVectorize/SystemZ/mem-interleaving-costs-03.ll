@@ -12,7 +12,7 @@
 define noundef i32 @fun(i32 %argc, ptr nocapture readnone %argv) {
 entry:
   %l_4774.i = alloca [4 x [2 x i128]], align 8
-  call void @llvm.lifetime.start.p0(i64 128, ptr nonnull %l_4774.i)
+  call void @llvm.lifetime.start.p0(ptr nonnull %l_4774.i)
   br label %for.cond4.preheader.i
 
 for.cond4.preheader.i:                            ; preds = %for.cond4.preheader.i, %entry
@@ -31,13 +31,13 @@ func_1.exit:                                      ; preds = %for.cond4.preheader
   %cmp200.i = icmp ne i128 %0, 0
   %conv202.i = zext i1 %cmp200.i to i64
   %call203.i = tail call i64 @safe_sub_func_int64_t_s_s(i64 noundef %conv202.i, i64 noundef 9139899272418802852)
-  call void @llvm.lifetime.end.p0(i64 128, ptr nonnull %l_4774.i)
+  call void @llvm.lifetime.end.p0(ptr nonnull %l_4774.i)
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %func_1.exit
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare dso_local i64 @safe_sub_func_int64_t_s_s(i64, i64)

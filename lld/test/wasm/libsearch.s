@@ -93,6 +93,11 @@
 // RUN: wasm-ld -pie --experimental-pic --emit-relocs --no-gc-sections -o %t3 %t.o -L%t.dir -Bstatic -call_shared -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
+/// -r implies -Bstatic and has precedence over -Bdynamic.
+// RUN: wasm-ld -r -Bdynamic %t.o -L%t.dir -lls -o %t3.ro
+// RUN: llvm-readobj -s -h %t3.ro | FileCheck --check-prefix=RELOCATABLE %s
+// RELOCATABLE: Name: _static
+
 .globl _start, _bar
 _start:
   .functype _start () -> ()

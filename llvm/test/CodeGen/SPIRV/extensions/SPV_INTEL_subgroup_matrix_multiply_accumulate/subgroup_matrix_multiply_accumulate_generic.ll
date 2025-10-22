@@ -131,35 +131,35 @@
 ; CHECK: %[[#hM2:]] = OpFunctionParameter %[[#Vec2HalfTy]]
 ; CHECK: %[[#hM4:]] = OpFunctionParameter %[[#Vec4HalfTy]]
 ; CHECK: %[[#hM8:]] = OpFunctionParameter %[[#Vec8HalfTy]]
-; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int32Ty]] %[[#Const42]] %[[#iM]] %[[#iM8]] %[[#iM]] 10 
-; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int32Ty]] %[[#Const42]] %[[#iM2]] %[[#iM8]] %[[#iM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int32Ty]] %[[#Const42]] %[[#iM4]] %[[#iM8]] %[[#iM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int32Ty]] %[[#Const42]] %[[#iM8]] %[[#iM8]] %[[#iM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#iM]] %[[#iM8]] %[[#fM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#iM2]] %[[#iM8]] %[[#fM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#iM4]] %[[#iM8]] %[[#fM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#iM8]] %[[#iM8]] %[[#fM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int32Ty]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#iM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int32Ty]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#iM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int32Ty]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#iM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int32Ty]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#iM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#fM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#fM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#fM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#fM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#HalfTy]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#hM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2HalfTy]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#hM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4HalfTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#hM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8HalfTy]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#hM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int16Ty]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#sM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int16Ty]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#sM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int16Ty]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#sM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int16Ty]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#sM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#fM]] %[[#fM8]] %[[#fM]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#fM2]] %[[#fM8]] %[[#fM2]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#fM4]] %[[#fM8]] %[[#fM4]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#fM8]] %[[#fM8]] %[[#fM8]] 10 
-; CHECK: OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#fM4]] 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int32Ty]] %[[#Const42]] %[[#iM]] %[[#iM8]] %[[#iM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int32Ty]] %[[#Const42]] %[[#iM2]] %[[#iM8]] %[[#iM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int32Ty]] %[[#Const42]] %[[#iM4]] %[[#iM8]] %[[#iM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int32Ty]] %[[#Const42]] %[[#iM8]] %[[#iM8]] %[[#iM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#iM]] %[[#iM8]] %[[#fM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#iM2]] %[[#iM8]] %[[#fM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#iM4]] %[[#iM8]] %[[#fM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#iM8]] %[[#iM8]] %[[#fM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int32Ty]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#iM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int32Ty]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#iM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int32Ty]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#iM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int32Ty]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#iM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#fM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#fM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#fM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#fM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#HalfTy]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#hM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2HalfTy]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#hM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4HalfTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#hM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8HalfTy]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#hM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Int16Ty]] %[[#Const42]] %[[#sM]] %[[#iM8]] %[[#sM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2Int16Ty]] %[[#Const42]] %[[#sM2]] %[[#iM8]] %[[#sM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4Int16Ty]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#sM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8Int16Ty]] %[[#Const42]] %[[#sM8]] %[[#iM8]] %[[#sM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#FloatTy]] %[[#Const42]] %[[#fM]] %[[#fM8]] %[[#fM]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec2FloatTy]] %[[#Const42]] %[[#fM2]] %[[#fM8]] %[[#fM2]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#fM4]] %[[#fM8]] %[[#fM4]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec8FloatTy]] %[[#Const42]] %[[#fM8]] %[[#fM8]] %[[#fM8]] MatrixBSignedComponentsINTEL|MatrixResultBFloat16INTEL 
+; CHECK: %[[#]] = OpSubgroupMatrixMultiplyAccumulateINTEL %[[#Vec4FloatTy]] %[[#Const42]] %[[#sM4]] %[[#iM8]] %[[#fM4]] 
 
 define spir_func void @foo(i32 %iM, <2 x i32> %iM2, <4 x i32> %iM4, <8 x i32> %iM8,
                            i16 signext %sM, <2 x i16> %sM2, <4 x i16> %sM4, <8 x i16> %sM8,

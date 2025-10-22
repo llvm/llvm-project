@@ -17,10 +17,9 @@ define void @gather(ptr noalias nocapture %A, ptr noalias nocapture readonly %B)
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> splat (i1 true), i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> splat (i1 true), <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
-; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i8> [[I4]], ptr [[I2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
@@ -37,7 +36,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -60,7 +59,7 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]], i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = select <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]]
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -103,10 +102,9 @@ define void @gather_negative_stride(ptr noalias nocapture %A, ptr noalias nocapt
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 155, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 -5, <32 x i1> splat (i1 true), i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> splat (i1 true), <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
-; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i8> [[I4]], ptr [[I2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
@@ -123,7 +121,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ <i64 31, i64 30, i64 29, i64 28, i64 27, i64 26, i64 25, i64 24, i64 23, i64 22, i64 21, i64 20, i64 19, i64 18, i64 17, i64 16, i64 15, i64 14, i64 13, i64 12, i64 11, i64 10, i64 9, i64 8, i64 7, i64 6, i64 5, i64 4, i64 3, i64 2, i64 1, i64 0>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -146,10 +144,9 @@ define void @gather_zero_stride(ptr noalias nocapture %A, ptr noalias nocapture 
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 0, <32 x i1> splat (i1 true), i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> splat (i1 true), <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
-; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i8> [[I4]], ptr [[I2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
@@ -166,7 +163,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i64> [ zeroinitializer, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i64> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather
@@ -195,8 +192,7 @@ define void @scatter(ptr noalias nocapture %A, ptr noalias nocapture readonly %B
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> splat (i1 true), i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> splat (i1 true), <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
-; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[TMP1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> splat (i1 true), i32 32)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 160
@@ -215,7 +211,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.load = load <32 x i8>, ptr %i, align 1
   %i2 = mul nuw nsw <32 x i64> %vec.ind, splat (i64 5)
   %i3 = getelementptr inbounds i8, ptr %A, <32 x i64> %i2
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i4 = add <32 x i8> %wide.masked.gather, %wide.load
   call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> %i4, <32 x ptr> %i3, i32 1, <32 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 32
@@ -238,7 +234,7 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]], i32 32)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = select <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <32 x i8> [[TMP1]], <32 x i8> [[MASKEDOFF:%.*]]
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v32i8.p0.i64(<32 x i8> [[I4]], ptr [[TMP0]], i64 5, <32 x i1> <i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, i32 32)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
@@ -283,10 +279,9 @@ define void @gather_pow2(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
-; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[TMP1]]
 ; CHECK-NEXT:    store <8 x i32> [[I4]], ptr [[I2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 32
@@ -303,7 +298,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
@@ -329,10 +324,9 @@ define void @gather_unknown_pow2(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[VEC_IND_SCALAR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP1]], i64 [[TMP0]], <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP2]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
-; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[TMP2]]
 ; CHECK-NEXT:    store <8 x i32> [[I4]], ptr [[I2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], [[STEP]]
@@ -351,7 +345,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %vec.ind, %.splat
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
@@ -376,7 +370,7 @@ define void @negative_shl_non_commute(ptr noalias nocapture %A, ptr noalias noca
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = shl nsw <8 x i64> [[DOTSPLAT]], [[VEC_IND]]
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], <8 x i64> [[I]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[I1]], i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[I1]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -398,7 +392,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nsw <8 x i64> %.splat, %vec.ind
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 1
   %i4 = add <8 x i32> %wide.load, %wide.masked.gather
@@ -427,8 +421,7 @@ define void @scatter_pow2(ptr noalias nocapture %A, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
-; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[I4:%.*]] = add <8 x i32> [[TMP1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I4]], ptr [[TMP0]], i64 16, <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 32
@@ -447,7 +440,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %wide.load = load <8 x i32>, ptr %i, align 1
   %i2 = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i3 = getelementptr inbounds i32, ptr %A, <8 x i64> %i2
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i4 = add <8 x i32> %wide.masked.gather, %wide.load
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i4, <8 x ptr> %i3, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
@@ -478,15 +471,13 @@ define void @struct_gather(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_FOO:%.*]], ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_FOO]], ptr [[B]], i64 [[VEC_IND_SCALAR1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP2]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP1]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER9:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP3]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[I2]], align 4
 ; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds i32, ptr [[I2]], i64 8
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <8 x i32>, ptr [[I4]], align 4
-; CHECK-NEXT:    [[I6:%.*]] = add nsw <8 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    [[I7:%.*]] = add nsw <8 x i32> [[WIDE_LOAD10]], [[WIDE_MASKED_GATHER9]]
+; CHECK-NEXT:    [[I6:%.*]] = add nsw <8 x i32> [[WIDE_LOAD]], [[TMP2]]
+; CHECK-NEXT:    [[I7:%.*]] = add nsw <8 x i32> [[WIDE_LOAD10]], [[TMP3]]
 ; CHECK-NEXT:    store <8 x i32> [[I6]], ptr [[I2]], align 4
 ; CHECK-NEXT:    store <8 x i32> [[I7]], ptr [[I4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -506,8 +497,8 @@ vector.body:                                      ; preds = %vector.body, %entry
   %step.add = add <8 x i64> %vec.ind, splat (i64 8)
   %i = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %vec.ind, i32 1
   %i1 = getelementptr inbounds %struct.foo, ptr %B, <8 x i64> %step.add, i32 1
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
-  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
+  %wide.masked.gather9 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, i64 %index
   %wide.load = load <8 x i32>, ptr %i2, align 4
   %i4 = getelementptr inbounds i32, ptr %i2, i64 8
@@ -549,35 +540,27 @@ define void @gather_unroll(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    [[VEC_IND_SCALAR13:%.*]] = phi i64 [ 3, [[ENTRY]] ], [ [[VEC_IND_NEXT_SCALAR14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[VEC_IND_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP0]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP1]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[VEC_IND_SCALAR1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP2]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER52:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP3]], <8 x i32> undef, i32 8)
-; CHECK-NEXT:    [[I3:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER52]], [[WIDE_MASKED_GATHER]]
+; CHECK-NEXT:    [[I3:%.*]] = add nsw <8 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I3]], ptr [[TMP2]], i64 16, <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP4]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER53:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP5]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP6]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER54:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP7]], <8 x i32> undef, i32 8)
-; CHECK-NEXT:    [[I8:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER54]], [[WIDE_MASKED_GATHER53]]
+; CHECK-NEXT:    [[I8:%.*]] = add nsw <8 x i32> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I8]], ptr [[TMP6]], i64 16, <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP8]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER55:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP9]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP10]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER56:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP11]], <8 x i32> undef, i32 8)
-; CHECK-NEXT:    [[I13:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER56]], [[WIDE_MASKED_GATHER55]]
+; CHECK-NEXT:    [[I13:%.*]] = add nsw <8 x i32> [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I13]], ptr [[TMP10]], i64 16, <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[B]], i64 [[VEC_IND_SCALAR11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP12]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER57:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP13]], <8 x i32> undef, i32 8)
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i32, ptr [[A]], i64 [[VEC_IND_SCALAR13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <8 x i32> @llvm.experimental.vp.strided.load.v8i32.p0.i64(ptr [[TMP14]], i64 16, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER58:%.*]] = call <8 x i32> @llvm.vp.select.v8i32(<8 x i1> splat (i1 true), <8 x i32> [[TMP15]], <8 x i32> undef, i32 8)
-; CHECK-NEXT:    [[I18:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER58]], [[WIDE_MASKED_GATHER57]]
+; CHECK-NEXT:    [[I18:%.*]] = add nsw <8 x i32> [[TMP15]], [[TMP13]]
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v8i32.p0.i64(<8 x i32> [[I18]], ptr [[TMP14]], i64 16, <8 x i1> splat (i1 true), i32 8)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT_SCALAR]] = add i64 [[VEC_IND_SCALAR]], 128
@@ -601,33 +584,33 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <8 x i64> [ <i64 0, i64 4, i64 8, i64 12, i64 16, i64 20, i64 24, i64 28>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = shl nuw nsw <8 x i64> %vec.ind, splat (i64 2)
   %i1 = getelementptr inbounds i32, ptr %B, <8 x i64> %i
-  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i1, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i2 = getelementptr inbounds i32, ptr %A, <8 x i64> %vec.ind
-  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather52 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i3 = add nsw <8 x i32> %wide.masked.gather52, %wide.masked.gather
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i3, <8 x ptr> %i2, i32 4, <8 x i1> splat (i1 true))
   %i4 = or disjoint <8 x i64> %vec.ind, splat (i64 1)
   %i5 = shl nsw <8 x i64> %i4, splat (i64 2)
   %i6 = getelementptr inbounds i32, ptr %B, <8 x i64> %i5
-  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather53 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i6, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i7 = getelementptr inbounds i32, ptr %A, <8 x i64> %i4
-  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather54 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i8 = add nsw <8 x i32> %wide.masked.gather54, %wide.masked.gather53
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i8, <8 x ptr> %i7, i32 4, <8 x i1> splat (i1 true))
   %i9 = or disjoint <8 x i64> %vec.ind, splat (i64 2)
   %i10 = shl nsw <8 x i64> %i9, splat (i64 2)
   %i11 = getelementptr inbounds i32, ptr %B, <8 x i64> %i10
-  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather55 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i11, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i12 = getelementptr inbounds i32, ptr %A, <8 x i64> %i9
-  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather56 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i13 = add nsw <8 x i32> %wide.masked.gather56, %wide.masked.gather55
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i13, <8 x ptr> %i12, i32 4, <8 x i1> splat (i1 true))
   %i14 = or disjoint <8 x i64> %vec.ind, splat (i64 3)
   %i15 = shl nsw <8 x i64> %i14, splat (i64 2)
   %i16 = getelementptr inbounds i32, ptr %B, <8 x i64> %i15
-  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather57 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i16, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i17 = getelementptr inbounds i32, ptr %A, <8 x i64> %i14
-  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true), <8 x i32> undef)
+  %wide.masked.gather58 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
   %i18 = add nsw <8 x i32> %wide.masked.gather58, %wide.masked.gather57
   call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> %i18, <8 x ptr> %i17, i32 4, <8 x i1> splat (i1 true))
   %index.next = add nuw i64 %index, 8
@@ -656,13 +639,11 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; V-NEXT:    [[TMP0:%.*]] = getelementptr ptr, ptr [[ARG1:%.*]], i64 [[I3_SCALAR]]
 ; V-NEXT:    [[TMP1:%.*]] = getelementptr ptr, ptr [[ARG1]], i64 [[I3_SCALAR1]]
 ; V-NEXT:    [[TMP2:%.*]] = call <2 x ptr> @llvm.experimental.vp.strided.load.v2p0.p0.i64(ptr [[TMP0]], i64 40, <2 x i1> splat (i1 true), i32 2)
-; V-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.vp.select.v2p0(<2 x i1> splat (i1 true), <2 x ptr> [[TMP2]], <2 x ptr> undef, i32 2)
 ; V-NEXT:    [[TMP3:%.*]] = call <2 x ptr> @llvm.experimental.vp.strided.load.v2p0.p0.i64(ptr [[TMP1]], i64 40, <2 x i1> splat (i1 true), i32 2)
-; V-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.vp.select.v2p0(<2 x i1> splat (i1 true), <2 x ptr> [[TMP3]], <2 x ptr> undef, i32 2)
 ; V-NEXT:    [[I11:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 [[I]]
-; V-NEXT:    store <2 x ptr> [[I9]], ptr [[I11]], align 8
+; V-NEXT:    store <2 x ptr> [[TMP2]], ptr [[I11]], align 8
 ; V-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[I11]], i64 2
-; V-NEXT:    store <2 x ptr> [[I10]], ptr [[I13]], align 8
+; V-NEXT:    store <2 x ptr> [[TMP3]], ptr [[I13]], align 8
 ; V-NEXT:    [[I15]] = add nuw i64 [[I]], 4
 ; V-NEXT:    [[I16_SCALAR]] = add i64 [[I3_SCALAR]], 20
 ; V-NEXT:    [[I16_SCALAR2]] = add i64 [[I3_SCALAR1]], 20
@@ -682,8 +663,8 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; ZVE32F-NEXT:    [[I6:%.*]] = add <2 x i64> [[I5]], splat (i64 10)
 ; ZVE32F-NEXT:    [[I7:%.*]] = getelementptr inbounds ptr, ptr [[ARG1:%.*]], <2 x i64> [[I4]]
 ; ZVE32F-NEXT:    [[I8:%.*]] = getelementptr inbounds ptr, ptr [[ARG1]], <2 x i64> [[I6]]
-; ZVE32F-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> [[I7]], i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
-; ZVE32F-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> [[I8]], i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
+; ZVE32F-NEXT:    [[I9:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> align 8 [[I7]], <2 x i1> splat (i1 true), <2 x ptr> poison)
+; ZVE32F-NEXT:    [[I10:%.*]] = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> align 8 [[I8]], <2 x i1> splat (i1 true), <2 x ptr> poison)
 ; ZVE32F-NEXT:    [[I11:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], i64 [[I]]
 ; ZVE32F-NEXT:    store <2 x ptr> [[I9]], ptr [[I11]], align 8
 ; ZVE32F-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[I11]], i64 2
@@ -706,8 +687,8 @@ bb2:                                              ; preds = %bb2, %bb
   %i6 = add <2 x i64> %i5, <i64 10, i64 10>
   %i7 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i4
   %i8 = getelementptr inbounds ptr, ptr %arg1, <2 x i64> %i6
-  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
-  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> splat (i1 true), <2 x ptr> undef)
+  %i9 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i7, i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
+  %i10 = call <2 x ptr> @llvm.masked.gather.v2p0.v2p0(<2 x ptr> %i8, i32 8, <2 x i1> splat (i1 true), <2 x ptr> poison)
   %i11 = getelementptr inbounds ptr, ptr %arg, i64 %i
   store <2 x ptr> %i9, ptr %i11, align 8
   %i13 = getelementptr inbounds ptr, ptr %i11, i64 2
@@ -763,8 +744,8 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; ZVE32F-NEXT:    [[I12:%.*]] = add <2 x i64> [[I11]], splat (i64 10)
 ; ZVE32F-NEXT:    [[I13:%.*]] = getelementptr inbounds ptr, ptr [[ARG:%.*]], <2 x i64> [[I10]]
 ; ZVE32F-NEXT:    [[I14:%.*]] = getelementptr inbounds ptr, ptr [[ARG]], <2 x i64> [[I12]]
-; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I6]], <2 x ptr> [[I13]], i32 8, <2 x i1> splat (i1 true))
-; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I9]], <2 x ptr> [[I14]], i32 8, <2 x i1> splat (i1 true))
+; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I6]], <2 x ptr> align 8 [[I13]], <2 x i1> splat (i1 true))
+; ZVE32F-NEXT:    call void @llvm.masked.scatter.v2p0.v2p0(<2 x ptr> [[I9]], <2 x ptr> align 8 [[I14]], <2 x i1> splat (i1 true))
 ; ZVE32F-NEXT:    [[I15]] = add nuw i64 [[I]], 4
 ; ZVE32F-NEXT:    [[I16]] = add <2 x i64> [[I3]], splat (i64 4)
 ; ZVE32F-NEXT:    [[I17:%.*]] = icmp eq i64 [[I15]], 1024
@@ -823,10 +804,9 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    [[I18:%.*]] = add i64 [[I16]], [[I4]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I17_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i8> @llvm.experimental.vp.strided.load.v32i8.p0.i64(ptr [[TMP0]], i64 5, <32 x i1> splat (i1 true), i32 32)
-; CHECK-NEXT:    [[I21:%.*]] = call <32 x i8> @llvm.vp.select.v32i8(<32 x i1> splat (i1 true), <32 x i8> [[TMP1]], <32 x i8> undef, i32 32)
 ; CHECK-NEXT:    [[I22:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 [[I18]]
 ; CHECK-NEXT:    [[I24:%.*]] = load <32 x i8>, ptr [[I22]], align 1
-; CHECK-NEXT:    [[I25:%.*]] = add <32 x i8> [[I24]], [[I21]]
+; CHECK-NEXT:    [[I25:%.*]] = add <32 x i8> [[I24]], [[TMP1]]
 ; CHECK-NEXT:    store <32 x i8> [[I25]], ptr [[I22]], align 1
 ; CHECK-NEXT:    [[I27]] = add nuw i64 [[I16]], 32
 ; CHECK-NEXT:    [[I28_SCALAR]] = add i64 [[I17_SCALAR]], 160
@@ -880,7 +860,7 @@ bb15:                                             ; preds = %bb15, %bb9
   %i18 = add i64 %i16, %i4
   %i19 = mul nsw <32 x i64> %i17, splat (i64 5)
   %i20 = getelementptr inbounds i8, ptr %arg1, <32 x i64> %i19
-  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %i21 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i20, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i22 = getelementptr inbounds i8, ptr %arg, i64 %i18
   %i24 = load <32 x i8>, ptr %i22, align 1
   %i25 = add <32 x i8> %i24, %i21
@@ -932,10 +912,9 @@ define void @gather_no_scalar_remainder(ptr noalias nocapture noundef %arg, ptr 
 ; CHECK-NEXT:    [[I6_SCALAR:%.*]] = phi i64 [ 0, [[BB2]] ], [ [[I14_SCALAR:%.*]], [[BB4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[I6_SCALAR]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i8> @llvm.experimental.vp.strided.load.v16i8.p0.i64(ptr [[TMP0]], i64 5, <16 x i1> splat (i1 true), i32 16)
-; CHECK-NEXT:    [[I9:%.*]] = call <16 x i8> @llvm.vp.select.v16i8(<16 x i1> splat (i1 true), <16 x i8> [[TMP1]], <16 x i8> undef, i32 16)
 ; CHECK-NEXT:    [[I10:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 [[I5]]
 ; CHECK-NEXT:    [[I11:%.*]] = load <16 x i8>, ptr [[I10]], align 1
-; CHECK-NEXT:    [[I12:%.*]] = add <16 x i8> [[I11]], [[I9]]
+; CHECK-NEXT:    [[I12:%.*]] = add <16 x i8> [[I11]], [[TMP1]]
 ; CHECK-NEXT:    store <16 x i8> [[I12]], ptr [[I10]], align 1
 ; CHECK-NEXT:    [[I13]] = add nuw i64 [[I5]], 16
 ; CHECK-NEXT:    [[I14_SCALAR]] = add i64 [[I6_SCALAR]], 80
@@ -957,7 +936,7 @@ bb4:                                              ; preds = %bb4, %bb2
   %i6 = phi <16 x i64> [ %i14, %bb4 ], [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>, %bb2 ]
   %i7 = mul <16 x i64> %i6, splat (i64 5)
   %i8 = getelementptr inbounds i8, ptr %arg1, <16 x i64> %i7
-  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> splat (i1 true), <16 x i8> undef)
+  %i9 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %i8, i32 1, <16 x i1> splat (i1 true), <16 x i8> poison)
   %i10 = getelementptr inbounds i8, ptr %arg, i64 %i5
   %i11 = load <16 x i8>, ptr %i10, align 1
   %i12 = add <16 x i8> %i11, %i9
@@ -975,8 +954,7 @@ define <8 x i8> @broadcast_ptr_base(ptr %a) {
 ; CHECK-LABEL: @broadcast_ptr_base(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.experimental.vp.strided.load.v8i8.p0.i64(ptr [[A:%.*]], i64 64, <8 x i1> splat (i1 true), i32 8)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.vp.select.v8i8(<8 x i1> splat (i1 true), <8 x i8> [[TMP0]], <8 x i8> poison, i32 8)
-; CHECK-NEXT:    ret <8 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <8 x i8> [[TMP0]]
 ;
 entry:
   %0 = insertelement <8 x ptr> poison, ptr %a, i64 0
@@ -997,7 +975,7 @@ define void @gather_narrow_idx(ptr noalias nocapture %A, ptr noalias nocapture r
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <32 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 20, i16 21, i16 22, i16 23, i16 24, i16 25, i16 26, i16 27, i16 28, i16 29, i16 30, i16 31>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[I:%.*]] = mul nuw nsw <32 x i16> [[VEC_IND]], splat (i16 5)
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], <32 x i16> [[I]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> [[I1]], i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> align 1 [[I1]], <32 x i1> splat (i1 true), <32 x i8> poison)
 ; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <32 x i8>, ptr [[I2]], align 1
 ; CHECK-NEXT:    [[I4:%.*]] = add <32 x i8> [[WIDE_LOAD]], [[WIDE_MASKED_GATHER]]
@@ -1017,7 +995,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %vec.ind = phi <32 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16, i16 17, i16 18, i16 19, i16 20, i16 21, i16 22, i16 23, i16 24, i16 25, i16 26, i16 27, i16 28, i16 29, i16 30, i16 31>, %entry ], [ %vec.ind.next, %vector.body ]
   %i = mul nuw nsw <32 x i16> %vec.ind, splat (i16 5)
   %i1 = getelementptr inbounds i8, ptr %B, <32 x i16> %i
-  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> undef)
+  %wide.masked.gather = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> %i1, i32 1, <32 x i1> splat (i1 true), <32 x i8> poison)
   %i2 = getelementptr inbounds i8, ptr %A, i64 %index
   %wide.load = load <32 x i8>, ptr %i2, align 1
   %i4 = add <32 x i8> %wide.load, %wide.masked.gather

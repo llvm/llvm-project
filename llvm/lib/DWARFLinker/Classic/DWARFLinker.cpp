@@ -23,10 +23,10 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -109,6 +109,7 @@ static bool isODRAttribute(uint16_t Attr) {
   case dwarf::DW_AT_specification:
   case dwarf::DW_AT_abstract_origin:
   case dwarf::DW_AT_import:
+  case dwarf::DW_AT_LLVM_alloc_type:
     return true;
   }
   llvm_unreachable("Improper attribute.");
@@ -411,6 +412,117 @@ void DWARFLinker::cleanupAuxiliarryData(LinkContext &Context) {
 static bool isTlsAddressCode(uint8_t DW_OP_Code) {
   return DW_OP_Code == dwarf::DW_OP_form_tls_address ||
          DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
+}
+
+static void constructSeqOffsettoOrigRowMapping(
+    CompileUnit &Unit, const DWARFDebugLine::LineTable &LT,
+    DenseMap<uint64_t, unsigned> &SeqOffToOrigRow) {
+
+  // Use std::map for ordered iteration.
+  std::map<uint64_t, unsigned> LineTableMapping;
+
+  // First, trust the sequences that the DWARF parser did identify.
+  for (const DWARFDebugLine::Sequence &Seq : LT.Sequences)
+    LineTableMapping[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+
+  // Second, manually find sequence boundaries and match them to the
+  // sorted attributes to handle sequences the parser might have missed.
+  auto StmtAttrs = Unit.getStmtSeqListAttributes();
+  llvm::sort(StmtAttrs, [](const PatchLocation &A, const PatchLocation &B) {
+    return A.get() < B.get();
+  });
+
+  std::vector<unsigned> SeqStartRows;
+  SeqStartRows.push_back(0);
+  for (auto [I, Row] : llvm::enumerate(ArrayRef(LT.Rows).drop_back()))
+    if (Row.EndSequence)
+      SeqStartRows.push_back(I + 1);
+
+  // While SeqOffToOrigRow parsed from CU could be the ground truth,
+  // e.g.
+  //
+  // SeqOff     Row
+  // 0x08        9
+  // 0x14       15
+  //
+  // The StmtAttrs and SeqStartRows may not match perfectly, e.g.
+  //
+  // StmtAttrs  SeqStartRows
+  // 0x04        3
+  // 0x08        5
+  // 0x10        9
+  // 0x12       11
+  // 0x14       15
+  //
+  // In this case, we don't want to assign 5 to 0x08, since we know 0x08
+  // maps to 9. If we do a dummy 1:1 mapping 0x10 will be mapped to 9
+  // which is incorrect. The expected behavior is ignore 5, realign the
+  // table based on the result from the line table:
+  //
+  // StmtAttrs  SeqStartRows
+  // 0x04        3
+  //   --        5
+  // 0x08        9 <- LineTableMapping ground truth
+  // 0x10       11
+  // 0x12       --
+  // 0x14       15 <- LineTableMapping ground truth
+
+  ArrayRef StmtAttrsRef(StmtAttrs);
+  ArrayRef SeqStartRowsRef(SeqStartRows);
+
+  // Dummy last element to make sure StmtAttrsRef and SeqStartRowsRef always
+  // run out first.
+  constexpr uint64_t DummyKey = UINT64_MAX;
+  constexpr unsigned DummyVal = UINT32_MAX;
+  LineTableMapping[DummyKey] = DummyVal;
+
+  for (auto [NextSeqOff, NextRow] : LineTableMapping) {
+    // Explict capture to avoid capturing structured bindings and make C++17
+    // happy.
+    auto StmtAttrSmallerThanNext = [N = NextSeqOff](const PatchLocation &SA) {
+      return SA.get() < N;
+    };
+    auto SeqStartSmallerThanNext = [N = NextRow](const unsigned &Row) {
+      return Row < N;
+    };
+    // If both StmtAttrs and SeqStartRows points to value not in
+    // the LineTableMapping yet, we do a dummy one to one mapping and
+    // move the pointer.
+    while (!StmtAttrsRef.empty() && !SeqStartRowsRef.empty() &&
+           StmtAttrSmallerThanNext(StmtAttrsRef.front()) &&
+           SeqStartSmallerThanNext(SeqStartRowsRef.front())) {
+      SeqOffToOrigRow[StmtAttrsRef.consume_front().get()] =
+          SeqStartRowsRef.consume_front();
+    }
+    // One of the pointer points to the value at or past Next in the
+    // LineTableMapping, We move the pointer to re-align with the
+    // LineTableMapping
+    StmtAttrsRef = StmtAttrsRef.drop_while(StmtAttrSmallerThanNext);
+    SeqStartRowsRef = SeqStartRowsRef.drop_while(SeqStartSmallerThanNext);
+    // Use the LineTableMapping's result as the ground truth and move
+    // on.
+    if (NextSeqOff != DummyKey) {
+      SeqOffToOrigRow[NextSeqOff] = NextRow;
+    }
+    // Move the pointers if they are pointed at Next.
+    // It is possible that they point to later entries in LineTableMapping.
+    // Therefore we only increment the pointers after we validate they are
+    // pointing to the `Next` entry. e.g.
+    //
+    // LineTableMapping
+    // SeqOff      Row
+    // 0x08         9    <- NextSeqOff/NextRow
+    // 0x14        15
+    //
+    // StmtAttrs  SeqStartRows
+    // 0x14       13    <- StmtAttrsRef.front() / SeqStartRowsRef.front()
+    // 0x16       15
+    //  --        17
+    if (!StmtAttrsRef.empty() && StmtAttrsRef.front().get() == NextSeqOff)
+      StmtAttrsRef.consume_front();
+    if (!SeqStartRowsRef.empty() && SeqStartRowsRef.front() == NextRow)
+      SeqStartRowsRef.consume_front();
+  }
 }
 
 std::pair<bool, std::optional<int64_t>>
@@ -2297,8 +2409,12 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
         // Create a map of stmt sequence offsets to original row indices.
         DenseMap<uint64_t, unsigned> SeqOffToOrigRow;
-        for (const DWARFDebugLine::Sequence &Seq : LT->Sequences)
-          SeqOffToOrigRow[Seq.StmtSeqOffset] = Seq.FirstRowIndex;
+        // The DWARF parser's discovery of sequences can be incomplete. To
+        // ensure all DW_AT_LLVM_stmt_sequence attributes can be patched, we
+        // build a map from both the parser's results and a manual
+        // reconstruction.
+        if (!LT->Rows.empty())
+          constructSeqOffsettoOrigRowMapping(Unit, *LT, SeqOffToOrigRow);
 
         // Create a map of original row indices to new row indices.
         DenseMap<size_t, size_t> OrigRowToNewRow;
@@ -2311,11 +2427,13 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           uint64_t OrigStmtSeq = StmtSeq.get();
           // 1. Get the original row index from the stmt list offset.
           auto OrigRowIter = SeqOffToOrigRow.find(OrigStmtSeq);
+          const uint64_t InvalidOffset =
+              Unit.getOrigUnit().getFormParams().getDwarfMaxOffset();
           // Check whether we have an output sequence for the StmtSeq offset.
           // Some sequences are discarded by the DWARFLinker if they are invalid
           // (empty).
           if (OrigRowIter == SeqOffToOrigRow.end()) {
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
           size_t OrigRowIndex = OrigRowIter->second;
@@ -2325,7 +2443,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
           if (NewRowIter == OrigRowToNewRow.end()) {
             // If the original row index is not found in the map, update the
             // stmt_sequence attribute to the 'invalid offset' magic value.
-            StmtSeq.set(UINT64_MAX);
+            StmtSeq.set(InvalidOffset);
             continue;
           }
 

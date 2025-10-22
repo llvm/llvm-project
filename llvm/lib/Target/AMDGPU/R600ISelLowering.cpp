@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
@@ -43,6 +44,9 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   // Legalize loads and stores to the private address space.
   setOperationAction(ISD::LOAD, {MVT::i32, MVT::v2i32, MVT::v4i32}, Custom);
+
+  // 32-bit ABS is legal for AMDGPU except for R600
+  setOperationAction(ISD::ABS, MVT::i32, Expand);
 
   // EXTLOAD should be the same as ZEXTLOAD. It is legal for some address
   // spaces, so it is custom lowered to handle those where it isn't.
@@ -1448,7 +1452,7 @@ CCAssignFn *R600TargetLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_LS:
     return CC_R600;
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   }
 }
 

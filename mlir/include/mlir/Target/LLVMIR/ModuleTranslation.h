@@ -15,18 +15,23 @@
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/FPEnv.h"
+#include "llvm/IR/Module.h"
 
 namespace llvm {
 class BasicBlock;
+class CallBase;
+class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
 class OpenMPIRBuilder;
@@ -107,6 +112,41 @@ public:
     return blockMapping.lookup(block);
   }
 
+  /// Find the LLVM-IR loop that represents an MLIR loop.
+  llvm::CanonicalLoopInfo *lookupOMPLoop(omp::NewCliOp mlir) const {
+    llvm::CanonicalLoopInfo *result = loopMapping.lookup(mlir);
+    assert(result && "attempt to get non-existing loop");
+    return result;
+  }
+
+  /// Find the LLVM-IR loop that represents an MLIR loop.
+  llvm::CanonicalLoopInfo *lookupOMPLoop(Value mlir) const {
+    return lookupOMPLoop(mlir.getDefiningOp<omp::NewCliOp>());
+  }
+
+  /// Mark an OpenMP loop as having been consumed.
+  void invalidateOmpLoop(omp::NewCliOp mlir) { loopMapping.erase(mlir); }
+
+  /// Mark an OpenMP loop as having been consumed.
+  void invalidateOmpLoop(Value mlir) {
+    invalidateOmpLoop(mlir.getDefiningOp<omp::NewCliOp>());
+  }
+
+  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
+  /// OpenMPIRBuilder CanonicalLoopInfo
+  void mapOmpLoop(omp::NewCliOp mlir, llvm::CanonicalLoopInfo *llvm) {
+    assert(llvm && "argument must be non-null");
+    llvm::CanonicalLoopInfo *&cur = loopMapping[mlir];
+    assert(cur == nullptr && "attempting to map a loop that is already mapped");
+    cur = llvm;
+  }
+
+  /// Map an MLIR OpenMP dialect CanonicalLoopInfo to its lowered LLVM-IR
+  /// OpenMPIRBuilder CanonicalLoopInfo
+  void mapOmpLoop(Value mlir, llvm::CanonicalLoopInfo *llvm) {
+    mapOmpLoop(mlir.getDefiningOp<omp::NewCliOp>(), llvm);
+  }
+
   /// Stores the mapping between an MLIR operation with successors and a
   /// corresponding LLVM IR instruction.
   void mapBranch(Operation *mlir, llvm::Instruction *llvm) {
@@ -142,21 +182,20 @@ public:
     auto result = unresolvedBlockAddressMapping.try_emplace(op, cst);
     (void)result;
     assert(result.second &&
-           "attempting to map a blockaddress that is already mapped");
+           "attempting to map a blockaddress operation that is already mapped");
   }
 
-  /// Maps a blockaddress operation to its corresponding placeholder LLVM
-  /// value.
-  void mapBlockTag(BlockAddressAttr attr, BlockTagOp blockTag) {
-    // Attempts to map already mapped block labels which is fine if the given
-    // labels are verified to be unique.
-    blockTagMapping[attr] = blockTag;
+  /// Maps a BlockAddressAttr to its corresponding LLVM basic block.
+  void mapBlockAddress(BlockAddressAttr attr, llvm::BasicBlock *block) {
+    auto result = blockAddressToLLVMMapping.try_emplace(attr, block);
+    (void)result;
+    assert(result.second &&
+           "attempting to map a blockaddress attribute that is already mapped");
   }
 
-  /// Finds an MLIR block that corresponds to the given MLIR call
-  /// operation.
-  BlockTagOp lookupBlockTag(BlockAddressAttr attr) const {
-    return blockTagMapping.lookup(attr);
+  /// Finds the LLVM basic block that corresponds to the given BlockAddressAttr.
+  llvm::BasicBlock *lookupBlockAddress(BlockAddressAttr attr) const {
+    return blockAddressToLLVMMapping.lookup(attr);
   }
 
   /// Removes the mapping for blocks contained in the region and values defined
@@ -190,7 +229,7 @@ public:
                                   llvm::Instruction *inst);
 
   /// Sets LLVM profiling metadata for operations that have branch weights.
-  void setBranchWeightsMetadata(BranchWeightOpInterface op);
+  void setBranchWeightsMetadata(WeightedBranchOpInterface op);
 
   /// Sets LLVM loop metadata for branch operations that have a loop annotation
   /// attribute.
@@ -221,6 +260,12 @@ public:
   /// defining a global alias value.
   llvm::GlobalValue *lookupAlias(Operation *op) {
     return aliasesMapping.lookup(op);
+  }
+
+  /// Finds an LLVM IR global value that corresponds to the given MLIR operation
+  /// defining an IFunc.
+  llvm::GlobalValue *lookupIFunc(Operation *op) {
+    return ifuncMapping.lookup(op);
   }
 
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
@@ -263,41 +308,20 @@ public:
                             /*recordInsertions=*/false);
   }
 
-  /// Translates parameter attributes of a call and adds them to the returned
-  /// AttrBuilder. Returns failure if any of the translations failed.
-  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
-                                                     DictionaryAttr paramAttrs);
+  /// Converts argument and result attributes from `attrsOp` to LLVM IR
+  /// attributes on the `call` instruction. Returns failure if conversion fails.
+  /// The `immArgPositions` parameter is only relevant for intrinsics. It
+  /// specifies the positions of immediate arguments, which do not have
+  /// associated argument attributes in MLIR and should be skipped during
+  /// attribute mapping.
+  LogicalResult
+  convertArgAndResultAttrs(ArgAndResultAttrsOpInterface attrsOp,
+                           llvm::CallBase *call,
+                           ArrayRef<unsigned> immArgPositions = {});
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
-
-  /// Common CRTP base class for ModuleTranslation stack frames.
-  class StackFrame {
-  public:
-    virtual ~StackFrame() = default;
-    TypeID getTypeID() const { return typeID; }
-
-  protected:
-    explicit StackFrame(TypeID typeID) : typeID(typeID) {}
-
-  private:
-    const TypeID typeID;
-    virtual void anchor();
-  };
-
-  /// Concrete CRTP base class for ModuleTranslation stack frames. When
-  /// translating operations with regions, users of ModuleTranslation can store
-  /// state on ModuleTranslation stack before entering the region and inspect
-  /// it when converting operations nested within that region. Users are
-  /// expected to derive this class and put any relevant information into fields
-  /// of the derived class. The usual isa/dyn_cast functionality is available
-  /// for instances of derived classes.
-  template <typename Derived>
-  class StackFrameBase : public StackFrame {
-  public:
-    explicit StackFrameBase() : StackFrame(TypeID::get<Derived>()) {}
-  };
 
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
@@ -306,46 +330,22 @@ public:
   /// region.
   template <typename T, typename... Args>
   void stackPush(Args &&...args) {
-    static_assert(
-        std::is_base_of<StackFrame, T>::value,
-        "can only push instances of StackFrame on ModuleTranslation stack");
-    stack.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+    stack.stackPush<T>(std::forward<Args>(args)...);
   }
 
   /// Pops the last element from the ModuleTranslation stack.
-  void stackPop() { stack.pop_back(); }
+  void stackPop() { stack.stackPop(); }
 
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
   WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
-    static_assert(std::is_base_of<StackFrame, T>::value,
-                  "expected T derived from StackFrame");
-    if (!callback)
-      return WalkResult::skip();
-    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
-      if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
-        WalkResult result = callback(*ptr);
-        if (result.wasInterrupted())
-          return result;
-      }
-    }
-    return WalkResult::advance();
+    return stack.stackWalk(callback);
   }
 
   /// RAII object calling stackPush/stackPop on construction/destruction.
   template <typename T>
-  struct SaveStack {
-    template <typename... Args>
-    explicit SaveStack(ModuleTranslation &m, Args &&...args)
-        : moduleTranslation(m) {
-      moduleTranslation.stackPush<T>(std::forward<Args>(args)...);
-    }
-    ~SaveStack() { moduleTranslation.stackPop(); }
-
-  private:
-    ModuleTranslation &moduleTranslation;
-  };
+  using SaveStack = SaveStateStack<T, ModuleTranslation>;
 
   SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
@@ -359,6 +359,7 @@ private:
                                  bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
+  LogicalResult convertIFuncs();
   LogicalResult convertComdats();
 
   LogicalResult convertUnresolvedBlockAddress();
@@ -396,6 +397,11 @@ private:
   convertDialectAttributes(Operation *op,
                            ArrayRef<llvm::Instruction *> instructions);
 
+  /// Translates parameter attributes of a call and adds them to the returned
+  /// AttrBuilder. Returns failure if any of the translations failed.
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
+                                                     DictionaryAttr paramAttrs);
+
   /// Translates parameter attributes of a function and adds them to the
   /// returned AttrBuilder. Returns failure if any of the translations failed.
   FailureOr<llvm::AttrBuilder>
@@ -420,6 +426,10 @@ private:
   /// aliases.
   DenseMap<Operation *, llvm::GlobalValue *> aliasesMapping;
 
+  /// Mappings between llvm.mlir.ifunc definitions and corresponding global
+  /// ifuncs.
+  DenseMap<Operation *, llvm::GlobalValue *> ifuncMapping;
+
   /// A stateful object used to translate types.
   TypeToLLVMIRTranslator typeTranslator;
 
@@ -431,6 +441,12 @@ private:
   llvm::StringMap<llvm::Function *> functionMapping;
   DenseMap<Value, llvm::Value *> valueMapping;
   DenseMap<Block *, llvm::BasicBlock *> blockMapping;
+
+  /// List of not yet consumed MLIR loop handles (represented by an omp.new_cli
+  /// operation which creates a value of type CanonicalLoopInfoType) and their
+  /// LLVM-IR representation as CanonicalLoopInfo which is managed by the
+  /// OpenMPIRBuilder.
+  DenseMap<omp::NewCliOp, llvm::CanonicalLoopInfo *> loopMapping;
 
   /// A mapping between MLIR LLVM dialect terminators and LLVM IR terminators
   /// they are converted to. This allows for connecting PHI nodes to the source
@@ -463,14 +479,13 @@ private:
   /// mapping is used to replace the placeholders with the LLVM block addresses.
   DenseMap<BlockAddressOp, llvm::Value *> unresolvedBlockAddressMapping;
 
-  /// Mapping from a BlockAddressAttr attribute to a matching BlockTagOp. This
-  /// is used to cache BlockTagOp locations instead of walking a LLVMFuncOp in
-  /// search for those.
-  DenseMap<BlockAddressAttr, BlockTagOp> blockTagMapping;
+  /// Mapping from a BlockAddressAttr attribute to it's matching LLVM basic
+  /// block.
+  DenseMap<BlockAddressAttr, llvm::BasicBlock *> blockAddressToLLVMMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
-  SmallVector<std::unique_ptr<StackFrame>> stack;
+  StateStack stack;
 
   /// A cache for the symbol tables constructed during symbols lookup.
   SymbolTableCollection symbolTableCollection;
@@ -511,15 +526,5 @@ llvm::CallInst *createIntrinsicCall(
 
 } // namespace LLVM
 } // namespace mlir
-
-namespace llvm {
-template <typename T>
-struct isa_impl<T, ::mlir::LLVM::ModuleTranslation::StackFrame> {
-  static inline bool
-  doit(const ::mlir::LLVM::ModuleTranslation::StackFrame &frame) {
-    return frame.getTypeID() == ::mlir::TypeID::get<T>();
-  }
-};
-} // namespace llvm
 
 #endif // MLIR_TARGET_LLVMIR_MODULETRANSLATION_H

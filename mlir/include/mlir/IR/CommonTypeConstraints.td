@@ -387,6 +387,12 @@ class OpaqueType<string dialect, string name, string summary>
 def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
                               "function type", "::mlir::FunctionType">;
 
+// Graph Type.
+
+// Any graph type.
+def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,
+                              "graph type", "::mlir::GraphType">;
+
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
                     string descr, string cppType = "::mlir::Type"> :
@@ -576,7 +582,7 @@ class NormalizeIndex<int value> {
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
   : And<[
       CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
-      CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+      CPred<"::llvm::is_contained(::llvm::ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
         # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
         #   !if(!lt(n, 0),
               "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
@@ -585,7 +591,7 @@ class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
 
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
-  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
+  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ::llvm::ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
@@ -616,6 +622,14 @@ class VectorOfLengthAndType<list<int> allowedLengths,
   [VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
+
+class FixedVectorOfShapeAndType<list<int> shape, Type elType>: ShapedContainerType<
+  [elType],
+  And<[IsVectorOfShape<shape>, IsFixedVectorOfAnyRankTypePred]>,
+  "vector<" # !interleave(shape, "x") # "x" # elType # ">",
+  "::mlir::VectorType">,
+  BuildableType<"::mlir::VectorType::get({" # !interleave(shape, " ,") # "} , " # elType.builderCall # " );">;
+
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list

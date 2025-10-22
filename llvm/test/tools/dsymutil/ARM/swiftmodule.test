@@ -13,12 +13,17 @@
 #
 # CHECK-NOT: Skipping compiled textual Swift interface: {{.*}}/Inputs/Binary.swiftmodule
 # CHECK: Skipping compiled textual Swift interface: {{.*}}/Inputs/FromInterface.swiftmodule
+# CHECK-NOT: Skipping compiled textual Swift interface: {{.*}}/Inputs/FromInterface.swiftmodule
 
 #
 ---
 triple:          'arm64-apple-darwin'
 objects:
   - filename:        '../Inputs/Binary.swiftmodule'
+    timestamp:       0
+    type:            50
+    symbols:         []
+  - filename:        '../Inputs/FromInterface.swiftmodule'
     timestamp:       0
     type:            50
     symbols:         []

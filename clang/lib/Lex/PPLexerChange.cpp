@@ -302,7 +302,7 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
     // Check whether this entry has an extension typically associated with
     // headers.
     if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
-             .Cases(".h", ".H", ".hh", ".hpp", true)
+             .Cases({".h", ".H", ".hh", ".hpp"}, true)
              .Default(false))
       continue;
 
@@ -711,7 +711,7 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   ModMap.resolveConflicts(M, /*Complain=*/false);
 
   // If this is the first time we've entered this module, set up its state.
-  auto R = Submodules.insert(std::make_pair(M, SubmoduleState()));
+  auto R = Submodules.try_emplace(M);
   auto &State = R.first->second;
   bool FirstTime = R.second;
   if (FirstTime) {

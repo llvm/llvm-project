@@ -5,7 +5,7 @@
 ! RUN: %flang_fc1 -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 ! RUN: bbc -hlfir -emit-hlfir %openmp_flags %s -o - | FileCheck %s
 
-!CHECK: func @_QQmain() attributes {fir.bindc_name = "sample"} {
+!CHECK: func @_QQmain() attributes {fir.bindc_name = "SAMPLE"} {
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
 !CHECK:   %[[COUNT_DECL:.*]]:2 = hlfir.declare %[[COUNT]] {uniq_name = "_QFEcount"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[ETA:.*]] = fir.alloca f32 {bindc_name = "eta", uniq_name = "_QFEeta"}
@@ -264,7 +264,7 @@ subroutine lastprivate2()
 end subroutine
 
 !CHECK-LABEL: func @_QPlastprivate_common
-!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[I:.*]]:2 = hlfir.declare %{{.*}} storage(%{{.*}}[0]) {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>, !fir.ref<!fir.array<4xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[I_PRIV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFlastprivate_commonEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: omp.sections
 !CHECK: omp.section

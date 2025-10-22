@@ -8,7 +8,6 @@
 
 #include "ARM.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
@@ -291,6 +290,8 @@ void arm::setArchNameInTriple(const Driver &D, const ArgList &Args,
                       // Thumb2 is the default for V7 on Darwin.
                       (llvm::ARM::parseArchVersion(Suffix) == 7 &&
                        Triple.isOSBinFormatMachO()) ||
+                      // Thumb2 is the default for Fuchsia.
+                      Triple.isOSFuchsia() ||
                       // FIXME: this is invalid for WindowsCE
                       Triple.isOSWindows();
 
@@ -452,6 +453,9 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::Haiku:
   case llvm::Triple::OpenBSD:
     return FloatABI::SoftFP;
+
+  case llvm::Triple::Fuchsia:
+    return FloatABI::Hard;
 
   default:
     if (Triple.isOHOSFamily())

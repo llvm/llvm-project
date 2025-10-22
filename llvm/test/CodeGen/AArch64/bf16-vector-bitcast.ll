@@ -11,6 +11,16 @@ entry:
   ret <4 x i16> %1
 }
 
+define <4 x half> @v4bf16_to_v4f16(float, <4 x bfloat> %a) nounwind {
+; CHECK-LABEL: v4bf16_to_v4f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %1 = bitcast <4 x bfloat> %a to <4 x half>
+  ret <4 x half> %1
+}
+
 define <2 x i32> @v4bf16_to_v2i32(float, <4 x bfloat> %a) nounwind {
 ; CHECK-LABEL: v4bf16_to_v2i32:
 ; CHECK:       // %bb.0: // %entry
@@ -79,6 +89,16 @@ define <4 x bfloat> @v4i16_to_v4bf16(float, <4 x i16> %a) nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %1 = bitcast <4 x i16> %a to <4 x bfloat>
+  ret <4 x bfloat> %1
+}
+
+define <4 x bfloat> @v4f16_to_v4bf16(float, <4 x half> %a) nounwind {
+; CHECK-LABEL: v4f16_to_v4bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %1 = bitcast <4 x half> %a to <4 x bfloat>
   ret <4 x bfloat> %1
 }
 
@@ -152,6 +172,16 @@ entry:
   ret <8 x i16> %1
 }
 
+define <8 x half> @v8bf16_to_v8f16(float, <8 x bfloat> %a) nounwind {
+; CHECK-LABEL: v8bf16_to_v8f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %1 = bitcast <8 x bfloat> %a to <8 x half>
+  ret <8 x half> %1
+}
+
 define <4 x i32> @v8bf16_to_v4i32(float, <8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: v8bf16_to_v4i32:
 ; CHECK:       // %bb.0: // %entry
@@ -199,6 +229,16 @@ define <8 x bfloat> @v8i16_to_v8bf16(float, <8 x i16> %a) nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %1 = bitcast <8 x i16> %a to <8 x bfloat>
+  ret <8 x bfloat> %1
+}
+
+define <8 x bfloat> @v8f16_to_v8bf16(float, <8 x half> %a) nounwind {
+; CHECK-LABEL: v8f16_to_v8bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov v0.16b, v1.16b
+; CHECK-NEXT:    ret
+entry:
+  %1 = bitcast <8 x half> %a to <8 x bfloat>
   ret <8 x bfloat> %1
 }
 

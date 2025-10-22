@@ -139,6 +139,17 @@ if(CMAKE_HOST_APPLE)
   endif()
 endif()
 
+if(WIN32 AND CMAKE_BUILD_TYPE STREQUAL Debug)
+  if(${CMAKE_VERSION} VERSION_LESS "3.30")
+    message(WARNING "CMake version is inferior to 3.30. Some lldb tests will fail.")
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
+  else()
+    set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE_DEBUG}")
+  endif()
+else()
+  set(LLDB_PYTHON_API_TEST_EXECUTABLE "${Python3_EXECUTABLE}")
+endif()
+
 set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
 if(LLDB_BUILT_STANDALONE)

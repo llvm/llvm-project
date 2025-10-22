@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/Driver/XRayArgs.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
@@ -105,8 +105,9 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
       for (const auto &P : BundleParts) {
         // TODO: Automate the generation of the string case table.
         auto Valid = llvm::StringSwitch<bool>(P)
-                         .Cases("none", "all", "function", "function-entry",
-                                "function-exit", "custom", true)
+                         .Cases({"none", "all", "function", "function-entry",
+                                 "function-exit", "custom"},
+                                true)
                          .Default(false);
 
         if (!Valid) {

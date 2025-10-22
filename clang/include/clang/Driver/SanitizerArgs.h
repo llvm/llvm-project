@@ -27,6 +27,7 @@ class SanitizerArgs {
   SanitizerSet TrapSanitizers;
   SanitizerSet MergeHandlers;
   SanitizerMaskCutoffs SkipHotCutoffs;
+  SanitizerSet AnnotateDebugInfo;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -34,6 +35,7 @@ class SanitizerArgs {
   std::vector<std::string> CoverageIgnorelistFiles;
   std::vector<std::string> BinaryMetadataIgnorelistFiles;
   int CoverageFeatures = 0;
+  int CoverageStackDepthCallbackMin = 0;
   int BinaryMetadataFeatures = 0;
   int OverflowPatternExclusions = 0;
   int MsanTrackOrigins = 0;
@@ -73,6 +75,8 @@ class SanitizerArgs {
       llvm::AsanDetectStackUseAfterReturnMode::Invalid;
 
   std::string MemtagMode;
+  bool AllocTokenFastABI = false;
+  bool AllocTokenExtended = false;
 
 public:
   /// Parses the sanitizer arguments from an argument list.

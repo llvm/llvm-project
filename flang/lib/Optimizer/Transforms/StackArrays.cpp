@@ -13,12 +13,15 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Diagnostics.h"
@@ -47,6 +50,11 @@ static llvm::cl::opt<std::size_t> maxAllocsPerFunc(
                    "function before skipping (to save compilation time). Set "
                    "to 0 for no limit."),
     llvm::cl::init(1000), llvm::cl::Hidden);
+
+static llvm::cl::opt<bool> emitLifetimeMarkers(
+    "stack-arrays-lifetime",
+    llvm::cl::desc("Add lifetime markers to generated constant size allocas"),
+    llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -189,8 +197,11 @@ class AllocMemConversion : public mlir::OpRewritePattern<fir::AllocMemOp> {
 public:
   explicit AllocMemConversion(
       mlir::MLIRContext *ctx,
-      const StackArraysAnalysisWrapper::AllocMemMap &candidateOps)
-      : OpRewritePattern(ctx), candidateOps{candidateOps} {}
+      const StackArraysAnalysisWrapper::AllocMemMap &candidateOps,
+      std::optional<mlir::DataLayout> &dl,
+      std::optional<fir::KindMapping> &kindMap)
+      : OpRewritePattern(ctx), candidateOps{candidateOps}, dl{dl},
+        kindMap{kindMap} {}
 
   llvm::LogicalResult
   matchAndRewrite(fir::AllocMemOp allocmem,
@@ -206,6 +217,9 @@ private:
   /// Handle to the DFA (already run)
   const StackArraysAnalysisWrapper::AllocMemMap &candidateOps;
 
+  const std::optional<mlir::DataLayout> &dl;
+  const std::optional<fir::KindMapping> &kindMap;
+
   /// If we failed to find an insertion point not inside a loop, see if it would
   /// be safe to use an llvm.stacksave/llvm.stackrestore inside the loop
   static InsertionPoint findAllocaLoopInsertionPoint(
@@ -218,8 +232,12 @@ private:
                mlir::PatternRewriter &rewriter) const;
 
   /// Inserts a stacksave before oldAlloc and a stackrestore after each freemem
-  void insertStackSaveRestore(fir::AllocMemOp &oldAlloc,
+  void insertStackSaveRestore(fir::AllocMemOp oldAlloc,
                               mlir::PatternRewriter &rewriter) const;
+  /// Emit lifetime markers for newAlloc between oldAlloc and each freemem.
+  /// If the allocation is dynamic, no life markers are emitted.
+  void insertLifetimeMarkers(fir::AllocMemOp oldAlloc, fir::AllocaOp newAlloc,
+                             mlir::PatternRewriter &rewriter) const;
 };
 
 class StackArraysPass : public fir::impl::StackArraysBase<StackArraysPass> {
@@ -543,7 +561,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
     return stack;
 
   fir::HeapType firHeapTy = mlir::cast<fir::HeapType>(heapTy);
-  LLVM_ATTRIBUTE_UNUSED fir::ReferenceType firRefTy =
+  [[maybe_unused]] fir::ReferenceType firRefTy =
       mlir::cast<fir::ReferenceType>(stackTy);
   assert(firHeapTy.getElementType() == firRefTy.getElementType() &&
          "Allocations must have the same type");
@@ -551,7 +569,7 @@ static mlir::Value convertAllocationType(mlir::PatternRewriter &rewriter,
   auto insertionPoint = rewriter.saveInsertionPoint();
   rewriter.setInsertionPointAfter(stack.getDefiningOp());
   mlir::Value conv =
-      rewriter.create<fir::ConvertOp>(loc, firHeapTy, stack).getResult();
+      fir::ConvertOp::create(rewriter, loc, firHeapTy, stack).getResult();
   rewriter.restoreInsertionPoint(insertionPoint);
   return conv;
 }
@@ -582,10 +600,7 @@ AllocMemConversion::matchAndRewrite(fir::AllocMemOp allocmem,
   // replace references to heap allocation with references to stack allocation
   mlir::Value newValue = convertAllocationType(
       rewriter, allocmem.getLoc(), allocmem.getResult(), alloca->getResult());
-  rewriter.replaceAllUsesWith(allocmem.getResult(), newValue);
-
-  // remove allocmem operation
-  rewriter.eraseOp(allocmem.getOperation());
+  rewriter.replaceOp(allocmem, newValue);
 
   return mlir::success();
 }
@@ -740,14 +755,34 @@ AllocMemConversion::insertAlloca(fir::AllocMemOp &oldAlloc,
 
   llvm::StringRef uniqName = unpackName(oldAlloc.getUniqName());
   llvm::StringRef bindcName = unpackName(oldAlloc.getBindcName());
-  return rewriter.create<fir::AllocaOp>(loc, varTy, uniqName, bindcName,
-                                        oldAlloc.getTypeparams(),
-                                        oldAlloc.getShape());
+  auto alloca =
+      fir::AllocaOp::create(rewriter, loc, varTy, uniqName, bindcName,
+                            oldAlloc.getTypeparams(), oldAlloc.getShape());
+  if (emitLifetimeMarkers)
+    insertLifetimeMarkers(oldAlloc, alloca, rewriter);
+
+  return alloca;
+}
+
+static void
+visitFreeMemOp(fir::AllocMemOp oldAlloc,
+               const std::function<void(mlir::Operation *)> &callBack) {
+  for (mlir::Operation *user : oldAlloc->getUsers()) {
+    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
+      for (mlir::Operation *user : declareOp->getUsers()) {
+        if (mlir::isa<fir::FreeMemOp>(user))
+          callBack(user);
+      }
+    }
+
+    if (mlir::isa<fir::FreeMemOp>(user))
+      callBack(user);
+  }
 }
 
 void AllocMemConversion::insertStackSaveRestore(
-    fir::AllocMemOp &oldAlloc, mlir::PatternRewriter &rewriter) const {
-  auto oldPoint = rewriter.saveInsertionPoint();
+    fir::AllocMemOp oldAlloc, mlir::PatternRewriter &rewriter) const {
+  mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
   auto mod = oldAlloc->getParentOfType<mlir::ModuleOp>();
   fir::FirOpBuilder builder{rewriter, mod};
 
@@ -758,21 +793,30 @@ void AllocMemConversion::insertStackSaveRestore(
     builder.setInsertionPoint(user);
     builder.genStackRestore(user->getLoc(), sp);
   };
+  visitFreeMemOp(oldAlloc, createStackRestoreCall);
+}
 
-  for (mlir::Operation *user : oldAlloc->getUsers()) {
-    if (auto declareOp = mlir::dyn_cast_if_present<fir::DeclareOp>(user)) {
-      for (mlir::Operation *user : declareOp->getUsers()) {
-        if (mlir::isa<fir::FreeMemOp>(user))
-          createStackRestoreCall(user);
-      }
-    }
-
-    if (mlir::isa<fir::FreeMemOp>(user)) {
-      createStackRestoreCall(user);
-    }
+void AllocMemConversion::insertLifetimeMarkers(
+    fir::AllocMemOp oldAlloc, fir::AllocaOp newAlloc,
+    mlir::PatternRewriter &rewriter) const {
+  if (!dl || !kindMap)
+    return;
+  llvm::StringRef attrName = fir::getHasLifetimeMarkerAttrName();
+  // Do not add lifetime markers if the alloca already has any.
+  if (newAlloc->hasAttr(attrName))
+    return;
+  if (std::optional<int64_t> size =
+          fir::getAllocaByteSize(newAlloc, *dl, *kindMap)) {
+    mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPoint(oldAlloc);
+    mlir::Value ptr = fir::factory::genLifetimeStart(
+        rewriter, newAlloc.getLoc(), newAlloc, &*dl);
+    visitFreeMemOp(oldAlloc, [&](mlir::Operation *op) {
+      rewriter.setInsertionPoint(op);
+      fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr);
+    });
+    newAlloc->setAttr(attrName, rewriter.getUnitAttr());
   }
-
-  rewriter.restoreInsertionPoint(oldPoint);
 }
 
 StackArraysPass::StackArraysPass(const StackArraysPass &pass)
@@ -809,7 +853,16 @@ void StackArraysPass::runOnOperation() {
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
 
-  patterns.insert<AllocMemConversion>(&context, *candidateOps);
+  auto module = func->getParentOfType<mlir::ModuleOp>();
+  std::optional<mlir::DataLayout> dl =
+      module ? fir::support::getOrSetMLIRDataLayout(
+                   module, /*allowDefaultLayout=*/false)
+             : std::nullopt;
+  std::optional<fir::KindMapping> kindMap;
+  if (module)
+    kindMap = fir::getKindMapping(module);
+
+  patterns.insert<AllocMemConversion>(&context, *candidateOps, dl, kindMap);
   if (mlir::failed(mlir::applyOpPatternsGreedily(
           opsToConvert, std::move(patterns), config))) {
     mlir::emitError(func->getLoc(), "error in stack arrays optimization\n");
