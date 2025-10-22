@@ -144,7 +144,13 @@ struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
 /// and separate out the format strings into global constants. For some
 /// runtimes, such as OpenCL on AMD, this is sufficient setup, as the compiler
 /// will lower printf calls to appropriate device-side code.
-/// callingConvention and funcName can be adjusted as needed.
+/// However not all backends use the same calling convention and function
+/// naming.
+/// For example, the LLVM SPIRV backend requires calling convention
+/// LLVM::cconv::CConv::SPIR_FUNC and function name needs to be
+/// mangled as "_Z6printfPU3AS2Kcz".
+/// Default callingConvention is LLVM::cconv::CConv::C and
+/// funcName is "printf" but they can be customized as needed.
 struct GPUPrintfOpToLLVMCallLowering
     : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
   GPUPrintfOpToLLVMCallLowering(
