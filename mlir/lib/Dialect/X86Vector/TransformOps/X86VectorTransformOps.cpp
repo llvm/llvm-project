@@ -14,10 +14,12 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 
-#include "mlir/Dialect/Transform/IR/TransformAttrs.h"
-#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h"
+
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
+
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 
 using namespace mlir;
 using namespace mlir::x86vector;
@@ -27,10 +29,31 @@ using namespace mlir::transform;
 
 void mlir::transform::ApplyVectorContractNanokernelLoweringPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorTransferLoweringPatterns(patterns);//,
+  x86vector::populateVectorContractNanokernelLoweringPatterns(patterns);//,
                                                  //getVectorSize());
 }
 
+//===----------------------------------------------------------------------===//
+// Transform op registration
+//===----------------------------------------------------------------------===//
+
+namespace {
+class X86VectorTransformDialectExtension
+    : public transform::TransformDialectExtension<
+          X86VectorTransformDialectExtension> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(X86VectorTransformDialectExtension)
+
+  X86VectorTransformDialectExtension() {
+    declareGeneratedDialect<x86vector::X86VectorDialect>();
+    declareGeneratedDialect<LLVM::LLVMDialect>();
+    registerTransformOps<
+#define GET_OP_LIST
+#include "mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc"
+        >();
+  }
+};
+} // namespace
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc"
@@ -39,4 +62,3 @@ void mlir::x86vector::registerTransformDialectExtension(
     DialectRegistry &registry) {
   registry.addExtensions<X86VectorTransformDialectExtension>();
 }
-
