@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -313,33 +314,33 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   }
 
   // Older builtins had an enum argument for the memory scope.
+  const char *SSN = nullptr;
   int scope = cast<llvm::ConstantInt>(Scope)->getZExtValue();
   switch (scope) {
-  case 0: // __MEMORY_SCOPE_SYSTEM
+  case AtomicScopeGenericModel::System: // __MEMORY_SCOPE_SYSTEM
     SSID = llvm::SyncScope::System;
     break;
-  case 1: // __MEMORY_SCOPE_DEVICE
-    if (getTarget().getTriple().isSPIRV())
-      SSID = getLLVMContext().getOrInsertSyncScopeID("device");
-    else
-      SSID = getLLVMContext().getOrInsertSyncScopeID("agent");
+  case AtomicScopeGenericModel::Device: // __MEMORY_SCOPE_DEVICE
+    SSN = getTarget().getTriple().isSPIRV() ? "device" : "agent";
     break;
-  case 2: // __MEMORY_SCOPE_WRKGRP
-    SSID = getLLVMContext().getOrInsertSyncScopeID("workgroup");
+  case AtomicScopeGenericModel::Workgroup: // __MEMORY_SCOPE_WRKGRP
+    SSN = "workgroup";
     break;
-  case 3: // __MEMORY_SCOPE_WVFRNT
-    if (getTarget().getTriple().isSPIRV())
-      SSID = getLLVMContext().getOrInsertSyncScopeID("subgroup");
-    else
-      SSID = getLLVMContext().getOrInsertSyncScopeID("wavefront");
+  case AtomicScopeGenericModel::Cluster: // __MEMORY_SCOPE_CLUSTR
+    SSN = getTarget().getTriple().isSPIRV() ? "workgroup" : "cluster";
     break;
-  case 4: // __MEMORY_SCOPE_SINGLE
+  case AtomicScopeGenericModel::Wavefront: // __MEMORY_SCOPE_WVFRNT
+    SSN = getTarget().getTriple().isSPIRV() ? "subgroup" : "wavefront";
+    break;
+  case AtomicScopeGenericModel::Single: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
     break;
   default:
     SSID = llvm::SyncScope::System;
     break;
   }
+  if (SSN)
+    SSID = getLLVMContext().getOrInsertSyncScopeID(SSN);
 }
 
 llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
@@ -900,6 +901,26 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     // argument.
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
+  }
+  case AMDGPU::BI__builtin_amdgcn_global_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_global_store_b128: {
+    const bool IsStore =
+        BuiltinID == AMDGPU::BI__builtin_amdgcn_global_store_b128;
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    SmallVector<Value *, 5> Args = {EmitScalarExpr(E->getArg(0))}; // addr
+    if (IsStore)
+      Args.push_back(EmitScalarExpr(E->getArg(1))); // data
+    const unsigned ScopeIdx = E->getNumArgs() - 1;
+    StringRef ScopeLit =
+        cast<StringLiteral>(E->getArg(ScopeIdx)->IgnoreParenCasts())
+            ->getString();
+    llvm::MDNode *MD =
+        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeLit)});
+    Args.push_back(llvm::MetadataAsValue::get(Ctx, MD)); // scope
+    llvm::Function *F =
+        CGM.getIntrinsic(IsStore ? Intrinsic::amdgcn_global_store_b128
+                                 : Intrinsic::amdgcn_global_load_b128);
+    return Builder.CreateCall(F, Args);
   }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,

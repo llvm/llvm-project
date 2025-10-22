@@ -1057,6 +1057,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_openmp_simd);
   }
 
+  if (Args.hasArg(options::OPT_famd_allow_threadprivate_equivalence))
+    CmdArgs.push_back("-famd-allow-threadprivate-equivalence");
+
   // Pass the path to compiler resource files.
   CmdArgs.push_back("-resource-dir");
   CmdArgs.push_back(D.ResourceDir.c_str());

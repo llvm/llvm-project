@@ -33,6 +33,7 @@
 #include "flang/Parser/characters.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
@@ -44,7 +45,6 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -944,8 +944,7 @@ getDefaultmapIfPresent(const DefaultMapsTy &defaultMaps, mlir::Type varType) {
   return DefMap::ImplicitBehavior::Default;
 }
 
-static std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                 mlir::omp::VariableCaptureKind>
+static std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
 getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
                           lower::AbstractConverter &converter,
                           const DefaultMapsTy &defaultMaps, mlir::Type varType,
@@ -966,8 +965,7 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     return size <= ptrSize && align <= ptrAlign;
   };
 
-  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
 
   auto implicitBehaviour = getDefaultmapIfPresent(defaultMaps, varType);
   if (implicitBehaviour == DefMap::ImplicitBehavior::Default) {
@@ -988,8 +986,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       // a map clause with a map-type of tofrom
       if (declareTargetOp.getDeclareTargetDeviceType() !=
           mlir::omp::DeclareTargetDeviceType::nohost) {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
+        mapFlag |= mlir::omp::ClauseMapFlags::from;
       }
     } else if (fir::isa_trivial(varType) || fir::isa_char(varType)) {
       // Scalars behave as if they were "firstprivate".
@@ -998,18 +996,18 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
       if (isLiteralType(varType)) {
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       } else {
-        mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+        mapFlag |= mlir::omp::ClauseMapFlags::to;
       }
     } else if (!fir::isa_builtin_cptr_type(varType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
     }
     return std::make_pair(mapFlag, captureKind);
   }
 
   switch (implicitBehaviour) {
   case DefMap::ImplicitBehavior::Alloc:
-    return std::make_pair(llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE,
+    return std::make_pair(mlir::omp::ClauseMapFlags::storage,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Firstprivate:
@@ -1018,26 +1016,22 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
               "behaviour");
     break;
   case DefMap::ImplicitBehavior::From:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Present:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::present,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::To:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::to,
                           (fir::isa_trivial(varType) || fir::isa_char(varType))
                               ? mlir::omp::VariableCaptureKind::ByCopy
                               : mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Tofrom:
-    return std::make_pair(mapFlag |=
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+    return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                     mlir::omp::ClauseMapFlags::to,
                           mlir::omp::VariableCaptureKind::ByRef);
     break;
   case DefMap::ImplicitBehavior::Default:
@@ -1046,9 +1040,8 @@ getImplicitMapTypeAndKind(fir::FirOpBuilder &firOpBuilder,
     break;
   }
 
-  return std::make_pair(mapFlag |=
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
-                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO,
+  return std::make_pair(mapFlag |= mlir::omp::ClauseMapFlags::from |
+                                   mlir::omp::ClauseMapFlags::to,
                         mlir::omp::VariableCaptureKind::ByRef);
 }
 
@@ -2622,18 +2615,14 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
         eleType = refType.getElementType();
 
-      std::pair<llvm::omp::OpenMPOffloadMappingFlags,
-                mlir::omp::VariableCaptureKind>
+      std::pair<mlir::omp::ClauseMapFlags, mlir::omp::VariableCaptureKind>
           mapFlagAndKind = getImplicitMapTypeAndKind(
               firOpBuilder, converter, defaultMaps, eleType, loc, sym);
 
       mlir::Value mapOp = createMapInfoOp(
           firOpBuilder, converter.getCurrentLocation(), baseOp,
           /*varPtrPtr=*/mlir::Value{}, name.str(), bounds, /*members=*/{},
-          /*membersIndex=*/mlir::ArrayAttr{},
-          static_cast<
-              std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-              std::get<0>(mapFlagAndKind)),
+          /*membersIndex=*/mlir::ArrayAttr{}, std::get<0>(mapFlagAndKind),
           std::get<1>(mapFlagAndKind), baseOp.getType(),
           /*partialMap=*/false, mapperId);
 
@@ -3910,7 +3899,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     assert(object && "Expecting object as argument");
     auto *designator = semantics::omp::GetDesignatorFromObj(*object);
     assert(designator && "Expecting desginator in argument");
-    auto *name = semantics::getDesignatorNameIfDataRef(*designator);
+    auto *name = parser::GetDesignatorNameIfDataRef(*designator);
     assert(name && "Expecting dataref in designator");
     critName = *name;
   }
@@ -4234,18 +4223,17 @@ bool Fortran::lower::markOpenMPDeferredDeclareTargetFunctions(
 void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
                                        const semantics::Symbol *symbol) {
   using MlirRequires = mlir::omp::ClauseRequires;
-  using SemaRequires = semantics::WithOmpDeclarative::RequiresFlag;
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    semantics::WithOmpDeclarative::RequiresFlags semaFlags;
+    semantics::WithOmpDeclarative::RequiresClauses reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {
             if constexpr (std::is_base_of_v<semantics::WithOmpDeclarative,
                                             std::decay_t<decltype(details)>>) {
               if (details.has_ompRequires())
-                semaFlags = *details.ompRequires();
+                reqs = *details.ompRequires();
             }
           },
           symbol->details());
@@ -4254,14 +4242,14 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
     // Use pre-populated omp.requires module attribute if it was set, so that
     // the "-fopenmp-force-usm" compiler option is honored.
     MlirRequires mlirFlags = offloadMod.getRequires();
-    if (semaFlags.test(SemaRequires::ReverseOffload))
-      mlirFlags = mlirFlags | MlirRequires::reverse_offload;
-    if (semaFlags.test(SemaRequires::UnifiedAddress))
-      mlirFlags = mlirFlags | MlirRequires::unified_address;
-    if (semaFlags.test(SemaRequires::UnifiedSharedMemory))
-      mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
-    if (semaFlags.test(SemaRequires::DynamicAllocators))
+    if (reqs.test(llvm::omp::Clause::OMPC_dynamic_allocators))
       mlirFlags = mlirFlags | MlirRequires::dynamic_allocators;
+    if (reqs.test(llvm::omp::Clause::OMPC_reverse_offload))
+      mlirFlags = mlirFlags | MlirRequires::reverse_offload;
+    if (reqs.test(llvm::omp::Clause::OMPC_unified_address))
+      mlirFlags = mlirFlags | MlirRequires::unified_address;
+    if (reqs.test(llvm::omp::Clause::OMPC_unified_shared_memory))
+      mlirFlags = mlirFlags | MlirRequires::unified_shared_memory;
 
     offloadMod.setRequires(mlirFlags);
   }

@@ -453,7 +453,7 @@
               "cwd": {
                 "type": "string",
                 "description": "Program working directory.",
-                "default": "${workspaceRoot}"
+                "default": "${workspaceFolder}"
               },
               "env": {
                 "anyOf": [
@@ -626,7 +626,10 @@
               "stdio": {
                 "type": "array",
                 "items": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "description": "The stdio property specifies the redirection targets for the debuggee's stdio streams. A null value redirects a stream to the default debug terminal. String can be a path to file, named pipe or TTY device. If less than three values are provided, the list will be padded with the last value. Specifying more than three values will create additional file descriptors (4, 5, etc.).",
                 "default": []
@@ -880,10 +883,10 @@
             "type": "lldb-dap",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceRoot}/<your program>",
+            "program": "${workspaceFolder}/<your program>",
             "args": [],
             "env": [],
-            "cwd": "${workspaceRoot}"
+            "cwd": "${workspaceFolder}"
           }
         ],
         "configurationSnippets": [
@@ -894,10 +897,10 @@
               "type": "lldb-dap",
               "request": "launch",
               "name": "${2:Launch}",
-              "program": "^\"\\${workspaceRoot}/${1:<your program>}\"",
+              "program": "^\"\\${workspaceFolder}/${1:<your program>}\"",
               "args": [],
               "env": [],
-              "cwd": "^\"\\${workspaceRoot}\""
+              "cwd": "^\"\\${workspaceFolder}\""
             }
           },
           {

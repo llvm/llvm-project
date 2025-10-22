@@ -5681,6 +5681,15 @@ void Verifier::visitInstruction(Instruction &I) {
   InstsInThisBlock.insert(&I);
 }
 
+inline MDString *getMetadataValueAsString(MetadataAsValue *MDV) {
+  if (!MDV)
+    return nullptr;
+  auto *MD = dyn_cast<MDTuple>(MDV->getMetadata());
+  if (!MD || MD->getNumOperands() != 1)
+    return nullptr;
+  return dyn_cast<MDString>(MD->getOperand(0));
+}
+
 /// Allow intrinsics to be verified in different ways.
 void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   Function *IF = Call.getCalledFunction();
@@ -6227,13 +6236,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
           Call);
 
-    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(1));
-    Value *Mask = Call.getArgOperand(2);
-    Value *PassThru = Call.getArgOperand(3);
+    Value *Mask = Call.getArgOperand(1);
+    Value *PassThru = Call.getArgOperand(2);
     Check(Mask->getType()->isVectorTy(), "masked_load: mask must be vector",
           Call);
-    Check(Alignment->getValue().isPowerOf2(),
-          "masked_load: alignment must be a power of 2", Call);
     Check(PassThru->getType() == Call.getType(),
           "masked_load: pass through and return type must match", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
@@ -6243,30 +6249,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::masked_store: {
     Value *Val = Call.getArgOperand(0);
-    ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(2));
-    Value *Mask = Call.getArgOperand(3);
+    Value *Mask = Call.getArgOperand(2);
     Check(Mask->getType()->isVectorTy(), "masked_store: mask must be vector",
           Call);
-    Check(Alignment->getValue().isPowerOf2(),
-          "masked_store: alignment must be a power of 2", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
               cast<VectorType>(Val->getType())->getElementCount(),
           "masked_store: vector mask must be same length as value", Call);
-    break;
-  }
-
-  case Intrinsic::masked_gather: {
-    const APInt &Alignment =
-        cast<ConstantInt>(Call.getArgOperand(1))->getValue();
-    Check(Alignment.isZero() || Alignment.isPowerOf2(),
-          "masked_gather: alignment must be 0 or a power of 2", Call);
-    break;
-  }
-  case Intrinsic::masked_scatter: {
-    const APInt &Alignment =
-        cast<ConstantInt>(Call.getArgOperand(2))->getValue();
-    Check(Alignment.isZero() || Alignment.isPowerOf2(),
-          "masked_scatter: alignment must be 0 or a power of 2", Call);
     break;
   }
 
@@ -6495,9 +6483,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               NumRows->getZExtValue() * NumColumns->getZExtValue(),
           "Result of a matrix operation does not fit in the returned vector!");
 
-    if (Stride)
+    if (Stride) {
+      Check(Stride->getBitWidth() <= 64, "Stride bitwidth cannot exceed 64!",
+            IF);
       Check(Stride->getZExtValue() >= NumRows->getZExtValue(),
             "Stride must be greater or equal than the number of rows!", IF);
+    }
 
     break;
   }
@@ -6898,11 +6889,29 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, PtrArg);
 
     // Last argument must be a MD string
-    auto *Op = cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
-    MDNode *MD = cast<MDNode>(Op->getMetadata());
-    Check((MD->getNumOperands() == 1) && isa<MDString>(MD->getOperand(0)),
+    auto *Op =
+        dyn_cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    Check(getMetadataValueAsString(Op) != nullptr,
           "cooperative atomic intrinsics require that the last argument is a "
           "metadata string",
+          &Call, Op);
+    break;
+  }
+  case Intrinsic::amdgcn_global_load_b128:
+  case Intrinsic::amdgcn_global_store_b128: {
+    auto *Op =
+        dyn_cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));
+    MDString *MDStr = getMetadataValueAsString(Op);
+    Check(MDStr != nullptr,
+          "global load/store intrinsics require that the last argument is a "
+          "metadata string",
+          &Call, Op);
+
+    StringRef Scope = MDStr->getString();
+    Check(Scope == "" || Scope == "agent" || Scope == "workgroup" ||
+              Scope == "wavefront",
+          "'" + Scope +
+              "' is not a valid scope for global load/store intrinsics",
           &Call, Op);
     break;
   }

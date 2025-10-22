@@ -697,6 +697,68 @@ StringRef CGDebugInfo::getCurrentDirname() {
   return CGM.getCodeGenOpts().DebugCompilationDir;
 }
 
+static llvm::dwarf::SourceLanguage GetSourceLanguage(const CodeGenModule &CGM) {
+  const CodeGenOptions &CGO = CGM.getCodeGenOpts();
+  const LangOptions &LO = CGM.getLangOpts();
+
+  assert(CGO.DwarfVersion <= 5);
+
+  llvm::dwarf::SourceLanguage LangTag;
+  if (LO.CPlusPlus) {
+    if (LO.ObjC)
+      LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
+    else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
+    else if (LO.CPlusPlus14)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
+    else if (LO.CPlusPlus11)
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
+    else
+      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
+  } else if (LO.ObjC) {
+    LangTag = llvm::dwarf::DW_LANG_ObjC;
+  } else if (LO.OpenCL && (!CGO.DebugStrictDwarf || CGO.DwarfVersion >= 5)) {
+    LangTag = llvm::dwarf::DW_LANG_OpenCL;
+  } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
+    LangTag = llvm::dwarf::DW_LANG_C11;
+  } else if (LO.C99) {
+    LangTag = llvm::dwarf::DW_LANG_C99;
+  } else {
+    LangTag = llvm::dwarf::DW_LANG_C89;
+  }
+
+  return LangTag;
+}
+
+static llvm::DISourceLanguageName
+GetDISourceLanguageName(const CodeGenModule &CGM) {
+  // Emit pre-DWARFv6 language codes.
+  if (CGM.getCodeGenOpts().DwarfVersion < 6)
+    return llvm::DISourceLanguageName(GetSourceLanguage(CGM));
+
+  const LangOptions &LO = CGM.getLangOpts();
+
+  uint32_t LangVersion = 0;
+  llvm::dwarf::SourceLanguageName LangTag;
+  if (LO.CPlusPlus) {
+    if (LO.ObjC) {
+      LangTag = llvm::dwarf::DW_LNAME_ObjC_plus_plus;
+    } else {
+      LangTag = llvm::dwarf::DW_LNAME_C_plus_plus;
+      LangVersion = LO.getCPlusPlusLangStd().value_or(0);
+    }
+  } else if (LO.ObjC) {
+    LangTag = llvm::dwarf::DW_LNAME_ObjC;
+  } else if (LO.OpenCL) {
+    LangTag = llvm::dwarf::DW_LNAME_OpenCL_C;
+  } else {
+    LangTag = llvm::dwarf::DW_LNAME_C;
+    LangVersion = LO.getCLangStd().value_or(0);
+  }
+
+  return llvm::DISourceLanguageName(LangTag, LangVersion);
+}
+
 void CGDebugInfo::CreateCompileUnit() {
   SmallString<64> Checksum;
   std::optional<llvm::DIFile::ChecksumKind> CSKind;
@@ -750,31 +812,6 @@ void CGDebugInfo::CreateCompileUnit() {
     } else {
       CSKind = computeChecksum(SM.getMainFileID(), Checksum);
     }
-  }
-
-  llvm::dwarf::SourceLanguage LangTag;
-  if (LO.CPlusPlus) {
-    if (LO.ObjC)
-      LangTag = llvm::dwarf::DW_LANG_ObjC_plus_plus;
-    else if (CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
-    else if (LO.CPlusPlus14)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_14;
-    else if (LO.CPlusPlus11)
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus_11;
-    else
-      LangTag = llvm::dwarf::DW_LANG_C_plus_plus;
-  } else if (LO.ObjC) {
-    LangTag = llvm::dwarf::DW_LANG_ObjC;
-  } else if (LO.OpenCL && (!CGM.getCodeGenOpts().DebugStrictDwarf ||
-                           CGM.getCodeGenOpts().DwarfVersion >= 5)) {
-    LangTag = llvm::dwarf::DW_LANG_OpenCL;
-  } else if (LO.C11 && !(CGO.DebugStrictDwarf && CGO.DwarfVersion < 5)) {
-      LangTag = llvm::dwarf::DW_LANG_C11;
-  } else if (LO.C99) {
-    LangTag = llvm::dwarf::DW_LANG_C99;
-  } else {
-    LangTag = llvm::dwarf::DW_LANG_C89;
   }
 
   std::string Producer = getClangFullVersion();
@@ -837,7 +874,7 @@ void CGDebugInfo::CreateCompileUnit() {
 
   // Create new compile unit.
   TheCU = DBuilder.createCompileUnit(
-      llvm::DISourceLanguageName(LangTag), CUFile,
+      GetDISourceLanguageName(CGM), CUFile,
       CGOpts.EmitVersionIdentMetadata ? Producer : "",
       CGOpts.OptimizationLevel != 0 || CGOpts.PrepareForLTO ||
           CGOpts.PrepareForThinLTO,
@@ -1291,18 +1328,44 @@ llvm::DIType *CGDebugInfo::CreateType(const PointerType *Ty,
                                Ty->getPointeeType(), Unit);
 }
 
-/// \return whether a C++ mangling exists for the type defined by TD.
-static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
-  switch (TheCU->getSourceLanguage().getUnversionedName()) {
+static bool hasCXXMangling(llvm::dwarf::SourceLanguage Lang, bool IsTagDecl) {
+  switch (Lang) {
   case llvm::dwarf::DW_LANG_C_plus_plus:
   case llvm::dwarf::DW_LANG_C_plus_plus_11:
   case llvm::dwarf::DW_LANG_C_plus_plus_14:
     return true;
   case llvm::dwarf::DW_LANG_ObjC_plus_plus:
-    return isa<CXXRecordDecl>(TD) || isa<EnumDecl>(TD);
+    return IsTagDecl;
   default:
     return false;
   }
+}
+
+static bool hasCXXMangling(llvm::dwarf::SourceLanguageName Lang,
+                           bool IsTagDecl) {
+  switch (Lang) {
+  case llvm::dwarf::DW_LNAME_C_plus_plus:
+    return true;
+  case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
+    return IsTagDecl;
+  default:
+    return false;
+  }
+}
+
+/// \return whether a C++ mangling exists for the type defined by TD.
+static bool hasCXXMangling(const TagDecl *TD, llvm::DICompileUnit *TheCU) {
+  const bool IsTagDecl = isa<CXXRecordDecl>(TD) || isa<EnumDecl>(TD);
+
+  if (llvm::DISourceLanguageName SourceLang = TheCU->getSourceLanguage();
+      SourceLang.hasVersionedName())
+    return hasCXXMangling(
+        static_cast<llvm::dwarf::SourceLanguageName>(SourceLang.getName()),
+        IsTagDecl);
+  else
+    return hasCXXMangling(
+        static_cast<llvm::dwarf::SourceLanguage>(SourceLang.getName()),
+        IsTagDecl);
 }
 
 // Determines if the debug info for this tag declaration needs a type
@@ -1347,7 +1410,7 @@ static bool needsTypeIdentifier(const TagDecl *TD, CodeGenModule &CGM,
 static SmallString<256> getTypeIdentifier(const TagType *Ty, CodeGenModule &CGM,
                                           llvm::DICompileUnit *TheCU) {
   SmallString<256> Identifier;
-  const TagDecl *TD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  const TagDecl *TD = Ty->getDecl()->getDefinitionOrSelf();
 
   if (!needsTypeIdentifier(TD, CGM, TheCU))
     return Identifier;
@@ -1383,7 +1446,7 @@ static llvm::dwarf::Tag getTagForRecord(const RecordDecl *RD) {
 llvm::DICompositeType *
 CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
                                       llvm::DIScope *Ctx) {
-  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
   if (llvm::DIType *T = getTypeOrNull(QualType(Ty, 0)))
     return cast<llvm::DICompositeType>(T);
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
@@ -2460,7 +2523,7 @@ void CGDebugInfo::CollectCXXBasesAux(
   for (const auto &BI : Bases) {
     const auto *Base =
         cast<CXXRecordDecl>(
-            BI.getType()->castAsCanonical<RecordType>()->getOriginalDecl())
+            BI.getType()->castAsCanonical<RecordType>()->getDecl())
             ->getDefinition();
     if (!SeenTypes.insert(Base).second)
       continue;
@@ -3137,7 +3200,7 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
   llvm::DIType *T = cast_or_null<llvm::DIType>(getTypeOrNull(QualType(Ty, 0)));
   if (T || shouldOmitDefinition(DebugKind, DebugTypeExtRefs, RD,
                                 CGM.getLangOpts())) {
@@ -3165,7 +3228,7 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
 
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   llvm::DIFile *DefUnit = getOrCreateFile(RD->getLocation());
@@ -3808,7 +3871,7 @@ llvm::DIType *CGDebugInfo::CreateType(const HLSLInlineSpirvType *Ty,
 
 static auto getEnumInfo(CodeGenModule &CGM, llvm::DICompileUnit *TheCU,
                         const EnumType *Ty) {
-  const EnumDecl *ED = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  const EnumDecl *ED = Ty->getDecl()->getDefinitionOrSelf();
 
   uint64_t Size = 0;
   uint32_t Align = 0;
@@ -4211,7 +4274,7 @@ CGDebugInfo::getOrCreateLimitedType(const RecordType *Ty) {
 
 // TODO: Currently used for context chains when limiting debug info.
 llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
-  RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
 
   // Get overall information about the record type for the debug info.
   StringRef RDName = getClassName(RD);
@@ -4298,8 +4361,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     break;
   }
 
-  if (auto *CTSD =
-          dyn_cast<ClassTemplateSpecializationDecl>(Ty->getOriginalDecl())) {
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Ty->getDecl())) {
     CXXRecordDecl *TemplateDecl =
         CTSD->getSpecializedTemplate()->getTemplatedDecl();
     RegionMap[TemplateDecl].reset(RealDecl);
@@ -5209,7 +5271,7 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       // GDB has trouble finding local variables in anonymous unions, so we emit
       // artificial local variables for each of the members.
@@ -6053,9 +6115,8 @@ llvm::DIGlobalVariableExpression *CGDebugInfo::CollectAnonRecordDecls(
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
       if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
-        GVE = CollectAnonRecordDecls(
-            RT->getOriginalDecl()->getDefinitionOrSelf(), Unit, LineNo,
-            LinkageName, MS, Var, DContext);
+        GVE = CollectAnonRecordDecls(RT->getDecl()->getDefinitionOrSelf(), Unit,
+                     LineNo, LinkageName, MS, Var, DContext);
       continue;
     }
     // Use VarDecl's Tag, Scope and Line number.
@@ -6104,7 +6165,7 @@ static bool ReferencesAnonymousEntity(RecordType *RT) {
   // But so long as it's not one of those, it doesn't matter if some sub-type
   // of the record (a template parameter) can't be reconstituted - because the
   // un-reconstitutable type itself will carry its own name.
-  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl());
+  const auto *RD = dyn_cast<CXXRecordDecl>(RT->getDecl());
   if (!RD)
     return false;
   if (!RD->getIdentifier())
@@ -6166,7 +6227,7 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool TraverseEnumType(EnumType *ET, bool = false) {
     // Unnamed enums can't be reconstituted due to a lack of column info we
     // produce in the DWARF, so we can't get Clang's full name back.
-    if (const auto *ED = dyn_cast<EnumDecl>(ET->getOriginalDecl())) {
+    if (const auto *ED = dyn_cast<EnumDecl>(ET->getDecl())) {
       if (!ED->getIdentifier()) {
         Reconstitutable = false;
         return false;

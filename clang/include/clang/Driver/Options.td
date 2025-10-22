@@ -6267,7 +6267,7 @@ def rewrite_legacy_objc : Flag<["-"], "rewrite-legacy-objc">,
 def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
-  Flags<[NoXarchOption, HelpHidden]>,
+  Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
@@ -6363,11 +6363,12 @@ def static : Flag<["-", "--"], "static">, Group<Link_Group>,
   Flags<[NoArgumentUnused]>;
 def std_default_EQ : Joined<["-"], "std-default=">;
 def std_EQ : Joined<["-", "--"], "std=">,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  Group<CompileOnly_Group>, HelpText<"Language standard to compile for">,
-  ValuesCode<[{
+             Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+             Group<CompileOnly_Group>,
+             HelpText<"Language standard to compile for">,
+             ValuesCode<[{
     static constexpr const char VALUES_CODE [] =
-    #define LANGSTANDARD(id, name, lang, desc, features) name ","
+    #define LANGSTANDARD(id, name, lang, desc, features, version) name ","
     #define LANGSTANDARD_ALIAS(id, alias) alias ","
     #include "clang/Basic/LangStandards.def"
     ;
@@ -9654,6 +9655,9 @@ def famd_opt : Flag<["-"], "famd-opt">, Group<f_Group>,
   HelpText<"Enable \"All\" [AMD] proprietary Optimizations">;
 def fno_amd_opt : Flag<["-"], "fno-amd-opt">, Group<f_Group>;
 }
+def famd_allow_threadprivate_equivalence : Flag<["-"], "famd-allow-threadprivate-equivalence">,
+  Flags<[HelpHidden]>, Group<f_Group>, Visibility<[FlangOption, FC1Option]>,
+  HelpText<"Allow to use veriables in EQUIVALENCE statements with THREADPRIVATE">;
 let Visibility = [ClangOption, CLOption] in {
 def floop_unswitch_aggressive : Flag<["-"], "floop-unswitch-aggressive">, Group<f_Group>,
   HelpText<"Aggressively unswitch loops.">;
@@ -9889,6 +9893,15 @@ def fhlsl_spv_use_unknown_image_format
                "attribute. If this option is not used, the format is inferred "
                "from the resource's data type.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvUseUnknownImageFormat">>;
+
+def fhlsl_spv_enable_maximal_reconvergence
+    : Flag<["-"], "fspv-enable-maximal-reconvergence">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option, DXCOption]>,
+      HelpText<"Enables the MaximallyReconvergesKHR execution mode for this "
+               "module. This ensures that control flow reconverges at "
+               "well-defined merge points as defined by the Vulkan spec.">,
+      MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,

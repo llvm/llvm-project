@@ -329,10 +329,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   for (const auto &[Name, Info] : make_early_inc_range(ForwardRefVals)) {
     if (StringRef(Name).starts_with("llvm.")) {
       Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(Name);
-      if (IID == Intrinsic::not_intrinsic)
-        // Don't do anything for unknown intrinsics.
-        continue;
-
       // Automatically create declarations for intrinsics. Intrinsics can only
       // be called directly, so the call function type directly determines the
       // declaration function type.
@@ -346,11 +342,26 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
           return error(Info.second, "intrinsic can only be used as callee");
 
         SmallVector<Type *> OverloadTys;
-        if (!Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
-                                              OverloadTys))
-          return error(Info.second, "invalid intrinsic signature");
+        if (IID != Intrinsic::not_intrinsic &&
+            Intrinsic::getIntrinsicSignature(IID, CB->getFunctionType(),
+                                             OverloadTys)) {
+          U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+        } else {
+          // Try to upgrade the intrinsic.
+          Function *TmpF = Function::Create(CB->getFunctionType(),
+                                            Function::ExternalLinkage, Name, M);
+          Function *NewF = nullptr;
+          if (!UpgradeIntrinsicFunction(TmpF, NewF)) {
+            if (IID == Intrinsic::not_intrinsic)
+              return error(Info.second, "unknown intrinsic '" + Name + "'");
+            return error(Info.second, "invalid intrinsic signature");
+          }
 
-        U.set(Intrinsic::getOrInsertDeclaration(M, IID, OverloadTys));
+          U.set(TmpF);
+          UpgradeIntrinsicCall(CB, NewF);
+          if (TmpF->use_empty())
+            TmpF->eraseFromParent();
+        }
       }
 
       Info.first->eraseFromParent();
@@ -1259,7 +1270,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
     } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
-      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+      if (parseGlobalObjectMetadataAttachment(*GI))
         return true;
     } else {
       return tokError("unknown alias or ifunc property!");
@@ -5909,6 +5920,7 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
   OPTIONAL(language, DwarfLangField, );                                        \
   OPTIONAL(sourceLanguageName, DwarfSourceLangNameField, );                    \
+  OPTIONAL(sourceLanguageVersion, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5938,10 +5950,15 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
     return error(Loc, "can only specify one of 'language' and "
                       "'sourceLanguageName' on !DICompileUnit");
 
+  if (sourceLanguageVersion.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "'sourceLanguageVersion' requires an associated "
+                      "'sourceLanguageName' on !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
       Context,
       language.Seen ? DISourceLanguageName(language.Val)
-                    : DISourceLanguageName(sourceLanguageName.Val, 0),
+                    : DISourceLanguageName(sourceLanguageName.Val,
+                                           sourceLanguageVersion.Val),
       file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
       splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
       globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
