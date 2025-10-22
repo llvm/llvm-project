@@ -253,7 +253,7 @@ static inline unsigned getTMOpNum(const MCInstrDesc &Desc) {
 }
 
 static inline unsigned getTKOpNum(const MCInstrDesc &Desc) {
-  const uint64_t TSFlags = Desc.TSFlags;
+  [[maybe_unused]] const uint64_t TSFlags = Desc.TSFlags;
   assert(hasTWidenOp(TSFlags) && hasTKOp(TSFlags));
   return Desc.getNumOperands() - 3;
 }

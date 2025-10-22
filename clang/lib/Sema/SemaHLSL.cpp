@@ -782,7 +782,7 @@ bool SemaHLSL::isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D) {
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getOriginalDecl();
+  const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     if (!isSemanticValid(FD, Field))
       return false;
@@ -1986,7 +1986,7 @@ SemaHLSL::TakeLocForHLSLAttribute(const HLSLAttributedResourceType *RT) {
 // requirements and adds them to Bindings
 void SemaHLSL::collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                        const RecordType *RT) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   for (FieldDecl *FD : RD->fields()) {
     const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
 
@@ -3006,6 +3006,24 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(CounterHandleTy);
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 1))
+      return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_getstride: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 1))
+      return true;
+    break;
+  }
   case Builtin::BI__builtin_hlsl_and:
   case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
@@ -3542,40 +3560,6 @@ bool SemaHLSL::CanPerformScalarCast(QualType SrcTy, QualType DestTy) {
   }
 
   llvm_unreachable("Unhandled scalar cast");
-}
-
-// Detect if a type contains a bitfield. Will be removed when
-// bitfield support is added to HLSLElementwiseCast and HLSLAggregateSplatCast
-bool SemaHLSL::ContainsBitField(QualType BaseTy) {
-  llvm::SmallVector<QualType, 16> WorkList;
-  WorkList.push_back(BaseTy);
-  while (!WorkList.empty()) {
-    QualType T = WorkList.pop_back_val();
-    T = T.getCanonicalType().getUnqualifiedType();
-    // only check aggregate types
-    if (const auto *AT = dyn_cast<ConstantArrayType>(T)) {
-      WorkList.push_back(AT->getElementType());
-      continue;
-    }
-    if (const auto *RT = dyn_cast<RecordType>(T)) {
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isUnion())
-        continue;
-
-      const CXXRecordDecl *CXXD = dyn_cast<CXXRecordDecl>(RD);
-
-      if (CXXD && CXXD->isStandardLayout())
-        RD = CXXD->getStandardLayoutBaseWithFields();
-
-      for (const auto *FD : RD->fields()) {
-        if (FD->isBitField())
-          return true;
-        WorkList.push_back(FD->getType());
-      }
-      continue;
-    }
-  }
-  return false;
 }
 
 // Can perform an HLSL Aggregate splat cast if the Dest is an aggregate and the

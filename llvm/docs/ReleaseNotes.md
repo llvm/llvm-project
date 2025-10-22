@@ -62,6 +62,10 @@ Changes to the LLVM IR
 * The `ptrtoaddr` instruction was introduced. This instruction returns the
   address component of a pointer type variable but unlike `ptrtoint` does not
   capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
+  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
+  Instead, the `align` attribute should be placed on the pointer (or vector of
+  pointers) argument.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -134,8 +138,13 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* `-fpseudo-probe-for-profiling` is now supported for COFF.
+
 Changes to the X86 Backend
 --------------------------
+
+* `-mcpu=wildcatlake` is now supported.
+* `-mcpu=novalake` is now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -161,6 +170,8 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* `llvm-profgen` now supports decoding pseudo probe for COFF binaries.
+
 * `llvm-readelf` now dumps all hex format values in lower-case mode.
 * Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
 * Support for `%T` in lit has been removed.
@@ -170,6 +181,12 @@ Changes to LLDB
 
 * LLDB can now set breakpoints, show backtraces, and display variables when
   debugging Wasm with supported runtimes (WAMR and V8).
+* LLDB no longer stops processes by default when receiving SIGWINCH signals 
+  (window resize events) on Linux. This is the default on other Unix platforms.
+  You can re-enable it using `process handle --notify=true --stop=true SIGWINCH`.
+* The `show-progress` setting, which became a NOOP with the introduction of the
+  statusline, now defaults to off and controls using OSC escape codes to show a
+  native progress bar in supporting terminals like Ghostty and ConEmu.
 
 Changes to BOLT
 ---------------------------------
