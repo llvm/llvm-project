@@ -38,38 +38,32 @@ define void @Store1(ptr nocapture %p, i8 %x) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8:[0-9]+]]
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB6]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[P]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
 ; CHECK-NEXT:    store i8 [[TMP7]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i8 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB16:.*]], label %[[BB18:.*]], !prof [[PROF1]]
-; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB12:.*]], !prof [[PROF1]]
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP10]])
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4
-; CHECK-NEXT:    br label %[[BB18]]
-; CHECK:       [[BB18]]:
+; CHECK-NEXT:    br label %[[BB12]]
+; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    store i8 [[X]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -90,38 +84,32 @@ define void @Store2(ptr nocapture %p, i16 %x) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1]]
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB6]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_2(ptr [[P]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
 ; CHECK-NEXT:    store i16 [[TMP7]], ptr [[TMP14]], align 2
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i16 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB16:.*]], label %[[BB18:.*]], !prof [[PROF1]]
-; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB12:.*]], !prof [[PROF1]]
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP10]])
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4
-; CHECK-NEXT:    br label %[[BB18]]
-; CHECK:       [[BB18]]:
+; CHECK-NEXT:    br label %[[BB12]]
+; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    store i16 [[X]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -142,38 +130,32 @@ define void @Store4(ptr nocapture %p, i32 %x) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1]]
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB6]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_4(ptr [[P]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i32 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB16:.*]], label %[[BB18:.*]], !prof [[PROF1]]
-; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB12:.*]], !prof [[PROF1]]
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP10]])
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP15]], align 4
-; CHECK-NEXT:    br label %[[BB18]]
-; CHECK:       [[BB18]]:
+; CHECK-NEXT:    br label %[[BB12]]
+; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    store i32 [[X]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -194,41 +176,35 @@ define void @Store8(ptr nocapture %p, i64 %x) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1]]
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB6]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr [[P]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i64 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB16:.*]], label %[[BB21:.*]], !prof [[PROF1]]
-; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB15:.*]], !prof [[PROF1]]
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP10]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 32
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i64 [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP15]], align 8
-; CHECK-NEXT:    br label %[[BB21]]
-; CHECK:       [[BB21]]:
+; CHECK-NEXT:    br label %[[BB15]]
+; CHECK:       [[BB15]]:
 ; CHECK-NEXT:    store i64 [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -249,34 +225,28 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP9]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[_MSARG_O2]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB11:.*]], label %[[BB12:.*]], !prof [[PROF1]]
-; CHECK:       [[BB11]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
+; CHECK:       [[BB5]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB12]]
-; CHECK:       [[BB12]]:
+; CHECK-NEXT:    br label %[[BB6]]
+; CHECK:       [[BB6]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_n(ptr [[P]], i64 16)
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { ptr, ptr } [[TMP13]], 1
 ; CHECK-NEXT:    store i128 [[TMP7]], ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP7]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB16:.*]], label %[[BB22:.*]], !prof [[PROF1]]
-; CHECK:       [[BB16]]:
+; CHECK-NEXT:    br i1 [[_MSCMP3]], label %[[BB10:.*]], label %[[BB16:.*]], !prof [[PROF1]]
+; CHECK:       [[BB10]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP10]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i32 [[TMP17]] to i64
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 32
@@ -284,8 +254,8 @@ define void @Store16(ptr nocapture %p, i128 %x) nounwind uwtable sanitize_memory
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[TMP15]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP20]], ptr [[TMP21]], align 8
-; CHECK-NEXT:    br label %[[BB22]]
-; CHECK:       [[BB22]]:
+; CHECK-NEXT:    br label %[[BB16]]
+; CHECK:       [[BB16]]:
 ; CHECK-NEXT:    store i128 [[X]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -308,19 +278,17 @@ define i8 @Load1(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_1(ptr [[P]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
@@ -348,19 +316,17 @@ define i16 @Load2(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_2(ptr [[P]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
@@ -388,19 +354,17 @@ define i32 @Load4(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_4(ptr [[P]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
@@ -428,19 +392,17 @@ define i64 @Load8(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_8(ptr [[P]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
@@ -468,19 +430,17 @@ define i128 @Load16(ptr nocapture %p) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB5:.*]], label %[[BB6:.*]], !prof [[PROF1]]
-; CHECK:       [[BB5]]:
+; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB3:.*]], label %[[BB4:.*]], !prof [[PROF1]]
+; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    call void @__msan_warning(i32 [[TMP4]]) #[[ATTR8]]
-; CHECK-NEXT:    br label %[[BB6]]
-; CHECK:       [[BB6]]:
+; CHECK-NEXT:    br label %[[BB4]]
+; CHECK:       [[BB4]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i128, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_load_n(ptr [[P]], i64 16)
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { ptr, ptr } [[TMP8]], 0
@@ -517,11 +477,9 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    [[VA_ARG_OVERFLOW_SIZE:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 4
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG_O:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[_MSARG_O]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 48, [[TMP5]]
@@ -539,18 +497,14 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { ptr, ptr } [[TMP10]], 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP11]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[ARGS]])
-; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[ARGS]] to i64
-; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP13]], 16
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[ARGS]], i64 16
 ; CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[TMP16]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { ptr, ptr } [[TMP17]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { ptr, ptr } [[TMP17]], 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP18]], ptr align 16 [[TMP7]], i64 48, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP19]], ptr align 16 [[TMP9]], i64 48, i1 false)
-; CHECK-NEXT:    [[TMP20:%.*]] = ptrtoint ptr [[ARGS]] to i64
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[TMP20]], 8
-; CHECK-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[ARGS]], i64 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP22]], align 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_1(ptr [[TMP23]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractvalue { ptr, ptr } [[TMP24]], 0
@@ -559,15 +513,11 @@ define dso_local i32 @VarArgFn(ptr %fmt, ...) local_unnamed_addr sanitize_memory
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP25]], ptr align 16 [[TMP27]], i64 [[TMP5]], i1 false)
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[TMP9]], i32 48
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP26]], ptr align 16 [[TMP28]], i64 [[TMP5]], i1 false)
-; CHECK-NEXT:    [[TMP29:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP29]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr [[PARAM_ORIGIN]] to i64
-; CHECK-NEXT:    [[_MSARG_O2:%.*]] = inttoptr i64 [[TMP30]] to ptr
+; CHECK-NEXT:    [[_MSARG_O2:%.*]] = getelementptr i8, ptr [[PARAM_ORIGIN]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[_MSARG_O2]], align 4
-; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP32:%.*]] = add i64 [[TMP31]], 8
-; CHECK-NEXT:    [[_MSARG3:%.*]] = inttoptr i64 [[TMP32]] to ptr
+; CHECK-NEXT:    [[_MSARG3:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    store i64 0, ptr [[_MSARG3]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL_SHADOW]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @VAListFn(ptr [[FMT]], ptr nonnull [[ARGS]])
@@ -606,25 +556,14 @@ define dso_local void @VarArgCaller() local_unnamed_addr sanitize_memory {
 ; CHECK-NEXT:    [[PARAM_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 5
 ; CHECK-NEXT:    [[RETVAL_ORIGIN:%.*]] = getelementptr { [100 x i64], [100 x i64], [100 x i64], [100 x i64], i64, [200 x i32], i32, i32 }, ptr [[TMP0]], i32 0, i32 6
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[_MSARG:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[_MSARG:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 0
 ; CHECK-NEXT:    store i64 0, ptr [[_MSARG]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[PARAM_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 8
-; CHECK-NEXT:    [[_MSARG1:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSARG1:%.*]] = getelementptr i8, ptr [[PARAM_SHADOW]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[_MSARG1]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VA_ARG_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 0
-; CHECK-NEXT:    [[_MSARG_VA_S:%.*]] = inttoptr i64 [[TMP5]] to ptr
-; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[VA_ARG_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP6]], 0
-; CHECK-NEXT:    [[_MSARG_VA_O:%.*]] = inttoptr i64 [[TMP7]] to ptr
-; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[VA_ARG_SHADOW]] to i64
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP8]], 8
-; CHECK-NEXT:    [[_MSARG_VA_S2:%.*]] = inttoptr i64 [[TMP9]] to ptr
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[VA_ARG_ORIGIN]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 8
-; CHECK-NEXT:    [[_MSARG_VA_O3:%.*]] = inttoptr i64 [[TMP11]] to ptr
+; CHECK-NEXT:    [[_MSARG_VA_S:%.*]] = getelementptr i8, ptr [[VA_ARG_SHADOW]], i64 0
+; CHECK-NEXT:    [[_MSARG_VA_O:%.*]] = getelementptr i8, ptr [[VA_ARG_ORIGIN]], i64 0
+; CHECK-NEXT:    [[_MSARG_VA_S2:%.*]] = getelementptr i8, ptr [[VA_ARG_SHADOW]], i64 8
+; CHECK-NEXT:    [[_MSARG_VA_O3:%.*]] = getelementptr i8, ptr [[VA_ARG_ORIGIN]], i64 8
 ; CHECK-NEXT:    store i32 0, ptr [[_MSARG_VA_S2]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[_MSARG_VA_O3]], align 8
 ; CHECK-NEXT:    store i64 0, ptr [[VA_ARG_OVERFLOW_SIZE]], align 8
