@@ -15,6 +15,16 @@ S partial_init = { 1 };
 // LLVM: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
 // OGCG: @partial_init = global %struct.S { i32 1, i32 0, i32 0 }
 
+struct StructWithDefaultInit {
+  int a = 2;
+};
+
+StructWithDefaultInit swdi = {};
+
+// CIR: cir.global external @swdi = #cir.const_record<{#cir.int<2> : !s32i}> : !rec_StructWithDefaultInit
+// LLVM: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
+// OGCG: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};
