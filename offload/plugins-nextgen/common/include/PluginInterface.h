@@ -1295,7 +1295,7 @@ struct GenericPluginTy {
     return *Devices[DeviceId];
   }
   const GenericDeviceTy &getDevice(int32_t DeviceId) const {
-    return cast<const GenericDeviceTy>(getDevice(DeviceId));
+    return const_cast<GenericPluginTy *>(this)->getDevice(DeviceId);
   }
 
   /// Get the number of active devices.
