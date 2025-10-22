@@ -927,11 +927,11 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
             ((IsLoadChain &&
               TTI.isLegalMaskedLoad(
                   FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
-                  AS, true)) ||
+                  AS, TTI::MaskKind::ConstantMask)) ||
              (!IsLoadChain &&
               TTI.isLegalMaskedStore(
                   FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
-                  AS, true)))) {
+                  AS, TTI::MaskKind::ConstantMask)))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: extending " << (IsLoadChain ? "load" : "store")
                      << " chain of " << NumVecElems << " "
@@ -995,10 +995,11 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         if (CandidateChainContainsExtraLoadsStores &&
             ((IsLoadChain && !TTI.isLegalMaskedLoad(
                                  FixedVectorType::get(VecElemTy, NumVecElems),
-                                 Alignment, AS, true)) ||
-             (!IsLoadChain && !TTI.isLegalMaskedStore(
-                                  FixedVectorType::get(VecElemTy, NumVecElems),
-                                  Alignment, AS, true)))) {
+                                 Alignment, AS, TTI::MaskKind::ConstantMask)) ||
+             (!IsLoadChain &&
+              !TTI.isLegalMaskedStore(
+                  FixedVectorType::get(VecElemTy, NumVecElems), Alignment, AS,
+                  TTI::MaskKind::ConstantMask)))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: splitChainByAlignment discarding candidate chain "
                         "because it contains extra loads/stores that we cannot "
@@ -1082,7 +1083,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // If the chain contains extra loads, we need to vectorize into a
     // masked load.
     if (ChainContainsExtraLoadsStores) {
-      assert(TTI.isLegalMaskedLoad(VecTy, Alignment, AS, true));
+      assert(TTI.isLegalMaskedLoad(VecTy, Alignment, AS,
+                                   TTI::MaskKind::ConstantMask));
       Value *Mask = createMaskForExtraElements(C, VecTy, Alignment, AS);
       VecInst = Builder.CreateMaskedLoad(
           VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
@@ -1163,7 +1165,8 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     // If the chain originates from extra stores, we need to vectorize into a
     // masked store.
     if (ChainContainsExtraLoadsStores) {
-      assert(TTI.isLegalMaskedStore(Vec->getType(), Alignment, AS, true));
+      assert(TTI.isLegalMaskedStore(Vec->getType(), Alignment, AS,
+                                    TTI::MaskKind::ConstantMask));
       Value *Mask =
           createMaskForExtraElements(C, Vec->getType(), Alignment, AS);
       VecInst = Builder.CreateMaskedStore(
@@ -1882,9 +1885,10 @@ bool Vectorizer::shouldAttemptMaskedLoadStore(
        NumElems <= MaxVectorNumElems; NumElems *= 2) {
     FixedVectorType *VectorType = FixedVectorType::get(ElementType, NumElems);
     bool IsLegalMaskedInstruction =
-        IsLoadChain
-            ? TTI.isLegalMaskedLoad(VectorType, OptimisticAlign, AS, true)
-            : TTI.isLegalMaskedStore(VectorType, OptimisticAlign, AS, true);
+        IsLoadChain ? TTI.isLegalMaskedLoad(VectorType, OptimisticAlign, AS,
+                                            TTI::MaskKind::ConstantMask)
+                    : TTI.isLegalMaskedStore(VectorType, OptimisticAlign, AS,
+                                             TTI::MaskKind::ConstantMask);
     if (IsLegalMaskedInstruction)
       return true;
   }
