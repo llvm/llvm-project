@@ -630,8 +630,6 @@ This indicates that ``ball`` calls ``foo``, ``bar`` and ``baz`` directly;
 ``ball`` indirectly calls functions whose types are ``4524972987496481828``,
 ``3498816979441845844`` and ``8646233951371320954``.
 
-
-
 CodeView-Dependent
 ------------------
 
