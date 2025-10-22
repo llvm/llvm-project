@@ -2428,14 +2428,14 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::Type complexElemTy =
         getTypeConverter()->convertType(complexType.getElementType());
 
-    auto lhsReal = mlir::LLVM::ExtractValueOp::create(rewriter, loc,
-                                                      complexElemTy, lhs, 0);
-    auto lhsImag = mlir::LLVM::ExtractValueOp::create(rewriter, loc,
-                                                      complexElemTy, lhs, 1);
-    auto rhsReal = mlir::LLVM::ExtractValueOp::create(rewriter, loc,
-                                                      complexElemTy, rhs, 0);
-    auto rhsImag = mlir::LLVM::ExtractValueOp::create(rewriter, loc,
-                                                      complexElemTy, rhs, 1);
+    auto lhsReal = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, complexElemTy, lhs, int64_t{0});
+    auto lhsImag = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, complexElemTy, lhs, int64_t{1});
+    auto rhsReal = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, complexElemTy, rhs, int64_t{0});
+    auto rhsImag = mlir::LLVM::ExtractValueOp::create(
+        rewriter, loc, complexElemTy, rhs, int64_t{1});
 
     if (cmpOp.getKind() == cir::CmpOpKind::eq) {
       if (complexElemTy.isInteger()) {
