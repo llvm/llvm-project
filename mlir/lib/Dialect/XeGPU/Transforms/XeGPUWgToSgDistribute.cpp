@@ -825,7 +825,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
       auto tileAttr = DenseElementsAttr::get(VectorType::get(sgShape, eltType),
                                              baseTileValues);
-      auto baseConstVec = rewriter.create<arith::ConstantOp>(loc, tileAttr);
+      auto baseConstVec = arith::ConstantOp::create(rewriter, loc, tileAttr);
 
       // Get subgroup id
       Value sgId =
@@ -837,25 +837,26 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
       SmallVector<Value, 2> strideConsts;
       strideConsts.push_back(
-          rewriter.create<arith::ConstantIndexOp>(loc, colStride));
+          arith::ConstantIndexOp::create(rewriter, loc, colStride));
       if (rows > 1)
         strideConsts.insert(
             strideConsts.begin(),
-            rewriter.create<arith::ConstantIndexOp>(loc, rowStride));
+            arith::ConstantIndexOp::create(rewriter, loc, rowStride));
 
       SmallVector<Value> newConstOps;
       for (auto offsets : *sgOffsets) {
         // Multiply offset with stride, broadcast it and add to baseConstVec
-        Value mulOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+        Value mulOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
         for (size_t i = 0; i < strideConsts.size(); ++i) {
-          Value mul = rewriter.create<arith::MulIOp>(
-              loc, rewriter.getIndexType(), offsets[i], strideConsts[i]);
-          mulOffset = rewriter.create<arith::AddIOp>(
-              loc, rewriter.getIndexType(), mulOffset, mul);
+          Value mul =
+              arith::MulIOp::create(rewriter, loc, rewriter.getIndexType(),
+                                    offsets[i], strideConsts[i]);
+          mulOffset = arith::AddIOp::create(
+              rewriter, loc, rewriter.getIndexType(), mulOffset, mul);
         }
         // Broadcast to baseConstVec size
-        auto bcastOffset = rewriter.create<vector::BroadcastOp>(
-            loc, baseConstVec.getType(), mulOffset);
+        auto bcastOffset = vector::BroadcastOp::create(
+            rewriter, loc, baseConstVec.getType(), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
         setLayoutIfNeeded(baseConstVec);
@@ -1138,8 +1139,8 @@ struct WgToSgVectorShapeCastOp
 
     SmallVector<Value> newShapeCastOps;
     for (auto src : adaptor.getSource()) {
-      auto newShapeCast =
-          rewriter.create<vector::ShapeCastOp>(op.getLoc(), newResultType, src);
+      auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
+                                                      newResultType, src);
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newShapeCast->getResult(0),
@@ -1201,9 +1202,9 @@ struct WgToSgMultiDimReductionOp
 
     SmallVector<Value> newReductions;
     for (auto sgSrc : adaptor.getSource()) {
-      auto newOp = rewriter.create<vector::MultiDimReductionOp>(
-          op.getLoc(), newDstType, op.getKind(), sgSrc, adaptor.getAcc()[0],
-          op.getReductionDims());
+      auto newOp = vector::MultiDimReductionOp::create(
+          rewriter, op.getLoc(), newDstType, op.getKind(), sgSrc,
+          adaptor.getAcc()[0], op.getReductionDims());
       if (!layout.getEffectiveLaneLayoutAsInt().empty() ||
           !layout.getEffectiveInstDataAsInt().empty())
         xegpu::setDistributeLayoutAttr(newOp->getResult(0),

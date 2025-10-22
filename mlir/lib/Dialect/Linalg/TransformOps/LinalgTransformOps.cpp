@@ -437,13 +437,15 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     for (auto [pos, dim] : llvm::enumerate(type.getShape())) {
       if (!ShapedType::isDynamic(dim))
         continue;
-      Value cst = rewriter.create<arith::ConstantIndexOp>(tensor.getLoc(), pos);
-      auto dimOp = rewriter.create<tensor::DimOp>(tensor.getLoc(), tensor, cst);
+      Value cst =
+          arith::ConstantIndexOp::create(rewriter, tensor.getLoc(), pos);
+      auto dimOp =
+          tensor::DimOp::create(rewriter, tensor.getLoc(), tensor, cst);
       preservedOps.insert(dimOp);
       dynamicDims.push_back(dimOp);
     }
-    auto allocation = rewriter.create<bufferization::AllocTensorOp>(
-        tensor.getLoc(), type, dynamicDims);
+    auto allocation = bufferization::AllocTensorOp::create(
+        rewriter, tensor.getLoc(), type, dynamicDims);
     // Set memory space if provided.
     if (getMemorySpaceAttr())
       allocation.setMemorySpaceAttr(getMemorySpaceAttr());
@@ -452,8 +454,8 @@ transform::PromoteTensorOp::apply(transform::TransformRewriter &rewriter,
     // Only insert a materialization (typically bufferizes to a copy) when the
     // value may be read from.
     if (needsMaterialization) {
-      auto copy = rewriter.create<bufferization::MaterializeInDestinationOp>(
-          tensor.getLoc(), tensor, allocated);
+      auto copy = bufferization::MaterializeInDestinationOp::create(
+          rewriter, tensor.getLoc(), tensor, allocated);
       preservedOps.insert(copy);
       promoted.push_back(copy.getResult());
     } else {

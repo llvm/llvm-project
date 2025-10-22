@@ -214,3 +214,54 @@ gpu.module @xevm_module{
 
   }
 }
+
+// -----
+// CHECK-LABEL: gpu.func @warp_scf_for_unused_uniform_for_result(
+// CHECK:         %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] args(%{{.*}} : index,
+// CHECK-SAME:      !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
+// CHECK-SAME:      memref<16x16xf32>) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:           gpu.yield %{{.*}}, {{.*}} : vector<16x16xf32>, vector<16x1xf32>
+// CHECK:         }
+// CHECK:         %{{.*}}:2 = scf.for {{.*}} to %{{.*}} step %{{.*}} iter_args
+// CHECK-SAME:      (%{{.*}} = %[[W]]#0, %{{.*}} = %[[W]]#1) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:           %[[W1:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
+// CHECK-SAME:        args(%{{.*}} : vector<16x1xf32>, vector<16x1xf32>) -> (vector<16x1xf32>, vector<16x1xf32>) {
+// CHECK:             gpu.yield %{{.*}}, %{{.*}} : vector<16x16xf32>, vector<16x1xf32>
+// CHECK:           }
+// CHECK:           scf.yield %[[W1]]#0, %[[W1]]#1 : vector<16x1xf32>, vector<16x1xf32>
+// CHECK:         }
+gpu.module @xevm_module{
+  gpu.func @warp_scf_for_unused_uniform_for_result(%arg0: index,
+    %arg1: !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>,
+    %arg2: memref<16x16xf32>) {
+    %c128 = arith.constant 128 : index
+    %c1 = arith.constant 1 : index
+    %c0 = arith.constant 0 : index
+    %ini = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : () -> (vector<16x1xf32>)
+    %ini2 = "some_def"() {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : () -> (vector<16x16xf32>)
+    %3:2 = scf.for %arg3 = %c0 to %c128 step %c1 iter_args(%arg4 = %ini2, %arg5 = %ini) -> (vector<16x16xf32>, vector<16x1xf32>) {
+      %1  = "some_def"(%arg5)
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : (vector<16x1xf32>) -> (vector<16x1xf32>)
+      %acc = "some_def"(%arg4, %1)
+        {
+          layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+          layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+        }
+        : (vector<16x16xf32>, vector<16x1xf32>) -> (vector<16x16xf32>)
+      scf.yield %acc, %1 : vector<16x16xf32>, vector<16x1xf32>
+    }
+    {
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    }
+    xegpu.store_nd %3#0, %arg1[%c0, %c0]
+      : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
+  }
+}

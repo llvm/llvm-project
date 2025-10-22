@@ -736,7 +736,7 @@ OpFoldResult genBinOp(OpFoldResult a, OpFoldResult b, Location loc,
                       OpBuilder &builder) {
   auto aVal = getValueOrCreateConstantIndexOp(builder, loc, a);
   auto bVal = getValueOrCreateConstantIndexOp(builder, loc, b);
-  return builder.create<ArithOp>(loc, aVal, bVal).getResult();
+  return ArithOp::create(builder, loc, aVal, bVal).getResult();
 }
 
 // a helper utility to perform division operation on OpFoldResult and int64_t.

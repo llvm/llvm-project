@@ -2,7 +2,7 @@
 ;; be mixed.
 ;;
 ; RUN: llvm-as %s -o %t1.bc
-; RUN: llvm-as %p/TestInputs/foo.ll -o %t2.bc
+; RUN: llvm-as %p/Inputs/foo.ll -o %t2.bc
 ; RUN: llvm-lto -exported-symbol main \
 ; RUN:          -exported-symbol foo_on \
 ; RUN:          -filetype=obj \

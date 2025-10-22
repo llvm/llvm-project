@@ -50,24 +50,25 @@ struct StructuredOpInterface
       auto endValue = getValueOrCreateConstantIndexOp(builder, loc, end);
 
       // Loop Trip count > 0 iff start < end
-      Value dimensionHasNonZeroTripCount = builder.create<index::CmpOp>(
-          loc, index::IndexCmpPredicate::SLT, startValue, endValue);
+      Value dimensionHasNonZeroTripCount = index::CmpOp::create(
+          builder, loc, index::IndexCmpPredicate::SLT, startValue, endValue);
 
       if (!iterationDomainIsNonDegenerate) {
         iterationDomainIsNonDegenerate = dimensionHasNonZeroTripCount;
       } else {
         // Iteration domain is non-degenerate iff all dimensions have loop trip
         // count > 0
-        iterationDomainIsNonDegenerate = builder.create<arith::AndIOp>(
-            loc, iterationDomainIsNonDegenerate, dimensionHasNonZeroTripCount);
+        iterationDomainIsNonDegenerate =
+            arith::AndIOp::create(builder, loc, iterationDomainIsNonDegenerate,
+                                  dimensionHasNonZeroTripCount);
       }
     }
 
     if (!iterationDomainIsNonDegenerate)
       return;
 
-    auto ifOp = builder.create<scf::IfOp>(loc, iterationDomainIsNonDegenerate,
-                                          /*withElseRegion=*/false);
+    auto ifOp = scf::IfOp::create(builder, loc, iterationDomainIsNonDegenerate,
+                                  /*withElseRegion=*/false);
     builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 
     // Subtract one from the loop ends before composing with the indexing map

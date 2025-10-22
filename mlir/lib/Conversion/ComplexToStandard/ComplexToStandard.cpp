@@ -937,14 +937,14 @@ struct PowiOpConversion : public OpConversionPattern<complex::PowiOp> {
     auto elementType = cast<FloatType>(type.getElementType());
 
     Value floatExponent =
-        builder.create<arith::SIToFPOp>(elementType, adaptor.getRhs());
+        arith::SIToFPOp::create(builder, elementType, adaptor.getRhs());
     Value zero = arith::ConstantOp::create(
         builder, elementType, builder.getFloatAttr(elementType, 0.0));
     Value complexExponent =
         complex::CreateOp::create(builder, type, floatExponent, zero);
 
-    auto pow = builder.create<complex::PowOp>(
-        type, adaptor.getLhs(), complexExponent, op.getFastmathAttr());
+    auto pow = complex::PowOp::create(builder, type, adaptor.getLhs(),
+                                      complexExponent, op.getFastmathAttr());
     rewriter.replaceOp(op, pow.getResult());
     return success();
   }

@@ -410,3 +410,78 @@ TEST_F(OpenACCUtilsTest, getTypeCategoryArray) {
   VariableTypeCategory category = getTypeCategory(varPtr);
   EXPECT_EQ(category, VariableTypeCategory::array);
 }
+
+//===----------------------------------------------------------------------===//
+// getVariableName Tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(OpenACCUtilsTest, getVariableNameDirect) {
+  // Create a memref with acc.var_name attribute
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  // Set the acc.var_name attribute
+  auto varNameAttr = VarNameAttr::get(&context, "my_variable");
+  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+
+  Value varPtr = allocOp->getResult();
+
+  // Test that getVariableName returns the variable name
+  std::string varName = getVariableName(varPtr);
+  EXPECT_EQ(varName, "my_variable");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameThroughCast) {
+  // Create a 5x2 memref with acc.var_name attribute
+  auto memrefTy = MemRefType::get({5, 2}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  // Set the acc.var_name attribute on the alloca
+  auto varNameAttr = VarNameAttr::get(&context, "casted_variable");
+  allocOp.get()->setAttr(getVarNameAttrName(), varNameAttr);
+
+  Value allocResult = allocOp->getResult();
+
+  // Create a memref.cast operation to a flattened 10-element array
+  auto castedMemrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::CastOp> castOp =
+      memref::CastOp::create(b, loc, castedMemrefTy, allocResult);
+
+  Value castedPtr = castOp->getResult();
+
+  // Test that getVariableName walks through the cast to find the variable name
+  std::string varName = getVariableName(castedPtr);
+  EXPECT_EQ(varName, "casted_variable");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameNotFound) {
+  // Create a memref without acc.var_name attribute
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  Value varPtr = allocOp->getResult();
+
+  // Test that getVariableName returns empty string when no name is found
+  std::string varName = getVariableName(varPtr);
+  EXPECT_EQ(varName, "");
+}
+
+TEST_F(OpenACCUtilsTest, getVariableNameFromCopyin) {
+  // Create a memref
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> allocOp =
+      memref::AllocaOp::create(b, loc, memrefTy);
+
+  Value varPtr = allocOp->getResult();
+  StringRef name = "data_array";
+  OwningOpRef<CopyinOp> copyinOp =
+      CopyinOp::create(b, loc, varPtr, /*structured=*/true, /*implicit=*/true,
+                       /*name=*/name);
+
+  // Test that getVariableName extracts the name from the copyin operation
+  std::string varName = getVariableName(copyinOp->getAccVar());
+  EXPECT_EQ(varName, name);
+}

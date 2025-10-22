@@ -232,16 +232,16 @@ static Value createLinalgBodyCalculationForElementwiseOp(
         }
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-        zpAddValue = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+        zpAddValue = arith::ConstantOp::create(
+            rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
         auto arg1 =
-            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[1]);
+            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[1]);
         auto arg2 =
-            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[2]);
+            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[2]);
         zpAddValue =
-            rewriter.create<arith::AddIOp>(loc, intermediateType, arg1, arg2);
+            arith::AddIOp::create(rewriter, loc, intermediateType, arg1, arg2);
       }
 
       // The negation can be applied by doing:
@@ -1402,8 +1402,8 @@ static Value collapse1xNTensorToN(PatternRewriter &rewriter, Value input,
   auto elemType = inputType.getElementType();
   auto collapsedType = RankedTensorType::get({}, elemType);
   // Emit the collapse op
-  return rewriter.create<tensor::CollapseShapeOp>(loc, collapsedType, input,
-                                                  reassociation);
+  return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType, input,
+                                         reassociation);
 }
 
 static llvm::SmallVector<int8_t>
@@ -1443,7 +1443,7 @@ static void setupLinalgGenericOpInputAndIndexingMap(
       IntegerAttr intAttr = isShift
                                 ? rewriter.getI8IntegerAttr(values.front())
                                 : rewriter.getI32IntegerAttr(values.front());
-      constant = rewriter.create<arith::ConstantOp>(loc, intAttr);
+      constant = arith::ConstantOp::create(rewriter, loc, intAttr);
     } else {
       auto elementType =
           isShift ? rewriter.getIntegerType(8) : rewriter.getI32Type();
@@ -1511,14 +1511,14 @@ static Value getExtendZp(OpBuilder &builder, Type valueTy,
                 .getResult(0);
       }
       if (zpTy.isUnsignedInteger()) {
-        return builder.create<arith::ExtUIOp>(loc, extendType, result);
+        return arith::ExtUIOp::create(builder, loc, extendType, result);
       } else {
-        return builder.create<arith::ExtSIOp>(loc, extendType, result);
+        return arith::ExtSIOp::create(builder, loc, extendType, result);
       }
     }
   } else {
-    return builder.create<arith::ConstantOp>(
-        loc, IntegerAttr::get(extendType, *maybeZp));
+    return arith::ConstantOp::create(builder, loc,
+                                     IntegerAttr::get(extendType, *maybeZp));
   }
   return result;
 }
