@@ -2341,7 +2341,7 @@ LLVM_C_ABI LLVMValueRef LLVMConstRealOfStringAndSize(LLVMTypeRef RealTy,
 
 /**
  * Obtain a constant for a floating point FP128 value from 2 64 bit values.
- * Only the LLVMFP128Type or LLVMPPCFP128Type are accepted. 
+ * Only the LLVMFP128Type or LLVMPPCFP128Type are accepted.
  */
 
 LLVM_C_ABI LLVMValueRef LLVMConstFP128(LLVMTypeRef Ty, const uint64_t N[2]);
