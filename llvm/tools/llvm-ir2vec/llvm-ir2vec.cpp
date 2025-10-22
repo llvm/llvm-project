@@ -77,6 +77,8 @@
 
 namespace llvm {
 
+static const char *ToolName = "llvm-ir2vec";
+
 // Common option category for options shared between IR2Vec and MIR2Vec
 static cl::OptionCategory CommonCategory("Common Options",
                                          "Options applicable to both IR2Vec "
@@ -258,7 +260,8 @@ public:
   /// Generate embeddings for the entire module
   void generateEmbeddings(raw_ostream &OS) const {
     if (!Vocab->isValid()) {
-      OS << "Error: Vocabulary is not valid. IR2VecTool not initialized.\n";
+      WithColor::error(errs(), ToolName)
+          << "Vocabulary is not valid. IR2VecTool not initialized.\n";
       return;
     }
 
@@ -277,8 +280,8 @@ public:
     assert(Vocab->isValid() && "Vocabulary is not valid");
     auto Emb = Embedder::create(IR2VecEmbeddingKind, F, *Vocab);
     if (!Emb) {
-      OS << "Error: Failed to create embedder for function " << F.getName()
-         << "\n";
+      WithColor::error(errs(), ToolName)
+          << "Failed to create embedder for function " << F.getName() << "\n";
       return;
     }
 
@@ -351,13 +354,14 @@ private:
 public:
   explicit MIR2VecTool(MachineModuleInfo &MMI) : MMI(MMI) {}
 
-  /// Initialize the MIR2Vec vocabulary
+  /// Initialize MIR2Vec vocabulary
   bool initializeVocabulary(const Module &M) {
     MIR2VecVocabProvider Provider(MMI);
     auto VocabOrErr = Provider.getVocabulary(M);
     if (!VocabOrErr) {
-      errs() << "Error: Failed to load MIR2Vec vocabulary - "
-             << toString(VocabOrErr.takeError()) << "\n";
+      WithColor::error(errs(), ToolName)
+          << "Failed to load MIR2Vec vocabulary - "
+          << toString(VocabOrErr.takeError()) << "\n";
       return false;
     }
     Vocab = std::make_unique<MIRVocabulary>(std::move(*VocabOrErr));
@@ -367,7 +371,7 @@ public:
   /// Generate embeddings for all machine functions in the module
   void generateEmbeddings(const Module &M, raw_ostream &OS) const {
     if (!Vocab) {
-      OS << "Error: Vocabulary not initialized.\n";
+      WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
       return;
     }
 
@@ -377,7 +381,8 @@ public:
 
       MachineFunction *MF = MMI.getMachineFunction(F);
       if (!MF) {
-        errs() << "Warning: No MachineFunction for " << F.getName() << "\n";
+        WithColor::warning(errs(), ToolName)
+            << "No MachineFunction for " << F.getName() << "\n";
         continue;
       }
 
@@ -388,13 +393,14 @@ public:
   /// Generate embeddings for a specific machine function
   void generateEmbeddings(MachineFunction &MF, raw_ostream &OS) const {
     if (!Vocab) {
-      OS << "Error: Vocabulary not initialized.\n";
+      WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
       return;
     }
 
     auto Emb = MIREmbedder::create(MIR2VecKind::Symbolic, MF, *Vocab);
     if (!Emb) {
-      errs() << "Error: Failed to create embedder for " << MF.getName() << "\n";
+      WithColor::error(errs(), ToolName)
+          << "Failed to create embedder for " << MF.getName() << "\n";
       return;
     }
 
@@ -456,7 +462,8 @@ int main(int argc, char **argv) {
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename, EC);
   if (EC) {
-    errs() << "Error opening output file: " << EC.message() << "\n";
+    WithColor::error(errs(), ToolName)
+        << "opening output file: " << EC.message() << "\n";
     return 1;
   }
 
@@ -472,13 +479,13 @@ int main(int argc, char **argv) {
     LLVMContext Context;
     std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
     if (!M) {
-      Err.print(argv[0], errs());
+      Err.print(ToolName, errs());
       return 1;
     }
 
     if (Error Err = processModule(*M, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
-        errs() << "Error: " << EIB.message() << "\n";
+        WithColor::error(errs(), ToolName) << EIB.message() << "\n";
       });
       return 1;
     }
@@ -499,7 +506,7 @@ int main(int argc, char **argv) {
 
     auto MIR = createMIRParserFromFile(InputFilename, Err, Context);
     if (!MIR) {
-      Err.print(argv[0], WithColor::error(errs(), argv[0]));
+      Err.print(ToolName, errs());
       return 1;
     }
 
@@ -511,7 +518,7 @@ int main(int argc, char **argv) {
         TheTriple.setTriple(sys::getDefaultTargetTriple());
       auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple.str());
       if (!TMOrErr) {
-        Err.print(argv[0], WithColor::error(errs(), argv[0]));
+        Err.print(ToolName, errs());
         exit(1);
       }
       TM = std::move(*TMOrErr);
@@ -520,14 +527,14 @@ int main(int argc, char **argv) {
 
     std::unique_ptr<Module> M = MIR->parseIRModule(SetDataLayout);
     if (!M) {
-      Err.print(argv[0], WithColor::error(errs(), argv[0]));
+      Err.print(ToolName, errs());
       return 1;
     }
 
     // Parse machine functions
     auto MMI = std::make_unique<MachineModuleInfo>(TM.get());
     if (!MMI || MIR->parseMachineFunctions(*M, *MMI)) {
-      Err.print(argv[0], WithColor::error(errs(), argv[0]));
+      Err.print(ToolName, errs());
       return 1;
     }
 
@@ -547,13 +554,15 @@ int main(int argc, char **argv) {
       // Process single function
       Function *F = M->getFunction(FunctionName);
       if (!F) {
-        errs() << "Error: Function '" << FunctionName << "' not found\n";
+        WithColor::error(errs(), ToolName)
+            << "Function '" << FunctionName << "' not found\n";
         return 1;
       }
 
       MachineFunction *MF = MMI->getMachineFunction(*F);
       if (!MF) {
-        errs() << "Error: No MachineFunction for " << FunctionName << "\n";
+        WithColor::error(errs(), ToolName)
+            << "No MachineFunction for " << FunctionName << "\n";
         return 1;
       }
 
