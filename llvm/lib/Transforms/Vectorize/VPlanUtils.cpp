@@ -129,7 +129,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
         Type *SrcElementTy = cast<GetElementPtrInst>(R->getUnderlyingInstr())
                                  ->getSourceElementType();
-        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy, SCEV::FlagAnyWrap);
+        return SE.getGEPExpr(Base, IndexExprs, SrcElementTy);
       })
       .Default([&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 }
