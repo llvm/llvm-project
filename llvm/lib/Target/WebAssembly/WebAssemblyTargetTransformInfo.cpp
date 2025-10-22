@@ -119,18 +119,82 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
     }
   }
 
-  // extend_low
   static constexpr TypeConversionCostTblEntry ConversionTbl[] = {
+      // extend_low
       {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i32, 1},
       {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i32, 1},
       {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i16, 1},
       {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i16, 1},
       {ISD::SIGN_EXTEND, MVT::v8i16, MVT::v8i8, 1},
       {ISD::ZERO_EXTEND, MVT::v8i16, MVT::v8i8, 1},
+      // 2 x extend_low
       {ISD::SIGN_EXTEND, MVT::v2i64, MVT::v2i16, 2},
       {ISD::ZERO_EXTEND, MVT::v2i64, MVT::v2i16, 2},
       {ISD::SIGN_EXTEND, MVT::v4i32, MVT::v4i8, 2},
       {ISD::ZERO_EXTEND, MVT::v4i32, MVT::v4i8, 2},
+      // extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::ZERO_EXTEND, MVT::v4i64, MVT::v4i32, 2},
+      {ISD::SIGN_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::ZERO_EXTEND, MVT::v8i32, MVT::v8i16, 2},
+      {ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      {ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 2},
+      // 2x extend_low, extend_high
+      {ISD::SIGN_EXTEND, MVT::v8i64, MVT::v8i32, 4},
+      {ISD::ZERO_EXTEND, MVT::v8i64, MVT::v8i32, 4},
+      {ISD::SIGN_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      {ISD::ZERO_EXTEND, MVT::v16i32, MVT::v16i16, 4},
+      // shuffle
+      {ISD::TRUNCATE, MVT::v2i16, MVT::v2i32, 2},
+      {ISD::TRUNCATE, MVT::v2i8, MVT::v2i32, 4},
+      {ISD::TRUNCATE, MVT::v4i16, MVT::v4i32, 2},
+      {ISD::TRUNCATE, MVT::v4i8, MVT::v4i32, 4},
+      // narrow, and
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i32, 2},
+      {ISD::TRUNCATE, MVT::v8i8, MVT::v8i16, 2},
+      // narrow, 2x and
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i16, 3},
+      // 3x narrow, 4x and
+      {ISD::TRUNCATE, MVT::v8i16, MVT::v8i64, 7},
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i32, 7},
+      // 7x narrow, 8x and
+      {ISD::TRUNCATE, MVT::v16i8, MVT::v16i64, 15},
+      // convert_i32x4
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i32, 1},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
+      // extend_low, convert
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 2},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 2},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+      // extend_low x 2, convert
+      {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
+      {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
+      {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
+      // several shuffles
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      /// trunc_sat, const, and, 3x narrow
+      {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
+      {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},
+      {ISD::FP_TO_SINT, MVT::v4i8, MVT::v4f32, 6},
+      {ISD::FP_TO_UINT, MVT::v4i8, MVT::v4f32, 6},
+      /// trunc_sat, const, and, narrow
+      {ISD::FP_TO_UINT, MVT::v2i16, MVT::v2f32, 4},
+      {ISD::FP_TO_SINT, MVT::v2i16, MVT::v2f32, 4},
+      {ISD::FP_TO_SINT, MVT::v4i16, MVT::v4f32, 4},
+      {ISD::FP_TO_UINT, MVT::v4i16, MVT::v4f32, 4},
+      // 2x trunc_sat, const, 2x and, 3x narrow
+      {ISD::FP_TO_SINT, MVT::v8i8, MVT::v8f32, 8},
+      {ISD::FP_TO_UINT, MVT::v8i8, MVT::v8f32, 8},
+      // 2x trunc_sat, const, 2x and, narrow
+      {ISD::FP_TO_SINT, MVT::v8i16, MVT::v8f32, 6},
+      {ISD::FP_TO_UINT, MVT::v8i16, MVT::v8f32, 6},
   };
 
   if (const auto *Entry =
