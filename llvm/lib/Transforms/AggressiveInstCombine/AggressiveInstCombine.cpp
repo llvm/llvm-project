@@ -907,10 +907,20 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   StoreInst *Store = Builder.CreateAlignedStore(
       Val, First.Store->getPointerOperand(), First.Store->getAlign());
 
+  // Merge various metadata onto the new store.
   AAMDNodes AATags = First.Store->getAAMetadata();
-  for (const PartStore &Part : drop_begin(Parts))
+  SmallVector<Instruction *> Stores = {First.Store};
+  Stores.reserve(Parts.size());
+  SmallVector<DebugLoc> DbgLocs = {First.Store->getDebugLoc()};
+  DbgLocs.reserve(Parts.size());
+  for (const PartStore &Part : drop_begin(Parts)) {
     AATags = AATags.concat(Part.Store->getAAMetadata());
+    Stores.push_back(Part.Store);
+    DbgLocs.push_back(Part.Store->getDebugLoc());
+  }
   Store->setAAMetadata(AATags);
+  Store->mergeDIAssignID(Stores);
+  Store->setDebugLoc(DebugLoc::getMergedLocations(DbgLocs));
 
   // Remove the old stores.
   for (const PartStore &Part : Parts)
