@@ -35,6 +35,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -1729,6 +1730,34 @@ template <typename R> constexpr size_t range_size(R &&Range) {
     return adl_size(Range);
   else
     return static_cast<size_t>(std::distance(adl_begin(Range), adl_end(Range)));
+}
+
+/// Wrapper for std::accumulate.
+template <typename R, typename E> auto accumulate(R &&Range, E &&Init) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init));
+}
+
+/// Wrapper for std::accumulate with a binary operator.
+template <typename R, typename E, typename BinaryOp>
+auto accumulate(R &&Range, E &&Init, BinaryOp &&Op) {
+  return std::accumulate(adl_begin(Range), adl_end(Range),
+                         std::forward<E>(Init), std::forward<BinaryOp>(Op));
+}
+
+/// Returns the sum of all values in `Range` with `Init` initial value.
+/// The default initial value is 0.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto sum_of(R &&Range, E Init = E{0}) {
+  return accumulate(std::forward<R>(Range), std::move(Init));
+}
+
+/// Returns the product of all values in `Range` with `Init` initial value.
+/// The default initial value is 1.
+template <typename R, typename E = detail::ValueOfRange<R>>
+auto product_of(R &&Range, E Init = E{1}) {
+  return accumulate(std::forward<R>(Range), std::move(Init),
+                    std::multiplies<>{});
 }
 
 /// Provide wrappers to std::for_each which take ranges instead of having to
