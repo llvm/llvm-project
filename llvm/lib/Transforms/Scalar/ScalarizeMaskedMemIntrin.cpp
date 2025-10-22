@@ -1124,7 +1124,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
               CI->getType(), CI->getParamAlign(0).valueOrOne(),
               cast<PointerType>(CI->getArgOperand(0)->getType())
                   ->getAddressSpace(),
-              isConstantIntVector(CI->getArgOperand(2))
+              isConstantIntVector(CI->getArgOperand(1))
                   ? TTI::MaskKind::ConstantMask
                   : TTI::MaskKind::VariableOrConstantMask))
         return false;
@@ -1136,7 +1136,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
               CI->getParamAlign(1).valueOrOne(),
               cast<PointerType>(CI->getArgOperand(1)->getType())
                   ->getAddressSpace(),
-              isConstantIntVector(CI->getArgOperand(3))
+              isConstantIntVector(CI->getArgOperand(2))
                   ? TTI::MaskKind::ConstantMask
                   : TTI::MaskKind::VariableOrConstantMask))
         return false;

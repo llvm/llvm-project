@@ -40,8 +40,8 @@ define void @global_8xi32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    ld.param.b64 %rd2, [global_8xi32_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, _, %r3, _, _, _, _, %r8};
 ; SM100-NEXT:    ret;
-  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) %a, i32 32, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
-  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) %b, i32 32, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
+  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 %a, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) align 32 %b, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
 
@@ -93,8 +93,8 @@ define void @global_16xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    st.global.b16 [%rd2+28], %rs1;
 ; SM100-NEXT:    st.global.b16 [%rd2+30], %rs2;
 ; SM100-NEXT:    ret;
-  %a.load = tail call <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1) %a, i32 32, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <16 x i16> poison)
-  tail call void @llvm.masked.store.v16i16.p1(<16 x i16> %a.load, ptr addrspace(1) %b, i32 32, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>)
+  %a.load = tail call <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1) align 32 %a, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>, <16 x i16> poison)
+  tail call void @llvm.masked.store.v16i16.p1(<16 x i16> %a.load, ptr addrspace(1) align 32 %b, <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true>)
   ret void
 }
 
@@ -114,8 +114,8 @@ define void @global_8xi32_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    st.global.b32 [%rd2+8], %r2;
 ; CHECK-NEXT:    st.global.b32 [%rd2+28], %r3;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) %a, i32 16, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
-  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) %b, i32 16, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
+  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 16 %a, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
+  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) align 16 %b, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
 
@@ -150,8 +150,8 @@ define void @global_8xi32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    ld.param.b64 %rd2, [global_8xi32_invariant_param_1];
 ; SM100-NEXT:    st.global.v8.b32 [%rd2], {%r1, _, %r3, _, _, _, _, %r8};
 ; SM100-NEXT:    ret;
-  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) %a, i32 32, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison), !invariant.load !0
-  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) %b, i32 32, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
+  %a.load = tail call <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1) align 32 %a, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison), !invariant.load !0
+  tail call void @llvm.masked.store.v8i32.p1(<8 x i32> %a.load, ptr addrspace(1) align 32 %b, <8 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
 
@@ -170,8 +170,8 @@ define void @global_2xi16(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) %a, i32 4, <2 x i1> <i1 true, i1 false>, <2 x i16> poison)
-  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) %b, i32 4, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) align 4 %a, <2 x i1> <i1 true, i1 false>, <2 x i16> poison)
+  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) align 4 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
@@ -190,8 +190,8 @@ define void @global_2xi16_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) %a, i32 4, <2 x i1> <i1 true, i1 false>, <2 x i16> poison), !invariant.load !0
-  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) %b, i32 4, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) align 4 %a, <2 x i1> <i1 true, i1 false>, <2 x i16> poison), !invariant.load !0
+  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) align 4 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
@@ -207,8 +207,8 @@ define void @global_2xi16_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xi16_no_align_param_1];
 ; CHECK-NEXT:    st.global.b16 [%rd2], %rs1;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) %a, i32 2, <2 x i1> <i1 true, i1 false>, <2 x i16> poison)
-  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) %b, i32 4, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) align 2 %a, <2 x i1> <i1 true, i1 false>, <2 x i16> poison)
+  tail call void @llvm.masked.store.v2i16.p1(<2 x i16> %a.load, ptr addrspace(1) align 4 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
@@ -227,8 +227,8 @@ define void @global_4xi8(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %r2;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) %a, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison)
-  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) %b, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
+  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) align 4 %a, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison)
+  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) align 4 %b, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -247,8 +247,8 @@ define void @global_4xi8_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    prmt.b32 %r2, %r1, 0, 0x7772U;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %r2;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) %a, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison), !invariant.load !0
-  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) %b, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
+  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) align 4 %a, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison), !invariant.load !0
+  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) align 4 %b, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -266,8 +266,8 @@ define void @global_4xi8_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    st.global.b8 [%rd2], %rs1;
 ; CHECK-NEXT:    st.global.b8 [%rd2+2], %rs2;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) %a, i32 2, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison)
-  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) %b, i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
+  %a.load = tail call <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1) align 2 %a, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i8> poison)
+  tail call void @llvm.masked.store.v4i8.p1(<4 x i8> %a.load, ptr addrspace(1) align 4 %b, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -299,8 +299,8 @@ define void @global_2xf32(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    mov.b64 {%r1, _}, %rd2;
 ; SM100-NEXT:    st.global.b32 [%rd3], %r1;
 ; SM100-NEXT:    ret;
-  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) %a, i32 8, <2 x i1> <i1 true, i1 false>, <2 x float> poison)
-  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) %b, i32 8, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) align 8 %a, <2 x i1> <i1 true, i1 false>, <2 x float> poison)
+  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) align 8 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
@@ -331,8 +331,8 @@ define void @global_2xf32_invariant(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; SM100-NEXT:    mov.b64 {%r1, _}, %rd2;
 ; SM100-NEXT:    st.global.b32 [%rd3], %r1;
 ; SM100-NEXT:    ret;
-  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) %a, i32 8, <2 x i1> <i1 true, i1 false>, <2 x float> poison), !invariant.load !0
-  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) %b, i32 8, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) align 8 %a, <2 x i1> <i1 true, i1 false>, <2 x float> poison), !invariant.load !0
+  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) align 8 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
@@ -348,19 +348,19 @@ define void @global_2xf32_no_align(ptr addrspace(1) %a, ptr addrspace(1) %b) {
 ; CHECK-NEXT:    ld.param.b64 %rd2, [global_2xf32_no_align_param_1];
 ; CHECK-NEXT:    st.global.b32 [%rd2], %r1;
 ; CHECK-NEXT:    ret;
-  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) %a, i32 4, <2 x i1> <i1 true, i1 false>, <2 x float> poison)
-  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) %b, i32 8, <2 x i1> <i1 true, i1 false>)
+  %a.load = tail call <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1) align 4 %a, <2 x i1> <i1 true, i1 false>, <2 x float> poison)
+  tail call void @llvm.masked.store.v2f32.p1(<2 x float> %a.load, ptr addrspace(1) align 8 %b, <2 x i1> <i1 true, i1 false>)
   ret void
 }
 
-declare <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1), i32, <8 x i1>, <8 x i32>)
-declare void @llvm.masked.store.v8i32.p1(<8 x i32>, ptr addrspace(1), i32, <8 x i1>)
-declare <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1), i32, <16 x i1>, <16 x i16>)
-declare void @llvm.masked.store.v16i16.p1(<16 x i16>, ptr addrspace(1), i32, <16 x i1>)
-declare <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1), i32, <2 x i1>, <2 x i16>)
-declare void @llvm.masked.store.v2i16.p1(<2 x i16>, ptr addrspace(1), i32, <2 x i1>)
-declare <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1), i32, <4 x i1>, <4 x i8>)
-declare void @llvm.masked.store.v4i8.p1(<4 x i8>, ptr addrspace(1), i32, <4 x i1>)
-declare <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1), i32, <2 x i1>, <2 x float>)
-declare void @llvm.masked.store.v2f32.p1(<2 x float>, ptr addrspace(1), i32, <2 x i1>)
+declare <8 x i32> @llvm.masked.load.v8i32.p1(ptr addrspace(1), <8 x i1>, <8 x i32>)
+declare void @llvm.masked.store.v8i32.p1(<8 x i32>, ptr addrspace(1), <8 x i1>)
+declare <16 x i16> @llvm.masked.load.v16i16.p1(ptr addrspace(1), <16 x i1>, <16 x i16>)
+declare void @llvm.masked.store.v16i16.p1(<16 x i16>, ptr addrspace(1), <16 x i1>)
+declare <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1), <2 x i1>, <2 x i16>)
+declare void @llvm.masked.store.v2i16.p1(<2 x i16>, ptr addrspace(1), <2 x i1>)
+declare <4 x i8> @llvm.masked.load.v4i8.p1(ptr addrspace(1), <4 x i1>, <4 x i8>)
+declare void @llvm.masked.store.v4i8.p1(<4 x i8>, ptr addrspace(1), <4 x i1>)
+declare <2 x float> @llvm.masked.load.v2f32.p1(ptr addrspace(1), <2 x i1>, <2 x float>)
+declare void @llvm.masked.store.v2f32.p1(<2 x float>, ptr addrspace(1), <2 x i1>)
 !0 = !{}
