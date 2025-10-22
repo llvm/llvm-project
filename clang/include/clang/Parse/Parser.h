@@ -1548,7 +1548,7 @@ private:
                             // 'instancetype'
     DSC_condition,          // condition declaration context
     DSC_association, // A _Generic selection expression's type association
-    DSC_new          // C++ new expression
+    DSC_new,         // C++ new expression
   };
 
   /// Is this a context in which we are parsing just a type-specifier (or
@@ -7683,7 +7683,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim
+  /// \endverbatim 
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 
