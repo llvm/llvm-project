@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos
+  TargetParser
   )
 
 add_llvm_tool(llvm-ir2vec
