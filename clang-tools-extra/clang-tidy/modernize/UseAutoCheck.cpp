@@ -1,4 +1,4 @@
-//===--- UseAutoCheck.cpp - clang-tidy-------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -316,7 +316,7 @@ void UseAutoCheck::replaceIterators(const DeclStmt *D, ASTContext *Context) {
       if (NestedConstruct->getConstructor()->isConvertingConstructor(false))
         return;
     }
-    if (!Context->hasSameType(V->getType(), E->getType()))
+    if (!ASTContext::hasSameType(V->getType(), E->getType()))
       return;
   }
 
@@ -378,7 +378,7 @@ void UseAutoCheck::replaceExpr(
       return;
 
     // If VarDecl and Initializer have mismatching unqualified types.
-    if (!Context->hasSameUnqualifiedType(V->getType(), GetType(Expr)))
+    if (!ASTContext::hasSameUnqualifiedType(V->getType(), GetType(Expr)))
       return;
 
     // All subsequent variables in this declaration should have the same

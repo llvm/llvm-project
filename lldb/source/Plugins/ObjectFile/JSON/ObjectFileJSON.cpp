@@ -12,6 +12,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/DenseSet.h"
@@ -231,6 +232,40 @@ void ObjectFileJSON::CreateSections(SectionList &unified_section_list) {
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }
+}
+
+bool ObjectFileJSON::SetLoadAddress(Target &target, lldb::addr_t value,
+                                    bool value_is_offset) {
+  Log *log(GetLog(LLDBLog::DynamicLoader));
+  if (!m_sections_up)
+    return true;
+
+  addr_t slide = value;
+  if (!value_is_offset) {
+    addr_t lowest_addr = LLDB_INVALID_ADDRESS;
+    for (const SectionSP &section_sp : *m_sections_up) {
+      addr_t section_load_addr = section_sp->GetFileAddress();
+      lowest_addr = std::min(lowest_addr, section_load_addr);
+    }
+    if (lowest_addr == LLDB_INVALID_ADDRESS)
+      return false;
+    slide = value - lowest_addr;
+  }
+
+  // Apply slide to each section's file address.
+  for (const SectionSP &section_sp : *m_sections_up) {
+    addr_t section_load_addr = section_sp->GetFileAddress();
+    if (section_load_addr != LLDB_INVALID_ADDRESS) {
+      LLDB_LOGF(
+          log,
+          "ObjectFileJSON::SetLoadAddress section %s to load addr 0x%" PRIx64,
+          section_sp->GetName().AsCString(), section_load_addr + slide);
+      target.SetSectionLoadAddress(section_sp, section_load_addr + slide,
+                                   /*warn_multiple=*/true);
+    }
+  }
+
+  return true;
 }
 
 bool ObjectFileJSON::MagicBytesMatch(DataBufferSP data_sp,

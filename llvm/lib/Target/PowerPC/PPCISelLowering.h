@@ -498,6 +498,9 @@ namespace llvm {
     /// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
     SETBCR,
 
+    /// VSRQ - The ISA 3.1 (P10) Vector Shift right quadword instruction
+    VSRQ,
+
     // NOTE: The nodes below may require PC-Rel specific patterns if the
     // address could be PC-Relative. When adding new nodes below, consider
     // whether or not the address can be PC-Relative and add the corresponding
@@ -1315,6 +1318,7 @@ namespace llvm {
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUCMP(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1467,6 +1471,9 @@ namespace llvm {
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,
                                                DAGCombinerInfo &DCI) const;
+
+    SDValue combineBVLoadsSpecialValue(SDValue Operand,
+                                       SelectionDAG &DAG) const;
 
     /// lowerToVINSERTH - Return the SDValue if this VECTOR_SHUFFLE can be
     /// handled by the VINSERTH instruction introduced in ISA 3.0. This is

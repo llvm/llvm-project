@@ -88,7 +88,10 @@ __attribute__((pointer_with_type_tag(unsigned1,1,2)));
 
 void TestInt(void) __attribute__((constructor(123)));
 // CHECK:      FunctionDecl{{.*}}TestInt
-// CHECK-NEXT:   ConstructorAttr{{.*}} 123
+// CHECK-NEXT:   ConstructorAttr
+// CHECK-NEXT:   ConstantExpr
+// CHECK-NEXT:   value: Int 123
+// CHECK-NEXT:   IntegerLiteral{{.*}} 123
 
 static int TestString __attribute__((alias("alias1")));
 // CHECK:      VarDecl{{.*}}TestString

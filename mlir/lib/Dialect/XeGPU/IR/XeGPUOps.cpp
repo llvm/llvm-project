@@ -20,10 +20,10 @@
 
 #define DEBUG_TYPE "xegpu"
 
-namespace mlir {
-namespace xegpu {
+using namespace mlir;
+using namespace mlir::xegpu;
 
-bool isSharedMemory(const MemRefType &memrefTy) {
+static bool isSharedMemory(const MemRefType &memrefTy) {
   Attribute attr = memrefTy.getMemorySpace();
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
     return intAttr.getInt() == 3;
@@ -173,6 +173,49 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
   return success();
 }
 
+LogicalResult
+IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
+                      UnitAttr subgroup_block_io,
+                      function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!dataTy) {
+    if (subgroup_block_io)
+      return emitError() << "subgroup_block_io "
+                            "are only allowed when result is a 1D VectorType.";
+    else
+      return success();
+  }
+
+  if (mdescTy.getRank() != 2)
+    return emitError() << "mem_desc must be 2D.";
+
+  ArrayRef<int64_t> dataShape = dataTy.getShape();
+  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
+
+  if (dataShape.size() == 2) {
+    if (subgroup_block_io)
+      return emitError() << "subgroup_block_io "
+                            "are only allowed when result is a 1D VectorType.";
+    if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
+                     [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+      return emitError() << "data shape must not exceed mem_desc shape.";
+  } else {
+    SmallVector<int64_t> blockShape = mdescTy.getBlockShape();
+    // if the subgroup_block_io attribute is set,  mdescTy must have block
+    // attribute
+    if (subgroup_block_io && !blockShape.size())
+      return emitError() << "mem_desc must have block attribute when "
+                            "subgroup_block_io is set.";
+    // if the subgroup_block_io attribute is set, the memdesc should be row
+    // major
+    if (subgroup_block_io && mdescTy.isColMajor())
+      return emitError() << "mem_desc should be row major when "
+                            "subgroup_block_io is set.";
+  }
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -249,7 +292,7 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            llvm::ArrayRef<OpFoldResult> offsets,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && offsets.size() && strides.size() &&
+  assert(!shape.empty() && !offsets.empty() && !strides.empty() &&
          shape.size() == strides.size() && shape.size() == offsets.size());
 
   Type srcTy = source.getType();
@@ -340,7 +383,7 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
-ParseResult parseOptionalDynamicIndexList(
+static ParseResult parseOptionalDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
@@ -378,9 +421,9 @@ ParseResult parseOptionalDynamicIndexList(
   return success();
 }
 
-void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
-                                   OperandRange values,
-                                   DenseI64ArrayAttr integers) {
+static void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          OperandRange values,
+                                          DenseI64ArrayAttr integers) {
   if (!integers || integers.empty())
     return;
   printDynamicIndexList(printer, op, values, integers,
@@ -819,6 +862,22 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
         l1_hint, l2_hint, l3_hint);
 }
 
+void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
+                         Type valueType, Value source,
+                         ArrayRef<OpFoldResult> offsets, Value mask,
+                         IntegerAttr chunk_size, xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
+  auto loc = source.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get(size, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
+
+  build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
+        l2_hint, l3_hint);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_StoreScatterOp
 //===----------------------------------------------------------------------===//
@@ -868,6 +927,24 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
                            xegpu::CachePolicyAttr l3_hint) {
   build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
         l2_hint, l3_hint);
+}
+
+void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
+                           Value value, Value dest,
+                           ArrayRef<OpFoldResult> offsets, Value mask,
+                           IntegerAttr chunk_size,
+                           xegpu::CachePolicyAttr l1_hint,
+                           xegpu::CachePolicyAttr l2_hint,
+                           xegpu::CachePolicyAttr l3_hint) {
+  auto loc = dest.getLoc();
+  int64_t size = static_cast<int64_t>(offsets.size());
+  auto type = VectorType::get(size, builder.getIndexType());
+  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
+  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
+
+  // Call the correct builder overload that does not expect result types.
+  build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
+        l3_hint);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1015,23 +1092,20 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  // Call the generated builder with all parameters (including optional ones as
+  // nullptr/empty)
   build(builder, state, res, memDesc, dynamicOffsets, staticOffsetsAttr,
-        layout);
+        /*subgroup_block_io=*/nullptr, layout);
 }
 
 LogicalResult LoadMatrixOp::verify() {
-  VectorType resTy = getRes().getType();
+
+  auto resTy = dyn_cast<VectorType>(getRes().getType());
+  UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
 
-  if (mdescTy.getRank() != 2)
-    return emitOpError("mem_desc must be 2D.");
-
-  ArrayRef<int64_t> valueShape = resTy.getShape();
-  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-  if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
-                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("result shape must not exceed mem_desc shape.");
-  return success();
+  return IsValidMatrixOpParams(resTy, mdescTy, subgroup_block_io,
+                               [&]() { return emitError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -1046,61 +1120,17 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state, Value data,
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
   build(builder, state, data, memDesc, dynamicOffsets, staticOffsetsAttr,
-        layout);
+        /*subgroup_block_io=*/nullptr, layout);
 }
 
 LogicalResult StoreMatrixOp::verify() {
-  VectorType dataTy = getData().getType();
+
+  auto dataTy = dyn_cast<VectorType>(getData().getType());
+  UnitAttr subgroup_block_io = getSubgroupBlockIoAttr();
   MemDescType mdescTy = getMemDesc().getType();
-
-  if (mdescTy.getRank() != 2)
-    return emitOpError("mem_desc must be 2D.");
-
-  ArrayRef<int64_t> dataShape = dataTy.getShape();
-  ArrayRef<int64_t> mdescShape = mdescTy.getShape();
-  if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
-                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("data shape must not exceed mem_desc shape.");
-
-  return success();
+  return IsValidMatrixOpParams(dataTy, mdescTy, subgroup_block_io,
+                               [&]() { return emitError(); });
 }
-
-//===----------------------------------------------------------------------===//
-// XeGPU_MemDescSubviewOp
-//===----------------------------------------------------------------------===//
-
-void MemDescSubviewOp::build(OpBuilder &builder, OperationState &state,
-                             Type resTy, Value src,
-                             llvm::ArrayRef<OpFoldResult> offsets) {
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<int64_t> staticOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr);
-}
-
-LogicalResult MemDescSubviewOp::verify() {
-  MemDescType srcTy = getSrc().getType();
-  MemDescType resTy = getRes().getType();
-  ArrayRef<int64_t> srcShape = srcTy.getShape();
-  ArrayRef<int64_t> resShape = resTy.getShape();
-
-  if (srcTy.getRank() < resTy.getRank())
-    return emitOpError("result rank must not exceed source rank.");
-
-  if (llvm::any_of(
-          llvm::zip_equal(resShape, srcShape.take_back(resShape.size())),
-          [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
-    return emitOpError("result shape must not exceed source shape.");
-
-  if (srcTy.getStrides() != resTy.getStrides())
-    return emitOpError("result must inherit the source strides.");
-
-  return success();
-}
-
-} // namespace xegpu
-} // namespace mlir
 
 namespace mlir {
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc>

@@ -127,24 +127,24 @@ public:
     return c0.getValue() == c1.getValue();
   }
 
-  friend bool LLVM_ATTRIBUTE_UNUSED operator!=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator!=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() != c1.getValue();
   }
 
   friend bool operator<(const Constructable &c0, const Constructable &c1) {
     return c0.getValue() < c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator<=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator<=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() <= c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>(const Constructable &c0,
-                                              const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>(const Constructable &c0,
+                                         const Constructable &c1) {
     return c0.getValue() > c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() >= c1.getValue();
   }
 };

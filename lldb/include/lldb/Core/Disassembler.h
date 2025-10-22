@@ -566,6 +566,26 @@ private:
   const Disassembler &operator=(const Disassembler &) = delete;
 };
 
+/// Tracks live variable annotations across instructions and produces
+/// per-instruction "events" like `name = RDI` or `name = <undef>`.
+class VariableAnnotator {
+  struct VarState {
+    /// Display name.
+    std::string name;
+    /// Last printed location (empty means <undef>).
+    std::string last_loc;
+  };
+
+  // Live state from the previous instruction, keyed by Variable::GetID().
+  llvm::DenseMap<lldb::user_id_t, VarState> Live_;
+
+public:
+  /// Compute annotation strings for a single instruction and update `Live_`.
+  /// Returns only the events that should be printed *at this instruction*.
+  std::vector<std::string> annotate(Instruction &inst, Target &target,
+                                    const lldb::ModuleSP &module_sp);
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_CORE_DISASSEMBLER_H

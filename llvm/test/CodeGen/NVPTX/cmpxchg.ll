@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_32 | FileCheck %s --check-prefixes=SM30,CHECK
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_32 | %ptxas-verify %}
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | FileCheck %s --check-prefixes=SM70,CHECK
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
+; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 | %ptxas-verify -arch=sm_70 %}
 
 ; TODO: these are system scope, but are compiled to gpu scope..
 ; TODO: these are seq_cst, but are compiled to relaxed..
