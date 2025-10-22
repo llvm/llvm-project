@@ -1439,13 +1439,11 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled,
-          BBFreqEnabled,
-          BrProbEnabled,
+  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          HasCalls,
-          EmitBBHash.getValue()};
+          // Use static_cast to avoid breakage of tests on windows.
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
+          static_cast<bool>(EmitBBHash)};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {

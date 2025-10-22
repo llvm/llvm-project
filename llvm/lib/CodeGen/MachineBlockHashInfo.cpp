@@ -95,10 +95,11 @@ bool MachineBlockHashInfo::runOnMachineFunction(MachineFunction &F) {
 
   // Assign hashes
   for (const MachineBasicBlock &MBB : F) {
-    BlendedBlockHash BlendedHash(fold_64_to_16(HashInfos[&MBB].Offset),
-                                 fold_64_to_16(HashInfos[&MBB].OpcodeHash),
-                                 fold_64_to_16(HashInfos[&MBB].InstrHash),
-                                 fold_64_to_16(HashInfos[&MBB].NeighborHash));
+    const auto &HashInfo = HashInfos[&MBB];
+    BlendedBlockHash BlendedHash(fold_64_to_16(HashInfo.Offset),
+                                 fold_64_to_16(HashInfo.OpcodeHash),
+                                 fold_64_to_16(HashInfo.InstrHash),
+                                 fold_64_to_16(HashInfo.NeighborHash));
     MBBHashInfo[&MBB] = BlendedHash.combine();
   }
 

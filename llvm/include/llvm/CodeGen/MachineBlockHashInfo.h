@@ -39,20 +39,14 @@ public:
 
   /// Combine the blended hash into uint64_t.
   uint64_t combine() const {
-
     uint64_t Hash = 0;
-
     Hash |= uint64_t(NeighborHash);
     Hash <<= 16;
-
     Hash |= uint64_t(InstrHash);
     Hash <<= 16;
-
     Hash |= uint64_t(OpcodeHash);
     Hash <<= 16;
-
     Hash |= uint64_t(Offset);
-
     return Hash;
   }
 
@@ -63,15 +57,14 @@ public:
   /// the OpcodeHashes are identical. Mismatched OpcodeHashes lead to low
   /// matching accuracy, and poor matches undermine the quality of final
   /// inference. Notably, during inference, we also consider the matching
-  /// ratio of basic blocks (BBs). For MachineFunctions with a low matching
+  /// ratio of basic blocks. For MachineFunctions with a low matching
   /// ratio, we directly skip optimization to reduce the impact of
-  /// mismatches—this ensures even very poor profiles won’t cause negative
+  /// mismatches. This ensures even very poor profiles won’t cause negative
   /// optimization.
   /// In the context of matching, we consider NeighborHash to be more
   /// important. This is especially true when accounting for inlining
-  /// scenarios, where the position of a basic block (BB) in the control
-  /// flow graph (CFG) is more critical. Therefore, the matching results
-  /// from NeighborHash carry greater significance.
+  /// scenarios, where the position of a basic block in the control
+  /// flow graph is more critical.
   uint64_t distance(const BlendedBlockHash &BBH) const {
     assert(OpcodeHash == BBH.OpcodeHash &&
            "incorrect blended hash distance computation");

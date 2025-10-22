@@ -92,8 +92,7 @@ int AllComparisons() {
     if (static_cast<unsigned int>(uArray[2]) < static_cast<int>(sArray[2]))
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
-// CHECK-FIXES: if (q20::cmp_less(uArray[2],sArray[2])))
-// FIXME: There should only be 2 closing braces. The fix-it inserts an unbalanced one.
+// CHECK-FIXES: if (q20::cmp_less(uArray[2],sArray[2]))
 
     if ((unsigned int)uArray[3] < (int)sArray[3])
         return 0;
@@ -115,6 +114,11 @@ int AllComparisons() {
         return 0;
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
 // CHECK-FIXES: if (q20::cmp_greater(uArray[6] , VALUE))
+
+    if (unsigned(uArray[7]) >= int(sArray[7]))
+        return 0;
+// CHECK-MESSAGES: :[[@LINE-2]]:9: warning: comparison between 'signed' and 'unsigned' integers [modernize-use-integer-sign-comparison]
+// CHECK-FIXES: if (q20::cmp_greater_equal(uArray[7],sArray[7]))
 
 
     FuncParameters(uVar);
