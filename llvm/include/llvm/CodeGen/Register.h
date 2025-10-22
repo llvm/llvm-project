@@ -37,21 +37,22 @@ public:
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
   static constexpr unsigned MaxFrameIndexBitwidth = 30;
-  static constexpr unsigned FirstStackSlot = 1u << MaxFrameIndexBitwidth;
-  static constexpr const unsigned StackSlotMask =
-      (unsigned)(-1) >> (CHAR_BIT * sizeof(unsigned) - MaxFrameIndexBitwidth);
-  static_assert(FirstStackSlot >= MCRegister::LastPhysicalReg);
+  static constexpr unsigned StackSlotZero = 1u << MaxFrameIndexBitwidth;
+  static constexpr const unsigned StackSlotMask = StackSlotZero - 1;
+  static_assert(StackSlotZero >= MCRegister::LastPhysicalReg);
   static constexpr unsigned VirtualRegFlag = 1u << 31;
 
   /// Return true if this is a stack slot.
   constexpr bool isStack() const {
-    return Register::FirstStackSlot <= Reg && Reg < Register::VirtualRegFlag;
+    return Register::StackSlotZero <= Reg && Reg < Register::VirtualRegFlag;
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
-    assert(isInt<30>(FI) && "Frame index must be at most 30 bit integer");
-    return Register((FI & Register::StackSlotMask) | Register::FirstStackSlot);
+    unsigned FIMasked = FI & Register::StackSlotMask;
+    assert(isUInt<30>(FIMasked) &&
+           "Frame index must be at most 30 bit as an unsigned integer");
+    return Register(FIMasked | Register::StackSlotZero);
   }
 
   /// Return true if the specified register number is in
@@ -91,7 +92,8 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(SignExtend64<30>(Reg & Register::StackSlotMask));
+    return static_cast<int>(
+        SignExtend64<MaxFrameIndexBitwidth>(Reg & Register::StackSlotMask));
   }
 
   constexpr operator unsigned() const { return Reg; }
