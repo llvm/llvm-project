@@ -368,7 +368,8 @@ OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
     // We want the L-value for ONLY the X side, so we ignore implicit casts. For
     // the right side (the expr), we emit it as an r-value so we need to
     // maintain implicit casts.
-    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(), BinaryArgs.second};
+    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second};
   }
   }
 
