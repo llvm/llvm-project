@@ -288,6 +288,9 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                    ArrayRef<unsigned> Matches,
                    SmallVector<WhitespaceManager::Change, 16> &Changes) {
   int Shift = 0;
+  // Set when the shift is applied anywhere in the line. Cleared when the line
+  // ends.
+  bool LineShifted = false;
 
   // ScopeStack keeps track of the current scope depth. It contains the levels
   // of at most 2 scopes. The first one is the one that the matched token is
@@ -339,8 +342,11 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                                   Changes[i - 1].Tok->is(tok::string_literal);
     bool SkipMatchCheck = InsideNestedScope || ContinuedStringLiteral;
 
-    if (CurrentChange.NewlinesBefore > 0 && !SkipMatchCheck)
-      Shift = 0;
+    if (CurrentChange.NewlinesBefore > 0) {
+      LineShifted = false;
+      if (!SkipMatchCheck)
+        Shift = 0;
+    }
 
     // If this is the first matching token to be aligned, remember by how many
     // spaces it has to be shifted, so the rest of the changes on the line are
@@ -349,7 +355,6 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
       Shift = Column - (RightJustify ? CurrentChange.TokenLength : 0) -
               CurrentChange.StartOfTokenColumn;
       ScopeStack = {CurrentChange.indentAndNestingLevel()};
-      CurrentChange.Spaces += Shift;
     }
 
     if (Shift == 0)
@@ -358,8 +363,10 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
     // This is for lines that are split across multiple lines, as mentioned in
     // the ScopeStack comment. The stack size being 1 means that the token is
     // not in a scope that should not move.
-    if (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
-        (ContinuedStringLiteral || InsideNestedScope)) {
+    if ((!Matches.empty() && Matches[0] == i) ||
+        (ScopeStack.size() == 1u && CurrentChange.NewlinesBefore > 0 &&
+         (ContinuedStringLiteral || InsideNestedScope))) {
+      LineShifted = true;
       CurrentChange.Spaces += Shift;
     }
 
@@ -369,9 +376,11 @@ AlignTokenSequence(const FormatStyle &Style, unsigned Start, unsigned End,
                static_cast<int>(Changes[i].Tok->SpacesRequiredBefore) ||
            CurrentChange.Tok->is(tok::eof));
 
-    CurrentChange.StartOfTokenColumn += Shift;
-    if (i + 1 != Changes.size())
-      Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+    if (LineShifted) {
+      CurrentChange.StartOfTokenColumn += Shift;
+      if (i + 1 != Changes.size())
+        Changes[i + 1].PreviousEndOfTokenColumn += Shift;
+    }
 
     // If PointerAlignment is PAS_Right, keep *s or &s next to the token,
     // except if the token is equal, then a space is needed.
