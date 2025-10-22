@@ -23502,12 +23502,10 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         NumDynamic += !isa<ConstantSDNode>(InVec.getOperand(2));
       }
 
-      // We will lower every insertelt in the sequence to a store. In the
-      // default handling, only dynamic insertelts in the sequence will be
-      // lowered to a store (+ vector save/load for each). Check that our
-      // approach reduces the total number of loads and stores over the default.
-      if (2 * VT.getVectorMinNumElements() + Seq.size() <
-          NumDynamic * (2 * VT.getVectorMinNumElements() + 1)) {
+      // It always and only makes sense to lower this sequence when we have more
+      // than one dynamic insertelt, since we will not have more than V constant
+      // insertelts, so we will be reducing the total number of stores+loads.
+      if (NumDynamic > 1) {
         // In cases where the vector is illegal it will be broken down into
         // parts and stored in parts - we should use the alignment for the
         // smallest part.

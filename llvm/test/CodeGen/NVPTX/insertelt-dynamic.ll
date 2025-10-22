@@ -210,8 +210,8 @@ define <4 x i32> @all_dynamic(i32 %idx0, i32 %idx1, i32 %idx2, i32 %idx3) {
 
 ; Test mixed constant and dynamic insertelts with high ratio of dynamic ones.
 ; Should lower all insertelts to stores.
-define <4 x i32> @mix_high_dynamic_ratio(i32 %idx0, i32 %idx1) {
-; CHECK-LABEL: mix_high_dynamic_ratio(
+define <4 x i32> @mix_dynamic_constant(i32 %idx0, i32 %idx1) {
+; CHECK-LABEL: mix_dynamic_constant(
 ; CHECK:       {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot6[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
@@ -222,13 +222,13 @@ define <4 x i32> @mix_high_dynamic_ratio(i32 %idx0, i32 %idx1) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot6;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %rd1, [mix_high_dynamic_ratio_param_0];
+; CHECK-NEXT:    ld.param.b32 %rd1, [mix_dynamic_constant_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
 ; CHECK-NEXT:    st.b32 [%rd5], 10;
-; CHECK-NEXT:    ld.param.b32 %rd6, [mix_high_dynamic_ratio_param_1];
+; CHECK-NEXT:    ld.param.b32 %rd6, [mix_dynamic_constant_param_1];
 ; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
 ; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
 ; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
@@ -246,50 +246,18 @@ define <4 x i32> @mix_high_dynamic_ratio(i32 %idx0, i32 %idx1) {
   ret <4 x i32> %v2
 }
 
-; Test mixed constant and dynamic insertelts with low ratio of dynamic ones.
-; Should handle dynamic insertelt individually.
-define <4 x i32> @mix_low_dynamic_ratio(i32 %idx) {
-; CHECK-LABEL: mix_low_dynamic_ratio(
-; CHECK:       {
-; CHECK-NEXT:    .local .align 4 .b8 __local_depot7[16];
-; CHECK-NEXT:    .reg .b64 %SP;
-; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b64 %SPL, __local_depot7;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %rd1, [mix_low_dynamic_ratio_param_0];
-; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
-; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
-; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
-; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
-; CHECK-NEXT:    st.b32 [%SP], 10;
-; CHECK-NEXT:    st.b32 [%rd5], 20;
-; CHECK-NEXT:    ld.b32 %r1, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r2, [%SP];
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r2, %r1, 30, 40};
-; CHECK-NEXT:    ret;
-  %v0 = insertelement <4 x i32> poison, i32 10, i32 0
-  %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx
-  %v2 = insertelement <4 x i32> %v1, i32 30, i32 2
-  %v3 = insertelement <4 x i32> %v2, i32 40, i32 3
-  ret <4 x i32> %v3
-}
-
 ; Test two separate chains that don't interfere
 define void @two_separate_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
 ; CHECK-LABEL: two_separate_chains(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 4 .b8 __local_depot8[32];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot7[32];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<13>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b64 %SPL, __local_depot8;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot7;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %rd1, [two_separate_chains_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
@@ -331,14 +299,14 @@ define void @two_separate_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
 define void @overlapping_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
 ; CHECK-LABEL: overlapping_chains(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 4 .b8 __local_depot9[32];
+; CHECK-NEXT:    .local .align 4 .b8 __local_depot8[32];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
 ; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b64 %SPL, __local_depot9;
+; CHECK-NEXT:    mov.b64 %SPL, __local_depot8;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b32 %rd1, [overlapping_chains_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
