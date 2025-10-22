@@ -32,7 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/InterleavedRange.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -1736,10 +1736,10 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 // Parser, printer and verifier for Target
 //===----------------------------------------------------------------------===//
 
-// Helper function to get bitwise AND of `value` and 'flag'
-static uint64_t mapTypeToBitFlag(uint64_t value,
-                                 llvm::omp::OpenMPOffloadMappingFlags flag) {
-  return value & llvm::to_underlying(flag);
+// Helper function to get bitwise AND of `value` and 'flag' then return it as a
+// boolean
+static bool mapTypeToBool(ClauseMapFlags value, ClauseMapFlags flag) {
+  return (value & flag) == flag;
 }
 
 /// Parses a map_entries map type from a string format back into its numeric
@@ -1747,10 +1747,9 @@ static uint64_t mapTypeToBitFlag(uint64_t value,
 ///
 /// map-clause = `map_clauses (  ( `(` `always, `? `implicit, `? `ompx_hold, `?
 /// `close, `? `present, `? ( `to` | `from` | `delete` `)` )+ `)` )
-static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
-  llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
-      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-
+static ParseResult parseMapClause(OpAsmParser &parser,
+                                  ClauseMapFlagsAttr &mapType) {
+  ClauseMapFlags mapTypeBits = ClauseMapFlags::none;
   // This simply verifies the correct keyword is read in, the
   // keyword itself is stored inside of the operation
   auto parseTypeAndMod = [&]() -> ParseResult {
@@ -1759,35 +1758,64 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
       return failure();
 
     if (mapTypeMod == "always")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+      mapTypeBits |= ClauseMapFlags::always;
 
     if (mapTypeMod == "implicit")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+      mapTypeBits |= ClauseMapFlags::implicit;
 
     if (mapTypeMod == "ompx_hold")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
+      mapTypeBits |= ClauseMapFlags::ompx_hold;
 
     if (mapTypeMod == "close")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      mapTypeBits |= ClauseMapFlags::close;
 
     if (mapTypeMod == "present")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+      mapTypeBits |= ClauseMapFlags::present;
 
     if (mapTypeMod == "to")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+      mapTypeBits |= ClauseMapFlags::to;
 
     if (mapTypeMod == "from")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::from;
 
     if (mapTypeMod == "tofrom")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                     llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapTypeBits |= ClauseMapFlags::to | ClauseMapFlags::from;
 
     if (mapTypeMod == "delete")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+      mapTypeBits |= ClauseMapFlags::del;
+
+    if (mapTypeMod == "storage")
+      mapTypeBits |= ClauseMapFlags::storage;
 
     if (mapTypeMod == "return_param")
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+      mapTypeBits |= ClauseMapFlags::return_param;
+
+    if (mapTypeMod == "private")
+      mapTypeBits |= ClauseMapFlags::priv;
+
+    if (mapTypeMod == "literal")
+      mapTypeBits |= ClauseMapFlags::literal;
+
+    if (mapTypeMod == "attach")
+      mapTypeBits |= ClauseMapFlags::attach;
+
+    if (mapTypeMod == "attach_always")
+      mapTypeBits |= ClauseMapFlags::attach_always;
+
+    if (mapTypeMod == "attach_none")
+      mapTypeBits |= ClauseMapFlags::attach_none;
+
+    if (mapTypeMod == "attach_auto")
+      mapTypeBits |= ClauseMapFlags::attach_auto;
+
+    if (mapTypeMod == "ref_ptr")
+      mapTypeBits |= ClauseMapFlags::ref_ptr;
+
+    if (mapTypeMod == "ref_ptee")
+      mapTypeBits |= ClauseMapFlags::ref_ptee;
+
+    if (mapTypeMod == "ref_ptr_ptee")
+      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
 
     return success();
   };
@@ -1795,9 +1823,8 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
   if (parser.parseCommaSeparatedList(parseTypeAndMod))
     return failure();
 
-  mapType = parser.getBuilder().getIntegerAttr(
-      parser.getBuilder().getIntegerType(64, /*isSigned=*/false),
-      llvm::to_underlying(mapTypeBits));
+  mapType =
+      parser.getBuilder().getAttr<mlir::omp::ClauseMapFlagsAttr>(mapTypeBits);
 
   return success();
 }
@@ -1805,60 +1832,62 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
 /// Prints a map_entries map type from its numeric value out into its string
 /// format.
 static void printMapClause(OpAsmPrinter &p, Operation *op,
-                           IntegerAttr mapType) {
-  uint64_t mapTypeBits = mapType.getUInt();
-
-  bool emitAllocRelease = true;
+                           ClauseMapFlagsAttr mapType) {
   llvm::SmallVector<std::string, 4> mapTypeStrs;
+  ClauseMapFlags mapFlags = mapType.getValue();
 
   // handling of always, close, present placed at the beginning of the string
   // to aid readability
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::always))
     mapTypeStrs.push_back("always");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::implicit))
     mapTypeStrs.push_back("implicit");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ompx_hold))
     mapTypeStrs.push_back("ompx_hold");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::close))
     mapTypeStrs.push_back("close");
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT))
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
   // both the to and from flag to be set.
-  bool to = mapTypeToBitFlag(mapTypeBits,
-                             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-  bool from = mapTypeToBitFlag(
-      mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-  if (to && from) {
-    emitAllocRelease = false;
+  bool to = mapTypeToBool(mapFlags, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapFlags, ClauseMapFlags::from);
+
+  if (to && from)
     mapTypeStrs.push_back("tofrom");
-  } else if (from) {
-    emitAllocRelease = false;
+  else if (from)
     mapTypeStrs.push_back("from");
-  } else if (to) {
-    emitAllocRelease = false;
+  else if (to)
     mapTypeStrs.push_back("to");
-  }
-  if (mapTypeToBitFlag(mapTypeBits,
-                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE)) {
-    emitAllocRelease = false;
+
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::del))
     mapTypeStrs.push_back("delete");
-  }
-  if (mapTypeToBitFlag(
-          mapTypeBits,
-          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM)) {
-    emitAllocRelease = false;
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::return_param))
     mapTypeStrs.push_back("return_param");
-  }
-  if (emitAllocRelease)
-    mapTypeStrs.push_back("exit_release_or_enter_alloc");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::storage))
+    mapTypeStrs.push_back("storage");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::priv))
+    mapTypeStrs.push_back("private");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::literal))
+    mapTypeStrs.push_back("literal");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach))
+    mapTypeStrs.push_back("attach");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_always))
+    mapTypeStrs.push_back("attach_always");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_none))
+    mapTypeStrs.push_back("attach_none");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::attach_auto))
+    mapTypeStrs.push_back("attach_auto");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr))
+    mapTypeStrs.push_back("ref_ptr");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
+    mapTypeStrs.push_back("ref_ptee");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
+    mapTypeStrs.push_back("ref_ptr_ptee");
+  if (mapFlags == ClauseMapFlags::none)
+    mapTypeStrs.push_back("none");
 
   for (unsigned int i = 0; i < mapTypeStrs.size(); ++i) {
     p << mapTypeStrs[i];
@@ -1962,21 +1991,15 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
       return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
-      uint64_t mapTypeBits = mapInfoOp.getMapType();
+      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
 
-      bool to = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
-      bool from = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM);
-      bool del = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE);
+      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
 
-      bool always = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
-      bool close = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
-      bool implicit = mapTypeToBitFlag(
-          mapTypeBits, llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
+      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
 
       if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
         return emitError(op->getLoc(),
@@ -3385,6 +3408,9 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
   Value result = getResult();
   auto [newCli, gen, cons] = decodeCli(result);
 
+  // Structured binding `gen` cannot be captured in lambdas before C++20
+  OpOperand *generator = gen;
+
   // Derive the CLI variable name from its generator:
   //  * "canonloop" for omp.canonical_loop
   //  * custom name for loop transformation generatees
@@ -3403,10 +3429,25 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
             .Case([&](UnrollHeuristicOp op) -> std::string {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
-            .Default([&](Operation *op) {
-              assert(false && "TODO: Custom name for this operation");
-              return "transformed";
-            });
+            .Case([&](TileOp op) -> std::string {
+              auto [generateesFirst, generateesCount] =
+                  op.getGenerateesODSOperandIndexAndLength();
+              unsigned firstGrid = generateesFirst;
+              unsigned firstIntratile = generateesFirst + generateesCount / 2;
+              unsigned end = generateesFirst + generateesCount;
+              unsigned opnum = generator->getOperandNumber();
+              // In the OpenMP apply and looprange clauses, indices are 1-based
+              if (firstGrid <= opnum && opnum < firstIntratile) {
+                unsigned gridnum = opnum - firstGrid + 1;
+                return ("grid" + Twine(gridnum)).str();
+              }
+              if (firstIntratile <= opnum && opnum < end) {
+                unsigned intratilenum = opnum - firstIntratile + 1;
+                return ("intratile" + Twine(intratilenum)).str();
+              }
+              llvm_unreachable("Unexpected generatee argument");
+            })
+            .DefaultUnreachable("TODO: Custom name for this operation");
   }
 
   setNameFn(result, cliName);
@@ -3629,6 +3670,138 @@ UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
 std::pair<unsigned, unsigned>
 UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
   return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
+// TileOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, TileOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+static ParseResult parseLoopTransformClis(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &generateesOperands,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &applyeesOperands) {
+  if (parser.parseOptionalLess()) {
+    // Syntax 1: generatees present
+
+    if (parser.parseOperandList(generateesOperands,
+                                mlir::OpAsmParser::Delimiter::Paren))
+      return failure();
+
+    if (parser.parseLess())
+      return failure();
+  } else {
+    // Syntax 2: generatees omitted
+  }
+
+  // Parse `<-` (`<` has already been parsed)
+  if (parser.parseMinus())
+    return failure();
+
+  if (parser.parseOperandList(applyeesOperands,
+                              mlir::OpAsmParser::Delimiter::Paren))
+    return failure();
+
+  return success();
+}
+
+LogicalResult TileOp::verify() {
+  if (getApplyees().empty())
+    return emitOpError() << "must apply to at least one loop";
+
+  if (getSizes().size() != getApplyees().size())
+    return emitOpError() << "there must be one tile size for each applyee";
+
+  if (!getGeneratees().empty() &&
+      2 * getSizes().size() != getGeneratees().size())
+    return emitOpError()
+           << "expecting two times the number of generatees than applyees";
+
+  DenseSet<Value> parentIVs;
+
+  Value parent = getApplyees().front();
+  for (auto &&applyee : llvm::drop_begin(getApplyees())) {
+    auto [parentCreate, parentGen, parentCons] = decodeCli(parent);
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!parentGen)
+      return emitOpError() << "applyee CLI has no generator";
+
+    auto parentLoop = dyn_cast_or_null<CanonicalLoopOp>(parentGen->getOwner());
+    if (!parentGen)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    parentIVs.insert(parentLoop.getInductionVar());
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+
+    // Canonical loop must be perfectly nested, i.e. the body of the parent must
+    // only contain the omp.canonical_loop of the nested loops, and
+    // omp.terminator
+    bool isPerfectlyNested = [&]() {
+      auto &parentBody = parentLoop.getRegion();
+      if (!parentBody.hasOneBlock())
+        return false;
+      auto &parentBlock = parentBody.getBlocks().front();
+
+      auto nestedLoopIt = parentBlock.begin();
+      if (nestedLoopIt == parentBlock.end() ||
+          (&*nestedLoopIt != loop.getOperation()))
+        return false;
+
+      auto termIt = std::next(nestedLoopIt);
+      if (termIt == parentBlock.end() || !isa<TerminatorOp>(termIt))
+        return false;
+
+      if (std::next(termIt) != parentBlock.end())
+        return false;
+
+      return true;
+    }();
+    if (!isPerfectlyNested)
+      return emitOpError() << "tiled loop nest must be perfectly nested";
+
+    if (parentIVs.contains(loop.getTripCount()))
+      return emitOpError() << "tiled loop nest must be rectangular";
+
+    parent = applyee;
+  }
+
+  // TODO: The tile sizes must be computed before the loop, but checking this
+  // requires dominance analysis. For instance:
+  //
+  //      %canonloop = omp.new_cli
+  //      omp.canonical_loop(%canonloop) %iv : i32 in range(%tc) {
+  //        // write to %x
+  //        omp.terminator
+  //      }
+  //      %ts = llvm.load %x
+  //      omp.tile <- (%canonloop) sizes(%ts : i32)
+
+  return success();
+}
+
+std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
 //===----------------------------------------------------------------------===//

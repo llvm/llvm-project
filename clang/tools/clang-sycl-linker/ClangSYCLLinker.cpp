@@ -462,9 +462,10 @@ static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
 
 // TODO: Consider using LLVM-IR metadata to identify globals of interest
 bool isKernel(const Function &F) {
-  const CallingConv::ID CC = F.getCallingConv();
-  return CC == CallingConv::SPIR_KERNEL || CC == CallingConv::AMDGPU_KERNEL ||
-         CC == CallingConv::PTX_Kernel;
+  const llvm::CallingConv::ID CC = F.getCallingConv();
+  return CC == llvm::CallingConv::SPIR_KERNEL ||
+         CC == llvm::CallingConv::AMDGPU_KERNEL ||
+         CC == llvm::CallingConv::PTX_Kernel;
 }
 
 /// Performs the following steps:

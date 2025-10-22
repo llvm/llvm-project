@@ -113,12 +113,14 @@ MODULE_PASS("pgo-force-function-attrs",
                                           ? PGOOpt->ColdOptType
                                           : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
+MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
 MODULE_PASS("module-inline", ModuleInlinerPass())
 MODULE_PASS("name-anon-globals", NameAnonGlobalPass())
 MODULE_PASS("no-op-module", NoOpModulePass())
+MODULE_PASS("norecurse-lto-inference", NoRecurseLTOInferencePass())
 MODULE_PASS("nsan", NumericalStabilitySanitizerPass())
 MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
@@ -179,6 +181,10 @@ MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 #ifndef MODULE_PASS_WITH_PARAMS
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+MODULE_PASS_WITH_PARAMS(
+    "alloc-token", "AllocTokenPass",
+    [](AllocTokenOptions Opts) { return AllocTokenPass(Opts); },
+    parseAllocTokenPassOptions, "mode=<mode>")
 MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },
@@ -685,8 +691,9 @@ FUNCTION_PASS_WITH_PARAMS(
     parseSimplifyCFGOptions,
     "no-speculate-blocks;speculate-blocks;no-simplify-cond-branch;"
     "simplify-cond-branch;no-forward-switch-cond;forward-switch-cond;"
-    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-lookup;"
-    "switch-to-lookup;no-keep-loops;keep-loops;no-hoist-common-insts;"
+    "no-switch-range-to-icmp;switch-range-to-icmp;no-switch-to-arithmetic;"
+    "switch-to-arithmetic;no-switch-to-lookup;switch-to-lookup;"
+    "no-keep-loops;keep-loops;no-hoist-common-insts;"
     "hoist-common-insts;no-hoist-loads-stores-with-cond-faulting;"
     "hoist-loads-stores-with-cond-faulting;no-sink-common-insts;"
     "sink-common-insts;no-speculate-unpredictables;speculate-unpredictables;"

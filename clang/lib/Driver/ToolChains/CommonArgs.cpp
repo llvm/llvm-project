@@ -1272,6 +1272,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
   if (!StatsFile.empty())
@@ -2231,7 +2236,7 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
     return 0;
 
   unsigned Value = 0;
-  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 5 ||
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 6 ||
       Value < 2)
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
@@ -2244,13 +2249,14 @@ unsigned tools::DwarfVersionNum(StringRef ArgValue) {
       .Case("-gdwarf-3", 3)
       .Case("-gdwarf-4", 4)
       .Case("-gdwarf-5", 5)
+      .Case("-gdwarf-6", 6)
       .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
                          options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
+                         options::OPT_gdwarf_6, options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,

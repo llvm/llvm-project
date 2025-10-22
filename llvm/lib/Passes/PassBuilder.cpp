@@ -240,6 +240,7 @@
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
@@ -1094,6 +1095,31 @@ Expected<MemorySanitizerOptions> parseMSanPassOptions(StringRef Params) {
   return Result;
 }
 
+Expected<AllocTokenOptions> parseAllocTokenPassOptions(StringRef Params) {
+  AllocTokenOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("mode=")) {
+      if (auto Mode = getAllocTokenModeFromString(ParamName))
+        Result.Mode = *Mode;
+      else
+        return make_error<StringError>(
+            formatv("invalid argument to AllocToken pass mode "
+                    "parameter: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid AllocToken pass parameter '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
+}
+
 /// Parser of parameters for SimplifyCFG pass.
 Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
   SimplifyCFGOptions Result;
@@ -1110,6 +1136,8 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
       Result.forwardSwitchCondToPhi(Enable);
     } else if (ParamName == "switch-range-to-icmp") {
       Result.convertSwitchRangeToICmp(Enable);
+    } else if (ParamName == "switch-to-arithmetic") {
+      Result.convertSwitchToArithmetic(Enable);
     } else if (ParamName == "switch-to-lookup") {
       Result.convertSwitchToLookupTable(Enable);
     } else if (ParamName == "keep-loops") {
@@ -2024,13 +2052,13 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
 #define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(                             \
-        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false)));                 \
     return Error::success();                                                   \
   }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     MPM.addPass(createModuleToFunctionPassAdaptor(                             \
-        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false)));                 \
     return Error::success();                                                   \
   }
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
@@ -2038,9 +2066,8 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
-    MPM.addPass(                                                               \
-        createModuleToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(     \
-            CREATE_PASS(Params.get()), false, false)));                        \
+    MPM.addPass(createModuleToFunctionPassAdaptor(                             \
+        createFunctionToLoopPassAdaptor(CREATE_PASS(Params.get()), false)));   \
     return Error::success();                                                   \
   }
 #include "PassRegistry.def"
@@ -2139,13 +2166,13 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
 #define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(                             \
-        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false)));                 \
     return Error::success();                                                   \
   }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     CGPM.addPass(createCGSCCToFunctionPassAdaptor(                             \
-        createFunctionToLoopPassAdaptor(CREATE_PASS, false, false)));          \
+        createFunctionToLoopPassAdaptor(CREATE_PASS, false)));                 \
     return Error::success();                                                   \
   }
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
@@ -2153,9 +2180,8 @@ Error PassBuilder::parseCGSCCPass(CGSCCPassManager &CGPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
-    CGPM.addPass(                                                              \
-        createCGSCCToFunctionPassAdaptor(createFunctionToLoopPassAdaptor(      \
-            CREATE_PASS(Params.get()), false, false)));                        \
+    CGPM.addPass(createCGSCCToFunctionPassAdaptor(                             \
+        createFunctionToLoopPassAdaptor(CREATE_PASS(Params.get()), false)));   \
     return Error::success();                                                   \
   }
 #include "PassRegistry.def"
@@ -2188,11 +2214,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
         return Err;
       // Add the nested pass manager with the appropriate adaptor.
       bool UseMemorySSA = (Name == "loop-mssa");
-      bool UseBFI = llvm::any_of(InnerPipeline, [](auto Pipeline) {
-        return Pipeline.Name.contains("simple-loop-unswitch");
-      });
-      FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA,
-                                                  UseBFI));
+      FPM.addPass(
+          createFunctionToLoopPassAdaptor(std::move(LPM), UseMemorySSA));
       return Error::success();
     }
     if (Name == "machine-function") {
@@ -2245,12 +2268,12 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
 //        The risk is that it may become obsolete if we're not careful.
 #define LOOPNEST_PASS(NAME, CREATE_PASS)                                       \
   if (Name == NAME) {                                                          \
-    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false, false));   \
+    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false));          \
     return Error::success();                                                   \
   }
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
-    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false, false));   \
+    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS, false));          \
     return Error::success();                                                   \
   }
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
@@ -2258,8 +2281,8 @@ Error PassBuilder::parseFunctionPass(FunctionPassManager &FPM,
     auto Params = parsePassParameters(PARSER, Name, NAME);                     \
     if (!Params)                                                               \
       return Params.takeError();                                               \
-    FPM.addPass(createFunctionToLoopPassAdaptor(CREATE_PASS(Params.get()),     \
-                                                false, false));                \
+    FPM.addPass(                                                               \
+        createFunctionToLoopPassAdaptor(CREATE_PASS(Params.get()), false));    \
     return Error::success();                                                   \
   }
 #include "PassRegistry.def"

@@ -419,7 +419,7 @@ protected:
           // Seems weird that we Launch a core file, but that is what we
           // do!
           {
-            ElapsedTime loadCoreTime(
+            ElapsedTime load_core_time(
                 target_sp->GetStatistics().GetLoadCoreTime());
             error = process_sp->LoadCore();
           }

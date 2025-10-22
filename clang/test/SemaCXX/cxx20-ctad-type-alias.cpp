@@ -587,6 +587,23 @@ static_assert(__is_same(decltype(a), A<A<int>>));
 
 } // namespace GH133132
 
+namespace GH131408 {
+
+struct Node {};
+
+template <class T, Node>
+struct A {
+    A(T) {}
+};
+
+template <class T>
+using AA = A<T, {}>;
+
+AA a{0};
+
+static_assert(__is_same(decltype(a), A<int, Node{}>));
+}
+
 namespace GH130604 {
 template <typename T> struct A {
     A(T);
