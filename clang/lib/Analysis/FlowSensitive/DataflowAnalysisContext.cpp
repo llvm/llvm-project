@@ -59,6 +59,7 @@ void DataflowAnalysisContext::addModeledFields(const FieldSet &Fields) {
 }
 
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
+  StorageLocation *S;
   if (!Type.isNull() && Type->isRecordType()) {
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     for (const FieldDecl *Field : getModeledFields(Type))
@@ -74,10 +75,14 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
           {Entry.getKey(),
            &createStorageLocation(Entry.getValue().getNonReferenceType())});
 
-    return createRecordStorageLocation(Type, std::move(FieldLocs),
+    S = &createRecordStorageLocation(Type, std::move(FieldLocs),
                                        std::move(SyntheticFields));
+  } else {
+    S = &arena().create<ScalarStorageLocation>(Type);
   }
-  return arena().create<ScalarStorageLocation>(Type);
+  if (InitializerCallback)
+    (*InitializerCallback)(Type, *S);
+  return *S;
 }
 
 // Returns the keys for a given `StringMap`.
