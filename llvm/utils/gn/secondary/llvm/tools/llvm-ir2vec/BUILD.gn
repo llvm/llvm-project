@@ -10,6 +10,7 @@ executable("llvm-ir2vec") {
     "//llvm/lib/Target:AllTargetsCodeGens",
     "//llvm/lib/Target:AllTargetsDescs",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-ir2vec.cpp" ]
 }
