@@ -9,13 +9,13 @@
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt --no-threads --print-all | FileCheck %s --check-prefix=CHECK-BOLT
 
 # Check that the negate-ra-state at the start of bar is not discarded.
-# If it was discarded, MarkRAState would report bar as having inconsistent RAStates.
+# If it was discarded, PointerAuthCFIAnalyzer would report bar as having inconsistent RAStates.
 # This is testing the handling of initialRAState on the BinaryFunction.
 # CHECK-BOLT-NOT: BOLT-INFO: inconsistent RAStates in function foo
 # CHECK-BOLT-NOT: BOLT-INFO: inconsistent RAStates in function bar
 
 # Check that OpNegateRAState CFIs are generated correctly.
-# CHECK-BOLT: Binary Function "foo" after insert-negate-ra-state-pass {
+# CHECK-BOLT: Binary Function "foo" after pointer-auth-cfi-fixup {
 # CHECK-BOLT:         paciasp
 # CHECK-BOLT-NEXT:    OpNegateRAState
 
@@ -23,7 +23,7 @@
 # CHECK-BOLT-NEXT:     0:  OpNegateRAState
 # CHECK-BOLT-NEXT: End of Function "foo"
 
-# CHECK-BOLT: Binary Function "bar" after insert-negate-ra-state-pass {
+# CHECK-BOLT: Binary Function "bar" after pointer-auth-cfi-fixup {
 # CHECK-BOLT:         OpNegateRAState
 # CHECK-BOLT-NEXT:    mov     x1, #0x0
 # CHECK-BOLT-NEXT:    mov     x1, #0x1
@@ -37,7 +37,7 @@
 # CHECK-BOLT-NEXT: End of Function "bar"
 
 # End of negate-ra-state insertion logs for foo and bar.
-# CHECK: Binary Function "_start" after insert-negate-ra-state-pass {
+# CHECK: Binary Function "_start" after pointer-auth-cfi-fixup {
 
 # Check that the functions are in the new .text section
 # RUN: llvm-objdump %t.exe.bolt -d -j .text | FileCheck %s --check-prefix=CHECK-OBJDUMP

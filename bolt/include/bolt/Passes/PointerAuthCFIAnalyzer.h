@@ -1,4 +1,4 @@
-//===- bolt/Passes/MarkRAStates.cpp ---------------------------------===//
+//===- bolt/Passes/PointerAuthCFIAnalyzer.h -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the MarkRAStates class.
+// This file implements the PointerAuthCFIAnalyzer class.
 //
 //===----------------------------------------------------------------------===//
-#ifndef BOLT_PASSES_MARK_RA_STATES
-#define BOLT_PASSES_MARK_RA_STATES
+#ifndef BOLT_PASSES_POINTER_AUTH_CFI_ANALYZER
+#define BOLT_PASSES_POINTER_AUTH_CFI_ANALYZER
 
 #include "bolt/Passes/BinaryPasses.h"
 
 namespace llvm {
 namespace bolt {
 
-class MarkRAStates : public BinaryFunctionPass {
+class PointerAuthCFIAnalyzer : public BinaryFunctionPass {
 public:
-  explicit MarkRAStates() : BinaryFunctionPass(false) {}
+  explicit PointerAuthCFIAnalyzer() : BinaryFunctionPass(false) {}
 
-  const char *getName() const override { return "mark-ra-states"; }
+  const char *getName() const override { return "pointer-auth-cfi-analyzer"; }
 
   /// Pass entry point
   Error runOnFunctions(BinaryContext &BC) override;
