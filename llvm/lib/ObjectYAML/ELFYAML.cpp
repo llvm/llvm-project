@@ -1920,6 +1920,7 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
     IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("BBFreq", E.BBFreq);
+  IO.mapOptional("PropellerBBFreq", E.PropellerBBFreq);
   IO.mapOptional("Successors", E.Successors);
 }
 
@@ -1929,6 +1930,7 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("ID", E.ID);
   IO.mapRequired("BrProb", E.BrProb);
+  IO.mapOptional("PropellerBrFreq", E.PropellerBrFreq);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,
