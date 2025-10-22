@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
@@ -150,6 +151,18 @@ public:
         return LHS < RHS;
     }
     return false;
+  }
+
+  template <typename Func>
+  constexpr void forEachBit(Func func) const {
+    for (unsigned I = 0; I < MAX_SUBTARGET_WORDS; ++I) {
+      uint64_t Word = Bits[I];
+      while (Word) {
+        unsigned Bit = llvm::countr_zero(Word);
+        Word &= Word - 1;
+        func(I * 64 + Bit);
+      }
+    }
   }
 };
 

@@ -34,15 +34,32 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-static
-void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
-                    ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
-  // which might imply features not in FeatureTable to use this.
-  Bits |= Implies;
-  for (const SubtargetFeatureKV &FE : FeatureTable)
-    if (Implies.test(FE.Value))
-      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
+static void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
+                           ArrayRef<SubtargetFeatureKV> FeatureTable) {
+  std::array<uint16_t, MAX_SUBTARGET_FEATURES> featureMap;
+  FeatureBitset Mask;
+  uint16_t idx = 0;
+  for (const auto &FE : FeatureTable) {
+    Mask.set(FE.Value);
+    featureMap[FE.Value] = idx++;
+  }
+
+  FeatureBitset impl(Implies);
+  while (true) {
+    Bits |= impl;
+    auto newImplies = Mask & impl;
+    if (newImplies.none()) {
+      break;
+    }
+
+    Mask ^= newImplies;
+    impl = FeatureBitset();
+
+    newImplies.forEachBit([&](unsigned Bit) {
+      unsigned idx = featureMap[Bit];
+      impl |= FeatureTable[idx].Implies.getAsBitset();
+    });
+  }
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
