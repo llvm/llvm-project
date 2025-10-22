@@ -94,6 +94,19 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
     StringRef Prefix = G.Pattern.prefix();
     StringRef Suffix = G.Pattern.suffix();
 
+    if (Suffix.empty() && Prefix.empty()) {
+      // If both prefix and suffix are empty put into special tree to search by
+      // substring in a middle.
+      StringRef Substr = G.Pattern.longest_substr();
+      if (!Substr.empty()) {
+        // But only if substring is not empty. Searching this tree is more
+        // expensive.
+        auto &V = SubstrToGlob.emplace(Substr).first->second;
+        V.emplace_back(&G);
+        continue;
+      }
+    }
+
     auto &PToGlob = SuffixPrefixToGlob.emplace(reverse(Suffix)).first->second;
     auto &V = PToGlob.emplace(Prefix).first->second;
     V.emplace_back(&G);
@@ -107,6 +120,21 @@ void SpecialCaseList::GlobMatcher::match(
     for (const auto &[_, PToGlob] :
          SuffixPrefixToGlob.find_prefixes(reverse(Query))) {
       for (const auto &[_, V] : PToGlob.find_prefixes(Query)) {
+        for (const auto *G : reverse(V)) {
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!SubstrToGlob.empty()) {
+    // As we don't know when substring exactly starts, we will try all
+    // possibilities. In most cases search will fail on first characters.
+    for (StringRef Q = Query; !Q.empty(); Q = Q.drop_front()) {
+      for (const auto &[_, V] : SubstrToGlob.find_prefixes(Q)) {
         for (const auto *G : reverse(V)) {
           if (G->Pattern.match(Query)) {
             Cb(G->Name, G->LineNo);

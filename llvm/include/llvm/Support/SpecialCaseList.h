@@ -170,6 +170,10 @@ private:
               RadixTree<iterator_range<StringRef::const_iterator>,
                         SmallVector<const GlobMatcher::Glob *, 1>>>
         SuffixPrefixToGlob;
+
+    RadixTree<iterator_range<StringRef::const_iterator>,
+              SmallVector<const GlobMatcher::Glob *, 1>>
+        SubstrToGlob;
   };
 
   /// Represents a set of patterns and their line numbers
