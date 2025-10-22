@@ -946,6 +946,10 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         uint64_t BBF = FeatEnable.BBFreq
                            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
                            : 0;
+        uint32_t PropellerBBFreq =
+            FeatEnable.PropellerCfg
+                ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                : 0;
 
         // Branch probability
         llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
@@ -955,13 +959,20 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           for (uint64_t I = 0; I < SuccCount; ++I) {
             uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
             uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            uint32_t PropellerFreq =
+                FeatEnable.PropellerCfg
+                    ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                    : 0;
+
             if (PGOAnalyses)
-              Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
+              Successors.push_back(
+                  {BBID, BranchProbability::getRaw(BrProb), PropellerFreq});
           }
         }
 
         if (PGOAnalyses)
-          PGOBBEntries.push_back({BlockFrequency(BBF), std::move(Successors)});
+          PGOBBEntries.push_back(
+              {BlockFrequency(BBF), PropellerBBFreq, std::move(Successors)});
       }
 
       if (PGOAnalyses)
