@@ -1953,7 +1953,7 @@ CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation OperatorLoc,
                                        SourceLocation OperandLoc,
                                        QualType Operand) {
-  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.DependentTy, Operand);
+  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.VoidTy, Operand);
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
   return E;
@@ -1966,7 +1966,7 @@ CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
   bool IsNamespace = isa<TranslationUnitDecl>(Operand);
 
   CXXReflectExpr *E =
-      new (C) CXXReflectExpr(C, C.DependentTy, Operand, IsNamespace);
+      new (C) CXXReflectExpr(C, C.VoidTy, Operand, IsNamespace);
 
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
