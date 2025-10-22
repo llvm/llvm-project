@@ -18,9 +18,11 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
-    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT) &&                       \
+    defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
 
 // We use float-float implementation to reduce size.
 #include "atan2f_float.h"
