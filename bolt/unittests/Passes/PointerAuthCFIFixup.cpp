@@ -1,4 +1,4 @@
-//===- bolt/unittest/Passes/InsertNegateRAState.cpp -----------------------===//
+//===- bolt/unittest/Passes/PointerAuthCFIFixup.cpp ----------------------===//
 //
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -14,7 +14,7 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "bolt/Passes/InsertNegateRAStatePass.h"
+#include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Rewrite/BinaryPassManager.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -83,7 +83,7 @@ protected:
                             BC->MRI.get(), BC->STI.get())));
 
     PassManager = std::make_unique<BinaryFunctionPassManager>(*BC);
-    PassManager->registerPass(std::make_unique<InsertNegateRAState>());
+    PassManager->registerPass(std::make_unique<PointerAuthCFIFixup>());
 
     TextSection = &BC->registerOrUpdateSection(
         ".text", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_EXECINSTR,
