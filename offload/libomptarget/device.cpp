@@ -456,3 +456,7 @@ uint32_t DeviceTy::getNumMultiDevices() const {
 bool DeviceTy::isMultiDeviceKernel(void *TgtEntryPtr) {
   return RTL->kernel_is_multi_device(RTLDeviceID, TgtEntryPtr);
 }
+
+bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
+}
