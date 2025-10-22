@@ -111,6 +111,12 @@ public:
     SyntheticFieldCallback = CB;
   }
 
+  void setInitializerCallback(
+      std::function<void(QualType, StorageLocation&)> CB) {
+    assert(!RecordStorageLocationCreated);
+    InitializerCallback = CB;
+  }
+
   /// Returns a new storage location appropriate for `Type`.
   ///
   /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
@@ -332,6 +338,7 @@ private:
   std::unique_ptr<Logger> LogOwner; // If created via flags.
 
   std::function<llvm::StringMap<QualType>(QualType)> SyntheticFieldCallback;
+  std::optional<std::function<void(QualType, StorageLocation&)>> InitializerCallback;
 
   /// Has any `RecordStorageLocation` been created yet?
   bool RecordStorageLocationCreated = false;
