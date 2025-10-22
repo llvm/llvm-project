@@ -50,6 +50,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -544,6 +545,46 @@ struct OMPInformationCache : public InformationCache {
     collectUses(RFI, /*CollectStats*/ false);
   }
 
+  void initializeMetadata(Function *F, RuntimeFunction RF) {
+    if (!F)
+      return;
+
+    // Check if this is one of the runtime functions that needs callback
+    // metadata
+    switch (RF) {
+    case OMPRTL___kmpc_distribute_static_loop_4:
+    case OMPRTL___kmpc_distribute_static_loop_4u:
+    case OMPRTL___kmpc_distribute_static_loop_8:
+    case OMPRTL___kmpc_distribute_static_loop_8u:
+    case OMPRTL___kmpc_distribute_for_static_loop_4:
+    case OMPRTL___kmpc_distribute_for_static_loop_4u:
+    case OMPRTL___kmpc_distribute_for_static_loop_8:
+    case OMPRTL___kmpc_distribute_for_static_loop_8u:
+    case OMPRTL___kmpc_for_static_loop_4:
+    case OMPRTL___kmpc_for_static_loop_4u:
+    case OMPRTL___kmpc_for_static_loop_8:
+    case OMPRTL___kmpc_for_static_loop_8u: {
+      // Only add metadata if it doesn't already exist
+      if (!F->hasMetadata(LLVMContext::MD_callback)) {
+        LLVMContext &Ctx = F->getContext();
+        MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the runtime function:
+        //  - The callback callee is argument number 1.
+        //  - The first argument of the callback callee is unknown (-1).
+        //  - The second argument of the callback callee is argument number 2
+        F->addMetadata(
+            LLVMContext::MD_callback,
+            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                  1, {-1, 2}, /* VarArgsArePassed */ false)}));
+      }
+      break;
+    }
+    default:
+      // No metadata needed for other runtime functions
+      break;
+    }
+  }
+
   // Helper function to recollect uses of all runtime functions.
   void recollectUses() {
     for (int Idx = 0; Idx < RFIs.size(); ++Idx)
@@ -615,6 +656,7 @@ struct OMPInformationCache : public InformationCache {
       RFI.ReturnType = OMPBuilder._ReturnType;                                 \
       RFI.ArgumentTypes = std::move(ArgsTypes);                                \
       RFI.Declaration = F;                                                     \
+      initializeMetadata(F, _Enum);                                            \
       unsigned NumUses = collectUses(RFI);                                     \
       (void)NumUses;                                                           \
       LLVM_DEBUG({                                                             \
@@ -3659,44 +3701,19 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   static const char ID;
 };
 
-static bool isRuntimeFuncionWithCallbacks(RuntimeFunction RF) {
-  switch (RF) {
-  case OMPRTL___kmpc_distribute_static_loop_4:
-  case OMPRTL___kmpc_distribute_static_loop_4u:
-  case OMPRTL___kmpc_distribute_static_loop_8:
-  case OMPRTL___kmpc_distribute_static_loop_8u:
-  case OMPRTL___kmpc_distribute_for_static_loop_4:
-  case OMPRTL___kmpc_distribute_for_static_loop_4u:
-  case OMPRTL___kmpc_distribute_for_static_loop_8:
-  case OMPRTL___kmpc_distribute_for_static_loop_8u:
-  case OMPRTL___kmpc_for_static_loop_4:
-  case OMPRTL___kmpc_for_static_loop_4u:
-  case OMPRTL___kmpc_for_static_loop_8:
-  case OMPRTL___kmpc_for_static_loop_8u:
-    return true;
-  default:
-    return false;
-  }
+static bool isRuntimeFunctionWithCallbacks(Function *Fn) {
+  return Fn->hasMetadata(LLVMContext::MD_callback);
 }
 
-static unsigned runtimeFuncionCallbackArgNo(RuntimeFunction RF) {
-  switch (RF) {
-  case OMPRTL___kmpc_distribute_static_loop_4:
-  case OMPRTL___kmpc_distribute_static_loop_4u:
-  case OMPRTL___kmpc_distribute_static_loop_8:
-  case OMPRTL___kmpc_distribute_static_loop_8u:
-  case OMPRTL___kmpc_distribute_for_static_loop_4:
-  case OMPRTL___kmpc_distribute_for_static_loop_4u:
-  case OMPRTL___kmpc_distribute_for_static_loop_8:
-  case OMPRTL___kmpc_distribute_for_static_loop_8u:
-  case OMPRTL___kmpc_for_static_loop_4:
-  case OMPRTL___kmpc_for_static_loop_4u:
-  case OMPRTL___kmpc_for_static_loop_8:
-  case OMPRTL___kmpc_for_static_loop_8u:
-    return 1;
-  default:
-    llvm_unreachable("Unexpected runtime function!");
-  }
+static unsigned runtimeFunctionCallbackArgNo(Function *Fn) {
+  assert(isRuntimeFunctionWithCallbacks(Fn));
+  MDNode *CallbackMD = Fn->getMetadata(LLVMContext::MD_callback);
+  assert(CallbackMD);
+  MDNode *OpMD = cast<MDNode>(CallbackMD->getOperand(0).get());
+  auto *CalleeIdxCM = cast<ConstantAsMetadata>(OpMD->getOperand(0));
+  uint64_t CalleeIdx =
+      cast<ConstantInt>(CalleeIdxCM->getValue())->getZExtValue();
+  return CalleeIdx;
 }
 
 /// The function kernel info abstract attribute, basically, what can we say
@@ -4793,14 +4810,13 @@ struct AAKernelInfoFunction : AAKernelInfo {
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
       auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
-      const auto &It =
-          OMPInfoCache.RuntimeFunctionIDMap.find(CB.getCalledFunction());
+      Function *Callee = CB.getCalledFunction();
+      const auto &It = OMPInfoCache.RuntimeFunctionIDMap.find(Callee);
       if (It != OMPInfoCache.RuntimeFunctionIDMap.end()) {
-        RuntimeFunction RF = It->getSecond();
-        if (isRuntimeFuncionWithCallbacks(RF)) {
-          const unsigned int CallbackArgNo = runtimeFuncionCallbackArgNo(RF);
-          auto *LoopRegion = dyn_cast<Function>(
-              CB.getArgOperand(CallbackArgNo)->stripPointerCasts());
+        if (isRuntimeFunctionWithCallbacks(Callee)) {
+          const unsigned int ArgNo = runtimeFunctionCallbackArgNo(Callee);
+          auto *LoopRegion =
+              dyn_cast<Function>(CB.getArgOperand(ArgNo)->stripPointerCasts());
           if (LoopRegion) {
             auto *FnAA = A.getAAFor<AAKernelInfo>(
                 *this, IRPosition::function(*LoopRegion), DepClassTy::OPTIONAL);
@@ -4991,7 +5007,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         // state based on the callee state in updateImpl.
         return;
       }
-      if (NumCallees > 1 && !isRuntimeFuncionWithCallbacks(It->getSecond())) {
+      if (NumCallees > 1 && !isRuntimeFunctionWithCallbacks(Callee)) {
         indicatePessimisticFixpoint();
         return;
       }
@@ -5162,7 +5178,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         getState() = FnAA->getState();
         return ChangeStatus::CHANGED;
       }
-      if (NumCallees > 1 && !isRuntimeFuncionWithCallbacks(It->getSecond()))
+      if (NumCallees > 1 && !isRuntimeFunctionWithCallbacks(F))
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
