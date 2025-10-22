@@ -160,8 +160,6 @@ bool CompilerInstance::createTarget() {
 }
 
 void CompilerInstance::setFileManager(IntrusiveRefCntPtr<FileManager> Value) {
-  if (!hasVirtualFileSystem())
-    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
   assert(Value == nullptr ||
          getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
   FileMgr = std::move(Value);
