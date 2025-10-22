@@ -3,7 +3,7 @@
 # ulimit does not work on non-POSIX platforms.
 # Solaris for some reason does not respect ulimit -n, so mark it unsupported
 # as well.
-# UNSUPPORTED: system-windows, system-solaris
+# UNSUPPORTED: system-windows, system-cygwin, system-solaris
 
 # RUN: not %{lit} -a -v %{inputs}/shtest-ulimit --order=lexical | FileCheck %s
 
