@@ -599,7 +599,7 @@ define amdgpu_ps i32 @not64(i64 inreg %val0) {
 ; Negative tests
 ; --------------------------------------------------------------------------------
 
-@1 = weak dso_local addrspace(4) constant i32 zeroinitializer
+@1 = extern_weak dso_local addrspace(4) constant i32
 
 define amdgpu_ps i32 @si_pc_add_rel_offset_must_not_optimize() {
 ; CHECK-LABEL: si_pc_add_rel_offset_must_not_optimize:
