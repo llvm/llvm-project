@@ -150,6 +150,24 @@ static auto isComparisonOperatorCall(llvm::StringRef operator_name) {
       hasArgument(1, anyOf(hasType(statusType()), hasType(statusOrType()))));
 }
 
+static auto isOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasName("::absl::OkStatus"))));
+}
+
+static auto isNotOkStatusCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return callExpr(callee(functionDecl(hasAnyName(
+      "::absl::AbortedError", "::absl::AlreadyExistsError",
+      "::absl::CancelledError", "::absl::DataLossError",
+      "::absl::DeadlineExceededError", "::absl::FailedPreconditionError",
+      "::absl::InternalError", "::absl::InvalidArgumentError",
+      "::absl::NotFoundError", "::absl::OutOfRangeError",
+      "::absl::PermissionDeniedError", "::absl::ResourceExhaustedError",
+      "::absl::UnauthenticatedError", "::absl::UnavailableError",
+      "::absl::UnimplementedError", "::absl::UnknownError"))));
+}
+
 static auto
 buildDiagnoseMatchSwitch(const UncheckedStatusOrAccessModelOptions &Options) {
   return CFGMatchSwitchBuilder<const Environment,
@@ -420,6 +438,23 @@ static void transferComparisonOperator(const CXXOperatorCallExpr *Expr,
     State.Env.setValue(*Expr, *LhsAndRhsVal);
 }
 
+static void transferOkStatusCall(const CallExpr *Expr,
+                                 const MatchFinder::MatchResult &,
+                                 LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  State.Env.assume(OkVal.formula());
+}
+
+static void transferNotOkStatusCall(const CallExpr *Expr,
+                                    const MatchFinder::MatchResult &,
+                                    LatticeTransferState &State) {
+  auto &OkVal =
+      initializeStatus(State.Env.getResultObjectLocation(*Expr), State.Env);
+  auto &A = State.Env.arena();
+  State.Env.assume(A.makeNot(OkVal.formula()));
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -447,6 +482,8 @@ buildTransferMatchSwitch(ASTContext &Ctx,
             transferComparisonOperator(Expr, State,
                                        /*IsNegative=*/true);
           })
+      .CaseOfCFGStmt<CallExpr>(isOkStatusCall(), transferOkStatusCall)
+      .CaseOfCFGStmt<CallExpr>(isNotOkStatusCall(), transferNotOkStatusCall)
       .Build();
 }
 
