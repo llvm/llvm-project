@@ -37,7 +37,8 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
     response.exceptionId = "signal";
     break;
   case lldb::eStopReasonBreakpoint: {
-    const ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
+    const ExceptionBreakpoint *exc_bp =
+        dap.GetExceptionBPFromStopReason(thread);
     if (exc_bp) {
       response.exceptionId = exc_bp->GetFilter();
       response.description = exc_bp->GetLabel();
