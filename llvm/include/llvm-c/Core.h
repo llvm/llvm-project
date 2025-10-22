@@ -588,11 +588,11 @@ LLVM_C_ABI LLVMContextRef LLVMContextCreate(void);
 
 /**
  * Obtain the global context instance.
- *
- * Use of the global context is deprecated. Use LLVMContextCreate() and
- * context-aware functions instead.
  */
-LLVM_C_ABI LLVMContextRef LLVMGetGlobalContext(void);
+LLVM_C_ABI
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMContextRef LLVMGetGlobalContext(void),
+                            "Use of the global context is deprecated, create "
+                            "one using LLVMContextCreate instead");
 
 /**
  * Set the diagnostic handler for this context.
