@@ -463,10 +463,105 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitLibraryCall(*this, fd, e,
                            cgm.getBuiltinLibFunction(fd, builtinID));
 
+  // Some target-specific builtins can have aggregate return values, e.g.
+  // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
+  // returnValue to be non-null, so that the target-specific emission code can
+  // always just emit into it.
+  cir::TypeEvaluationKind evalKind = getEvaluationKind(e->getType());
+  if (evalKind == cir::TEK_Aggregate && returnValue.isNull()) {
+    cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
+    return getUndefRValue(e->getType());
+  }
+
+  // Now see if we can emit a target-specific builtin.
+  if (mlir::Value v = emitTargetBuiltinExpr(builtinID, e, returnValue)) {
+    switch (evalKind) {
+    case cir::TEK_Scalar:
+      if (mlir::isa<cir::VoidType>(v.getType()))
+        return RValue::get(nullptr);
+      return RValue::get(v);
+    case cir::TEK_Aggregate:
+      cgm.errorNYI(e->getSourceRange(), "aggregate return value from builtin");
+      return getUndefRValue(e->getType());
+    case cir::TEK_Complex:
+      llvm_unreachable("No current target builtin returns complex");
+    }
+    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
+  }
+
   cgm.errorNYI(e->getSourceRange(),
                std::string("unimplemented builtin call: ") +
                    getContext().BuiltinInfo.getName(builtinID));
   return getUndefRValue(e->getType());
+}
+
+static mlir::Value emitTargetArchBuiltinExpr(CIRGenFunction *cgf,
+                                             unsigned builtinID,
+                                             const CallExpr *e,
+                                             ReturnValueSlot &returnValue,
+                                             llvm::Triple::ArchType arch) {
+  // When compiling in HipStdPar mode we have to be conservative in rejecting
+  // target specific features in the FE, and defer the possible error to the
+  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
+  // referenced by an accelerator executable function, we emit an error.
+  // Returning nullptr here leads to the builtin being handled in
+  // EmitStdParUnsupportedBuiltin.
+  if (cgf->getLangOpts().HIPStdPar && cgf->getLangOpts().CUDAIsDevice &&
+      arch != cgf->getTarget().getTriple().getArch())
+    return {};
+
+  switch (arch) {
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::aarch64_32:
+  case llvm::Triple::aarch64_be:
+  case llvm::Triple::bpfeb:
+  case llvm::Triple::bpfel:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return nullptr;
+
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return cgf->emitX86BuiltinExpr(builtinID, e);
+
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppcle:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
+  case llvm::Triple::r600:
+  case llvm::Triple::amdgcn:
+  case llvm::Triple::systemz:
+  case llvm::Triple::nvptx:
+  case llvm::Triple::nvptx64:
+  case llvm::Triple::wasm32:
+  case llvm::Triple::wasm64:
+  case llvm::Triple::hexagon:
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return {};
+  default:
+    return {};
+  }
+}
+
+mlir::Value
+CIRGenFunction::emitTargetBuiltinExpr(unsigned builtinID, const CallExpr *e,
+                                      ReturnValueSlot &returnValue) {
+  if (getContext().BuiltinInfo.isAuxBuiltinID(builtinID)) {
+    assert(getContext().getAuxTargetInfo() && "Missing aux target info");
+    return emitTargetArchBuiltinExpr(
+        this, getContext().BuiltinInfo.getAuxBuiltinID(builtinID), e,
+        returnValue, getContext().getAuxTargetInfo()->getTriple().getArch());
+  }
+
+  return emitTargetArchBuiltinExpr(this, builtinID, e, returnValue,
+                                   getTarget().getTriple().getArch());
 }
 
 /// Given a builtin id for a function like "__builtin_fabsf", return a Function*

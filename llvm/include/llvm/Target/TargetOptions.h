@@ -118,9 +118,8 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : UnsafeFPMath(false), NoInfsFPMath(false), NoNaNsFPMath(false),
-        NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        EnableAIXExtendedAltivecABI(false),
+      : NoInfsFPMath(false), NoNaNsFPMath(false), NoTrappingFPMath(true),
+        NoSignedZerosFPMath(false), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -155,13 +154,6 @@ public:
   /// If greater than 0, override the default value of
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};
-
-  /// UnsafeFPMath - This flag is enabled when the
-  /// -enable-unsafe-fp-math flag is specified on the command line.  When
-  /// this flag is off (the default), the code generator is not allowed to
-  /// produce results that are "less precise" than IEEE allows.  This includes
-  /// use of X86 instructions like FSIN and FCOS instead of libcalls.
-  unsigned UnsafeFPMath : 1;
 
   /// NoInfsFPMath - This flag is enabled when the
   /// -enable-no-infs-fp-math flag is specified on the command line. When

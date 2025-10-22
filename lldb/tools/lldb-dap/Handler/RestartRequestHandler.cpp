@@ -124,6 +124,8 @@ void RestartRequestHandler::operator()(
     return;
   }
 
+  SendProcessEvent(dap, Launch);
+
   // This is normally done after receiving a "configuration done" request.
   // Because we're restarting, configuration has already happened so we can
   // continue the process right away.

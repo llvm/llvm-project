@@ -355,9 +355,9 @@ private:
   SPIRVType *widenTypeToVec4(const SPIRVType *Type, MachineInstr &I) const;
   bool extractSubvector(Register &ResVReg, const SPIRVType *ResType,
                         Register &ReadReg, MachineInstr &InsertionPoint) const;
-  bool generateImageRead(Register &ResVReg, const SPIRVType *ResType,
-                         Register ImageReg, Register IdxReg, DebugLoc Loc,
-                         MachineInstr &Pos) const;
+  bool generateImageReadOrFetch(Register &ResVReg, const SPIRVType *ResType,
+                                Register ImageReg, Register IdxReg,
+                                DebugLoc Loc, MachineInstr &Pos) const;
   bool BuildCOPY(Register DestReg, Register SrcReg, MachineInstr &I) const;
   bool loadVec3BuiltinInputID(SPIRV::BuiltIn::BuiltIn BuiltInValue,
                               Register ResVReg, const SPIRVType *ResType,
@@ -1321,8 +1321,8 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
       }
 
       Register IdxReg = IntPtrDef->getOperand(3).getReg();
-      return generateImageRead(ResVReg, ResType, NewHandleReg, IdxReg,
-                               I.getDebugLoc(), I);
+      return generateImageReadOrFetch(ResVReg, ResType, NewHandleReg, IdxReg,
+                                      I.getDebugLoc(), I);
     }
   }
 
@@ -3639,27 +3639,33 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(
   DebugLoc Loc = I.getDebugLoc();
   MachineInstr &Pos = I;
 
-  return generateImageRead(ResVReg, ResType, NewImageReg, IdxReg, Loc, Pos);
+  return generateImageReadOrFetch(ResVReg, ResType, NewImageReg, IdxReg, Loc,
+                                  Pos);
 }
 
-bool SPIRVInstructionSelector::generateImageRead(Register &ResVReg,
-                                                 const SPIRVType *ResType,
-                                                 Register ImageReg,
-                                                 Register IdxReg, DebugLoc Loc,
-                                                 MachineInstr &Pos) const {
+bool SPIRVInstructionSelector::generateImageReadOrFetch(
+    Register &ResVReg, const SPIRVType *ResType, Register ImageReg,
+    Register IdxReg, DebugLoc Loc, MachineInstr &Pos) const {
   SPIRVType *ImageType = GR.getSPIRVTypeForVReg(ImageReg);
   assert(ImageType && ImageType->getOpcode() == SPIRV::OpTypeImage &&
          "ImageReg is not an image type.");
+
   bool IsSignedInteger =
       sampledTypeIsSignedInteger(GR.getTypeForSPIRVType(ImageType));
+  // Check if the "sampled" operand of the image type is 1.
+  // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpImageFetch
+  auto SampledOp = ImageType->getOperand(6);
+  bool IsFetch = (SampledOp.getImm() == 1);
 
   uint64_t ResultSize = GR.getScalarOrVectorComponentCount(ResType);
   if (ResultSize == 4) {
-    auto BMI = BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpImageRead))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType))
-                   .addUse(ImageReg)
-                   .addUse(IdxReg);
+    auto BMI =
+        BuildMI(*Pos.getParent(), Pos, Loc,
+                TII.get(IsFetch ? SPIRV::OpImageFetch : SPIRV::OpImageRead))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(ImageReg)
+            .addUse(IdxReg);
 
     if (IsSignedInteger)
       BMI.addImm(0x1000); // SignExtend
@@ -3668,11 +3674,13 @@ bool SPIRVInstructionSelector::generateImageRead(Register &ResVReg,
 
   SPIRVType *ReadType = widenTypeToVec4(ResType, Pos);
   Register ReadReg = MRI->createVirtualRegister(GR.getRegClass(ReadType));
-  auto BMI = BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpImageRead))
-                 .addDef(ReadReg)
-                 .addUse(GR.getSPIRVTypeID(ReadType))
-                 .addUse(ImageReg)
-                 .addUse(IdxReg);
+  auto BMI =
+      BuildMI(*Pos.getParent(), Pos, Loc,
+              TII.get(IsFetch ? SPIRV::OpImageFetch : SPIRV::OpImageRead))
+          .addDef(ReadReg)
+          .addUse(GR.getSPIRVTypeID(ReadType))
+          .addUse(ImageReg)
+          .addUse(IdxReg);
   if (IsSignedInteger)
     BMI.addImm(0x1000); // SignExtend
   bool Succeed = BMI.constrainAllUses(TII, TRI, RBI);

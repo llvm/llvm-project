@@ -4450,22 +4450,24 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
-  /// IsReplicator is true, the region is a replicate region. The returned block
-  /// is owned by the VPlan and deleted once the VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                     const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+  /// Create a new loop region with \p Name and entry and exiting blocks set
+  /// to \p Entry and \p Exiting respectively, if set. The returned block is
+  /// owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(const std::string &Name = "",
+                                  VPBlockBase *Entry = nullptr,
+                                  VPBlockBase *Exiting = nullptr) {
+    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
+                      : new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Name);
+  /// Create a new replicate region with \p Entry, \p Exiting and \p Name. The
+  /// returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                       const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, true);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

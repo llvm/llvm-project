@@ -5,9 +5,9 @@
 # as well.
 # UNSUPPORTED: system-windows, system-solaris
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-ulimit | FileCheck %s
+# RUN: not %{lit} -a -v %{inputs}/shtest-ulimit --order=lexical | FileCheck %s
 
-# CHECK: -- Testing: 2 tests{{.*}}
+# CHECK: -- Testing: 3 tests{{.*}}
 
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit-bad-arg.txt ({{[^)]*}})
 # CHECK: ulimit -n
@@ -16,3 +16,6 @@
 # CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_okay.txt ({{[^)]*}})
 # CHECK: ulimit -n 50
 # CHECK: RLIMIT_NOFILE=50
+
+# CHECK-LABEL: FAIL: shtest-ulimit :: ulimit_reset.txt ({{[^)]*}})
+# CHECK-NOT: RLIMIT_NOFILE=50

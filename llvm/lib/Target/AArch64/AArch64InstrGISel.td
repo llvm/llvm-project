@@ -507,7 +507,7 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
 
-def : Pat<(v8i8 (AArch64dup (i8 (load (am_indexed8 GPR64sp:$Rn))))),
+def : Pat<(v8i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv8b GPR64sp:$Rn)>;
 def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv16b GPR64sp:$Rn)>;

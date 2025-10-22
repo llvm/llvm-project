@@ -102,7 +102,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeAlignInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   UIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -1916,6 +1916,17 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   if (!isLocalLinkage(getFunctionLinkage(globalDecl))) {
     const Decl *decl = globalDecl.getDecl();
     func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
+  }
+
+  // If we plan on emitting this inline builtin, we can't treat it as a builtin.
+  const auto *fd = cast<FunctionDecl>(globalDecl.getDecl());
+  if (fd->isInlineBuiltinDeclaration()) {
+    const FunctionDecl *fdBody;
+    bool hasBody = fd->hasBody(fdBody);
+    (void)hasBody;
+    assert(hasBody && "Inline builtin declarations should always have an "
+                      "available body!");
+    assert(!cir::MissingFeatures::attributeNoBuiltin());
   }
 }
 

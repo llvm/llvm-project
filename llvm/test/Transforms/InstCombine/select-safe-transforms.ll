@@ -58,15 +58,15 @@ define i1 @cond_eq_or_const(i8 %X, i8 %Y) !prof !0 {
   ret i1 %res
 }
 
-define i1 @xor_and(i1 %c, i32 %X, i32 %Y) {
+define i1 @xor_and(i1 %c, i32 %X, i32 %Y) !prof !0 {
 ; CHECK-LABEL: @xor_and(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[COMP]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 true, i1 [[COMP]], !prof [[PROF2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
-  %sel = select i1 %c, i1 %comp, i1 false
+  %sel = select i1 %c, i1 %comp, i1 false, !prof !1
   %res = xor i1 %sel, true
   ret i1 %res
 }
@@ -97,15 +97,15 @@ define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
   ret <2 x i1> %res
 }
 
-define i1 @xor_or(i1 %c, i32 %X, i32 %Y) {
+define i1 @xor_or(i1 %c, i32 %X, i32 %Y) !prof !0 {
 ; CHECK-LABEL: @xor_or(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 [[COMP]], i1 false
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_C]], i1 [[COMP]], i1 false, !prof [[PROF2]]
 ; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %comp = icmp ult i32 %X, %Y
-  %sel = select i1 %c, i1 true, i1 %comp
+  %sel = select i1 %c, i1 true, i1 %comp, !prof !1
   %res = xor i1 %sel, true
   ret i1 %res
 }
@@ -802,4 +802,5 @@ define <2 x i1> @not_logical_and2(i1 %b, <2 x i32> %a) {
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 2, i32 3}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 3, i32 2}
 ;.

@@ -281,22 +281,23 @@ ClassDescriptorV2::ReadMethods(llvm::ArrayRef<lldb::addr_t> addresses,
   const size_t num_methods = addresses.size();
 
   llvm::SmallVector<uint8_t, 0> buffer(num_methods * size, 0);
-  llvm::DenseSet<uint32_t> failed_indices;
 
-  for (auto [idx, addr] : llvm::enumerate(addresses)) {
-    Status error;
-    process->ReadMemory(addr, buffer.data() + idx * size, size, error);
-    if (error.Fail())
-      failed_indices.insert(idx);
-  }
+  llvm::SmallVector<Range<addr_t, size_t>> mem_ranges =
+      llvm::to_vector(llvm::map_range(llvm::seq(num_methods), [&](size_t idx) {
+        return Range<addr_t, size_t>(addresses[idx], size);
+      }));
+
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(mem_ranges, buffer);
 
   llvm::SmallVector<method_t, 0> methods;
   methods.reserve(num_methods);
-  for (auto [idx, addr] : llvm::enumerate(addresses)) {
-    if (failed_indices.contains(idx))
+  for (auto [addr, memory] : llvm::zip(addresses, read_results)) {
+    // Ignore partial reads.
+    if (memory.size() != size)
       continue;
-    DataExtractor extractor(buffer.data() + idx * size, size,
-                            process->GetByteOrder(),
+
+    DataExtractor extractor(memory.data(), size, process->GetByteOrder(),
                             process->GetAddressByteSize());
     methods.push_back(method_t());
     methods.back().Read(extractor, process, addr, relative_string_base_addr,

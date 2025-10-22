@@ -283,7 +283,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
                            OnDiskGraphDB::FaultInPolicy::SingleNode);
 }
 
-#if defined(EXPENSIVE_CHECKS)
+#if defined(EXPENSIVE_CHECKS) && !defined(_WIN32)
 TEST_F(OnDiskCASTest, OnDiskGraphDBSpaceLimit) {
   setMaxOnDiskCASMappingSize();
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);

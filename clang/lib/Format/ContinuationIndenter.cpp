@@ -798,9 +798,11 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   }
 
   if (!DryRun) {
+    const bool ContinuePPDirective =
+        State.Line->InMacroBody && Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
                                   State.Column + Spaces + PPColumnCorrection,
-                                  /*IsAligned=*/false, State.Line->InMacroBody);
+                                  /*IsAligned=*/false, ContinuePPDirective);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -1176,10 +1178,11 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       // about removing empty lines on closing blocks. Special case them here.
       MaxEmptyLinesToKeep = 1;
     }
-    unsigned Newlines =
+    const unsigned Newlines =
         std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
-    bool ContinuePPDirective =
-        State.Line->InPPDirective && State.Line->Type != LT_ImportStatement;
+    const bool ContinuePPDirective = State.Line->InPPDirective &&
+                                     State.Line->Type != LT_ImportStatement &&
+                                     Current.isNot(TT_LineComment);
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
                                   CurrentState.IsAligned, ContinuePPDirective);
   }

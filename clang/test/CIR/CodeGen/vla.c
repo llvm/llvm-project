@@ -282,4 +282,61 @@ void f3(unsigned len) {
 //         break;
 //     }
 // }
-  
+
+int f5(unsigned long len) {
+  int arr[len];
+  return arr[2];
+}
+
+// CIR: cir.func{{.*}} @f5(%[[LEN_ARG:.*]]: !u64i {{.*}}) -> !s32i
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["len", init]
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
+// CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
+// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
+// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN]] : !u64i, ["arr"]
+// CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:   %[[ARR_2:.*]] = cir.ptr_stride %[[ARR]], %[[TWO]]
+// CIR:   %[[ARR_VAL:.*]] = cir.load{{.*}} %[[ARR_2]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.store{{.*}} %[[ARR_VAL]], %[[RET_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
+// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
+// CIR:   cir.return %[[RET_VAL]] : !s32i
+
+// LLVM: define{{.*}} i32 @f5(i64 %[[LEN_ARG:.*]])
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i64
+// LLVM:   %[[RET_ADDR:.*]] = alloca i32
+// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
+// LLVM:   store i64 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
+// LLVM:   %[[LEN:.*]] = load i64, ptr %[[LEN_ADDR]]
+// LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
+// LLVM:   %[[ARR:.*]] = alloca i32, i64 %[[LEN]]
+// LLVM:   %[[ARR_2:.*]] = getelementptr i32, ptr %[[ARR]], i64 2
+// LLVM:   %[[ARR_VAL:.*]] = load i32, ptr %[[ARR_2]]
+// LLVM:   store i32 %[[ARR_VAL]], ptr %[[RET_ADDR]]
+// LLVM:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
+// LLVM:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
+// LLVM:   %[[RET_VAL:.*]] = load i32, ptr %[[RET_ADDR]]
+// LLVM:   ret i32 %[[RET_VAL]]
+
+// Note: VLA_EXPR0 below is emitted to capture debug info.
+
+// OGCG: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
+// OGCG:   %[[LEN_ADDR:.*]] = alloca i64
+// OGCG:   %[[SAVED_STACK:.*]] = alloca ptr
+// OGCG:   %[[VLA_EXPR0:.*]] = alloca i64
+// OGCG:   store i64 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
+// OGCG:   %[[LEN:.*]] = load i64, ptr %[[LEN_ADDR]]
+// OGCG:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
+// OGCG:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
+// OGCG:   %[[ARR:.*]] = alloca i32, i64 %[[LEN]]
+// OGCG:   store i64 %[[LEN]], ptr %[[VLA_EXPR0]]
+// OGCG:   %[[ARR_2:.*]] = getelementptr inbounds i32, ptr %[[ARR]], i64 2
+// OGCG:   %[[ARR_VAL:.*]] = load i32, ptr %[[ARR_2]]
+// OGCG:   %[[STACK_RESTORE_PTR:.*]] = load ptr, ptr %[[SAVED_STACK]]
+// OGCG:   call void @llvm.stackrestore.p0(ptr %[[STACK_RESTORE_PTR]])
+// OGCG:   ret i32 %[[ARR_VAL]]
