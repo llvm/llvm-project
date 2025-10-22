@@ -372,7 +372,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *Exiting =
       Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   VPRegionBlock *Region =
-      Plan.createVPRegionBlock(Entry, Exiting, RegionName, true);
+      Plan.createReplicateRegion(Entry, Exiting, RegionName);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
@@ -4051,7 +4051,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 static std::optional<ElementCount> isConsecutiveInterleaveGroup(
     VPInterleaveRecipe *InterleaveR, ArrayRef<ElementCount> VFs,
     VPTypeAnalysis &TypeInfo, const TargetTransformInfo &TTI) {
-  if (!InterleaveR)
+  if (!InterleaveR || InterleaveR->getMask())
     return std::nullopt;
 
   Type *GroupElementTy = nullptr;

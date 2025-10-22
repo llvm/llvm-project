@@ -119,7 +119,7 @@ struct PollyForcePassLinking {
 
 namespace llvm {
 void initializeCodePreparationPass(llvm::PassRegistry &);
-void initializeScopInlinerPass(llvm::PassRegistry &);
+void initializeScopInlinerWrapperPassPass(llvm::PassRegistry &);
 void initializeScopDetectionWrapperPassPass(llvm::PassRegistry &);
 void initializeScopDetectionPrinterLegacyPassPass(llvm::PassRegistry &);
 void initializeScopInfoRegionPassPass(PassRegistry &);
