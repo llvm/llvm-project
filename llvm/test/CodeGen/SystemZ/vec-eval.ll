@@ -1889,7 +1889,9 @@ entry:
 define <16 x i8> @eval128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v24, %v26, %v24, %v28, 128
+; CHECK-NEXT:    vno %v0, %v24, %v24
+; CHECK-NEXT:    vno %v1, %v26, %v26
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 2
 ; CHECK-NEXT:    br %r14
 entry:
   %and.demorgan = or <16 x i8> %src2, %src1
@@ -1901,9 +1903,10 @@ entry:
 define <16 x i8> @eval129(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval129:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vo %v0, %v26, %v24
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
 ; CHECK-NEXT:    vn %v1, %v26, %v24
-; CHECK-NEXT:    veval %v24, %v1, %v28, %v0, 139
+; CHECK-NEXT:    vsel %v24, %v1, %v0, %v28
 ; CHECK-NEXT:    br %r14
 entry:
   %and.demorgan = or <16 x i8> %src2, %src1
@@ -2034,8 +2037,10 @@ entry:
 define <16 x i8> @eval138(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval138:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v0, %v26, %v24, %v28, 127
-; CHECK-NEXT:    veval %v24, %v24, %v28, %v0, 174
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
+; CHECK-NEXT:    vnc %v1, %v24, %v28
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %not2 = xor <16 x i8> %src3, splat(i8 -1)
@@ -2050,9 +2055,10 @@ entry:
 define <16 x i8> @eval139(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval139:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vo %v0, %v26, %v24
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
 ; CHECK-NEXT:    veval %v1, %v24, %v26, %v28, 11
-; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 143
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = or <16 x i8> %src2, %src1
@@ -2068,8 +2074,10 @@ entry:
 define <16 x i8> @eval140(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval140:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v0, %v24, %v28, %v26, 127
-; CHECK-NEXT:    veval %v24, %v24, %v26, %v0, 174
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v28, %v0, %v24, 40
+; CHECK-NEXT:    vnc %v1, %v24, %v26
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v26, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %not1 = xor <16 x i8> %src2, splat(i8 -1)
@@ -2084,10 +2092,11 @@ entry:
 define <16 x i8> @eval141(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval141:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vgbm %v0, 65535
 ; CHECK-NEXT:    veval %v1, %v26, %v24, %v28, 1
-; CHECK-NEXT:    vo %v0, %v26, %v24
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
 ; CHECK-NEXT:    veval %v1, %v1, %v24, %v26, 47
-; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 143
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %not1 = xor <16 x i8> %src2, splat(i8 -1)
@@ -2105,9 +2114,10 @@ entry:
 define <16 x i8> @eval142(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval142:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v0, %v26, %v24, %v28, 127
-; CHECK-NEXT:    vn %v1, %v28, %v26
-; CHECK-NEXT:    veval %v24, %v24, %v1, %v0, 174
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
+; CHECK-NEXT:    veval %v1, %v24, %v28, %v26, 14
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = or <16 x i8> %src2, %src1
@@ -2441,8 +2451,10 @@ entry:
 define <16 x i8> @eval162(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval162:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    veval %v0, %v28, %v24, %v26, 127
-; CHECK-NEXT:    veval %v24, %v26, %v28, %v0, 174
+; CHECK-NEXT:    vgbm %v1, 65535
+; CHECK-NEXT:    vno %v0, %v28, %v28
+; CHECK-NEXT:    veval %v1, %v24, %v1, %v28, 40
+; CHECK-NEXT:    vsel %v24, %v0, %v1, %v26
 ; CHECK-NEXT:    br %r14
 entry:
   %not2 = xor <16 x i8> %src3, splat(i8 -1)
@@ -2457,9 +2469,10 @@ entry:
 define <16 x i8> @eval163(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %src3) {
 ; CHECK-LABEL: eval163:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vo %v0, %v26, %v24
+; CHECK-NEXT:    vgbm %v0, 65535
+; CHECK-NEXT:    veval %v0, %v24, %v0, %v26, 40
 ; CHECK-NEXT:    veval %v1, %v26, %v24, %v28, 11
-; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 143
+; CHECK-NEXT:    veval %v24, %v1, %v0, %v28, 47
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = or <16 x i8> %src2, %src1
