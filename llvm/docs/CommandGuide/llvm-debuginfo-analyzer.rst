@@ -391,11 +391,11 @@ to make the output easier to understand.
  .. code-block:: text
 
    =children: Elements and children are displayed in a tree format.
+   =debugger: Lines, and optionally variables and instructions are
+              displayed in a way to simulate stepping through a debugger.
    =list: Elements are displayed in a tabular format.
    =parents: Elements and parents are displayed in a tree format.
    =view: Elements, parents and children are displayed in a tree format.
-   =debugger: Lines, and optionally variables and instructions are
-          displayed in a way to simulate stepping through a debugger.
 
 The **list** layout presents the logical elements in a tabular form
 without any parent-child relationship. This may be the preferred way to

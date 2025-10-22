@@ -4,22 +4,24 @@
 ; The test compiles this module using the AMDGPU backend under `-O0`,
 ; and makes sure `llvm-debuginfo-analyzer --report=debugger` works for it.
 
-; CHECK: {Function}: main
-; CHECK: {Line}: {{.+}}basic_var.hlsl:7
-; CHECK: {Line}: {{.+}}basic_var.hlsl:11
-; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line}: {{.+}}basic_var.hlsl:17
-; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line}: {{.+}}basic_var.hlsl:11
-; CHECK: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line}: {{.+}}basic_var.hlsl:14
-; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line}: {{.+}}basic_var.hlsl:17
-; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK-DAG: {Variable}: my_var2: float : reg{{.+}}
-; CHECK: {Line}: {{.+}}basic_var.hlsl:19
-; CHECK-DAG: {Variable}: dtid: uint3 : reg{{.+}}, piece 4
-; CHECK-DAG: {Variable}: my_var2: float : reg{{.+}}
+; CHECK: {File}
+; CHECK: {CompileUnit} basic_var.hlsl
+; CHECK: {Function} main
+; CHECK: {Line} {{.+}}basic_var.hlsl:7
+; CHECK: {Line} {{.+}}basic_var.hlsl:11
+; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} {{.+}}basic_var.hlsl:17
+; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} {{.+}}basic_var.hlsl:11
+; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} {{.+}}basic_var.hlsl:14
+; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} {{.+}}basic_var.hlsl:17
+; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: {Variable} my_var2: float : reg{{.+}}
+; CHECK: {Line} {{.+}}basic_var.hlsl:19
+; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK-DAG: {Variable} my_var2: float : reg{{.+}}
 
 source_filename = "module"
 target triple = "amdgcn-amd-amdpal"

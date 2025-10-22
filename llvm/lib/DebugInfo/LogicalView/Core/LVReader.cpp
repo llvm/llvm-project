@@ -556,7 +556,7 @@ struct DebuggerViewPrinter {
           continue;
 
         if (IncludeRanges)
-          OS << "{Range}: " << Symbol->getName() << " (line "
+          OS << "{Range} " << Symbol->getName() << " (line "
              << Symbol->getLineNumber() << ")" << ": ";
 
         for (const LVLocation *Loc : SymbolLocations) {
@@ -639,7 +639,7 @@ struct DebuggerViewPrinter {
         auto LineDebug = cast<LVLineDebug>(Line);
 
         printIndent(OS, 1);
-        OS << "{Line}: " << " [" << hexValue(LineDebug->getAddress()) << "] "
+        OS << "{Line} " << " [" << hexValue(LineDebug->getAddress()) << "] "
            << LineDebug->getPathname() << ":" << LineDebug->getLineNumber()
            << " ";
         printCallstack(OS, Scope);
@@ -652,7 +652,7 @@ struct DebuggerViewPrinter {
             if (SymScope != LineScope && !isChildScopeOf(LineScope, SymScope))
               continue;
             printIndent(OS, 2);
-            OS << "{Variable}: " << Sym->getName() << ": "
+            OS << "{Variable} " << Sym->getName() << ": "
                << Sym->getType()->getName() << " : ";
             SymLoc->printLocations(OS);
             OS << " (line " << Sym->getLineNumber() << ")";
@@ -661,7 +661,7 @@ struct DebuggerViewPrinter {
         }
 
       } else if (IncludeCode && Line->getIsLineAssembler()) {
-        OS << "  {Code}: " << " [" << hexValue(Line->getAddress()) << "]  "
+        OS << "  {Code} " << " [" << hexValue(Line->getAddress()) << "]  "
            << Line->getName() << "\n";
       }
     }
@@ -673,11 +673,13 @@ struct DebuggerViewPrinter {
 Error LVReader::printDebugger() {
   if (!Root || !Root->scopeCount())
     return Error::success();
+  outs() << "{File} " << getFilename() << "\n";
 
   for (auto *Scope : *Root->getScopes()) {
     auto *CU = dyn_cast<LVScopeCompileUnit>(Scope);
     if (!CU)
       continue;
+    outs() << "{CompileUnit} " << CU->getName() << "\n";
     for (const LVScope *ChildScope : *CU->getScopes()) {
       auto *Fn = dyn_cast<LVScopeFunction>(ChildScope);
       if (Fn) {
@@ -685,7 +687,7 @@ Error LVReader::printDebugger() {
         // If there's no lines, this function has no body.
         if (!Lines)
           continue;
-        outs() << "{Function}: " << ChildScope->getName() << "\n";
+        outs() << "{Function} " << ChildScope->getName() << "\n";
 
         DebuggerViewPrinter P(OS, Fn);
         P.print();
