@@ -1,4 +1,4 @@
-## Tests that --call-graph-info fails if .callgraph section does not have
+## Tests that --call-graph-info fails if .llvm.callgraph section does not have
 ## an expected value, e.g., not as much call sites as the given count.
 
 # REQUIRES: x86-registered-target

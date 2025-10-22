@@ -5497,7 +5497,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   auto PrintFunc = [](uint64_t FuncEntryPC, std::string FuncSymName,
                       formatted_raw_ostream &OS) {
     OS.PadToColumn(4);
-    OS << "Address:           ";
+    OS << "Address:";
+    OS.PadToColumn(21);
     OS << to_string(format_hex(FuncEntryPC, 1));
     if (!FuncSymName.empty())
       OS << " <" << FuncSymName << ">";
