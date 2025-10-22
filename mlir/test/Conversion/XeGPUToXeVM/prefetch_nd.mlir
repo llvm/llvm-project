@@ -1,7 +1,7 @@
-// RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-xegpu-to-xevm %s | FileCheck %s
 
-gpu.module @fence_check {
-    gpu.func @fence(%src: memref<8x16xf32, 1>, %dst: memref<8x16xf32, 1>) kernel {
+gpu.module @prefetch_nd_check {
+    gpu.func @prefetch_nd(%src: memref<8x16xf32, 1>, %dst: memref<8x16xf32, 1>) kernel {
         %srcce = memref.memory_space_cast %src : memref<8x16xf32, 1> to memref<8x16xf32>
         %dstte = memref.memory_space_cast %dst : memref<8x16xf32, 1> to memref<8x16xf32>
 

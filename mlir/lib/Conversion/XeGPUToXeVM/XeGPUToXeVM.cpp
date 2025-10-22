@@ -48,15 +48,6 @@ namespace {
 static constexpr int32_t systolicDepth{8};
 static constexpr int32_t executionSize{16};
 
-// Offsets to individual fields of the 8xi32 layout nd tensor descriptor.
-enum class NdTdescOffset : uint32_t {
-  BasePtr = 0,       // Base pointer (i64)
-  BaseShapeW = 2,    // Base shape width (i32)
-  BaseShapeH = 3,    // Base shape height (i32)
-  TensorOffsetW = 4, // Tensor offset W (i32)
-  TensorOffsetH = 5  // Tensor offset H (i32)
-};
-
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
   switch (xeGpuMemspace) {
   case xegpu::MemorySpace::Global:
@@ -177,92 +168,14 @@ class CreateNdDescToXeVMPattern
     if (mixedOffsets.size() != 0)
       return rewriter.notifyMatchFailure(op, "Offsets not supported.");
     auto loc = op.getLoc();
-    auto source = op.getSource();
-    // Op is lowered to a code sequence that populates payload.
-    // Payload is a 8xi32 vector. Offset to individual fields are defined in
-    // NdTdescOffset enum.
-    Type payloadElemTy = rewriter.getI32Type();
-    VectorType payloadTy = VectorType::get(8, payloadElemTy);
+
+    Value baseAddr = adaptor.getSource();
     Type i64Ty = rewriter.getI64Type();
-    // 4xi64 view is used for inserting the base pointer.
-    VectorType payloadI64Ty = VectorType::get(4, i64Ty);
-    // Initialize payload to zero.
-    Value payload = arith::ConstantOp::create(
-        rewriter, loc,
-        DenseElementsAttr::get(payloadTy, IntegerAttr::get(payloadElemTy, 0)));
-
-    Value baseAddr;
-    Value baseShapeW;
-    Value baseShapeH;
-    Value offsetW;
-    Value offsetH;
-
-    // Source can be a memref or a pointer (ui64, ui32, i64 or i32).
-    SmallVector<OpFoldResult> mixedSizes = op.getMixedSizes();
-    auto srcRank = mixedSizes.size();
-    if (srcRank < 2)
-      return rewriter.notifyMatchFailure(op, "Expected at least 2D source.");
-
-    auto sourceTy = source.getType();
-    auto sourceMemrefTy = dyn_cast<MemRefType>(sourceTy);
-    // If source is a memref, we need to extract the aligned pointer as index.
-    // Pointer type is passed as i32 or i64 by type converter.
-    if (sourceMemrefTy) {
-      if (!sourceMemrefTy.hasStaticShape()) {
-        return rewriter.notifyMatchFailure(op, "Expected static memref shape.");
-      }
-      baseAddr =
-          memref::ExtractAlignedPointerAsIndexOp::create(rewriter, loc, source);
-    } else {
-      baseAddr = adaptor.getSource();
-    }
-    // Utility for creating offset values from op fold result.
-    auto createOffset = [&](OpFoldResult ofr) -> Value {
-      Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
-      val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
-      return val;
-    };
-    // Offsets are not supported (0 is used).
-    offsetW = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
-    offsetH = arith::ConstantIntOp::create(rewriter, loc, payloadElemTy, 0);
-    // Get shape values from op fold results.
-    baseShapeW = createOffset(mixedSizes[srcRank - 1]);
-    if (srcRank == 2) {
-      baseShapeH = createOffset(mixedSizes[0]);
-    } else {
-      // Generate compute chain for height (product of sizes of all but the last
-      // dimension).
-      baseShapeH = getProductOfSizes(rewriter, loc, mixedSizes, 0, srcRank - 1);
-      baseShapeH = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy,
-                                                   baseShapeH);
-    }
-    if (sourceMemrefTy) {
-      // Cast index to i64.
-      baseAddr = arith::IndexCastUIOp::create(rewriter, loc, i64Ty, baseAddr);
-    } else if (baseAddr.getType() != i64Ty) {
+    if (baseAddr.getType() != i64Ty) {
       // Pointer type may be i32. Cast to i64 if needed.
       baseAddr = arith::ExtUIOp::create(rewriter, loc, i64Ty, baseAddr);
     }
-    // Populate payload.
-    Value payLoadAsI64 =
-        vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
-    payLoadAsI64 =
-        vector::InsertOp::create(rewriter, loc, baseAddr, payLoadAsI64,
-                                 static_cast<int>(NdTdescOffset::BasePtr));
-    payload = vector::BitCastOp::create(rewriter, loc, payloadTy, payLoadAsI64);
-    payload =
-        vector::InsertOp::create(rewriter, loc, baseShapeW, payload,
-                                 static_cast<int>(NdTdescOffset::BaseShapeW));
-    payload =
-        vector::InsertOp::create(rewriter, loc, baseShapeH, payload,
-                                 static_cast<int>(NdTdescOffset::BaseShapeH));
-    payload = vector::InsertOp::create(
-        rewriter, loc, offsetW, payload,
-        static_cast<int>(NdTdescOffset::TensorOffsetW));
-    payload = vector::InsertOp::create(
-        rewriter, loc, offsetH, payload,
-        static_cast<int>(NdTdescOffset::TensorOffsetH));
-    rewriter.replaceOp(op, payload);
+    rewriter.replaceOp(op, baseAddr);
     return success();
   }
 };
@@ -291,7 +204,6 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
 
-    auto tdesc = adaptor.getTensorDesc();
     auto tdescTy = op.getTensorDescType();
     if (tdescTy.getRank() != 2)
       return rewriter.notifyMatchFailure(op, "Expected 2D tensor descriptor.");
@@ -301,15 +213,27 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(
           op, "Expected element type bit width to be multiple of 8.");
 
-    VectorType payloadI64Ty = VectorType::get(4, rewriter.getI64Type());
-    Value payLoadAsI64 =
-        vector::BitCastOp::create(rewriter, loc, payloadI64Ty, tdesc);
-    Value basePtr = vector::ExtractOp::create(
-        rewriter, loc, payLoadAsI64, static_cast<int>(NdTdescOffset::BasePtr));
-    Value baseShapeW = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeW));
-    Value baseShapeH = vector::ExtractOp::create(
-        rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
+    Value basePtr = adaptor.getTensorDesc();
+    // Utility for creating offset values from op fold result.
+    Type payloadElemTy = rewriter.getIntegerType(32);
+    auto createOffset = [&](OpFoldResult ofr) -> Value {
+      Value val = getValueOrCreateConstantIntOp(rewriter, loc, ofr);
+      val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
+      return val;
+    };
+    auto srcRank = mixedSizes.size();
+    // Get shape values from op fold results.
+    Value baseShapeW = createOffset(mixedSizes[srcRank - 1]);
+    Value baseShapeH;
+    if (srcRank == 2) {
+      baseShapeH = createOffset(mixedSizes[0]);
+    } else {
+      // Generate compute chain for height (product of sizes of all but the last
+      // dimension).
+      baseShapeH = getProductOfSizes(rewriter, loc, mixedSizes, 0, srcRank - 1);
+      baseShapeH = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy,
+                                                   baseShapeH);
+    }
     // Offsets are provided by the op.
     // convert them to i32.
     // Offset computation assumes base memory layout is row major.
@@ -979,10 +903,7 @@ struct ConvertXeGPUToXeVMPass
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
-      if (type.isScattered())
-        return IntegerType::get(&getContext(), 64);
-      auto i32Type = IntegerType::get(&getContext(), 32);
-      return VectorType::get(8, i32Type);
+      return IntegerType::get(&getContext(), 64);
     });
     // Convert MemDescType into flattened MemRefType for SLM
     typeConverter.addConversion([&](xegpu::MemDescType type) -> Type {

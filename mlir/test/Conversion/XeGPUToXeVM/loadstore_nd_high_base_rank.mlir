@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-xegpu-to-xevm %s | FileCheck %s
+// RUN: mlir-opt -convert-xegpu-to-xevm -canonicalize %s | FileCheck %s
 
 gpu.module @load_store_check {
     // CHECK: fail
