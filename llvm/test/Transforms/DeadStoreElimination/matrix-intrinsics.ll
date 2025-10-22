@@ -10,9 +10,9 @@ define void @dead_unstrided_store_non_matrix_load(ptr noalias %src, ptr noalias 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   %l = load double, ptr %src
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -28,9 +28,9 @@ define void @live_unstrided_store_non_matrix_load(ptr noalias %src, ptr noalias 
 ;
 entry:
   %l.1 = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   %l.2 = load double, ptr %dst
-  call void @llvm.matrix.column.major.store(<8 x double> %l.1, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l.1, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -44,9 +44,9 @@ define void @dead_strided_store(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 200, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -60,9 +60,9 @@ define void @live_strided_store(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %ptr, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %ptr, i32 100, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %ptr, i32 200, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %ptr, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %ptr, i32 100, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -78,9 +78,9 @@ define void @dead_strided_store_non_matrix_load(ptr noalias %src, ptr noalias %d
 ;
 entry:
   %l.1 = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   %l.2 = load double, ptr %src
-  call void @llvm.matrix.column.major.store(<8 x double> %l.1, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l.1, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -96,9 +96,9 @@ define void @live_strided_store_non_matrix_load(ptr noalias %src, ptr noalias %d
 ;
 entry:
   %l.1 = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   %l.2 = load double, ptr %dst
-  call void @llvm.matrix.column.major.store(<8 x double> %l.1, ptr %dst, i32 100, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l.1, ptr %dst, i32 100, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -112,9 +112,9 @@ define void @dead_dynamically_strided_store(ptr noalias %src, ptr noalias %dst, 
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -128,9 +128,9 @@ define void @live_dynamically_strided_store(ptr %ptr, i32 %stride) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %ptr, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %ptr, i32 %stride, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %ptr, i32 %stride, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %ptr, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %ptr, i32 %stride, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -146,9 +146,9 @@ define void @dead_dynamically_strided_store_non_matrix_load(ptr noalias %src, pt
 ;
 entry:
   %l.1 = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   %l.2 = load double, ptr %src
-  call void @llvm.matrix.column.major.store(<8 x double> %l.1, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l.1, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -163,9 +163,9 @@ define void @live_dynamically_strided_store_non_matrix_load(ptr noalias %src, pt
 ;
 entry:
   %l.1 = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   %l.2 = load double, ptr %dst
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 %stride, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -179,9 +179,9 @@ define void @dead_unstrided_store(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -195,9 +195,9 @@ define void @live_unstrided_store(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @llvm.matrix.column.major.store(<8 x double> zeroinitializer, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> zeroinitializer, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %ptr, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -215,7 +215,7 @@ entry:
   %dst.offset = getelementptr inbounds double, ptr %src, i32 6
   store double 42.0, ptr %dst.offset
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -233,7 +233,7 @@ entry:
   %ptr.offset = getelementptr inbounds double, ptr %ptr, i32 6
   store double 42.0, ptr %ptr.offset
   %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %ptr, i32 4, i1 false, i32 4, i32 2)
-  call void @llvm.matrix.column.major.store(<8 x double> %l, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %ptr, i32 4, i1 false, i32 4, i32 2)
   ret void
 }
 
@@ -301,5 +301,38 @@ entry:
   ret void
 }
 
+define void @dead_matrix_store_dimension_change(ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @dead_matrix_store_dimension_change(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v9f64.i32(<9 x double> zeroinitializer, ptr [[DST]], i32 3, i1 false, i32 3, i32 3)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 8, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v9f64.i32(<9 x double> zeroinitializer, ptr %dst, i32 3, i1 false, i32 3, i32 3)
+  ret void
+}
+
+define void @live_matrix_store_dimension_change(ptr noalias %src, ptr noalias %dst) {
+; CHECK-LABEL: define void @live_matrix_store_dimension_change(
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L:%.*]] = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr [[SRC]], i32 8, i1 false, i32 4, i32 2)
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v9f64.i32(<9 x double> zeroinitializer, ptr [[DST]], i32 3, i1 false, i32 3, i32 3)
+; CHECK-NEXT:    call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> [[L]], ptr [[DST]], i32 4, i1 false, i32 4, i32 2)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %l = call <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr %src, i32 8, i1 false, i32 4, i32 2)
+  call void @llvm.matrix.column.major.store.v9f64.i32(<9 x double> zeroinitializer, ptr %dst, i32 3, i1 false, i32 3, i32 3)
+  call void @llvm.matrix.column.major.store.v8f64.i32(<8 x double> %l, ptr %dst, i32 4, i1 false, i32 4, i32 2)
+  ret void
+}
+
 declare <8 x double> @llvm.matrix.column.major.load.v8f64.i32(ptr, i32, i1, i32, i32)
+declare <9 x double> @llvm.matrix.column.major.load.v9f64.i32(ptr, i32, i1, i32, i32)
 declare void @llvm.matrix.column.major.store.v8f64.i32(<8 x double>, ptr, i32, i1, i32, i32)
