@@ -26,6 +26,8 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
+  const parser::Name *statVar{nullptr};
+  const parser::Name *msgVar{nullptr};
   int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
@@ -141,10 +143,14 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
             [&](const parser::StatOrErrmsg &statOrErr) {
               common::visit(
                   common::visitors{
-                      [&](const parser::StatVariable &) {
+                      [&](const parser::StatVariable &var) {
                         if (info.gotStat) { // C943
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
+                        }
+                        if (const auto *designator{
+                                parser::Unwrap<parser::Designator>(var)}) {
+                          info.statVar = &parser::GetLastName(*designator);
                         }
                         info.gotStat = true;
                       },
@@ -157,6 +163,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
+                        }
+                        if (const auto *designator{
+                                parser::Unwrap<parser::Designator>(var)}) {
+                          info.msgVar = &parser::GetLastName(*designator);
                         }
                         info.gotMsg = true;
                       },
@@ -688,6 +698,20 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Device) {
       context.Say(name_.source,
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
+    }
+  }
+  if (allocateInfo_.gotStat && allocateInfo_.statVar) {
+    if (const Symbol *symbol{allocateInfo_.statVar->symbol};
+        symbol && *ultimate_ == symbol->GetUltimate()) {
+      context.Say(allocateInfo_.statVar->source,
+          "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
+    }
+  }
+  if (allocateInfo_.gotMsg && allocateInfo_.msgVar) {
+    if (const Symbol *symbol{allocateInfo_.msgVar->symbol};
+        symbol && *ultimate_ == symbol->GetUltimate()) {
+      context.Say(allocateInfo_.msgVar->source,
+          "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
   }
   return RunCoarrayRelatedChecks(context);
