@@ -135,13 +135,13 @@ subp z0.b, p0/m, z1.b, z2.b
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-addqp z0.b, z0.b, z0.b
+addqp z0.b, z1.b, z2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: addqp z0.b, z0.b, z0.b
+// CHECK-NEXT: addqp z0.b, z1.b, z2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 movprfx z0, z7
-addsubp z0.b, z0.b, z0.b
+addsubp z0.b, z1.b, z2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: addsubp z0.b, z0.b, z0.b
+// CHECK-NEXT: addsubp z0.b, z1.b, z2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
