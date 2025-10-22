@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/DependencyScanning/DependencyScannerImpl.h"
+#include "DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
 #include "clang/Driver/Driver.h"
@@ -490,9 +490,6 @@ bool initializeScanCompilerInstance(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
     DiagnosticConsumer *DiagConsumer, DependencyScanningService &Service,
     IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS) {
-  // TODO: the commented out code here should be un-commented when
-  // we enable CAS.
-  // ScanInstance.getInvocation().getCASOpts() = Worker.CASOpts;
   ScanInstance.setBuildingModule(false);
 
   ScanInstance.createVirtualFileSystem(FS, DiagConsumer);
@@ -728,20 +725,22 @@ llvm::Error CompilerInstanceWithContext::initialize() {
                                                llvm::inconvertibleErrorCode());
   }
 
+  assert(Compilation->getJobs().size() &&
+         "Must have a job list of non-zero size");
   const driver::Command &Command = *(Compilation->getJobs().begin());
   const auto &CommandArgs = Command.getArguments();
   size_t ArgSize = CommandArgs.size();
   assert(ArgSize >= 1 && "Cannot have a command with 0 args");
   const char *FirstArg = CommandArgs[0];
-  if (strcmp(FirstArg, "-cc1"))
+  if (StringRef(FirstArg) != "-cc1")
     return llvm::make_error<llvm::StringError>(
         "Incorrect compilation command, missing cc1",
         llvm::inconvertibleErrorCode());
-  Invocation = std::make_unique<CompilerInvocation>();
+  OriginalInvocation = std::make_unique<CompilerInvocation>();
 
-  if (!CompilerInvocation::CreateFromArgs(*Invocation, Command.getArguments(),
-                                          *DiagEngineWithCmdAndOpts->DiagEngine,
-                                          Command.getExecutable())) {
+  if (!CompilerInvocation::CreateFromArgs(
+          *OriginalInvocation, Command.getArguments(),
+          *DiagEngineWithCmdAndOpts->DiagEngine, Command.getExecutable())) {
     DiagEngineWithCmdAndOpts->DiagEngine->Report(
         diag::err_fe_expected_compiler_job)
         << llvm::join(CommandLine, " ");
@@ -749,37 +748,16 @@ llvm::Error CompilerInstanceWithContext::initialize() {
         "Cannot create CompilerInvocation from Args",
         llvm::inconvertibleErrorCode());
   }
-
-  // TODO: CMDArgsStrVector is making string copies. We should optimize later
-  // and avoid the copies.
-  std::vector<std::string> CMDArgsStrVector(ArgSize + 1);
-  CMDArgsStrVector.push_back(Command.getExecutable());
-  llvm::transform(CommandArgs, CMDArgsStrVector.begin() + 1,
-                  [](const char *s) { return std::string(s); });
-
-  Invocation = createCompilerInvocation(CMDArgsStrVector,
-                                        *DiagEngineWithCmdAndOpts->DiagEngine);
-  if (!Invocation) {
-    DiagEngineWithCmdAndOpts->DiagEngine->Report(
-        diag::err_fe_expected_compiler_job)
-        << llvm::join(CommandLine, " ");
-    return llvm::make_error<llvm::StringError>(
-        "Cannot create CompilerInvocation from Args",
-        llvm::inconvertibleErrorCode());
-  }
-
-  Invocation->getFrontendOpts().DisableFree = false;
-  Invocation->getCodeGenOpts().DisableFree = false;
 
   if (any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::Macros))
-    canonicalizeDefines(Invocation->getPreprocessorOpts());
+    canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
   IntrusiveRefCntPtr<ModuleCache> ModCache =
       makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
-      std::make_shared<CompilerInvocation>(*Invocation), Worker.PCHContainerOps,
-      ModCache.get());
+      std::make_shared<CompilerInvocation>(*OriginalInvocation),
+      Worker.PCHContainerOps, ModCache.get());
   auto &CI = *CIPtr;
 
   if (!initializeScanCompilerInstance(
@@ -801,7 +779,6 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   OutputOpts = takeDependencyOutputOptionsFrom(CI);
 
   CI.createTarget();
-  // CI.initializeDelayedInputFileFromCAS();
 
   return llvm::Error::success();
 }
@@ -810,21 +787,19 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
   auto &CI = *CIPtr;
-  CompilerInvocation Inv(*Invocation);
+  CompilerInvocation Inv(*OriginalInvocation);
 
   CI.clearDependencyCollectors();
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
-      Worker.Service, *Invocation, Controller, PrebuiltModuleASTMap,
-      StableDirs);
+      Worker.Service, Inv, Controller, PrebuiltModuleASTMap, StableDirs);
 
   if (!SrcLocOffset) {
     // When SrcLocOffset is zero, we are at the beginning of the fake source
     // file. In this case, we call BeginSourceFile to initialize.
     std::unique_ptr<FrontendAction> Action =
-        std::make_unique<GetDependenciesByModuleNameAction>(ModuleName);
+        std::make_unique<PreprocessOnlyAction>();
     auto InputFile = CI.getFrontendOpts().Inputs.begin();
-
     Action->BeginSourceFile(CI, *InputFile);
   }
 
@@ -871,14 +846,6 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
 
   MDC->applyDiscoveredDependencies(Inv);
   Consumer.handleBuildCommand({CommandLine[0], Inv.getCC1CommandLine()});
-
-  // TODO: enable CAS
-  //   std::string ID = Inv.getFileSystemOpts().CASFileSystemRootID;
-  //   if (!ID.empty())
-  //     Consumer.handleCASFileSystemRootID(std::move(ID));
-  //   ID = Inv.getFrontendOpts().CASIncludeTreeID;
-  //   if (!ID.empty())
-  //     Consumer.handleIncludeTreeID(std::move(ID));
 
   // Remove the PPCallbacks since they are going out of scope.
   CI.getPreprocessor().removePPCallbacks();

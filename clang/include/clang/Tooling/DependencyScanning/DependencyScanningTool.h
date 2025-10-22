@@ -162,7 +162,7 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompilerInstacneWithContext(
+  llvm::Error initializeCompilerInstanceWithContext(
       StringRef CWD, const std::vector<std::string> &CommandLine);
 
   /// @brief Computes the dependeny for the module named ModuleName.

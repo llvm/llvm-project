@@ -13,7 +13,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Tooling/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "llvm/Support/Error.h"
@@ -30,6 +29,7 @@ namespace tooling {
 namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
+class CompilerInstanceWithContext;
 
 /// A command-line tool invocation that is part of building a TU.
 ///
@@ -89,6 +89,8 @@ public:
   /// @param FS The filesystem for the worker to use.
   DependencyScanningWorker(DependencyScanningService &Service,
                            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+
+  ~DependencyScanningWorker();
 
   /// Run the dependency scanning tool for a given clang driver command-line,
   /// and report the discovered dependencies to the provided consumer. If

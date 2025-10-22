@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNER_H
 
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -170,8 +169,7 @@ class CompilerInstanceWithContext {
   // Context - compiler invocation
   std::unique_ptr<clang::driver::Driver> Driver;
   std::unique_ptr<clang::driver::Compilation> Compilation;
-  std::unique_ptr<CompilerInvocation> Invocation;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFSFromCompilerInvocation;
+  std::unique_ptr<CompilerInvocation> OriginalInvocation;
 
   // Context - output options
   std::unique_ptr<DependencyOutputOptions> OutputOpts;

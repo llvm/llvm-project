@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
@@ -41,6 +42,8 @@ DependencyScanningWorker::DependencyScanningWorker(
     break;
   }
 }
+
+DependencyScanningWorker::~DependencyScanningWorker() = default;
 
 llvm::Error DependencyScanningWorker::computeDependencies(
     StringRef WorkingDirectory, const std::vector<std::string> &CommandLine,
