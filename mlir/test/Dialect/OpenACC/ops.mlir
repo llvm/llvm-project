@@ -2200,3 +2200,46 @@ acc.private.recipe @privatization_memref_slice : memref<10x10xf32> init {
 
   acc.yield %result : memref<10x10xf32>
 }
+
+// -----
+
+func.func @test_firstprivate_map(%arg0: memref<10xf32>) {
+  // Map the function argument using firstprivate_map to enable
+  // moving to accelerator but prevent any present counter updates.
+  %mapped = acc.firstprivate_map varPtr(%arg0 : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+
+  acc.parallel {
+    // Allocate a local variable inside the parallel region to represent
+    // materialized privatization.
+    %local = memref.alloca() : memref<10xf32>
+
+    // Initialize the local variable with the mapped firstprivate value
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %c1 = arith.constant 1 : index
+
+    scf.for %i = %c0 to %c10 step %c1 {
+      %val = memref.load %mapped[%i] : memref<10xf32>
+      memref.store %val, %local[%i] : memref<10xf32>
+    }
+
+    acc.yield
+  }
+
+  return
+}
+
+// CHECK-LABEL: func @test_firstprivate_map
+// CHECK-NEXT:   %[[MAPPED:.*]] = acc.firstprivate_map varPtr(%{{.*}} : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
+// CHECK-NEXT:   acc.parallel {
+// CHECK-NEXT:     %[[LOCAL:.*]] = memref.alloca() : memref<10xf32>
+// CHECK-NEXT:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-NEXT:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NEXT:     scf.for %{{.*}} = %[[C0]] to %[[C10]] step %[[C1]] {
+// CHECK-NEXT:       %{{.*}} = memref.load %[[MAPPED]][%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:       memref.store %{{.*}}, %[[LOCAL]][%{{.*}}] : memref<10xf32>
+// CHECK-NEXT:     }
+// CHECK-NEXT:     acc.yield
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return

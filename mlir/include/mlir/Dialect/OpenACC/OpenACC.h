@@ -46,10 +46,10 @@
   mlir::acc::CopyinOp, mlir::acc::CreateOp, mlir::acc::PresentOp,              \
       mlir::acc::NoCreateOp, mlir::acc::AttachOp, mlir::acc::DevicePtrOp,      \
       mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
-      mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
-      mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
-      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp,            \
-      mlir::acc::CacheOp
+      mlir::acc::FirstprivateOp, mlir::acc::FirstprivateMapInitialOp,          \
+      mlir::acc::UpdateDeviceOp, mlir::acc::UseDeviceOp,                       \
+      mlir::acc::ReductionOp, mlir::acc::DeclareDeviceResidentOp,              \
+      mlir::acc::DeclareLinkOp, mlir::acc::CacheOp
 #define ACC_DATA_EXIT_OPS                                                      \
   mlir::acc::CopyoutOp, mlir::acc::DeleteOp, mlir::acc::DetachOp,              \
       mlir::acc::UpdateHostOp
