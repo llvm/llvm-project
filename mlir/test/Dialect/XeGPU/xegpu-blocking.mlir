@@ -685,7 +685,7 @@ gpu.module @test_kernel {
 
 // -----
 gpu.module @test_kernel {
-  // CHECK-LABEL: load_gather
+  // CHECK-LABEL: remove_unit_dim_inst_data
   // CHECK-SAME: [[arg0:%.+]]: ui64
   // CHECK: [[cst:%.+]] = arith.constant dense<0.000000e+00> : vector<1x1x32xf32>
   // CHECK: [[cst_0:%.+]] = arith.constant dense<true> : vector<16xi1>
@@ -695,7 +695,7 @@ gpu.module @test_kernel {
   // CHECK: [[ld_1:%.+]] = xegpu.load [[arg0]][[[cst_2]]], [[cst_0]] <{chunk_size = 1 : i64, l1_hint = #xegpu.cache_hint<cached>}> : ui64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   // CHECK: [[ins_0:%.+]] = vector.insert_strided_slice [[ld_0]], [[cst]] {offsets = [0, 0, 0], strides = [1]} : vector<16xf32> into vector<1x1x32xf32>
   // CHECK: [[ins_1:%.+]] = vector.insert_strided_slice [[ld_1]], [[ins_0]] {offsets = [0, 0, 16], strides = [1]} : vector<16xf32> into vector<1x1x32xf32>
-  gpu.func @load_gather(%src: ui64) -> vector<1x1x32xf32> {
+  gpu.func @remove_unit_dim_inst_data(%src: ui64) -> vector<1x1x32xf32> {
       %cst = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [1, 1, 16]>} dense<[[
       [0,   8,  16,  24,  32,  40,  48,  56,
       64,  72,  80,  88,  96, 104, 112, 120,

@@ -255,8 +255,6 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
             1);
   std::copy(shape.begin(), shape.end(), adjustedTargetShape.begin() + rankDiff);
 
-  int64_t adjustedTargetShapeRank = adjustedTargetShape.size();
-
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets :
        StaticTileOffsetRange(srcShape, adjustedTargetShape)) {
@@ -265,7 +263,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
         builder, loc, value, offsets, adjustedTargetShape, staticStrides);
 
     // Reshape to remove leading unit dims if needed
-    if (adjustedTargetShapeRank > targetShapeRank) {
+    if (srcShapeRank > targetShapeRank) {
       auto targetTy = VectorType::get(shape, vecTy.getElementType());
       slice = builder.create<vector::ShapeCastOp>(loc, targetTy, slice);
     }

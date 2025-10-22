@@ -148,6 +148,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
     if (!layout.getEffectiveInstDataAsInt().empty()) {
       SmallVector<int64_t> instData = layout.getEffectiveInstDataAsInt();
       // Remove leading unit dimensions from inst_data
+      // For example, if the inst_data is [1, 1, 32]
+      // it will pass [32] as the unroll/blocking size.
       // Skip it for xegpu nd ops since it will be 2D
       Operation *definingOp = value.getDefiningOp();
       bool skipLeadingUnitDimRemoval =
@@ -155,8 +157,8 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
           (isa<xegpu::CreateNdDescOp, xegpu::LoadNdOp, xegpu::DpasOp,
                xegpu::StoreNdOp, xegpu::PrefetchNdOp>(definingOp));
       if (!skipLeadingUnitDimRemoval) {
-        while (!instData.empty() && instData.front() == 1)
-          instData.erase(instData.begin());
+        auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
+        instData.erase(instData.begin(), it);
       }
       return instData;
     }
