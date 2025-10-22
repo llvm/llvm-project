@@ -111,7 +111,7 @@ Error SpecialCaseList::Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
-LLVM_ABI void SpecialCaseList::Matcher::preprocess(bool BySize) {
+void SpecialCaseList::Matcher::preprocess(bool BySize) {
   return std::visit([&](auto &V) { return V.preprocess(BySize); }, M);
 }
 

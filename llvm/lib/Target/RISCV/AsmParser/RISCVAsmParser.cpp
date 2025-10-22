@@ -2406,7 +2406,8 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa))
+  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
+      STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e))
     return Error(
         ErrorLoc,
         "operand must be "
