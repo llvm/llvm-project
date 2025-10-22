@@ -6432,6 +6432,13 @@ bool Compiler<Emitter>::visitFunc(const FunctionDecl *F) {
   return this->emitNoRet(SourceInfo{});
 }
 
+static uint32_t getBitWidth(const Expr *E) {
+  assert(E->refersToBitField());
+  const auto *ME = cast<MemberExpr>(E);
+  const auto *FD = cast<FieldDecl>(ME->getMemberDecl());
+  return FD->getBitWidthValue();
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
@@ -6460,10 +6467,15 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return DiscardResult ? this->emitPopPtr(E) : true;
     }
 
-    if (T == PT_Float) {
+    if (T == PT_Float)
       return DiscardResult ? this->emitIncfPop(getFPOptions(E), E)
                            : this->emitIncf(getFPOptions(E), E);
-    }
+
+    if (SubExpr->refersToBitField())
+      return DiscardResult ? this->emitIncPopBitfield(*T, E->canOverflow(),
+                                                      getBitWidth(SubExpr), E)
+                           : this->emitIncBitfield(*T, E->canOverflow(),
+                                                   getBitWidth(SubExpr), E);
 
     return DiscardResult ? this->emitIncPop(*T, E->canOverflow(), E)
                          : this->emitInc(*T, E->canOverflow(), E);
@@ -6484,9 +6496,15 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return DiscardResult ? this->emitPopPtr(E) : true;
     }
 
-    if (T == PT_Float) {
+    if (T == PT_Float)
       return DiscardResult ? this->emitDecfPop(getFPOptions(E), E)
                            : this->emitDecf(getFPOptions(E), E);
+
+    if (SubExpr->refersToBitField()) {
+      return DiscardResult ? this->emitDecPopBitfield(*T, E->canOverflow(),
+                                                      getBitWidth(SubExpr), E)
+                           : this->emitDecBitfield(*T, E->canOverflow(),
+                                                   getBitWidth(SubExpr), E);
     }
 
     return DiscardResult ? this->emitDecPop(*T, E->canOverflow(), E)
@@ -6515,6 +6533,11 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitIncfPop(getFPOptions(E), E);
+      if (SubExpr->refersToBitField())
+        return DiscardResult ? this->emitIncPopBitfield(*T, E->canOverflow(),
+                                                        getBitWidth(SubExpr), E)
+                             : this->emitIncBitfield(*T, E->canOverflow(),
+                                                     getBitWidth(SubExpr), E);
       return this->emitIncPop(*T, E->canOverflow(), E);
     }
 
@@ -6529,6 +6552,11 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitAddf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
+        return false;
+    } else if (SubExpr->refersToBitField()) {
+      assert(isIntegralType(*T));
+      if (!this->emitPreIncBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
+                                    E))
         return false;
     } else {
       assert(isIntegralType(*T));
@@ -6560,6 +6588,11 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (DiscardResult) {
       if (T == PT_Float)
         return this->emitDecfPop(getFPOptions(E), E);
+      if (SubExpr->refersToBitField())
+        return DiscardResult ? this->emitDecPopBitfield(*T, E->canOverflow(),
+                                                        getBitWidth(SubExpr), E)
+                             : this->emitDecBitfield(*T, E->canOverflow(),
+                                                     getBitWidth(SubExpr), E);
       return this->emitDecPop(*T, E->canOverflow(), E);
     }
 
@@ -6574,6 +6607,11 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (!this->emitSubf(getFPOptions(E), E))
         return false;
       if (!this->emitStoreFloat(E))
+        return false;
+    } else if (SubExpr->refersToBitField()) {
+      assert(isIntegralType(*T));
+      if (!this->emitPreDecBitfield(*T, E->canOverflow(), getBitWidth(SubExpr),
+                                    E))
         return false;
     } else {
       assert(isIntegralType(*T));
