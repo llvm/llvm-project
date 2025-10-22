@@ -52,6 +52,7 @@
 #include "MultiLevelImplicitPointerConversionCheck.h"
 #include "MultipleNewInOneExpressionCheck.h"
 #include "MultipleStatementMacroCheck.h"
+#include "MutatingCopyCheck.h"
 #include "NarrowingConversionsCheck.h"
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
@@ -198,6 +199,7 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<MutatingCopyCheck>("bugprone-mutating-copy");
     CheckFactories.registerCheck<NondeterministicPointerIterationOrderCheck>(
         "bugprone-nondeterministic-pointer-iteration-order");
     CheckFactories.registerCheck<OptionalValueConversionCheck>(

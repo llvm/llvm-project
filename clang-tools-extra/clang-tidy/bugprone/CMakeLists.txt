@@ -53,6 +53,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultiLevelImplicitPointerConversionCheck.cpp
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
+  MutatingCopyCheck.cpp
   NarrowingConversionsCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp

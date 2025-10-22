@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
 #include "../bugprone/CommandProcessorCheck.h"
+#include "../bugprone/MutatingCopyCheck.h"
 #include "../bugprone/PointerArithmeticOnPolymorphicObjectCheck.h"
 #include "../bugprone/ReservedIdentifierCheck.h"
 #include "../bugprone/SignalHandlerCheck.h"
@@ -38,7 +39,6 @@
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
-#include "MutatingCopyCheck.h"
 #include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "ThrownExceptionTypeCheck.h"
@@ -280,7 +280,7 @@ public:
         "cert-oop54-cpp");
     CheckFactories.registerCheck<NonTrivialTypesLibcMemoryCallsCheck>(
         "cert-oop57-cpp");
-    CheckFactories.registerCheck<MutatingCopyCheck>("cert-oop58-cpp");
+    CheckFactories.registerCheck<bugprone::MutatingCopyCheck>("cert-oop58-cpp");
 
     // C checkers
     // ARR
