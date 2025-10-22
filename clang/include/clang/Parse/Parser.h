@@ -5168,7 +5168,6 @@ private:
   /// Implementations are in ParseHLSL.cpp
   ///@{
 
-
   //===--------------------------------------------------------------------===//
   // C++2c: Reflection [P2996]
   ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
