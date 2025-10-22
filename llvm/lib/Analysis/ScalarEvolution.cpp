@@ -3768,9 +3768,8 @@ ScalarEvolution::getAddRecExpr(SmallVectorImpl<const SCEV *> &Operands,
   return getOrCreateAddRecExpr(Operands, L, Flags);
 }
 
-const SCEV *
-ScalarEvolution::getGEPExpr(GEPOperator *GEP,
-                            const SmallVectorImpl<const SCEV *> &IndexExprs) {
+const SCEV *ScalarEvolution::getGEPExpr(GEPOperator *GEP,
+                                        ArrayRef<const SCEV *> IndexExprs) {
   const SCEV *BaseExpr = getSCEV(GEP->getPointerOperand());
   // getSCEV(Base)->getType() has the same address space as Base->getType()
   // because SCEV::getType() preserves the address space.
@@ -3786,20 +3785,18 @@ ScalarEvolution::getGEPExpr(GEPOperator *GEP,
       NW = GEPNoWrapFlags::none();
   }
 
+  return getGEPExpr(BaseExpr, IndexExprs, GEP->getSourceElementType(), NW);
+}
+
+const SCEV *ScalarEvolution::getGEPExpr(const SCEV *BaseExpr,
+                                        ArrayRef<const SCEV *> IndexExprs,
+                                        Type *SrcElementTy, GEPNoWrapFlags NW) {
   SCEV::NoWrapFlags OffsetWrap = SCEV::FlagAnyWrap;
   if (NW.hasNoUnsignedSignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNSW);
   if (NW.hasNoUnsignedWrap())
     OffsetWrap = setFlags(OffsetWrap, SCEV::FlagNUW);
 
-  return getGEPExpr(BaseExpr, IndexExprs, GEP->getSourceElementType(),
-                    OffsetWrap);
-}
-
-const SCEV *
-ScalarEvolution::getGEPExpr(const SCEV *BaseExpr,
-                            const SmallVectorImpl<const SCEV *> &IndexExprs,
-                            Type *SrcElementTy, SCEV::NoWrapFlags OffsetWrap) {
   Type *CurTy = BaseExpr->getType();
   Type *IntIdxTy = getEffectiveSCEVType(BaseExpr->getType());
   bool FirstIter = true;
@@ -3845,9 +3842,8 @@ ScalarEvolution::getGEPExpr(const SCEV *BaseExpr,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  bool NUW =
-      hasFlags(OffsetWrap, SCEV::FlagNUW) ||
-      (hasFlags(OffsetWrap, SCEV::FlagNSW) && isKnownNonNegative(Offset));
+  bool NUW = NW.hasNoUnsignedWrap() ||
+             (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
   SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
