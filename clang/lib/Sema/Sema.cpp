@@ -1447,10 +1447,6 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (!VD || VD->isInvalidDecl() || !Seen.insert(VD).second)
       continue;
 
-    if (PP.isIncrementalProcessingEnabled() &&
-        VD->getTranslationUnitDecl() != Context.getTranslationUnitDecl())
-      continue;
-
     if (const IncompleteArrayType *ArrayT
         = Context.getAsIncompleteArrayType(VD->getType())) {
       // Set the length of the array to 1 (C99 6.9.2p5).
@@ -1487,6 +1483,13 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
   }
+
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                                TentativeDefinitions.end());
 
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
