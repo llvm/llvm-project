@@ -36,6 +36,10 @@ entry:
 
 ; Check that eon is generated if the xor is a disjoint or.
 define i64 @disjoint_or(i64 %a, i64 %b) {
+; CHECK-LABEL: disjoint_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eon x0, x0, x1
+; CHECK-NEXT:    ret
   %or = or disjoint i64 %a, %b
   %eon = xor i64 %or, -1
   ret i64 %eon
@@ -43,6 +47,11 @@ define i64 @disjoint_or(i64 %a, i64 %b) {
 
 ; Check that eon is *not* generated if the or is not disjoint.
 define i64 @normal_or(i64 %a, i64 %b) {
+; CHECK-LABEL: normal_or:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr x8, x0, x1
+; CHECK-NEXT:    mvn x0, x8
+; CHECK-NEXT:    ret
   %or = or i64 %a, %b
   %not = xor i64 %or, -1
   ret i64 %not
