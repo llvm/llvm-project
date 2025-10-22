@@ -46,7 +46,11 @@ private:
       std::string_view v(__PRETTY_FUNCTION__);
       // Extract the "xyz" from the "pretty function" string:
       // "... [with T = xyz; std::string_view = ...]"
-      std::string_view front("with T = ");
+#ifdef __clang__
+      std::string_view front("[T = ");
+#else
+      std::string_view front("[with T = ");
+#endif
       std::string_view back("; std::string_view =");
 
 #elif defined(_MSC_VER)
@@ -69,7 +73,6 @@ private:
         }
       }
 #endif
-
       return "";
     }
 

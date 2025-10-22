@@ -614,7 +614,7 @@ bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
   RecordDecl *rd = ile->getType()
                        ->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
+                       ->getDecl()
                        ->getDefinitionOrSelf();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
@@ -817,9 +817,8 @@ bool ConstRecordBuilder::build(const APValue &val, const RecordDecl *rd,
 
 mlir::Attribute ConstRecordBuilder::finalize(QualType type) {
   type = type.getNonReferenceType();
-  RecordDecl *rd = type->castAs<clang::RecordType>()
-                       ->getOriginalDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd =
+      type->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   mlir::Type valTy = cgm.convertType(type);
   return builder.build(valTy, rd->hasFlexibleArrayMember());
 }
@@ -842,9 +841,8 @@ mlir::Attribute ConstRecordBuilder::buildRecord(ConstantEmitter &emitter,
   ConstantAggregateBuilder constant(emitter.cgm);
   ConstRecordBuilder builder(emitter, constant, CharUnits::Zero());
 
-  const RecordDecl *rd = valTy->castAs<clang::RecordType>()
-                             ->getOriginalDecl()
-                             ->getDefinitionOrSelf();
+  const RecordDecl *rd =
+      valTy->castAs<clang::RecordType>()->getDecl()->getDefinitionOrSelf();
   const CXXRecordDecl *cd = dyn_cast<CXXRecordDecl>(rd);
   if (!builder.build(val, rd, false, cd, CharUnits::Zero()))
     return nullptr;
@@ -873,7 +871,7 @@ bool ConstRecordBuilder::updateRecord(ConstantEmitter &emitter,
 class ConstExprEmitter
     : public StmtVisitor<ConstExprEmitter, mlir::Attribute, QualType> {
   CIRGenModule &cgm;
-  LLVM_ATTRIBUTE_UNUSED ConstantEmitter &emitter;
+  [[maybe_unused]] ConstantEmitter &emitter;
 
 public:
   ConstExprEmitter(ConstantEmitter &emitter)
@@ -1013,9 +1011,9 @@ public:
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
-    cgm.errorNYI(die->getBeginLoc(),
-                 "ConstExprEmitter::VisitCXXDefaultInitExpr");
-    return {};
+    // No need for a DefaultInitExprScope: we don't handle 'this' in a
+    // constant expression.
+    return Visit(die->getExpr(), t);
   }
 
   mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *e, QualType t) {
@@ -1030,9 +1028,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    cgm.errorNYI(e->getBeginLoc(),
-                 "ConstExprEmitter::VisitImplicitValueInitExpr");
-    return {};
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {

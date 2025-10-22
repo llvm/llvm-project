@@ -12,7 +12,7 @@ from lldbsuite.test import lldbutil
 class TestCortexMExceptionUnwind(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfRemote
+    @skipIfLLVMTargetMissing("ARM")
     def test_no_fpu(self):
         """Test that we can backtrace correctly through an ARM Cortex-M Exception return stack"""
 
@@ -44,10 +44,6 @@ class TestCortexMExceptionUnwind(TestBase):
         thread = process.GetThreadAtIndex(0)
         self.assertTrue(thread.IsValid())
 
-        # We have 4 named stack frames and two unnamed
-        # frames above that.  The topmost two stack frames
-        # were not interesting for this test, so I didn't
-        # create symbols for them.
         self.assertEqual(thread.GetNumFrames(), 3)
         stackframe_names = [
             "exception_catcher",
