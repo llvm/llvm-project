@@ -69,10 +69,10 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   Allocator = AllocatorIn;
 
   // Read user-defined options
-  const auto &UserOptions = Option.MemPoolInfo.at(AllocKind);
-  const size_t UserAllocMax = UserOptions[0];
-  const size_t UserCapacity = UserOptions[1];
-  const size_t UserPoolSize = UserOptions[2];
+  const auto &UserOptions = Option.MemPoolConfig[AllocKind];
+  const size_t UserAllocMax = UserOptions.AllocMax;
+  const size_t UserCapacity = UserOptions.Capacity;
+  const size_t UserPoolSize = UserOptions.PoolSize;
 
   BlockCapacity = UserCapacity;
   PoolSizeMax = UserPoolSize << 20; // MB to B
@@ -373,7 +373,7 @@ Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
   Device = &L0Device;
   L0Context = &L0Device.getL0Context();
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
-    if (Options.MemPoolInfo.count(Kind) > 0) {
+    if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);
       Pools[Kind] = std::make_unique<MemPoolTy>();
       if (auto Err = Pools[Kind]->init(Kind, this, Options))
@@ -395,7 +395,7 @@ Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
   this->L0Context = &Driver;
-  if (Option.MemPoolInfo.count(TARGET_ALLOC_HOST) > 0) {
+  if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
     Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
     if (auto Err =

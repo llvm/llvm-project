@@ -77,13 +77,18 @@ struct L0OptionsTy {
   /// Staging buffer count
   size_t StagingBufferCount = L0StagingBufferCount;
 
-  // TODO: This should probably be an array indexed by AllocKind
   /// Memory pool parameters
   /// MemPoolInfo[MemType] = {AllocMax(MB), Capacity, PoolSize(MB)}
-  std::map<int32_t, std::array<int32_t, 3>> MemPoolInfo = {
-      {TARGET_ALLOC_DEVICE, {1, 4, 256}},
-      {TARGET_ALLOC_HOST, {1, 4, 256}},
-      {TARGET_ALLOC_SHARED, {8, 4, 256}}};
+  struct MemPoolConfigTy {
+    bool Use;
+    int32_t AllocMax;
+    int32_t Capacity;
+    int32_t PoolSize;
+  };
+  std::array<MemPoolConfigTy, 3> MemPoolConfig{
+      MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_DEVICE
+      MemPoolConfigTy{true, 1, 4, 256},  // TARGET_ALLOC_HOST
+      MemPoolConfigTy{true, 8, 4, 256}}; // TARGET_ALLOC_SHARED
 
   /// Parameters for memory pools dedicated to reduction scratch space
   std::array<int32_t, 3> ReductionPoolInfo{256, 8, 8192};

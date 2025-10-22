@@ -41,7 +41,8 @@ void L0OptionsTy::processEnvironmentVars() {
   if (MemoryPoolVar.isPresent()) {
     if (MemoryPoolVar.get() == "0") {
       Flags.UseMemoryPool = 0;
-      MemPoolInfo.clear();
+      std::for_each(MemPoolConfig.begin(), MemPoolConfig.end(),
+                    [](auto &I) { I = {false, 0, 0, 0}; });
     } else {
       std::istringstream Str(MemoryPoolVar.get());
       int32_t MemType = -1;
@@ -50,19 +51,19 @@ void L0OptionsTy::processEnvironmentVars() {
       const std::array<int32_t, 3> DefaultValue{1, 4, 256};
       const int32_t AllMemType = INT32_MAX;
       std::array<int32_t, 3> AllInfo{1, 4, 256};
-      std::map<int32_t, std::array<int32_t, 3>> PoolInfo;
+      std::array<std::array<int32_t, 3>, 3> PoolInfo;
       for (std::string Token; std::getline(Str, Token, ',') && Valid > 0;) {
         if (Token == "device") {
           MemType = TARGET_ALLOC_DEVICE;
-          PoolInfo.emplace(MemType, DefaultValue);
+          PoolInfo[TARGET_ALLOC_DEVICE] = DefaultValue;
           Offset = 0;
         } else if (Token == "host") {
           MemType = TARGET_ALLOC_HOST;
-          PoolInfo.emplace(MemType, DefaultValue);
+          PoolInfo[TARGET_ALLOC_HOST] = DefaultValue;
           Offset = 0;
         } else if (Token == "shared") {
           MemType = TARGET_ALLOC_SHARED;
-          PoolInfo.emplace(MemType, DefaultValue);
+          PoolInfo[TARGET_ALLOC_SHARED] = DefaultValue;
           Offset = 0;
         } else if (Token == "all") {
           MemType = AllMemType;
@@ -87,19 +88,24 @@ void L0OptionsTy::processEnvironmentVars() {
         if (Valid == 2) {
           // "all" is specified -- ignore other inputs
           if (AllInfo[0] > 0) {
-            MemPoolInfo[TARGET_ALLOC_DEVICE] = AllInfo;
-            MemPoolInfo[TARGET_ALLOC_HOST] = AllInfo;
-            MemPoolInfo[TARGET_ALLOC_SHARED] = std::move(AllInfo);
+            MemPoolConfig[TARGET_ALLOC_DEVICE] = {true, AllInfo[0], AllInfo[1],
+                                                  AllInfo[2]};
+            MemPoolConfig[TARGET_ALLOC_HOST] = {true, AllInfo[0], AllInfo[1],
+                                                AllInfo[2]};
+            MemPoolConfig[TARGET_ALLOC_SHARED] = {true, AllInfo[0], AllInfo[1],
+                                                  AllInfo[2]};
           } else {
-            MemPoolInfo.clear();
+            std::for_each(MemPoolConfig.begin(), MemPoolConfig.end(),
+                          [](auto &I) { I = {false, 0, 0, 0}; });
           }
         } else {
-          // Use user-specified configuration
-          for (auto &I : PoolInfo) {
-            if (I.second[0] > 0)
-              MemPoolInfo[I.first] = I.second;
-            else
-              MemPoolInfo.erase(I.first);
+          for (size_t Pool = 0; Pool < PoolInfo.size(); ++Pool) {
+            if (PoolInfo[Pool][0] == 0) {
+              MemPoolConfig[Pool] = {false, 0, 0, 0};
+            } else {
+              MemPoolConfig[Pool] = {true, PoolInfo[Pool][0], PoolInfo[Pool][1],
+                                     PoolInfo[Pool][2]};
+            }
           }
         }
       } else {
