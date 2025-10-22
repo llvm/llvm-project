@@ -251,6 +251,14 @@
   define i32 @symbolic_operands_constantpool() {
     ret i32 0
   }
+
+  define i32 @symbolic_operands_interleave() {
+    ret i32 0
+  }
+
+  define i32 @symbolic_operands_base_offset_different_align() {
+    ret i32 0
+  }
 ---
 # Basic case: two consecutive 32-bit loads that can be combined into LD
 name: basic_load_combine
@@ -1271,6 +1279,85 @@ body: |
     ; Two consecutive loads with constant pool operands
     %1:gpr = LW %0, target-flags(riscv-lo) %const.0 :: (load (s32))
     %2:gpr = LW %0, target-flags(riscv-lo) %const.0 + 4 :: (load (s32))
+    %3:gpr = ADD %1, %2
+    PseudoRET
+
+...
+---
+name: symbolic_operands_interleave
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+  - { reg: '$x11', virtual-reg: '%1' }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: symbolic_operands_interleave
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY1]], 4 :: (load (s32))
+    ; CHECK-NEXT: [[LW2:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-NEXT: [[LW3:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW3]]
+    ; CHECK-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW1]], [[LW2]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: symbolic_operands_interleave
+    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) @global_var :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY1]], 4 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], 0 :: (load (s32))
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT]], [[PseudoLD_RV32_OPT1]]
+    ; CHECK-4BYTE-NEXT: [[ADD1:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x11
+    %2:gpr = LW %0, target-flags(riscv-lo) @global_var :: (load (s32))
+    %3:gpr = LW %1, 4 :: (load (s32))
+    %5:gpr = LW %0, 0 :: (load (s32))
+    %4:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32))
+    %6:gpr = ADD %2, %4
+    %7:gpr = ADD %3, %5
+    PseudoRET
+
+...
+---
+name: symbolic_operands_base_offset_different_align
+alignment: 4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x10', virtual-reg: '%0' }
+body: |
+  bb.0:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: symbolic_operands_base_offset_different_align
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 8 :: (load (s32), align 8)
+    ; CHECK-NEXT: [[LW1:%[0-9]+]]:gpr = LW [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[LW]], [[LW1]]
+    ; CHECK-NEXT: PseudoRET
+    ;
+    ; CHECK-4BYTE-LABEL: name: symbolic_operands_base_offset_different_align
+    ; CHECK-4BYTE: liveins: $x10, $x11
+    ; CHECK-4BYTE-NEXT: {{  $}}
+    ; CHECK-4BYTE-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-4BYTE-NEXT: [[PseudoLD_RV32_OPT:%[0-9]+]]:gpr, [[PseudoLD_RV32_OPT1:%[0-9]+]]:gpr = PseudoLD_RV32_OPT [[COPY]], target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
+    ; CHECK-4BYTE-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PseudoLD_RV32_OPT1]], [[PseudoLD_RV32_OPT]]
+    ; CHECK-4BYTE-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = LW %0, target-flags(riscv-lo) @global_var + 8:: (load (s32), align 8)
+    %2:gpr = LW %0, target-flags(riscv-lo) @global_var + 4 :: (load (s32), align 8)
     %3:gpr = ADD %1, %2
     PseudoRET
 

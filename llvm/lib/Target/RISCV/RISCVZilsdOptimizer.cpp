@@ -79,19 +79,28 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+  enum class MemoryOffsetKind {
+    Imm = 0,
+    Global = 1,
+    CPI = 2,
+    BlockAddr = 3,
+    Unknown = 4,
+  };
+  using MemOffset = std::pair<MemoryOffsetKind, int>;
+  using BaseRegInfo = std::pair<unsigned, MemoryOffsetKind>;
 
 private:
   bool isMemoryOp(const MachineInstr &MI);
   bool rescheduleLoadStoreInstrs(MachineBasicBlock *MBB);
-  bool canFormLdSdPair(MachineInstr *Op0, MachineInstr *Op1, unsigned &NewOpc,
-                       Register &FirstReg, Register &SecondReg,
-                       Register &BaseReg, int &Offset);
+  bool canFormLdSdPair(MachineInstr *Op0, MachineInstr *Op1, Register &FirstReg,
+                       Register &SecondReg, Register &BaseReg,
+                       MachineOperand *&OffsetOp);
   bool rescheduleOps(MachineBasicBlock *MBB,
-                     SmallVectorImpl<MachineInstr *> &Ops, unsigned Base,
-                     bool IsLoad,
+                     SmallVectorImpl<MachineInstr *> &Ops,
+                     BaseRegInfo Base, bool IsLoad,
                      DenseMap<MachineInstr *, unsigned> &MI2LocMap);
   bool isSafeToMove(MachineInstr *MI, MachineInstr *Target, bool MoveForward);
-  int getMemoryOpOffset(const MachineInstr &MI);
+  MemOffset getMemoryOpOffset(const MachineInstr &MI);
 
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
@@ -141,7 +150,8 @@ bool RISCVPreAllocZilsdOpt::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-int RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
+RISCVPreAllocZilsdOpt::MemOffset
+RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case RISCV::LW:
   case RISCV::SW: {
@@ -150,27 +160,32 @@ int RISCVPreAllocZilsdOpt::getMemoryOpOffset(const MachineInstr &MI) {
 
     // Handle immediate offset
     if (OffsetOp.isImm())
-      return OffsetOp.getImm();
+      return std::make_pair(MemoryOffsetKind::Imm, OffsetOp.getImm());
 
     // Handle symbolic operands with MO_LO flag (from MergeBaseOffset)
-    if (OffsetOp.getTargetFlags() & RISCVII::MO_LO)
-      if (OffsetOp.isGlobal() || OffsetOp.isCPI() ||
-          OffsetOp.isBlockAddress() || OffsetOp.isSymbol())
-        return OffsetOp.getOffset();
+    if (OffsetOp.getTargetFlags() & RISCVII::MO_LO) {
+      if (OffsetOp.isGlobal())
+        return std::make_pair(MemoryOffsetKind::Global, OffsetOp.getOffset());
+      if (OffsetOp.isCPI())
+        return std::make_pair(MemoryOffsetKind::CPI, OffsetOp.getOffset());
+      if (OffsetOp.isBlockAddress())
+        return std::make_pair(MemoryOffsetKind::BlockAddr,
+                              OffsetOp.getOffset());
+    }
 
     break;
   }
   default:
     break;
   }
-  return 0;
+
+  return std::make_pair(MemoryOffsetKind::Unknown, 0);
 }
 
-bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
-                                            MachineInstr *Op1, unsigned &NewOpc,
-                                            Register &FirstReg,
-                                            Register &SecondReg,
-                                            Register &BaseReg, int &Offset) {
+bool RISCVPreAllocZilsdOpt::canFormLdSdPair(
+    MachineInstr *Op0, MachineInstr *Op1, Register &FirstReg,
+    Register &SecondReg, Register &BaseReg,
+    MachineOperand *&OffsetOp) {
 
   unsigned Opcode = Op0->getOpcode();
 
@@ -178,11 +193,7 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
   if (Opcode != Op1->getOpcode())
     return false;
 
-  if (Opcode == RISCV::LW)
-    NewOpc = RISCV::PseudoLD_RV32_OPT;
-  else if (Opcode == RISCV::SW)
-    NewOpc = RISCV::PseudoSD_RV32_OPT;
-  else
+  if (Opcode != RISCV::LW && Opcode != RISCV::SW)
     return false;
 
   if (!Op0->hasOneMemOperand() || !Op1->hasOneMemOperand())
@@ -196,41 +207,9 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
   if (OffsetOp0.getType() != OffsetOp1.getType())
     return false;
 
-  // If they're symbolic, they must reference the same symbol
-  if (!OffsetOp0.isImm()) {
-    // Check if both have MO_LO flag
-    if ((OffsetOp0.getTargetFlags() & RISCVII::MO_LO) !=
-        (OffsetOp1.getTargetFlags() & RISCVII::MO_LO))
-      return false;
-
-    // For global addresses, must be the same global
-    if (OffsetOp0.isGlobal()) {
-      if (!OffsetOp1.isGlobal() ||
-          OffsetOp0.getGlobal() != OffsetOp1.getGlobal())
-        return false;
-    }
-    // For constant pool indices, must be the same index
-    else if (OffsetOp0.isCPI()) {
-      if (!OffsetOp1.isCPI() || OffsetOp0.getIndex() != OffsetOp1.getIndex())
-        return false;
-    }
-    // For symbols, must be the same symbol name
-    else if (OffsetOp0.isSymbol()) {
-      if (!OffsetOp1.isSymbol() ||
-          strcmp(OffsetOp0.getSymbolName(), OffsetOp1.getSymbolName()) != 0)
-        return false;
-    }
-    // For block addresses, must be the same block
-    else if (OffsetOp0.isBlockAddress()) {
-      if (!OffsetOp1.isBlockAddress() ||
-          OffsetOp0.getBlockAddress() != OffsetOp1.getBlockAddress())
-        return false;
-    }
-  }
-
   // Get offsets and check they are consecutive
-  int Offset0 = getMemoryOpOffset(*Op0);
-  int Offset1 = getMemoryOpOffset(*Op1);
+  int Offset0 = getMemoryOpOffset(*Op0).second;
+  int Offset1 = getMemoryOpOffset(*Op1).second;
 
   // Offsets must be 4 bytes apart
   if (std::abs(Offset1 - Offset0) != 4)
@@ -242,16 +221,31 @@ bool RISCVPreAllocZilsdOpt::canFormLdSdPair(MachineInstr *Op0,
   if (Base0 != Base1)
     return false;
 
+  int OffsetVal;
+
   // Set output parameters
   if (Offset0 < Offset1) {
     FirstReg = Op0->getOperand(0).getReg();
     SecondReg = Op1->getOperand(0).getReg();
-    Offset = Offset0;
+    OffsetOp = &Op0->getOperand(2);
+    OffsetVal = Offset0;
   } else {
     FirstReg = Op1->getOperand(0).getReg();
     SecondReg = Op0->getOperand(0).getReg();
-    Offset = Offset1;
+    OffsetOp = &Op1->getOperand(2);
+    OffsetVal = Offset1;
   }
+
+  // Check alignment: default is 8-byte, but allow 4-byte with tune feature
+  // If unaligned scalar memory is enabled, allow any alignment
+  unsigned RequiredAlign = STI->enableUnalignedScalarMem() ? 1
+                           : STI->allowZilsd4ByteAlign()   ? 4
+                                                           : 8;
+  // Base alignment is checked at this point, we need to check offset alignment.
+  // e.g. Valid: global(align 8) + offset(0)
+  //      Invalid: global(align 8) + offset(4)
+  if (OffsetVal % RequiredAlign != 0)
+    return false;
 
   BaseReg = Base0;
 
@@ -335,11 +329,13 @@ bool RISCVPreAllocZilsdOpt::isSafeToMove(MachineInstr *MI, MachineInstr *Target,
 }
 
 bool RISCVPreAllocZilsdOpt::rescheduleOps(
-    MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops, unsigned Base,
-    bool IsLoad, DenseMap<MachineInstr *, unsigned> &MI2LocMap) {
-  // Sort by offset
+    MachineBasicBlock *MBB, SmallVectorImpl<MachineInstr *> &Ops,
+    BaseRegInfo Base, bool IsLoad,
+    DenseMap<MachineInstr *, unsigned> &MI2LocMap) {
+  // Sort by offset, at this point it ensure base reg and MemoryOffsetKind are
+  // same, so we just need to simply sort by offset value.
   llvm::sort(Ops.begin(), Ops.end(), [this](MachineInstr *A, MachineInstr *B) {
-    return getMemoryOpOffset(*A) < getMemoryOpOffset(*B);
+    return getMemoryOpOffset(*A).second < getMemoryOpOffset(*B).second;
   });
 
   bool Modified = false;
@@ -353,12 +349,10 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     if (!Op0->getParent() || !Op1->getParent())
       continue;
 
-    unsigned NewOpc;
     Register FirstReg, SecondReg, BaseReg;
-    int Offset;
+    MachineOperand *OffsetOp = nullptr;
 
-    if (!canFormLdSdPair(Op0, Op1, NewOpc, FirstReg, SecondReg, BaseReg,
-                         Offset))
+    if (!canFormLdSdPair(Op0, Op1, FirstReg, SecondReg, BaseReg, OffsetOp))
       continue;
 
     // Check if we can safely and profitably move the instructions together
@@ -403,40 +397,22 @@ bool RISCVPreAllocZilsdOpt::rescheduleOps(
     DebugLoc DL = Op0->getDebugLoc();
 
     if (IsLoad) {
-      MIB = BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc))
+      MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoLD_RV32_OPT))
                 .addReg(FirstReg, RegState::Define)
                 .addReg(SecondReg, RegState::Define)
-                .addReg(BaseReg);
+                .addReg(BaseReg)
+                .add(*OffsetOp);
       ++NumLDFormed;
       LLVM_DEBUG(dbgs() << "Formed LD: " << *MIB << "\n");
     } else {
-      MIB = BuildMI(*MBB, InsertPos, DL, TII->get(NewOpc))
+      MIB = BuildMI(*MBB, InsertPos, DL, TII->get(RISCV::PseudoSD_RV32_OPT))
                 .addReg(FirstReg)
                 .addReg(SecondReg)
-                .addReg(BaseReg);
+                .addReg(BaseReg)
+                .add(*OffsetOp);
       ++NumSDFormed;
       LLVM_DEBUG(dbgs() << "Formed SD: " << *MIB << "\n");
     }
-
-    // Add the offset operand - preserve symbolic references
-    const MachineOperand &OffsetOp = (Offset == getMemoryOpOffset(*Op0))
-                                         ? Op0->getOperand(2)
-                                         : Op1->getOperand(2);
-
-    if (OffsetOp.isImm())
-      MIB.addImm(Offset);
-    else if (OffsetOp.isGlobal())
-      MIB.addGlobalAddress(OffsetOp.getGlobal(), Offset,
-                           OffsetOp.getTargetFlags());
-    else if (OffsetOp.isCPI())
-      MIB.addConstantPoolIndex(OffsetOp.getIndex(), Offset,
-                               OffsetOp.getTargetFlags());
-    else if (OffsetOp.isSymbol())
-      MIB.addExternalSymbol(OffsetOp.getSymbolName(),
-                            OffsetOp.getTargetFlags());
-    else if (OffsetOp.isBlockAddress())
-      MIB.addBlockAddress(OffsetOp.getBlockAddress(), Offset,
-                          OffsetOp.getTargetFlags());
 
     // Copy memory operands
     MIB.cloneMergedMemRefs({Op0, Op1});
@@ -485,7 +461,7 @@ bool RISCVPreAllocZilsdOpt::isMemoryOp(const MachineInstr &MI) {
   Align RequiredAlign = STI->enableUnalignedScalarMem() ? Align(1)
                         : STI->allowZilsd4ByteAlign()   ? Align(4)
                                                         : Align(8);
-  if (MMO->getAlign() < RequiredAlign)
+  if (MMO->getBaseAlign() < RequiredAlign)
     return false;
 
   if (MMO->isVolatile() || MMO->isAtomic())
@@ -516,8 +492,8 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     DenseMap<MachineInstr *, unsigned> MI2LocMap;
 
     // Map from base register to list of load/store instructions
-    using Base2InstMap = DenseMap<unsigned, SmallVector<MachineInstr *, 4>>;
-    using BaseVec = SmallVector<unsigned, 4>;
+    using Base2InstMap = DenseMap<BaseRegInfo, SmallVector<MachineInstr *, 4>>;
+    using BaseVec = SmallVector<BaseRegInfo, 4>;
     Base2InstMap Base2LdsMap;
     Base2InstMap Base2StsMap;
     BaseVec LdBases;
@@ -540,22 +516,22 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
       if (!MI.isDebugInstr())
         MI2LocMap[&MI] = ++Loc;
 
-      // Skip non-memory operations
-      if (!isMemoryOp(MI))
+      MemOffset Offset = getMemoryOpOffset(MI);
+      // Skip non-memory operations or it's not a valid memory offset kind.
+      if (!isMemoryOp(MI) || Offset.first == MemoryOffsetKind::Unknown)
         continue;
 
       bool IsLd = (MI.getOpcode() == RISCV::LW);
       Register Base = MI.getOperand(1).getReg();
-      int Offset = getMemoryOpOffset(MI);
       bool StopHere = false;
 
       // Lambda to find or add base register entries
       auto FindBases = [&](Base2InstMap &Base2Ops, BaseVec &Bases) {
-        auto [BI, Inserted] = Base2Ops.try_emplace(Base.id());
+        auto [BI, Inserted] = Base2Ops.try_emplace({Base.id(), Offset.first});
         if (Inserted) {
           // First time seeing this base register
           BI->second.push_back(&MI);
-          Bases.push_back(Base.id());
+          Bases.push_back({Base.id(), Offset.first});
           return;
         }
         // Check if we've seen this exact base+offset before
@@ -584,7 +560,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
 
     // Process the current window - reschedule loads
-    for (unsigned Base : LdBases) {
+    for (auto Base : LdBases) {
       SmallVectorImpl<MachineInstr *> &Lds = Base2LdsMap[Base];
       if (Lds.size() > 1) {
         Modified |= rescheduleOps(MBB, Lds, Base, true, MI2LocMap);
@@ -592,7 +568,7 @@ bool RISCVPreAllocZilsdOpt::rescheduleLoadStoreInstrs(MachineBasicBlock *MBB) {
     }
 
     // Process the current window - reschedule stores
-    for (unsigned Base : StBases) {
+    for (auto Base : StBases) {
       SmallVectorImpl<MachineInstr *> &Sts = Base2StsMap[Base];
       if (Sts.size() > 1) {
         Modified |= rescheduleOps(MBB, Sts, Base, false, MI2LocMap);
