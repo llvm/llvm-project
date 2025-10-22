@@ -5329,6 +5329,17 @@ getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
   return CallGraphSection;
 }
 
+namespace callgraph {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+enum Flags : uint8_t {
+  None = 0,
+  IsIndirectTarget = 1u << 0,
+  HasDirectCallees = 1u << 1,
+  HasIndirectCallees = 1u << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
+};
+} // namespace callgraph
+
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
   if (!CGSection)
@@ -5357,10 +5368,10 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   while (Offset < CGSection->sh_size) {
     Error CGSectionErr = Error::success();
     uint8_t FormatVersionNumber = Data.getU8(&Offset, &CGSectionErr);
-    if (CGSectionErr)
+    if (CGSectionErr) {
       reportError(std::move(CGSectionErr),
                   "While reading call graph info FormatVersionNumber");
-
+    }
     if (FormatVersionNumber != 0) {
       reportError(createError("Unknown format version value [" +
                               std::to_string(FormatVersionNumber) +
@@ -5368,15 +5379,16 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                   "Unknown value");
     }
 
-    uint8_t Flags = Data.getU8(&Offset, &CGSectionErr);
+    uint8_t FlagsVal = Data.getU8(&Offset, &CGSectionErr);
     if (CGSectionErr)
       reportError(std::move(CGSectionErr),
                   "While reading call graph info's Flags");
-    if (Flags > 7) {
+    callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
+    if (FlagsVal > 7) {
       reportError(
           createError(
               "Unknown Flags. Expected a value in the range [0-7] but found [" +
-              std::to_string(Flags) + "]"),
+              std::to_string(FlagsVal) + "]"),
           "While reading call graph info's Flags");
     }
     uint64_t FuncAddrOffset = Offset;
@@ -5391,19 +5403,19 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     FunctionCallgraphInfo CGInfo;
     CGInfo.FunctionAddress = IsETREL ? FuncAddrOffset : FuncAddr;
     CGInfo.FormatVersionNumber = FormatVersionNumber;
-    bool IsIndirectTarget = Flags & 1; // LSB is set to 1 if indirect target.
+    bool IsIndirectTarget =
+        (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
     CGInfo.IsIndirectTarget = IsIndirectTarget;
     uint64_t TypeId = Data.getU64(&Offset, &CGSectionErr);
     if (CGSectionErr)
       PrintMalformedError(CGSectionErr, Twine::utohexstr(FuncAddr),
                           "indirect type id");
     CGInfo.FunctionTypeId = TypeId;
-
     if (IsIndirectTarget && TypeId == 0)
       UnknownCount++;
 
     bool HasDirectCallees =
-        Flags & (1u << 1); // LSB 1 is set to 1 if direct callees present.
+        (CGFlags & callgraph::HasDirectCallees) != callgraph::None;
     if (HasDirectCallees) {
       // Read number of direct call sites for this function.
       uint64_t NumDirectCallees = Data.getULEB128(&Offset, &CGSectionErr);
@@ -5423,8 +5435,7 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     }
 
     bool HasIndirectTypeIds =
-        Flags &
-        (1u << 2); // LSB 2 is set to 1 if indirect target type Ids present.
+        (CGFlags & callgraph::HasIndirectCallees) != callgraph::None;
     if (HasIndirectTypeIds) {
       uint64_t NumIndirectTargetTypeIDs =
           Data.getULEB128(&Offset, &CGSectionErr);
@@ -5447,10 +5458,6 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   if (UnknownCount)
     reportUniqueWarning(".llvm.callgraph section has unknown type id for " +
                         std::to_string(UnknownCount) + " indirect targets.");
-
-  // // Sort function info by function PC.
-  // llvm::sort(FuncCGInfos,
-  //            [](const auto &A, const auto &B) { return A.first < B.first; });
   return true;
 }
 
