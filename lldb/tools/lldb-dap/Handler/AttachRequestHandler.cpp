@@ -32,8 +32,9 @@ namespace lldb_dap {
 Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
   // Initialize DAP debugger and related components if not sharing previously
   // launched debugger.
+  std::optional<int> debugger_id = args.debuggerId;
   std::optional<lldb::user_id_t> target_id = args.targetId;
-  if (Error err = dap.InitializeDebugger(target_id))
+  if (Error err = dap.InitializeDebugger(debugger_id, target_id))
     return err;
 
   // Validate that we have a well formed attach request.

@@ -1309,18 +1309,34 @@ void DAP::StartEventThreads() {
   StartEventThread();
 }
 
-llvm::Error DAP::InitializeDebugger(std::optional<lldb::user_id_t> target_id) {
+llvm::Error DAP::InitializeDebugger(std::optional<int> debugger_id,
+                                    std::optional<lldb::user_id_t> target_id) {
+  // Validate that both debugger_id and target_id are provided together.
+  if (debugger_id.has_value() != target_id.has_value()) {
+    return llvm::createStringError(
+        "Both debuggerId and targetId must be specified together for debugger "
+        "reuse, or both must be omitted to create a new debugger");
+  }
+
   // Initialize debugger instance (shared or individual).
-  if (target_id) {
-    std::optional<lldb::SBTarget> shared_target =
-        DAPSessionManager::GetInstance().TakeTargetById(*target_id);
-    // If the target ID is not valid, then we won't find a target.
-    if (!shared_target) {
+  if (debugger_id && target_id) {
+    // Find the existing debugger by ID
+    debugger = lldb::SBDebugger::FindDebuggerWithID(*debugger_id);
+    if (!debugger.IsValid()) {
+      return llvm::createStringError(
+          "Unable to find existing debugger for debugger ID");
+    }
+
+    // Find the target within the debugger by its globally unique ID
+    lldb::SBTarget shared_target =
+        debugger.FindTargetByGloballyUniqueID(*target_id);
+    if (!shared_target.IsValid()) {
       return llvm::createStringError(
           "Unable to find existing target for target ID");
     }
-    // Get the debugger from the target and set it up.
-    debugger = shared_target->GetDebugger();
+
+    // Set the target for this DAP session.
+    SetTarget(shared_target);
     StartEventThreads();
     return llvm::Error::success();
   }
@@ -1568,18 +1584,18 @@ void DAP::EventThread() {
         } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
           auto target = lldb::SBTarget::GetTargetFromEvent(event);
 
-          // Generate unique target ID and store the target for handoff.
           lldb::user_id_t target_id = target.GetGloballyUniqueID();
-          DAPSessionManager::GetInstance().StoreTargetById(target_id, target);
+          lldb::SBDebugger target_debugger = target.GetDebugger();
+          int debugger_id = target_debugger.GetID();
 
-          // We create an attach config that will select the unique
-          // target ID of the created target. The DAP instance will attach to
-          // this existing target and the debug session will be ready to go.
+          // We create an attach config that contains the debugger ID and target
+          // ID. The new DAP instance will use these IDs to find the existing
+          // debugger and target via FindDebuggerWithID and
+          // FindTargetByGloballyUniqueID.
           llvm::json::Object attach_config;
 
-          // If we have a process name, add command to attach to the same
-          // process name.
           attach_config.try_emplace("type", "lldb");
+          attach_config.try_emplace("debuggerId", debugger_id);
           attach_config.try_emplace("targetId", target_id);
           const char *session_name = target.GetTargetSessionName();
           attach_config.try_emplace("name", session_name);

@@ -71,31 +71,6 @@ public:
   /// DisconnectAllSessions() was called and any disconnection failed.
   llvm::Error WaitForAllSessionsToDisconnect();
 
-  /// Store a target for later retrieval by another session.
-  ///
-  /// When a new target is dynamically created (e.g., via scripting hooks or
-  /// child process debugging), it needs to be handed off to a new DAP session.
-  /// This method stores the target in a temporary map using its globally unique
-  /// ID so that the new session can retrieve it via TakeTargetById().
-  ///
-  /// \param target_id The globally unique ID of the target (from
-  ///                  SBTarget::GetGloballyUniqueID()).
-  /// \param target The target to store.
-  void StoreTargetById(lldb::user_id_t target_id, lldb::SBTarget target);
-
-  /// Retrieve and remove a stored target by its globally unique target ID.
-  ///
-  /// This method is called during the attach request when a new DAP session
-  /// wants to attach to a dynamically created target. The target is removed
-  /// from the map after retrieval because:
-  /// 1. Each target should only be attached to by one DAP session
-  /// 2. Once attached, the DAP session takes ownership of the target
-  /// 3. Keeping the target in the map would prevent proper cleanup
-  ///
-  /// \param target_id The globally unique ID of the target to retrieve.
-  /// \return The target if found, std::nullopt otherwise.
-  std::optional<lldb::SBTarget> TakeTargetById(lldb::user_id_t target_id);
-
   /// Get or create event thread for a specific debugger.
   std::shared_ptr<ManagedEventThread>
   GetEventThreadForDebugger(lldb::SBDebugger debugger, DAP *requesting_dap);
@@ -107,9 +82,6 @@ public:
   static DAP *FindDAP(lldb::SBTarget target) {
     return GetInstance().FindDAPForTarget(target);
   }
-
-  /// Clean up shared resources when the last session exits.
-  void CleanupSharedResources();
 
   /// Clean up expired event threads from the collection.
   void ReleaseExpiredEventThreads();
@@ -128,10 +100,6 @@ private:
   std::mutex m_sessions_mutex;
   std::condition_variable m_sessions_condition;
   std::map<lldb_private::MainLoop *, DAP *> m_active_sessions;
-
-  /// Map from target ID to target for handing off newly created targets
-  /// between sessions.
-  std::map<lldb::user_id_t, lldb::SBTarget> m_target_map;
 
   /// Map from debugger ID to its event thread, used when multiple DAP sessions
   /// share the same debugger instance.

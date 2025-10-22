@@ -50,11 +50,6 @@ void DAPSessionManager::RegisterSession(lldb_private::MainLoop *loop,
 void DAPSessionManager::UnregisterSession(lldb_private::MainLoop *loop) {
   std::unique_lock<std::mutex> lock(m_sessions_mutex);
   m_active_sessions.erase(loop);
-
-  // Clean up shared resources when the last session exits.
-  if (m_active_sessions.empty())
-    CleanupSharedResources();
-
   std::notify_all_at_thread_exit(m_sessions_condition, std::move(lock));
 }
 
@@ -118,23 +113,6 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   return new_thread_sp;
 }
 
-void DAPSessionManager::StoreTargetById(lldb::user_id_t target_id,
-                                        lldb::SBTarget target) {
-  std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  m_target_map[target_id] = target;
-}
-
-std::optional<lldb::SBTarget>
-DAPSessionManager::TakeTargetById(lldb::user_id_t target_id) {
-  std::lock_guard<std::mutex> lock(m_sessions_mutex);
-  auto pos = m_target_map.find(target_id);
-  if (pos == m_target_map.end())
-    return std::nullopt;
-  lldb::SBTarget target = pos->second;
-  m_target_map.erase(pos);
-  return target;
-}
-
 DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
@@ -143,13 +121,6 @@ DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
       return dap;
 
   return nullptr;
-}
-
-void DAPSessionManager::CleanupSharedResources() {
-  // Note: Caller must hold m_sessions_mutex.
-  // SBTarget destructors will handle cleanup when the map entries are
-  // destroyed.
-  m_target_map.clear();
 }
 
 void DAPSessionManager::ReleaseExpiredEventThreads() {
