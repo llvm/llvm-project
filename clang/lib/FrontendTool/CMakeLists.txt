@@ -7,6 +7,7 @@ set(link_libs
   clangBasic
   clangCodeGen
   clangDriver
+  clangOptions
   clangExtractAPI
   clangFrontend
   clangRewriteFrontend
