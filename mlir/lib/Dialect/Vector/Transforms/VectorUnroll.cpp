@@ -84,8 +84,8 @@ static Value createTileFromElements(PatternRewriter &rewriter, Location loc,
                                     ArrayRef<int64_t> tileShape,
                                     VectorType tileType) {
   // Initialize tile with zeros.
-  Value tile = rewriter.create<arith::ConstantOp>(
-      loc, tileType, rewriter.getZeroAttr(tileType));
+  Value tile = arith::ConstantOp::create(rewriter, loc, tileType,
+                                         rewriter.getZeroAttr(tileType));
 
   // Calculate strides for source, result, and tile shapes.
   SmallVector<int64_t> sourceStrides = computeStrides(sourceShape);
