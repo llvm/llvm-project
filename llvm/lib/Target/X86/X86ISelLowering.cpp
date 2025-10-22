@@ -2652,6 +2652,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::AVGCEILU,
                        ISD::AVGFLOORS,
                        ISD::AVGFLOORU,
+                       ISD::CTLZ,
+                       ISD::CTTZ,
                        ISD::BITREVERSE,
                        ISD::ADD,
                        ISD::FADD,
@@ -55130,6 +55132,55 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   return combineFneg(N, DAG, DCI, Subtarget);
 }
 
+// Fold i256/i512 CTLZ/CTTZ patterns to make use of AVX512
+// vXi64 CTLZ/CTTZ and VECTOR_COMPRESS.
+// Compute the CTLZ/CTTZ of each element, add the element's bit offset, compress
+// the result to remove all zero elements (passthru is set to scalar bitwidth if
+// all elements are zero) and extract the lowest compressed element.
+static SDValue combineCTZ(SDNode *N, SelectionDAG &DAG,
+                          TargetLowering::DAGCombinerInfo &DCI,
+                          const X86Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  unsigned Opc = N->getOpcode();
+  unsigned SizeInBits = VT.getSizeInBits();
+  assert((Opc == ISD::CTLZ || Opc == ISD::CTTZ) && "Unsupported bit count");
+
+  if (VT.isScalarInteger() && Subtarget.hasCDI() &&
+      ((SizeInBits == 512 && Subtarget.useAVX512Regs()) ||
+       (SizeInBits == 256 && Subtarget.hasVLX() &&
+        X86::mayFoldLoad(N0, Subtarget)))) {
+    MVT VecVT = MVT::getVectorVT(MVT::i64, SizeInBits / 64);
+    MVT BoolVT = VecVT.changeVectorElementType(MVT::i1);
+    SDValue Vec = DAG.getBitcast(VecVT, N0);
+    SDLoc DL(N0);
+
+    SmallVector<int, 8> RevMask;
+    SmallVector<SDValue, 8> Offsets;
+    for (unsigned I = 0, E = VecVT.getVectorNumElements(); I != E; ++I) {
+      RevMask.push_back((int)((E - 1) - I));
+      Offsets.push_back(DAG.getConstant(I * 64, DL, MVT::i64));
+    }
+
+    // CTLZ - reverse the elements as we want the top non-zero element.
+    if (Opc == ISD::CTLZ)
+      Vec = DAG.getVectorShuffle(VecVT, DL, Vec, Vec, RevMask);
+
+    SDValue IsNonZero = DAG.getSetCC(DL, BoolVT, Vec,
+                                     DAG.getConstant(0, DL, VecVT), ISD::SETNE);
+    SDValue Cnt = DAG.getNode(Opc, DL, VecVT, Vec);
+    Cnt = DAG.getNode(ISD::ADD, DL, VecVT, Cnt,
+                      DAG.getBuildVector(VecVT, DL, Offsets));
+    Cnt = DAG.getNode(ISD::VECTOR_COMPRESS, DL, VecVT, Cnt, IsNonZero,
+                      DAG.getConstant(SizeInBits, DL, VecVT));
+    Cnt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, Cnt,
+                      DAG.getVectorIdxConstant(0, DL));
+    return DAG.getZExtOrTrunc(Cnt, DL, VT);
+  }
+
+  return SDValue();
+}
+
 static SDValue combineBITREVERSE(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const X86Subtarget &Subtarget) {
@@ -60804,6 +60855,8 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AND:            return combineAnd(N, DAG, DCI, Subtarget);
   case ISD::OR:             return combineOr(N, DAG, DCI, Subtarget);
   case ISD::XOR:            return combineXor(N, DAG, DCI, Subtarget);
+  case ISD::CTLZ:
+  case ISD::CTTZ:           return combineCTZ(N, DAG, DCI, Subtarget);
   case ISD::BITREVERSE:     return combineBITREVERSE(N, DAG, DCI, Subtarget);
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
