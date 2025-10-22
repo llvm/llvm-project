@@ -1965,8 +1965,7 @@ CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        Decl *Operand) {
   bool IsNamespace = isa<TranslationUnitDecl>(Operand);
 
-  CXXReflectExpr *E =
-      new (C) CXXReflectExpr(C, C.VoidTy, Operand, IsNamespace);
+  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.VoidTy, Operand, IsNamespace);
 
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
