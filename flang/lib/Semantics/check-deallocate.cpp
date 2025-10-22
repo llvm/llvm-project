@@ -17,20 +17,56 @@
 namespace Fortran::semantics {
 
 void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
+  bool gotStat{false}, gotMsg{false};
+  const parser::Name *statVar{nullptr}, *msgVar{nullptr};
+  for (const parser::StatOrErrmsg &deallocOpt :
+      std::get<std::list<parser::StatOrErrmsg>>(deallocateStmt.t)) {
+    common::visit(
+        common::visitors{
+            [&](const parser::StatVariable &var) {
+              if (gotStat) {
+                context_.Say(
+                    "STAT may not be duplicated in a DEALLOCATE statement"_err_en_US);
+              }
+              if (const auto *designator{
+                      parser::Unwrap<parser::Designator>(var)}) {
+                statVar = &parser::GetLastName(*designator);
+              }
+              gotStat = true;
+            },
+            [&](const parser::MsgVariable &var) {
+              WarnOnDeferredLengthCharacterScalar(context_,
+                  GetExpr(context_, var),
+                  parser::UnwrapRef<parser::Variable>(var).GetSource(),
+                  "ERRMSG=");
+              if (gotMsg) {
+                context_.Say(
+                    "ERRMSG may not be duplicated in a DEALLOCATE statement"_err_en_US);
+              }
+              if (const auto *designator{
+                      parser::Unwrap<parser::Designator>(var)}) {
+                msgVar = &parser::GetLastName(*designator);
+              }
+              gotMsg = true;
+            },
+        },
+        deallocOpt.u);
+  }
   for (const parser::AllocateObject &allocateObject :
       std::get<std::list<parser::AllocateObject>>(deallocateStmt.t)) {
+    const Symbol *ultimate{nullptr};
     common::visit(
         common::visitors{
             [&](const parser::Name &name) {
-              const Symbol *symbol{
-                  name.symbol ? &name.symbol->GetUltimate() : nullptr};
-              ;
-              if (context_.HasError(symbol)) {
+              if (name.symbol) {
+                ultimate = &name.symbol->GetUltimate();
+              }
+              if (context_.HasError(ultimate)) {
                 // already reported an error
-              } else if (!IsVariableName(*symbol)) {
+              } else if (!IsVariableName(*ultimate)) {
                 context_.Say(name.source,
                     "Name in DEALLOCATE statement must be a variable name"_err_en_US);
-              } else if (!IsAllocatableOrObjectPointer(symbol)) { // C936
+              } else if (!IsAllocatableOrObjectPointer(ultimate)) { // C936
                 context_.Say(name.source,
                     "Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
               } else if (auto whyNot{WhyNotDefinable(name.source,
@@ -38,7 +74,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                              {DefinabilityFlag::PointerDefinition,
                                  DefinabilityFlag::AcceptAllocatable,
                                  DefinabilityFlag::PotentialDeallocation},
-                             *symbol)}) {
+                             *ultimate)}) {
                 // Catch problems with non-definability of the
                 // pointer/allocatable
                 context_
@@ -48,7 +84,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
                         whyNot->set_severity(parser::Severity::Because)));
               } else if (auto whyNot{WhyNotDefinable(name.source,
                              context_.FindScope(name.source),
-                             DefinabilityFlags{}, *symbol)}) {
+                             DefinabilityFlags{}, *ultimate)}) {
                 // Catch problems with non-definability of the dynamic object
                 context_
                     .Say(name.source,
@@ -63,13 +99,11 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               // Only perform structureComponent checks if it was successfully
               // analyzed by expression analysis.
               auto source{structureComponent.component.source};
+              if (structureComponent.component.symbol) {
+                ultimate = &structureComponent.component.symbol->GetUltimate();
+              }
               if (const auto *expr{GetExpr(context_, allocateObject)}) {
-                if (const Symbol *
-                        symbol{structureComponent.component.symbol
-                                ? &structureComponent.component.symbol
-                                       ->GetUltimate()
-                                : nullptr};
-                    !IsAllocatableOrObjectPointer(symbol)) { // F'2023 C936
+                if (!IsAllocatableOrObjectPointer(ultimate)) { // F'2023 C936
                   context_.Say(source,
                       "Component in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute"_err_en_US);
                 } else if (auto whyNot{WhyNotDefinable(source,
@@ -99,32 +133,22 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
             },
         },
         allocateObject.u);
-  }
-  bool gotStat{false}, gotMsg{false};
-  for (const parser::StatOrErrmsg &deallocOpt :
-      std::get<std::list<parser::StatOrErrmsg>>(deallocateStmt.t)) {
-    common::visit(
-        common::visitors{
-            [&](const parser::StatVariable &) {
-              if (gotStat) {
-                context_.Say(
-                    "STAT may not be duplicated in a DEALLOCATE statement"_err_en_US);
-              }
-              gotStat = true;
-            },
-            [&](const parser::MsgVariable &var) {
-              WarnOnDeferredLengthCharacterScalar(context_,
-                  GetExpr(context_, var),
-                  parser::UnwrapRef<parser::Variable>(var).GetSource(),
-                  "ERRMSG=");
-              if (gotMsg) {
-                context_.Say(
-                    "ERRMSG may not be duplicated in a DEALLOCATE statement"_err_en_US);
-              }
-              gotMsg = true;
-            },
-        },
-        deallocOpt.u);
+    if (ultimate) {
+      if (gotStat && statVar) {
+        if (const Symbol *symbol{statVar->symbol};
+            symbol && *ultimate == symbol->GetUltimate()) {
+          context_.Say(statVar->source,
+              "STAT variable in DEALLOCATE must not be the variable being deallocated"_err_en_US);
+        }
+      }
+      if (gotMsg && msgVar) {
+        if (const Symbol *symbol{msgVar->symbol};
+            symbol && *ultimate == symbol->GetUltimate()) {
+          context_.Say(msgVar->source,
+              "ERRMSG variable in DEALLOCATE must not be the variable being deallocated"_err_en_US);
+        }
+      }
+    }
   }
 }
 
