@@ -7158,7 +7158,7 @@ defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
   HelpText<"Link the flang-rt shared library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
-def static_libflangrt : Flag<["-"], "static-libflangrt">,
+def static_libflangrt : Flag<["-"], "static-libflangrt">, 
   HelpText<"Link the flang-rt static library">, Group<Link_Group>,
   Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
 
