@@ -50,8 +50,8 @@ enum class CountedByInvalidPointeeTypeKind {
   VALID,
 };
 
-bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
-                                     bool OrNull) {
+bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, QualType T, Expr *E,
+                                     bool CountInBytes, bool OrNull) {
   // Check the context the attribute is used in
 
   unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
@@ -62,7 +62,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     return true;
   }
 
-  const auto FieldTy = FD->getType();
+  const auto FieldTy = T;
   if (FieldTy->isArrayType() && (CountInBytes || OrNull)) {
     Diag(FD->getBeginLoc(),
          diag::err_count_attr_not_on_ptr_or_flexible_array_member)
@@ -216,6 +216,80 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
     // Whether CountRD is an anonymous struct is not determined at this
     // point. Thus, an additional diagnostic in case it's not anonymous struct
     // is done later in `Parser::ParseStructDeclaration`.
+    auto *RD = GetEnclosingNamedOrTopAnonRecord(FD);
+    auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
+
+    if (RD != CountRD) {
+      Diag(E->getBeginLoc(), diag::err_count_attr_param_not_in_same_struct)
+          << CountFD << Kind << FieldTy->isArrayType() << E->getSourceRange();
+      Diag(CountFD->getBeginLoc(),
+           diag::note_flexible_array_counted_by_attr_field)
+          << CountFD << CountFD->getSourceRange();
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Sema::CheckCountedByAttrOnFieldDecl(FieldDecl *FD, Expr *E,
+                                          bool CountInBytes, bool OrNull) {
+  unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
+
+  if (FD->getParent()->isUnion()) {
+    Diag(FD->getBeginLoc(), diag::err_count_attr_in_union)
+        << Kind << FD->getSourceRange();
+    return true;
+  }
+
+  const QualType FieldTy = FD->getType();
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      LangOptions::StrictFlexArraysLevelKind::IncompleteOnly;
+  if (FieldTy->isArrayType() &&
+      !Decl::isFlexibleArrayMemberLike(getASTContext(), FD, FieldTy,
+                                       StrictFlexArraysLevel, true)) {
+    Diag(FD->getBeginLoc(),
+         diag::err_counted_by_attr_on_array_not_flexible_array_member)
+        << Kind << FD->getLocation();
+    return true;
+  }
+
+  // Validate the expression type
+  if (!E->getType()->isIntegerType() || E->getType()->isBooleanType()) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_argument_not_integer)
+        << Kind << E->getSourceRange();
+    return true;
+  }
+
+  auto *DRE = dyn_cast<DeclRefExpr>(E);
+  if (!DRE) {
+    Diag(E->getBeginLoc(),
+         diag::err_count_attr_only_support_simple_decl_reference)
+        << Kind << E->getSourceRange();
+    return true;
+  }
+
+  // Validate count field references
+  auto *CountDecl = DRE->getDecl();
+  FieldDecl *CountFD = dyn_cast<FieldDecl>(CountDecl);
+  if (auto *IFD = dyn_cast<IndirectFieldDecl>(CountDecl)) {
+    CountFD = IFD->getAnonField();
+  }
+  if (!CountFD) {
+    Diag(E->getBeginLoc(), diag::err_count_attr_must_be_in_structure)
+        << CountDecl << Kind << E->getSourceRange();
+
+    Diag(CountDecl->getBeginLoc(),
+         diag::note_flexible_array_counted_by_attr_field)
+        << CountDecl << CountDecl->getSourceRange();
+    return true;
+  }
+
+  if (FD->getParent() != CountFD->getParent()) {
+    if (CountFD->getParent()->isUnion()) {
+      Diag(CountFD->getBeginLoc(), diag::err_count_attr_refer_to_union)
+          << Kind << CountFD->getSourceRange();
+      return true;
+    }
     auto *RD = GetEnclosingNamedOrTopAnonRecord(FD);
     auto *CountRD = GetEnclosingNamedOrTopAnonRecord(CountFD);
 

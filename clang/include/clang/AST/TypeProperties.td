@@ -44,6 +44,14 @@ let Class = CountAttributedType in {
   def : Creator<[{ return ctx.getCountAttributedType(WrappedTy, CountExpr, CountInBytes, OrNull, CoupledDecls); }]>;
 }
 
+let Class = LateParsedAttrType in {
+  // Note: LateParsedAttrType is a transient placeholder type that should
+  // normally be replaced before serialization. If serialized, we just
+  // serialize the wrapped type, losing the late-parsed attribute pointer
+  // (which wouldn't be valid after deserialization anyway).
+  def : Creator<[{ (void)ctx; llvm_unreachable("unreachable for serialization"); }]>;
+}
+
 let Class = AdjustedType in {
   def : Property<"originalType", QualType> {
     let Read = [{ node->getOriginalType() }];
