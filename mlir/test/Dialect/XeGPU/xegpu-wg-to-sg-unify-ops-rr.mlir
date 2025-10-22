@@ -14,22 +14,11 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: load_nd_tdesc_with_offset
   gpu.func @load_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
-    // CHECK-COUNT-4: xegpu.create_nd_tdesc {{%.*}} : memref<256x128xf32>
-    // CHECK-SAME: -> !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
-    // CHECK-DAG: %[[C8:.*]] = arith.constant 8 : index
-    // CHECK-DAG: %[[C16:.*]] = arith.constant 16 : index
-    // CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
-    // CHECK-DAG: %[[C128:.*]] = arith.constant 128 : index
-    // CHECK-DAG: %[[C256:.*]] = arith.constant 256 : index
-    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK-SAME-COUNT-4: -> vector<16x16xf32>
+    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf32>
     // CHECK-NOT: xegpu.load_nd
     %tdesc = xegpu.create_nd_tdesc %src: memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
-    %load =  xegpu.load_nd %tdesc[0, 0]
+    %load = xegpu.load_nd %tdesc[0, 0]
       : !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
       -> vector<256x128xf32>
     gpu.return
@@ -37,15 +26,7 @@ gpu.module @test_distribution {
 
   // CHECK-LABEL: store_nd_with_offset
   gpu.func @store_nd_with_offset(%src: memref<256x128xf32>) {
-    // CHECK-COUNT-4: xegpu.create_nd_tdesc {{%.*}} : memref<256x128xf32>
-    // CHECK-SAME: -> !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK-SAME-COUNT-4: -> vector<16x16xf32>
-    // CHECK: %[[SGID2:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-4: xegpu.store_nd %{{.*}}, {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    // CHECK-COUNT-4: xegpu.store_nd %{{.*}}, {{%.*}}[{{%.*}}, {{%.*}}] : vector<16x16xf32>, !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     // CHECK-NOT: xegpu.store_nd
     %tdesc = xegpu.create_nd_tdesc %src: memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -58,13 +39,8 @@ gpu.module @test_distribution {
   }
 
   // CHECK-LABEL: prefetch_nd_tdesc_with_offset
-  // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
   gpu.func @prefetch_nd_tdesc_with_offset(%src: memref<256x128xf32>) {
-    // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf32>
-    // CHECK-SAME: -> !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-4: xegpu.prefetch_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    // CHECK-COUNT-4: xegpu.prefetch_nd {{%.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
     // CHECK-NOT: xegpu.prefetch_nd
     %tdesc = xegpu.create_nd_tdesc %src : memref<256x128xf32>
       -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -76,21 +52,11 @@ gpu.module @test_distribution {
   // CHECK-LABEL: dpas
   // CHECK-SAME: (%[[ARG_0:.*]]: memref<256x128xf16>, %[[ARG_1:.*]]: memref<128x256xf16>)
   gpu.func @dpas(%a: memref<256x128xf16>, %b: memref<128x256xf16>) {
-    // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf16>
-    // CHECK-SAME-COUNT-4: -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-    // CHECK-SAME-COUNT-4: -> vector<16x16xf16>
-    // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_1]] : memref<128x256xf16>
-    // CHECK-SAME-COUNT-4: -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
-    // CHECK: %[[SGID2:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-4: : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
-    // CHECK-SAME-COUNT-4: -> vector<16x16xf16>
-    // CHECK-COUNT-16: xegpu.dpas %{{.*}}, %{{.*}}
-    // CHECK-SAME-COUNT-16: {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
-    // CHECK-SAME-COUNT-16: : vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
+    // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_0]] : memref<256x128xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<16x16xf16>
+    // CHECK-COUNT-4: xegpu.create_nd_tdesc %[[ARG_1]] : memref<128x256xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>>
+    // CHECK-COUNT-4: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}] : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+    // CHECK-COUNT-16: xegpu.dpas %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<16x16xf16>, vector<16x16xf16> -> vector<16x16xf32>
     // CHECK-NOT: xegpu.dpas
     %tdesc_a = xegpu.create_nd_tdesc %a : memref<256x128xf16>
       -> !xegpu.tensor_desc<256x128xf16, #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
@@ -117,11 +83,6 @@ gpu.module @test_distribution {
     %load =  xegpu.load_nd %tdesc[0, 0]
       : !xegpu.tensor_desc<256x64xf32, #xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>>
       -> vector<256x64xf32>
-    // CHECK-COUNT-2: xegpu.create_nd_tdesc {{%.*}} : memref<256x64xf32>
-    // CHECK-SAME: -> !xegpu.tensor_desc<16x64xf32>
-    // CHECK: %[[SGID:.*]] = gpu.subgroup_id : index
-    // CHECK-COUNT-2: xegpu.load_nd {{%.*}}[{{%.*}}, {{%.*}}]
-    // CHECK-SAME-COUNT-2: : !xegpu.tensor_desc<16x64xf32> -> vector<16x64xf32>
     // CHECK-COUNT-2: vector.multi_reduction <add>, {{.*}}, %[[CST]] [1] : vector<16x64xf32> to vector<16xf32>
     // CHECK-NOT: vector.multi_reduction
     %reduce = vector.multi_reduction <add>, %load, %cst {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [8, 1], sg_data = [16, 64]>, dims = [1]>} [1]

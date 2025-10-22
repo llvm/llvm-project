@@ -10,7 +10,6 @@ gpu.module @test {
     // CHECK-DAG: %[[BASE:.*]] = vector.step : vector<32xindex>
     // CHECK-DAG: %[[CAST:.*]] = vector.broadcast %[[MOD]] : index to vector<32xindex>
     // CHECK-DAG: %[[ADD:.*]] = arith.addi %[[BASE]], %[[CAST]] : vector<32xindex>
-    // CHECK-DAG: %[[RESULT:.*]] = builtin.unrealized_conversion_cast %[[ADD]] : vector<32xindex> to vector<128xindex>
     %step = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 8], sg_data = [32, 32]>, dims = [1]>}: vector<128xindex>
     gpu.return %step : vector<128xindex>
   }
@@ -25,7 +24,6 @@ gpu.module @test {
     // CHECK-DAG: %[[BASE:.*]] = vector.step : vector<32xindex>
     // CHECK-DAG: %[[CAST:.*]] = vector.broadcast %[[MOD]] : index to vector<32xindex>
     // CHECK-DAG: %[[ADD:.*]] = arith.addi %[[BASE]], %[[CAST]] : vector<32xindex>
-    // CHECK-DAG: %[[RESULT:.*]] = builtin.unrealized_conversion_cast %[[ADD]] : vector<32xindex> to vector<128xindex>
     %0 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 1], sg_data = [32, 32, 1]>, dims = [2]>, dims = [1]>} : vector<128xindex>
     gpu.return %0 : vector<128xindex>
   }

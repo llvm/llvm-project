@@ -288,7 +288,6 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
         llvm::reverse(llvm::seq<int64_t>(0, sgLayoutInt.size())));
   }
 
-  // Validate order
   if (order.size() != sgLayoutInt.size()) {
     return failure();
   }
