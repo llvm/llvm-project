@@ -5169,7 +5169,7 @@ private:
   ///@{
 
   //===--------------------------------------------------------------------===//
-  // C++2c: Reflection [P2996]
+  // Parses the operand of reflection operator
   ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
 
 private:
