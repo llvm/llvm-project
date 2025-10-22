@@ -1512,7 +1512,7 @@ mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::Prefetch>(
       op, adaptor.getAddr(), adaptor.getIsWrite(), adaptor.getLocality(),
-      /*DataCache*/ 1);
+      /*DataCache=*/1);
   return mlir::success();
 }
 

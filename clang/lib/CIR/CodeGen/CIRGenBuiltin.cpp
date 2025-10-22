@@ -467,7 +467,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (e->getNumArgs() > 1)
       isWrite = evaluateOperandAsInt(e->getArg(1));
 
-    int locality = 0;
+    int locality = 3;
     if (e->getNumArgs() > 2)
       locality = evaluateOperandAsInt(e->getArg(2));
 
