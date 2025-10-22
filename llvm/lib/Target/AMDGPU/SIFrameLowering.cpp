@@ -12,8 +12,10 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -41,6 +43,15 @@ static MCRegister findUnusedRegister(MachineRegisterInfo &MRI,
       return Reg;
   }
   return MCRegister();
+}
+
+static bool needsFrameMoves(const MachineFunction &MF) {
+  // FIXME: There are some places in the compiler which are sensitive to the CFI
+  // pseudos and so using MachineFunction::needsFrameMoves has the unintended
+  // effect of making enabling debug info affect codegen. Once we have
+  // identified and fixed those cases this should be replaced with
+  // MF.needsFrameMoves()
+  return true;
 }
 
 // Find a scratch register that we can use in the prologue. We avoid using
@@ -615,9 +626,38 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
+  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
+
+  // Debug location must be unknown since the first debug location is used to
+  // determine the end of the prologue.
+  DebugLoc DL;
+  MachineBasicBlock::iterator I = MBB.begin();
+
+  if (needsFrameMoves(MF)) {
+    // On entry the SP/FP are not set up, so we need to define the CFA in terms
+    // of a literal location expression.
+    static const char CFAEncodedInstUserOpsArr[] = {
+        dwarf::DW_CFA_def_cfa_expression,
+        4, // length
+        static_cast<char>(dwarf::DW_OP_lit0),
+        static_cast<char>(dwarf::DW_OP_lit0 +
+                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
+        static_cast<char>(dwarf::DW_OP_LLVM_user),
+        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
+    static StringRef CFAEncodedInstUserOps =
+        StringRef(CFAEncodedInstUserOpsArr, sizeof(CFAEncodedInstUserOpsArr));
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createEscape(nullptr, CFAEncodedInstUserOps,
+                                            SMLoc(),
+                                            "CFA is 0 in private_wave aspace"));
+    // Unwinding halts when the return address (PC) is undefined.
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createUndefined(
+                 nullptr, MCRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
+  }
 
   Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
       AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
@@ -654,11 +694,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       MBB.addLiveIn(PreloadedScratchRsrcReg);
     }
   }
-
-  // Debug location must be unknown since the first debug location is used to
-  // determine the end of the prologue.
-  DebugLoc DL;
-  MachineBasicBlock::iterator I = MBB.begin();
 
   // We found the SRSRC first because it needs four registers and has an
   // alignment requirement. If the SRSRC that we found is clobbering with
@@ -2209,4 +2244,16 @@ bool SIFrameLowering::requiresStackPointerReference(
   // We still need to initialize the SP if we're doing anything weird that
   // references the SP, like variable sized stack objects.
   return frameTriviallyRequiresSP(MFI);
+}
+
+MachineInstr *SIFrameLowering::buildCFI(MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator MBBI,
+                                        const DebugLoc &DL,
+                                        const MCCFIInstruction &CFIInst,
+                                        MachineInstr::MIFlag flag) const {
+  MachineFunction &MF = *MBB.getParent();
+  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+  return BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+      .addCFIIndex(MF.addFrameInst(CFIInst))
+      .setMIFlag(flag);
 }

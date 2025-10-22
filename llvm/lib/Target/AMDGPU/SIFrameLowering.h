@@ -104,6 +104,12 @@ private:
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;
 
+  /// Create a CFI index for CFIInst and build a MachineInstr around it.
+  MachineInstr *
+  buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+           const DebugLoc &DL, const MCCFIInstruction &CFIInst,
+           MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
+
   // Returns true if the function may need to reserve space on the stack for the
   // CWSR trap handler.
   bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
