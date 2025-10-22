@@ -252,7 +252,8 @@ class PrepareForOMPOffloadPrivatizationPass
         // variable, rewrite all the uses of the original variable with
         // the heap-allocated variable.
         rewriter.setInsertionPoint(targetOp);
-        rewriter.setInsertionPoint(cloneModifyAndErase(mapInfoOp));
+        mapInfoOp = cloneModifyAndErase(mapInfoOp);
+        rewriter.setInsertionPoint(mapInfoOp);
 
         // Fix any members that may use varPtr to now use heapMem
         for (auto member : mapInfoOp.getMembers()) {
