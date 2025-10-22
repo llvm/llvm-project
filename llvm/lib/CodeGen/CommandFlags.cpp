@@ -218,12 +218,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
 
-  [[maybe_unused]]
-  static cl::opt<bool> EnableUnsafeFPMath(
-      "enable-unsafe-fp-math",
-      cl::desc("Enable optimizations that may decrease FP precision"),
-      cl::init(false));
-
   static cl::opt<bool> EnableNoInfsFPMath(
       "enable-no-infs-fp-math",
       cl::desc("Enable FP math optimizations that assume no +-Infs"),

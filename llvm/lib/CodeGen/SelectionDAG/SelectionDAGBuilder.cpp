@@ -1977,8 +1977,13 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
   if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
     Register InReg = FuncInfo.InitializeRegForValue(Inst);
 
+    std::optional<CallingConv::ID> CallConv;
+    auto *CI = dyn_cast<CallInst>(Inst);
+    if (CI && !CI->isInlineAsm())
+      CallConv = CI->getCallingConv();
+
     RegsForValue RFV(*DAG.getContext(), TLI, DAG.getDataLayout(), InReg,
-                     Inst->getType(), std::nullopt);
+                     Inst->getType(), CallConv);
     SDValue Chain = DAG.getEntryNode();
     return RFV.getCopyFromRegs(DAG, FuncInfo, getCurSDLoc(), Chain, nullptr, V);
   }
