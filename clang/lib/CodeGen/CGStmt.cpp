@@ -234,6 +234,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPInterchangeDirectiveClass:
     EmitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*S));
     break;
+  case Stmt::OMPFuseDirectiveClass:
+    EmitOMPFuseDirective(cast<OMPFuseDirective>(*S));
+    break;
   case Stmt::OMPForDirectiveClass:
     EmitOMPForDirective(cast<OMPForDirective>(*S));
     break;
@@ -1291,7 +1294,9 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
                                   ArrayRef<const Attr *> ForAttrs) {
   JumpDest LoopExit = getJumpDestInCurrentScope("for.end");
 
-  LexicalScope ForScope(*this, S.getSourceRange());
+  std::optional<LexicalScope> ForScope;
+  if (getLangOpts().C99 || getLangOpts().CPlusPlus)
+    ForScope.emplace(*this, S.getSourceRange());
 
   // Evaluate the first part before the loop.
   if (S.getInit())
@@ -1350,7 +1355,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
-    if (ForScope.requiresCleanups())
+    if (ForScope && ForScope->requiresCleanups())
       ExitBlock = createBasicBlock("for.cond.cleanup");
 
     // As long as the condition is true, iterate the loop.
@@ -1419,7 +1424,8 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   EmitStopPoint(&S);
   EmitBranch(CondBlock);
 
-  ForScope.ForceCleanup();
+  if (ForScope)
+    ForScope->ForceCleanup();
 
   LoopStack.pop();
 
@@ -2468,56 +2474,6 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   CaseRangeBlock = SavedCRBlock;
 }
 
-static std::string
-SimplifyConstraint(const char *Constraint, const TargetInfo &Target,
-                 SmallVectorImpl<TargetInfo::ConstraintInfo> *OutCons=nullptr) {
-  std::string Result;
-
-  while (*Constraint) {
-    switch (*Constraint) {
-    default:
-      Result += Target.convertConstraint(Constraint);
-      break;
-    // Ignore these
-    case '*':
-    case '?':
-    case '!':
-    case '=': // Will see this and the following in mult-alt constraints.
-    case '+':
-      break;
-    case '#': // Ignore the rest of the constraint alternative.
-      while (Constraint[1] && Constraint[1] != ',')
-        Constraint++;
-      break;
-    case '&':
-    case '%':
-      Result += *Constraint;
-      while (Constraint[1] && Constraint[1] == *Constraint)
-        Constraint++;
-      break;
-    case ',':
-      Result += "|";
-      break;
-    case 'g':
-      Result += "imr";
-      break;
-    case '[': {
-      assert(OutCons &&
-             "Must pass output names to constraints with a symbolic name");
-      unsigned Index;
-      bool result = Target.resolveSymbolicName(Constraint, *OutCons, Index);
-      assert(result && "Could not resolve symbolic name"); (void)result;
-      Result += llvm::utostr(Index);
-      break;
-    }
-    }
-
-    Constraint++;
-  }
-
-  return Result;
-}
-
 /// AddVariableConstraints - Look at AsmExpr and if it is a variable declared
 /// as using a particular register add that as a constraint that will be used
 /// in this asm stmt.
@@ -2718,7 +2674,8 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const llvm::BitVector &ResultRegIsFlagReg) {
+              const std::vector<std::optional<std::pair<unsigned, unsigned>>>
+                  &ResultBounds) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2729,18 +2686,20 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
   // ResultRegDests can be also populated by addReturnRegisterOutputs() above,
   // in which case its size may grow.
   assert(ResultTypeRequiresCast.size() <= ResultRegDests.size());
-  assert(ResultRegIsFlagReg.size() <= ResultRegDests.size());
+  assert(ResultBounds.size() <= ResultRegDests.size());
 
   for (unsigned i = 0, e = RegResults.size(); i != e; ++i) {
     llvm::Value *Tmp = RegResults[i];
     llvm::Type *TruncTy = ResultTruncRegTypes[i];
 
-    if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
-      // Target must guarantee the Value `Tmp` here is lowered to a boolean
-      // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+    if ((i < ResultBounds.size()) && ResultBounds[i].has_value()) {
+      const auto [LowerBound, UpperBound] = ResultBounds[i].value();
+      // FIXME: Support for nonzero lower bounds not yet implemented.
+      assert(LowerBound == 0 && "Output operand lower bound is not zero.");
+      llvm::Constant *UpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), UpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, UpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
@@ -2869,7 +2828,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  llvm::BitVector ResultRegIsFlagReg;
+  std::vector<std::optional<std::pair<unsigned, unsigned>>> ResultBounds;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2896,8 +2855,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // Simplify the output constraint.
     std::string OutputConstraint(S.getOutputConstraint(i));
-    OutputConstraint = SimplifyConstraint(OutputConstraint.c_str() + 1,
-                                          getTarget(), &OutputConstraintInfos);
+    OutputConstraint = getTarget().simplifyConstraint(
+        StringRef(OutputConstraint).substr(1), &OutputConstraintInfos);
 
     const Expr *OutExpr = S.getOutputExpr(i);
     OutExpr = OutExpr->IgnoreParenNoopCasts(getContext());
@@ -2927,8 +2886,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
-      ResultRegIsFlagReg.push_back(IsFlagReg);
+      ResultBounds.emplace_back(Info.getOutputOperandBounds());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&
@@ -3059,8 +3017,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // Simplify the input constraint.
     std::string InputConstraint(S.getInputConstraint(i));
-    InputConstraint = SimplifyConstraint(InputConstraint.c_str(), getTarget(),
-                                         &OutputConstraintInfos);
+    InputConstraint =
+        getTarget().simplifyConstraint(InputConstraint, &OutputConstraintInfos);
 
     InputConstraint = AddVariableConstraints(
         InputConstraint, *InputExpr->IgnoreParenNoopCasts(getContext()),
@@ -3275,7 +3233,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
   EmitAsmStores(*this, S, RegResults, ResultRegTypes, ResultTruncRegTypes,
                 ResultRegDests, ResultRegQualTys, ResultTypeRequiresCast,
-                ResultRegIsFlagReg);
+                ResultBounds);
 
   // If this is an asm goto with outputs, repeat EmitAsmStores, but with a
   // different insertion point; one for each indirect destination and with
@@ -3286,7 +3244,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       Builder.SetInsertPoint(Succ, --(Succ->end()));
       EmitAsmStores(*this, S, CBRRegResults[Succ], ResultRegTypes,
                     ResultTruncRegTypes, ResultRegDests, ResultRegQualTys,
-                    ResultTypeRequiresCast, ResultRegIsFlagReg);
+                    ResultTypeRequiresCast, ResultBounds);
     }
   }
 }

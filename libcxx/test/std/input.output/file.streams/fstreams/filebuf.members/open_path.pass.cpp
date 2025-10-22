@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// UNSUPPORTED: availability-filesystem-missing
-
 // <fstream>
 
 // basic_filebuf<charT,traits>* open(const filesystem::path& p, ios_base::openmode mode);

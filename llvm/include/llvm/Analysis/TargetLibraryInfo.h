@@ -373,12 +373,10 @@ public:
   /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
-  void disableAllFunctions() LLVM_ATTRIBUTE_UNUSED {
-    OverrideAsUnavailable.set();
-  }
+  [[maybe_unused]] void disableAllFunctions() { OverrideAsUnavailable.set(); }
 
   /// Forces a function to be marked as unavailable.
-  void setUnavailable(LibFunc F) LLVM_ATTRIBUTE_UNUSED {
+  [[maybe_unused]] void setUnavailable(LibFunc F) {
     assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     OverrideAsUnavailable.set(F);
   }

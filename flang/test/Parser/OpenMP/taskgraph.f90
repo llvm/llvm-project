@@ -50,9 +50,9 @@ end
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 !PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = taskgraph
-!PARSE-TREE: | | OmpClauseList -> OmpClause -> GraphId -> OmpGraphIdClause -> Expr = 'x'
+!PARSE-TREE: | | OmpClauseList -> OmpClause -> GraphId -> OmpGraphIdClause -> Scalar -> Integer -> Expr = 'x'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | OmpClause -> GraphReset -> OmpGraphResetClause -> Expr = 'y'
+!PARSE-TREE: | | OmpClause -> GraphReset -> OmpGraphResetClause -> Scalar -> Logical -> Expr = 'y'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | Flags = None
 !PARSE-TREE: | Block

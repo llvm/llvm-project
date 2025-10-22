@@ -1885,6 +1885,12 @@ LLVM_ABI SDValue peekThroughOneUseBitcasts(SDValue V);
 /// If \p V is not an extracted subvector, it is returned as-is.
 LLVM_ABI SDValue peekThroughExtractSubvectors(SDValue V);
 
+/// Recursively peek through INSERT_VECTOR_ELT nodes, returning the source
+/// vector operand of \p V, as long as \p V is an INSERT_VECTOR_ELT operation
+/// that do not insert into any of the demanded vector elts.
+LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
+                                            const APInt &DemandedElts);
+
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
@@ -1944,7 +1950,7 @@ LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 0 integer or a splatted vector of a
 /// constant 0 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
+/// Build vector implicit truncation is allowed.
 LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
 
 /// Return true if \p V is either a integer or FP constant.

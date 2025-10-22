@@ -13,8 +13,8 @@ combination of its sub-project tools for distribution. This document covers
 useful features of the LLVM build system as well as best practices and general
 information about packaging LLVM.
 
-If you are new to CMake you may find the :doc:`CMake` or :doc:`CMakePrimer`
-documentation useful. Some of the things covered in this document are the inner
+If you are new to CMake, you may find the :doc:`CMake` or :doc:`CMakePrimer`
+documentation useful. This document covers some of the inner
 workings of the builds described in the :doc:`AdvancedBuilds` document.
 
 General Distribution Guidance
@@ -27,7 +27,7 @@ compiler. This is done so that the compiler you distribute benefits from all the
 bug fixes, performance optimizations and general improvements provided by the
 new compiler.
 
-In deciding how to build your distribution there are a few trade-offs that you
+In deciding how to build your distribution, there are a few trade-offs that you
 will need to evaluate. The big two are:
 
 #. Compile time of the distribution against performance of the built compiler
@@ -41,8 +41,8 @@ opportunity for the compiler to optimize.
 
 The guidance for minimizing distribution size is to dynamically link LLVM and
 Clang libraries into the tools to reduce code duplication. This will come at a
-substantial performance penalty to the generated binary both because it reduces
-optimization opportunity, and because dynamic linking requires resolving symbols
+substantial performance penalty to the generated binary, both because it reduces
+optimization opportunities and because dynamic linking requires resolving symbols
 at process launch time, which can be very slow for C++ code.
 
 .. _shared_libs:
@@ -76,7 +76,7 @@ LLVM testing tools. Alternatively the ``install-distribution`` target, which is
 recommended for building distributions, only installs specific parts of LLVM as
 specified at configuration time by *LLVM_DISTRIBUTION_COMPONENTS*.
 
-Additionally by default the ``install`` target will install the LLVM testing
+Additionally, by default, the ``install`` target will install the LLVM testing
 tools as the public tools. This can be changed well by setting
 *LLVM_INSTALL_TOOLCHAIN_ONLY* to ``On``. The LLVM tools are intended for
 development and testing of LLVM, and should only be included in distributions

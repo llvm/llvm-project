@@ -2,166 +2,186 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1010 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FAST %s
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=SLOW %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250 %s
 
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1010 -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx90a -mattr=+half-rate-64-ops < %s | FileCheck -check-prefix=FAST-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=SLOW-SIZE %s
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-SIZE %s
 
 
 define void @fma_f16() {
 ; FAST-LABEL: 'fma_f16'
-; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half poison, half poison, half poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> poison, <2 x half> poison, <2 x half> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> poison, <3 x half> poison, <3 x half> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> poison, <4 x half> poison, <4 x half> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> poison, <5 x half> poison, <5 x half> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> poison, <16 x half> poison, <16 x half> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> poison, <17 x half> poison, <17 x half> poison)
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fma_f16'
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f16 = call half @llvm.fma.f16(half poison, half poison, half poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> poison, <2 x half> poison, <2 x half> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> poison, <3 x half> poison, <3 x half> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> poison, <4 x half> poison, <4 x half> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> poison, <5 x half> poison, <5 x half> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> poison, <16 x half> poison, <16 x half> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> poison, <17 x half> poison, <17 x half> poison)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST-SIZE-LABEL: 'fma_f16'
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.fma.f16(half poison, half poison, half poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> poison, <2 x half> poison, <2 x half> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> poison, <3 x half> poison, <3 x half> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> poison, <4 x half> poison, <4 x half> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> poison, <5 x half> poison, <5 x half> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> poison, <16 x half> poison, <16 x half> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> poison, <17 x half> poison, <17 x half> poison)
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f16'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f16 = call half @llvm.fma.f16(half poison, half poison, half poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> poison, <2 x half> poison, <2 x half> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> poison, <3 x half> poison, <3 x half> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> poison, <4 x half> poison, <4 x half> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> poison, <5 x half> poison, <5 x half> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> poison, <16 x half> poison, <16 x half> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> poison, <17 x half> poison, <17 x half> poison)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %f16 = call half @llvm.fma.f16(half undef, half undef, half undef)
-  %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> undef, <2 x half> undef, <2 x half> undef)
-  %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> undef, <3 x half> undef, <3 x half> undef)
-  %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> undef, <4 x half> undef, <4 x half> undef)
-  %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> undef, <5 x half> undef, <5 x half> undef)
-  %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> undef, <16 x half> undef, <16 x half> undef)
-  %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> undef, <17 x half> undef, <17 x half> undef)
+  %f16 = call half @llvm.fma.f16(half poison, half poison, half poison)
+  %v2f16 = call <2 x half> @llvm.fma.v2f16(<2 x half> poison, <2 x half> poison, <2 x half> poison)
+  %v3f16 = call <3 x half> @llvm.fma.v3f16(<3 x half> poison, <3 x half> poison, <3 x half> poison)
+  %v4f16 = call <4 x half> @llvm.fma.v4f16(<4 x half> poison, <4 x half> poison, <4 x half> poison)
+  %v5f16 = call <5 x half> @llvm.fma.v5f16(<5 x half> poison, <5 x half> poison, <5 x half> poison)
+  %v16f16 = call <16 x half> @llvm.fma.v16f16(<16 x half> poison, <16 x half> poison, <16 x half> poison)
+  %v17f16 = call <17 x half> @llvm.fma.v17f16(<17 x half> poison, <17 x half> poison, <17 x half> poison)
   ret void
 }
 
 define void @fma_bf16() {
 ; FAST-LABEL: 'fma_bf16'
-; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
-; FAST-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; FAST-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-LABEL: 'fma_bf16'
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; FAST-SIZE-LABEL: 'fma_bf16'
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_bf16'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %bf16 = call bfloat @llvm.fma.bf16(bfloat undef, bfloat undef, bfloat undef)
-  %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> undef, <2 x bfloat> undef, <2 x bfloat> undef)
-  %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> undef, <3 x bfloat> undef, <3 x bfloat> undef)
-  %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> undef, <4 x bfloat> undef, <4 x bfloat> undef)
-  %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> undef, <5 x bfloat> undef, <5 x bfloat> undef)
-  %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> undef, <16 x bfloat> undef, <16 x bfloat> undef)
-  %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> undef, <17 x bfloat> undef, <17 x bfloat> undef)
+; GFX1250-LABEL: 'fma_bf16'
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
+; GFX1250-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
+; GFX1250-SIZE-LABEL: 'fma_bf16'
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
+; GFX1250-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+  %bf16 = call bfloat @llvm.fma.bf16(bfloat poison, bfloat poison, bfloat poison)
+  %v2bf16 = call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> poison, <2 x bfloat> poison, <2 x bfloat> poison)
+  %v3bf16 = call <3 x bfloat> @llvm.fma.v3bf16(<3 x bfloat> poison, <3 x bfloat> poison, <3 x bfloat> poison)
+  %v4bf16 = call <4 x bfloat> @llvm.fma.v4bf16(<4 x bfloat> poison, <4 x bfloat> poison, <4 x bfloat> poison)
+  %v5bf16 = call <5 x bfloat> @llvm.fma.v5bf16(<5 x bfloat> poison, <5 x bfloat> poison, <5 x bfloat> poison)
+  %v16bf16 = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> poison, <16 x bfloat> poison, <16 x bfloat> poison)
+  %v17bf16 = call <17 x bfloat> @llvm.fma.v17bf16(<17 x bfloat> poison, <17 x bfloat> poison, <17 x bfloat> poison)
   ret void
 }
 
 define void @fma_f32() {
 ; SLOW-LABEL: 'fma_f32'
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = call float @llvm.fma.f32(float undef, float undef, float undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> undef, <3 x float> undef, <3 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f32 = call float @llvm.fma.f32(float poison, float poison, float poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> poison, <2 x float> poison, <2 x float> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> poison, <3 x float> poison, <3 x float> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> poison, <4 x float> poison, <4 x float> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> poison, <5 x float> poison, <5 x float> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> poison, <8 x float> poison, <8 x float> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 108 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> poison, <9 x float> poison, <9 x float> poison)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f32'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.fma.f32(float undef, float undef, float undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> undef, <3 x float> undef, <3 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f32 = call float @llvm.fma.f32(float poison, float poison, float poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> poison, <2 x float> poison, <2 x float> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> poison, <3 x float> poison, <3 x float> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> poison, <4 x float> poison, <4 x float> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> poison, <5 x float> poison, <5 x float> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> poison, <8 x float> poison, <8 x float> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 54 for instruction: %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> poison, <9 x float> poison, <9 x float> poison)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %f32 = call float @llvm.fma.f32(float undef, float undef, float undef)
-  %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> undef, <2 x float> undef, <2 x float> undef)
-  %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> undef, <3 x float> undef, <3 x float> undef)
-  %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> undef, <4 x float> undef, <4 x float> undef)
-  %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> undef, <5 x float> undef, <5 x float> undef)
-  %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> undef, <8 x float> undef, <8 x float> undef)
-  %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> undef, <9 x float> undef, <9 x float> undef)
+  %f32 = call float @llvm.fma.f32(float poison, float poison, float poison)
+  %v2f32 = call <2 x float> @llvm.fma.v2f32(<2 x float> poison, <2 x float> poison, <2 x float> poison)
+  %v3f32 = call <3 x float> @llvm.fma.v3f32(<3 x float> poison, <3 x float> poison, <3 x float> poison)
+  %v4f32 = call <4 x float> @llvm.fma.v4f32(<4 x float> poison, <4 x float> poison, <4 x float> poison)
+  %v5f32 = call <5 x float> @llvm.fma.v5f32(<5 x float> poison, <5 x float> poison, <5 x float> poison)
+  %v8f32 = call <8 x float> @llvm.fma.v8f32(<8 x float> poison, <8 x float> poison, <8 x float> poison)
+  %v9f32 = call <9 x float> @llvm.fma.v9f32(<9 x float> poison, <9 x float> poison, <9 x float> poison)
   ret void
 }
 
 define void @fma_f64() {
 ; SLOW-LABEL: 'fma_f64'
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64 = call double @llvm.fma.f64(double undef, double undef, double undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> undef, <3 x double> undef, <3 x double> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
-; SLOW-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> undef, <5 x double> undef, <5 x double> undef)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %f64 = call double @llvm.fma.f64(double poison, double poison, double poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> poison, <2 x double> poison, <2 x double> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> poison, <3 x double> poison, <3 x double> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> poison, <4 x double> poison, <4 x double> poison)
+; SLOW-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> poison, <5 x double> poison, <5 x double> poison)
 ; SLOW-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; SLOW-SIZE-LABEL: 'fma_f64'
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.fma.f64(double undef, double undef, double undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> undef, <3 x double> undef, <3 x double> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
-; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> undef, <5 x double> undef, <5 x double> undef)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %f64 = call double @llvm.fma.f64(double poison, double poison, double poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> poison, <2 x double> poison, <2 x double> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> poison, <3 x double> poison, <3 x double> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> poison, <4 x double> poison, <4 x double> poison)
+; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> poison, <5 x double> poison, <5 x double> poison)
 ; SLOW-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
-  %f64 = call double @llvm.fma.f64(double undef, double undef, double undef)
-  %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> undef, <2 x double> undef, <2 x double> undef)
-  %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> undef, <3 x double> undef, <3 x double> undef)
-  %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> undef, <4 x double> undef, <4 x double> undef)
-  %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> undef, <5 x double> undef, <5 x double> undef)
+  %f64 = call double @llvm.fma.f64(double poison, double poison, double poison)
+  %v2f64 = call <2 x double> @llvm.fma.v2f64(<2 x double> poison, <2 x double> poison, <2 x double> poison)
+  %v3f64 = call <3 x double> @llvm.fma.v3f64(<3 x double> poison, <3 x double> poison, <3 x double> poison)
+  %v4f64 = call <4 x double> @llvm.fma.v4f64(<4 x double> poison, <4 x double> poison, <4 x double> poison)
+  %v5f64 = call <5 x double> @llvm.fma.v5f64(<5 x double> poison, <5 x double> poison, <5 x double> poison)
   ret void
 }

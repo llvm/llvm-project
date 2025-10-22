@@ -1,0 +1,9 @@
+! RUN: %not_todo_cmd bbc -emit-fir -fcuda -o - %s 2>&1 | FileCheck %s
+
+program main
+  implicit none
+  integer, device, allocatable :: a_d(:)
+  integer, allocatable :: a(:)
+! CHECK: not yet implemented: CUDA Fortran: allocate with device source
+  allocate(a, source=a_d)
+end program

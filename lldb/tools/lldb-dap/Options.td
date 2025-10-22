@@ -47,6 +47,12 @@ def debugger_pid: S<"debugger-pid">,
   HelpText<"The PID of the lldb-dap instance that sent the launchInTerminal "
     "request when using --launch-target.">;
 
+def stdio: S<"stdio">,
+  MetaVarName<"<stdin:stdout:stderr:...>">,
+  HelpText<"An array of file paths for redirecting the program's standard IO "
+    "streams. A colon-separated list of entries. Empty value means no "
+    "redirection.">;
+
 def repl_mode
     : S<"repl-mode">,
       MetaVarName<"<mode>">,

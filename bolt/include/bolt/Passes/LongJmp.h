@@ -30,7 +30,7 @@ namespace bolt {
 /// 64-bit range, we guarantee it can reach any code location.
 ///
 class LongJmpPass : public BinaryFunctionPass {
-  /// Used to implement stub grouping (re-using a stub from one function into
+  /// Used to implement stub grouping (reusing a stub from one function into
   /// another)
   using StubTy = std::pair<uint64_t, BinaryBasicBlock *>;
   using StubGroupTy = SmallVector<StubTy, 4>;

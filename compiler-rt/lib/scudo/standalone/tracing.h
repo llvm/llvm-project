@@ -9,6 +9,8 @@
 #ifndef SCUDO_TRACING_H_
 #define SCUDO_TRACING_H_
 
+#include "common.h"
+
 #if defined(SCUDO_ENABLE_TRACING)
 
 // This file must include definitions for all of the functions below.

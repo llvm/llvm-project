@@ -207,7 +207,6 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   bool IsScalableVector = (LastInfo == IIT_SCALABLE_VEC);
 
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
-  unsigned StructElts = 2;
 
   switch (Info) {
   case IIT_Done:
@@ -390,28 +389,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
-  case IIT_STRUCT9:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT8:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT7:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT6:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT5:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT4:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT3:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT2: {
+  case IIT_STRUCT: {
+    unsigned StructElts = Infos[NextElt++] + 2;
+
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Struct, StructElts));
 
@@ -745,6 +725,19 @@ Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
   auto *FT = getType(M->getContext(), id, Tys);
+  Function *F = cast<Function>(
+      M->getOrInsertFunction(
+           Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
+          .getCallee());
+  if (F->getFunctionType() == FT)
+    return F;
+
+  // It's possible that a declaration for this intrinsic already exists with an
+  // incorrect signature, if the signature has changed, but this particular
+  // declaration has not been auto-upgraded yet. In that case, rename the
+  // invalid declaration and insert a new one with the correct signature. The
+  // invalid declaration will get upgraded later.
+  F->setName(F->getName() + ".invalid");
   return cast<Function>(
       M->getOrInsertFunction(
            Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)

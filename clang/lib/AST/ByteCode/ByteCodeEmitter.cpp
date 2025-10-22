@@ -207,8 +207,7 @@ void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
 }
 
 template <typename... Tys>
-bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
-                             const SourceInfo &SI) {
+bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   bool Success = true;
 
   // The opcode is followed by arguments. The source info is

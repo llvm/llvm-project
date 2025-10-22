@@ -3457,13 +3457,15 @@ template <typename T, typename C = bool> class Foo {}
 ```
 
 ---
-**Template Parameters:**
+### Brief
+
+documentation
+
+---
+### Template Parameters
 
 - `typename T`
 - `typename C = bool`
-
----
-documentation
 
 ---
 Size: 10 bytes)",
@@ -3506,7 +3508,7 @@ ret_type foo(params) {}
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - 
 - `type (aka can_type)`
@@ -3514,7 +3516,7 @@ ret_type foo(params) {}
 - `type foo = default (aka can_type)`
 
 ---
-**Returns:**
+### Returns
 
 `ret_type (aka can_ret_type)`)",
       },
@@ -3649,7 +3651,7 @@ protected: size_t method()
 ```
 
 ---
-**Returns:**
+### Returns
 
 `size_t (aka unsigned long)`)",
       },
@@ -3688,7 +3690,7 @@ public: cls(int a, int b = 5)
 ```
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a`
 - `int b = 5`)",
@@ -4001,9 +4003,13 @@ void foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
@@ -4034,20 +4040,34 @@ int foo()
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Returns:**
+### Returns
 
 `int`
 
 ---
+### Details
+
 longer doc)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
-         HI.Documentation = "@brief brief doc\n\n"
-                            "longer doc\n@param a this is a param\n@return it "
-                            "returns something";
+         HI.Documentation = R"(@brief brief doc
+
+longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
+@param a this is a param
+@return it returns something
+@retval 0 if successful
+@retval 1 if failed)";
          HI.Definition = "int foo(int a)";
          HI.ReturnType = "int";
          HI.Name = "foo";
@@ -4068,8 +4088,16 @@ Parameters:
 @brief brief doc
 
 longer doc
+@note this is a note
+
+As you see, notes are "inlined".
+@warning this is a warning
+
+As well as warnings
 @param a this is a param
 @return it returns something
+@retval 0 if successful
+@retval 1 if failed
 
 ---
 ```cpp
@@ -4083,20 +4111,37 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
+- `0` - if successful
+- `1` - if failed
+
 ---
-longer doc)"},
+### Details
+
+longer doc
+
+**Note:**  
+this is a note
+
+As you see, notes are "inlined".
+
+**Warning:**  
+this is a warning
+
+As well as warnings)"},
       {[](HoverInfo &HI) {
          HI.Kind = index::SymbolKind::Function;
          HI.Documentation = "@brief brief doc\n\n"
@@ -4138,19 +4183,23 @@ int foo(int a)
 ```
 
 ---
+### Brief
+
 brief doc
 
 ---
-**Parameters:**
+### Parameters
 
 - `int a` - this is a param
 
 ---
-**Returns:**
+### Returns
 
 `int` - it returns something
 
 ---
+### Details
+
 longer doc)"},
   };
 

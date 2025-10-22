@@ -226,7 +226,7 @@ void StoringDiagnosticConsumer::SetCurrentModuleProgress(
 }
 
 ClangModulesDeclVendor::ClangModulesDeclVendor()
-    : ClangDeclVendor(eClangModuleDeclVendor) {}
+    : DeclVendor(eClangModuleDeclVendor) {}
 
 ClangModulesDeclVendor::~ClangModulesDeclVendor() = default;
 

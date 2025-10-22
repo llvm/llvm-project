@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// creat() is better to be replaced by open().
 /// Find the usage of creat() and redirect user to use open().
 
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-creat.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-creat.html
 class CloexecCreatCheck : public CloexecCheck {
 public:
   CloexecCreatCheck(StringRef Name, ClangTidyContext *Context)

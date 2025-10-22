@@ -38,6 +38,13 @@ static cl::opt<bool>
     EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
                    cl::desc("Enable reciprocal sqrt optimization"));
 
+// FIXME: This is a WAR to recover lost performance from #155024.
+// We still need to investigate the regression and find a more permanent
+// solution.
+static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
+                                   cl::Hidden,
+                                   cl::desc("Enable MAD wide optimization"));
+
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -83,6 +90,8 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
 }
 
 bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+
+bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -271,6 +280,10 @@ static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.ld is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -1018,6 +1031,7 @@ pickOpcodeForVT(MVT::SimpleValueType VT, std::optional<unsigned> Opcode_i16,
   case MVT::f32:
     return Opcode_i32;
   case MVT::v2f32:
+  case MVT::v2i32:
   case MVT::i64:
   case MVT::f64:
     return Opcode_i64;
@@ -2126,6 +2140,10 @@ static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.st is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 

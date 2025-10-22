@@ -239,19 +239,9 @@ struct PointerSumTypeHelper : MemberTs... {
     TagMask = ~PointerMask
   };
 
-  // Finally we need a recursive template to do static checks of each
-  // member.
-  template <typename MemberT, typename... InnerMemberTs>
-  struct Checker : Checker<InnerMemberTs...> {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  template <typename MemberT> struct Checker<MemberT> : std::true_type {
-    static_assert(MemberT::Tag < (1 << NumTagBits),
-                  "This discriminant value requires too many bits!");
-  };
-  static_assert(Checker<MemberTs...>::value,
-                "Each member must pass the checker.");
+  // Finally, statically check each member.
+  static_assert(((MemberTs::Tag < (1 << NumTagBits)) && ...),
+                "A discriminant value requires too many bits!");
 };
 
 } // end namespace detail

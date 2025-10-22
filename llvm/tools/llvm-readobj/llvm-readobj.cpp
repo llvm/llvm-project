@@ -135,6 +135,7 @@ static bool HashHistogram;
 static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
+static bool Offloading;
 static bool ProgramHeaders;
 static bool SectionGroups;
 static std::vector<std::string> SFrame;
@@ -274,6 +275,7 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Memtag = Args.hasArg(OPT_memtag);
   opts::NeededLibraries = Args.hasArg(OPT_needed_libs);
   opts::Notes = Args.hasArg(OPT_notes);
+  opts::Offloading = Args.hasArg(OPT_offloading);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
@@ -459,6 +461,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     Dumper->printGnuHashTable();
   if (opts::VersionInfo)
     Dumper->printVersionInfo();
+  if (opts::Offloading)
+    Dumper->printOffloading(Obj);
   if (opts::StringTable)
     Dumper->printStringTable();
   if (Obj.isELF()) {
@@ -707,6 +711,7 @@ int llvm_readobj_main(int argc, char **argv, const llvm::ToolContext &) {
     opts::DynamicTable = true;
     opts::Notes = true;
     opts::VersionInfo = true;
+    opts::Offloading = true;
     opts::UnwindInfo = true;
     opts::SectionGroups = true;
     opts::HashHistogram = true;

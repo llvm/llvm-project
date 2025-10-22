@@ -227,30 +227,6 @@ func.func @nvvm_mma_m16n8k16_f16_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
   llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
 }
 
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f16
-func.func @nvvm_mma_m16n8k16_f32_f16(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : vector<2xf16>, %c1 : vector<2xf16>) {
-  // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>,vector<2xf16>,vector<2xf16>) -> !llvm.struct<(f32, f32, f32, f32)>
-  llvm.return %0 : !llvm.struct<(f32, f32, f32, f32)>
-}
-
-// CHECK-LABEL: @nvvm_mma_m16n8k16_f16_f32
-func.func @nvvm_mma_m16n8k16_f16_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
-                                %a2 : vector<2xf16>, %a3 : vector<2xf16>,
-                                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
-                                %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32) {
-  // CHECK: nvvm.mma.sync A[{{.*}}, {{.*}}, {{.*}}, {{.*}}] B[{{.*}}, {{.*}}] C[{{.*}}, {{.*}}, {{.*}}, {{.*}}] {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>, shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  %0 = nvvm.mma.sync A[%a0, %a1, %a2, %a3] B[%b0, %b1] C[%c0, %c1, %c2, %c3]
-    {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     shape = #nvvm.shape<m = 16, n = 8, k = 16>} : (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-  llvm.return %0 : !llvm.struct<(vector<2xf16>, vector<2xf16>)>
-}
-
 // CHECK-LABEL: @nvvm_mma_m16n8k16_f32_f32
 func.func @nvvm_mma_m16n8k16_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                                 %a2 : vector<2xf16>, %a3 : vector<2xf16>,

@@ -64,7 +64,7 @@ jobs:
           podman save ${{ steps.vars.outputs.container-name-agent-tag }} > ${{ steps.vars.outputs.container-agent-filename }}
 
       - name: Upload container image
-        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: container-${{ matrix.arch }}
           path: "*.tar"
@@ -103,7 +103,7 @@ jobs:
           }
 
           podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
-          for f in $(find . -iname *.tar); do
+          for f in $(find . -iname '*.tar'); do
             image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
             push_container $image_name
 

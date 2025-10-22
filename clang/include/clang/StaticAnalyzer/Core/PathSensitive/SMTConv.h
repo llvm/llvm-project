@@ -455,6 +455,20 @@ public:
       QualType OperandTy;
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+
+      if (const BinarySymExpr *BSE =
+              dyn_cast<BinarySymExpr>(USE->getOperand())) {
+        if (USE->getOpcode() == UO_Minus &&
+            BinaryOperator::isComparisonOp(BSE->getOpcode()))
+          // The comparison operator yields a boolean value in the Z3
+          // language and applying the unary minus operator on a boolean
+          // crashes Z3. However, the unary minus does nothing in this
+          // context (a number is truthy if and only if its negative is
+          // truthy), so let's just ignore the unary minus.
+          // TODO: Replace this with a more general solution.
+          return OperandExp;
+      }
+
       llvm::SMTExprRef UnaryExp =
           OperandTy->isRealFloatingType()
               ? fromFloatUnOp(Solver, USE->getOpcode(), OperandExp)

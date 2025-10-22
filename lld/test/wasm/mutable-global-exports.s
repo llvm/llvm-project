@@ -16,6 +16,10 @@
 
 .globl _start
 .globl foo_global
+.globl bar_global
+
+.globaltype bar_global, i32, immutable
+bar_global:
 
 .globaltype foo_global, i32
 foo_global:
@@ -33,6 +37,7 @@ _start:
   .ascii  "atomics"
 
 # CHECK-ERR: mutable global exported but 'mutable-globals' feature not present in inputs: `foo_global`. Use --no-check-features to suppress
+# CHECK-ERR-NOT: bar_global
 
 #      CHECK:  - Type:            EXPORT
 # CHECK-NEXT:    Exports:
@@ -68,42 +73,48 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __wasm_call_ctors
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           0
+# CHECK-ALL-NEXT:      - Name:            __stack_pointer
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           0
 # CHECK-ALL-NEXT:      - Name:            _start
 # CHECK-ALL-NEXT:        Kind:            FUNCTION
 # CHECK-ALL-NEXT:        Index:           1
 # CHECK-ALL-NEXT:      - Name:            foo_global
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           1
-# CHECK-ALL-NEXT:      - Name:            __dso_handle
+# CHECK-ALL-NEXT:      - Name:            bar_global
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           2
-# CHECK-ALL-NEXT:      - Name:            __data_end
+# CHECK-ALL-NEXT:      - Name:            __dso_handle
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           3
-# CHECK-ALL-NEXT:      - Name:            __stack_low
+# CHECK-ALL-NEXT:      - Name:            __data_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           4
-# CHECK-ALL-NEXT:      - Name:            __stack_high
+# CHECK-ALL-NEXT:      - Name:            __stack_low
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           5
-# CHECK-ALL-NEXT:      - Name:            __global_base
+# CHECK-ALL-NEXT:      - Name:            __stack_high
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           6
-# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:      - Name:            __global_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           7
-# CHECK-ALL-NEXT:      - Name:            __heap_end
+# CHECK-ALL-NEXT:      - Name:            __heap_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           8
-# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:      - Name:            __heap_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           9
-# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:      - Name:            __memory_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           10
-# CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
+# CHECK-ALL-NEXT:      - Name:            __table_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           11
+# CHECK-ALL-NEXT:      - Name:            __wasm_first_page_end
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           12
 # CHECK-ALL-NEXT:  - Type:            CODE
 
 # CHECK-ALL:         Name:            target_features

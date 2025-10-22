@@ -103,6 +103,11 @@ TEST(SimplePackedSerializationTest, UInt64Serialization) {
   testFixedIntegralTypeSerialization<uint64_t>();
 }
 
+TEST(SimplePackedSerializationTest, SizeTSerialization) {
+  size_t V = 42;
+  blobSerializationRoundTrip<SPSSize, size_t>(V);
+}
+
 TEST(SimplePackedSerializationTest, SequenceSerialization) {
   std::vector<int32_t> V({1, 2, -47, 139});
   blobSerializationRoundTrip<SPSSequence<int32_t>, std::vector<int32_t>>(V);
@@ -162,6 +167,12 @@ TEST(SimplePackedSerializationTest, StdOptionalNoValueSerialization) {
 TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
   std::optional<int64_t> Value(42);
   blobSerializationRoundTrip<SPSOptional<int64_t>>(Value);
+}
+
+TEST(SimplePackedSerializationTest, Pointers) {
+  int X = 42;
+  int *P = &X;
+  blobSerializationRoundTrip<SPSExecutorAddr>(P);
 }
 
 TEST(SimplePackedSerializationTest, ArgListSerialization) {

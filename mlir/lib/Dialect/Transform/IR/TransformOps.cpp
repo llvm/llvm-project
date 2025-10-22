@@ -616,11 +616,10 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
       if (diag.succeeded()) {
         // Tracking failure is the only failure.
         return trackingFailure;
-      } else {
-        diag.attachNote() << "tracking listener also failed: "
-                          << trackingFailure.getMessage();
-        (void)trackingFailure.silence();
       }
+      diag.attachNote() << "tracking listener also failed: "
+                        << trackingFailure.getMessage();
+      (void)trackingFailure.silence();
     }
 
     if (!diag.succeeded())
@@ -2098,17 +2097,11 @@ void transform::IncludeOp::getEffects(
       getOperation(), getTarget());
   if (!callee)
     return defaultEffects();
-  DiagnosedSilenceableFailure earlyVerifierResult =
-      verifyNamedSequenceOp(callee, /*emitWarnings=*/false);
-  if (!earlyVerifierResult.succeeded()) {
-    (void)earlyVerifierResult.silence();
-    return defaultEffects();
-  }
 
   for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
     if (callee.getArgAttr(i, TransformDialect::kArgConsumedAttrName))
       consumesHandle(getOperation()->getOpOperand(i), effects);
-    else
+    else if (callee.getArgAttr(i, TransformDialect::kArgReadOnlyAttrName))
       onlyReadsHandle(getOperation()->getOpOperand(i), effects);
   }
 }
@@ -2598,10 +2591,7 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
           .Case([&](TransformParamTypeInterface param) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](Type) {
-            llvm_unreachable("unknown kind of transform dialect type");
-            return 0;
-          });
+          .DefaultUnreachable("unknown kind of transform dialect type");
   results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
@@ -2658,10 +2648,7 @@ transform::SplitHandleOp::apply(transform::TransformRewriter &rewriter,
           .Case<TransformParamTypeInterface>([&](auto x) {
             return llvm::range_size(state.getParams(getHandle()));
           })
-          .Default([](auto x) {
-            llvm_unreachable("unknown transform dialect type interface");
-            return -1;
-          });
+          .DefaultUnreachable("unknown transform dialect type interface");
 
   auto produceNumOpsError = [&]() {
     return emitSilenceableError()

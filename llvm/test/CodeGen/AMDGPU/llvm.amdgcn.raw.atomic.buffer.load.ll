@@ -361,12 +361,10 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    buffer_load_b64 v[1:2], off, s[0:3], 0 offset:4 glc
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
+; GFX11-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
+; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
 ; GFX11-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX11-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX11-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2
@@ -444,12 +442,10 @@ define amdgpu_kernel void @raw_atomic_buffer_load_v4i16(<4 x i32> %addr) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:4 th:TH_LOAD_NT
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
-; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v0
 ; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s4, vcc_lo, s4
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s4
 ; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %bb2

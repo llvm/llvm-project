@@ -31,17 +31,12 @@ namespace pointer_union_detail {
   /// Determine the number of bits required to store integers with values < n.
   /// This is ceil(log2(n)).
   constexpr int bitsRequired(unsigned n) {
-    return n > 1 ? 1 + bitsRequired((n + 1) / 2) : 0;
+    return n == 0 ? 0 : llvm::bit_width_constexpr(n - 1);
   }
 
   template <typename... Ts> constexpr int lowBitsAvailable() {
     return std::min<int>({PointerLikeTypeTraits<Ts>::NumLowBitsAvailable...});
   }
-
-  /// Find the first type in a list of types.
-  template <typename T, typename...> struct GetFirstType {
-    using type = T;
-  };
 
   /// Provide PointerLikeTypeTraits for void* that is used by PointerUnion
   /// for the template arguments.
@@ -264,8 +259,7 @@ struct PointerLikeTypeTraits<PointerUnion<PTs...>> {
 // Teach DenseMap how to use PointerUnions as keys.
 template <typename ...PTs> struct DenseMapInfo<PointerUnion<PTs...>> {
   using Union = PointerUnion<PTs...>;
-  using FirstInfo =
-      DenseMapInfo<typename pointer_union_detail::GetFirstType<PTs...>::type>;
+  using FirstInfo = DenseMapInfo<TypeAtIndex<0, PTs...>>;
 
   static inline Union getEmptyKey() { return Union(FirstInfo::getEmptyKey()); }
 

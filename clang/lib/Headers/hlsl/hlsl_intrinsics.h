@@ -423,6 +423,30 @@ constexpr int4 D3DCOLORtoUBYTE4(float4 V) {
 }
 
 //===----------------------------------------------------------------------===//
+// NonUniformResourceIndex builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn uint NonUniformResourceIndex(uint I)
+/// \brief A compiler hint to indicate that a resource index varies across
+/// threads within a wave (i.e., it is non-uniform).
+/// \param I [in] Resource array index
+///
+/// The return value is the \Index parameter.
+///
+/// When indexing into an array of shader resources (e.g., textures, buffers),
+/// some GPU hardware and drivers require the compiler to know whether the index
+/// is uniform (same for all threads) or non-uniform (varies per thread).
+///
+/// Using NonUniformResourceIndex explicitly marks an index as non-uniform,
+/// disabling certain assumptions or optimizations that could lead to incorrect
+/// behavior when dynamically accessing resource arrays with non-uniform
+/// indices.
+
+constexpr uint32_t NonUniformResourceIndex(uint32_t Index) {
+  return __builtin_hlsl_resource_nonuniformindex(Index);
+}
+
+//===----------------------------------------------------------------------===//
 // reflect builtin
 //===----------------------------------------------------------------------===//
 

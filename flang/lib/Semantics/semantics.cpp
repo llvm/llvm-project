@@ -313,15 +313,13 @@ private:
   /// Return the symbol of an initialized member if a COMMON block
   /// is initalized. Otherwise, return nullptr.
   static Symbol *CommonBlockIsInitialized(const Symbol &common) {
-    const auto &commonDetails =
-        common.get<Fortran::semantics::CommonBlockDetails>();
-
+    const auto &commonDetails{
+        common.get<Fortran::semantics::CommonBlockDetails>()};
     for (const auto &member : commonDetails.objects()) {
       if (IsInitialized(*member)) {
         return &*member;
       }
     }
-
     // Common block may be initialized via initialized variables that are in an
     // equivalence with the common block members.
     for (const Fortran::semantics::EquivalenceSet &set :
@@ -451,6 +449,15 @@ void SemanticsContext::UpdateScopeIndex(
     }
     scopeIndex_.erase(iter);
     scopeIndex_.emplace(newSource, scope);
+  }
+}
+
+void SemanticsContext::DumpScopeIndex(llvm::raw_ostream &out) const {
+  out << "scopeIndex_:\n";
+  for (const auto &[source, scope] : scopeIndex_) {
+    out << "source '" << source.ToString() << "' -> scope " << scope
+        << "... whose source range is '" << scope.sourceRange().ToString()
+        << "'\n";
   }
 }
 

@@ -290,11 +290,9 @@ def update_test(ti: common.TestInfo):
 
         # prefix is selected and generated with most shared output lines
         # each run_id can only be used once
-        gen_prefix = ""
         used_runid = set()
 
-        # line number diff between generated prefix and testline
-        line_offset = 1
+        selected_prefixes = set()
         for prefix, tup in p_dict_sorted.items():
             o, run_ids = tup
 
@@ -308,18 +306,24 @@ def update_test(ti: common.TestInfo):
                 else:
                     used_runid.add(i)
             if not skip:
-                used_prefixes.add(prefix)
+                selected_prefixes.add(prefix)
 
-                if hasErr(o):
-                    newline = getErrCheckLine(prefix, o, mc_mode, line_offset)
-                else:
-                    newline = getStdCheckLine(prefix, o, mc_mode)
+        # Generate check lines in alphabetical order.
+        check_lines = []
+        for prefix in sorted(selected_prefixes):
+            o, run_ids = p_dict[prefix]
+            used_prefixes.add(prefix)
 
-                if newline:
-                    gen_prefix += newline
-                    line_offset += 1
+            if hasErr(o):
+                line_offset = len(check_lines) + 1
+                check = getErrCheckLine(prefix, o, mc_mode, line_offset)
+            else:
+                check = getStdCheckLine(prefix, o, mc_mode)
 
-        generated_prefixes[input_line] = gen_prefix.rstrip("\n")
+            if check:
+                check_lines.append(check.strip())
+
+        generated_prefixes[input_line] = "\n".join(check_lines)
 
     # write output
     for input_info in ti.iterlines(output_lines):

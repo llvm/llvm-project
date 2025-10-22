@@ -4393,13 +4393,6 @@ def t2LDRpci_pic : PseudoInst<(outs rGPR:$dst), (ins i32imm:$addr, pclabel:$cp),
                                            imm:$cp))]>,
                Requires<[IsThumb2]>;
 
-// Pseudo instruction that combines movs + predicated rsbmi
-// to implement integer ABS
-let usesCustomInserter = 1, Defs = [CPSR], hasNoSchedulingInfo = 1 in {
-def t2ABS : PseudoInst<(outs rGPR:$dst), (ins rGPR:$src),
-                       NoItinerary, []>, Requires<[IsThumb2]>;
-}
-
 //===----------------------------------------------------------------------===//
 // Coprocessor load/store -- for disassembly only
 //

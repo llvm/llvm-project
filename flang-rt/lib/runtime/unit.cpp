@@ -827,6 +827,7 @@ ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
   Terminator &terminator{parent.GetIoErrorHandler()};
   OwningPtr<ChildIo> next{New<ChildIo>{terminator}(parent, std::move(current))};
   child_.reset(next.release());
+  leftTabLimit = positionInRecord;
   return *child_;
 }
 

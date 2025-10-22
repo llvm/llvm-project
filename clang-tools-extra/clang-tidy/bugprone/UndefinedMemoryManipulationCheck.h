@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// behavior.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/undefined-memory-manipulation.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/undefined-memory-manipulation.html
 class UndefinedMemoryManipulationCheck : public ClangTidyCheck {
 public:
   UndefinedMemoryManipulationCheck(StringRef Name, ClangTidyContext *Context)

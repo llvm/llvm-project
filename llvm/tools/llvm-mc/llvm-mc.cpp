@@ -40,6 +40,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
@@ -439,6 +440,7 @@ int main(int argc, char **argv) {
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
@@ -459,13 +461,22 @@ int main(int argc, char **argv) {
   MAI->setCommentColumn(CommentColumn);
 
   // Package up features to be passed to target/subtarget
+  SubtargetFeatures Features;
   std::string FeaturesStr;
-  if (MAttrs.size()) {
-    SubtargetFeatures Features;
-    for (unsigned i = 0; i != MAttrs.size(); ++i)
-      Features.AddFeature(MAttrs[i]);
-    FeaturesStr = Features.getString();
+
+  // Replace -mcpu=native with Host CPU and features.
+  if (MCPU == "native") {
+    MCPU = std::string(llvm::sys::getHostCPUName());
+
+    llvm::StringMap<bool> TargetFeatures = llvm::sys::getHostCPUFeatures();
+    for (auto const &[FeatureName, IsSupported] : TargetFeatures)
+      Features.AddFeature(FeatureName, IsSupported);
   }
+
+  // Handle features passed to target/subtarget.
+  for (unsigned i = 0; i != MAttrs.size(); ++i)
+    Features.AddFeature(MAttrs[i]);
+  FeaturesStr = Features.getString();
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TheTriple, MCPU, FeaturesStr));
@@ -633,7 +644,8 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+      Str->switchSection(
+          Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }

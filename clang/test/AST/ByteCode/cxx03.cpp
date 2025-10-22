@@ -40,3 +40,9 @@ struct B2 : B {
 };
 _Static_assert(&(B2().a) == &p, ""); // both-error {{taking the address of a temporary object of type 'int'}} \
                                      // both-error {{not an integral constant expression}}
+
+typedef __attribute__((ext_vector_type(4))) int vi4b;
+struct S {
+  vi4b w;
+};
+const int s = S().w[1];

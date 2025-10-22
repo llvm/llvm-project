@@ -8,10 +8,17 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/atan2f.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAtan2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using LIBC_NAMESPACE::testing::tlog;
@@ -36,16 +43,20 @@ TEST_F(LlvmLibcAtan2fTest, TrickyInputs) {
     float x = INPUTS[i].x;
     float y = INPUTS[i].y;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
-                                   LIBC_NAMESPACE::atan2f(x, y), 0.5);
+                                   LIBC_NAMESPACE::atan2f(x, y),
+                                   TOLERANCE + 0.5);
     INPUTS[i].x = -INPUTS[i].x;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
-                                   LIBC_NAMESPACE::atan2f(-x, y), 0.5);
+                                   LIBC_NAMESPACE::atan2f(-x, y),
+                                   TOLERANCE + 0.5);
     INPUTS[i].y = -INPUTS[i].y;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
-                                   LIBC_NAMESPACE::atan2f(-x, -y), 0.5);
+                                   LIBC_NAMESPACE::atan2f(-x, -y),
+                                   TOLERANCE + 0.5);
     INPUTS[i].x = -INPUTS[i].x;
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan2, INPUTS[i],
-                                   LIBC_NAMESPACE::atan2f(x, -y), 0.5);
+                                   LIBC_NAMESPACE::atan2f(x, -y),
+                                   TOLERANCE + 0.5);
   }
 }
 

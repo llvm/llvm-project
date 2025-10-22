@@ -161,10 +161,23 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
           xegpu::UpdateOffsetOp, xegpu::LoadMatrixOp>(op))
     return getTileShape(op->getOpResult(0));
   if (isa<xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::PrefetchOp,
-          xegpu::LoadGatherOp, xegpu::StoreMatrixOp>(op))
+          xegpu::StoreMatrixOp>(op))
     return getTileShape(op->getOpOperand(0));
-  if (isa<xegpu::StoreNdOp, xegpu::StoreScatterOp>(op))
+  if (isa<xegpu::StoreNdOp>(op))
     return getTileShape(op->getOpOperand(1));
+
+  // Handle LoadGatherOp and StoreScatterOp (with and without offset)
+  if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
+    if (loadGatherOp.getOffsets())
+      return getTileShape(loadGatherOp->getOpResult(0));
+    else
+      return getTileShape(loadGatherOp->getOpOperand(0));
+  }
+
+  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+    return getTileShape(storeScatterOp.getOffsets()
+                            ? storeScatterOp->getOpOperand(0)
+                            : storeScatterOp->getOpOperand(1));
 
   if (isa<xegpu::DpasOp>(op)) {
     std::optional<SmallVector<int64_t>> aTile =
@@ -319,7 +332,8 @@ void XeGPUBlockingPass::runOnOperation() {
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
-  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape) {
+  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape,
+                                 bool returnSingleType = false) {
     Type elemTy = type.getElementType();
     Type newTy;
 
@@ -352,6 +366,8 @@ void XeGPUBlockingPass::runOnOperation() {
       newTy = type.clone(tileShape, elemTy);
     }
 
+    if (returnSingleType)
+      return SmallVector<Type>{newTy};
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
     assert(ratio && "The shape of the type must be a multiple of tileShape.");

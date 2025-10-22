@@ -10,7 +10,7 @@
 define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %ptr2) {
 ; IF-EVL-LABEL: @reverse_load_store(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -43,20 +43,7 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[LOOPEND:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
-; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[ADD]]
-; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
-; IF-EVL-NEXT:    [[GEPS:%.*]] = getelementptr inbounds i32, ptr [[PTR2]], i64 [[ADD]]
-; IF-EVL-NEXT:    store i32 [[TMP]], ptr [[GEPS]], align 4
-; IF-EVL-NEXT:    [[INC]] = add i32 [[I]], 1
-; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 1024
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[LOOPEND]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       loopend:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -140,7 +127,7 @@ loopend:
 define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
 ; IF-EVL-LABEL: @reverse_load_store_masked(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -177,29 +164,9 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP28]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP28]]
 ; IF-EVL-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[LOOPEND:%.*]]
-; IF-EVL:       scalar.ph:
-; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
-; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
-; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
-; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[I]]
-; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
-; IF-EVL-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP]], 100
-; IF-EVL-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; IF-EVL:       if.then:
-; IF-EVL-NEXT:    [[GEPL1:%.*]] = getelementptr inbounds i32, ptr [[PTR1]], i64 [[ADD]]
-; IF-EVL-NEXT:    [[V:%.*]] = load i32, ptr [[GEPL1]], align 4
-; IF-EVL-NEXT:    [[GEPS:%.*]] = getelementptr inbounds i32, ptr [[PTR2]], i64 [[ADD]]
-; IF-EVL-NEXT:    store i32 [[V]], ptr [[GEPS]], align 4
-; IF-EVL-NEXT:    br label [[FOR_INC]]
-; IF-EVL:       for.inc:
-; IF-EVL-NEXT:    [[INC]] = add i32 [[I]], 1
-; IF-EVL-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 1024
-; IF-EVL-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[LOOPEND]], !llvm.loop [[LOOP6:![0-9]+]]
+; IF-EVL-NEXT:    br label [[FOR_INC:%.*]]
 ; IF-EVL:       loopend:
 ; IF-EVL-NEXT:    ret void
 ;
@@ -232,7 +199,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; NO-VP-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[TMP11]], i64 [[TMP12]]
 ; NO-VP-NEXT:    [[TMP16:%.*]] = getelementptr i32, ptr [[TMP15]], i64 [[TMP14]]
 ; NO-VP-NEXT:    [[REVERSE:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
-; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP16]], i32 4, <vscale x 4 x i1> [[REVERSE]], <vscale x 4 x i32> poison)
+; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP16]], <vscale x 4 x i1> [[REVERSE]], <vscale x 4 x i32> poison)
 ; NO-VP-NEXT:    [[REVERSE2:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[WIDE_MASKED_LOAD]])
 ; NO-VP-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i64 [[TMP8]]
 ; NO-VP-NEXT:    [[TMP18:%.*]] = mul i64 0, [[TMP3]]
@@ -242,7 +209,7 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; NO-VP-NEXT:    [[TMP22:%.*]] = getelementptr i32, ptr [[TMP21]], i64 [[TMP20]]
 ; NO-VP-NEXT:    [[REVERSE3:%.*]] = call <vscale x 4 x i1> @llvm.vector.reverse.nxv4i1(<vscale x 4 x i1> [[TMP10]])
 ; NO-VP-NEXT:    [[REVERSE4:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[REVERSE2]])
-; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[REVERSE4]], ptr [[TMP22]], i32 4, <vscale x 4 x i1> [[REVERSE3]])
+; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[REVERSE4]], ptr align 4 [[TMP22]], <vscale x 4 x i1> [[REVERSE3]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -308,7 +275,7 @@ loopend:
 define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalias %d) {
 ; IF-EVL-LABEL: @multiple_reverse_vector_pointer(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -349,30 +316,15 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP27]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP27]]
 ; IF-EVL-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; IF-EVL-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; IF-EVL-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IF-EVL:       middle.block:
-; IF-EVL-NEXT:    br label [[EXIT:%.*]]
-; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
-; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 1024, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; IF-EVL-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
-; IF-EVL-NEXT:    [[X:%.*]] = load i8, ptr [[GEP_A]], align 1
-; IF-EVL-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[B]], i8 [[X]]
-; IF-EVL-NEXT:    [[Y:%.*]] = load i8, ptr [[GEP_B]], align 1
-; IF-EVL-NEXT:    [[GEP_C:%.*]] = getelementptr i8, ptr [[C]], i64 [[IV]]
-; IF-EVL-NEXT:    store i8 [[Y]], ptr [[GEP_C]], align 1
-; IF-EVL-NEXT:    [[GEP_D:%.*]] = getelementptr i8, ptr [[D]], i64 [[IV]]
-; IF-EVL-NEXT:    store i8 [[Y]], ptr [[GEP_D]], align 1
-; IF-EVL-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
-; IF-EVL-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
-; IF-EVL-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; IF-EVL:       exit:
 ; IF-EVL-NEXT:    ret void
 ;
 ; NO-VP-LABEL: @multiple_reverse_vector_pointer(
 ; NO-VP-NEXT:  entry:
-; NO-VP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; NO-VP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
 ; NO-VP-NEXT:    br label [[LOOP:%.*]]
 ; NO-VP:       vector.body:
@@ -384,7 +336,7 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; NO-VP-NEXT:    [[REVERSE:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 ; NO-VP-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B:%.*]], <16 x i8> [[REVERSE]]
-; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> [[TMP3]], i32 1, <16 x i1> splat (i1 true), <16 x i8> poison)
+; NO-VP-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 1 [[TMP3]], <16 x i1> splat (i1 true), <16 x i8> poison)
 ; NO-VP-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[OFFSET_IDX]]
 ; NO-VP-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
 ; NO-VP-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP5]], i32 -15
@@ -398,12 +350,11 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; NO-VP-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; NO-VP:       middle.block:
-; NO-VP-NEXT:    br label [[SCALAR_PH]]
+; NO-VP-NEXT:    br label [[SCALAR_PH:%.*]]
 ; NO-VP:       scalar.ph:
-; NO-VP-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[MIDDLE_BLOCK]] ], [ 1024, [[ENTRY:%.*]] ]
 ; NO-VP-NEXT:    br label [[LOOP1:%.*]]
 ; NO-VP:       loop:
-; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
+; NO-VP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP1]] ]
 ; NO-VP-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
 ; NO-VP-NEXT:    [[X:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; NO-VP-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[B]], i8 [[X]]

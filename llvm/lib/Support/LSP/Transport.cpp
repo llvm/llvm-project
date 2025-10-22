@@ -120,7 +120,7 @@ bool MessageHandler::onReply(llvm::json::Value Id,
   // mapping and erase it.
   ResponseHandlerTy ResponseHandler;
   {
-    std::lock_guard<std::mutex> responseHandlersLock(ResponseHandlerTy);
+    std::lock_guard<std::mutex> responseHandlersLock(ResponseHandlersMutex);
     auto It = ResponseHandlers.find(debugString(Id));
     if (It != ResponseHandlers.end()) {
       ResponseHandler = std::move(It->second);

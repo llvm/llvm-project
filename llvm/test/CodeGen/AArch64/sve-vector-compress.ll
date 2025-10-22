@@ -100,6 +100,42 @@ define <vscale x 4 x i4> @test_compress_illegal_element_type(<vscale x 4 x i4> %
     ret <vscale x 4 x i4> %out
 }
 
+define <vscale x 4 x i32> @test_compress_knownbits_zext(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_knownbits_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    and z1.s, z1.s, #0x3
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %xvec = zext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %res = and <vscale x 4 x i32> %out, splat (i32 65535)
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @test_compress_numsignbits_sext(<vscale x 4 x i16> %vec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %passthru) nounwind {
+; CHECK-LABEL: test_compress_numsignbits_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    and z1.s, z1.s, #0x3
+; CHECK-NEXT:    cntp x8, p0, p0.s
+; CHECK-NEXT:    sxth z0.s, p1/m, z0.s
+; CHECK-NEXT:    compact z0.s, p0, z0.s
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    ret
+  %xvec = sext <vscale x 4 x i16> %vec to <vscale x 4 x i32>
+  %xpassthru = and <vscale x 4 x i32> %passthru, splat (i32 3)
+  %out = call <vscale x 4 x i32> @llvm.experimental.vector.compress(<vscale x 4 x i32> %xvec, <vscale x 4 x i1> %mask, <vscale x 4 x i32> %xpassthru)
+  %shl = shl <vscale x 4 x i32> %out, splat (i32 16)
+  %res = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %res
+}
+
 define <vscale x 8 x i32> @test_compress_large(<vscale x 8 x i32> %vec, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: test_compress_large:
 ; CHECK:       // %bb.0:

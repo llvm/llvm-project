@@ -16,7 +16,7 @@ namespace clang::tidy::modernize {
 /// Prefer using transparent functors to non-transparent ones.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-transparent-functors.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-transparent-functors.html
 class UseTransparentFunctorsCheck : public ClangTidyCheck {
 public:
   UseTransparentFunctorsCheck(StringRef Name, ClangTidyContext *Context);

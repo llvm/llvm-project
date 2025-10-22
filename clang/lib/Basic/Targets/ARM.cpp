@@ -260,6 +260,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     : TargetInfo(Triple), FPMath(FP_Default), IsAAPCS(true), LDREX(0),
       HW_FP(0) {
   bool IsFreeBSD = Triple.isOSFreeBSD();
+  bool IsFuchsia = Triple.isOSFuchsia();
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
@@ -332,7 +333,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsFuchsia || IsOpenBSD || IsHaiku || IsOHOS)
         setABI("aapcs-linux");
       else
         setABI("aapcs");

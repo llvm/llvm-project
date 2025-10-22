@@ -31,7 +31,7 @@ Example invocations.
                       -header-filter=extra/clang-tidy
 
 Compilation database setup:
-http://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
+https://clang.llvm.org/docs/HowToSetupToolingForLLVM.html
 """
 
 import argparse

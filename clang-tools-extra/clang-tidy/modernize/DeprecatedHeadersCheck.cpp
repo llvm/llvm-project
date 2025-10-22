@@ -24,8 +24,9 @@ namespace {
 class IncludeModernizePPCallbacks : public PPCallbacks {
 public:
   explicit IncludeModernizePPCallbacks(
-      std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts,
-      const SourceManager &SM, bool CheckHeaderFile);
+      std::vector<IncludeMarker> &IncludesToBeProcessed,
+      const LangOptions &LangOpts, const SourceManager &SM,
+      bool CheckHeaderFile);
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
@@ -37,8 +38,7 @@ public:
 
 private:
   std::vector<IncludeMarker> &IncludesToBeProcessed;
-  LangOptions LangOpts;
-  llvm::StringMap<std::string> CStyledHeaderToCxx;
+  llvm::StringMap<StringRef> CStyledHeaderToCxx;
   llvm::StringSet<> DeleteHeaders;
   const SourceManager &SM;
   bool CheckHeaderFile;
@@ -131,48 +131,35 @@ void DeprecatedHeadersCheck::check(
 }
 
 IncludeModernizePPCallbacks::IncludeModernizePPCallbacks(
-    std::vector<IncludeMarker> &IncludesToBeProcessed, LangOptions LangOpts,
-    const SourceManager &SM, bool CheckHeaderFile)
-    : IncludesToBeProcessed(IncludesToBeProcessed), LangOpts(LangOpts), SM(SM),
+    std::vector<IncludeMarker> &IncludesToBeProcessed,
+    const LangOptions &LangOpts, const SourceManager &SM, bool CheckHeaderFile)
+    : IncludesToBeProcessed(IncludesToBeProcessed), SM(SM),
       CheckHeaderFile(CheckHeaderFile) {
-  for (const auto &KeyValue :
-       std::vector<std::pair<llvm::StringRef, std::string>>(
-           {{"assert.h", "cassert"},
-            {"complex.h", "complex"},
-            {"ctype.h", "cctype"},
-            {"errno.h", "cerrno"},
-            {"float.h", "cfloat"},
-            {"limits.h", "climits"},
-            {"locale.h", "clocale"},
-            {"math.h", "cmath"},
-            {"setjmp.h", "csetjmp"},
-            {"signal.h", "csignal"},
-            {"stdarg.h", "cstdarg"},
-            {"stddef.h", "cstddef"},
-            {"stdio.h", "cstdio"},
-            {"stdlib.h", "cstdlib"},
-            {"string.h", "cstring"},
-            {"time.h", "ctime"},
-            {"wchar.h", "cwchar"},
-            {"wctype.h", "cwctype"}})) {
-    CStyledHeaderToCxx.insert(KeyValue);
-  }
-  // Add C++11 headers.
-  if (LangOpts.CPlusPlus11) {
-    for (const auto &KeyValue :
-         std::vector<std::pair<llvm::StringRef, std::string>>(
-             {{"fenv.h", "cfenv"},
-              {"stdint.h", "cstdint"},
-              {"inttypes.h", "cinttypes"},
-              {"tgmath.h", "ctgmath"},
-              {"uchar.h", "cuchar"}})) {
-      CStyledHeaderToCxx.insert(KeyValue);
-    }
-  }
-  for (const auto &Key :
-       std::vector<std::string>({"stdalign.h", "stdbool.h", "iso646.h"})) {
-    DeleteHeaders.insert(Key);
-  }
+
+  static constexpr std::pair<StringRef, StringRef> CXX98Headers[] = {
+      {"assert.h", "cassert"}, {"complex.h", "complex"},
+      {"ctype.h", "cctype"},   {"errno.h", "cerrno"},
+      {"float.h", "cfloat"},   {"limits.h", "climits"},
+      {"locale.h", "clocale"}, {"math.h", "cmath"},
+      {"setjmp.h", "csetjmp"}, {"signal.h", "csignal"},
+      {"stdarg.h", "cstdarg"}, {"stddef.h", "cstddef"},
+      {"stdio.h", "cstdio"},   {"stdlib.h", "cstdlib"},
+      {"string.h", "cstring"}, {"time.h", "ctime"},
+      {"wchar.h", "cwchar"},   {"wctype.h", "cwctype"},
+  };
+  CStyledHeaderToCxx.insert(std::begin(CXX98Headers), std::end(CXX98Headers));
+
+  static constexpr std::pair<StringRef, StringRef> CXX11Headers[] = {
+      {"fenv.h", "cfenv"},         {"stdint.h", "cstdint"},
+      {"inttypes.h", "cinttypes"}, {"tgmath.h", "ctgmath"},
+      {"uchar.h", "cuchar"},
+  };
+  if (LangOpts.CPlusPlus11)
+    CStyledHeaderToCxx.insert(std::begin(CXX11Headers), std::end(CXX11Headers));
+
+  static constexpr StringRef HeadersToDelete[] = {"stdalign.h", "stdbool.h",
+                                                  "iso646.h"};
+  DeleteHeaders.insert_range(HeadersToDelete);
 }
 
 void IncludeModernizePPCallbacks::InclusionDirective(
@@ -205,7 +192,7 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   } else if (DeleteHeaders.contains(FileName)) {
     IncludesToBeProcessed.emplace_back(
         // NOLINTNEXTLINE(modernize-use-emplace) - false-positive
-        IncludeMarker{std::string{}, FileName,
+        IncludeMarker{StringRef{}, FileName,
                       SourceRange{HashLoc, FilenameRange.getEnd()}, DiagLoc});
   }
 }

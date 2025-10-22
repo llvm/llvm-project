@@ -93,9 +93,9 @@ static const NamedDecl *findDecl(const RecordDecl &RecDecl,
   return nullptr;
 }
 
-/// Returns the function that \p Method is overridding. If There are none or
+/// Returns the function that \p Method is overriding. If There are none or
 /// multiple overrides it returns nullptr. If the overridden function itself is
-/// overridding then it will recurse up to find the first decl of the function.
+/// overriding then it will recurse up to find the first decl of the function.
 static const CXXMethodDecl *getOverrideMethod(const CXXMethodDecl *Method) {
   if (Method->size_overridden_methods() != 1)
     return nullptr;
@@ -331,7 +331,7 @@ public:
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
     return true;
   }
 
@@ -490,7 +490,7 @@ void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
   NamingCheckFailure &Failure = FailureIter->second;
   Failure.Info = std::move(*MaybeFailure);
 
-  // Don't overwritte the failure status if it was already set.
+  // Don't overwrite the failure status if it was already set.
   if (!Failure.shouldFix()) {
     return;
   }

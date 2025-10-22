@@ -905,56 +905,29 @@ static inline LogicalResult errorIfShapeNotSizeOne(Operation *op, Type type) {
   return shapeAdaptor.getNumElements() == 1 ? success() : failure();
 }
 
-// Returns the first declaration point prior to this operation or failure if
-// not found.
-static FailureOr<tosa::VariableOp> findVariableDecl(Operation *op,
-                                                    StringRef symName) {
-  ModuleOp module = op->getParentOfType<ModuleOp>();
-  tosa::VariableOp varOp = nullptr;
-
-  // TODO: Adopt SymbolTable trait to Varible ops.
-  // Currently, the variable's definition point is searched via walk(),
-  // starting from the top-level ModuleOp and stopping at the point of use. Once
-  // TOSA control flow and variable extensions reach the complete state, may
-  // leverage MLIR's Symbol Table functionality to look up symbol and enhance
-  // the search to a TOSA specific graph traversal over the IR structure.
-  module.walk([&](Operation *tempOp) {
-    // Reach this op itself.
-    if (tempOp == op) {
-      return WalkResult::interrupt();
-    }
-
-    if (auto tosaOp = dyn_cast<tosa::VariableOp>(tempOp)) {
-      if (symName == tosaOp.getName()) {
-        varOp = tosaOp;
-        return WalkResult::interrupt();
-      }
-    }
-
-    return WalkResult::advance();
-  });
-
-  if (varOp)
-    return varOp;
-
-  return failure();
-}
-
 template <typename T>
 static LogicalResult verifyVariableOpErrorIf(T op, Type type, StringRef name) {
-  StringRef symName = op.getName();
-  FailureOr<tosa::VariableOp> varOp = findVariableDecl(op, symName);
-  if (failed(varOp))
+  Operation *symTableOp =
+      op->template getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symTableOp)
+    // If the operation is not the scope of a symbol table, we cannot
+    // verify it against it's declaration.
+    return success();
+
+  SymbolTable symTable(symTableOp);
+  const auto varOp = symTable.lookup<tosa::VariableOp>(op.getName());
+
+  // Verify prior declaration
+  if (!varOp)
     return op->emitOpError("'")
-           << symName << "' has not been declared by 'tosa.variable'";
+           << op.getName() << "' has not been declared by 'tosa.variable'";
 
   // Verify type and shape
-  auto variableType = getVariableType(varOp.value());
+  auto variableType = getVariableType(varOp);
   if (errorIfTypeOrShapeMismatch(op, type, name, variableType,
                                  "the input tensor")
           .failed())
     return failure();
-
   return success();
 }
 
@@ -1418,7 +1391,7 @@ static void buildVariableOp(OpBuilder &builder, OperationState &result,
   ArrayRef<int64_t> shape = shapedType.getShape();
   auto varShapeAttr = builder.getIndexTensorAttr(convertFromMlirShape(shape));
 
-  result.addAttribute("name", nameAttr);
+  result.addAttribute("sym_name", nameAttr);
   result.addAttribute("var_shape", varShapeAttr);
   result.addAttribute("type", elementTypeAttr);
   result.addAttribute("initial_value", initialValue);
@@ -1842,12 +1815,6 @@ LogicalResult MatMulOp::verify() {
     if (aQuantWidth != bQuantWidth) {
       return emitOpError("expect quantized operands to have same widths, got ")
              << aQuantWidth << " and " << bQuantWidth;
-    }
-  } else {
-    // non-quantized element types
-    if (aElementType != bElementType) {
-      return emitOpError("expect same element type for inputs a and b, got ")
-             << aElementType << " and " << bElementType;
     }
   }
 
@@ -2401,9 +2368,10 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
       }
     }
 
-    int64_t newShapeElementsNum = std::accumulate(
-        shapeValues.begin(), shapeValues.end(), 1LL,
-        [](int64_t acc, int64_t dim) { return (dim > 0) ? acc * dim : acc; });
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1), [](int64_t acc, int64_t dim) {
+          return (dim > 0) ? acc * dim : acc;
+        });
     bool isStaticNewShape =
         llvm::all_of(shapeValues, [](int64_t s) { return s > 0; });
     if ((isStaticNewShape && inputElementsNum != newShapeElementsNum) ||
@@ -4025,19 +3993,27 @@ LogicalResult IfOp::verify() {
           .failed())
     return failure();
 
-  auto thenYield = cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, thenYield.getInputs(),
-                                 "'then_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getThenGraph().front().mightHaveTerminator()) {
+    auto thenYield =
+        dyn_cast<tosa::YieldOp>(getThenGraph().front().getTerminator());
+    if (thenYield && errorIfTypeOrShapeMismatch(
+                         *this, thenYield.getInputs(), "'then_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
-  auto elseYield = cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, elseYield.getInputs(),
-                                 "'else_graph' results", getOutputList(),
-                                 "'output_list'")
-          .failed())
-    return failure();
+  // MLIR will verify the absence of the terminator for us if otherwise.
+  if (getElseGraph().front().mightHaveTerminator()) {
+    auto elseYield =
+        dyn_cast<tosa::YieldOp>(getElseGraph().front().getTerminator());
+    if (elseYield && errorIfTypeOrShapeMismatch(
+                         *this, elseYield.getInputs(), "'else_graph' results",
+                         getOutputList(), "'output_list'")
+                         .failed())
+      return failure();
+  }
 
   auto condType = getCondition().getType();
   if (errorIfShapeNotSizeOne(*this, condType).failed())
@@ -4065,16 +4041,26 @@ LogicalResult WhileOp::verify() {
           .failed())
     return failure();
 
-  auto bodyYield = cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
-  if (errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
-                                 "'body_graph' results", getInputList(),
-                                 "'input_list'")
-          .failed())
-    return failure();
+  if (getBodyGraph().front().mightHaveTerminator()) {
+    auto bodyYield =
+        dyn_cast<tosa::YieldOp>(getBodyGraph().front().getTerminator());
+    if (bodyYield && errorIfTypeOrShapeMismatch(*this, bodyYield.getInputs(),
+                                                "'body_graph' results",
+                                                getInputList(), "'input_list'")
+                         .failed())
+      return failure();
+  }
 
   // Condition block output must be a single element tensor with a single bool
   // value.
-  auto condYield = cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!getCondGraph().front().mightHaveTerminator())
+    return success();
+
+  auto condYield =
+      dyn_cast<tosa::YieldOp>(getCondGraph().front().getTerminator());
+  if (!condYield)
+    return success();
+
   if (condYield.getInputs().size() != 1)
     return emitOpError() << "require 'cond_graph' only have one result";
 
@@ -4144,16 +4130,6 @@ LogicalResult tosa::SelectOp::verify() {
     return emitOpError("expect element type of bool for input1, got ")
            << predicateElementType;
   }
-
-  return success();
-}
-
-LogicalResult tosa::VariableOp::verify() {
-  StringRef symName = getName();
-  FailureOr<tosa::VariableOp> varOp = findVariableDecl(*this, symName);
-  if (succeeded(varOp))
-    return emitOpError("illegal to have multiple declaration of '")
-           << symName << "'";
 
   return success();
 }

@@ -808,12 +808,13 @@ void ASTUnit::ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
 
 std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-    WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+    WhatToLoad ToLoad, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+    std::shared_ptr<DiagnosticOptions> DiagOpts,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
     const FileSystemOptions &FileSystemOpts, const HeaderSearchOptions &HSOpts,
     const LangOptions *LangOpts, bool OnlyLocalDecls,
     CaptureDiagsKind CaptureDiagnostics, bool AllowASTWithCompilerErrors,
-    bool UserFilesAreVolatile, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    bool UserFilesAreVolatile) {
   std::unique_ptr<ASTUnit> AST(new ASTUnit(true));
 
   // Recover resources if we crash before exiting this method.
@@ -1650,6 +1651,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   AST->Reader = nullptr;
 
   // Create a file manager object to provide access to and cache the filesystem.
+  Clang->setVirtualFileSystem(AST->getVirtualFileSystemPtr());
   Clang->setFileManager(AST->getFileManagerPtr());
 
   // Create the source manager.
@@ -2289,6 +2291,7 @@ void ASTUnit::CodeComplete(
          "IR inputs not support here!");
 
   // Use the source and file managers that we were given.
+  Clang->setVirtualFileSystem(FileMgr->getVirtualFileSystemPtr());
   Clang->setFileManager(FileMgr);
   Clang->setSourceManager(SourceMgr);
 

@@ -57,7 +57,7 @@ struct ConstrainedVectorConvertToLLVMPattern
 /// are the same.
 struct IdentityBitcastLowering final
     : public OpConversionPattern<arith::BitcastOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(arith::BitcastOp op, OpAdaptor adaptor,

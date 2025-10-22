@@ -97,17 +97,7 @@ void Prescanner::Prescan(ProvenanceRange range) {
   while (!IsAtEnd()) {
     Statement();
   }
-  if (inFixedForm_ != beganInFixedForm) {
-    std::string dir{"!dir$ "};
-    if (beganInFixedForm) {
-      dir += "fixed";
-    } else {
-      dir += "free";
-    }
-    dir += '\n';
-    TokenSequence tokens{dir, allSources_.AddCompilerInsertion(dir).start()};
-    tokens.Emit(cooked_);
-  }
+  inFixedForm_ = beganInFixedForm;
 }
 
 void Prescanner::Statement() {
@@ -150,12 +140,9 @@ void Prescanner::Statement() {
       CHECK(*at_ == '!');
     }
     std::optional<int> condOffset;
-    if (InOpenMPConditionalLine()) {
+    if (InOpenMPConditionalLine()) { // !$
       condOffset = 2;
-    } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'c' &&
-        directiveSentinel_[2] == 'u' && directiveSentinel_[3] == 'f' &&
-        directiveSentinel_[4] == '\0') {
-      // CUDA conditional compilation line.
+    } else if (InOpenACCOrCUDAConditionalLine()) { // !@acc or !@cuf
       condOffset = 5;
     }
     if (condOffset && !preprocessingOnly_) {
@@ -171,7 +158,8 @@ void Prescanner::Statement() {
     } else {
       // Compiler directive.  Emit normalized sentinel, squash following spaces.
       // Conditional compilation lines (!$) take this path in -E mode too
-      // so that -fopenmp only has to appear on the later compilation.
+      // so that -fopenmp only has to appear on the later compilation
+      // (ditto for !@cuf and !@acc).
       EmitChar(tokens, '!');
       ++at_, ++column_;
       for (const char *sp{directiveSentinel_}; *sp != '\0';
@@ -207,7 +195,7 @@ void Prescanner::Statement() {
       }
       tokens.CloseToken();
       SkipSpaces();
-      if (InOpenMPConditionalLine() && inFixedForm_ && !tabInCurrentLine_ &&
+      if (InConditionalLine() && inFixedForm_ && !tabInCurrentLine_ &&
           column_ == 6 && *at_ != '\n') {
         // !$   0   - turn '0' into a space
         // !$   1   - turn '1' into '&'
@@ -324,10 +312,11 @@ void Prescanner::Statement() {
       }
       NormalizeCompilerDirectiveCommentMarker(*preprocessed);
       preprocessed->ToLowerCase();
-      SourceFormChange(preprocessed->ToString());
-      CheckAndEmitLine(
-          preprocessed->ClipComment(*this, true /* skip first ! */),
-          newlineProvenance);
+      if (!SourceFormChange(preprocessed->ToString())) {
+        CheckAndEmitLine(
+            preprocessed->ClipComment(*this, true /* skip first ! */),
+            newlineProvenance);
+      }
       break;
     case LineClassification::Kind::Source:
       if (inFixedForm_) {
@@ -351,7 +340,7 @@ void Prescanner::Statement() {
       while (CompilerDirectiveContinuation(tokens, line.sentinel)) {
         newlineProvenance = GetCurrentProvenance();
       }
-      if (preprocessingOnly_ && inFixedForm_ && InOpenMPConditionalLine() &&
+      if (preprocessingOnly_ && inFixedForm_ && InConditionalLine() &&
           nextLine_ < limit_) {
         // In -E mode, when the line after !$ conditional compilation is a
         // regular fixed form continuation line, append a '&' to the line.
@@ -370,14 +359,16 @@ void Prescanner::Statement() {
         }
       }
       tokens.ToLowerCase();
-      SourceFormChange(tokens.ToString());
+      if (!SourceFormChange(tokens.ToString())) {
+        CheckAndEmitLine(tokens, newlineProvenance);
+      }
     } else { // Kind::Source
       tokens.ToLowerCase();
       if (inFixedForm_) {
         EnforceStupidEndStatementRules(tokens);
       }
+      CheckAndEmitLine(tokens, newlineProvenance);
     }
-    CheckAndEmitLine(tokens, newlineProvenance);
   }
   directiveSentinel_ = nullptr;
 }
@@ -1362,11 +1353,10 @@ const char *Prescanner::FixedFormContinuationLine(bool atNewline) {
               features_.IsEnabled(LanguageFeature::OldDebugLines))) &&
       nextLine_[1] == ' ' && nextLine_[2] == ' ' && nextLine_[3] == ' ' &&
       nextLine_[4] == ' '};
-  if (InCompilerDirective() &&
-      !(InOpenMPConditionalLine() && !preprocessingOnly_)) {
+  if (InCompilerDirective() && !(InConditionalLine() && !preprocessingOnly_)) {
     // !$ under -E is not continued, but deferred to later compilation
     if (IsFixedFormCommentChar(col1) &&
-        !(InOpenMPConditionalLine() && preprocessingOnly_)) {
+        !(InConditionalLine() && preprocessingOnly_)) {
       int j{1};
       for (; j < 5; ++j) {
         char ch{directiveSentinel_[j - 1]};
@@ -1445,7 +1435,7 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
   }
   p = SkipWhiteSpaceIncludingEmptyMacros(p);
   if (InCompilerDirective()) {
-    if (InOpenMPConditionalLine()) {
+    if (InConditionalLine()) {
       if (preprocessingOnly_) {
         // in -E mode, don't treat !$ as a continuation
         return nullptr;
@@ -1774,11 +1764,15 @@ Prescanner::LineClassification Prescanner::ClassifyLine(
   return classification;
 }
 
-void Prescanner::SourceFormChange(std::string &&dir) {
+bool Prescanner::SourceFormChange(std::string &&dir) {
   if (dir == "!dir$ free") {
     inFixedForm_ = false;
+    return true;
   } else if (dir == "!dir$ fixed") {
     inFixedForm_ = true;
+    return true;
+  } else {
+    return false;
   }
 }
 

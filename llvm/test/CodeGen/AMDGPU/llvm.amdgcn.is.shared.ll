@@ -3,11 +3,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CIT-LABEL: is_local_vgpr:

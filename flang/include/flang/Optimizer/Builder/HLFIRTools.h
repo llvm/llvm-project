@@ -98,6 +98,13 @@ public:
   mlir::Type getElementOrSequenceType() const {
     return hlfir::getFortranElementOrSequenceType(getType());
   }
+  /// Return the fir.class or fir.box type needed to describe this entity.
+  fir::BaseBoxType getBoxType() const {
+    if (isBoxAddressOrValue())
+      return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
+    const bool isVolatile = fir::isa_volatile_type(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
+  }
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
@@ -324,6 +331,10 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
+/// Return character length if known at compile time. Unlike genCharLength
+/// it does not create any new op as specifically is intended for analysis.
+std::optional<std::int64_t> getCharLengthIfConst(Entity entity);
+
 mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity entity, mlir::Type resultType);
 
@@ -481,9 +492,18 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
 /// would be incorrect.
 bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 
-std::pair<hlfir::Entity, mlir::Value>
-createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                   hlfir::Entity mold);
+/// Create a new temporary based on the provided \p mold entity.
+///
+/// The returned temporary has the same element type, shape and type parameters
+/// as the mold. When possible, the storage is stack-allocated; otherwise it is
+/// heap-allocated (for instance for arrays with dynamic shape or polymorphic
+/// cases). The bool result indicates whether heap allocation was used.
+///
+/// If the returned bool is true, callers are responsible for arranging cleanup
+/// (e.g., generating destruction/deallocation code at an appropriate point).
+std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder,
+                                                  hlfir::Entity mold);
 
 // TODO: this does not support polymorphic molds
 hlfir::Entity createStackTempFromMold(mlir::Location loc,

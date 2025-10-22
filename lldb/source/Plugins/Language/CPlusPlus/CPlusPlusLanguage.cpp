@@ -104,10 +104,10 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 }
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
-  const char *mangled_name = mangled.GetMangledName().GetCString();
-  auto mangling_scheme = Mangled::GetManglingScheme(mangled_name);
-  return mangled_name && (mangling_scheme == Mangled::eManglingSchemeItanium ||
-                          mangling_scheme == Mangled::eManglingSchemeMSVC);
+  auto mangling_scheme =
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
+  return mangling_scheme == Mangled::eManglingSchemeItanium ||
+         mangling_scheme == Mangled::eManglingSchemeMSVC;
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -2199,6 +2199,7 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   case FunctionNameRepresentation::eName:
     return false;
   }
+  llvm_unreachable("Fully covered switch above");
 }
 
 bool CPlusPlusLanguage::HandleFrameFormatVariable(

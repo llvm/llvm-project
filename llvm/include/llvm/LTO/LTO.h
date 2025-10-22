@@ -15,6 +15,7 @@
 #ifndef LLVM_LTO_LTO_H
 #define LLVM_LTO_LTO_H
 
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 
@@ -91,7 +92,7 @@ LLVM_ABI std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
                                           StringRef NewPrefix);
 
 /// Setup optimization remarks.
-LLVM_ABI Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
+LLVM_ABI Expected<LLVMRemarkFileHandle> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
@@ -103,12 +104,6 @@ setupStatsFile(StringRef StatsFilename);
 /// Produces a container ordering for optimal multi-threaded processing. Returns
 /// ordered indices to elements in the input array.
 LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
-
-/// Updates MemProf attributes (and metadata) based on whether the index
-/// has recorded that we are linking with allocation libraries containing
-/// the necessary APIs for downstream transformations.
-LLVM_ABI void updateMemProfAttributes(Module &Mod,
-                                      const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
@@ -579,7 +574,7 @@ private:
   DenseSet<GlobalValue::GUID> DynamicExportSymbols;
 
   // Diagnostic optimization remarks file
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
 };
 
 /// The resolution for a symbol. The linker must provide a SymbolResolution for

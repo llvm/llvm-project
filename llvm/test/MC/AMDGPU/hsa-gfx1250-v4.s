@@ -178,6 +178,7 @@ max_vgprs:
 // ASM-NEXT: .amdhsa_next_free_sgpr 32
 // ASM-NEXT: .amdhsa_named_barrier_count 3
 // ASM-NEXT: .amdhsa_reserve_vcc 0
+// ASM-NEXT: .amdhsa_reserve_xnack_mask 1
 // ASM-NEXT: .amdhsa_float_round_mode_32 1
 // ASM-NEXT: .amdhsa_float_round_mode_16_64 1
 // ASM-NEXT: .amdhsa_float_denorm_mode_32 1

@@ -374,8 +374,8 @@ define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:    bl foo
 ; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:    ldr z0, [sp, #2, mul vl]
-; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addvl x8, sp, #2
+; CHECK-NEXT:    ldrb w0, [x8]
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
