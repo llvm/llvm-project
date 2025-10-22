@@ -25,6 +25,7 @@
 #include "PluginInterface.h"
 #include "Utils/ELF.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
@@ -293,11 +294,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = Plugin::check(Res, "error in cuDeviceGet: %s"))
       return Err;
 
-    char Uuid[16];
-    Res = cuDeviceGetUuid(Uuid, Device);
+    CUuuid Uuid = {0};
+    Res = cuDeviceGetUuid(&Uuid, Device);
     if (auto Err = Plugin::check(Res, "error in cuDeviceGetUuid: %s"))
       return Err;
-    setDeviceUidFromVendorUid(Uuid);
+    setDeviceUidFromVendorUid(toHex(Uuid.bytes, true));
 
     // Query the current flags of the primary context and set its flags if
     // it is inactive.

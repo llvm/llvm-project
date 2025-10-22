@@ -1613,7 +1613,7 @@ Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
   return isAccessiblePtrImpl(Ptr, Size);
 }
 
-void GenericDeviceTy::setDeviceUidFromVendorUid(const char *VendorUid) {
+void GenericDeviceTy::setDeviceUidFromVendorUid(StringRef VendorUid) {
   DeviceUid = std::string(Plugin.getName()) + "-" + std::string(VendorUid);
 }
 

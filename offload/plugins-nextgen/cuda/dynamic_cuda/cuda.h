@@ -33,7 +33,9 @@ typedef struct CUfunc_st *CUfunction;
 typedef void (*CUhostFn)(void *userData);
 typedef struct CUstream_st *CUstream;
 typedef struct CUevent_st *CUevent;
-typedef struct CUuuid_st *CUuuid;
+typedef struct CUuuid_st {
+  char bytes[16];
+} CUuuid;
 
 #define CU_DEVICE_INVALID ((CUdevice)(-2))
 

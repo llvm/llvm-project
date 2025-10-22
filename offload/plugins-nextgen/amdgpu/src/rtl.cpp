@@ -2091,7 +2091,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     //
     // Agents that do not support UUID will return the string "GPU-XX" or
     // "CPU-XX" or "DSP-XX" depending on their device type.
-    char Uuid[24];
+    char Uuid[24] = {0};
     if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, Uuid))
       return Err;
     if (strcmp(Uuid + 3, "-XX") != 0)

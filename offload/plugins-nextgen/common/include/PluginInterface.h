@@ -1216,7 +1216,7 @@ protected:
   /// between different plugins.
   std::string DeviceUid;
   /// Construct the device UID from the vendor (U)UID.
-  void setDeviceUidFromVendorUid(const char *VendorUid);
+  void setDeviceUidFromVendorUid(StringRef VendorUid);
 
   /// The default grid values used for this device.
   llvm::omp::GV GridValues;
