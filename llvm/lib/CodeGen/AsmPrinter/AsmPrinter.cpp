@@ -1438,7 +1438,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           BBFreqEnabled,
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          BBAddrMapSkipEmitBBEntries,
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
           HasCalls,
           false};
 }
