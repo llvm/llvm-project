@@ -278,15 +278,21 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
 
+  std::string DerivedName = "llvm." + EnumName.str();
+  llvm::replace(DerivedName, '_', '.');
+
   if (Name == "") {
     // If an explicit name isn't specified, derive one from the DefName.
-    Name = "llvm." + EnumName.str();
-    llvm::replace(Name, '_', '.');
+    Name = std::move(DerivedName);
   } else {
     // Verify it starts with "llvm.".
     if (!StringRef(Name).starts_with("llvm."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
+
+    if (Name == DerivedName)
+      PrintNote(DefLoc, "Explicitly specified name matches default name, "
+                        "consider dropping it.");
   }
 
   // If TargetPrefix is specified, make sure that Name starts with

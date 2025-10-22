@@ -533,26 +533,34 @@ class MMA_SP_NAME<string Metadata, string Kind, int Satfinite,
                   # signature;
 }
 
+class IntrinsicName<string name> {
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", name));
+  // Use explicit intrinsic name if it has an _ in it, else rely on LLVM
+  // assigned default name.
+  string intr = !if(!ne(!find(name, "_"), -1), name, "");
+}
+
 class LDMATRIX_NAME<WMMA_REGS Frag, int Trans> {
-  string intr = "llvm.nvvm.ldmatrix.sync.aligned"
+  defvar name = "llvm.nvvm.ldmatrix.sync.aligned"
                 # "." # Frag.geom
                 # "." # Frag.frag
                 # !if(Trans, ".trans", "")
                 # "." # Frag.ptx_elt_type
                 ;
-  string record = !subst(".", "_",
-                  !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 class STMATRIX_NAME<WMMA_REGS Frag, int Trans> {
-  string intr = "llvm.nvvm.stmatrix.sync.aligned"
+  defvar name = "llvm.nvvm.stmatrix.sync.aligned"
                 # "." # Frag.geom
                 # "." # Frag.frag
                 # !if(Trans, ".trans", "")
                 # "." # Frag.ptx_elt_type
                 ;
-  string record = !subst(".", "_",
-                  !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 // Generates list of 4-tuples of WMMA_REGS representing a valid MMA op.
@@ -1042,45 +1050,49 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit Sp> {
 class NVVM_TCGEN05_MMA<bit Sp, string Space,
                        bit AShift, bit ScaleInputD>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string intr = "llvm.nvvm.tcgen05.mma"
+  string name = "llvm.nvvm.tcgen05.mma"
                 # !if(!eq(Sp, 1), ".sp", "")
                 # "." # Space
                 # !if(!eq(ScaleInputD, 1), ".scale_d", "")
                 # !if(!eq(AShift, 1), ".ashift", "");
-  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 class NVVM_TCGEN05_MMA_BLOCKSCALE<bit Sp, string Space,
                                   string Kind, string ScaleVecSize>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string intr = "llvm.nvvm.tcgen05.mma"
+  string name = "llvm.nvvm.tcgen05.mma"
                 # !if(!eq(Sp, 1), ".sp", "")
                 # "." # Space
                 # "." # Kind
                 # ".block_scale" # ScaleVecSize;
-  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 class NVVM_TCGEN05_MMA_WS<bit Sp, string Space, bit ZeroColMask>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string intr = "llvm.nvvm.tcgen05.mma.ws"
+  string name = "llvm.nvvm.tcgen05.mma.ws"
                 # !if(!eq(Sp, 1), ".sp", "")
                 # "." # Space
                 # !if(!eq(ZeroColMask, 1), ".zero_col_mask", "");
-  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 class NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE<bit Sp, string Space,
                                            int CtaGroup, bit AShift,
                                            bit ScaleInputD>:
         NVVM_TCGEN05_MMA_BASE<Space, Sp> {
-  string intr = "llvm.nvvm.tcgen05.mma"
+  string name = "llvm.nvvm.tcgen05.mma"
                 # !if(!eq(Sp, 1), ".sp", "")
                 # "." # Space
                 # !if(!eq(ScaleInputD, 1), ".scale_d", "")
                 # ".disable_output_lane.cg" # CtaGroup
                 # !if(!eq(AShift, 1), ".ashift", "");
-  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+  string intr = IntrinsicName<name>.intr;
+  string record = IntrinsicName<name>.record;
 }
 
 class NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<string Kind, string ScaleVecSize> {
@@ -2767,14 +2779,15 @@ foreach cta_group = ["cg1", "cg2"] in {
                      "64x128b_warpx2_02_13",
                      "64x128b_warpx2_01_23",
                      "32x128b_warpx4"] in {
-      defvar intr_suffix = StrJoin<"_", [shape, src_fmt, cta_group]>.ret;
-      defvar name_suffix = StrJoin<".", [shape, src_fmt, cta_group]>.ret;
+      defvar name = "llvm.nvvm.tcgen05.cp."  #
+                    StrJoin<".", [shape, src_fmt, cta_group]>.ret;
 
-      def int_nvvm_tcgen05_cp_ # intr_suffix : Intrinsic<[],
+      defvar intname = IntrinsicName<name>;
+      def intname.record : Intrinsic<[],
         [llvm_tmem_ptr_ty,   // tmem_addr
          llvm_i64_ty],       // smem descriptor
         [IntrConvergent, IntrInaccessibleMemOrArgMemOnly, NoCapture<ArgIndex<0>>],
-        "llvm.nvvm.tcgen05.cp." # name_suffix>;
+        intname.intr>;
     }
   }
 }
