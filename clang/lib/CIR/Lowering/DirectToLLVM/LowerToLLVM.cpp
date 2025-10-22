@@ -3353,10 +3353,10 @@ mlir::LogicalResult CIRToLLVMComplexAddOpLowering::matchAndRewrite(
       mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), complexLLVMTy);
 
   auto realComplex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), initialComplex, newReal, 0);
+      rewriter, op->getLoc(), initialComplex, newReal, ArrayRef(int64_t{0}));
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(op, realComplex,
-                                                         newImag, 1);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, realComplex, newImag, ArrayRef(int64_t{1}));
 
   return mlir::success();
 }
@@ -3370,10 +3370,12 @@ mlir::LogicalResult CIRToLLVMComplexCreateOpLowering::matchAndRewrite(
       mlir::LLVM::UndefOp::create(rewriter, op->getLoc(), complexLLVMTy);
 
   auto realComplex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), initialComplex, adaptor.getReal(), 0);
+      rewriter, op->getLoc(), initialComplex, adaptor.getReal(),
+      ArrayRef(int64_t{0}));
 
   auto complex = mlir::LLVM::InsertValueOp::create(
-      rewriter, op->getLoc(), realComplex, adaptor.getImag(), 1);
+      rewriter, op->getLoc(), realComplex, adaptor.getImag(),
+      ArrayRef(int64_t{1}));
 
   rewriter.replaceOp(op, complex);
   return mlir::success();
