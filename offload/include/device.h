@@ -158,6 +158,9 @@ struct DeviceTy {
   /// Ask the device whether the runtime should use auto zero-copy.
   bool useAutoZeroCopy();
 
+  /// Check if HstPtr is in pinned memory
+  bool isPinnedPtr(void *HstPtr);
+
   /// Check if there are pending images for this device.
   bool hasPendingImages() const { return HasPendingImages; }
 

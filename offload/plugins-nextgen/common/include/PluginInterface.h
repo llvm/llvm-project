@@ -1492,6 +1492,9 @@ public:
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
+  // Returns true, if the Ptr in pinned memory
+  int32_t is_pinned_ptr(int32_t DeviceId, void *HstPtr);
+
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
                      const char *Name, void **DevicePtr);
