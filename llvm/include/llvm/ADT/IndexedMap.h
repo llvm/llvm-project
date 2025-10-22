@@ -28,7 +28,6 @@ namespace llvm {
 
 namespace detail {
 template <class Ty> struct IdentityIndex {
-  using is_transparent = void;
   using argument_type = Ty;
 
   Ty &operator()(Ty &self) const { return self; }
