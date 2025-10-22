@@ -111,6 +111,8 @@ public:
 
   bool tryCombineAll(MachineInstr &I) const override;
 
+  bool tryCombineAllImpl(MachineInstr &I) const;
+
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
 #include "RISCVGenPostLegalizeGICombiner.inc"
@@ -134,6 +136,45 @@ RISCVPostLegalizerCombinerImpl::RISCVPostLegalizerCombinerImpl(
 #include "RISCVGenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_CONSTRUCTOR_INITS
 {
+}
+
+bool RISCVPostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
+  if (tryCombineAllImpl(MI))
+    return true;
+
+  switch (MI.getOpcode()) {
+  case RISCV::G_VMV_S_VL: {
+    MachineRegisterInfo &MRI = *Helper.getBuilder().getMRI();
+    MachineOperand &Dst = MI.getOperand(0);
+    MachineOperand &Src = MI.getOperand(1);
+    MachineOperand &Elt = MI.getOperand(2);
+    MachineOperand &VL = MI.getOperand(3);
+    Register Vec = Src.getReg();
+
+    LLT VecTy = MRI.getType(Vec);
+
+    MVT VecTyMVT = getMVTForLLT(VecTy);
+    const MVT M1VT = RISCVTargetLowering::getM1VT(VecTyMVT);
+    LLT M1VecTy = getLLTForMVT(M1VT);
+
+    // Use M1 or smaller to avoid over constraining register allocation
+    if (M1VT.bitsLT(VecTyMVT)) {
+      auto M1Passthru =
+          Helper.getBuilder().buildExtractSubvector(M1VecTy, Vec, 0);
+      auto M1VMVOp = Helper.getBuilder().buildInstr(
+          RISCV::G_VMV_S_VL, {M1VecTy}, {M1Passthru, Elt, VL});
+      Helper.getBuilder().buildInsertSubvector(
+          Dst, Helper.getBuilder().buildUndef(VecTy), M1VMVOp, 0);
+
+      MI.eraseFromParent();
+      return true;
+    }
+
+    return false;
+  }
+  default:
+    return false;
+  }
 }
 
 class RISCVPostLegalizerCombiner : public MachineFunctionPass {
