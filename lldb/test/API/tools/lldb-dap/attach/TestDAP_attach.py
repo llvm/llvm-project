@@ -75,3 +75,14 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         self.spawn_thread.start()
         self.attach(program=program, waitFor=True)
         self.continue_and_verify_pid()
+
+    def test_attach_with_invalid_targetId(self):
+        """
+        Test that attaching with an invalid targetId fails with the expected
+        error message.
+        """
+        self.build_and_create_debug_adapter()
+
+        resp = self.attach(targetId=99999, expectFailure=True)
+        self.assertFalse(resp["success"])
+        self.assertIn("Unable to find existing target", resp["body"]["error"]["format"])
