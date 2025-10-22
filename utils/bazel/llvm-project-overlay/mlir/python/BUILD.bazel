@@ -1030,6 +1030,7 @@ gentbl_filegroup(
     deps = [
         "//mlir:OpBaseTdFiles",
         "//mlir:ShardTdFiles",
+        "//mlir:ShapeOpsTdFiles",
     ],
 )
 
