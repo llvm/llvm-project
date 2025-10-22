@@ -491,7 +491,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPentry_with_assumed_size(
 ! CHECK-SAME:                                          %[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_2:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_2:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) dummy_scope %[[VAL_1]] {uniq_name = "_QFassumed_sizeEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 ! CHECK:           cf.br ^bb1
