@@ -85,8 +85,8 @@ struct MaskHelper {
 
 //===----------------------------------------------------------------------===//
 // Nano-kernels
-LogicalResult nanoKernels(RewriterBase &rewriter,
-                           vector::ContractionOp contractOp, int64_t vectorSize);
+void populateVectorContractNanokernelLoweringPatterns(RewritePatternSet &patterns); //RewriterBase &rewriter,
+                           //vector::ContractionOp contractOp, int64_t vectorSize);
 
 //===----------------------------------------------------------------------===//
 /// Helpers extracted from:

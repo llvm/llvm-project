@@ -21,6 +21,10 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
+
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
@@ -331,9 +335,16 @@ scf::ForOp createLoop(RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
   return newKForOp;
 }
 
-LogicalResult mlir::x86vector::nanoKernels(RewriterBase &rewriter,
-                                           vector::ContractionOp contractOp, int64_t vectorSize) {
+//LogicalResult mlir::x86vector::nanoKernels(RewriterBase &rewriter,
+                  //                         vector::ContractionOp contractOp)//, int64_t vectorSize) {
+
+struct VectorContractNanokernelLowering final : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
+                                PatternRewriter &rewriter) const override {
   auto loc = contractOp.getLoc();
+  int64_t vectorSize = 16;
 
   if (contractOp.getKind() != vector::CombiningKind::ADD) {
     return rewriter.notifyMatchFailure(contractOp,
@@ -480,4 +491,10 @@ LogicalResult mlir::x86vector::nanoKernels(RewriterBase &rewriter,
     rewriter.replaceAllUsesWith(kForOp.getResult(0), reshapeAcc);
 
   return success();
+}
+};
+
+
+void x86vector::populateVectorContractNanokernelLoweringPatterns(RewritePatternSet &patterns) {
+  patterns.add<VectorContractNanokernelLowering>(patterns.getContext());
 }
