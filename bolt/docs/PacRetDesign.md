@@ -104,9 +104,9 @@ negate-ra-state CFIs will become invalid during BasicBlock reordering.
 ## Solution design
 
 The implementation introduces two new passes:
-1. `MarkRAStatesPass`: assigns the RA state to each instruction based on the CFIs
-    in the input binary
-2. `InsertNegateRAStatePass`: reads those assigned instruction RA states after
+1. `PointerAuthCFIAnalyzer`: assigns the RA state to each instruction based on
+    the CFI in the input binary
+2. `PointerAuthCFIFixup`: reads those assigned instruction RA states after
     optimizations, and emits `DW_CFA_AARCH64_negate_ra_state` CFIs at the correct
     places: wherever there is a state change between two consecutive instructions
     in the layout order.
@@ -129,7 +129,7 @@ instruction.
 This special case is handled by adding an `initialRAState` bool to each BinaryFunction.
 If the `Offset` the CFI refers to is zero, we don't store an annotation, but set
 the `initialRAState` in `FillCFIInfoFor`. This information is then used in
-`MarkRAStates`.
+`PointerAuthCFIAnalyzer`.
 
 ### Binaries without DWARF info
 
@@ -146,7 +146,7 @@ In summary:
 - pointer auth is used, and we have DWARF CFIs: passes run, and rewrite the
   negate-ra-state CFI.
 
-### MarkRAStates pass
+### PointerAuthCFIAnalyzer pass
 
 This pass runs before optimizations reorder anything.
 
@@ -173,9 +173,9 @@ what we have before the pass, and after it.
 | autiasp                       | negate-ra-state | signed   |
 | ret                           |                 | unsigned |
 
-##### Error handling in MarkRAState Pass:
+##### Error handling in PointerAuthCFIAnalyzer pass:
 
-Whenever the MarkRAStates pass finds inconsistencies in the current
+Whenever the PointerAuthCFIAnalyzer pass finds inconsistencies in the current
 BinaryFunction, it marks the function as ignored using `BF.setIgnored()`. BOLT
 will not optimize this function but will emit it unchanged in the original section
 (`.bolt.org.text`).
@@ -188,16 +188,17 @@ The inconsistencies are as follows:
 Users will be informed about the number of ignored functions in the pass, the
 exact functions ignored, and the found inconsistency.
 
-### InsertNegateRAStatePass
+### PointerAuthCFIFixup
 
-This pass runs after optimizations. It performns the _inverse_ of MarkRAState pa s:
+This pass runs after optimizations. It performns the _inverse_ of PointerAuthCFIAnalyzer
+pass:
 1. it reads the RA state annotations attached to the instructions, and
 2. whenever the state changes, it adds a PseudoInstruction that holds an
    OpNegateRAState CFI.
 
 ##### Covering newly generated instructions:
 
-Some BOLT passes can add new Instructions. In InsertNegateRAStatePass, we have
+Some BOLT passes can add new Instructions. In PointerAuthCFIFixup, we have
 to know what RA state these have.
 
 > [!important]
@@ -230,7 +231,7 @@ freely. The only special case is function splitting. When a function is split,
 the split part becomes a new function in the emitted binary. For unwinding to
 work, it needs to "replay" all CFIs that lead up to the split point. BOLT does
 this for other CFIs. As negate-ra-state is not read (only stored as an Annotation),
-we have to do this manually in InsertNegateRAStatePass. Here, if the split part
+we have to do this manually in PointerAuthCFIFixup. Here, if the split part
 starts with an instruction that has Signed RA state, we add a negate-ra-state CFI
 to indicate this.
 

@@ -1,4 +1,4 @@
-//===- bolt/Passes/InsertNegateRAStatePass.h ------------------------------===//
+//===- bolt/Passes/PointerAuthCFIFixup.h ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the InsertNegateRAStatePass class.
+// This file implements the PointerAuthCFIFixup class.
 //
 //===----------------------------------------------------------------------===//
-#ifndef BOLT_PASSES_INSERT_NEGATE_RA_STATE_PASS
-#define BOLT_PASSES_INSERT_NEGATE_RA_STATE_PASS
+#ifndef BOLT_PASSES_POINTER_AUTH_CFI_FIXUP
+#define BOLT_PASSES_POINTER_AUTH_CFI_FIXUP
 
 #include "bolt/Passes/BinaryPasses.h"
 
 namespace llvm {
 namespace bolt {
 
-class InsertNegateRAState : public BinaryFunctionPass {
+class PointerAuthCFIFixup : public BinaryFunctionPass {
 public:
-  explicit InsertNegateRAState() : BinaryFunctionPass(false) {}
+  explicit PointerAuthCFIFixup() : BinaryFunctionPass(false) {}
 
-  const char *getName() const override { return "insert-negate-ra-state-pass"; }
+  const char *getName() const override { return "pointer-auth-cfi-fixup"; }
 
   /// Pass entry point
   Error runOnFunctions(BinaryContext &BC) override;
