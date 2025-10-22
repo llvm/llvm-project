@@ -732,6 +732,247 @@ exit:
   ret void
 }
 
+; This example corresponds to:
+;
+; __arm_agnostic("sme_za_state") void try_catch_agnostic_za_invoke()
+; {
+;    try {
+;        agnostic_za_call();
+;    } catch(...) {
+;    }
+; }
+;
+; In this example we preserve all SME state enabled by PSTATE.ZA using
+; `__arm_sme_save` before agnostic_za_call(). This is because on all normal
+; returns from an agnostic ZA function ZA state should be preserved. That means
+; we need to make sure ZA state is saved in case agnostic_za_call() throws, and
+; we need to restore ZA state after unwinding to the catch block.
+
+define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: try_catch_agnostic_za_invoke:
+; CHECK:       .Lfunc_begin5:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception5
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w19, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    bl __arm_sme_state_size
+; CHECK-NEXT:    sub sp, sp, x0
+; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:  .Ltmp15: // EH_LABEL
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_save
+; CHECK-NEXT:    bl agnostic_za_call
+; CHECK-NEXT:  .Ltmp16: // EH_LABEL
+; CHECK-NEXT:  .LBB5_1: // %exit
+; CHECK-NEXT:    mov x0, x19
+; CHECK-NEXT:    bl __arm_sme_restore
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB5_2: // %catch
+; CHECK-NEXT:  .Ltmp17: // EH_LABEL
+; CHECK-NEXT:    bl __cxa_begin_catch
+; CHECK-NEXT:    bl __cxa_end_catch
+; CHECK-NEXT:    b .LBB5_1
+;
+; CHECK-SDAG-LABEL: try_catch_agnostic_za_invoke:
+; CHECK-SDAG:       .Lfunc_begin5:
+; CHECK-SDAG-NEXT:    .cfi_startproc
+; CHECK-SDAG-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception5
+; CHECK-SDAG-NEXT:  // %bb.0: // %entry
+; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    mov x29, sp
+; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-SDAG-NEXT:    .cfi_offset w19, -16
+; CHECK-SDAG-NEXT:    .cfi_offset w30, -24
+; CHECK-SDAG-NEXT:    .cfi_offset w29, -32
+; CHECK-SDAG-NEXT:    bl __arm_sme_state_size
+; CHECK-SDAG-NEXT:    sub sp, sp, x0
+; CHECK-SDAG-NEXT:    mov x19, sp
+; CHECK-SDAG-NEXT:  .Ltmp15: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_save
+; CHECK-SDAG-NEXT:    bl agnostic_za_call
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
+; CHECK-SDAG-NEXT:  .Ltmp16: // EH_LABEL
+; CHECK-SDAG-NEXT:  .LBB5_1: // %exit
+; CHECK-SDAG-NEXT:    mov sp, x29
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ret
+; CHECK-SDAG-NEXT:  .LBB5_2: // %catch
+; CHECK-SDAG-NEXT:  .Ltmp17: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x1, x0
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_save
+; CHECK-SDAG-NEXT:    mov x0, x1
+; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_save
+; CHECK-SDAG-NEXT:    bl __cxa_end_catch
+; CHECK-SDAG-NEXT:    mov x0, x19
+; CHECK-SDAG-NEXT:    bl __arm_sme_restore
+; CHECK-SDAG-NEXT:    b .LBB5_1
+entry:
+  invoke void @agnostic_za_call()
+          to label %exit unwind label %catch
+
+catch:
+  %eh_info = landingpad { ptr, i32 }
+          catch ptr null
+  %exception_ptr = extractvalue { ptr, i32 } %eh_info, 0
+  tail call ptr @__cxa_begin_catch(ptr %exception_ptr)
+  tail call void @__cxa_end_catch()
+  br label %exit
+
+exit:
+  ret void
+}
+
+; This is the same `try_catch_agnostic_za_invoke`, but shows a lazy save would
+; also need to be committed in a shared-ZA function calling an agnostic-ZA function.
+define void @try_catch_inout_za_agnostic_za_callee() "aarch64_inout_za" personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: try_catch_inout_za_agnostic_za_callee:
+; CHECK:       .Lfunc_begin6:
+; CHECK-NEXT:    .cfi_startproc
+; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-NEXT:    .cfi_lsda 28, .Lexception6
+; CHECK-NEXT:  // %bb.0: // %entry
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    msub x9, x8, x8, x9
+; CHECK-NEXT:    mov sp, x9
+; CHECK-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-NEXT:  .Ltmp18: // EH_LABEL
+; CHECK-NEXT:    sub x8, x29, #16
+; CHECK-NEXT:    msr TPIDR2_EL0, x8
+; CHECK-NEXT:    bl agnostic_za_call
+; CHECK-NEXT:  .Ltmp19: // EH_LABEL
+; CHECK-NEXT:  .LBB6_1: // %exit
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #16
+; CHECK-NEXT:    cbnz x8, .LBB6_3
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB6_3: // %exit
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB6_4: // %catch
+; CHECK-NEXT:  .Ltmp20: // EH_LABEL
+; CHECK-NEXT:    bl __cxa_begin_catch
+; CHECK-NEXT:    bl __cxa_end_catch
+; CHECK-NEXT:    b .LBB6_1
+;
+; CHECK-SDAG-LABEL: try_catch_inout_za_agnostic_za_callee:
+; CHECK-SDAG:       .Lfunc_begin6:
+; CHECK-SDAG-NEXT:    .cfi_startproc
+; CHECK-SDAG-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
+; CHECK-SDAG-NEXT:    .cfi_lsda 28, .Lexception6
+; CHECK-SDAG-NEXT:  // %bb.0: // %entry
+; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Folded Spill
+; CHECK-SDAG-NEXT:    mov x29, sp
+; CHECK-SDAG-NEXT:    sub sp, sp, #16
+; CHECK-SDAG-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-SDAG-NEXT:    .cfi_offset w19, -16
+; CHECK-SDAG-NEXT:    .cfi_offset w30, -24
+; CHECK-SDAG-NEXT:    .cfi_offset w29, -32
+; CHECK-SDAG-NEXT:    rdsvl x8, #1
+; CHECK-SDAG-NEXT:    mov x9, sp
+; CHECK-SDAG-NEXT:    msub x9, x8, x8, x9
+; CHECK-SDAG-NEXT:    mov sp, x9
+; CHECK-SDAG-NEXT:    stp x9, x8, [x29, #-16]
+; CHECK-SDAG-NEXT:  .Ltmp18: // EH_LABEL
+; CHECK-SDAG-NEXT:    sub x19, x29, #16
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
+; CHECK-SDAG-NEXT:    bl agnostic_za_call
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB6_2
+; CHECK-SDAG-NEXT:  // %bb.1: // %entry
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB6_2: // %entry
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:  .Ltmp19: // EH_LABEL
+; CHECK-SDAG-NEXT:  .LBB6_3: // %exit
+; CHECK-SDAG-NEXT:    mov sp, x29
+; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Folded Reload
+; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-SDAG-NEXT:    ret
+; CHECK-SDAG-NEXT:  .LBB6_4: // %catch
+; CHECK-SDAG-NEXT:  .Ltmp20: // EH_LABEL
+; CHECK-SDAG-NEXT:    mov x1, x0
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB6_6
+; CHECK-SDAG-NEXT:  // %bb.5: // %catch
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB6_6: // %catch
+; CHECK-SDAG-NEXT:    mov x0, x1
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
+; CHECK-SDAG-NEXT:    bl __cxa_begin_catch
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB6_8
+; CHECK-SDAG-NEXT:  // %bb.7: // %catch
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB6_8: // %catch
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, x19
+; CHECK-SDAG-NEXT:    bl __cxa_end_catch
+; CHECK-SDAG-NEXT:    smstart za
+; CHECK-SDAG-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-SDAG-NEXT:    sub x0, x29, #16
+; CHECK-SDAG-NEXT:    cbnz x8, .LBB6_10
+; CHECK-SDAG-NEXT:  // %bb.9: // %catch
+; CHECK-SDAG-NEXT:    bl __arm_tpidr2_restore
+; CHECK-SDAG-NEXT:  .LBB6_10: // %catch
+; CHECK-SDAG-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-SDAG-NEXT:    b .LBB6_3
+entry:
+  invoke void @agnostic_za_call()
+          to label %exit unwind label %catch
+
+catch:
+  %eh_info = landingpad { ptr, i32 }
+          catch ptr null
+  %exception_ptr = extractvalue { ptr, i32 } %eh_info, 0
+  tail call ptr @__cxa_begin_catch(ptr %exception_ptr)
+  tail call void @__cxa_end_catch()
+  br label %exit
+
+exit:
+  ret void
+}
+
 declare ptr @__cxa_allocate_exception(i64)
 declare void @__cxa_throw(ptr, ptr, ptr)
 declare ptr @__cxa_begin_catch(ptr)
@@ -742,3 +983,4 @@ declare void @may_throw()
 declare void @shared_za_call() "aarch64_inout_za"
 declare void @noexcept_shared_za_call() "aarch64_inout_za"
 declare void @shared_zt0_call() "aarch64_inout_zt0"
+declare void @agnostic_za_call() "aarch64_za_state_agnostic"

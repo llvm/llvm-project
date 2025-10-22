@@ -9,6 +9,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -232,8 +233,9 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    DIB.createCompileUnit(dwarf::DW_LANG_C89, DIB.createFile("broken.c", "/"),
-                          "unittest", false, "", 0);
+    DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
+                          DIB.createFile("broken.c", "/"), "unittest", false,
+                          "", 0);
     DIB.finalize();
     EXPECT_FALSE(verifyModule(M));
 
@@ -247,7 +249,7 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
-    auto *CU = DIB.createCompileUnit(dwarf::DW_LANG_C89,
+    auto *CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C89),
                                      DIB.createFile("broken.c", "/"),
                                      "unittest", false, "", 0);
     new GlobalVariable(M, Type::getInt8Ty(C), false,

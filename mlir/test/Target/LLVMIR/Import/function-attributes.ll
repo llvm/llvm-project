@@ -303,18 +303,6 @@ declare void @align_decl() align 64
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_unsafe_fp_math_true
-; CHECK-SAME: attributes {unsafe_fp_math = true}
-declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_unsafe_fp_math_false
-; CHECK-SAME: attributes {unsafe_fp_math = false}
-declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_infs_fp_math_true
 ; CHECK-SAME: attributes {no_infs_fp_math = true}
 declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
@@ -390,6 +378,12 @@ declare void @noinline_attribute() noinline
 ; CHECK-LABEL: @alwaysinline_attribute
 ; CHECK-SAME: attributes {always_inline}
 declare void @alwaysinline_attribute() alwaysinline
+
+// -----
+
+; CHECK-LABEL: @inlinehint_attribute
+; CHECK-SAME: attributes {inline_hint}
+declare void @inlinehint_attribute() inlinehint
 
 // -----
 

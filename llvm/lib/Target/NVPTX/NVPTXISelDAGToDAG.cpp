@@ -280,6 +280,10 @@ static unsigned getTcgen05LdOpcode(unsigned IID, bool enablePack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.ld is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
@@ -2136,6 +2140,10 @@ static unsigned getTcgen05StOpcode(unsigned IID, bool enableUnpack) {
 }
 
 void NVPTXDAGToDAGISel::SelectTcgen05St(SDNode *N, bool hasOffset) {
+  if (!Subtarget->hasTcgen05InstSupport())
+    report_fatal_error(
+        "tcgen05.st is not supported on this architecture variant");
+
   SDLoc DL(N);
   unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 

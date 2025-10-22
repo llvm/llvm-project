@@ -194,11 +194,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .legalFor({{s8, s1}, {s16, s1}, {s32, s1}})
-      .legalFor(Is64Bit, {{s64, s1}})
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
-      .clampScalar(1, s1, s1)
+      .clampScalar(1, s8, s8)
       .scalarize(0);
 
   // integer multiply
@@ -575,10 +575,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
+      .legalFor(!HasCMOV, {{s8, s32}})
+      .legalFor(Is64Bit, {{s64, s32}})
+      .legalFor(UseX87, {{s80, s32}})
+      .clampScalar(1, s32, s32)
       .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar)
-      .clampScalar(1, s32, s32);
+      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar);
 
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();

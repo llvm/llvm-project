@@ -5959,7 +5959,11 @@ bool SimplifyCFGOpt::turnSwitchRangeIntoICmp(SwitchInst *SI,
     unsigned PreviousEdges = OtherCases->size();
     if (OtherDest == SI->getDefaultDest())
       ++PreviousEdges;
-    for (unsigned I = 0, E = PreviousEdges - 1; I != E; ++I)
+    unsigned E = PreviousEdges - 1;
+    // Remove all incoming values from OtherDest if OtherDest is unreachable.
+    if (NewBI->isUnconditional())
+      ++E;
+    for (unsigned I = 0; I != E; ++I)
       cast<PHINode>(BBI)->removeIncomingValue(SI->getParent());
   }
 
@@ -6642,6 +6646,9 @@ public:
   /// Return true if the replacement is a lookup table.
   bool isLookupTable();
 
+  /// Return true if the replacement is a bit map.
+  bool isBitMap();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6932,6 +6939,8 @@ Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
 
 bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
+bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
+
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
   // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
@@ -7097,7 +7106,8 @@ static void reuseTableCompare(
 /// lookup tables.
 static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
                                  DomTreeUpdater *DTU, const DataLayout &DL,
-                                 const TargetTransformInfo &TTI) {
+                                 const TargetTransformInfo &TTI,
+                                 bool ConvertSwitchToLookupTable) {
   assert(SI->getNumCases() > 1 && "Degenerate switch?");
 
   BasicBlock *BB = SI->getParent();
@@ -7262,6 +7272,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   bool AnyLookupTables = any_of(
       PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
+  bool AnyBitMaps = any_of(PhiToReplacementMap,
+                           [](auto &KV) { return KV.second.isBitMap(); });
 
   // A few conditions prevent the generation of lookup tables:
   //     1. The target does not support lookup tables.
@@ -7272,6 +7284,12 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (AnyLookupTables &&
       (!TTI.shouldBuildLookupTables() ||
        Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+    return false;
+
+  // In the early optimization pipeline, disable formation of lookup tables,
+  // bit maps and mask checks, as they may inhibit further optimization.
+  if (!ConvertSwitchToLookupTable &&
+      (AnyLookupTables || AnyBitMaps || NeedMask))
     return false;
 
   Builder.SetInsertPoint(SI);
@@ -7722,8 +7740,7 @@ struct SwitchSuccWrapper {
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> *PhiPredIVs;
 };
 
-namespace llvm {
-template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
+template <> struct llvm::DenseMapInfo<const SwitchSuccWrapper *> {
   static const SwitchSuccWrapper *getEmptyKey() {
     return static_cast<SwitchSuccWrapper *>(
         DenseMapInfo<void *>::getEmptyKey());
@@ -7791,7 +7808,6 @@ template <> struct DenseMapInfo<const SwitchSuccWrapper *> {
     return true;
   }
 };
-} // namespace llvm
 
 bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
                                                  DomTreeUpdater *DTU) {
@@ -7929,14 +7945,13 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   if (Options.ForwardSwitchCondToPhi && forwardSwitchConditionToPHI(SI))
     return requestResimplify();
 
-  // The conversion from switch to lookup tables results in difficult-to-analyze
-  // code and makes pruning branches much harder. This is a problem if the
-  // switch expression itself can still be restricted as a result of inlining or
-  // CVP. Therefore, only apply this transformation during late stages of the
-  // optimisation pipeline.
-  if (Options.ConvertSwitchToLookupTable &&
-      simplifySwitchLookup(SI, Builder, DTU, DL, TTI))
-    return requestResimplify();
+  // The conversion of switches to arithmetic or lookup table is disabled in
+  // the early optimization pipeline, as it may lose information or make the
+  // resulting code harder to analyze.
+  if (Options.ConvertSwitchToArithmetic || Options.ConvertSwitchToLookupTable)
+    if (simplifySwitchLookup(SI, Builder, DTU, DL, TTI,
+                             Options.ConvertSwitchToLookupTable))
+      return requestResimplify();
 
   if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
     return requestResimplify();

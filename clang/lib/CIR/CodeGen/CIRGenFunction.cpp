@@ -410,6 +410,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+
+  didCallStackSave = false;
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
@@ -549,6 +551,49 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
   const auto funcDecl = cast<FunctionDecl>(gd.getDecl());
   curGD = gd;
 
+  if (funcDecl->isInlineBuiltinDeclaration()) {
+    // When generating code for a builtin with an inline declaration, use a
+    // mangled name to hold the actual body, while keeping an external
+    // declaration in case the function pointer is referenced somewhere.
+    std::string fdInlineName = (cgm.getMangledName(funcDecl) + ".inline").str();
+    cir::FuncOp clone =
+        mlir::cast_or_null<cir::FuncOp>(cgm.getGlobalValue(fdInlineName));
+    if (!clone) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPoint(fn);
+      clone = builder.create<cir::FuncOp>(fn.getLoc(), fdInlineName,
+                                          fn.getFunctionType());
+      clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+      clone.setSymVisibility("private");
+      clone.setInlineKind(cir::InlineKind::AlwaysInline);
+    }
+    fn.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
+    fn.setSymVisibility("private");
+    fn = clone;
+  } else {
+    // Detect the unusual situation where an inline version is shadowed by a
+    // non-inline version. In that case we should pick the external one
+    // everywhere. That's GCC behavior too.
+    for (const FunctionDecl *pd = funcDecl->getPreviousDecl(); pd;
+         pd = pd->getPreviousDecl()) {
+      if (LLVM_UNLIKELY(pd->isInlineBuiltinDeclaration())) {
+        std::string inlineName = funcDecl->getName().str() + ".inline";
+        if (auto inlineFn = mlir::cast_or_null<cir::FuncOp>(
+                cgm.getGlobalValue(inlineName))) {
+          // Replace all uses of the .inline function with the regular function
+          // FIXME: This performs a linear walk over the module. Introduce some
+          // caching here.
+          if (inlineFn
+                  .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
+                  .failed())
+            llvm_unreachable("Failed to replace inline builtin symbol uses");
+          inlineFn.erase();
+        }
+        break;
+      }
+    }
+  }
+
   SourceLocation loc = funcDecl->getLocation();
   Stmt *body = funcDecl->getBody();
   SourceRange bodyRange =
@@ -678,7 +723,13 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // possible to delegate the destructor body to the complete
   // destructor.  Do so.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dtor->getSourceRange(), "deleting destructor");
+    RunCleanupsScope dtorEpilogue(*this);
+    enterDtorCleanups(dtor, Dtor_Deleting);
+    if (haveInsertPoint()) {
+      QualType thisTy = dtor->getFunctionObjectParameterType();
+      emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase=*/false,
+                            /*delegating=*/false, loadCXXThisAddress(), thisTy);
+    }
     return;
   }
 
@@ -689,7 +740,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
-  assert(!cir::MissingFeatures::dtorCleanups());
+
+  // Enter the epilogue cleanups.
+  RunCleanupsScope dtorEpilogue(*this);
 
   // If this is the complete variant, just invoke the base variant;
   // the epilogue will destruct the virtual bases.  But we can't do
@@ -708,7 +761,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     assert((body || getTarget().getCXXABI().isMicrosoft()) &&
            "can't emit a dtor without a body for non-Microsoft ABIs");
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for virtual bases.
+    enterDtorCleanups(dtor, Dtor_Complete);
 
     if (!isTryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
@@ -723,7 +777,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
-    assert(!cir::MissingFeatures::dtorCleanups());
+    // Enter the cleanup scopes for fields and non-virtual bases.
+    enterDtorCleanups(dtor, Dtor_Base);
+
     assert(!cir::MissingFeatures::vtableInitialization());
 
     if (isTryBody) {
@@ -741,7 +797,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     break;
   }
 
-  assert(!cir::MissingFeatures::dtorCleanups());
+  // Jump out through the epilogue cleanups.
+  dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
   if (isTryBody)
@@ -808,6 +865,10 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
     return LValue();
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
   case Expr::ArraySubscriptExprClass:
     return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
   case Expr::UnaryOperatorClass:
@@ -852,6 +913,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
   }
@@ -994,6 +1057,41 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
                                  offsetValue);
 }
 
+CIRGenFunction::VlaSizePair CIRGenFunction::getVLASize(QualType type) {
+  const VariableArrayType *vla =
+      cgm.getASTContext().getAsVariableArrayType(type);
+  assert(vla && "type was not a variable array type!");
+  return getVLASize(vla);
+}
+
+CIRGenFunction::VlaSizePair
+CIRGenFunction::getVLASize(const VariableArrayType *type) {
+  // The number of elements so far; always size_t.
+  mlir::Value numElements;
+
+  QualType elementType;
+  do {
+    elementType = type->getElementType();
+    mlir::Value vlaSize = vlaSizeMap[type->getSizeExpr()];
+    assert(vlaSize && "no size for VLA!");
+    assert(vlaSize.getType() == SizeTy);
+
+    if (!numElements) {
+      numElements = vlaSize;
+    } else {
+      // It's undefined behavior if this wraps around, so mark it that way.
+      // FIXME: Teach -fsanitize=undefined to trap this.
+
+      numElements =
+          builder.createMul(numElements.getLoc(), numElements, vlaSize,
+                            cir::OverflowBehavior::NoUnsignedWrap);
+    }
+  } while ((type = getContext().getAsVariableArrayType(elementType)));
+
+  assert(numElements && "Undefined elements number");
+  return {numElements, elementType};
+}
+
 // TODO(cir): Most of this function can be shared between CIRGen
 // and traditional LLVM codegen
 void CIRGenFunction::emitVariablyModifiedType(QualType type) {
@@ -1074,7 +1172,26 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
       break;
 
     case Type::VariableArray: {
-      cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType VLA");
+      // Losing element qualification here is fine.
+      const VariableArrayType *vat = cast<clang::VariableArrayType>(ty);
+
+      // Unknown size indication requires no size computation.
+      // Otherwise, evaluate and record it.
+      if (const Expr *sizeExpr = vat->getSizeExpr()) {
+        // It's possible that we might have emitted this already,
+        // e.g. with a typedef and a pointer to it.
+        mlir::Value &entry = vlaSizeMap[sizeExpr];
+        if (!entry) {
+          mlir::Value size = emitScalarExpr(sizeExpr);
+          assert(!cir::MissingFeatures::sanitizers());
+
+          // Always zexting here would be wrong if it weren't
+          // undefined behavior to have a negative bound.
+          // FIXME: What about when size's type is larger than size_t?
+          entry = builder.createIntCast(size, SizeTy);
+        }
+      }
+      type = vat->getElementType();
       break;
     }
 

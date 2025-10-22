@@ -1077,7 +1077,7 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
   if (!AMDGPU::isSISrcOperand(Desc, UseOpIdx))
     return false;
 
-  int16_t RCID = Desc.operands()[UseOpIdx].RegClass;
+  int16_t RCID = TII->getOpRegClassID(Desc.operands()[UseOpIdx]);
   if (RCID == -1)
     return false;
 
@@ -1299,10 +1299,8 @@ void SIFoldOperandsImpl::foldOperand(
           AMDGPU::V_ACCVGPR_WRITE_B32_e64, AMDGPU::AV_MOV_B32_IMM_PSEUDO,
           AMDGPU::AV_MOV_B64_IMM_PSEUDO}) {
       const MCInstrDesc &MovDesc = TII->get(MovOp);
-      assert(MovDesc.getNumDefs() > 0 && MovDesc.operands()[0].RegClass != -1);
-
       const TargetRegisterClass *MovDstRC =
-          TRI->getRegClass(MovDesc.operands()[0].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[0]));
 
       // Fold if the destination register class of the MOV instruction (ResRC)
       // is a superclass of (or equal to) the destination register class of the
@@ -1312,7 +1310,8 @@ void SIFoldOperandsImpl::foldOperand(
 
       const int SrcIdx = MovOp == AMDGPU::V_MOV_B16_t16_e64 ? 2 : 1;
       const TargetRegisterClass *MovSrcRC =
-          TRI->getRegClass(MovDesc.operands()[SrcIdx].RegClass);
+          TRI->getRegClass(TII->getOpRegClassID(MovDesc.operands()[SrcIdx]));
+
       if (MovSrcRC) {
         if (UseSubReg)
           MovSrcRC = TRI->getMatchingSuperRegClass(SrcRC, MovSrcRC, UseSubReg);

@@ -108,9 +108,10 @@ $ perf record -e cycles:u -j any,u -o perf.data -- <executable> <args> ...
 #### For Services
 
 Once you get the service deployed and warmed-up, it is time to collect perf
-data with LBR (branch information). The exact perf command to use will depend
-on the service. E.g., to collect the data for all processes running on the
-server for the next 3 minutes use:
+data with brstack (branch information). Different architectures implement this
+using different hardware units, for example LBR on X86, and BRBE on AArch64.
+The exact perf command to use will depend on the service. E.g., to collect the
+data for all processes running on the server for the next 3 minutes use:
 ```
 $ perf record -e cycles:u -j any,u -a -o perf.data -- sleep 180
 ```
@@ -163,7 +164,7 @@ $ perf2bolt -p perf.data -o perf.fdata <executable>
 This command will aggregate branch data from `perf.data` and store it in a
 format that is both more compact and more resilient to binary modifications.
 
-If the profile was collected without LBRs, you will need to add `-nl` flag to
+If the profile was collected without brstacks, you will need to add `-nl` flag to
 the command line above.
 
 ### Step 3: Optimize with BOLT

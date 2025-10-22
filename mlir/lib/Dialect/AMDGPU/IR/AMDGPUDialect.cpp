@@ -26,6 +26,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -40,6 +41,15 @@ using namespace mlir::amdgpu;
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.cpp.inc"
 
+namespace {
+struct AMDGPUInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 void AMDGPUDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
@@ -49,6 +59,7 @@ void AMDGPUDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
       >();
+  addInterfaces<AMDGPUInlinerInterface>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -325,6 +336,25 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<RemoveStaticallyOobBufferLoads<RawBufferAtomicCmpswapOp>>(
       context);
+}
+
+//===----------------------------------------------------------------------===//
+// ScaledExtPacked816Op
+//===----------------------------------------------------------------------===//
+LogicalResult ScaledExtPacked816Op::verify() {
+  int blockSize = getBlockSize();
+  assert((blockSize == 16 || blockSize == 32) && "invalid block size");
+  int firstScaleByte = getFirstScaleByte();
+  if (blockSize == 16 && !llvm::is_contained({0, 1}, firstScaleByte)) {
+    return emitOpError(
+        "blockSize of 16 can only have firstScaleByte be 0 or 1.");
+  }
+  if (blockSize == 32 && !llvm::is_contained({0, 2}, firstScaleByte)) {
+    return emitOpError(
+        "blockSize of 32 can only have firstScaleByte be 0 or 2.");
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -746,13 +776,13 @@ struct PackScales final : OpRewritePattern<ScaledMFMAOp> {
         offset = numElements - 4l;
       }
       Type scaleSrcElemType = scaleSrcType.getElementType();
-      auto newSrcType = VectorType::get(SmallVector<int64_t>({numElements}),
-                                        scaleSrcElemType);
+      auto newSrcType =
+          VectorType::get(ArrayRef{numElements}, scaleSrcElemType);
       Value newScaleSrc =
           vector::ShapeCastOp::create(rewriter, loc, newSrcType, scaleSrc);
       auto extract = vector::ExtractStridedSliceOp::create(
-          rewriter, loc, newScaleSrc, ArrayRef<int64_t>{offset},
-          ArrayRef<int64_t>{size}, ArrayRef<int64_t>{1});
+          rewriter, loc, newScaleSrc, ArrayRef{offset}, ArrayRef{size},
+          ArrayRef{int64_t(1)});
       rewriter.modifyOpInPlace(op, [&] {
         op->setOperand(opIdx, extract);
         setOpsel(opIdx, opsel);

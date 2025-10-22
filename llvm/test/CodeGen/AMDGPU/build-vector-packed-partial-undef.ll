@@ -410,26 +410,14 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-SDAG-LABEL: undef_lo2_v4i16:
-; GFX11-TRUE16-SDAG:       ; %bb.0:
-; GFX11-TRUE16-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-SDAG-NEXT:    v_mov_b16_e32 v1.l, v0.h
-; GFX11-TRUE16-SDAG-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-TRUE16-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMSTART
-; GFX11-TRUE16-SDAG-NEXT:    ; use v[0:1]
-; GFX11-TRUE16-SDAG-NEXT:    ;;#ASMEND
-; GFX11-TRUE16-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-TRUE16-GISEL-LABEL: undef_lo2_v4i16:
-; GFX11-TRUE16-GISEL:       ; %bb.0:
-; GFX11-TRUE16-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-GISEL-NEXT:    v_mov_b16_e32 v0.l, v0.h
-; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMSTART
-; GFX11-TRUE16-GISEL-NEXT:    ; use v[0:1]
-; GFX11-TRUE16-GISEL-NEXT:    ;;#ASMEND
-; GFX11-TRUE16-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: undef_lo2_v4i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; GFX11-TRUE16-NEXT:    ;;#ASMSTART
+; GFX11-TRUE16-NEXT:    ; use v[0:1]
+; GFX11-TRUE16-NEXT:    ;;#ASMEND
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %undef.lo = shufflevector <2 x i16> %arg0, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
   call void asm sideeffect "; use $0", "v"(<4 x i16> %undef.lo);
   ret void

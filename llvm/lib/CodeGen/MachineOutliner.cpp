@@ -593,14 +593,11 @@ struct MachineOutliner : public ModulePass {
 
 char MachineOutliner::ID = 0;
 
-namespace llvm {
-ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
+ModulePass *llvm::createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();
   OL->RunOutlinerMode = RunOutlinerMode;
   return OL;
 }
-
-} // namespace llvm
 
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
                 false)

@@ -94,7 +94,7 @@ struct FormatStyle {
     ///
     /// \note
     ///  This currently only applies to braced initializer lists (when
-    ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
+    ///  ``Cpp11BracedListStyle`` is not ``Block``) and parentheses.
     /// \endnote
     BAS_BlockIndent,
   };
@@ -2555,29 +2555,67 @@ struct FormatStyle {
   /// \version 3.7
   unsigned ContinuationIndentWidth;
 
-  /// If ``true``, format braced lists as best suited for C++11 braced
-  /// lists.
-  ///
-  /// Important differences:
-  ///
-  /// * No spaces inside the braced list.
-  /// * No line break before the closing brace.
-  /// * Indentation with the continuation indent, not with the block indent.
-  ///
-  /// Fundamentally, C++11 braced lists are formatted exactly like function
-  /// calls would be formatted in their place. If the braced list follows a name
-  /// (e.g. a type or variable name), clang-format formats as if the ``{}`` were
-  /// the parentheses of a function call with that name. If there is no name,
-  /// a zero-length name is assumed.
-  /// \code
-  ///    true:                                  false:
-  ///    vector<int> x{1, 2, 3, 4};     vs.     vector<int> x{ 1, 2, 3, 4 };
-  ///    vector<T> x{{}, {}, {}, {}};           vector<T> x{ {}, {}, {}, {} };
-  ///    f(MyMap[{composite, key}]);            f(MyMap[{ composite, key }]);
-  ///    new int[3]{1, 2, 3};                   new int[3]{ 1, 2, 3 };
-  /// \endcode
+  /// Different ways to handle braced lists.
+  enum BracedListStyle : int8_t {
+    /// Best suited for pre C++11 braced lists.
+    ///
+    /// * Spaces inside the braced list.
+    /// * Line break before the closing brace.
+    /// * Indentation with the block indent.
+    ///
+    /// \code
+    ///    vector<int> x{ 1, 2, 3, 4 };
+    ///    vector<T> x{ {}, {}, {}, {} };
+    ///    f(MyMap[{ composite, key }]);
+    ///    new int[3]{ 1, 2, 3 };
+    ///    Type name{ // Comment
+    ///               value
+    ///    };
+    /// \endcode
+    BLS_Block,
+    /// Best suited for C++11 braced lists.
+    ///
+    /// * No spaces inside the braced list.
+    /// * No line break before the closing brace.
+    /// * Indentation with the continuation indent.
+    ///
+    /// Fundamentally, C++11 braced lists are formatted exactly like function
+    /// calls would be formatted in their place. If the braced list follows a
+    /// name (e.g. a type or variable name), clang-format formats as if the
+    /// ``{}`` were the parentheses of a function call with that name. If there
+    /// is no name, a zero-length name is assumed.
+    /// \code
+    ///    vector<int> x{1, 2, 3, 4};
+    ///    vector<T> x{{}, {}, {}, {}};
+    ///    f(MyMap[{composite, key}]);
+    ///    new int[3]{1, 2, 3};
+    ///    Type name{ // Comment
+    ///        value};
+    /// \endcode
+    BLS_FunctionCall,
+    /// Same as ``FunctionCall``, except for the handling of a comment at the
+    /// begin, it then aligns everything following with the comment.
+    ///
+    /// * No spaces inside the braced list. (Even for a comment at the first
+    ///   position.)
+    /// * No line break before the closing brace.
+    /// * Indentation with the continuation indent, except when followed by a
+    ///   line comment, then it uses the block indent.
+    ///
+    /// \code
+    ///    vector<int> x{1, 2, 3, 4};
+    ///    vector<T> x{{}, {}, {}, {}};
+    ///    f(MyMap[{composite, key}]);
+    ///    new int[3]{1, 2, 3};
+    ///    Type name{// Comment
+    ///              value};
+    /// \endcode
+    BLS_AlignFirstComment,
+  };
+
+  /// The style to handle braced lists.
   /// \version 3.4
-  bool Cpp11BracedListStyle;
+  BracedListStyle Cpp11BracedListStyle;
 
   /// This option is **deprecated**. See ``DeriveLF`` and ``DeriveCRLF`` of
   /// ``LineEnding``.
@@ -4933,7 +4971,7 @@ struct FormatStyle {
   /// Specifies when to insert a space in empty braces.
   /// \note
   ///  This option doesn't apply to initializer braces if
-  ///  ``Cpp11BracedListStyle`` is set to ``true``.
+  ///  ``Cpp11BracedListStyle`` is not ``Block``.
   /// \endnote
   /// \version 22
   SpaceInEmptyBracesStyle SpaceInEmptyBraces;

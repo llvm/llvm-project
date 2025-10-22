@@ -160,6 +160,16 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
+                               LValue &Stride) {
+  // Figure out the stride of the buffer elements from the handle type.
+  auto *HandleTy =
+      cast<HLSLAttributedResourceType>(HandleExpr->getType().getTypePtr());
+  QualType ElementTy = HandleTy->getContainedType();
+  Value *StrideValue = CGF->getTypeSize(ElementTy);
+  return CGF->Builder.CreateStore(StrideValue, Stride.getAddress());
+}
+
 // Return dot product intrinsic that corresponds to the QT scalar type
 static Intrinsic::ID getDotProductIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   if (QT->isFloatingType())
@@ -352,12 +362,38 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     SmallVector<Value *> Args{OrderID, SpaceOp, RangeOp, IndexOp, Name};
     return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *OrderID = EmitScalarExpr(E->getArg(1));
+    Value *SpaceOp = EmitScalarExpr(E->getArg(2));
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromimplicitbinding;
+    SmallVector<Value *> Args{MainHandle, OrderID, SpaceOp};
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+  }
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getNonUniformResourceIndexIntrinsic(),
         ArrayRef<Value *>{IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
+    Value *Handle = EmitScalarExpr(E->getArg(0));
+    LValue Dim = EmitLValue(E->getArg(1));
+    llvm::Type *RetTy = llvm::Type::getInt32Ty(getLLVMContext());
+    Value *DimValue = Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getGetDimensionsXIntrinsic(),
+        ArrayRef<Value *>{Handle});
+    return Builder.CreateStore(DimValue, Dim.getAddress());
+  }
+  case Builtin::BI__builtin_hlsl_resource_getstride: {
+    LValue Stride = EmitLValue(E->getArg(1));
+    return emitBufferStride(this, E->getArg(0), Stride);
   }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

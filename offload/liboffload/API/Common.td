@@ -140,9 +140,10 @@ def ol_dimensions_t : Struct {
 }
 
 def olInit : Function {
-  let desc = "Perform initialization of the Offload library and plugins";
+  let desc = "Perform initialization of the Offload library";
   let details = [
     "This must be the first API call made by a user of the Offload library",
+    "The underlying platforms are lazily initialized on their first use"
     "Each call will increment an internal reference count that is decremented by `olShutDown`"
   ];
   let params = [];

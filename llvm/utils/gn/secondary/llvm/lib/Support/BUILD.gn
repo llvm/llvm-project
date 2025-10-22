@@ -45,6 +45,7 @@ static_library("Support") {
     "ARMAttributeParser.cpp",
     "ARMBuildAttributes.cpp",
     "ARMWinEH.cpp",
+    "AllocToken.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
     "BalancedPartitioning.cpp",

@@ -409,7 +409,8 @@ TEST(DIBuilder, CreateFortranArrayTypeWithAttributes) {
 
   DIFile *F = DIB.createFile("main.c", "/");
   DICompileUnit *CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, DIB.createFile("main.c", "/"), "llvm-c", true, "", 0);
+      DISourceLanguageName(dwarf::DW_LANG_C), DIB.createFile("main.c", "/"),
+      "llvm-c", true, "", 0);
 
   DIVariable *DataLocation =
       DIB.createTempGlobalVariableFwdDecl(CU, "dl", "_dl", F, 1, nullptr, true);
@@ -1335,8 +1336,8 @@ TEST(DIBuilder, HashingDISubprogram) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   llvm::TempDIType ForwardDeclaredType =
       llvm::TempDIType(DIB.createReplaceableCompositeType(
@@ -1381,8 +1382,8 @@ TEST(DIBuilder, CompositeTypes) {
   DIBuilder DIB(*M);
 
   DIFile *F = DIB.createFile("main.c", "/");
-  DICompileUnit *CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), F, "Test", false, "", 0);
 
   DICompositeType *Class =
       DIB.createClassType(CU, "MyClass", F, 0, 8, 8, 0, {}, nullptr, {}, 0,

@@ -1244,7 +1244,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
         break;
     }
 
-    D.takeAttributes(Attributes);
+    D.takeAttributesAppending(Attributes);
   }
 
   MultiParseScope TemplateParamScope(*this);
@@ -3200,6 +3200,8 @@ ExprResult Parser::ParseRequiresExpression() {
         BalancedDelimiterTracker ExprBraces(*this, tok::l_brace);
         ExprBraces.consumeOpen();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           ExprBraces.skipToEnd();
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
@@ -3369,6 +3371,8 @@ ExprResult Parser::ParseRequiresExpression() {
         //         expression ';'
         SourceLocation StartLoc = Tok.getLocation();
         ExprResult Expression = ParseExpression();
+        if (Expression.isUsable())
+          Expression = Actions.CheckPlaceholderExpr(Expression.get());
         if (!Expression.isUsable()) {
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
           break;

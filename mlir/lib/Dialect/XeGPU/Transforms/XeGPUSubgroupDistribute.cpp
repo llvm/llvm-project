@@ -195,8 +195,7 @@ static bool requireTranspose(const xegpu::LayoutAttr layout,
 ///     }
 ///     return %0
 ///   }
-struct MoveFuncBodyToWarpExecuteOnLane0
-    : public OpRewritePattern<gpu::GPUFuncOp> {
+struct MoveFuncBodyToWarpOp : public OpRewritePattern<gpu::GPUFuncOp> {
   using OpRewritePattern<gpu::GPUFuncOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(gpu::GPUFuncOp gpuFuncOp,
                                 PatternRewriter &rewriter) const override {
@@ -1447,6 +1446,11 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
       /*pattern benefit=*/highPatternBenefit);
 }
 
+void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<MoveFuncBodyToWarpOp>(patterns.getContext());
+}
+
 void XeGPUSubgroupDistributePass::runOnOperation() {
   // Step 1: Attach layouts to op operands.
   // TODO: Following assumptions are made:
@@ -1473,7 +1477,7 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
   // gpu.warp_execute_on_lane_0 operation.
   {
     RewritePatternSet patterns(&getContext());
-    patterns.add<MoveFuncBodyToWarpExecuteOnLane0>(&getContext());
+    xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
 
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
       signalPassFailure();

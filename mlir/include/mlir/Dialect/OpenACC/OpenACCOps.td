@@ -415,6 +415,13 @@ def OpenACC_ConstructResource : Resource<"::mlir::acc::ConstructResource">;
 // Define a resource for the OpenACC current device setting.
 def OpenACC_CurrentDeviceIdResource : Resource<"::mlir::acc::CurrentDeviceIdResource">;
 
+// Attribute for saving variable names - this can be attached to non-acc-dialect
+// operations in order to ensure the name is preserved.
+def OpenACC_VarNameAttr : OpenACC_Attr<"VarName", "var_name"> {
+  let parameters = (ins StringRefParameter<"">:$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
@@ -1316,6 +1323,24 @@ def OpenACC_PrivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a PrivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<PrivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1410,6 +1435,24 @@ def OpenACC_FirstprivateRecipeOp
   }];
 
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    /// Creates a FirstprivateRecipeOp and populates its regions based on the
+    /// variable type as long as the type implements MappableType or
+    /// PointerLikeType interface. If a type implements both, the MappableType
+    /// API will be preferred. Returns std::nullopt if the recipe cannot be
+    /// created or populated. The builder's current insertion point will be used
+    /// and it must be a valid place for this operation to be inserted. The
+    /// `recipeName` must be a unique name to prevent "redefinition of symbol"
+    /// IR errors.
+    static std::optional<FirstprivateRecipeOp> createAndPopulate(
+        ::mlir::OpBuilder &builder,
+        ::mlir::Location loc,
+        ::llvm::StringRef recipeName,
+        ::mlir::Type varType,
+        ::llvm::StringRef varName = "",
+        ::mlir::ValueRange bounds = {});
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2744,10 +2787,14 @@ def AtomicReadOp : OpenACC_Op<"atomic.read", [AtomicReadOpInterface]> {
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
                        OpenACC_PointerLikeType:$v,
-                       TypeAttr:$element_type);
+                       TypeAttr:$element_type, Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $v `=` $x
-    `:` type($v) `,` type($x) `,` $element_type attr-dict
+    `:` type($v) `,` type($x) `,` $element_type
+    attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -2766,8 +2813,12 @@ def AtomicWriteOp : OpenACC_Op<"atomic.write",[AtomicWriteOpInterface]> {
   }];
 
   let arguments = (ins OpenACC_PointerLikeType:$x,
-                       AnyType:$expr);
+                       AnyType:$expr,
+                       Optional<I1>:$ifCond);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $x `=` $expr
     `:` type($x) `,` type($expr)
     attr-dict
@@ -2807,10 +2858,15 @@ def AtomicUpdateOp : OpenACC_Op<"atomic.update",
 
   let arguments = (ins Arg<OpenACC_PointerLikeType,
                            "Address of variable to be updated",
-                           [MemRead, MemWrite]>:$x);
+                           [MemRead, MemWrite]>:$x,
+                       Optional<I1>:$ifCond);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
-    $x `:` type($x) $region attr-dict
+    oilist(
+        `if` `(` $ifCond `)`
+    )
+    $x `:` type($x)
+      $region attr-dict
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2853,8 +2909,13 @@ def AtomicCaptureOp : OpenACC_Op<"atomic.capture",
 
   }];
 
+  let arguments = (ins Optional<I1>:$ifCond);
+
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+    )
     $region attr-dict
   }];
   let hasRegionVerifier = 1;

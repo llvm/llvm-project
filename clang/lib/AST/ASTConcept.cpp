@@ -86,7 +86,7 @@ void ConstraintSatisfaction::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddPointer(ConstraintOwner);
   ID.AddInteger(TemplateArgs.size());
   for (auto &Arg : TemplateArgs)
-    Arg.Profile(ID, C);
+    C.getCanonicalTemplateArgument(Arg).Profile(ID, C);
 }
 
 ConceptReference *

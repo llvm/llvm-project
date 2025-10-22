@@ -8,6 +8,8 @@
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointID.h"
+#include "lldb/Breakpoint/BreakpointResolver.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -43,6 +45,13 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
   }
 
   SetThreadIDInternal(tid);
+}
+
+BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner)
+    : m_should_resolve_indirect_functions(false), m_is_reexported(false),
+      m_is_indirect(false), m_address(LLDB_INVALID_ADDRESS), m_owner(owner),
+      m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
+  SetThreadIDInternal(LLDB_INVALID_THREAD_ID);
 }
 
 BreakpointLocation::~BreakpointLocation() {
@@ -372,12 +381,43 @@ bool BreakpointLocation::ValidForThisThread(Thread &thread) {
           .GetThreadSpecNoCreate());
 }
 
+BreakpointLocationSP
+BreakpointLocation::WasHit(StoppointCallbackContext *context) {
+  // Only the BreakpointResolverScripted provides WasHit.
+  BreakpointResolverSP resolver_sp = GetBreakpoint().GetResolver();
+  BreakpointResolverScripted *scripted =
+      llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
+  if (!scripted)
+    return shared_from_this();
+
+  StackFrameSP frame_sp = context->exe_ctx_ref.GetFrameSP();
+  if (!frame_sp)
+    return shared_from_this();
+
+  BreakpointLocationSP return_loc_sp =
+      scripted->WasHit(frame_sp, shared_from_this());
+  // If this is a facade location, then we won't have bumped its hit count
+  // while processing the original location hit.  Do so here.  We don't need
+  // to bump the breakpoint's hit count, however, since hitting the real
+  // location would have already done that.
+  // Also we have to check the enabled state here, since we would never have
+  // gotten here with a real location...
+  if (return_loc_sp && return_loc_sp->IsFacade()) {
+    if (return_loc_sp->IsEnabled())
+      return_loc_sp->m_hit_counter.Increment();
+    else
+      return {};
+  }
+  return return_loc_sp;
+}
+
 // RETURNS - true if we should stop at this breakpoint, false if we
 // should continue.  Note, we don't check the thread spec for the breakpoint
 // here, since if the breakpoint is not for this thread, then the event won't
 // even get reported, so the check is redundant.
 
-bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
+bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context,
+                                    lldb::BreakpointLocationSP &facade_loc_sp) {
   bool should_stop = true;
   Log *log = GetLog(LLDBLog::Breakpoints);
 
@@ -385,6 +425,27 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
   // count.
   if (!IsEnabled())
     return false;
+
+  // Next check WasHit:
+  BreakpointLocationSP loc_hit_sp = WasHit(context);
+
+  if (!loc_hit_sp) {
+    // We bump the hit counts in StopInfoBreakpoint::ShouldStopSynchronous,
+    // before we call into each location's ShouldStop.  So we need to undo
+    // that here.
+    UndoBumpHitCount();
+    return false;
+  }
+
+  // If the location hit was not us, it was a facade location, in which case
+  // we should use the facade location's callbacks, etc.  Those will all be
+  // run in the asynchronous phase, so for now we just have to record the fact
+  // that we should treat this as a facade hit.  This is strictly an out
+  // parameter, so clear it if this isn't a facade hit.
+  if (loc_hit_sp.get() != this)
+    facade_loc_sp = loc_hit_sp;
+  else
+    facade_loc_sp.reset();
 
   // We only run synchronous callbacks in ShouldStop:
   context->is_synchronous = true;
@@ -395,6 +456,11 @@ bool BreakpointLocation::ShouldStop(StoppointCallbackContext *context) {
     GetDescription(&s, lldb::eDescriptionLevelVerbose);
     LLDB_LOGF(log, "Hit breakpoint location: %s, %s.\n", s.GetData(),
               should_stop ? "stopping" : "continuing");
+    if (facade_loc_sp) {
+      s.Clear();
+      facade_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
+      LLDB_LOGF(log, "Attributing to facade location: %s.\n", s.GetData());
+    }
   }
 
   return should_stop;
@@ -417,7 +483,10 @@ void BreakpointLocation::UndoBumpHitCount() {
 }
 
 bool BreakpointLocation::IsResolved() const {
-  return m_bp_site_sp.get() != nullptr;
+
+  bool has_site = m_bp_site_sp.get() != nullptr;
+  // Facade locations are currently always considered resolved.
+  return has_site || IsFacade();
 }
 
 lldb::BreakpointSiteSP BreakpointLocation::GetBreakpointSite() const {
@@ -425,7 +494,9 @@ lldb::BreakpointSiteSP BreakpointLocation::GetBreakpointSite() const {
 }
 
 llvm::Error BreakpointLocation::ResolveBreakpointSite() {
-  if (m_bp_site_sp)
+  // This might be a facade location, which doesn't have an address.
+  // In that case, don't attempt to make a site.
+  if (m_bp_site_sp || IsFacade())
     return llvm::Error::success();
 
   Process *process = m_owner.GetTarget().GetProcessSP().get();
@@ -454,8 +525,12 @@ bool BreakpointLocation::SetBreakpointSite(BreakpointSiteSP &bp_site_sp) {
 }
 
 llvm::Error BreakpointLocation::ClearBreakpointSite() {
-  if (!m_bp_site_sp)
+  if (!m_bp_site_sp) {
+    // This might be a Facade Location, which don't have sites or addresses
+    if (IsFacade())
+      return llvm::Error::success();
     return llvm::createStringError("no breakpoint site to clear");
+  }
 
   // If the process exists, get it to remove the owner, it will remove the
   // physical implementation of the breakpoint as well if there are no more
@@ -474,6 +549,17 @@ void BreakpointLocation::GetDescription(Stream *s,
                                         lldb::DescriptionLevel level) {
   SymbolContext sc;
 
+  // If this is a scripted breakpoint, give it a chance to describe its
+  // locations:
+  std::optional<std::string> scripted_opt;
+  BreakpointResolverSP resolver_sp = GetBreakpoint().GetResolver();
+  BreakpointResolverScripted *scripted =
+      llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
+  if (scripted)
+    scripted_opt = scripted->GetLocationDescription(shared_from_this(), level);
+
+  bool is_scripted_desc = scripted_opt.has_value();
+
   // If the description level is "initial" then the breakpoint is printing out
   // our initial state, and we should let it decide how it wants to print our
   // label.
@@ -491,7 +577,9 @@ void BreakpointLocation::GetDescription(Stream *s,
   if (level == lldb::eDescriptionLevelVerbose)
     s->IndentMore();
 
-  if (m_address.IsSectionOffset()) {
+  if (is_scripted_desc) {
+    s->PutCString(scripted_opt->c_str());
+  } else if (m_address.IsSectionOffset()) {
     m_address.CalculateSymbolContext(&sc);
 
     if (level == lldb::eDescriptionLevelFull ||
@@ -566,43 +654,51 @@ void BreakpointLocation::GetDescription(Stream *s,
     s->Indent();
   }
 
-  if (m_address.IsSectionOffset() &&
-      (level == eDescriptionLevelFull || level == eDescriptionLevelInitial))
-    s->Printf(", ");
-  s->Printf("address = ");
+  if (!is_scripted_desc) {
+    if (m_address.IsSectionOffset() &&
+        (level == eDescriptionLevelFull || level == eDescriptionLevelInitial))
+      s->Printf(", ");
+    s->Printf("address = ");
 
-  ExecutionContextScope *exe_scope = nullptr;
-  Target *target = &m_owner.GetTarget();
-  if (target)
-    exe_scope = target->GetProcessSP().get();
-  if (exe_scope == nullptr)
-    exe_scope = target;
+    ExecutionContextScope *exe_scope = nullptr;
+    Target *target = &m_owner.GetTarget();
+    if (target)
+      exe_scope = target->GetProcessSP().get();
+    if (exe_scope == nullptr)
+      exe_scope = target;
 
-  if (level == eDescriptionLevelInitial)
-    m_address.Dump(s, exe_scope, Address::DumpStyleLoadAddress,
-                   Address::DumpStyleFileAddress);
-  else
-    m_address.Dump(s, exe_scope, Address::DumpStyleLoadAddress,
-                   Address::DumpStyleModuleWithFileAddress);
+    if (level == eDescriptionLevelInitial)
+      m_address.Dump(s, exe_scope, Address::DumpStyleLoadAddress,
+                     Address::DumpStyleFileAddress);
+    else
+      m_address.Dump(s, exe_scope, Address::DumpStyleLoadAddress,
+                     Address::DumpStyleModuleWithFileAddress);
 
-  if (IsIndirect() && m_bp_site_sp) {
-    Address resolved_address;
-    resolved_address.SetLoadAddress(m_bp_site_sp->GetLoadAddress(), target);
-    Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
-    if (resolved_symbol) {
-      if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
-        s->Printf(", ");
-      else if (level == lldb::eDescriptionLevelVerbose) {
-        s->EOL();
-        s->Indent();
+    if (IsIndirect() && m_bp_site_sp) {
+      Address resolved_address;
+      resolved_address.SetLoadAddress(m_bp_site_sp->GetLoadAddress(), target);
+      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      if (resolved_symbol) {
+        if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
+          s->Printf(", ");
+        else if (level == lldb::eDescriptionLevelVerbose) {
+          s->EOL();
+          s->Indent();
+        }
+        s->Printf("indirect target = %s",
+                  resolved_symbol->GetName().GetCString());
       }
-      s->Printf("indirect target = %s",
-                resolved_symbol->GetName().GetCString());
     }
   }
 
-  bool is_resolved = IsResolved();
-  bool is_hardware = is_resolved && m_bp_site_sp->IsHardware();
+  // FIXME: scripted breakpoint are currently always resolved.  Does this seem
+  // right? If they don't add any scripted locations, we shouldn't consider them
+  // resolved.
+  bool is_resolved = is_scripted_desc || IsResolved();
+  // A scripted breakpoint might be resolved but not have a site.  Be sure to
+  // check for that.
+  bool is_hardware = !is_scripted_desc && IsResolved() && m_bp_site_sp &&
+                     m_bp_site_sp->IsHardware();
 
   if (level == lldb::eDescriptionLevelVerbose) {
     s->EOL();
@@ -717,9 +813,9 @@ void BreakpointLocation::SwapLocation(BreakpointLocationSP swap_from) {
 }
 
 void BreakpointLocation::SetThreadIDInternal(lldb::tid_t thread_id) {
-  if (thread_id != LLDB_INVALID_THREAD_ID)
+  if (thread_id != LLDB_INVALID_THREAD_ID) {
     GetLocationOptions().SetThreadID(thread_id);
-  else {
+  } else {
     // If we're resetting this to an invalid thread id, then don't make an
     // options pointer just to do that.
     if (m_options_up != nullptr)

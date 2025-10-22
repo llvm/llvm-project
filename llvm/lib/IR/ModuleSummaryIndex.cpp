@@ -162,7 +162,7 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath, GVSummaryMapTy &GVSummaryMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &GlobSummary : GlobalList.second.SummaryList) {
+    for (auto &GlobSummary : GlobalList.second.getSummaryList()) {
       auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
@@ -263,7 +263,7 @@ void ModuleSummaryIndex::propagateAttributes(
   DenseSet<ValueInfo> MarkedNonReadWriteOnly;
   for (auto &P : *this) {
     bool IsDSOLocal = true;
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       if (!isGlobalValueLive(S.get())) {
         // computeDeadSymbolsAndUpdateIndirectCalls should have marked all
         // copies live. Note that it is possible that there is a GUID collision
@@ -273,7 +273,7 @@ void ModuleSummaryIndex::propagateAttributes(
         // all copies live we can assert here that all are dead if any copy is
         // dead.
         assert(llvm::none_of(
-            P.second.SummaryList,
+            P.second.getSummaryList(),
             [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
               return isGlobalValueLive(Summary.get());
             }));
@@ -308,16 +308,16 @@ void ModuleSummaryIndex::propagateAttributes(
       // Mark the flag in all summaries false so that we can do quick check
       // without going through the whole list.
       for (const std::unique_ptr<GlobalValueSummary> &Summary :
-           P.second.SummaryList)
+           P.second.getSummaryList())
         Summary->setDSOLocal(false);
   }
   setWithAttributePropagation();
   setWithDSOLocalPropagation();
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
-      if (P.second.SummaryList.size())
+      if (P.second.getSummaryList().size())
         if (auto *GVS = dyn_cast<GlobalVarSummary>(
-                P.second.SummaryList[0]->getBaseObject()))
+                P.second.getSummaryList()[0]->getBaseObject()))
           if (isGlobalValueLive(GVS)) {
             if (GVS->maybeReadOnly())
               ReadOnlyLiveGVars++;

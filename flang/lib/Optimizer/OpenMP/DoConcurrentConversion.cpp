@@ -22,7 +22,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 namespace flangomp {
 #define GEN_PASS_DEF_DOCONCURRENTCONVERSIONPASS
@@ -568,16 +567,15 @@ private:
     if (auto refType = mlir::dyn_cast<fir::ReferenceType>(liveInType))
       eleType = refType.getElementType();
 
-    llvm::omp::OpenMPOffloadMappingFlags mapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+    mlir::omp::ClauseMapFlags mapFlag = mlir::omp::ClauseMapFlags::implicit;
     mlir::omp::VariableCaptureKind captureKind =
         mlir::omp::VariableCaptureKind::ByRef;
 
     if (fir::isa_trivial(eleType) || fir::isa_char(eleType)) {
       captureKind = mlir::omp::VariableCaptureKind::ByCopy;
     } else if (!fir::isa_builtin_cptr_type(eleType)) {
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+      mapFlag |= mlir::omp::ClauseMapFlags::to;
+      mapFlag |= mlir::omp::ClauseMapFlags::from;
     }
 
     llvm::SmallVector<mlir::Value> boundsOps;
@@ -587,11 +585,8 @@ private:
         builder, liveIn.getLoc(), rawAddr,
         /*varPtrPtr=*/{}, name.str(), boundsOps,
         /*members=*/{},
-        /*membersIndex=*/mlir::ArrayAttr{},
-        static_cast<
-            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
-            mapFlag),
-        captureKind, rawAddr.getType());
+        /*membersIndex=*/mlir::ArrayAttr{}, mapFlag, captureKind,
+        rawAddr.getType());
   }
 
   mlir::omp::TargetOp

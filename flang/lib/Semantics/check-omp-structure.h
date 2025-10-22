@@ -19,7 +19,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
@@ -262,10 +261,10 @@ private:
   void CheckStorageOverlap(const evaluate::Expr<evaluate::SomeType> &,
       llvm::ArrayRef<evaluate::Expr<evaluate::SomeType>>, parser::CharBlock);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
-  void CheckAtomicType(
-      SymbolRef sym, parser::CharBlock source, std::string_view name);
-  void CheckAtomicVariable(
-      const evaluate::Expr<evaluate::SomeType> &, parser::CharBlock);
+  void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
+      std::string_view name, bool checkTypeOnPointer = true);
+  void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
+      parser::CharBlock, bool checkTypeOnPointer = true);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
@@ -346,8 +345,6 @@ private:
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
-
-  void CheckAlignValue(const parser::OmpClause &);
 
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
 

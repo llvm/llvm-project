@@ -4945,10 +4945,28 @@ def HLSLResourceHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceCounterHandleFromImplicitBinding : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_counterhandlefromimplicitbinding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceNonUniformIndex : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_nonuniformindex"];
   let Attributes = [NoThrow];
   let Prototype = "uint32_t(uint32_t)";
+}
+
+def HLSLResourceGetDimensionsX : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getdimensions_x"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceGetStride : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_getstride"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
 }
 
 def HLSLAll : LangBuiltin<"HLSL_LANG"> {

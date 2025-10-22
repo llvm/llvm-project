@@ -929,8 +929,8 @@ bool ABISysV_x86_64::RegisterIsCalleeSaved(const RegisterInfo *reg_info) {
   std::string Name = std::string(reg_info->name);
   bool IsCalleeSaved =
       llvm::StringSwitch<bool>(Name)
-          .Cases("r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx", true)
-          .Cases("rip", "eip", "rsp", "esp", "sp", "fp", "pc", true)
+          .Cases({"r12", "r13", "r14", "r15", "rbp", "ebp", "rbx", "ebx"}, true)
+          .Cases({"rip", "eip", "rsp", "esp", "sp", "fp", "pc"}, true)
           .Default(false);
   return IsCalleeSaved;
 }
