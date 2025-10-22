@@ -262,9 +262,9 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
     ```
 
     The operation may take optional offsets for the tensor descriptor.
-    The number of offsets must be greater or equal to the rank of the tensor descriptor
-    and less than the rank of the source memref. The offsets are applied to the innermost
-    dimension of the source memref.
+    The number of offsets must be greater than or equal to the rank of the tensor
+    descriptor and less than or equal to the rank of the source memref.
+    The offsets are applied to the innermost dimensions of the source memref.
 
     Examples:
     ```mlir
@@ -274,7 +274,7 @@ def XeGPU_PrefetchNdOp : XeGPU_Op<"prefetch_nd", []> {
       // memref[0, %off0, %off1, %off2]
       xegpu.prefetch_nd %tdesc[%off0, %off1, %off2] : !xegpu.tensor_desc<8x16xf16>
       // memref[%off0, %off1, %off2, %off3]
-      xegpu.prefetch_nd %tdesc[%off0, %off1, %off2] : !xegpu.tensor_desc<8x16xf16>
+      xegpu.prefetch_nd %tdesc[%off0, %off1, %off2, %off3] : !xegpu.tensor_desc<8x16xf16>
     ```
   }];
 
@@ -366,9 +366,9 @@ def XeGPU_LoadNdOp : XeGPU_Op<"load_nd", [
     ```
 
     The operation may take optional offsets for the tensor descriptor.
-    The number of offsets must be greater or equal to the rank of the tensor descriptor
-    and less than the rank of the source memref. The offsets are applied to the innermost
-    dimension of the source memref.
+    The number of offsets must be greater than or equal to the rank of the tensor
+    descriptor and less than or equal to the rank of the source memref.
+    The offsets are applied to the innermost dimensions of the source memref.
 
     Examples:
     ```mlir
@@ -476,9 +476,9 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
     ```
 
     The operation may take optional offsets for the tensor descriptor.
-    The number of offsets must be greater or equal to the rank of the tensor descriptor
-    and less than the rank of the source memref. The offsets are applied to the innermost
-    dimension of the source memref.
+    The number of offsets must be greater than or equal to the rank of the tensor
+    descriptor and less than or equal to the rank of the source memref.
+    The offsets are applied to the innermost dimensions of the source memref.
 
     Examples:
     ```mlir
