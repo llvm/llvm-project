@@ -496,15 +496,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     auto ReaderOrErr = llvm::IndexedInstrProfReader::create(
         CodeGenOpts.ProfileInstrumentUsePath, *FS,
         CodeGenOpts.ProfileRemappingFile);
-    if (auto E = ReaderOrErr.takeError()) {
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error, "Error in reading profile %0: %1");
-      llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-        Diags.Report(DiagID)
-            << CodeGenOpts.ProfileInstrumentUsePath << EI.message();
-      });
-      return;
-    }
+    // We're checking for profile read errors in CompilerInvocation, so if
+    // there was an error it should've already been caught. If it hasn't been
+    // somehow, trip an assertion.
+    assert(ReaderOrErr);
     PGOReader = std::move(ReaderOrErr.get());
   }
 
@@ -536,7 +531,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
   if (!CGO.MSSecureHotPatchFunctionsFile.empty() ||
       !CGO.MSSecureHotPatchFunctionsList.empty()) {
     if (!CGO.MSSecureHotPatchFunctionsFile.empty()) {
-      auto BufOrErr = FS->getBufferForFile(CGO.MSSecureHotPatchFunctionsFile);
+      auto BufOrErr =
+          llvm::MemoryBuffer::getFile(CGO.MSSecureHotPatchFunctionsFile);
       if (BufOrErr) {
         const llvm::MemoryBuffer &FileBuffer = **BufOrErr;
         for (llvm::line_iterator I(FileBuffer.getMemBufferRef(), true), E;
@@ -592,10 +588,6 @@ void CodeGenModule::createOpenCLRuntime() {
 }
 
 void CodeGenModule::createOpenMPRuntime() {
-  if (!LangOpts.OMPHostIRFile.empty() && !FS->exists(LangOpts.OMPHostIRFile))
-    Diags.Report(diag::err_omp_host_ir_file_not_found)
-        << LangOpts.OMPHostIRFile;
-
   // Select a specialized code generation class based on the target, if any.
   // If it does not exist use the default implementation.
   switch (getTriple().getArch()) {
@@ -1571,7 +1563,7 @@ void CodeGenModule::Release() {
   EmitBackendOptionsMetadata(getCodeGenOpts());
 
   // If there is device offloading code embed it in the host now.
-  EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
+  EmbedObject(&getModule(), CodeGenOpts, getDiags());
 
   // Set visibility from DLL storage class
   // We do this at the end of LLVM IR generation; after any operation
@@ -8121,17 +8113,12 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 
     // Get the UniqueID for the file containing the decl.
     llvm::sys::fs::UniqueID ID;
-    auto Status = FS->status(PLoc.getFilename());
-    if (!Status) {
+    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
       PLoc = SM.getPresumedLoc(D->getLocation(), /*UseLineDirectives=*/false);
       assert(PLoc.isValid() && "Source location is expected to be valid.");
-      Status = FS->status(PLoc.getFilename());
-    }
-    if (!Status) {
-      SM.getDiagnostics().Report(diag::err_cannot_open_file)
-          << PLoc.getFilename() << Status.getError().message();
-    } else {
-      ID = Status->getUniqueID();
+      if (auto EC = llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID))
+        SM.getDiagnostics().Report(diag::err_cannot_open_file)
+            << PLoc.getFilename() << EC.message();
     }
     OS << llvm::format("%x", ID.getFile()) << llvm::format("%x", ID.getDevice())
        << "_" << llvm::utohexstr(Result.low(), /*LowerCase=*/true, /*Width=*/8);

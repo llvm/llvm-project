@@ -1164,10 +1164,14 @@ protected:
 };
 
 /// Collect all pairs of <virtual path, real path> entries from the
-/// \p VFS. This is used by the module dependency collector to forward
+/// \p YAMLFilePath. This is used by the module dependency collector to forward
 /// the entries into the reproducer output VFS YAML file.
-void collectVFSEntries(RedirectingFileSystem &VFS,
-                       SmallVectorImpl<YAMLVFSEntry> &CollectedEntries);
+LLVM_ABI void collectVFSFromYAML(
+    std::unique_ptr<llvm::MemoryBuffer> Buffer,
+    llvm::SourceMgr::DiagHandlerTy DiagHandler, StringRef YAMLFilePath,
+    SmallVectorImpl<YAMLVFSEntry> &CollectedEntries,
+    void *DiagContext = nullptr,
+    IntrusiveRefCntPtr<FileSystem> ExternalFS = getRealFileSystem());
 
 class YAMLVFSWriter {
   std::vector<YAMLVFSEntry> Mappings;

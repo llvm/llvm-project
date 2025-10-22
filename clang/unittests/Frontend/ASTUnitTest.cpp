@@ -97,8 +97,7 @@ TEST_F(ASTUnitTest, SaveLoadPreservesLangOptionsInPrintingPolicy) {
 
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
       ASTFileName, PCHContainerOps->getRawReader(), ASTUnit::LoadEverything,
-      llvm::vfs::getRealFileSystem(), DiagOpts, Diags, FileSystemOptions(),
-      HSOpts);
+      DiagOpts, Diags, FileSystemOptions(), HSOpts);
 
   if (!AU)
     FAIL() << "failed to load ASTUnit";

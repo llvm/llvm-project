@@ -572,8 +572,7 @@ class DataFlowSanitizer {
   const uint64_t NumOfElementsInArgOrgTLS = ArgTLSSize / OriginWidthBytes;
 
 public:
-  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles,
-                    IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  DataFlowSanitizer(const std::vector<std::string> &ABIListFiles);
 
   bool runImpl(Module &M,
                llvm::function_ref<TargetLibraryInfo &(Function &)> GetTLI);
@@ -868,11 +867,12 @@ bool LibAtomicFunction(const Function &F) {
 } // end anonymous namespace
 
 DataFlowSanitizer::DataFlowSanitizer(
-    const std::vector<std::string> &ABIListFiles,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+    const std::vector<std::string> &ABIListFiles) {
   std::vector<std::string> AllABIListFiles(std::move(ABIListFiles));
   llvm::append_range(AllABIListFiles, ClABIListFiles);
-  ABIList.set(SpecialCaseList::createOrDie(AllABIListFiles, *FS));
+  // FIXME: should we propagate vfs::FileSystem to this constructor?
+  ABIList.set(
+      SpecialCaseList::createOrDie(AllABIListFiles, *vfs::getRealFileSystem()));
 
   CombineTaintLookupTableNames.insert_range(ClCombineTaintLookupTables);
 }
@@ -3471,7 +3471,7 @@ PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  if (!DataFlowSanitizer(ABIListFiles, FS).runImpl(M, GetTLI))
+  if (!DataFlowSanitizer(ABIListFiles).runImpl(M, GetTLI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = PreservedAnalyses::none();

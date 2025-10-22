@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKER_YAML_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKER_YAML_H
 
-#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -32,12 +31,9 @@ std::optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
   if (ConfigFile.trim().empty())
     return std::nullopt;
 
-  auto &VFS = Mgr.getASTContext()
-                  .getSourceManager()
-                  .getFileManager()
-                  .getVirtualFileSystem();
+  llvm::vfs::FileSystem *FS = llvm::vfs::getRealFileSystem().get();
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      VFS.getBufferForFile(ConfigFile.str());
+      FS->getBufferForFile(ConfigFile.str());
 
   if (Buffer.getError()) {
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,

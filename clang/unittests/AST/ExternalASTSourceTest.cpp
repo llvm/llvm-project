@@ -57,8 +57,7 @@ bool testExternalASTSource(ExternalASTSource *Source, StringRef FileContents) {
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
-  Compiler.createDiagnostics();
+  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
 
   TestFrontendAction Action(Source);
   return Compiler.ExecuteAction(Action);

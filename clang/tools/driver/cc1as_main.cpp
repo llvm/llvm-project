@@ -429,8 +429,7 @@ getOutputStream(StringRef Path, DiagnosticsEngine &Diags, bool Binary) {
 }
 
 static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
-                                 DiagnosticsEngine &Diags,
-                                 IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
+                                 DiagnosticsEngine &Diags) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -453,7 +452,6 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(Opts.IncludePaths);
-  SrcMgr.setVirtualFileSystem(VFS);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(Opts.Triple));
   assert(MRI && "Unable to create target register info!");
@@ -649,9 +647,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags,
-                             IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  bool Failed = ExecuteAssemblerImpl(Opts, Diags, VFS);
+                             DiagnosticsEngine &Diags) {
+  bool Failed = ExecuteAssemblerImpl(Opts, Diags);
 
   // Delete output file if there were errors.
   if (Failed) {
@@ -687,8 +684,6 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   DiagClient->setPrefix("clang -cc1as");
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
   DiagnosticsEngine Diags(DiagID, DiagOpts, DiagClient);
-
-  auto VFS = vfs::getRealFileSystem();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
@@ -728,12 +723,11 @@ int cc1as_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     for (unsigned i = 0; i != NumArgs; ++i)
       Args[i + 1] = Asm.LLVMArgs[i].c_str();
     Args[NumArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get(), /*Overview=*/"",
-                                      /*Errs=*/nullptr, /*VFS=*/VFS.get());
+    llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
   // Execute the invocation, unless there were parsing errors.
-  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags, VFS);
+  bool Failed = Diags.hasErrorOccurred() || ExecuteAssembler(Asm, Diags);
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.

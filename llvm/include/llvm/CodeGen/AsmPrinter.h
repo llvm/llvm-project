@@ -16,7 +16,6 @@
 #define LLVM_CODEGEN_ASMPRINTER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -89,10 +88,6 @@ namespace remarks {
 class RemarkStreamer;
 }
 
-namespace vfs {
-class FileSystem;
-}
-
 /// This class is intended to be used as a driving class for all asm writers.
 class LLVM_ABI AsmPrinter : public MachineFunctionPass {
 public:
@@ -110,9 +105,6 @@ public:
   /// contains the transient state for the current translation unit that we are
   /// generating (such as the current section etc).
   std::unique_ptr<MCStreamer> OutStreamer;
-
-  /// The VFS to resolve asm include directives.
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
 
   /// The current machine function.
   MachineFunction *MF = nullptr;

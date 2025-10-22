@@ -36,7 +36,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -3534,10 +3533,8 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
           llvm::StringRef(loc.getFilename()), loc.getLine());
     };
 
-    auto vfs = llvm::vfs::getRealFileSystem();
     os << llvm::format(
-        "_%x",
-        ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack, *vfs).FileID);
+        "_%x", ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack).FileID);
   }
   os << "_decl_tgt_ref_ptr";
 
@@ -5811,12 +5808,10 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
                                                      lineNo);
       };
 
-      auto vfs = llvm::vfs::getRealFileSystem();
-
       ompBuilder->registerTargetGlobalVariable(
           captureClause, deviceClause, isDeclaration, isExternallyVisible,
-          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
-          mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
+          ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
+          generatedRefs, /*OpenMPSimd*/ false, targetTriple,
           /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr,
           gVal->getType(), gVal);
 
@@ -5826,9 +5821,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
-            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
-            mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-            gVal->getType(), /*GlobalInitializer*/ nullptr,
+            ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack), mangledName,
+            generatedRefs, /*OpenMPSimd*/ false, targetTriple, gVal->getType(),
+            /*GlobalInitializer*/ nullptr,
             /*VariableLinkage*/ nullptr);
       }
     }
@@ -6190,9 +6185,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
               if (auto filepathAttr = dyn_cast<StringAttr>(attr)) {
                 llvm::OpenMPIRBuilder *ompBuilder =
                     moduleTranslation.getOpenMPBuilder();
-                auto VFS = llvm::vfs::getRealFileSystem();
-                ompBuilder->loadOffloadInfoMetadata(*VFS,
-                                                    filepathAttr.getValue());
+                ompBuilder->loadOffloadInfoMetadata(filepathAttr.getValue());
                 return success();
               }
               return failure();

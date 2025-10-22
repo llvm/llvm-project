@@ -17,7 +17,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Parser.h"
 #include "llvm/TableGen/Record.h"
 #include <optional>
@@ -438,7 +437,6 @@ void TableGenTextFile::initialize(const lsp::URIForFile &uri,
     return;
   }
   sourceMgr.setIncludeDirs(includeDirs);
-  sourceMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
 
   // This class provides a context argument for the SourceMgr diagnostic

@@ -1038,8 +1038,7 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM)
       /*HasRequiresReverseOffload*/ false, /*HasRequiresUnifiedAddress*/ false,
       hasRequiresUnifiedSharedMemory(), /*HasRequiresDynamicAllocators*/ false);
   OMPBuilder.initialize();
-  OMPBuilder.loadOffloadInfoMetadata(*CGM.getFileSystem(),
-                                     CGM.getLangOpts().OpenMPIsTargetDevice
+  OMPBuilder.loadOffloadInfoMetadata(CGM.getLangOpts().OpenMPIsTargetDevice
                                          ? CGM.getLangOpts().OMPHostIRFile
                                          : StringRef{});
   OMPBuilder.setConfig(Config);
@@ -1539,14 +1538,15 @@ static llvm::TargetRegionEntryInfo getEntryInfoFromPresumedLoc(
     SourceManager &SM = CGM.getContext().getSourceManager();
     PresumedLoc PLoc = SM.getPresumedLoc(BeginLoc);
 
-    if (!CGM.getFileSystem()->exists(PLoc.getFilename()))
+    llvm::sys::fs::UniqueID ID;
+    if (llvm::sys::fs::getUniqueID(PLoc.getFilename(), ID)) {
       PLoc = SM.getPresumedLoc(BeginLoc, /*UseLineDirectives=*/false);
+    }
 
     return std::pair<std::string, uint64_t>(PLoc.getFilename(), PLoc.getLine());
   };
 
-  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack,
-                                             *CGM.getFileSystem(), ParentName);
+  return OMPBuilder.getTargetEntryUniqueInfo(FileInfoCallBack, ParentName);
 }
 
 ConstantAddress CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {

@@ -217,8 +217,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
 }
 
 static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
-                          const llvm::ToolContext &ToolContext,
-                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+                          const llvm::ToolContext &ToolContext) {
   // If we call the cc1 tool from the clangDriver library (through
   // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
@@ -226,8 +225,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV,
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
-  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine,
-                                  VFS.get());
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
   if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
@@ -295,16 +293,14 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
 
   bool ClangCLMode = IsClangCL(DriverMode);
 
-  auto VFS = llvm::vfs::getRealFileSystem();
-
-  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A, VFS.get())) {
+  if (llvm::Error Err = expandResponseFiles(Args, ClangCLMode, A)) {
     llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
   // Handle -cc1 integrated tools.
   if (Args.size() >= 2 && StringRef(Args[1]).starts_with("-cc1"))
-    return ExecuteCC1Tool(Args, ToolContext, VFS);
+    return ExecuteCC1Tool(Args, ToolContext);
 
   // Handle options that need handling before the real command line parsing in
   // Driver::BuildCompilation()
@@ -386,6 +382,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
         Diags.takeClient(), std::move(SerializedConsumer)));
   }
 
+  auto VFS = llvm::vfs::getRealFileSystem();
   ProcessWarningOptions(Diags, *DiagOpts, *VFS, /*ReportDiags=*/false);
 
   Driver TheDriver(Path, llvm::sys::getDefaultTargetTriple(), Diags,
@@ -405,10 +402,10 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!SetBackdoorDriverOutputsFromEnvVars(TheDriver))
     return 1;
 
-  auto ExecuteCC1WithContext = [&ToolContext,
-                                &VFS](SmallVectorImpl<const char *> &ArgV) {
-    return ExecuteCC1Tool(ArgV, ToolContext, VFS);
-  };
+  auto ExecuteCC1WithContext =
+      [&ToolContext](SmallVectorImpl<const char *> &ArgV) {
+        return ExecuteCC1Tool(ArgV, ToolContext);
+      };
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes

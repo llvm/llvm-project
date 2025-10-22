@@ -369,13 +369,12 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
 
   HeaderSearchOptions HSOpts;
 
-  auto VFS = llvm::vfs::getRealFileSystem();
-
   auto DiagOpts = std::make_shared<DiagnosticOptions>();
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(*VFS, *DiagOpts);
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          *DiagOpts);
   std::unique_ptr<ASTUnit> AU = ASTUnit::LoadFromASTFile(
-      modulePath, *pchRdr, ASTUnit::LoadASTOnly, VFS, DiagOpts, Diags,
+      modulePath, *pchRdr, ASTUnit::LoadASTOnly, DiagOpts, Diags,
       FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,
       /*OnlyLocalDecls=*/true, CaptureDiagsKind::None,
       /*AllowASTWithCompilerErrors=*/true,
