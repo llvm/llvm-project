@@ -1249,6 +1249,41 @@ def fir_IsAssumedSizeOp : fir_SimpleOp<"is_assumed_size", [NoMemoryEffect]> {
   let results = (outs BoolLike);
 }
 
+def fir_AssumedSizeExtentOp : fir_SimpleOneResultOp<"assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "get the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns the special extent value representing the last dimension of an
+    assumed-size array. This is used to model the semantics in FIR without
+    directly materializing the sentinel value. The concrete encoding is
+    introduced during FIR to LLVM lowering.
+
+    ```
+      %e = fir.assumed_size_extent : index
+    ```
+  }];
+
+  let results = (outs Index);
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
+def fir_IsAssumedSizeExtentOp : fir_SimpleOp<"is_assumed_size_extent", [NoMemoryEffect]> {
+  let summary = "is value the assumed-size last extent sentinel";
+
+  let description = [{
+    Returns true iff the given integer equals the assumed-size extent sentinel.
+
+    ```
+      %t = fir.is_assumed_size_extent %v : (index) -> i1
+      %c = fir.is_assumed_size_extent %x : (i32) -> i1
+    ```
+  }];
+
+  let arguments = (ins AnyIntegerLike:$val);
+  let results = (outs BoolLike);
+  let hasCanonicalizer = 1;
+}
+
 def fir_BoxIsPtrOp : fir_SimpleOp<"box_isptr", [NoMemoryEffect]> {
   let summary = "is the boxed value a POINTER?";
 
