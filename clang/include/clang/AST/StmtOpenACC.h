@@ -815,6 +815,17 @@ public:
   Stmt *getAssociatedStmt() {
     return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
   }
+
+  // A struct to represent a broken-down version of the associated statement,
+  // providing the information specified in OpenACC3.3 Section 2.12.
+  struct StmtInfo {
+    const Expr *V;
+    const Expr *X;
+    // TODO: OpenACC: We should expand this as we're implementing the other
+    // atomic construct kinds.
+  };
+
+  const StmtInfo getAssociatedStmtInfo() const;
 };
 
 } // namespace clang

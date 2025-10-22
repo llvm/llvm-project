@@ -306,6 +306,29 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
-  return mlir::failure();
+  // For now, we are only support 'read', so diagnose. We can switch on the kind
+  // later once we start implementing the other 3 forms.
+  if (s.getAtomicKind() != OpenACCAtomicKind::Read) {
+    cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
+    return mlir::failure();
+  }
+
+  // While Atomic is an 'associated statement' construct, it 'steals' the
+  // expression it is associated with rather than emitting it inside of it.  So
+  // it has custom emit logic.
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  OpenACCAtomicConstruct::StmtInfo inf = s.getAssociatedStmtInfo();
+  // Atomic 'read' only permits 'v = x', where v and x are both scalar L values.
+  // The getAssociatedStmtInfo strips off implicit casts, which includes
+  // implicit conversions and L-to-R-Value conversions, so we can just emit it
+  // as an L value.  The Flang implementation has no problem with different
+  // types, so it appears that the dialect can handle the conversions.
+  mlir::Value v = emitLValue(inf.V).getPointer();
+  mlir::Value x = emitLValue(inf.X).getPointer();
+  mlir::Type resTy = convertType(inf.V->getType());
+  auto op = mlir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
+                                            /*ifCond=*/{});
+  emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                     s.clauses());
+  return mlir::success();
 }

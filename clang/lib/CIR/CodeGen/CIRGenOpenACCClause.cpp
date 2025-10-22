@@ -553,12 +553,15 @@ public:
   }
 
   void VisitIfClause(const OpenACCIfClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::InitOp,
-                               mlir::acc::ShutdownOp, mlir::acc::SetOp,
-                               mlir::acc::DataOp, mlir::acc::WaitOp,
-                               mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
-                               mlir::acc::ExitDataOp, mlir::acc::UpdateOp>) {
+    if constexpr (isOneOfTypes<
+                      OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                      mlir::acc::KernelsOp, mlir::acc::InitOp,
+                      mlir::acc::ShutdownOp, mlir::acc::SetOp,
+                      mlir::acc::DataOp, mlir::acc::WaitOp,
+                      mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
+                      mlir::acc::ExitDataOp, mlir::acc::UpdateOp,
+                      mlir::acc::AtomicReadOp, mlir::acc::AtomicWriteOp,
+                      mlir::acc::AtomicUpdateOp, mlir::acc::AtomicCaptureOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else if constexpr (isCombinedType<OpTy>) {
@@ -1144,6 +1147,10 @@ EXPL_SPEC(mlir::acc::HostDataOp)
 EXPL_SPEC(mlir::acc::EnterDataOp)
 EXPL_SPEC(mlir::acc::ExitDataOp)
 EXPL_SPEC(mlir::acc::UpdateOp)
+EXPL_SPEC(mlir::acc::AtomicReadOp)
+EXPL_SPEC(mlir::acc::AtomicWriteOp)
+EXPL_SPEC(mlir::acc::AtomicCaptureOp)
+EXPL_SPEC(mlir::acc::AtomicUpdateOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>
