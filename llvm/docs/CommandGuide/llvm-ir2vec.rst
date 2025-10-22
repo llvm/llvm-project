@@ -1,5 +1,5 @@
-llvm-ir2vec - IR2Vec Embedding Generation Tool
-==============================================
+llvm-ir2vec - IR2Vec and MIR2Vec Embedding Generation Tool
+===========================================================
 
 .. program:: llvm-ir2vec
 
@@ -11,9 +11,9 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`llvm-ir2vec` is a standalone command-line tool for IR2Vec. It
-generates IR2Vec embeddings for LLVM IR and supports triplet generation 
-for vocabulary training. 
+:program:`llvm-ir2vec` is a standalone command-line tool for IR2Vec and MIR2Vec.
+It generates embeddings for both LLVM IR and Machine IR (MIR) and supports 
+triplet generation for vocabulary training. 
 
 The tool provides three main subcommands:
 
@@ -23,22 +23,32 @@ The tool provides three main subcommands:
 2. **entities**: Generates entity mapping files (entity2id.txt) for vocabulary 
    training.
 
-3. **embeddings**: Generates IR2Vec embeddings using a trained vocabulary
+3. **embeddings**: Generates IR2Vec or MIR2Vec embeddings using a trained vocabulary
    at different granularity levels (instruction, basic block, or function).
 
+The tool supports two operation modes:
+
+* **LLVM IR mode** (``--mode=llvm``): Process LLVM IR bitcode files and generate
+  IR2Vec embeddings
+* **Machine IR mode** (``--mode=mir``): Process Machine IR (.mir) files and generate
+  MIR2Vec embeddings
+
 The tool is designed to facilitate machine learning applications that work with
-LLVM IR by converting the IR into numerical representations that can be used by
-ML models. The `triplets` subcommand generates numeric IDs directly instead of string 
-triplets, streamlining the training data preparation workflow.
+LLVM IR or Machine IR by converting them into numerical representations that can 
+be used by ML models. The `triplets` subcommand generates numeric IDs directly 
+instead of string triplets, streamlining the training data preparation workflow.
 
 .. note::
 
-   For information about using IR2Vec programmatically within LLVM passes and 
-   the C++ API, see the `IR2Vec Embeddings <https://llvm.org/docs/MLGO.html#ir2vec-embeddings>`_ 
+   For information about using IR2Vec and MIR2Vec programmatically within LLVM 
+   passes and the C++ API, see the `IR2Vec Embeddings <https://llvm.org/docs/MLGO.html#ir2vec-embeddings>`_ 
    section in the MLGO documentation.
 
 OPERATION MODES
 ---------------
+
+The tool operates in two modes: **LLVM IR mode** and **Machine IR mode**. The mode
+is selected using the ``--mode`` option (default: ``llvm``).
 
 Triplet Generation and Entity Mapping Modes are used for preparing
 vocabulary and training data for knowledge graph embeddings. The Embedding Mode
@@ -89,18 +99,31 @@ Embedding Generation
 ~~~~~~~~~~~~~~~~~~~~
 
 With the `embeddings` subcommand, :program:`llvm-ir2vec` uses a pre-trained vocabulary to
-generate numerical embeddings for LLVM IR at different levels of granularity.
+generate numerical embeddings for LLVM IR or Machine IR at different levels of granularity.
 
-Example Usage:
+Example Usage for LLVM IR:
 
 .. code-block:: bash
 
-   llvm-ir2vec embeddings --ir2vec-vocab-path=vocab.json --ir2vec-kind=symbolic --level=func input.bc -o embeddings.txt
+   llvm-ir2vec embeddings --mode=llvm --ir2vec-vocab-path=vocab.json --ir2vec-kind=symbolic --level=func input.bc -o embeddings.txt
+
+Example Usage for Machine IR:
+
+.. code-block:: bash
+
+   llvm-ir2vec embeddings --mode=mir --mir2vec-vocab-path=vocab.json --level=func input.mir -o embeddings.txt
 
 OPTIONS
 -------
 
-Global options:
+Common options (applicable to both LLVM IR and Machine IR modes):
+
+.. option:: --mode=<mode>
+
+   Specify the operation mode. Valid values are:
+
+   * ``llvm`` - Process LLVM IR bitcode files (default)
+   * ``mir`` - Process Machine IR (.mir) files
 
 .. option:: -o <filename>
 
@@ -116,8 +139,8 @@ Subcommand-specific options:
 
 .. option:: <input-file>
 
-   The input LLVM IR or bitcode file to process. This positional argument is
-   required for the `embeddings` subcommand.
+   The input LLVM IR/bitcode file (.ll/.bc) or Machine IR file (.mir) to process. 
+   This positional argument is required for the `embeddings` subcommand.
 
 .. option:: --level=<level>
 
@@ -131,6 +154,8 @@ Subcommand-specific options:
 
    Process only the specified function instead of all functions in the module.
 
+**IR2Vec-specific options** (for ``--mode=llvm``):
+
 .. option:: --ir2vec-kind=<kind>
 
    Specify the kind of IR2Vec embeddings to generate. Valid values are:
@@ -143,8 +168,8 @@ Subcommand-specific options:
 
 .. option:: --ir2vec-vocab-path=<path>
 
-   Specify the path to the vocabulary file (required for embedding generation).
-   The vocabulary file should be in JSON format and contain the trained
+   Specify the path to the IR2Vec vocabulary file (required for LLVM IR embedding 
+   generation). The vocabulary file should be in JSON format and contain the trained
    vocabulary for embedding generation. See `llvm/lib/Analysis/models`
    for pre-trained vocabulary files.
 
@@ -162,6 +187,35 @@ Subcommand-specific options:
 
    Specify the weight for argument embeddings (default: 0.2). This controls
    the relative importance of operand information in the final embedding.
+
+**MIR2Vec-specific options** (for ``--mode=mir``):
+
+.. option:: --mir2vec-vocab-path=<path>
+
+   Specify the path to the MIR2Vec vocabulary file (required for Machine IR 
+   embedding generation). The vocabulary file should be in JSON format and 
+   contain the trained vocabulary for embedding generation.
+
+.. option:: --mir2vec-kind=<kind>
+
+   Specify the kind of MIR2Vec embeddings to generate. Valid values are:
+
+   * ``symbolic`` - Generate symbolic embeddings (default)
+
+.. option:: --mir2vec-opc-weight=<weight>
+
+   Specify the weight for machine opcode embeddings (default: 1.0). This controls
+   the relative importance of machine instruction opcodes in the final embedding.
+
+.. option:: --mir2vec-common-operand-weight=<weight>
+
+   Specify the weight for common operand embeddings (default: 1.0). This controls
+   the relative importance of common operand types in the final embedding.
+
+.. option:: --mir2vec-reg-operand-weight=<weight>
+
+   Specify the weight for register operand embeddings (default: 1.0). This controls
+   the relative importance of register operands in the final embedding.
 
 
 **triplets** subcommand:
@@ -240,3 +294,6 @@ SEE ALSO
 
 For more information about the IR2Vec algorithm and approach, see:
 `IR2Vec: LLVM IR Based Scalable Program Embeddings <https://doi.org/10.1145/3418463>`_.
+
+For more information about the MIR2Vec algorithm and approach, see:
+`RL4ReAl: Reinforcement Learning for Register Allocation <https://doi.org/10.1145/3578360.3580273>`_.
