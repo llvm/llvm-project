@@ -36,6 +36,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -54,28 +55,11 @@
 #include <variant>
 
 using namespace llvm;
+using TokenMode = AllocTokenMode;
 
 #define DEBUG_TYPE "alloc-token"
 
 namespace {
-
-//===--- Constants --------------------------------------------------------===//
-
-enum class TokenMode : unsigned {
-  /// Incrementally increasing token ID.
-  Increment = 0,
-
-  /// Simple mode that returns a statically-assigned random token ID.
-  Random = 1,
-
-  /// Token ID based on allocated type hash.
-  TypeHash = 2,
-
-  /// Token ID based on allocated type hash, where the top half ID-space is
-  /// reserved for types that contain pointers and the bottom half for types
-  /// that do not contain pointers.
-  TypeHashPointerSplit = 3,
-};
 
 //===--- Command-line options ---------------------------------------------===//
 
@@ -217,22 +201,19 @@ public:
   using ModeBase::ModeBase;
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
-    const auto [N, H] = getHash(CB, ORE);
-    return N ? boundedToken(H) : H;
-  }
 
-protected:
-  std::pair<MDNode *, uint64_t> getHash(const CallBase &CB,
-                                        OptimizationRemarkEmitter &ORE) {
     if (MDNode *N = getAllocTokenMetadata(CB)) {
       MDString *S = cast<MDString>(N->getOperand(0));
-      return {N, getStableSipHash(S->getString())};
+      AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
+      if (auto Token = getAllocToken(TokenMode::TypeHash, Metadata, MaxTokens))
+        return *Token;
     }
     // Fallback.
     remarkNoMetadata(CB, ORE);
-    return {nullptr, ClFallbackToken};
+    return ClFallbackToken;
   }
 
+protected:
   /// Remark that there was no precise type information.
   static void remarkNoMetadata(const CallBase &CB,
                                OptimizationRemarkEmitter &ORE) {
@@ -253,20 +234,18 @@ public:
   using TypeHashMode::TypeHashMode;
 
   uint64_t operator()(const CallBase &CB, OptimizationRemarkEmitter &ORE) {
-    if (MaxTokens == 1)
-      return 0;
-    const uint64_t HalfTokens = MaxTokens / 2;
-    const auto [N, H] = getHash(CB, ORE);
-    if (!N) {
-      // Pick the fallback token (ClFallbackToken), which by default is 0,
-      // meaning it'll fall into the pointer-less bucket. Override by setting
-      // -alloc-token-fallback if that is the wrong choice.
-      return H;
+    if (MDNode *N = getAllocTokenMetadata(CB)) {
+      MDString *S = cast<MDString>(N->getOperand(0));
+      AllocTokenMetadata Metadata{S->getString(), containsPointer(N)};
+      if (auto Token = getAllocToken(TokenMode::TypeHashPointerSplit, Metadata,
+                                     MaxTokens))
+        return *Token;
     }
-    uint64_t Hash = H % HalfTokens; // base hash
-    if (containsPointer(N))
-      Hash += HalfTokens;
-    return Hash;
+    // Pick the fallback token (ClFallbackToken), which by default is 0, meaning
+    // it'll fall into the pointer-less bucket. Override by setting
+    // -alloc-token-fallback if that is the wrong choice.
+    remarkNoMetadata(CB, ORE);
+    return ClFallbackToken;
   }
 };
 
