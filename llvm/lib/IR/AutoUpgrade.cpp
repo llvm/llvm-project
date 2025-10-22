@@ -6045,6 +6045,120 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   }
 }
 
+// Check if the function attribute is not present and set it.
+static void setFunctionAttrIfNotSet(Function &F, StringRef FnAttrName,
+                                    StringRef Value) {
+  if (!F.hasFnAttribute(FnAttrName))
+    F.addFnAttr(FnAttrName, Value);
+}
+
+// Check if the function attribute is not present and set it if needed.
+// If the attribute is "false" then removes it.
+// If the attribute is "true" resets it to a valueless attribute.
+static void ConvertFunctionAttr(Function &F, bool Set, StringRef FnAttrName) {
+  if (!F.hasFnAttribute(FnAttrName)) {
+    if (Set)
+      F.addFnAttr(FnAttrName);
+  } else {
+    auto A = F.getFnAttribute(FnAttrName);
+    if ("false" == A.getValueAsString())
+      F.removeFnAttr(FnAttrName);
+    else if ("true" == A.getValueAsString()) {
+      F.removeFnAttr(FnAttrName);
+      F.addFnAttr(FnAttrName);
+    }
+  }
+}
+
+void llvm::copyModuleAttrToFunctions(Module &M) {
+  Triple T(M.getTargetTriple());
+  if (!T.isThumb() && !T.isARM() && !T.isAArch64())
+    return;
+
+  uint64_t BTEValue = 0;
+  uint64_t BPPLRValue = 0;
+  uint64_t GCSValue = 0;
+  uint64_t SRAValue = 0;
+  uint64_t SRAALLValue = 0;
+  uint64_t SRABKeyValue = 0;
+
+  NamedMDNode *ModFlags = M.getModuleFlagsMetadata();
+  if (ModFlags) {
+    for (unsigned I = 0, E = ModFlags->getNumOperands(); I != E; ++I) {
+      MDNode *Op = ModFlags->getOperand(I);
+      if (Op->getNumOperands() != 3)
+        continue;
+
+      MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
+      auto *CI = mdconst::dyn_extract<ConstantInt>(Op->getOperand(2));
+      if (!ID || !CI)
+        continue;
+
+      StringRef IDStr = ID->getString();
+      uint64_t *ValPtr = IDStr == "branch-target-enforcement"    ? &BTEValue
+                         : IDStr == "branch-protection-pauth-lr" ? &BPPLRValue
+                         : IDStr == "guarded-control-stack"      ? &GCSValue
+                         : IDStr == "sign-return-address"        ? &SRAValue
+                         : IDStr == "sign-return-address-all"    ? &SRAALLValue
+                         : IDStr == "sign-return-address-with-bkey"
+                             ? &SRABKeyValue
+                             : nullptr;
+      if (!ValPtr)
+        continue;
+
+      *ValPtr = CI->getZExtValue();
+      if (*ValPtr == 2)
+        return;
+    }
+  }
+
+  bool BTE = BTEValue == 1;
+  bool BPPLR = BPPLRValue == 1;
+  bool GCS = GCSValue == 1;
+  bool SRA = SRAValue == 1;
+
+  StringRef SignTypeValue = "non-leaf";
+  if (SRA && SRAALLValue == 1)
+    SignTypeValue = "all";
+
+  StringRef SignKeyValue = "a_key";
+  if (SRA && SRABKeyValue == 1)
+    SignKeyValue = "b_key";
+
+  for (Function &F : M.getFunctionList()) {
+    if (F.isDeclaration())
+      continue;
+
+    if (SRA) {
+      setFunctionAttrIfNotSet(F, "sign-return-address", SignTypeValue);
+      setFunctionAttrIfNotSet(F, "sign-return-address-key", SignKeyValue);
+    } else {
+      if (auto A = F.getFnAttribute("sign-return-address");
+          A.isValid() && "none" == A.getValueAsString()) {
+        F.removeFnAttr("sign-return-address");
+        F.removeFnAttr("sign-return-address-key");
+      }
+    }
+    ConvertFunctionAttr(F, BTE, "branch-target-enforcement");
+    ConvertFunctionAttr(F, BPPLR, "branch-protection-pauth-lr");
+    ConvertFunctionAttr(F, GCS, "guarded-control-stack");
+  }
+
+  if (BTE)
+    M.setModuleFlag(llvm::Module::Min, "branch-target-enforcement", 2);
+  if (BPPLR)
+    M.setModuleFlag(llvm::Module::Min, "branch-protection-pauth-lr", 2);
+  if (GCS)
+    M.setModuleFlag(llvm::Module::Min, "guarded-control-stack", 2);
+  if (SRA) {
+    M.setModuleFlag(llvm::Module::Min, "sign-return-address", 2);
+    if (SRAALLValue == 1)
+      M.setModuleFlag(llvm::Module::Min, "sign-return-address-all", 2);
+    if (SRABKeyValue == 1)
+      M.setModuleFlag(llvm::Module::Min, "sign-return-address-with-bkey", 2);
+  }
+}
+
 static bool isOldLoopArgument(Metadata *MD) {
   auto *T = dyn_cast_or_null<MDTuple>(MD);
   if (!T)
