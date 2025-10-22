@@ -1292,6 +1292,39 @@ void MCGenDwarfLabelEntry::Make(MCSymbol *Symbol, MCStreamer *MCOS,
       MCGenDwarfLabelEntry(Name, FileNumber, LineNumber, Label));
 }
 
+void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
+  auto ReplaceReg = [=](unsigned &Reg) {
+    if (Reg == FromReg)
+      Reg = ToReg;
+  };
+  auto Visitor = makeVisitor(
+      [=](CommonFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.Register2);
+      },
+      [](EscapeFields &) {}, [](LabelFields &) {},
+      [=](RegisterPairFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.Reg1);
+        ReplaceReg(F.Reg2);
+      },
+      [=](VectorRegistersFields &F) {
+        ReplaceReg(F.Register);
+        for (auto &VRL : F.VectorRegisters)
+          ReplaceReg(VRL.Register);
+      },
+      [=](VectorOffsetFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.MaskRegister);
+      },
+      [=](VectorRegisterMaskFields &F) {
+        ReplaceReg(F.Register);
+        ReplaceReg(F.SpillRegister);
+        ReplaceReg(F.MaskRegister);
+      });
+  std::visit(Visitor, ExtraFields);
+}
+
 static int getDataAlignmentFactor(MCStreamer &streamer) {
   MCContext &context = streamer.getContext();
   const MCAsmInfo *asmInfo = context.getAsmInfo();

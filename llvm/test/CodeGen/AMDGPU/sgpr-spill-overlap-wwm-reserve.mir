@@ -91,140 +91,140 @@ body:             |
   ; GCN-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x41, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
   ; GCN-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24, implicit-def dead $scc
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr255, 0, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr4, $vgpr2, 0, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr5, 1, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr5, $vgpr255, 1, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr5, $vgpr2, 1, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr6, 2, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr6, $vgpr255, 2, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr6, $vgpr2, 2, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr7, 3, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr7, $vgpr255, 3, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr7, $vgpr2, 3, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr8, 4, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr8, $vgpr255, 4, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr8, $vgpr2, 4, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr9, 5, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr9, $vgpr255, 5, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr9, $vgpr2, 5, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr10, 6, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr10, $vgpr255, 6, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr10, $vgpr2, 6, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr11, 7, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr11, $vgpr255, 7, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr11, $vgpr2, 7, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr12, 8, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr12, $vgpr255, 8, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr12, $vgpr2, 8, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr13, 9, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr13, $vgpr255, 9, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr13, $vgpr2, 9, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr14, 10, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr14, $vgpr255, 10, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr14, $vgpr2, 10, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr15, 11, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr15, $vgpr255, 11, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr15, $vgpr2, 11, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr16, 12, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr16, $vgpr255, 12, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr16, $vgpr2, 12, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr17, 13, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr17, $vgpr255, 13, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr17, $vgpr2, 13, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr18, 14, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr18, $vgpr255, 14, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr18, $vgpr2, 14, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr19, 15, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr19, $vgpr255, 15, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr19, $vgpr2, 15, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr20, 16, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr20, $vgpr255, 16, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr20, $vgpr2, 16, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr21, 17, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr21, $vgpr255, 17, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr21, $vgpr2, 17, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr22, 18, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr22, $vgpr255, 18, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr22, $vgpr2, 18, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr23, 19, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr23, $vgpr255, 19, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr23, $vgpr2, 19, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr24, 20, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr24, $vgpr255, 20, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr24, $vgpr2, 20, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr25, 21, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr25, $vgpr255, 21, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr25, $vgpr2, 21, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr26, 22, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr26, $vgpr255, 22, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr26, $vgpr2, 22, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr27, 23, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr27, $vgpr255, 23, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr27, $vgpr2, 23, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr28, 24, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr28, $vgpr255, 24, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr28, $vgpr2, 24, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr29, 25, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr29, $vgpr255, 25, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr29, $vgpr2, 25, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr64, 26, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr64, $vgpr255, 26, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr64, $vgpr2, 26, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr65, 27, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr65, $vgpr255, 27, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr65, $vgpr2, 27, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr66, 28, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr66, $vgpr255, 28, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr66, $vgpr2, 28, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr67, 29, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr67, $vgpr255, 29, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr67, $vgpr2, 29, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr68, 30, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr68, $vgpr255, 30, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr68, $vgpr2, 30, 32
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr69, 31, $vgpr2
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr69, $vgpr255, 31, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr69, $vgpr2, 31, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr70, 0, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr70, $vgpr254, 0, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr70, $vgpr3, 0, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr71, 1, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr71, $vgpr254, 1, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr71, $vgpr3, 1, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr72, 2, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr72, $vgpr254, 2, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr72, $vgpr3, 2, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr73, 3, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr73, $vgpr254, 3, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr73, $vgpr3, 3, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr74, 4, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr74, $vgpr254, 4, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr74, $vgpr3, 4, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr75, 5, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr75, $vgpr254, 5, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr75, $vgpr3, 5, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr76, 6, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr76, $vgpr254, 6, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr76, $vgpr3, 6, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr77, 7, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr77, $vgpr254, 7, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr77, $vgpr3, 7, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr78, 8, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr78, $vgpr254, 8, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr78, $vgpr3, 8, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr79, 9, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr79, $vgpr254, 9, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr79, $vgpr3, 9, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr80, 10, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr80, $vgpr254, 10, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr80, $vgpr3, 10, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr81, 11, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr81, $vgpr254, 11, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr81, $vgpr3, 11, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr82, 12, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr82, $vgpr254, 12, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr82, $vgpr3, 12, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr83, 13, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr83, $vgpr254, 13, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr83, $vgpr3, 13, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr84, 14, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr84, $vgpr254, 14, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr84, $vgpr3, 14, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr85, 15, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr85, $vgpr254, 15, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr85, $vgpr3, 15, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr86, 16, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr86, $vgpr254, 16, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr86, $vgpr3, 16, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr87, 17, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr87, $vgpr254, 17, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr87, $vgpr3, 17, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr88, 18, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr88, $vgpr254, 18, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr88, $vgpr3, 18, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr89, 19, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr89, $vgpr254, 19, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr89, $vgpr3, 19, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr90, 20, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr90, $vgpr254, 20, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr90, $vgpr3, 20, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr91, 21, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr91, $vgpr254, 21, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr91, $vgpr3, 21, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr92, 22, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr92, $vgpr254, 22, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr92, $vgpr3, 22, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr93, 23, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr93, $vgpr254, 23, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr93, $vgpr3, 23, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr94, 24, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr94, $vgpr254, 24, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr94, $vgpr3, 24, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr95, 25, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr95, $vgpr254, 25, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr95, $vgpr3, 25, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr96, 26, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr96, $vgpr254, 26, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr96, $vgpr3, 26, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr97, 27, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr97, $vgpr254, 27, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr97, $vgpr3, 27, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr98, 28, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr98, $vgpr254, 28, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr98, $vgpr3, 28, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr99, 29, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr99, $vgpr254, 29, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr99, $vgpr3, 29, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr100, 30, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr100, $vgpr254, 30, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr100, $vgpr3, 30, 32
   ; GCN-NEXT:   $vgpr3 = SI_SPILL_S32_TO_VGPR $sgpr101, 31, $vgpr3
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr101, $vgpr254, 31, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr101, $vgpr3, 31, 32
   ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr102, 0, $vgpr4
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr102, $vgpr253, 0, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr102, $vgpr4, 0, 32
   ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr103, 1, $vgpr4
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr103, $vgpr253, 1, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $sgpr103, $vgpr4, 1, 32
   ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr30, 2, $vgpr4, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
   ; GCN-NEXT:   $vgpr4 = SI_SPILL_S32_TO_VGPR $sgpr31, 3, $vgpr4, implicit $sgpr30_sgpr31
-  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr253, 2, 32, $vgpr253, 3, 32
+  ; GCN-NEXT:   frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr4, 2, 32, $vgpr4, 3, 32
   ; GCN-NEXT:   $sgpr22 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr5 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr5 = SI_SPILL_S32_TO_VGPR $sgpr22, 0, killed $vgpr5

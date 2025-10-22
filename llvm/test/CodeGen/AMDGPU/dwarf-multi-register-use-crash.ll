@@ -493,36 +493,36 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 0
 ; CHECK-NEXT:    v_writelane_b32 v41, s34, 0
-; CHECK-NEXT:    .cfi_llvm_vector_registers 66, 2622, 0, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 66, 2601, 0, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s35, 1
-; CHECK-NEXT:    .cfi_llvm_vector_registers 67, 2622, 1, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 67, 2601, 1, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s36, 2
-; CHECK-NEXT:    .cfi_llvm_vector_registers 68, 2622, 2, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 68, 2601, 2, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s37, 3
-; CHECK-NEXT:    .cfi_llvm_vector_registers 69, 2622, 3, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 69, 2601, 3, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s38, 4
-; CHECK-NEXT:    .cfi_llvm_vector_registers 70, 2622, 4, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 70, 2601, 4, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s39, 5
-; CHECK-NEXT:    .cfi_llvm_vector_registers 71, 2622, 5, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 71, 2601, 5, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s48, 6
-; CHECK-NEXT:    .cfi_llvm_vector_registers 80, 2622, 6, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 80, 2601, 6, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s49, 7
-; CHECK-NEXT:    .cfi_llvm_vector_registers 81, 2622, 7, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 81, 2601, 7, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s50, 8
-; CHECK-NEXT:    .cfi_llvm_vector_registers 82, 2622, 8, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 82, 2601, 8, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s51, 9
-; CHECK-NEXT:    .cfi_llvm_vector_registers 83, 2622, 9, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 83, 2601, 9, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s52, 10
-; CHECK-NEXT:    .cfi_llvm_vector_registers 84, 2622, 10, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 84, 2601, 10, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s53, 11
-; CHECK-NEXT:    .cfi_llvm_vector_registers 85, 2622, 11, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 85, 2601, 11, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s54, 12
-; CHECK-NEXT:    .cfi_llvm_vector_registers 86, 2622, 12, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 86, 2601, 12, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s55, 13
-; CHECK-NEXT:    .cfi_llvm_vector_registers 87, 2622, 13, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 87, 2601, 13, 32
 ; CHECK-NEXT:    v_writelane_b32 v41, s30, 14
 ; CHECK-NEXT:    v_writelane_b32 v41, s31, 15
-; CHECK-NEXT:    .cfi_llvm_vector_registers 16, 2622, 14, 32, 2622, 15, 32
+; CHECK-NEXT:    .cfi_llvm_vector_registers 16, 2601, 14, 32, 2601, 15, 32
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    ;DEBUG_VALUE: dummy:dummy <- undef
 ; CHECK-NEXT:  .Ltmp0:
