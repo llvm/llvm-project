@@ -1438,6 +1438,7 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           BBFreqEnabled,
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
+          // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
           HasCalls,
           false};
