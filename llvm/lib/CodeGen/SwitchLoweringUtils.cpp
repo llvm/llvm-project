@@ -214,7 +214,7 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
     const APInt &High = Clusters[I].High->getValue();
     unsigned int NumCmp = (Low == High) ? 1 : 2;
     const BasicBlock *BB = Clusters[I].MBB->getBasicBlock();
-    DestMap[BB] = DestMap.count(BB) ? (DestMap[BB] + NumCmp) : NumCmp;
+    DestMap[BB] += NumCmp;
 
     if (I != First) {
       // Fill the gap between this and the previous cluster.

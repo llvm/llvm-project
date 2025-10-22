@@ -597,7 +597,7 @@ public:
       DenseMap<const BasicBlock *, unsigned int> DestMap;
       for (auto I : SI.cases()) {
         const BasicBlock *BB = I.getCaseSuccessor();
-        DestMap[BB] = DestMap.count(BB) ? (DestMap.count(BB) + 1) : 1;
+        ++DestMap[BB];
       }
 
       if (TLI->isSuitableForBitTests(DestMap, MinCaseVal, MaxCaseVal, DL))

@@ -1442,7 +1442,7 @@ public:
   /// case value comparisons. Check if the number of destinations, comparison
   /// metric, and range are all suitable.
   bool isSuitableForBitTests(
-      const DenseMap<const BasicBlock *, unsigned int> DestCmps,
+      const DenseMap<const BasicBlock *, unsigned int> &DestCmps,
       const APInt &Low, const APInt &High, const DataLayout &DL) const {
     // FIXME: I don't think NumCmps is the correct metric: a single case and a
     // range of cases both require only one branch to lower. Just looking at the
@@ -2078,7 +2078,7 @@ public:
   virtual bool isJumpTableRelative() const;
 
   /// Retuen the minimum of largest number of comparisons in BitTest.
-  virtual unsigned getMinimumBitTestCmps() const;
+  unsigned getMinimumBitTestCmps() const;
 
   /// If a physical register, this specifies the register that
   /// llvm.savestack/llvm.restorestack should save and restore.
