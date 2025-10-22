@@ -8,128 +8,132 @@
 # RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
 
 
-# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
+# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
+# CHECK-EMPTY:
 # CHECK-NEXT: Call graph section '.llvm.callgraph' contains 3 entries:
 # CHECK-EMPTY:
 # CHECK-NEXT:  Entry 0:
-# CHECK-NEXT:    Function:          0x2
-# CHECK-NEXT:    Indirect Target:   Yes
-# CHECK-NEXT:    Type ID:           0x0x0
+# CHECK-NEXT:    Offset:           0x2
+# CHECK-NEXT:    Indirect Target:  Yes
+# CHECK-NEXT:    Type ID:          0x0
 # CHECK-NEXT:    Direct Callees (1):
-# CHECK-NEXT:      0x13
+# CHECK-NEXT:       Offset:        0x13
 # CHECK-NEXT:    Indirect Callees by Type ID (0):
 # CHECK-EMPTY:
 # CHECK-NEXT:  Entry 1:
-# CHECK-NEXT:    Function:          0x1d
-# CHECK-NEXT:    Indirect Target:   Yes
-# CHECK-NEXT:    Type ID:           0x0x0
+# CHECK-NEXT:    Offset:           0x1d
+# CHECK-NEXT:    Indirect Target:  Yes
+# CHECK-NEXT:    Type ID:          0x0
 # CHECK-NEXT:    Direct Callees (0):
 # CHECK-NEXT:    Indirect Callees by Type ID (1):
-# CHECK-NEXT:      0x0x10
+# CHECK-NEXT:      0x10
 # CHECK-EMPTY:
 # CHECK-NEXT:  Entry 2:
-# CHECK-NEXT:    Function:          0x38
-# CHECK-NEXT:    Indirect Target:   Yes
-# CHECK-NEXT:    Type ID:           0x0x20
+# CHECK-NEXT:    Offset:           0x38
+# CHECK-NEXT:    Indirect Target:  Yes
+# CHECK-NEXT:    Type ID:          0x20
 # CHECK-NEXT:    Direct Callees (0):
 # CHECK-NEXT:    Indirect Callees by Type ID (0):
 
-# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
-# LLVM: callgraph_info [
+# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
+# LLVM-NEXT: callgraph_info [
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: foo
-# LLVM-NEXT:     Address: 0x0
+# LLVM-NEXT:     Offset: 0x2
 # LLVM-NEXT:     Version: 0
-# LLVM-NEXT:     KindStr: NOT_INDIRECT
-# LLVM-NEXT:     Kind: 0
-# LLVM-NEXT:     NumIndirectCallSites: 0
-# LLVM-NEXT:     NumDirectCallSites: 1
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0x0
+# LLVM-NEXT:     NumDirectCallees: 1
 # LLVM-NEXT:     DirectCallees [
 # LLVM-NEXT:       Entry {
-# LLVM-NEXT:         Address: 0x5
+# LLVM-NEXT:         Offset: 0x13
 # LLVM-NEXT:       }
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-NEXT:     IndirectTypeIDs [
 # LLVM-NEXT:     ]
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: bar
-# LLVM-NEXT:     Address: 0x6
+# LLVM-NEXT:     Offset: 0x1D
 # LLVM-NEXT:     Version: 0
-# LLVM-NEXT:     KindStr: UNKNOWN_TID
-# LLVM-NEXT:     Kind: 1
-# LLVM-NEXT:     NumIndirectCallSites: 1
-# LLVM-NEXT:     IndirectCallsites [
-# LLVM-NEXT:       IndirectCallsite {
-# LLVM-NEXT:         Address: 0x9
+# LLVM-NEXT:     IsIndirectTarget: Yes
+# LLVM-NEXT:     TypeId: 0x0
+# LLVM-NEXT:     NumDirectCallees: 0
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 1
+# LLVM-NEXT:     IndirectTypeIDs [
+# LLVM-NEXT:       Entry {
 # LLVM-NEXT:         TypeId: 0x10
 # LLVM-NEXT:       }
 # LLVM-NEXT:     ]
-# LLVM-NEXT:     NumDirectCallSites: 0
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
-# LLVM-NEXT:     Name: baz
-# LLVM-NEXT:     Address: 0xA
+# LLVM-NEXT:     Offset: 0x38
 # LLVM-NEXT:     Version: 0
-# LLVM-NEXT:     KindStr: KNOWN_TID
-# LLVM-NEXT:     Kind: 2
+# LLVM-NEXT:     IsIndirectTarget: Yes
 # LLVM-NEXT:     TypeId: 0x20
-# LLVM-NEXT:     NumIndirectCallSites: 0
-# LLVM-NEXT:     NumDirectCallSites: 0
+# LLVM-NEXT:     NumDirectCallees: 0
+# LLVM-NEXT:     DirectCallees [
+# LLVM-NEXT:     ]
+# LLVM-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-NEXT:     IndirectTypeIDs [
+# LLVM-NEXT:     ]
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
-# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 1 indirect targets.
+# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # JSON:     "callgraph_info": [
-# JSON-NEXT:       {
-# JSON-NEXT:         "Function": {
-# JSON-NEXT:           "Name": "foo",
-# JSON-NEXT:           "Address": 0,
-# JSON-NEXT:           "Version": 0,
-# JSON-NEXT:           "KindStr": "NOT_INDIRECT",
-# JSON-NEXT:           "Kind": 0,
-# JSON-NEXT:           "NumIndirectCallSites": 0,
-# JSON-NEXT:           "NumDirectCallSites": 1,
-# JSON-NEXT:           "DirectCallees": [
-# JSON-NEXT:             {
-# JSON-NEXT:               "Entry": {
-# JSON-NEXT:                 "Address": 5
-# JSON-NEXT:               }
-# JSON-NEXT:             }
-# JSON-NEXT:           ]
-# JSON-NEXT:         }
-# JSON-NEXT:       },
-# JSON-NEXT:       {
-# JSON-NEXT:         "Function": {
-# JSON-NEXT:           "Name": "bar",
-# JSON-NEXT:           "Address": 6,
-# JSON-NEXT:           "Version": 0,
-# JSON-NEXT:           "KindStr": "UNKNOWN_TID",
-# JSON-NEXT:           "Kind": 1,
-# JSON-NEXT:           "NumIndirectCallSites": 1,
-# JSON-NEXT:           "IndirectCallsites": [
-# JSON-NEXT:             {
-# JSON-NEXT:               "IndirectCallsite": {
-# JSON-NEXT:                 "Address": 9,
-# JSON-NEXT:                 "TypeId": 16
-# JSON-NEXT:               }
-# JSON-NEXT:             }
-# JSON-NEXT:           ],
-# JSON-NEXT:           "NumDirectCallSites": 0
-# JSON-NEXT:         }
-# JSON-NEXT:       },
-# JSON-NEXT:       {
-# JSON-NEXT:         "Function": {
-# JSON-NEXT:           "Name": "baz",
-# JSON-NEXT:           "Address": 10,
-# JSON-NEXT:           "Version": 0,
-# JSON-NEXT:           "KindStr": "KNOWN_TID",
-# JSON-NEXT:           "Kind": 2,
-# JSON-NEXT:           "TypeId": 32,
-# JSON-NEXT:           "NumIndirectCallSites": 0,
-# JSON-NEXT:           "NumDirectCallSites": 0
-# JSON-NEXT:         }
-# JSON-NEXT:       }
-# JSON-NEXT:     ]
-
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Offset": 2,
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 0,
+# JSON-NEXT:          "NumDirectCallees": 1,
+# JSON-NEXT:          "DirectCallees": [
+# JSON-NEXT:            {
+# JSON-NEXT:              "Entry": {
+# JSON-NEXT:                "Offset": 19
+# JSON-NEXT:              }
+# JSON-NEXT:            }
+# JSON-NEXT:          ],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NEXT:          "IndirectTypeIDs": []
+# JSON-NEXT:        }
+# JSON-NEXT:      },
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Offset": 29,
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 0,
+# JSON-NEXT:          "NumDirectCallees": 0,
+# JSON-NEXT:          "DirectCallees": [],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 1,
+# JSON-NEXT:          "IndirectTypeIDs": [
+# JSON-NEXT:            {
+# JSON-NEXT:              "Entry": {
+# JSON-NEXT:                "TypeId": 16
+# JSON-NEXT:              }
+# JSON-NEXT:            }
+# JSON-NEXT:          ]
+# JSON-NEXT:        }
+# JSON-NEXT:      },
+# JSON-NEXT:      {
+# JSON-NEXT:        "Function": {
+# JSON-NEXT:          "Offset": 56,
+# JSON-NEXT:          "Version": 0,
+# JSON-NEXT:          "IsIndirectTarget": true,
+# JSON-NEXT:          "TypeId": 32,
+# JSON-NEXT:          "NumDirectCallees": 0,
+# JSON-NEXT:          "DirectCallees": [],
+# JSON-NEXT:          "NumIndirectTargetTypeIDs": 0,
+# JSON-NEXT:          "IndirectTypeIDs": []
+# JSON-NEXT:        }
+# JSON-NEXT:      }
+# JSON-NEXT:    ]
+# JSON-NEXT:  }
+# JSON-NEXT:]
 
 .text
 

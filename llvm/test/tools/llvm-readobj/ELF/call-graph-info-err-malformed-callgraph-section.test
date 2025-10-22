@@ -1,4 +1,4 @@
-## Tests that --call-graph-info fails if .callgraph section has invalid size.
+## Tests that --call-graph-info fails if .llvm.callgraph section has invalid size.
 
 # REQUIRES: x86-registered-target
 
@@ -15,7 +15,7 @@
 _Z3foov:
  callq _Z3foov@PLT
 
-.section	.callgraph,"o",@progbits,.text
+.section	.llvm.callgraph,"o",@llvm_call_graph_section,.text
 # Each unit in .callgraph section must have 64bit size. Therefore, byte size
 # must be divisible by 64.
 .quad 0

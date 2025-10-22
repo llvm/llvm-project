@@ -1,5 +1,5 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section has unknown format
-## version number.
+## Tests that --call-graph-info fails if .llvm.callgraph section has invalid
+## function kind value.
 
 # REQUIRES: x86-registered-target
 
@@ -8,7 +8,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
 
-# ERR: {{.*}}llvm-readelf{{.*}}: error: 'Unknown value': Unknown format version value [1] in .llvm.callgraph section.
+# ERR: {{.*}}llvm-readelf{{.*}}: error: 'While reading call graph info's [number of direct callsites] for function at [0x0]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 .text
 .globl _Z3foov
@@ -17,5 +17,9 @@ _Z3foov:
  callq _Z3foov@PLT
 
 .section	.llvm.callgraph,"o",@llvm_call_graph_section,.text
-.quad	1  #< Invalid format version number: the only supported version is 0.
+.byte	0   #< Format version number.
+.byte	3   #< Flag IsIndirectTarget true and has direct calls
+.quad 0   #< Function entry address.
+.quad 0   #< TypeID: unknown. 
+# Missing direct callees info
 .text

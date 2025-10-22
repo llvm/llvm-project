@@ -467,6 +467,19 @@ protected:
 
 private:
   mutable SmallVector<std::optional<VersionEntry>, 0> VersionMap;
+
+protected:
+  std::string getFunctionNames(uint64_t FuncAddr) {
+    SmallVector<uint32_t> FuncSymIndexes =
+        this->getSymbolIndexesForFunctionAddress(FuncAddr, std::nullopt);
+    if (FuncSymIndexes.empty())
+      return "";
+
+    SmallVector<std::string> FuncSymNames;
+    for (uint32_t Index : FuncSymIndexes)
+      FuncSymNames.push_back(this->getStaticSymbolName(Index));
+    return join(FuncSymNames, ", ");
+  }
 };
 
 template <class ELFT>
@@ -5364,7 +5377,18 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (CGSectionErr)
       reportError(std::move(CGSectionErr),
                   "While reading call graph info's Flags");
-
+    switch (Flags) {
+    case 1:
+    case 3:
+    case 5:
+    case 7:
+      break;
+    default:
+      Error FlagsErr = createError(
+          "Unknown Flags. Expected one of [1, 3, 5, 7] but found [" +
+          std::to_string(Flags) + "]");
+      reportError(std::move(FlagsErr), "While reading call graph info's Flags");
+    }
     uint64_t FuncAddrOffset = Offset;
     typename ELFT::uint FuncAddr =
         Data.getUnsigned(&Offset, sizeof(FuncAddr), &CGSectionErr);
@@ -5476,53 +5500,60 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
   const Elf_Shdr *RelocSymTab = nullptr;
   this->getCallGraphRelocations(Relocations, RelocSymTab);
 
-  auto GetFunctionName = [&](uint64_t EntryPc) {
-    SmallVector<uint32_t> FuncSymIndexes =
-        this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
-    if (FuncSymIndexes.empty())
-      return std::string("");
-
-    SmallVector<std::string> FuncSymNames;
-    for (uint32_t Index : FuncSymIndexes)
-      FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return join(FuncSymNames, ", ");
+  auto PrintFunc = [](uint64_t FuncEntryPC, std::string FuncSymName,
+                      formatted_raw_ostream &OS) {
+    OS.PadToColumn(4);
+    OS << "Address:           ";
+    OS << to_string(format_hex(FuncEntryPC, 1));
+    if (!FuncSymName.empty())
+      OS << " <" << FuncSymName << ">";
+    OS << "\n";
   };
 
-  auto GetFunctionAddressAndName = [&](uint64_t FuncEntryPC) -> std::string {
-    std::string S;
-    raw_string_ostream Stream(S);
-    if (this->Obj.getHeader().e_type == ELF::ET_REL) {
-      auto Reloc = llvm::lower_bound(
-          Relocations, FuncEntryPC,
-          [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
-      if (Reloc == Relocations.end()) {
-        Stream << format("0x%lx", FuncEntryPC);
-        return Stream.str();
-      }
-      Expected<RelSymbol<ELFT>> RelSym =
-          this->getRelocationTarget(*Reloc, RelocSymTab);
-      if (!RelSym) {
-        this->reportUniqueWarning(RelSym.takeError());
-        Stream << format("0x%lx", FuncEntryPC);
-      } else {
+  auto PrintReloc =
+      [&](uint64_t FuncEntryPC,
+          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
+        OS.PadToColumn(4);
+        if (Reloc == Relocations.end()) {
+          OS << "Offset:";
+          OS.PadToColumn(22);
+          OS << to_string(format_hex(FuncEntryPC, 1));
+          OS << "\n";
+          return;
+        }
+        Expected<RelSymbol<ELFT>> RelSym =
+            this->getRelocationTarget(*Reloc, RelocSymTab);
+        if (!RelSym) {
+          this->reportUniqueWarning(RelSym.takeError());
+          OS << "Offset:";
+          OS.PadToColumn(22);
+          OS << to_string(format_hex(FuncEntryPC, 1));
+          OS << "\n";
+          return;
+        }
         SmallString<32> RelocName;
         this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
-        Stream << RelSym->Name;
+        OS << RelSym->Name;
         if (Reloc->Addend) {
           if (*Reloc->Addend >= 0)
-            Stream << " + " << *Reloc->Addend;
+            OS << " + " << *Reloc->Addend;
           else
-            Stream << " - " << -(*Reloc->Addend);
+            OS << " - " << -(*Reloc->Addend);
         }
-        Stream << " (" << RelocName << ")";
-      }
-    } else {
-      std::string FuncSymNames = GetFunctionName(FuncEntryPC);
-      Stream << "0x" << to_string(format_hex(FuncEntryPC, 1));
-      if (!FuncSymNames.empty())
-        Stream << " <" << FuncSymNames << ">";
+        OS << " (" << RelocName << ")";
+        OS << "\n";
+      };
+
+  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
+    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
+      std::string FuncSymName = this->getFunctionNames(FuncEntryPC);
+      PrintFunc(FuncEntryPC, FuncSymName, OS);
+      return;
     }
-    return Stream.str();
+    auto Reloc = llvm::lower_bound(
+        Relocations, FuncEntryPC,
+        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+    PrintReloc(FuncEntryPC, Reloc);
   };
 
   OS << "\nCall graph section '.llvm.callgraph' contains "
@@ -5530,23 +5561,27 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCallGraphInfo() {
 
   int EntryIndex = 0;
   for (const auto &CGInfo : this->FuncCGInfos) {
-    OS << "\n  Entry " << EntryIndex++ << ":\n";
-    OS << "    Function:          "
-       << GetFunctionAddressAndName(CGInfo.FunctionAddress) << "\n";
-    OS << "    Indirect Target:   " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
+    OS << "\n";
+    OS.PadToColumn(2);
+    OS << "Entry " << EntryIndex++ << ":\n";
+    PrintFunctionInfo(CGInfo.FunctionAddress);
+    OS.PadToColumn(4);
+    OS << "Indirect Target:  " << (CGInfo.IsIndirectTarget ? "Yes" : "No")
        << "\n";
-    OS << "    Type ID:           0x" << format_hex(CGInfo.FunctionTypeId, 1)
-       << "\n";
-
-    OS << "    Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
+    OS.PadToColumn(4);
+    OS << "Type ID:          " << format_hex(CGInfo.FunctionTypeId, 1) << "\n";
+    OS.PadToColumn(4);
+    OS << "Direct Callees (" << CGInfo.DirectCallees.size() << "):\n";
     for (auto CalleePC : CGInfo.DirectCallees) {
-      OS << "      " << GetFunctionAddressAndName(CalleePC) << "\n";
+      OS.PadToColumn(6);
+      PrintFunctionInfo(CalleePC);
     }
-
-    OS << "    Indirect Callees by Type ID (" << CGInfo.IndirectTypeIDs.size()
+    OS.PadToColumn(4);
+    OS << "Indirect Callees by Type ID (" << CGInfo.IndirectTypeIDs.size()
        << "):\n";
     for (auto TypeId : CGInfo.IndirectTypeIDs) {
-      OS << "      0x" << format_hex(TypeId, 1) << "\n";
+      OS.PadToColumn(6);
+      OS << format_hex(TypeId, 1) << "\n";
     }
   }
 }
@@ -8390,33 +8425,27 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   const Elf_Shdr *RelocSymTab = nullptr;
   this->getCallGraphRelocations(Relocations, RelocSymTab);
 
-  auto GetFunctionName = [&](uint64_t EntryPc) {
-    SmallVector<uint32_t> FuncSymIndexes =
-        this->getSymbolIndexesForFunctionAddress(EntryPc, std::nullopt);
-    if (FuncSymIndexes.empty())
-      return std::string("");
-
-    SmallVector<std::string> FuncSymNames;
-    for (uint32_t Index : FuncSymIndexes)
-      FuncSymNames.push_back(this->getStaticSymbolName(Index));
-    return join(FuncSymNames, ", ");
+  auto PrintFunc = [](uint64_t FuncEntryPC, std::string FuncSymName,
+                      ScopedPrinter &W) {
+    if (!FuncSymName.empty())
+      W.printString("Name", FuncSymName);
+    W.printHex("Address", FuncEntryPC);
   };
 
-  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
-    if (this->Obj.getHeader().e_type == ELF::ET_REL) {
-      auto Reloc = llvm::lower_bound(
-          Relocations, FuncEntryPC,
-          [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
-      if (Reloc == Relocations.end()) {
-        W.printHex("Address", FuncEntryPC);      
-        return;
-      }          
-      Expected<RelSymbol<ELFT>> RelSym =
-          this->getRelocationTarget(*Reloc, RelocSymTab);
-      if (!RelSym) {
-        this->reportUniqueWarning(RelSym.takeError());
-        W.printHex("Address", FuncEntryPC);
-      } else {
+  auto PrintReloc =
+      [&](uint64_t FuncEntryPC,
+          typename std::vector<Relocation<ELFT>>::iterator &Reloc) {
+        if (Reloc == Relocations.end()) {
+          W.printHex("Offset", FuncEntryPC);
+          return;
+        }
+        Expected<RelSymbol<ELFT>> RelSym =
+            this->getRelocationTarget(*Reloc, RelocSymTab);
+        if (!RelSym) {
+          this->reportUniqueWarning(RelSym.takeError());
+          W.printHex("Offset", FuncEntryPC);
+          return;
+        }
         DictScope DCs(W, "Entry");
         SmallString<32> RelocName;
         this->Obj.getRelocationTypeName(Reloc->Type, RelocName);
@@ -8424,17 +8453,21 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         W.printString("Symbol", RelSym->Name);
         if (Reloc->Addend)
           W.printHex("Addend", (uintX_t)*Reloc->Addend);
-      }
-    } else {
-      std::string FuncSymName = GetFunctionName(FuncEntryPC);
-      if (!FuncSymName.empty())
-        W.printString("Name", FuncSymName);
-      W.printHex("Address", FuncEntryPC);
+      };
+
+  auto PrintFunctionInfo = [&](uint64_t FuncEntryPC) {
+    if (this->Obj.getHeader().e_type != ELF::ET_REL) {
+      std::string FuncSymName = this->getFunctionNames(FuncEntryPC);
+      PrintFunc(FuncEntryPC, FuncSymName, W);
+      return;
     }
+    auto Reloc = llvm::lower_bound(
+        Relocations, FuncEntryPC,
+        [](const Relocation<ELFT> &R, uint64_t O) { return R.Offset < O; });
+    PrintReloc(FuncEntryPC, Reloc);
   };
 
   ListScope CGI(W, "callgraph_info");
-
   for (const auto &CGInfo : this->FuncCGInfos) {
     DictScope D(W, "Function");
     PrintFunctionInfo(CGInfo.FunctionAddress);
@@ -8442,14 +8475,15 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
     W.printHex("TypeId", CGInfo.FunctionTypeId);
     W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
-    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    if (CGInfo.DirectCallees.size() > 0) {
+    {
       ListScope DCs(W, "DirectCallees");
       for (auto CalleePC : CGInfo.DirectCallees) {
+        DictScope D(W, "Entry");
         PrintFunctionInfo(CalleePC);
       }
     }
-    if (CGInfo.IndirectTypeIDs.size() > 0) {
+    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
+    {
       ListScope ICSs(W, "IndirectTypeIDs");
       for (auto TypeId : CGInfo.IndirectTypeIDs) {
         DictScope ICS(W, "Entry");
