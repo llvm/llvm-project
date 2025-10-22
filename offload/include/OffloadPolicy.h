@@ -22,7 +22,6 @@ enum kmp_target_offload_kind_t {
   tgt_mandatory = 2
 };
 
-
 class OffloadPolicy {
 
   OffloadPolicy(PluginManager &PM) {
