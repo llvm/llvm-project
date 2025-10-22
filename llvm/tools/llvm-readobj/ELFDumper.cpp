@@ -5331,27 +5331,22 @@ getCallGraphSection(const object::ELFObjectFile<ELFT> &ObjF) {
 
 template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
   const Elf_Shdr *CGSection = findSectionByName(".llvm.callgraph");
-  if (!CGSection) {
-    Error NoSectionErr = createError("No .llvm.callgraph section found.");
-    reportError(std::move(NoSectionErr), "Missing section");
-  }
+  if (!CGSection)
+    reportError(createError("No .llvm.callgraph section found."),
+                "Missing section");
 
   Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
       Obj.getSectionContents(*CGSection);
   if (!SectionBytesOrErr) {
-    Error SectionReadErr = SectionBytesOrErr.takeError();
-    reportError(std::move(SectionReadErr),
+    reportError(SectionBytesOrErr.takeError(),
                 "Unable to read the .llvm.callgraph section");
   }
 
   auto PrintMalformedError = [&](Error &E, Twine FuncPC, StringRef Component) {
-    // auto Msg = llvm::Twine("Malformed callgraph section while reading [") +
-    // Component + llvm::Twine("] .\n");
-    std::string Msg =
-        (StringRef("While reading call graph info's [") + Component +
-         StringRef("] for function at [0x") + StringRef(FuncPC.str()) + "]")
-            .str();
-    reportError(std::move(E), StringRef(Msg));
+    reportError(std::move(E),
+                Twine("While reading call graph info's [" + Component +
+                      "] for function at [0x" + FuncPC + "]")
+                    .str());
   };
 
   DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
@@ -5367,10 +5362,10 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                   "While reading call graph info FormatVersionNumber");
 
     if (FormatVersionNumber != 0) {
-      Error FormatErr = createError("Unknown format version value [" +
-                                    std::to_string(FormatVersionNumber) +
-                                    "] in .llvm.callgraph section.");
-      reportError(std::move(FormatErr), "Unknown value");
+      reportError(createError("Unknown format version value [" +
+                              std::to_string(FormatVersionNumber) +
+                              "] in .llvm.callgraph section."),
+                  "Unknown value");
     }
 
     uint8_t Flags = Data.getU8(&Offset, &CGSectionErr);
@@ -5378,10 +5373,11 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
       reportError(std::move(CGSectionErr),
                   "While reading call graph info's Flags");
     if (Flags > 7) {
-      Error FlagsErr = createError(
-          "Unknown Flags. Expected a value in the range [0-7] but found [" +
-          std::to_string(Flags) + "]");
-      reportError(std::move(FlagsErr), "While reading call graph info's Flags");
+      reportError(
+          createError(
+              "Unknown Flags. Expected a value in the range [0-7] but found [" +
+              std::to_string(Flags) + "]"),
+          "While reading call graph info's Flags");
     }
     uint64_t FuncAddrOffset = Offset;
     typename ELFT::uint FuncAddr =
