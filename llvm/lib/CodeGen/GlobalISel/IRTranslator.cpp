@@ -139,7 +139,7 @@ class DILocationVerifier : public GISelChangeObserver {
 
 public:
   DILocationVerifier() = default;
-  ~DILocationVerifier() = default;
+  ~DILocationVerifier() override = default;
 
   const Instruction *getCurrentInst() const { return CurrInst; }
   void setCurrentInst(const Instruction *Inst) { CurrInst = Inst; }
