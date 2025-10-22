@@ -734,6 +734,12 @@ public:
 
   void assign(const SmallVectorImpl &RHS) { assign(RHS.begin(), RHS.end()); }
 
+  template <typename U,
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+  void assign(ArrayRef<U> AR) {
+    assign(AR.begin(), AR.end());
+  }
+
   iterator erase(const_iterator CI) {
     // Just cast away constness because this is a non-const member function.
     iterator I = const_cast<iterator>(CI);
@@ -1228,7 +1234,7 @@ public:
   }
 
   template <typename U,
-            typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+            typename = std::enable_if_t<std::is_convertible_v<U, T>>>
   explicit SmallVector(ArrayRef<U> A) : SmallVectorImpl<T>(N) {
     this->append(A.begin(), A.end());
   }
