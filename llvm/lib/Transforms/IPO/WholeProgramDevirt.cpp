@@ -24,7 +24,8 @@
 //   returns 0, or a single vtable's function returns 1, replace each virtual
 //   call with a comparison of the vptr against that vtable's address.
 //
-// This pass is intended to be used during the regular and thin LTO pipelines:
+// This pass is intended to be used during the regular/thin and non-LTO
+// pipelines:
 //
 // During regular LTO, the pass determines the best optimization for each
 // virtual call and applies the resolutions directly to virtual calls that are
@@ -48,6 +49,14 @@
 //   is supported.
 // - Import phase: (same as with hybrid case above).
 //
+// During Speculative devirtualization mode -not restricted to LTO-:
+// - The pass applies speculative devirtualization without requiring any type of
+//   visibility.
+// - Skips other features like virtual constant propagation, uniform return
+//   value optimization, unique return value optimization and branch funnels as
+//   they need LTO.
+// - This mode is enabled via 'devirtualize-speculatively' flag.
+//
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -61,7 +70,9 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -144,6 +155,13 @@ static cl::opt<std::string> ClWriteSummary(
              "Output file format is deduced from extension: *.bc means writing "
              "bitcode, otherwise YAML"),
     cl::Hidden);
+
+// TODO: This option eventually should support any public visibility vtables
+// with/out LTO.
+static cl::opt<bool> ClDevirtualizeSpeculatively(
+    "devirtualize-speculatively",
+    cl::desc("Enable speculative devirtualization optimization"),
+    cl::init(false));
 
 static cl::opt<unsigned>
     ClThreshold("wholeprogramdevirt-branch-funnel-threshold", cl::Hidden,
@@ -892,6 +910,8 @@ void llvm::updatePublicTypeTestCalls(Module &M,
       CI->eraseFromParent();
     }
   } else {
+    // TODO: Don't replace public type tests when speculative devirtualization
+    // gets enabled in LTO mode.
     auto *True = ConstantInt::getTrue(M.getContext());
     for (Use &U : make_early_inc_range(PublicTypeTestFunc->uses())) {
       auto *CI = cast<CallInst>(U.getUser());
@@ -1083,10 +1103,10 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // We cannot perform whole program devirtualization analysis on a vtable
-    // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
+    // Without ClDevirtualizeSpeculatively, we cannot perform whole program
+    // devirtualization analysis on a vtable with public LTO visibility.
+    if (!ClDevirtualizeSpeculatively && TM.Bits->GV->getVCallVisibility() ==
+                                            GlobalObject::VCallVisibilityPublic)
       return false;
 
     Function *Fn = nullptr;
@@ -1103,6 +1123,12 @@ bool DevirtModule::tryFindVirtualCallTargets(
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
     if (Fn->getName() == "__cxa_pure_virtual")
+      continue;
+
+    // In most cases empty functions will be overridden by the
+    // implementation of the derived class, so we can skip them.
+    if (ClDevirtualizeSpeculatively && Fn->getReturnType()->isVoidTy() &&
+        Fn->getInstructionCount() <= 1)
       continue;
 
     // We can disregard unreachable functions as possible call targets, as
@@ -1223,10 +1249,12 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
 
-      // If fallback checking is enabled, add support to compare the virtual
-      // function pointer to the devirtualized target. In case of a mismatch,
-      // fall back to indirect call.
-      if (DevirtCheckMode == WPDCheckMode::Fallback) {
+      // If fallback checking or speculative devirtualization are enabled,
+      // add support to compare the virtual function pointer to the
+      // devirtualized target. In case of a mismatch, fall back to indirect
+      // call.
+      if (DevirtCheckMode == WPDCheckMode::Fallback ||
+          ClDevirtualizeSpeculatively) {
         MDNode *Weights = MDBuilder(M.getContext()).createLikelyBranchWeights();
         // Version the indirect call site. If the called value is equal to the
         // given callee, 'NewInst' will be executed, otherwise the original call
@@ -2057,15 +2085,15 @@ void DevirtModule::scanTypeTestUsers(
     Function *TypeTestFunc,
     DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
   // Find all virtual calls via a virtual table pointer %p under an assumption
-  // of the form llvm.assume(llvm.type.test(%p, %md)). This indicates that %p
-  // points to a member of the type identifier %md. Group calls by (type ID,
-  // offset) pair (effectively the identity of the virtual function) and store
-  // to CallSlots.
+  // of the form llvm.assume(llvm.type.test(%p, %md)) or
+  // llvm.assume(llvm.public.type.test(%p, %md)).
+  // This indicates that %p points to a member of the type identifier %md.
+  // Group calls by (type ID, offset) pair (effectively the identity of the
+  // virtual function) and store to CallSlots.
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc->uses())) {
     auto *CI = dyn_cast<CallInst>(U.getUser());
     if (!CI)
       continue;
-
     // Search for virtual calls based on %p and add them to DevirtCalls.
     SmallVector<DevirtCallSite, 1> DevirtCalls;
     SmallVector<CallInst *, 1> Assumes;
@@ -2348,6 +2376,12 @@ bool DevirtModule::run() {
       (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
     return false;
 
+  Function *PublicTypeTestFunc = nullptr;
+  // If we are in speculative devirtualization mode, we can work on the public
+  // type test intrinsics.
+  if (ClDevirtualizeSpeculatively)
+    PublicTypeTestFunc =
+        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
   Function *TypeCheckedLoadFunc =
@@ -2361,8 +2395,9 @@ bool DevirtModule::run() {
   // module, this pass has nothing to do. But if we are exporting, we also need
   // to handle any users that appear only in the function summaries.
   if (!ExportSummary &&
-      (!TypeTestFunc || TypeTestFunc->use_empty() || !AssumeFunc ||
-       AssumeFunc->use_empty()) &&
+      (((!PublicTypeTestFunc || PublicTypeTestFunc->use_empty()) &&
+        (!TypeTestFunc || TypeTestFunc->use_empty())) ||
+       !AssumeFunc || AssumeFunc->use_empty()) &&
       (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()) &&
       (!TypeCheckedLoadRelativeFunc ||
        TypeCheckedLoadRelativeFunc->use_empty()))
@@ -2372,6 +2407,9 @@ bool DevirtModule::run() {
   std::vector<VTableBits> Bits;
   DenseMap<Metadata *, std::set<TypeMemberInfo>> TypeIdMap;
   buildTypeIdentifierMap(Bits, TypeIdMap);
+
+  if (PublicTypeTestFunc && AssumeFunc)
+    scanTypeTestUsers(PublicTypeTestFunc, TypeIdMap);
 
   if (TypeTestFunc && AssumeFunc)
     scanTypeTestUsers(TypeTestFunc, TypeIdMap);
@@ -2472,8 +2510,12 @@ bool DevirtModule::run() {
                  .WPDRes[S.first.ByteOffset];
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary)) {
-
-      if (!trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res)) {
+      bool SingleImplDevirt =
+          trySingleImplDevirt(ExportSummary, TargetsForSlot, S.second, Res);
+      // Out of speculative devirtualization mode, Try to apply virtual constant
+      // propagation or branch funneling.
+      // TODO: This should eventually be enabled for non-public type tests.
+      if (!SingleImplDevirt && !ClDevirtualizeSpeculatively) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
