@@ -834,6 +834,7 @@ struct BBAddrMap {
     bool OmitBBEntries : 1;
     bool CallsiteEndOffsets : 1;
     bool BBHash : 1;
+    bool PropellerCfg : 1;
 
     bool hasPGOAnalysis() const { return FuncEntryCount || BBFreq || BrProb; }
 
@@ -847,7 +848,8 @@ struct BBAddrMap {
              (static_cast<uint8_t>(MultiBBRange) << 3) |
              (static_cast<uint8_t>(OmitBBEntries) << 4) |
              (static_cast<uint8_t>(CallsiteEndOffsets) << 5) |
-             (static_cast<uint8_t>(BBHash) << 6);
+             (static_cast<uint8_t>(BBHash) << 6) |
+             (static_cast<uint8_t>(PropellerCfg) << 7);
     }
 
     // Decodes from minimum bit width representation and validates no
@@ -857,7 +859,7 @@ struct BBAddrMap {
           static_cast<bool>(Val & (1 << 0)), static_cast<bool>(Val & (1 << 1)),
           static_cast<bool>(Val & (1 << 2)), static_cast<bool>(Val & (1 << 3)),
           static_cast<bool>(Val & (1 << 4)), static_cast<bool>(Val & (1 << 5)),
-          static_cast<bool>(Val & (1 << 6))};
+          static_cast<bool>(Val & (1 << 6)), static_cast<bool>(Val & (1 << 7))};
       if (Feat.encode() != Val)
         return createStringError(
             std::error_code(), "invalid encoding for BBAddrMap::Features: 0x%x",
@@ -867,10 +869,12 @@ struct BBAddrMap {
 
     bool operator==(const Features &Other) const {
       return std::tie(FuncEntryCount, BBFreq, BrProb, MultiBBRange,
-                      OmitBBEntries, CallsiteEndOffsets, BBHash) ==
+                      OmitBBEntries, CallsiteEndOffsets, BBHash,
+                      PropellerCfg) ==
              std::tie(Other.FuncEntryCount, Other.BBFreq, Other.BrProb,
                       Other.MultiBBRange, Other.OmitBBEntries,
-                      Other.CallsiteEndOffsets, Other.BBHash);
+                      Other.CallsiteEndOffsets, Other.BBHash,
+                      Other.PropellerCfg);
     }
   };
 
@@ -1013,20 +1017,25 @@ struct PGOAnalysisMap {
       uint32_t ID;
       /// Branch Probability of the edge to this successor taken from MBPI.
       BranchProbability Prob;
+      /// Edge frequency from Propeller.
+      uint32_t PropellerFreq;
 
       bool operator==(const SuccessorEntry &Other) const {
-        return std::tie(ID, Prob) == std::tie(Other.ID, Other.Prob);
+        return std::tie(ID, Prob, PropellerFreq) ==
+               std::tie(Other.ID, Other.Prob, Other.PropellerFreq);
       }
     };
 
     /// Block frequency taken from MBFI
     BlockFrequency BlockFreq;
+    /// Block frequency taken from Propeller.
+    uint32_t PropellerBlockFreq;
     /// List of successors of the current block
     llvm::SmallVector<SuccessorEntry, 2> Successors;
 
     bool operator==(const PGOBBEntry &Other) const {
-      return std::tie(BlockFreq, Successors) ==
-             std::tie(Other.BlockFreq, Other.Successors);
+      return std::tie(BlockFreq, PropellerBlockFreq, Successors) ==
+             std::tie(Other.BlockFreq, PropellerBlockFreq, Other.Successors);
     }
   };
 
