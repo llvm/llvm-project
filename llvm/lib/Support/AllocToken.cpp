@@ -11,10 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/AllocToken.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
 
 using namespace llvm;
+
+std::optional<AllocTokenMode>
+llvm::getAllocTokenModeFromString(StringRef Name) {
+  return StringSwitch<std::optional<AllocTokenMode>>(Name)
+      .Case("increment", AllocTokenMode::Increment)
+      .Case("random", AllocTokenMode::Random)
+      .Case("typehash", AllocTokenMode::TypeHash)
+      .Case("typehashpointersplit", AllocTokenMode::TypeHashPointerSplit)
+      .Default(std::nullopt);
+}
 
 static uint64_t getStableHash(const AllocTokenMetadata &Metadata,
                               uint64_t MaxTokens) {

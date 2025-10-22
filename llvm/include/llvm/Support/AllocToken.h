@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_ALLOCTOKEN_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <optional>
 
@@ -35,6 +36,15 @@ enum class AllocTokenMode {
   /// that do not contain pointers.
   TypeHashPointerSplit,
 };
+
+/// The default allocation token mode.
+inline constexpr AllocTokenMode DefaultAllocTokenMode =
+    AllocTokenMode::TypeHashPointerSplit;
+
+/// Returns the AllocTokenMode from its canonical string name; if an invalid
+/// name was provided returns nullopt.
+LLVM_ABI std::optional<AllocTokenMode>
+getAllocTokenModeFromString(StringRef Name);
 
 /// Metadata about an allocation used to generate a token ID.
 struct AllocTokenMetadata {
