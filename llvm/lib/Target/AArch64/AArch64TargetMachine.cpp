@@ -251,6 +251,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64DeadRegisterDefinitionsPass(PR);
   initializeAArch64ExpandPseudoPass(PR);
   initializeAArch64LoadStoreOptPass(PR);
+  initializeAArch64StackSlotReorderingPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
   initializeAArch64SIMDInstrOptPass(PR);
   initializeAArch64O0PreLegalizerCombinerPass(PR);
@@ -821,6 +822,10 @@ void AArch64PassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createAArch64RedundantCopyEliminationPass());
+
+  // Reorder stack slots to enable more load/store pairs
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createAArch64StackSlotReorderingPass());
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && usingDefaultRegAlloc())
     // Improve performance for some FP/SIMD code for A57.

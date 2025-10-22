@@ -4812,6 +4812,8 @@ bool AArch64InstrInfo::isFpOrNEON(const MachineInstr &MI) {
     if (!Op.isReg())
       return false;
     auto Reg = Op.getReg();
+    if (!Reg.isValid())
+      return false;
     if (Reg.isPhysical())
       return isFpOrNEON(Reg);
 

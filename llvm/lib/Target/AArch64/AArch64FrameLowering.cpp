@@ -3577,16 +3577,118 @@ void AArch64FrameLowering::orderFrameObjects(
     return;
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Skip reordering if the function uses GC/statepoints, as they require
+  // precise stack slot locations that are recorded in stackmaps
+  if (MF.getFunction().hasGC())
+    return;
+
+  // Also skip if any objects are statepoint spill slots
+  for (int FI : ObjectsToAllocate) {
+    if (MFI.isStatepointSpillSlotObjectIndex(FI))
+      return;
+  }
+
   std::vector<FrameObject> FrameObjects(MFI.getObjectIndexEnd());
   for (auto &Obj : ObjectsToAllocate) {
     FrameObjects[Obj].IsValid = true;
     FrameObjects[Obj].ObjectIndex = Obj;
   }
 
+  // Track which frame indices are accessed close together for potential pairing
+  // Conservative approach: only consider accesses within the same basic block
+  DenseMap<std::pair<int, int>, uint64_t> PairScores;
+
+  // Track register types for proper pairing (FPR with FPR, GPR with GPR)
+  DenseMap<int, unsigned> FrameIndexRegType; // Maps FrameIndex to AccessFPR/AccessGPR
+
+  // Track original allocation order - respect temporal locality from register allocator
+  DenseMap<int, int> OriginalOrder;
+  for (int i = 0; i < (int)ObjectsToAllocate.size(); ++i) {
+    OriginalOrder[ObjectsToAllocate[i]] = i;
+  }
+
   // Identify FPR vs GPR slots for hazards, and stack slots that are tagged at
   // the same time.
   GroupBuilder GB(FrameObjects);
+
+  // Analyze each basic block independently to avoid false proximity
   for (auto &MBB : MF) {
+    // Reset tracking for each basic block - only pair within same BB
+    SmallVector<std::pair<int, unsigned>, 32> BBFrameAccesses;
+    unsigned BBAccessOrder = 0;
+
+    for (auto &MI : MBB) {
+      if (MI.isDebugInstr())
+        continue;
+
+      // Track frame index accesses in this BB
+      SmallVector<int, 2> CurrentFrameIndices;
+      bool IsFPRAccess = AArch64InstrInfo::isFpOrNEON(MI);
+
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isFI()) {
+          int FI = MO.getIndex();
+          if (FI >= 0 && FI < (int)FrameObjects.size() && FrameObjects[FI].IsValid) {
+            CurrentFrameIndices.push_back(FI);
+            BBFrameAccesses.push_back({FI, BBAccessOrder});
+
+            // Track register type for this frame index
+            unsigned RegType = IsFPRAccess ? FrameObject::AccessFPR : FrameObject::AccessGPR;
+            auto It = FrameIndexRegType.find(FI);
+            if (It != FrameIndexRegType.end()) {
+              // Mix of FPR and GPR accesses - mark as GPR (conservative)
+              if (It->second != RegType)
+                It->second = FrameObject::AccessGPR;
+            } else {
+              FrameIndexRegType[FI] = RegType;
+            }
+          }
+        }
+      }
+
+      BBAccessOrder++;
+    }
+
+    // Score pairs only within this basic block
+    const unsigned ProximityThreshold = 10;
+    for (size_t i = 0; i < BBFrameAccesses.size(); ++i) {
+      for (size_t j = i + 1; j < BBFrameAccesses.size(); ++j) {
+        auto &Access1 = BBFrameAccesses[i];
+        auto &Access2 = BBFrameAccesses[j];
+
+        // Check proximity within the BB
+        int Distance = std::abs((int)Access1.second - (int)Access2.second);
+        if (Distance > (int)ProximityThreshold)
+          continue;
+
+        int FI1 = Access1.first;
+        int FI2 = Access2.first;
+
+        // Check if they have compatible sizes for pairing
+        unsigned Size1 = MFI.getObjectSize(FI1);
+        unsigned Size2 = MFI.getObjectSize(FI2);
+        if (Size1 == Size2 && (Size1 == 8 || Size1 == 4 || Size1 == 16)) {
+          // Check if they have the same register type
+          unsigned Type1 = FrameIndexRegType.lookup(FI1);
+          unsigned Type2 = FrameIndexRegType.lookup(FI2);
+          if (Type1 == Type2) {
+            // Compatible for load/store pairs
+            int Min = std::min(FI1, FI2);
+            int Max = std::max(FI1, FI2);
+
+            // Score based on proximity within BB (closer = better)
+            uint64_t Score = ProximityThreshold - Distance;
+
+            // Weight by basic block frequency if available
+            // For now, just use a base score since frequency info might not be available
+            PairScores[{Min, Max}] += Score;
+          }
+        }
+      }
+    }
+
+    // Handle stack hazard analysis and tag store grouping
     for (auto &MI : MBB) {
       if (MI.isDebugInstr())
         continue;
@@ -3663,6 +3765,69 @@ void AArch64FrameLowering::orderFrameObjects(
       for (FrameObject &Object : FrameObjects)
         if (Object.GroupIndex == FirstGroupIndex)
           Object.GroupFirst = true;
+  }
+
+  // Boost scores for originally-adjacent slots - respect register allocator's temporal locality
+  for (auto &Entry : PairScores) {
+    int FI1 = Entry.first.first;
+    int FI2 = Entry.first.second;
+
+    if (OriginalOrder.count(FI1) && OriginalOrder.count(FI2)) {
+      int Order1 = OriginalOrder[FI1];
+      int Order2 = OriginalOrder[FI2];
+
+      // Originally adjacent slots likely were spilled together for a reason
+      if (std::abs(Order1 - Order2) == 1) {
+        PairScores[Entry.first] *= 3;  // Triple the score for original neighbors
+      }
+    }
+  }
+
+  // Create groups for frame indices that should be paired for ldp/stp
+  // Sort pairs by score to prioritize high-scoring pairs
+  SmallVector<std::pair<std::pair<int, int>, uint64_t>, 32> SortedPairs;
+  for (const auto &Entry : PairScores) {
+    SortedPairs.push_back({Entry.first, Entry.second});
+  }
+  llvm::sort(SortedPairs, [](const auto &A, const auto &B) {
+    return A.second > B.second;
+  });
+
+  // Conservative threshold - only pair with strong evidence
+  const uint64_t MinPairScore = 15;  // Require reasonable evidence for pairing
+
+  // Assign groups based on pairing scores
+  int NextPairGroup = 100; // Start at 100 to avoid conflicts with existing groups
+  for (const auto &Pair : SortedPairs) {
+    int FI1 = Pair.first.first;
+    int FI2 = Pair.first.second;
+    uint64_t Score = Pair.second;
+
+    // Skip weak pairings - be conservative
+    if (Score < MinPairScore)
+      continue;
+
+    // Only group if both don't have groups yet
+    if (FrameObjects[FI1].GroupIndex < 0 && FrameObjects[FI2].GroupIndex < 0) {
+      FrameObjects[FI1].GroupIndex = NextPairGroup;
+      FrameObjects[FI2].GroupIndex = NextPairGroup;
+
+      // Set the Accesses field based on our tracked register types
+      unsigned RegType = FrameIndexRegType.lookup(FI1);
+      if (RegType == FrameObject::AccessFPR) {
+        FrameObjects[FI1].Accesses = FrameObject::AccessFPR;
+        FrameObjects[FI2].Accesses = FrameObject::AccessFPR;
+      } else {
+        FrameObjects[FI1].Accesses = FrameObject::AccessGPR;
+        FrameObjects[FI2].Accesses = FrameObject::AccessGPR;
+      }
+
+      NextPairGroup++;
+
+      LLVM_DEBUG(dbgs() << "Paired frame indices " << FI1 << " and " << FI2
+                        << " (score: " << Pair.second << ") in group "
+                        << (NextPairGroup - 1) << "\n");
+    }
   }
 
   llvm::stable_sort(FrameObjects, FrameObjectCompare);
