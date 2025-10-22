@@ -2323,6 +2323,32 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   return ConstantVector::get(NewVecC);
 }
 
+// Match a vector.insert where both the destination and subvector are constant.
+static bool matchConstantSubVector(Value *V, Constant *&Dest,
+                                   Constant *&SubVector, Value *&Idx) {
+  return match(V, m_Intrinsic<Intrinsic::vector_insert>(
+                      m_Constant(Dest), m_Constant(SubVector), m_Value(Idx)));
+}
+
+static Constant *matchConstantSplat(Value *V) {
+  Constant *C;
+  if (match(V, m_Constant(C)))
+    return C->getSplatValue();
+  return nullptr;
+}
+
+// Get the result of `Vector Op Splat` (or Splat Op Vector if \p SplatLHS).
+static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
+                                            Constant *Splat, bool SplatLHS,
+                                            const DataLayout &DL) {
+  ElementCount EC = cast<VectorType>(Vector->getType())->getElementCount();
+  Constant *LHS = ConstantVector::getSplat(EC, Splat);
+  Constant *RHS = Vector;
+  if (!SplatLHS)
+    std::swap(LHS, RHS);
+  return ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2333,6 +2359,36 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
          cast<VectorType>(Inst.getType())->getElementCount());
   assert(cast<VectorType>(RHS->getType())->getElementCount() ==
          cast<VectorType>(Inst.getType())->getElementCount());
+
+  auto foldConstantsThroughSubVectorInsert =
+      [&](Constant *Dest, Value *DestIdx, Type *SubVecType, Constant *SubVector,
+          Constant *Splat, bool SplatLHS) -> Instruction * {
+    SubVector =
+        constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL);
+    Dest = constantFoldBinOpWithSplat(Opcode, Dest, Splat, SplatLHS, DL);
+    if (!SubVector || !Dest)
+      return nullptr;
+    auto *InsertVector =
+        Builder.CreateInsertVector(Dest->getType(), Dest, SubVector, DestIdx);
+    InsertVector->removeFromParent();
+    return InsertVector;
+  };
+
+  // If one operand is a constant splat and the other operand is a
+  // `vector.insert` where both the destination and subvector are constant,
+  // apply the operation to both the destination and subvector, returning a new
+  // constant `vector.insert`. This helps constant folding for scalable vectors.
+  for (bool SwapOperands : {false, true}) {
+    Value *Idx, *MaybeSubVector = LHS, *MaybeSplat = RHS;
+    if (SwapOperands)
+      std::swap(MaybeSplat, MaybeSubVector);
+    Constant *SubVector, *Dest, *Splat;
+    if (matchConstantSubVector(MaybeSubVector, Dest, SubVector, Idx) &&
+        (Splat = matchConstantSplat(MaybeSplat)))
+      return foldConstantsThroughSubVectorInsert(
+          Dest, Idx, SubVector->getType(), SubVector, Splat,
+          /*SplatLHS=*/SwapOperands);
+  }
 
   // If both operands of the binop are vector concatenations, then perform the
   // narrow binop on each pair of the source operands followed by concatenation

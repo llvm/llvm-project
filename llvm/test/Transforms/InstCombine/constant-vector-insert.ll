@@ -4,8 +4,7 @@
 define <vscale x 4 x i32> @insert_div() {
 ; CHECK-LABEL: @insert_div(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 9), i64 0)
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[TMP0]], splat (i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 3), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
 entry:
@@ -17,8 +16,7 @@ entry:
 define <vscale x 4 x i32> @insert_div_splat_lhs() {
 ; CHECK-LABEL: @insert_div_splat_lhs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 9), i64 0)
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> splat (i32 3), [[TMP0]]
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> zeroinitializer, i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
 entry:
@@ -30,8 +28,7 @@ entry:
 define <vscale x 4 x i32> @insert_div_mixed_splat() {
 ; CHECK-LABEL: @insert_div_mixed_splat(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat (i32 18), <4 x i32> splat (i32 9), i64 0)
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[TMP0]], splat (i32 3)
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat (i32 6), <4 x i32> splat (i32 3), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
 entry:
@@ -43,8 +40,7 @@ entry:
 define <vscale x 4 x i32> @insert_mul() {
 ; CHECK-LABEL: @insert_mul(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 1), i64 4)
-; CHECK-NEXT:    [[MUL:%.*]] = mul <vscale x 4 x i32> [[TMP0]], splat (i32 7)
+; CHECK-NEXT:    [[MUL:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 7), i64 4)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[MUL]]
 ;
 entry:
@@ -56,8 +52,7 @@ entry:
 define <vscale x 4 x i32> @insert_add() {
 ; CHECK-LABEL: @insert_add(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 5), i64 0)
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[TMP0]], splat (i32 11)
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 16), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
 entry:
@@ -69,8 +64,7 @@ entry:
 define <vscale x 8 x i32> @insert_add_scalable_subvector() {
 ; CHECK-LABEL: @insert_add_scalable_subvector(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> splat (i32 16), <vscale x 4 x i32> splat (i32 -8), i64 0)
-; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 8 x i32> [[TMP0]], splat (i32 4)
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> splat (i32 20), <vscale x 4 x i32> splat (i32 -4), i64 0)
 ; CHECK-NEXT:    ret <vscale x 8 x i32> [[ADD]]
 ;
 entry:
@@ -82,8 +76,7 @@ entry:
 define <vscale x 4 x i32> @insert_sub() {
 ; CHECK-LABEL: @insert_sub(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 11), i64 8)
-; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 4 x i32> [[TMP0]], splat (i32 -11)
+; CHECK-NEXT:    [[SUB:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> zeroinitializer, i64 8)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[SUB]]
 ;
 entry:
@@ -95,8 +88,7 @@ entry:
 define <vscale x 4 x i32> @insert_and_partially_undef() {
 ; CHECK-LABEL: @insert_and_partially_undef(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> splat (i32 6), i64 0)
-; CHECK-NEXT:    [[AND:%.*]] = and <vscale x 4 x i32> [[TMP0]], splat (i32 4)
+; CHECK-NEXT:    [[AND:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> zeroinitializer, <4 x i32> splat (i32 4), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[AND]]
 ;
 entry:
@@ -108,9 +100,7 @@ entry:
 define <vscale x 4 x i32> @insert_fold_chain() {
 ; CHECK-LABEL: @insert_fold_chain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat (i32 21), <4 x i32> splat (i32 12), i64 0)
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <vscale x 4 x i32> [[TMP0]], splat (i32 3)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <vscale x 4 x i32> [[DIV]], splat (i32 4)
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat (i32 11), <4 x i32> splat (i32 8), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
 entry:
