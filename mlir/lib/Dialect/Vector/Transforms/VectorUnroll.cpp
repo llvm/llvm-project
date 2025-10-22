@@ -122,8 +122,27 @@ getTargetShape(const vector::UnrollVectorOptions &options, Operation *op) {
     return std::nullopt;
   }
   if (llvm::all_of(*maybeShapeRatio, [](int64_t v) { return v == 1; })) {
-    LDBG() << "--no unrolling needed -> SKIP";
-    return std::nullopt;
+    // If maybeShapeRatio are all 1s, only allow unrolling for leading unit
+    // dimension removal: [1,1,...,n] -> [n]
+    if (maybeUnrollShape->size() <= targetShape->size()) {
+      LDBG() << "--no dimension reduction -> SKIP";
+      return std::nullopt;
+    }
+
+    size_t dimDiff = maybeUnrollShape->size() - targetShape->size();
+    ArrayRef<int64_t> srcShape = *maybeUnrollShape;
+    ArrayRef<int64_t> tgtShape = *targetShape;
+
+    // Check leading dimensions are 1s and remaining matches target
+    bool isValidRemoval = llvm::all_of(srcShape.slice(0, dimDiff),
+                                       [](int64_t dim) { return dim == 1; }) &&
+                          srcShape.slice(dimDiff) == tgtShape;
+
+    if (!isValidRemoval) {
+      LDBG() << "--not a valid leading unit dimension removal -> SKIP";
+      return std::nullopt;
+    }
+    LDBG() << "--leading unit dimension removal -> CONTINUE";
   }
   LDBG() << "--found an integral shape ratio to unroll to -> SUCCESS";
   return targetShape;

@@ -496,3 +496,18 @@ func.func @elementwise_4D_to_2D(%v1: vector<2x2x2x2xf32>, %v2: vector<2x2x2x2xf3
 // CHECK-COUNT-4:   arith.addf %{{.*}}, %{{.*}} : vector<2x2xf32>
 // CHECK-NOT: arith.addf
 // CHECK: return
+
+
+func.func @elementwise_leading_unit_dim(%v1: vector<1x2x2xf32>, %v2: vector<1x2x2xf32>) -> vector<1x2x2xf32> {
+  %0 = arith.addf %v1, %v2 : vector<1x2x2xf32>
+  return %0 : vector<1x2x2xf32>
+}
+
+// CHECK-LABEL: func @elementwise_leading_unit_dim
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<1x2x2xf32>, %[[ARG1:.*]]: vector<1x2x2xf32>) -> vector<1x2x2xf32> {
+//       CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x2x2xf32>
+//       CHECK:   %[[S_LHS:.*]] = vector.shape_cast %[[ARG0]] : vector<1x2x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[S_RHS:.*]] = vector.shape_cast %[[ARG1]] : vector<1x2x2xf32> to vector<2x2xf32>
+//       CHECK:   %[[ADD:.*]] = arith.addf %[[S_LHS]], %[[S_RHS]] : vector<2x2xf32>
+//       CHECK:   %[[INS:.*]] = vector.insert_strided_slice %[[ADD]], %[[CST]] {offsets = [0, 0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<1x2x2xf32>
+//       CHECK:   return %[[INS]] : vector<1x2x2xf32>
