@@ -337,7 +337,8 @@
 #endif
 #endif
 
-#if defined(__i386__) || defined(__amd64__)
+
+#if defined(__ASSEMBLER__) && (defined(__i386__) || defined(__amd64__))
 .att_syntax
 #endif
 
