@@ -23,18 +23,18 @@ mov  x1, x2
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      0     0.13                        mov	x1, #0
-# CHECK-NEXT:  1      0     0.13                        mov	x1, xzr
-# CHECK-NEXT:  1      0     0.13                        mov	w1, #0
-# CHECK-NEXT:  1      0     0.13                        mov	w1, wzr
-# CHECK-NEXT:  1      0     0.13                        fmov	h1, wzr
-# CHECK-NEXT:  1      0     0.13                        fmov	h1, xzr
-# CHECK-NEXT:  1      0     0.13                        fmov	s1, wzr
-# CHECK-NEXT:  1      0     0.13                        fmov	d1, xzr
-# CHECK-NEXT:  1      0     0.13                        movi	d1, #0000000000000000
-# CHECK-NEXT:  1      0     0.13                        movi	v1.2d, #0000000000000000
-# CHECK-NEXT:  1      0     0.13                        mov	w1, w2
-# CHECK-NEXT:  1      0     0.13                        mov	x1, x2
+# CHECK-NEXT:  1      0     0.10                        mov	x1, #0
+# CHECK-NEXT:  1      0     0.10                        mov	x1, xzr
+# CHECK-NEXT:  1      0     0.10                        mov	w1, #0
+# CHECK-NEXT:  1      0     0.10                        mov	w1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	h1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	h1, xzr
+# CHECK-NEXT:  1      0     0.10                        fmov	s1, wzr
+# CHECK-NEXT:  1      0     0.10                        fmov	d1, xzr
+# CHECK-NEXT:  1      0     0.10                        movi	d1, #0000000000000000
+# CHECK-NEXT:  1      0     0.10                        movi	v1.2d, #0000000000000000
+# CHECK-NEXT:  1      0     0.10                        mov	w1, w2
+# CHECK-NEXT:  1      0     0.10                        mov	x1, x2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - V3AEUnitB
@@ -46,10 +46,6 @@ mov  x1, x2
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -66,20 +62,20 @@ mov  x1, x2
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, #0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	h1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	h1, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	s1, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	d1, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movi	d1, #0000000000000000
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movi	v1.2d, #0000000000000000
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, x2
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, #0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	h1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	h1, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	s1, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmov	d1, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movi	d1, #0000000000000000
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movi	v1.2d, #0000000000000000
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	w1, w2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mov	x1, x2

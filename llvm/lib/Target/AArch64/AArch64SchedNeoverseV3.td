@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV3Model : SchedMachineModel {
-  let IssueWidth            =   8; // Expect best value to be slightly higher than V2
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
+  let IssueWidth            =  10; // Expect best value to be slightly higher than V2
+  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V2
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
@@ -55,7 +55,7 @@ def V3UnitLS0 : ProcResource<1>;  // Load/Store 0
 def V3UnitL12 : ProcResource<2>;  // Load 1/2
 def V3UnitST1 : ProcResource<1>;  // Store 1
 def V3UnitD   : ProcResource<2>;  // Store data 0/1
-def V3UnitFlg : ProcResource<8>;  // Flags
+def V3UnitFlg : ProcResource<4>;  // Flags
 
 def V3UnitS   : ProcResGroup<[V3UnitS0, V3UnitS1, V3UnitS2, V3UnitS3, V3UnitS4, V3UnitS5]>;  // Integer single-cycle 0/1/2/3/4/5
 def V3UnitI   : ProcResGroup<[V3UnitS0, V3UnitS1, V3UnitS2, V3UnitS3, V3UnitS4, V3UnitS5, V3UnitM0, V3UnitM1]>;  // Integer single-cycle 0/1/2/3/4/5 and single/multicycle 0/1
@@ -128,18 +128,14 @@ def V3Write_3c_1V0   : SchedWriteRes<[V3UnitV0]>  { let Latency = 3; }
 def V3Write_3c_1V02  : SchedWriteRes<[V3UnitV02]> { let Latency = 3; }
 def V3Write_4c_1V0   : SchedWriteRes<[V3UnitV0]>  { let Latency = 4; }
 def V3Write_4c_1V02  : SchedWriteRes<[V3UnitV02]> { let Latency = 4; }
-def V3Write_7c_1V0   : SchedWriteRes<[V3UnitV0]>  { let Latency = 7;
-                                                    let ReleaseAtCycles = [7]; }
 def V3Write_9c_1V0   : SchedWriteRes<[V3UnitV0]>  { let Latency = 9; }
 def V3Write_10c_1V0  : SchedWriteRes<[V3UnitV0]>  { let Latency = 10; }
-def V3Write_8c_1V1   : SchedWriteRes<[V3UnitV1]> { let Latency = 8;
-                                                    let ReleaseAtCycles = [2]; }
+def V3Write_8c_1V1   : SchedWriteRes<[V3UnitV1]> { let Latency = 8; }
 def V3Write_12c_1V0  : SchedWriteRes<[V3UnitV0]>  { let Latency = 12;
                                                     let ReleaseAtCycles = [11]; }
 def V3Write_13c_1V0  : SchedWriteRes<[V3UnitV0]>  { let Latency = 13; }
 def V3Write_15c_1V0  : SchedWriteRes<[V3UnitV0]>  { let Latency = 15; }
-def V3Write_13c_1V1  : SchedWriteRes<[V3UnitV1]> { let Latency = 13;
-                                                   let ReleaseAtCycles = [8]; }
+def V3Write_13c_1V1  : SchedWriteRes<[V3UnitV1]> { let Latency = 13; }
 def V3Write_16c_1V0  : SchedWriteRes<[V3UnitV0]>  { let Latency = 16; }
 def V3Write_16c_1V02 : SchedWriteRes<[V3UnitV02]> { let Latency = 16;
                                                     let ReleaseAtCycles = [8]; }

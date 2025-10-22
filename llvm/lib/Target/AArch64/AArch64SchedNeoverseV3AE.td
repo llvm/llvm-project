@@ -7,15 +7,15 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the scheduling model for the Arm Neoverse V3AE processors.
-// All information is taken from the V3AE Software Optimization guide:
+// All information is taken from the V3AE Software Optimisation guide:
 //
 // https://developer.arm.com/documentation/109703/300/?lang=en
 //
 //===----------------------------------------------------------------------===//
 
 def NeoverseV3AEModel : SchedMachineModel {
-  let IssueWidth            =   8; // Expect best value to be slightly higher than V2
-  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer.
+  let IssueWidth            =  10; // Expect best value to be slightly higher than V2
+  let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V2
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N2.
   let LoopMicroOpBufferSize =  16; // NOTE: Copied from Cortex-A57.
@@ -53,7 +53,7 @@ def V3AEUnitLS0 : ProcResource<1>;  // Load/Store 0
 def V3AEUnitL12 : ProcResource<2>;  // Load 1/2
 def V3AEUnitST1 : ProcResource<1>;  // Store 1
 def V3AEUnitD   : ProcResource<2>;  // Store data 0/1
-def V3AEUnitFlg : ProcResource<8>;  // Flags
+def V3AEUnitFlg : ProcResource<4>;  // Flags
 
 def V3AEUnitS   : ProcResGroup<[V3AEUnitS0, V3AEUnitS1, V3AEUnitS2, V3AEUnitS3, V3AEUnitS4, V3AEUnitS5]>;  // Integer single-cycle 0/1/2/3/4/5
 def V3AEUnitI   : ProcResGroup<[V3AEUnitS0, V3AEUnitS1, V3AEUnitS2, V3AEUnitS3, V3AEUnitS4, V3AEUnitS5, V3AEUnitM0, V3AEUnitM1]>;  // Integer single-cycle 0/1/2/3/4/5 and single/multicycle 0/1
@@ -119,12 +119,9 @@ def V3AEWrite_6c_1V    : SchedWriteRes<[V3AEUnitV]>   { let Latency = 6; }
 def V3AEWrite_12c_1V   : SchedWriteRes<[V3AEUnitV]>   { let Latency = 12; }
 def V3AEWrite_3c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 3; }
 def V3AEWrite_4c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 4; }
-def V3AEWrite_7c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 7;
-                                                    let ReleaseAtCycles = [7]; }
 def V3AEWrite_9c_1V0   : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 9; }
 def V3AEWrite_10c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 10; }
-def V3AEWrite_8c_1V1   : SchedWriteRes<[V3AEUnitV1]> { let Latency = 8;
-                                                    let ReleaseAtCycles = [2]; }
+def V3AEWrite_8c_1V1   : SchedWriteRes<[V3AEUnitV1]> { let Latency = 8; }
 def V3AEWrite_12c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 12;
                                                     let ReleaseAtCycles = [11]; }
 def V3AEWrite_13c_1V0  : SchedWriteRes<[V3AEUnitV0]>  { let Latency = 13; }

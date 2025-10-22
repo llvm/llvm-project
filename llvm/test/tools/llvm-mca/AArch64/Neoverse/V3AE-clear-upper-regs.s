@@ -58,7 +58,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -85,10 +85,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -105,13 +101,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	b0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -144,7 +140,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -171,10 +167,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -191,13 +183,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	h0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -230,7 +222,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -257,10 +249,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -277,13 +265,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	s0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -316,7 +304,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -343,10 +331,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -363,13 +347,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	d0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -402,7 +386,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -429,10 +413,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -449,13 +429,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ldr	q0, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -488,7 +468,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -515,10 +495,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -535,13 +511,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.8b }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -574,7 +550,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -601,10 +577,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -621,13 +593,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.4h }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -660,7 +632,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -687,10 +659,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -707,13 +675,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.2s }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -746,7 +714,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      60
 # CHECK-NEXT: Total uOps:        200
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    3.33
 # CHECK-NEXT: IPC:               3.33
 # CHECK-NEXT: Block RThroughput: 0.5
@@ -773,10 +741,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -793,13 +757,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -     0.50   0.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.33   0.33   0.34    -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.1d }, [sp]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   add	z0.d, z0.d, z0.d
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -832,7 +796,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: Total Cycles:      703
 # CHECK-NEXT: Total uOps:        300
 
-# CHECK:      Dispatch Width:    8
+# CHECK:      Dispatch Width:    10
 # CHECK-NEXT: uOps Per Cycle:    0.43
 # CHECK-NEXT: IPC:               0.28
 # CHECK-NEXT: Block RThroughput: 1.0
@@ -859,10 +823,6 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [2.1] - V3AEUnitFlg
 # CHECK-NEXT: [2.2] - V3AEUnitFlg
 # CHECK-NEXT: [2.3] - V3AEUnitFlg
-# CHECK-NEXT: [2.4] - V3AEUnitFlg
-# CHECK-NEXT: [2.5] - V3AEUnitFlg
-# CHECK-NEXT: [2.6] - V3AEUnitFlg
-# CHECK-NEXT: [2.7] - V3AEUnitFlg
 # CHECK-NEXT: [3.0] - V3AEUnitL12
 # CHECK-NEXT: [3.1] - V3AEUnitL12
 # CHECK-NEXT: [4]   - V3AEUnitLS0
@@ -879,13 +839,13 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [15]  - V3AEUnitV1
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     1.00   1.00
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -     1.00   1.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [2.4]  [2.5]  [2.6]  [2.7]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -     1.00   insr	z0.s, w0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -     1.00   insr	z0.s, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     add	z0.s, z0.s, z0.s
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0
@@ -896,7 +856,7 @@ add z0.s, z0.s, z0.s
 # CHECK-NEXT: [1,0]     D=======eeeeeER.    .    .    .   insr	z0.s, w0
 # CHECK-NEXT: [1,1]     D============eeER   .    .    .   add	z0.s, z0.s, z0.s
 # CHECK-NEXT: [2,0]     D==============eeeeeER   .    .   insr	z0.s, w0
-# CHECK-NEXT: [2,1]     .D==================eeER .    .   add	z0.s, z0.s, z0.s
+# CHECK-NEXT: [2,1]     D===================eeER .    .   add	z0.s, z0.s, z0.s
 # CHECK-NEXT: [3,0]     .D====================eeeeeER .   insr	z0.s, w0
 # CHECK-NEXT: [3,1]     .D=========================eeER   add	z0.s, z0.s, z0.s
 
@@ -908,5 +868,5 @@ add z0.s, z0.s, z0.s
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     4     11.3   0.3    0.0       insr	z0.s, w0
-# CHECK-NEXT: 1.     4     16.0   0.0    0.0       add	z0.s, z0.s, z0.s
-# CHECK-NEXT:        4     13.6   0.1    0.0       <total>
+# CHECK-NEXT: 1.     4     16.3   0.0    0.0       add	z0.s, z0.s, z0.s
+# CHECK-NEXT:        4     13.8   0.1    0.0       <total>
