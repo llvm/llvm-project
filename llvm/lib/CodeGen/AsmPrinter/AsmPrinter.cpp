@@ -2469,8 +2469,7 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 
 void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
-         "IFunc is not supported on AIX.");
-
+         "AIX has non-default implementation.");
   auto EmitLinkage = [&](MCSymbol *Sym) {
     if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
