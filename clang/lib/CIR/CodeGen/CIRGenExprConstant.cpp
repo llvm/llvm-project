@@ -1069,9 +1069,27 @@ public:
 
   mlir::Attribute VisitCXXConstructExpr(CXXConstructExpr *e, QualType ty) {
     if (!e->getConstructor()->isTrivial())
-      return nullptr;
-    cgm.errorNYI(e->getBeginLoc(), "trivial constructor const handling");
-    return {};
+      return {};
+
+    // Only default and copy/move constructors can be trivial.
+    if (e->getNumArgs()) {
+      assert(e->getNumArgs() == 1 && "trivial ctor with > 1 argument");
+      assert(e->getConstructor()->isCopyOrMoveConstructor() &&
+             "trivial ctor has argument but isn't a copy/move ctor");
+
+      Expr *arg = e->getArg(0);
+      assert(cgm.getASTContext().hasSameUnqualifiedType(ty, arg->getType()) &&
+             "argument to copy ctor is of wrong type");
+
+      // Look through the temporary; it's just converting the value to an lvalue
+      // to pass it to the constructor.
+      if (auto const *mte = dyn_cast<MaterializeTemporaryExpr>(arg))
+        return Visit(mte->getSubExpr(), ty);
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return {};
+    }
+
+    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(ty));
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *e, QualType t) {
