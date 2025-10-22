@@ -13,8 +13,6 @@
 
 #include <__system_error/system_error.h>
 
-#include "filesystem/error.h"
-
 #if defined(_LIBCPP_WIN32API)
 #  define WIN32_LEAN_AND_MEAN
 #  define NOMINMAX
@@ -51,7 +49,11 @@ __write_to_windows_console([[maybe_unused]] FILE* __stream, [[maybe_unused]] wst
                     __view.size(),
                     nullptr,
                     nullptr) == 0) {
+#    if _LIBCPP_HAS_FILESYSTEM
     std::__throw_system_error(filesystem::detail::get_last_error(), "failed to write formatted output");
+#    else
+    std::__throw_system_error(error_code(GetLastError(), system_category()), "failed to write formatted output");
+#    endif
   }
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
