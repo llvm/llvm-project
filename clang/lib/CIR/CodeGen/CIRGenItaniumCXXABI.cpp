@@ -2064,7 +2064,7 @@ static mlir::Value emitExactDynamicCast(CIRGenItaniumCXXABI &abi,
     mlir::Type u8PtrTy = builder.getUInt8PtrTy();
 
     mlir::Value strideToApply =
-        builder.getConstInt(loc, builder.getUInt64Ty(), offset->getQuantity());
+        builder.getConstInt(loc, builder.getUInt64Ty(), -offset->getQuantity());
     mlir::Value srcU8Ptr = builder.createBitcast(src.getPointer(), u8PtrTy);
     mlir::Value resultU8Ptr = cir::PtrStrideOp::create(builder, loc, u8PtrTy,
                                                        srcU8Ptr, strideToApply);

@@ -39,7 +39,7 @@ Derived *ptr_cast(Base1 *ptr) {
 // CIR-NEXT:       cir.yield %[[NULL]] : !cir.ptr<!rec_Derived>
 // CIR-NEXT:     }) : (!cir.bool) -> !cir.ptr<!rec_Derived>
 // CIR-NEXT:     cir.yield %[[EXACT_RESULT]] : !cir.ptr<!rec_Derived>
-// CIR-NEXT:     }) : (!cir.bool) -> !cir.ptr<!rec_Derived>
+// CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!rec_Derived>
 
 // Note: The LLVM output omits the label for the entry block (which is
 //       implicitly %1), so we use %{{.*}} to match the implicit label in the
@@ -112,3 +112,63 @@ Derived &ref_cast(Base1 &ref) {
 //      OGCG: [[LABEL_END]]:
 // OGCG-NEXT:   ret ptr %[[REF]]
 // OGCG-NEXT: }
+
+struct Offset { virtual ~Offset(); };
+struct A { virtual ~A(); };
+struct B final : Offset, A { };
+
+B *offset_cast(A *a) {
+  return dynamic_cast<B*>(a);
+}
+
+//      CIR: cir.func {{.*}} @_Z11offset_castP1A
+//      CIR:   %[[SRC:.*]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!rec_A>>, !cir.ptr<!rec_A>
+// CIR-NEXT:   %[[NULL_PTR:.*]] = cir.const #cir.ptr<null>
+// CIR-NEXT:   %[[SRC_IS_NULL:.*]] = cir.cmp(eq, %[[SRC]], %[[NULL_PTR]])
+// CIR-NEXT:   %[[RESULT:.*]] = cir.ternary(%[[SRC_IS_NULL]], true {
+// CIR-NEXT:     %[[NULL_PTR_DEST:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_B>
+// CIR-NEXT:     cir.yield %[[NULL_PTR_DEST]] : !cir.ptr<!rec_B>
+// CIR-NEXT:   }, false {
+// CIR-NEXT:     %[[EXPECTED_VPTR:.*]] = cir.vtable.address_point(@_ZTV1B, address_point = <index = 1, offset = 2>) : !cir.vptr
+// CIR-NEXT:     %[[SRC_VPTR_PTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+// CIR-NEXT:     %[[SRC_VPTR:.*]] = cir.load{{.*}} %[[SRC_VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR-NEXT:     %[[SUCCESS:.*]] = cir.cmp(eq, %[[SRC_VPTR]], %[[EXPECTED_VPTR]]) : !cir.vptr, !cir.bool
+// CIR-NEXT:     %[[EXACT_RESULT:.*]] = cir.ternary(%[[SUCCESS]], true {
+// CIR-NEXT:       %[[MINUS_EIGHT:.*]] = cir.const #cir.int<18446744073709551608> : !u64i
+// CIR-NEXT:       %[[SRC_VOID:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_A> -> !cir.ptr<!u8i>
+// CIR-NEXT:       %[[SRC_OFFSET:.*]] = cir.ptr_stride %[[SRC_VOID]], %[[MINUS_EIGHT]]
+// CIR-NEXT:       %[[RES:.*]] = cir.cast bitcast %[[SRC_OFFSET]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_B>
+// CIR-NEXT:       cir.yield %[[RES]] : !cir.ptr<!rec_B>
+// CIR-NEXT:     }, false {
+// CIR-NEXT:       %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_B>
+// CIR-NEXT:       cir.yield %[[NULL]] : !cir.ptr<!rec_B>
+// CIR-NEXT:     }) : (!cir.bool) -> !cir.ptr<!rec_B>
+// CIR-NEXT:     cir.yield %[[EXACT_RESULT]] : !cir.ptr<!rec_B>
+// CIR-NEXT:   }) : (!cir.bool) -> !cir.ptr<!rec_B>
+
+//      LLVM: define dso_local ptr @_Z11offset_castP1A(ptr{{.*}} %[[SRC:.*]])
+// LLVM-NEXT:   %[[SRC_IS_NULL:.*]] = icmp eq ptr %0, null
+// LLVM-NEXT:   br i1 %[[SRC_IS_NULL]], label %[[LABEL_END:.*]], label %[[LABEL_NOTNULL:.*]]
+//      LLVM: [[LABEL_NOTNULL]]:
+// LLVM-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[SRC]]
+// LLVM-NEXT:   %[[VTABLE_CHECK:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds nuw (i8, ptr @_ZTV1B, i64 48)
+// LLVM-NEXT:   %[[SRC_OFFSET:.*]] = getelementptr i8, ptr %[[SRC]], i64 -8
+// LLVM-NEXT:   %[[EXACT_RESULT:.*]] = select i1 %[[VTABLE_CHECK]], ptr %[[SRC_OFFSET]], ptr null
+// LLVM-NEXT:   br label %[[LABEL_END]]
+//      LLVM: [[LABEL_END]]:
+// LLVM-NEXT:   %[[RESULT:.*]] = phi ptr [ %[[EXACT_RESULT]], %[[LABEL_NOTNULL]] ], [ null, %{{.*}} ]
+// LLVM-NEXT:   ret ptr %[[RESULT]]
+// LLVM-NEXT: }
+
+//      OGCG: define{{.*}} ptr @_Z11offset_castP1A(ptr{{.*}} %[[SRC:.*]])
+//      OGCG:   %[[SRV_NULL:.*]] = icmp eq ptr %[[SRC]], null
+// OGCG-NEXT:   br i1 %[[SRV_NULL]], label %[[LABEL_NULL:.*]], label %[[LABEL_NOTNULL:.*]]
+//      OGCG: [[LABEL_NOTNULL]]:
+// OGCG-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[SRC]]
+// OGCG-NEXT:   %[[VTABLE_CHECK:.*]] = icmp eq ptr %[[VTABLE]], getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @_ZTV1B, i64 48)
+// OGCG-NEXT:   %[[RESULT:.*]] = getelementptr inbounds i8, ptr %[[SRC]], i64 -8
+// OGCG-NEXT:   br i1 %[[VTABLE_CHECK]], label %[[LABEL_END:.*]], label %[[LABEL_NULL]]
+//      OGCG: [[LABEL_NULL]]:
+// OGCG-NEXT:   br label %[[LABEL_END]]
+//      OGCG: [[LABEL_END]]:
+// OGCG-NEXT:   phi ptr [ %[[RESULT]], %[[LABEL_NOTNULL]] ], [ null, %[[LABEL_NULL]] ]
