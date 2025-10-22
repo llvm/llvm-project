@@ -1830,36 +1830,31 @@ void CGOpenMPRuntime::registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
 }
 
 void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
-                                           CXXRecordDecl *CXXRecord,
-                                           const VarDecl *VD) {
-        // Register C++ VTable to OpenMP Offload Entry if it's a new
-        // CXXRecordDecl.
-        if (CXXRecord && CXXRecord->isDynamicClass() &&
-            CGM.getOpenMPRuntime().VTableDeclMap.find(CXXRecord) ==
-                CGM.getOpenMPRuntime().VTableDeclMap.end()) {
-          CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
-          CGM.EmitVTable(CXXRecord);
-          CodeGenVTables VTables = CGM.getVTables();
-          llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
-          if (VTablesAddr)
-            CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
-          // Emit VTable for all the fields containing dynamic CXXRecord
-          for (const FieldDecl *Field : CXXRecord->fields()) {
-            if (CXXRecordDecl *RecordDecl =
-                    Field->getType()->getAsCXXRecordDecl())
-              emitAndRegisterVTable(CGM, RecordDecl, VD);
-
-          }
-          // Emit VTable for all dynamic parent class
-          for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
-            if (CXXRecordDecl *BaseDecl =
-                    Base.getType()->getAsCXXRecordDecl())
-              emitAndRegisterVTable(CGM, BaseDecl, VD);
-
-          }
-        }
-      };
-
+                                            CXXRecordDecl *CXXRecord,
+                                            const VarDecl *VD) {
+  // Register C++ VTable to OpenMP Offload Entry if it's a new
+  // CXXRecordDecl.
+  if (CXXRecord && CXXRecord->isDynamicClass() &&
+      CGM.getOpenMPRuntime().VTableDeclMap.find(CXXRecord) ==
+          CGM.getOpenMPRuntime().VTableDeclMap.end()) {
+    CGM.getOpenMPRuntime().VTableDeclMap.try_emplace(CXXRecord, VD);
+    CGM.EmitVTable(CXXRecord);
+    CodeGenVTables VTables = CGM.getVTables();
+    llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
+    if (VTablesAddr)
+      CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
+    // Emit VTable for all the fields containing dynamic CXXRecord
+    for (const FieldDecl *Field : CXXRecord->fields()) {
+      if (CXXRecordDecl *RecordDecl = Field->getType()->getAsCXXRecordDecl())
+        emitAndRegisterVTable(CGM, RecordDecl, VD);
+    }
+    // Emit VTable for all dynamic parent class
+    for (CXXBaseSpecifier &Base : CXXRecord->bases()) {
+      if (CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl())
+        emitAndRegisterVTable(CGM, BaseDecl, VD);
+    }
+  }
+};
 
 void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
   // Register VTable by scanning through the map clause of OpenMP target region.
@@ -10070,15 +10065,15 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
   // Register vtable from device for target data and target directives.
   // Add this block here since scanForTargetRegionsFunctions ignores
   // target data by checking if S is a executable directive (target).
-    if (isa<OMPExecutableDirective>(S) &&
-        isOpenMPTargetDataManagementDirective(
-            dyn_cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
-      auto &E = *dyn_cast<OMPExecutableDirective>(S);
-      // Don't need to check if it's device compile
-      // since scanForTargetRegionsFunctions currently only called
-      // in device compilation.
-      registerVTable(E);
-    }
+  if (isa<OMPExecutableDirective>(S) &&
+      isOpenMPTargetDataManagementDirective(
+          dyn_cast<OMPExecutableDirective>(S)->getDirectiveKind())) {
+    auto &E = *dyn_cast<OMPExecutableDirective>(S);
+    // Don't need to check if it's device compile
+    // since scanForTargetRegionsFunctions currently only called
+    // in device compilation.
+    registerVTable(E);
+  }
 
   // Codegen OMP target directives that offload compute to the device.
   bool RequiresDeviceCodegen =

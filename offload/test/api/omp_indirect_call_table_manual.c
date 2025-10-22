@@ -89,7 +89,7 @@ int main() {
   myClass obj_baz = {dispatchTable + 2};
   int aaa = 0;
 
-#pragma omp target map(aaa) map (to: obj_foo, obj_bar, obj_baz)
+#pragma omp target map(aaa) map(to : obj_foo, obj_bar, obj_baz)
   {
     // Lookup
     fptr_t *foo_ptr = __llvm_omp_indirect_call_lookup(obj_foo.dispatchPtr);

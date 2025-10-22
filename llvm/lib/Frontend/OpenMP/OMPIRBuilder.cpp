@@ -10249,8 +10249,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect:
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable:
         if (!CE->getAddress()) {
-            ErrorFn(EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR, E.second);
-            continue;
+          ErrorFn(EMIT_MD_GLOBAL_VAR_INDIRECT_ERROR, E.second);
+          continue;
         }
         break;
       default:
@@ -10702,7 +10702,8 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       return;
     }
     if (Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect ||
-        Flags == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
+        Flags ==
+            OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirectVTable)
       OffloadEntriesDeviceGlobalVar.try_emplace(VarName, OffloadingEntriesNum,
                                                 Addr, VarSize, Flags, Linkage,
                                                 VarName.str());
