@@ -1072,7 +1072,7 @@ public:
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
     bool Overflowed = false;
 
-    for (const auto [Type, Count] : Other) {
+    for (const auto &[Type, Count] : Other) {
       FunctionId TypeId(Type);
       bool RowOverflow = false;
       TypeCounts[TypeId] = SaturatingMultiplyAdd(
