@@ -70,7 +70,7 @@ define void @PR34711(ptr %a, ptr %b, ptr %c, i64 %n) #0 {
 ; CHECK-VF4UF1-LABEL: @PR34711
 ; CHECK-VF4UF1: vector.body
 ; CHECK-VF4UF1: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i16> [ %vector.recur.init, %vector.ph ], [ %[[MGATHER:.*]], %vector.body ]
-; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> {{.*}}, i32 2, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i16> poison)
+; CHECK-VF4UF1: %[[MGATHER]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0(<vscale x 4 x ptr> {{.*}}, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i16> poison)
 ; CHECK-VF4UF1-NEXT: %[[SPLICE:.*]] = call <vscale x 4 x i16> @llvm.vector.splice.nxv4i16(<vscale x 4 x i16> %[[VEC_RECUR]], <vscale x 4 x i16> %[[MGATHER]], i32 -1)
 ; CHECK-VF4UF1-NEXT: %[[SXT1:.*]] = sext <vscale x 4 x i16> %[[SPLICE]] to <vscale x 4 x i32>
 ; CHECK-VF4UF1-NEXT: %[[SXT2:.*]] = sext <vscale x 4 x i16> %[[MGATHER]] to <vscale x 4 x i32>
