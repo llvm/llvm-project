@@ -40,7 +40,7 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   LLVMValueRef SumFunction = LLVMAddFunction(M, "sum", SumFunctionType);
   LLVMBasicBlockRef EntryBB =
       LLVMAppendBasicBlockInContext(Ctx, SumFunction, "entry");
-  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
   LLVMPositionBuilderAtEnd(Builder, EntryBB);
   LLVMValueRef SumArg0 = LLVMGetParam(SumFunction, 0);
   LLVMValueRef SumArg1 = LLVMGetParam(SumFunction, 1);

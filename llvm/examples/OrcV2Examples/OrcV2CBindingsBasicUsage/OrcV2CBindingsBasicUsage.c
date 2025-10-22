@@ -40,7 +40,7 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
       LLVMAppendBasicBlockInContext(Ctx, SumFunction, "entry");
 
   //  - Add an IR builder and point it at the end of the basic block.
-  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
   LLVMPositionBuilderAtEnd(Builder, EntryBB);
 
   //  - Get the two function arguments and use them co construct an "add"

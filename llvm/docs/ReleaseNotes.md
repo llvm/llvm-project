@@ -206,6 +206,7 @@ Changes to the C API
   * `LLVMMDNode` -> `LLVMMDNodeInContext2`
   * `LLVMAppendBasicBlock` -> `LLVMAppendBasicBlockInContext`
   * `LLVMInsertBasicBlock` -> `LLVMInsertBasicBlockInContext`
+  * `LLVMCreateBuilder` -> `LLVMCreateBuilderInContext`
   * `LLVMIntPtrType` -> `LLVMIntPtrTypeInContext`
   * `LLVMIntPtrTypeForAS` -> `LLVMIntPtrTypeForASInContext`
   * `LLVMParseBitcode` -> `LLVMParseBitcodeInContext2`
