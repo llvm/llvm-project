@@ -698,6 +698,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i64, Custom);
   }
 
+  setOperationAction(ISD::ABDS, MVT::i32, Custom);
+  setOperationAction(ISD::ABDS, MVT::i64, Custom);
+  setOperationAction(ISD::ABDU, MVT::i32, Custom);
+  setOperationAction(ISD::ABDU, MVT::i64, Custom);
+
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
   for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
@@ -3709,7 +3714,8 @@ static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                              const SDLoc &DL, SelectionDAG &DAG) {
+                              const SDLoc &DL, SelectionDAG &DAG,
+                              bool MIOrPLSupported = false) {
   EVT VT = LHS.getValueType();
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3752,6 +3758,33 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     } else if (LHS.getOpcode() == AArch64ISD::ANDS) {
       // Use result of ANDS
       return LHS.getValue(1);
+    } else if (MIOrPLSupported) {
+      // For MIOrPLSupported, optimize SUB/ADD operations with zero comparison
+      if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETLT) {
+        // SUB(x, y) < 0 -> SUBS(x, y)
+        return DAG
+            .getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETGE) {
+        // ADD(x, y) >= 0 -> ADDS(x, y)
+        return DAG
+            .getNode(AArch64ISD::ADDS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETLT) {
+        // ADD(x, y) < 0 -> SUBS(x, y)
+        return DAG
+            .getNode(AArch64ISD::ADDS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      } else if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETGE) {
+        // SUB(x, y) >= 0 -> ADDS(x, y)
+        return DAG
+            .getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
+                     LHS.getOperand(0), LHS.getOperand(1))
+            .getValue(1);
+      }
     }
   }
 
@@ -3816,7 +3849,8 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
                                          ISD::CondCode CC, SDValue CCOp,
                                          AArch64CC::CondCode Predicate,
                                          AArch64CC::CondCode OutCC,
-                                         const SDLoc &DL, SelectionDAG &DAG) {
+                                         const SDLoc &DL, SelectionDAG &DAG,
+                                         bool MIOrPLSupported = false) {
   unsigned Opcode = 0;
   const bool FullFP16 = DAG.getSubtarget<AArch64Subtarget>().hasFullFP16();
 
@@ -3843,6 +3877,30 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
     // we combine a (CCMP (sub 0, op1), op2) into a CCMN instruction ?
     Opcode = AArch64ISD::CCMN;
     LHS = LHS.getOperand(1);
+  } else if (isNullConstant(RHS) && !isUnsignedIntSetCC(CC) &&
+             MIOrPLSupported) {
+    // For MIOrPLSupported, optimize SUB/ADD operations with zero comparison
+    if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETLT) {
+      // SUB(x, y) < 0 -> CCMP(x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMP;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETGE) {
+      // ADD(x, y) >= 0 -> CCMP(x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMN;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::ADD && CC == ISD::SETLT) {
+      // ADD(x, y) < 0 -> CCMP(x, -y) with appropriate condition
+      Opcode = AArch64ISD::CCMN;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    } else if (LHS.getOpcode() == ISD::SUB && CC == ISD::SETGE) {
+      // SUB(x, y) >= 0 -> CCMP(-x, y) with appropriate condition
+      Opcode = AArch64ISD::CCMP;
+      RHS = LHS.getOperand(1);
+      LHS = LHS.getOperand(0);
+    }
   }
   if (Opcode == 0)
     Opcode = AArch64ISD::CCMP;
@@ -3969,7 +4027,7 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
       return emitComparison(LHS, RHS, CC, DL, DAG);
     // Otherwise produce a ccmp.
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
-                                     DAG);
+                                     DAG, true);
   }
   assert(Val->hasOneUse() && "Valid conjunction/disjunction tree");
 
@@ -4248,7 +4306,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   }
 
   if (!Cmp) {
-    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
+    Cmp = emitComparison(LHS, RHS, CC, DL, DAG, true);
     AArch64CC = changeIntCCToAArch64CC(CC, RHS);
   }
   AArch64cc = getCondCode(DAG, AArch64CC);
@@ -7367,13 +7425,100 @@ SDValue AArch64TargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABS_MERGE_PASSTHRU);
 
   SDLoc DL(Op);
-  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, VT);
 
-  // Generate SUBS & CSEL.
-  SDValue Cmp = DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(VT, FlagsVT),
-                            Op.getOperand(0), DAG.getConstant(0, DL, VT));
+  // Generate CMP & CSEL.
+  SDValue Cmp = emitComparison(Op.getOperand(0), DAG.getConstant(0, DL, VT),
+                               ISD::SETGE, DL, DAG, true);
+  SDValue Neg = DAG.getNegative(Op.getOperand(0), DL, VT);
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, Op.getOperand(0), Neg,
-                     getCondCode(DAG, AArch64CC::PL), Cmp.getValue(1));
+                     getCondCode(DAG, AArch64CC::PL), Cmp);
+}
+
+// Generate SUBS and CNEG for absolute difference.
+SDValue AArch64TargetLowering::LowerABD(SDValue Op, SelectionDAG &DAG) const {
+  MVT VT = Op.getSimpleValueType();
+
+  bool IsSigned = Op.getOpcode() == ISD::ABDS;
+  if (VT.isVector()) {
+    if (IsSigned)
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
+    else
+      return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+  }
+
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDLoc DL(Op);
+
+  if (!isa<ConstantSDNode>(RHS) || !isLegalCmpImmed(RHS->getAsAPIntVal())) {
+    SDValue TheLHS = isCMN(LHS, IsSigned ? ISD::SETGE : ISD::SETUGE, DAG)
+                         ? LHS.getOperand(1)
+                         : LHS;
+    SDValue TheRHS = isCMN(RHS, IsSigned ? ISD::SETGE : ISD::SETUGE, DAG)
+                         ? RHS.getOperand(1)
+                         : RHS;
+    if (getCmpOperandFoldingProfit(TheLHS) >
+        getCmpOperandFoldingProfit(TheRHS)) {
+      std::swap(LHS, RHS);
+    }
+  }
+
+  // If the subtract doesn't overflow then just use abs(sub())
+  bool IsNonNegative = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS);
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, LHS, RHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, LHS, RHS));
+
+  if (DAG.willNotOverflowSub(IsSigned || IsNonNegative, RHS, LHS))
+    return DAG.getNode(ISD::ABS, DL, VT,
+                       DAG.getNode(ISD::SUB, DL, VT, RHS, LHS));
+
+  unsigned Opcode = AArch64ISD::SUBS;
+  // Check if RHS is a subtraction against 0: (0 - X)
+  if (RHS.getOpcode() == ISD::SUB) {
+    SDValue SubLHS = RHS.getOperand(0);
+    SDValue SubRHS = RHS.getOperand(1);
+
+    // Check if it's 0 - X
+    if (isNullConstant(SubLHS)) {
+      bool CanUseAdd = false;
+      if (IsSigned) {
+        // For UCMP: only if X is known to never be INT_MIN (to avoid overflow)
+        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
+                                                      .getSignedMinValue()
+                                                      .isMinSignedValue()) {
+          CanUseAdd = true;
+        }
+      } else {
+        // For UCMP: only if X is known to never be zero
+        if (DAG.isKnownNeverZero(SubRHS)) {
+          CanUseAdd = true;
+        }
+      }
+
+      if (CanUseAdd) {
+        Opcode = AArch64ISD::ADDS;
+        RHS = SubRHS; // Replace RHS with X, so we do LHS + X instead of
+                      // LHS - (0 - X)
+      }
+    }
+  }
+
+  // Generate SUBS and CSEL for absolute difference (like LowerABS)
+  // Compute a - b with flags
+  SDValue Cmp = DAG.getNode(Opcode, DL, DAG.getVTList(VT, FlagsVT), LHS, RHS);
+
+  // Compute b - a (negative of a - b)
+  SDValue Neg = DAG.getNegative(Cmp.getValue(0), DL, VT);
+
+  // For unsigned: use HS (a >= b) to select a-b, otherwise b-a
+  // For signed: use GE (a >= b) to select a-b, otherwise b-a
+  AArch64CC::CondCode CC = IsSigned ? AArch64CC::GE : AArch64CC::HS;
+
+  // CSEL: if a > b, select a-b, otherwise b-a
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Cmp.getValue(0), Neg,
+                     getCondCode(DAG, CC), Cmp.getValue(1));
 }
 
 static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
@@ -7831,9 +7976,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::ABS:
     return LowerABS(Op, DAG);
   case ISD::ABDS:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDS_PRED);
   case ISD::ABDU:
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::ABDU_PRED);
+    return LowerABD(Op, DAG);
   case ISD::AVGFLOORS:
     return LowerAVG(Op, DAG, AArch64ISD::HADDS_PRED);
   case ISD::AVGFLOORU:
@@ -26032,29 +26176,6 @@ static SDValue performCSELCombine(SDNode *N,
       return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
                          N->getOperand(1), getCondCode(DAG, NewCond),
                          Sub.getValue(1));
-    }
-  }
-
-  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
-  // use overflow flags, to avoid the comparison with zero. In case of success,
-  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
-  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
-  // nodes with their SUBS equivalent as is already done for other flag-setting
-  // operators, in which case doing the replacement here becomes redundant.
-  if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
-      isNullConstant(Cond.getOperand(1))) {
-    SDValue Sub = Cond.getOperand(0);
-    AArch64CC::CondCode CC =
-        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
-    if (Sub.getOpcode() == ISD::SUB &&
-        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
-         CC == AArch64CC::PL)) {
-      SDLoc DL(N);
-      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
-                                 Sub.getOperand(0), Sub.getOperand(1));
-      DCI.CombineTo(Sub.getNode(), Subs);
-      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
-      return SDValue(N, 0);
     }
   }
 
