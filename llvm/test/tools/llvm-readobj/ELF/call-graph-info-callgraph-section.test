@@ -3,12 +3,12 @@
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --match-full-lines
-# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=LLVM
-# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=JSON
+# RUN: llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+# RUN: llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=LLVM
+# RUN: llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=JSON
 
 
-# CHECK: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
+# CHECK: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # CHECK-EMPTY:
 # CHECK-NEXT: Call graph section '.llvm.callgraph' contains 3 entries:
 # CHECK-EMPTY:
@@ -35,7 +35,7 @@
 # CHECK-NEXT:    Direct Callees (0):
 # CHECK-NEXT:    Indirect Callees by Type ID (0):
 
-# LLVM: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
+# LLVM: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # LLVM-NEXT: callgraph_info [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     Offset: 0x2
@@ -81,7 +81,7 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT: ]
 
-# JSON: {{.*}}llvm-readelf{{.*}}: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
+# JSON: warning: '[[FILE]]': .llvm.callgraph section has unknown type id for 2 indirect targets.
 # JSON:     "callgraph_info": [
 # JSON-NEXT:      {
 # JSON-NEXT:        "Function": {
@@ -160,7 +160,7 @@ baz:                  #< baz is at 10 (a).
 qux:                  #< qux is at 11 (b).
  retq
 
-.section	.llvm.callgraph,"o",@llvm_call_graph_section,.text
+.section	.llvm.callgraph,"o",@llvm_call_graph,.text
 .byte	0       #< Format version number.
 .byte	3       #< Flag IsIndirectTarget true
 .quad	0       #< foo()'s entry address.
@@ -182,6 +182,5 @@ qux:                  #< qux is at 11 (b).
 .quad   32      #< Indirect target type id.
 
 # No call graph section entry for qux. 
-# Technically its "UNKNOWN" type id but will not be printed as such by llvm-readelf.  
 
 .text

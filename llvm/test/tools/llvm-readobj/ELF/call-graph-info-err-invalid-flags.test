@@ -1,14 +1,14 @@
 ## Tests that --call-graph-info fails if .llvm.callgraph section has invalid
-## function kind value.
+## value for flags field.
 
 # REQUIRES: x86-registered-target
 
 # RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
-# RUN: not llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
-# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s --match-full-lines -DFILE=%t --check-prefix=ERR
+# RUN: not llvm-readelf --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+# RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
-# ERR: {{.*}}llvm-readelf{{.*}}: error: 'While reading call graph info's Flags': Unknown Flags. Expected one of [1, 3, 5, 7] but found [8]
+# ERR: error: 'While reading call graph info's Flags': Unknown Flags. Expected a value in the range [0-7] but found [8]
 
 .text
 .globl _Z3foov
@@ -16,8 +16,8 @@
 _Z3foov:
  callq _Z3foov@PLT
 
-.section	.llvm.callgraph,"o",@llvm_call_graph_section,.text
+.section	.llvm.callgraph,"o",@llvm_call_graph,.text
 .byte	0   #< Format version number.
-.byte	8   #< Only valid values are 1,3,5,7
+.byte	8   #< Only valid values are 0 to 7
 # Missing direct callees info
 .text

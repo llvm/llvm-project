@@ -1,5 +1,5 @@
-## Tests that --call-graph-info fails if .llvm.callgraph section has flags
-## that indicate there are direct calls but the direct call info is missing.
+## Tests that --call-graph-info fails if .callgraph section does not have
+## an expected value, e.g., not as much call sites as the given count.
 
 # REQUIRES: x86-registered-target
 
@@ -8,7 +8,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
-# ERR: error: 'While reading call graph info's [number of direct callsites] for function at [0x0]': unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# ERR: error: 'While reading call graph info's [indirect type ID] for function at [0x0]': unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 .text
 .globl _Z3foov
@@ -17,9 +17,10 @@ _Z3foov:
  callq _Z3foov@PLT
 
 .section	.llvm.callgraph,"o",@llvm_call_graph,.text
-.byte	0   #< Format version number.
-.byte	3   #< Flag IsIndirectTarget true and has direct calls
-.quad 0   #< Function entry address.
-.quad 0   #< TypeID: unknown. 
-# Missing direct callees info
+.byte 0  #< Format version number.
+.byte 4  #< Flags
+.quad 0  #< Function entry address.
+.quad 0  #< Type ID
+.byte 1  #< Indirect call site count that follows.
+         #< Missing indirect call entries here.
 .text

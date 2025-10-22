@@ -5377,15 +5377,9 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
     if (CGSectionErr)
       reportError(std::move(CGSectionErr),
                   "While reading call graph info's Flags");
-    switch (Flags) {
-    case 1:
-    case 3:
-    case 5:
-    case 7:
-      break;
-    default:
+    if (Flags > 7) {
       Error FlagsErr = createError(
-          "Unknown Flags. Expected one of [1, 3, 5, 7] but found [" +
+          "Unknown Flags. Expected a value in the range [0-7] but found [" +
           std::to_string(Flags) + "]");
       reportError(std::move(FlagsErr), "While reading call graph info's Flags");
     }
