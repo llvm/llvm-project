@@ -351,7 +351,7 @@ struct AttachRequestArguments {
   std::string coreFile;
 
   /// Unique ID of an existing target to attach to.
-  std::optional<uint32_t> targetId;
+  std::optional<lldb::user_id_t> targetId;
 
   /// @}
 };

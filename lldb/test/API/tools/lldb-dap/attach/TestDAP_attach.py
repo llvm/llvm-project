@@ -85,4 +85,4 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
         resp = self.attach(targetId=99999, expectFailure=True)
         self.assertFalse(resp["success"])
-        self.assertIn("Unable to find existing target", resp["body"]["error"]["format"])
+        self.assertIn("invalid target_id 99999 in attach config", resp["body"]["error"]["format"])
