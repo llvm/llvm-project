@@ -77,10 +77,11 @@ buildDynamicCastAfterNullCheck(cir::CIRBaseBuilderTy &builder,
   if (op.isRefCast()) {
     // Emit a cir.if that checks the casted value.
     mlir::Value castedValueIsNull = builder.createPtrIsNull(castedPtr);
-    builder.create<cir::IfOp>(
-        loc, castedValueIsNull, false, [&](mlir::OpBuilder &, mlir::Location) {
-          buildBadCastCall(builder, loc, castInfo.getBadCastFunc());
-        });
+    cir::IfOp::create(builder, loc, castedValueIsNull, false,
+                      [&](mlir::OpBuilder &, mlir::Location) {
+                        buildBadCastCall(builder, loc,
+                                         castInfo.getBadCastFunc());
+                      });
   }
 
   // Note that castedPtr is a void*. Cast it to a pointer to the destination

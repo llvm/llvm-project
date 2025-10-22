@@ -10162,6 +10162,22 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "OpenACCAnalysis",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenACC/Analysis/*.cpp",
+        ],
+    ),
+    hdrs = glob(["include/mlir/Dialect/OpenACC/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":OpenACCDialect",
+        ":Pass",
+    ],
+)
+
+cc_library(
     name = "OpenACCTransforms",
     srcs = glob(
         [
