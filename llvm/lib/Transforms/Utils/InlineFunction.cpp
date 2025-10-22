@@ -21,6 +21,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
@@ -2210,6 +2211,147 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
   }
 }
 
+struct SehScope {
+  llvm::InvokeInst *Begin;
+  llvm::InvokeInst *End;
+};
+
+// Determine SEH try scope begins and ends.
+static SmallVector<SehScope, 1> GetSehTryScopes(Function *Func) {
+  SmallVector<SehScope, 1> Scopes{};
+  DenseMap<llvm::BasicBlock *, llvm::InvokeInst *> ScopeEnds{};
+
+  for (auto &BB : *Func) {
+    auto *TI = BB.getTerminator();
+    if (auto *II = dyn_cast<InvokeInst>(TI)) {
+      auto *Call = cast<CallBase>(II);
+      const auto *Fn = Call->getCalledFunction();
+      if (!Fn || !Fn->isIntrinsic())
+        continue;
+
+      if (Fn->getIntrinsicID() == Intrinsic::seh_try_end) {
+        ScopeEnds[II->getUnwindDest()] = II;
+      } else if (Fn->getIntrinsicID() == Intrinsic::seh_try_begin) {
+        Scopes.push_back({II, nullptr});
+      }
+    }
+  }
+
+  // Assign scope end to begin if the unwind destination matches.
+  for (auto &Scope : Scopes) {
+    auto ScopeEndIt = ScopeEnds.find(Scope.Begin->getUnwindDest());
+    if (ScopeEndIt != ScopeEnds.end())
+      Scope.End = ScopeEndIt->second;
+  }
+
+  return Scopes;
+}
+
+// Find, if present, the outermost unterminated try scope for the input block.
+static llvm::InvokeInst *
+GetOutermostUnterminatedTryScopeBegin(llvm::BasicBlock *ReturnBlock,
+                                      SmallVector<SehScope, 1> &Scopes) {
+  llvm::InvokeInst *OutermostScope{nullptr};
+  DominatorTree DT;
+  DT.recalculate(*ReturnBlock->getParent());
+
+  for (auto &Scope : Scopes) {
+    auto *Invoke = Scope.Begin;
+
+    // Return might not be in a try scope.
+    if (!DT.dominates(Invoke->getParent(), ReturnBlock))
+      continue;
+
+    // If there is a catch which connects to the return, the try scope is
+    // considered to be terminated.
+    if (isPotentiallyReachable(Invoke->getUnwindDest(), ReturnBlock, nullptr,
+                               &DT))
+      continue;
+
+    // For SEH there can be try scope ends on invokes and finally statements.
+    if (Scope.End && isPotentiallyReachable(Scope.End->getParent(), ReturnBlock,
+                                            nullptr, &DT))
+      continue;
+
+    // Keep the outermost scope if we match multiple ones.
+    if (OutermostScope) {
+      if (!DT.dominates(Invoke->getParent(), OutermostScope->getParent()))
+        continue;
+    }
+
+    OutermostScope = Invoke;
+  }
+
+  return OutermostScope;
+}
+
+struct UnterminatedTryScope {
+  llvm::BasicBlock *ReturnBlock;
+  llvm::BasicBlock *TryStart;
+  llvm::BasicBlock *UnwindDestination;
+};
+
+// For Windows -EHa there may be the case of try scopes spanning over a return
+// instruction. If no other return out of the function is given (e.g. by letting
+// all other blocks terminate with unreachable) the try scope is considered
+// unterminated upon inlining. To avoid leaking the try scopes over to a caller
+// we need to add a terminator for the outermost unterminated try scope.
+static SmallVector<UnterminatedTryScope, 1>
+GetUnterminatedTryScopes(Function *CalledFunc) {
+  SmallVector<UnterminatedTryScope, 1> UnterminatedScopes;
+  auto Scopes = GetSehTryScopes(CalledFunc);
+  if (Scopes.empty())
+    return UnterminatedScopes;
+
+  SmallVector<ReturnInst *, 8> Returns;
+  for (auto &BB : *CalledFunc)
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      Returns.push_back(RI);
+
+  for (auto *RI : Returns) {
+    auto *Block = RI->getParent();
+    auto *OutermostScope = GetOutermostUnterminatedTryScopeBegin(Block, Scopes);
+    if (!OutermostScope)
+      continue;
+
+    UnterminatedScopes.push_back(
+        {Block, OutermostScope->getParent(), OutermostScope->getUnwindDest()});
+  }
+
+  return UnterminatedScopes;
+}
+
+// Insert terminator for unterminated try scopes.
+static void HandleUnterminatedTryScopes(
+    Function *Caller,
+    SmallVector<UnterminatedTryScope, 1> &UnterminatedTryScopes,
+    ValueToValueMapTy &VMap) {
+  for (auto &Scope : UnterminatedTryScopes) {
+    auto *ReturnBlock = cast<BasicBlock>(VMap[Scope.ReturnBlock]);
+    auto *TryStart = cast<BasicBlock>(VMap[Scope.TryStart]);
+    auto *UnwindDestination = cast<BasicBlock>(VMap[Scope.UnwindDestination]);
+    // did not survive (partial) inlining - ignore
+    if (!ReturnBlock || !TryStart || !UnwindDestination)
+      continue;
+
+    auto *Mod = (llvm::Module *)Caller->getParent();
+    auto *SehTryEndFn =
+        Intrinsic::getOrInsertDeclaration(Mod, Intrinsic::seh_try_end);
+    auto *BB = ReturnBlock->splitBasicBlockBefore(ReturnBlock->getTerminator(),
+                                                  "try.end");
+    BB->getTerminator()->eraseFromParent();
+    IRBuilder<>(BB).CreateInvoke(SehTryEndFn, ReturnBlock, UnwindDestination);
+
+    for (auto &Insn : *UnwindDestination) {
+      if (auto *Phi = dyn_cast<PHINode>(&Insn)) {
+        auto *ValType = Phi->getIncomingValueForBlock(TryStart)->getType();
+        auto *Val = PoisonValue::get(ValType);
+        Phi->addIncoming(Val, BB);
+      }
+    }
+  }
+}
+
 // In contextual profiling, when an inline succeeds, we want to remap the
 // indices of the callee into the index space of the caller. We can't just leave
 // them as-is because the same callee may appear in other places in this caller
@@ -2625,6 +2767,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   SmallVector<ReturnInst*, 8> Returns;
   ClonedCodeInfo InlinedFunctionInfo;
   Function::iterator FirstNewBlock;
+  SmallVector<UnterminatedTryScope, 1> UnterminatedTryScopes;
 
   // GC poses two hazards to inlining, which only occur when the callee has GC:
   //  1. If the caller has no GC, then the callee's GC must be propagated to the
@@ -2648,6 +2791,11 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       assert(Caller->getPersonalityFn()->stripPointerCasts() ==
                  CalledPersonality &&
              "CanInlineCallSite should have verified compatible personality");
+
+    const llvm::Module *M = CalledFunc->getParent();
+    if (M->getModuleFlag("eh-asynch")) {
+      UnterminatedTryScopes = GetUnterminatedTryScopes(CalledFunc);
+    }
   }
 
   { // Scope to destroy VMap after cloning.
@@ -2837,6 +2985,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         for (Instruction &I : NewBlock)
           if (auto *II = dyn_cast<AssumeInst>(&I))
             IFI.GetAssumptionCache(*Caller).registerAssumption(II);
+
+    HandleUnterminatedTryScopes(Caller, UnterminatedTryScopes, VMap);
   }
 
   if (IFI.ConvergenceControlToken) {
