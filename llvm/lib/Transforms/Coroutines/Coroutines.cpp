@@ -559,6 +559,9 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
         Args.push_back(TypeId);
     }
     auto *Call = Builder.CreateCall(Alloc, Args);
+    if (ABI == coro::ABI::RetconOnceDynamic) {
+      Call->addParamAttr(1, Attribute::SwiftCoro);
+    }
     propagateCallAttrsFromCallee(Call, Alloc);
     addCallToCallGraph(CG, Call, Alloc);
     return Call;
@@ -598,6 +601,9 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
         Ptr, Dealloc->getFunctionType()->getParamType(allocationParamIndex));
     Args.push_back(Ptr);
     auto *Call = Builder.CreateCall(Dealloc, Args);
+    if (ABI == coro::ABI::RetconOnceDynamic) {
+      Call->addParamAttr(1, Attribute::SwiftCoro);
+    }
     propagateCallAttrsFromCallee(Call, Dealloc);
     addCallToCallGraph(CG, Call, Dealloc);
     return;

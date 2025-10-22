@@ -187,12 +187,12 @@ declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcor
 ; CHECK:         %size = call i32 @getSize()
 ; CHECK:         call swiftcorocc ptr @allocate(
 ; CHECK-SAME:      ptr %frame,
-; CHECK-SAME:      ptr %allocator,
+; CHECK-SAME:      ptr swiftcoro %allocator,
 ; CHECK-SAME:      i32 %size
 ; CHECK-SAME:    )
 ; CHECK:         call swiftcorocc ptr @allocate_frame(
 ; CHECK-SAME:      ptr %frame,
-; CHECK-SAME:      ptr %allocator,
+; CHECK-SAME:      ptr swiftcoro %allocator,
 ; CHECK-SAME:      i32
 ; CHECK-SAME:    )
 ; CHECK-LABEL: @allocating_something.resume.0(
@@ -202,12 +202,12 @@ declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcor
 ; CHECK-SAME:  {
 ; CHECK:         call void @deallocate_frame(
 ; CHECK-SAME:      ptr %0,
-; CHECK-SAME:      ptr %1,
+; CHECK-SAME:      ptr swiftcoro %1,
 ; CHECK-SAME:      ptr
 ; CHECK-SAME:    )
 ; CHECK:         call void @deallocate(
 ; CHECK-SAME:      ptr %0,
-; CHECK-SAME:      ptr %1,
+; CHECK-SAME:      ptr swiftcoro %1,
 ; CHECK-SAME:      ptr
 ; CHECK-SAME:    )
 @allocating_something_cfp = constant <{ i32, i32 }>
