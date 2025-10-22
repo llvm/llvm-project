@@ -26,8 +26,10 @@ struct AllocateCheckerInfo {
   std::optional<evaluate::DynamicType> sourceExprType;
   std::optional<parser::CharBlock> sourceExprLoc;
   std::optional<parser::CharBlock> typeSpecLoc;
-  const parser::Name *statVar{nullptr};
-  const parser::Name *msgVar{nullptr};
+  std::optional<parser::CharBlock> statSource;
+  std::optional<parser::CharBlock> msgSource;
+  const SomeExpr *statVar{nullptr};
+  const SomeExpr *msgVar{nullptr};
   int sourceExprRank{0}; // only valid if gotMold || gotSource
   bool gotStat{false};
   bool gotMsg{false};
@@ -148,11 +150,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                           context.Say(
                               "STAT may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
-                        if (const auto *designator{
-                                parser::Unwrap<parser::Designator>(var)}) {
-                          info.statVar = &parser::GetLastName(*designator);
-                        }
                         info.gotStat = true;
+                        info.statVar = GetExpr(context, var);
+                        info.statSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
@@ -164,11 +165,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);
                         }
-                        if (const auto *designator{
-                                parser::Unwrap<parser::Designator>(var)}) {
-                          info.msgVar = &parser::GetLastName(*designator);
-                        }
                         info.gotMsg = true;
+                        info.msgVar = GetExpr(context, var);
+                        info.msgSource =
+                            parser::Unwrap<parser::Variable>(var)->GetSource();
                       },
                   },
                   statOrErr.u);
@@ -700,17 +700,13 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
     }
   }
-  if (allocateInfo_.gotStat && allocateInfo_.statVar) {
-    if (const Symbol *symbol{allocateInfo_.statVar->symbol};
-        symbol && *ultimate_ == symbol->GetUltimate()) {
-      context.Say(allocateInfo_.statVar->source,
+  if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
+    if (allocateInfo_.statVar && *allocObj == *allocateInfo_.statVar) {
+      context.Say(allocateInfo_.statSource.value_or(name_.source),
           "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
-  }
-  if (allocateInfo_.gotMsg && allocateInfo_.msgVar) {
-    if (const Symbol *symbol{allocateInfo_.msgVar->symbol};
-        symbol && *ultimate_ == symbol->GetUltimate()) {
-      context.Say(allocateInfo_.msgVar->source,
+    if (allocateInfo_.msgVar && *allocObj == *allocateInfo_.msgVar) {
+      context.Say(allocateInfo_.msgSource.value_or(name_.source),
           "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
   }
