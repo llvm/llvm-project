@@ -245,21 +245,31 @@ class LibraryResolverIT : public ::testing::Test {
 protected:
   std::string BaseDir;
   std::unordered_map<std::string, TestLibrary> libs;
+
+  void addLib(const std::string &name) {
+    SmallString<512> path;
+    sys::fs::real_path(libPath(BaseDir, name + "/lib" + name), path);
+    if (path.empty())
+      EnvReady = false;
+    libs[name] = {path.str().str(), {platformSymbolName("say" + name)}};
+  }
+
   void SetUp() override {
     if (!EnvReady)
       GTEST_SKIP() << "Skipping test: environment setup failed.";
 
     ASSERT_NE(GlobalEnv, nullptr);
     BaseDir = GlobalEnv->getBaseDir();
-    libs["A"] = {libPath(BaseDir, "A/libA"), {platformSymbolName("sayA")}};
-    libs["B"] = {libPath(BaseDir, "B/libB"), {platformSymbolName("sayB")}};
-    libs["C"] = {libPath(BaseDir, "C/libC"), {platformSymbolName("sayC")}};
-    libs["D"] = {libPath(BaseDir, "D/libD"), {platformSymbolName("sayD")}};
-    libs["Z"] = {libPath(BaseDir, "Z/libZ"), {platformSymbolName("sayZ")}};
     for (const auto &P : GlobalEnv->getDylibPaths()) {
       if (!sys::fs::exists(P))
         GTEST_SKIP();
     }
+    const std::vector<std::string> libNames = {"A", "B", "C", "D", "Z"};
+    for (const auto &name : libNames)
+      addLib(name);
+
+    if (!EnvReady)
+      GTEST_SKIP() << "Skipping test: environment setup failed.";
   }
 
   const std::vector<std::string> &sym(const std::string &key) {
