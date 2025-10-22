@@ -252,15 +252,16 @@ class PrepareForOMPOffloadPrivatizationPass
         // variable, rewrite all the uses of the original variable with
         // the heap-allocated variable.
         rewriter.setInsertionPoint(targetOp);
-        auto clonedOp = cast<omp::MapInfoOp>(cloneModifyAndErase(mapInfoOp));
-        rewriter.setInsertionPoint(clonedOp);
+        mapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(mapInfoOp));
+        rewriter.setInsertionPoint(mapInfoOp);
 
         // Fix any members that may use varPtr to now use heapMem
-        for (auto member : clonedOp.getMembers()) {
+        for (auto member : mapInfoOp.getMembers()) {
           auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
           if (!usesVarPtr(memberMapInfoOp))
             continue;
-          rewriter.setInsertionPoint(cloneModifyAndErase(memberMapInfoOp));
+          memberMapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
+          rewriter.setInsertionPoint(memberMapInfoOp);
 
           if (memberMapInfoOp.getVarPtrPtr()) {
             Operation *varPtrPtrdefOp =
@@ -276,7 +277,7 @@ class PrepareForOMPOffloadPrivatizationPass
         // targetOp.
         if (isPrivatizedByValue) {
           rewriter.setInsertionPoint(targetOp);
-          auto newPrivVar = LLVM::LoadOp::create(rewriter, clonedOp.getLoc(),
+          auto newPrivVar = LLVM::LoadOp::create(rewriter, mapInfoOp.getLoc(),
                                                  varType, heapMem);
           newPrivVars.push_back(newPrivVar);
         }
