@@ -2164,6 +2164,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
   ID.AddInteger(Hasher.CalculateHash());
 }
 
+void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
+  VisitExpr(E);
+  // TODO: 
+}
+
 void
 StmtProfiler::VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *S) {
   VisitExpr(S);

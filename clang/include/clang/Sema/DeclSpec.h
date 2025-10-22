@@ -1849,7 +1849,7 @@ enum class DeclaratorContext {
   AliasDecl,           // C++11 alias-declaration.
   AliasTemplate,       // C++11 alias-declaration template.
   RequiresExpr,        // C++2a requires-expression.
-  Association          // C11 _Generic selection expression association.
+  Association         // C11 _Generic selection expression association.
 };
 
 // Describes whether the current context is a context where an implicit

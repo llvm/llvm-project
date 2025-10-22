@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -1548,6 +1549,7 @@ private:
     DSC_condition,          // condition declaration context
     DSC_association, // A _Generic selection expression's type association
     DSC_new,         // C++ new expression
+    DSC_reflect_operator
   };
 
   /// Is this a context in which we are parsing just a type-specifier (or
@@ -1561,6 +1563,7 @@ private:
     case DeclSpecContext::DSC_top_level:
     case DeclSpecContext::DSC_objc_method_result:
     case DeclSpecContext::DSC_condition:
+    case DeclSpecContext::DSC_reflect_operator:
       return false;
 
     case DeclSpecContext::DSC_template_type_arg:
@@ -1619,6 +1622,7 @@ private:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_reflect_operator:
       return AllowDefiningTypeSpec::No;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -1643,6 +1647,7 @@ private:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_reflect_operator:
 
       return false;
     }
@@ -1663,6 +1668,7 @@ private:
     case DeclSpecContext::DSC_association:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_new:
+    case DeclSpecContext::DSC_reflect_operator:
       return true;
 
     case DeclSpecContext::DSC_objc_method_result:
@@ -1694,6 +1700,7 @@ private:
     case DeclSpecContext::DSC_template_arg:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_association:
+    case DeclSpecContext::DSC_reflect_operator:
       return ImplicitTypenameContext::No;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -5167,6 +5174,11 @@ private:
   /// Implementations are in ParseHLSL.cpp
   ///@{
 
+
+    //===--------------------------------------------------------------------===//
+    // C++2c: Reflection [P2996]
+    ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
+
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
                                  SourceLocation *EndLoc = nullptr,
@@ -7677,7 +7689,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

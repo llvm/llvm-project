@@ -529,6 +529,11 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
   }
 }
 
+
+void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  llvm_unreachable("unimplemented");
+}
+
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {
   VisitStmt(S);
   S->setOriginalStmt(cast<CompoundStmt>(Record.readSubStmt()));
@@ -4520,6 +4525,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case EXPR_HLSL_OUT_ARG:
       S = HLSLOutArgExpr::CreateEmpty(Context);
       break;
+    case EXPR_REFLECT: {
+      S = CXXReflectExpr::CreateEmpty(Context);
+      break;
+    }
     }
 
     // We hit a STMT_STOP, so we're done with this expression.

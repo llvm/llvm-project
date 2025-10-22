@@ -1939,6 +1939,40 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   return new (Mem) TypeTraitExpr(EmptyShell(), IsStoredAsBool);
 }
 
+CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty)
+: Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
+
+CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg, bool IsNamespace)
+: Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
+
+CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
+: Expr(CXXReflectExprClass, Empty) {}
+
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C, SourceLocation OperatorLoc,
+                                SourceLocation OperandLoc, QualType Operand) {
+  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.DependentTy, Operand);
+  E->setOperatorLoc(OperatorLoc);
+  E->setOperandRange(OperandLoc);
+  return E;
+}
+
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
+                                       SourceLocation OperatorLoc,
+                                       SourceLocation OperandLoc,
+                                       Decl *Operand) {
+  bool IsNamespace = isa<TranslationUnitDecl>(Operand);
+
+  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.DependentTy, Operand,
+                                             IsNamespace);
+  E->setOperatorLoc(OperatorLoc);
+  E->setOperandRange(OperandLoc);
+  return E;
+}
+
+CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {
+  return new (C) CXXReflectExpr(EmptyShell());
+}
+
 CUDAKernelCallExpr::CUDAKernelCallExpr(Expr *Fn, CallExpr *Config,
                                        ArrayRef<Expr *> Args, QualType Ty,
                                        ExprValueKind VK, SourceLocation RP,
