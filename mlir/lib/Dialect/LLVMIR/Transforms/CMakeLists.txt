@@ -18,4 +18,5 @@ add_mlir_dialect_library(MLIRLLVMIRTransforms
   MLIRPass
   MLIRTransforms
   MLIRNVVMDialect
+  MLIROpenMPDialect
   )

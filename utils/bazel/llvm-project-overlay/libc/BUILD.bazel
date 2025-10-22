@@ -3093,8 +3093,8 @@ libc_support_library(
 libc_support_library(
     name = "__support_sincosf_utils",
     hdrs = [
-        "src/__support/math/sincosf_utils.h",
         "src/__support/math/sincosf_float_eval.h",
+        "src/__support/math/sincosf_utils.h",
     ],
     deps = [
         ":__support_fputil_double_double",

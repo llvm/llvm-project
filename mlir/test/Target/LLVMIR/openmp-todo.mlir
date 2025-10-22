@@ -249,24 +249,6 @@ llvm.func @target_is_device_ptr(%x : !llvm.ptr) {
 
 // -----
 
-omp.private {type = firstprivate} @x.privatizer : i32 copy {
-^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
-  %0 = llvm.load %mold : !llvm.ptr -> i32
-  llvm.store %0, %private : i32, !llvm.ptr
-  omp.yield(%private: !llvm.ptr)
-}
-llvm.func @target_firstprivate(%x : !llvm.ptr) {
-  %0 = omp.map.info var_ptr(%x : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr
-  // expected-error@below {{not yet implemented: Unhandled clause privatization for deferred target tasks in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target nowait map_entries(%0 -> %blockarg0 : !llvm.ptr) private(@x.privatizer %x -> %arg0 [map_idx=0] : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @target_enter_data_depend(%x: !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause depend in omp.target_enter_data operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}
