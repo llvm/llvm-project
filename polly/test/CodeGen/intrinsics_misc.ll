@@ -95,5 +95,5 @@ declare ptr @llvm.invariant.start(i64, ptr nocapture) #1
 ; Function Attrs: nounwind
 declare void @llvm.invariant.end(ptr, i64, ptr nocapture) #1
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #1 = { nounwind }
