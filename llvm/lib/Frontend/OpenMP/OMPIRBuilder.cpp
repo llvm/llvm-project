@@ -1153,10 +1153,10 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
     // Even if the if condition evaluates to false, this should count as a
     // cancellation point
     Builder.SetInsertPoint(ElseTI);
-    auto ElseIP = Builder.saveIP();
+    IRBuilderBase::InsertPoint ElseIP = Builder.saveIP();
 
     InsertPointOrErrorTy IPOrErr = createCancellationPoint(
-        LocationDescription{ElseIP, Loc.DL}, CanceledDirective);
+        LocationDescription(ElseIP, Loc.DL), CanceledDirective);
     if (!IPOrErr)
       return IPOrErr;
   }
