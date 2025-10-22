@@ -86,57 +86,29 @@ Expected<int32_t> LevelZeroPluginTy::findDevices() {
               return A.IsDiscrete;
             });
 
-  struct DeviceInfoTy {
-    L0DeviceIdTy Id;
-    L0ContextTy *Driver;
-    bool isRoot() const { return Id.SubId < 0 && Id.CCSId < 0; }
-  };
-
-  llvm::SmallVector<DeviceInfoTy> DevicesToAdd;
-
   for (size_t RootId = 0; RootId < RootDevices.size(); RootId++) {
     const auto zeDevice = RootDevices[RootId].zeDevice;
     auto *RootDriver = RootDevices[RootId].Driver;
-    DevicesToAdd.push_back(
-        {{zeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
+    DetectedDevices.push_back(DeviceInfoTy{
+        {zeDevice, static_cast<int32_t>(RootId), -1, -1}, RootDriver});
   }
-  NumDevices = DevicesToAdd.size();
-  auto DeviceId = 0;
-  for (auto &DeviceInfo : DevicesToAdd) {
-    auto RootId = DeviceInfo.Id.RootId;
-    auto SubId = DeviceInfo.Id.SubId;
-    auto CCSId = DeviceInfo.Id.CCSId;
-    auto zeDevice = DeviceInfo.Id.zeId;
-    auto *Driver = DeviceInfo.Driver;
+  int32_t NumDevices = DetectedDevices.size();
 
-    std::string IdStr = std::to_string(RootId) +
-                        (SubId < 0 ? "" : "." + std::to_string(SubId)) +
-                        (CCSId < 0 ? "" : "." + std::to_string(CCSId));
-
-    L0Devices.push_back(new L0DeviceTy(*this, DeviceId, getNumRootDevices(),
-                                       zeDevice, *Driver, std::move(IdStr),
-                                       CCSId < 0 ? 0 : CCSId /* ComputeIndex */
-                                       ));
-    DeviceId++;
-  }
-
-  DP("Found %" PRIu32 " root devices, %" PRIu32 " total devices.\n",
-     getNumRootDevices(), NumDevices);
+  DP("Found %" PRIu32 " devices.\n", NumDevices);
   DP("List of devices (DeviceID[.SubID[.CCSID]])\n");
-  for (auto &l0Device : L0Devices) {
-    DP("-- %s\n", l0Device->getZeIdCStr());
-    (void)l0Device; // silence warning
+  for (auto &DeviceInfo : DetectedDevices) {
+    (void)DeviceInfo; // to avoid unused variable warning in non-debug builds
+    DP("-- Device %" PRIu32 "%s%s (zeDevice=%p) from Driver %p\n",
+       DeviceInfo.Id.RootId,
+       (DeviceInfo.Id.SubId < 0
+            ? ""
+            : ("." + std::to_string(DeviceInfo.Id.SubId)).c_str()),
+       (DeviceInfo.Id.CCSId < 0
+            ? ""
+            : ("." + std::to_string(DeviceInfo.Id.CCSId)).c_str()),
+       DPxPTR(DeviceInfo.Id.zeId), DPxPTR(DeviceInfo.Id.Driver));
   }
-
-  if (getDebugLevel() > 0) {
-    DP("Root Device Information\n");
-    for (uint32_t I = 0; I < getNumRootDevices(); I++) {
-      auto &l0Device = getDeviceFromId(I);
-      l0Device.reportDeviceInfo();
-    }
-  }
-
-  return getNumRootDevices();
+  return NumDevices;
 }
 
 Expected<int32_t> LevelZeroPluginTy::initImpl() {
@@ -163,7 +135,25 @@ Error LevelZeroPluginTy::deinitImpl() {
 GenericDeviceTy *LevelZeroPluginTy::createDevice(GenericPluginTy &Plugin,
                                                  int32_t DeviceId,
                                                  int32_t NumDevices) {
-  return &getDeviceFromId(DeviceId);
+  auto &DeviceInfo = DetectedDevices[DeviceId];
+  auto RootId = DeviceInfo.Id.RootId;
+  auto SubId = DeviceInfo.Id.SubId;
+  auto CCSId = DeviceInfo.Id.CCSId;
+  auto zeDevice = DeviceInfo.Id.zeId;
+  auto *zeDriver = DeviceInfo.Driver;
+
+  std::string IdStr = std::to_string(RootId) +
+                      (SubId < 0 ? "" : "." + std::to_string(SubId)) +
+                      (CCSId < 0 ? "" : "." + std::to_string(CCSId));
+
+  auto *NewDevice = new L0DeviceTy(
+      static_cast<LevelZeroPluginTy &>(Plugin), DeviceId, NumDevices, zeDevice,
+      *zeDriver, std::move(IdStr), CCSId < 0 ? 0 : CCSId /* ComputeIndex */);
+  if (NewDevice && getDebugLevel() > 0) {
+    DP("Device %" PRIi32 " information\n", DeviceId);
+    NewDevice->reportDeviceInfo();
+  }
+  return NewDevice;
 }
 
 GenericGlobalHandlerTy *LevelZeroPluginTy::createGlobalHandler() {

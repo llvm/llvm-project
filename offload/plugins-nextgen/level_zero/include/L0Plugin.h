@@ -26,15 +26,15 @@ namespace llvm::omp::target::plugin {
 /// Class implementing the LevelZero specific functionalities of the plugin.
 class LevelZeroPluginTy final : public GenericPluginTy {
 private:
-  /// Number of devices available including subdevices
-  uint32_t NumDevices = 0;
+  struct DeviceInfoTy {
+    L0DeviceIdTy Id;
+    L0ContextTy *Driver;
+    bool isRoot() const { return Id.SubId < 0 && Id.CCSId < 0; }
+  };
+  llvm::SmallVector<DeviceInfoTy> DetectedDevices;
 
   /// Context (and Driver) specific data
   std::list<L0ContextTy> ContextList;
-
-  /// L0 device used by each OpenMP device
-  using DeviceContainerTy = llvm::SmallVector<L0DeviceTy *>;
-  DeviceContainerTy L0Devices;
 
   // Table containing per-thread information using TLS
   L0ThreadTblTy ThreadTLSTable;
@@ -51,6 +51,10 @@ private:
 
   auto &getTLS() { return ThreadTLSTable.get(); }
 
+  /// Find L0 devices and initialize device properties.
+  /// Returns number of devices reported to omptarget.
+  Expected<int32_t> findDevices();
+
 public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() {}
@@ -62,34 +66,9 @@ public:
 
   static const auto &getOptions() { return Options; }
 
-  struct DevicesRangeTy {
-    using iterator = DeviceContainerTy::iterator;
-
-    iterator BeginIt;
-    iterator EndIt;
-
-    DevicesRangeTy(iterator BeginIt, iterator EndIt)
-        : BeginIt(BeginIt), EndIt(EndIt) {}
-
-    auto &begin() { return BeginIt; }
-    auto &end() { return EndIt; }
-  };
-
-  auto getDevicesRange() {
-    return DevicesRangeTy(L0Devices.begin(), L0Devices.end());
-  }
-
-  /// Find L0 devices and initialize device properties.
-  /// Returns number of devices reported to omptarget.
-  Expected<int32_t> findDevices();
-
   L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
-    assert("Invalid device ID" && DeviceId >= 0 &&
-           DeviceId < static_cast<int32_t>(L0Devices.size()));
-    return *L0Devices[DeviceId];
+    return static_cast<L0DeviceTy &>(getDevice(DeviceId));
   }
-
-  uint32_t getNumRootDevices() const { return NumDevices; }
 
   AsyncQueueTy *getAsyncQueue() {
     auto *Queue = getTLS().getAsyncQueue();

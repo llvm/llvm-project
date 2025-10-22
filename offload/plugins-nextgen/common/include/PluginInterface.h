@@ -1266,7 +1266,7 @@ struct GenericPluginTy {
   virtual GenericGlobalHandlerTy *createGlobalHandler() = 0;
 
   /// Get the reference to the device with a certain device id.
-  GenericDeviceTy &getDevice(int32_t DeviceId) {
+  GenericDeviceTy &getDevice(int32_t DeviceId) const {
     assert(isValidDeviceId(DeviceId) && "Invalid device id");
     assert(Devices[DeviceId] && "Device is uninitialized");
 
@@ -1526,6 +1526,23 @@ public:
   /// Queue an asynchronous barrier in the queue associated with the interop
   /// object and return immediately.
   int32_t async_barrier(omp_interop_val_t *Interop);
+
+  struct DevicesRangeTy {
+    using iterator = llvm::SmallVector<GenericDeviceTy *>::iterator;
+
+    iterator BeginIt;
+    iterator EndIt;
+
+    DevicesRangeTy(iterator BeginIt, iterator EndIt)
+        : BeginIt(BeginIt), EndIt(EndIt) {}
+
+    auto &begin() { return BeginIt; }
+    auto &end() { return EndIt; }
+  };
+
+  DevicesRangeTy getDevicesRange() {
+    return DevicesRangeTy(Devices.begin(), Devices.end());
+  }
 
 private:
   /// Indicates if the platform runtime has been fully initialized.
