@@ -39,7 +39,8 @@ public:
   void emitCSRSpillStores(MachineFunction &MF, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                           LiveRegUnits &LiveUnits, Register FrameReg,
-                          Register FramePtrRegScratchCopy) const;
+                          Register FramePtrRegScratchCopy,
+                          const bool NeedsFrameMoves) const;
   void emitCSRSpillRestores(MachineFunction &MF, MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI, DebugLoc &DL,
                             LiveRegUnits &LiveUnits, Register FrameReg,
@@ -101,6 +102,15 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
+  void emitPrologueEntryCFI(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL) const;
+
+  void emitDefCFA(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                  DebugLoc const &DL, Register StackPtrReg,
+                  bool AspaceAlreadyDefined,
+                  MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const;
+
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;
 
@@ -110,6 +120,24 @@ public:
            const DebugLoc &DL, const MCCFIInstruction &CFIInst,
            MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
 
+  /// Create a CFI index describing a spill of an SGPR to a single lane of
+  /// a VGPR and build a MachineInstr around it.
+  MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL,
+                                           const Register SGPR,
+                                           const Register VGPR,
+                                           const int Lane) const;
+  /// Create a CFI index describing a spill of an SGPR to multiple lanes of
+  /// VGPRs and build a MachineInstr around it.
+  MachineInstr *buildCFIForSGPRToVGPRSpill(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      const DebugLoc &DL, Register SGPR,
+      ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const;
+  MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator MBBI,
+                                              const DebugLoc &DL, Register Reg,
+                                              Register SGPRPair) const;
   // Returns true if the function may need to reserve space on the stack for the
   // CWSR trap handler.
   bool mayReserveScratchForCWSR(const MachineFunction &MF) const;

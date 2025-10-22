@@ -17,6 +17,9 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    s_mov_b64 exec, -1
 ; GFX906-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
 ; GFX906-NEXT:    s_mov_b64 exec, s[18:19]
+; GFX906-NEXT:    v_writelane_b32 v41, s16, 4
+; GFX906-NEXT:    v_writelane_b32 v41, s34, 2
+; GFX906-NEXT:    v_writelane_b32 v41, s35, 3
 ; GFX906-NEXT:    s_mov_b32 s21, s15
 ; GFX906-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GFX906-NEXT:    s_mov_b32 s22, s14
@@ -30,11 +33,8 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    v_writelane_b32 v39, s26, 4
 ; GFX906-NEXT:    v_writelane_b32 v39, s27, 5
 ; GFX906-NEXT:    v_writelane_b32 v39, s8, 6
-; GFX906-NEXT:    v_writelane_b32 v41, s16, 4
 ; GFX906-NEXT:    v_writelane_b32 v39, s9, 7
-; GFX906-NEXT:    v_writelane_b32 v41, s34, 2
 ; GFX906-NEXT:    v_writelane_b32 v39, s6, 8
-; GFX906-NEXT:    v_writelane_b32 v41, s35, 3
 ; GFX906-NEXT:    v_writelane_b32 v39, s7, 9
 ; GFX906-NEXT:    v_writelane_b32 v41, s30, 0
 ; GFX906-NEXT:    v_writelane_b32 v39, s4, 10

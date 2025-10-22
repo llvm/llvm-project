@@ -21,6 +21,12 @@ body:             |
     ; GCN-LABEL: name: shift_back_exec_copy_reserved_reg
     ; GCN: liveins: $sgpr30_sgpr31, $vgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, killed $vgpr0
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, killed $vgpr0
     ; GCN-NEXT: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
@@ -58,6 +64,14 @@ body:             |
     ; GCN-LABEL: name: spill_exec_copy_reserved_reg
     ; GCN: liveins: $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr30_sgpr31, $vcc, $vgpr0
     ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, killed $vgpr0
     ; GCN-NEXT: $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, killed $vgpr0
     ; GCN-NEXT: $sgpr40_sgpr41 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec

@@ -265,8 +265,8 @@ define void @func_indirect_use_workitem_id_x() #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, use_workitem_id_x@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, use_workitem_id_x@gotpcrel32@hi+12
@@ -298,8 +298,8 @@ define void @func_indirect_use_workitem_id_y() #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, use_workitem_id_y@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, use_workitem_id_y@gotpcrel32@hi+12
@@ -331,8 +331,8 @@ define void @func_indirect_use_workitem_id_z() #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, use_workitem_id_z@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, use_workitem_id_z@gotpcrel32@hi+12
@@ -651,8 +651,8 @@ define void @func_call_too_many_args_use_workitem_id_x(i32 %arg0) #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, too_many_args_use_workitem_id_x@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, too_many_args_use_workitem_id_x@gotpcrel32@hi+12
@@ -729,9 +729,9 @@ define void @too_many_args_call_too_many_args_use_workitem_id_x(
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    v_writelane_b32 v40, s4, 2
 ; GCN-NEXT:    buffer_load_dword v32, off, s[0:3], s33
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
-; GCN-NEXT:    v_writelane_b32 v40, s4, 2
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, too_many_args_use_workitem_id_x@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, too_many_args_use_workitem_id_x@gotpcrel32@hi+12
@@ -970,6 +970,7 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
+; GCN-NEXT:    v_writelane_b32 v40, s4, 2
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x3e7
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33
@@ -977,7 +978,6 @@ define void @func_call_too_many_args_use_workitem_id_x_byval() #1 {
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0x140
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32
 ; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s33
-; GCN-NEXT:    v_writelane_b32 v40, s4, 2
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, too_many_args_use_workitem_id_x_byval@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, too_many_args_use_workitem_id_x_byval@gotpcrel32@hi+12

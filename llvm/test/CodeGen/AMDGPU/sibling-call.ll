@@ -231,8 +231,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32_byval_parent(i32 %a, pt
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], s33
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
@@ -382,8 +382,8 @@ define fastcc i32 @no_sibling_call_callee_more_stack_space(i32 %a, i32 %b) #1 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_i32_a32i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_i32_a32i32@gotpcrel32@hi+12
@@ -450,8 +450,8 @@ define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i3
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v42, s4, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, i32_fastcc_i32_i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, i32_fastcc_i32_i32@gotpcrel32@hi+12

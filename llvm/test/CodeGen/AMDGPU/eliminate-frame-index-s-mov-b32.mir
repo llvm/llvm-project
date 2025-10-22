@@ -33,6 +33,214 @@ body:             |
     ; GFX8-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX8: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX8-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX8-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX8-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc
@@ -58,6 +266,214 @@ body:             |
     ; GFX900-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX900: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX900-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX900-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX900-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc
@@ -83,6 +499,246 @@ body:             |
     ; GFX90A-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX90A: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX90A-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX90A-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX90A-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc
@@ -108,6 +764,214 @@ body:             |
     ; GFX1010-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX1010: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX1010-NEXT: {{  $}}
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX1010-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX1010-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX1010-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc_lo
@@ -133,6 +997,214 @@ body:             |
     ; GFX1100-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX1100: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX1100-NEXT: {{  $}}
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX1100-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX1100-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX1100-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc_lo
@@ -158,6 +1230,214 @@ body:             |
     ; GFX1200-LABEL: name: s_copy_frame_index_elimination_failure_pei
     ; GFX1200: liveins: $sgpr12, $sgpr13, $sgpr14, $sgpr15, $vgpr0, $vgpr1, $vgpr2, $vgpr4, $vgpr31, $vgpr40, $vgpr63, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr30_sgpr31
     ; GFX1200-NEXT: {{  $}}
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr64
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr65
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr66
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr67
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr68
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr69
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr70
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr71
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr80
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr81
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr82
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr83
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr84
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr85
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr86
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr87
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr96
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr97
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr98
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr99
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr100
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr101
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr102
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr103
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr112
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr113
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr114
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr115
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr116
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr117
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr118
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr119
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr128
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr129
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr130
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr131
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr132
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr133
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr134
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr135
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr144
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr145
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr146
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr147
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr148
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr149
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr150
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr151
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr160
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr161
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr162
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr163
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr164
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr165
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr166
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr167
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr176
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr177
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr178
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr179
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr180
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr181
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr182
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr183
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr192
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr193
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr194
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr195
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr196
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr197
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr198
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr199
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr208
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr209
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr210
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr211
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr212
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr213
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr214
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr215
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr224
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr225
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr226
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr227
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr228
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr229
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr230
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr231
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr240
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr241
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr242
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr243
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr244
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr245
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr246
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr247
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr72
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr73
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr74
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr75
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr76
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr77
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr78
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr79
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr88
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr89
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr90
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr91
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr92
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr93
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr94
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr95
     ; GFX1200-NEXT: renamable $sgpr18_sgpr19 = S_MOV_B64 $src_private_base
     ; GFX1200-NEXT: renamable $sgpr17 = S_MOV_B32 0
     ; GFX1200-NEXT: undef renamable $vcc_lo = COPY undef renamable $sgpr17, implicit-def $vcc_lo
@@ -216,6 +1496,9 @@ body:   |
     ; GFX8-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX8-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -227,6 +1510,9 @@ body:   |
     ; GFX900-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX900-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -237,6 +1523,9 @@ body:   |
     ; GFX90A-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX90A: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX90A-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc, implicit $exec
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -247,6 +1536,9 @@ body:   |
     ; GFX1010-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX1010: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1010-NEXT: {{  $}}
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1010-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc_lo, implicit $exec
     ; GFX1010-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX1010-NEXT: $vgpr0 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
@@ -257,6 +1549,9 @@ body:   |
     ; GFX1100-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX1100: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1100-NEXT: {{  $}}
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1100-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc_lo, implicit $exec
     ; GFX1100-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX1100-NEXT: $sgpr0 = S_ADDC_U32 $sgpr32, 64, implicit-def $scc, implicit $scc
@@ -268,6 +1563,9 @@ body:   |
     ; GFX1200-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc
     ; GFX1200: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1200-NEXT: {{  $}}
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1200-NEXT: V_CMP_EQ_U32_e32 0, killed $vgpr0, implicit-def $vcc_lo, implicit $exec
     ; GFX1200-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX1200-NEXT: $sgpr0 = S_ADDC_U32 $sgpr32, 64, implicit-def $scc, implicit $scc
@@ -300,6 +1598,57 @@ body:   |
     ; GFX8-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr42, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
@@ -361,6 +1710,57 @@ body:   |
     ; GFX900-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr42, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
@@ -421,6 +1821,73 @@ body:   |
     ; GFX90A-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX90A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15, $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX90A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr40, implicit $exec
     ; GFX90A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr41, implicit $exec
     ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr42, implicit $exec
@@ -481,6 +1948,57 @@ body:   |
     ; GFX1010-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX1010: liveins: $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX1010-NEXT: {{  $}}
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1010-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 60, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
     ; GFX1010-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr41, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 56, 0, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
     ; GFX1010-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr42, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 52, 0, 0, implicit $exec :: (store (s32) into %stack.4, addrspace 5)
@@ -539,6 +2057,57 @@ body:   |
     ; GFX1100-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX1100: liveins: $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX1100-NEXT: {{  $}}
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1100-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
     ; GFX1100-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 56, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; GFX1100-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr42, $sgpr32, 52, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.4, addrspace 5)
@@ -598,6 +2167,57 @@ body:   |
     ; GFX1200-LABEL: name: materialize_fi_s_mov_b32_offset_64_live_scc_live_vcc_no_vgpr
     ; GFX1200: liveins: $sgpr4, $sgpr5, $vgpr0, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63
     ; GFX1200-NEXT: {{  $}}
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr2
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr3
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr4
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr5
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr6
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr7
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr9
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr10
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr11
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr12
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr13
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr14
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr15
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr16
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr17
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr18
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr19
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr20
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr21
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr22
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr23
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr24
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr25
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr26
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr27
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr28
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr29
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr30
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr31
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr33
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr34
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr35
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr36
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr37
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr38
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr39
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr48
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr49
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr50
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr51
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr52
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr53
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr54
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr55
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
     ; GFX1200-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 60, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
     ; GFX1200-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr41, $sgpr32, 56, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.3, addrspace 5)
     ; GFX1200-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr42, $sgpr32, 52, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.4, addrspace 5)
@@ -694,6 +2314,54 @@ body:   |
     ; GFX8-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -721,6 +2389,54 @@ body:   |
     ; GFX900-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -747,6 +2463,54 @@ body:   |
     ; GFX90A-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX90A: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -773,6 +2537,54 @@ body:   |
     ; GFX1010-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX1010: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1010-NEXT: {{  $}}
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -799,6 +2611,54 @@ body:   |
     ; GFX1100-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX1100: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1100-NEXT: {{  $}}
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -826,6 +2686,54 @@ body:   |
     ; GFX1200-LABEL: name: materialize_fi_s_mov_b32_offset_24_live_scc_live_vcc_no_sgpr
     ; GFX1200: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1200-NEXT: {{  $}}
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -889,6 +2797,54 @@ body:             |
     ; GFX8-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX8-NEXT: {{  $}}
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX8-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX8-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -916,6 +2872,54 @@ body:             |
     ; GFX900-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX900-NEXT: {{  $}}
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX900-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX900-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -942,6 +2946,54 @@ body:             |
     ; GFX90A-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX90A: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX90A-NEXT: {{  $}}
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX90A-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -968,6 +3020,54 @@ body:             |
     ; GFX1010-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX1010: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1010-NEXT: {{  $}}
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1010-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1010-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -994,6 +3094,54 @@ body:             |
     ; GFX1100-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX1100: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1100-NEXT: {{  $}}
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1100-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1100-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
@@ -1021,6 +3169,54 @@ body:             |
     ; GFX1200-LABEL: name: materialize_fi_s_mov_b32_offset_68_live_scc_no_sgpr
     ; GFX1200: liveins: $sgpr4, $sgpr5, $vgpr0
     ; GFX1200-NEXT: {{  $}}
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr0
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr1
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr2
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr3
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr4
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr5
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr6
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr7
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr8
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr9
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr10
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr11
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr12
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr13
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr14
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr15
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr16
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr17
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr18
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr19
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr20
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr21
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr22
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr23
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr24
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr25
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr26
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr27
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr28
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr29
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr40
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr41
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr42
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr43
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr44
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr45
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr46
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr47
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr56
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr57
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr58
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr59
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr60
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr61
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr62
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION undefined $sgpr63
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX1200-NEXT: S_NOP 0, implicit-def $sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23

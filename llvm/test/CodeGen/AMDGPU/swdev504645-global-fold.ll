@@ -10,8 +10,8 @@ define void @test_load_zext() {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[2:3], -1
 ; CHECK-NEXT:    scratch_store_dword off, v40, s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[2:3]
-; CHECK-NEXT:    s_add_i32 s32, s32, 16
 ; CHECK-NEXT:    v_writelane_b32 v40, s0, 2
+; CHECK-NEXT:    s_add_i32 s32, s32, 16
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, has_spgr_args@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, has_spgr_args@gotpcrel32@hi+12

@@ -18,8 +18,8 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, external_void_func_i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, external_void_func_i32@gotpcrel32@hi+12
@@ -52,8 +52,8 @@ define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:64 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    s_addk_i32 s32, 0x1400
 ; GCN-NEXT:    v_writelane_b32 v40, s16, 2
+; GCN-NEXT:    s_addk_i32 s32, 0x1400
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, external_void_func_i32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, external_void_func_i32@gotpcrel32@hi+12

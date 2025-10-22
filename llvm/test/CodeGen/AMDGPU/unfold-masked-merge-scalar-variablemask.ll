@@ -648,12 +648,12 @@ define i32 @s_in_multiuse_A(i32 inreg %x, i32 inreg %y, i32 inreg %z, i32 inreg 
 ; GCN-NEXT:    s_mov_b32 exec_lo, s16
 ; GCN-NEXT:    v_writelane_b32 v40, s2, 4
 ; GCN-NEXT:    s_add_i32 s32, s32, 16
+; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, use32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, use32@gotpcrel32@hi+12
 ; GCN-NEXT:    s_xor_b32 s0, s0, s1
 ; GCN-NEXT:    s_load_b64 s[16:17], s[16:17], 0x0
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 2
 ; GCN-NEXT:    s_mov_b32 s34, s1
@@ -693,16 +693,16 @@ define i32 @s_in_multiuse_B(i32 inreg %x, i32 inreg %y, i32 inreg %z, i32 inreg 
 ; GCN-NEXT:    s_or_saveexec_b32 s16, -1
 ; GCN-NEXT:    scratch_store_b32 off, v40, s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b32 exec_lo, s16
+; GCN-NEXT:    v_writelane_b32 v40, s2, 4
 ; GCN-NEXT:    s_add_i32 s32, s32, 16
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, use32@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, use32@gotpcrel32@hi+12
-; GCN-NEXT:    v_writelane_b32 v40, s2, 4
+; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_load_b64 s[16:17], s[16:17], 0x0
 ; GCN-NEXT:    s_xor_b32 s0, s0, s1
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
 ; GCN-NEXT:    v_writelane_b32 v40, s34, 2
 ; GCN-NEXT:    s_mov_b32 s34, s1
