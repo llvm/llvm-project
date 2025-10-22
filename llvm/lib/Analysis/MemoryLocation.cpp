@@ -307,7 +307,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
       auto *VT = cast<VectorType>(IsLoad ? II->getType()
                                          : II->getArgOperand(0)->getType());
       assert(Cols != 0 && "Matrix cannot have 0 columns");
-      TypeSize Size = DL.getTypeStoreSize(VT->getScalarType()) *
+      TypeSize Size = DL.getTypeAllocSize(VT->getScalarType()) *
                       (ConstStride * (Cols - 1) + Rows);
 
       // In the unstrided case, we have a precise size, ...
