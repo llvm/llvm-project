@@ -641,6 +641,44 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+
+    auto ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+
+    LLT VecVT = MRI.getType(InVec);
+    // computeKnownBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
+
+    Known.Zero.setAllBits();
+    Known.One.setAllBits();
+
+    const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
+    const unsigned NumSrcElts = VecVT.getNumElements();
+
+    // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
+    // anything about the extended bits.
+    if (BitWidth > EltBitWidth)
+      Known = Known.trunc(EltBitWidth);
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    computeKnownBitsImpl(InVec, Known2, DemandedSrcElts, Depth + 1);
+    Known = Known.intersectWith(Known2);
+
+    if (BitWidth > EltBitWidth)
+      Known = Known.anyext(BitWidth);
+
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     APInt DemandedLHS, DemandedRHS;
     // Collect the known bits that are shared by every vector element referenced
