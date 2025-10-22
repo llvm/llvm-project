@@ -135,8 +135,14 @@ public:
                               cir::PointerType destCIRTy, bool isRefCast,
                               Address src) override;
 
-  /**************************** RTTI Uniqueness ******************************/
+  Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
+                                mlir::Value numElements, const CXXNewExpr *e,
+                                QualType elementType) override;
+
 protected:
+  CharUnits getArrayCookieSizeImpl(QualType elementType) override;
+
+  /**************************** RTTI Uniqueness ******************************/
   /// Returns true if the ABI requires RTTI type_info objects to be unique
   /// across a program.
   virtual bool shouldRTTIBeUnique() const { return true; }
@@ -2002,4 +2008,71 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
       emitDynamicCastInfo(cgf, loc, srcRecordTy, destRecordTy);
   return cgf.getBuilder().createDynCast(loc, src.getPointer(), destCIRTy,
                                         isRefCast, castInfo);
+}
+
+/************************** Array allocation cookies **************************/
+
+CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
+  return std::max(
+      cgm.getSizeSize(),
+      cgm.getASTContext().getPreferredTypeAlignInChars(elementType));
+}
+
+Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
+                                                   Address newPtr,
+                                                   mlir::Value numElements,
+                                                   const CXXNewExpr *e,
+                                                   QualType elementType) {
+  assert(requiresArrayCookie(e));
+
+  // TODO: When sanitizer support is implemented, we'll need to
+  // get the address space from `newPtr`.
+  assert(!cir::MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::sanitizers());
+
+  ASTContext &ctx = cgm.getASTContext();
+  CharUnits sizeSize = cgf.getSizeSize();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  // The size of the cookie.
+  CharUnits cookieSize =
+      std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
+  assert(cookieSize == getArrayCookieSizeImpl(elementType));
+
+  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
+  mlir::Value baseBytePtr =
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
+
+  // Compute an offset to the cookie.
+  CharUnits cookieOffset = cookieSize - sizeSize;
+  mlir::Value cookiePtrValue = baseBytePtr;
+  if (!cookieOffset.isZero()) {
+    mlir::Value offsetOp = cgf.getBuilder().getSignedInt(
+        loc, cookieOffset.getQuantity(), /*width=*/32);
+    cookiePtrValue =
+        cgf.getBuilder().createPtrStride(loc, cookiePtrValue, offsetOp);
+  }
+
+  CharUnits baseAlignment = newPtr.getAlignment();
+  CharUnits cookiePtrAlignment = baseAlignment.alignmentAtOffset(cookieOffset);
+  Address cookiePtr(cookiePtrValue, u8PtrTy, cookiePtrAlignment);
+
+  // Write the number of elements into the appropriate slot.
+  Address numElementsPtr =
+      cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
+  cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
+
+  // Finally, compute a pointer to the actual data buffer by skipping
+  // over the cookie completely.
+  mlir::Value dataOffset =
+      cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
+                                    /*width=*/32);
+  mlir::Value dataPtr =
+      cgf.getBuilder().createPtrStride(loc, baseBytePtr, dataOffset);
+  mlir::Value finalPtr =
+      cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
+  CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
+  return Address(finalPtr, newPtr.getElementType(), finalAlignment);
 }
