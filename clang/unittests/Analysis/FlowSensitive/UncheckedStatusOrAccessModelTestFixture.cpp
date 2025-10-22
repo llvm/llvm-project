@@ -2961,8 +2961,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, Emplace) {
       bool sor_ok = sor.ok();
       if (b)
         sor.emplace(42);
-      else if (sor_ok)
-        sor.value();
+      sor.value();
     }
   )cc");
   ExpectDiagnosticsFor(R"cc(
