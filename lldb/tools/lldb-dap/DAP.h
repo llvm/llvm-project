@@ -425,7 +425,8 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// Perform complete DAP initialization in one call.
   llvm::Error
-  InitializeDebugger(std::optional<lldb::user_id_t> target_idx = std::nullopt);
+  InitializeDebugger(std::optional<int> debugger_id = std::nullopt,
+                     std::optional<lldb::user_id_t> target_id = std::nullopt);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();
