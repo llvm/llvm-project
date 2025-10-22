@@ -63,22 +63,6 @@ namespace {
 
 //===--- Command-line options ---------------------------------------------===//
 
-cl::opt<TokenMode> ClMode(
-    "alloc-token-mode", cl::Hidden, cl::desc("Token assignment mode"),
-    cl::init(TokenMode::TypeHashPointerSplit),
-    cl::values(
-        clEnumValN(TokenMode::Increment, "increment",
-                   "Incrementally increasing token ID"),
-        clEnumValN(TokenMode::Random, "random",
-                   "Statically-assigned random token ID"),
-        clEnumValN(TokenMode::TypeHash, "typehash",
-                   "Token ID based on allocated type hash"),
-        clEnumValN(
-            TokenMode::TypeHashPointerSplit, "typehashpointersplit",
-            "Token ID based on allocated type hash, where the top half "
-            "ID-space is reserved for types that contain pointers and the "
-            "bottom half for types that do not contain pointers. ")));
-
 cl::opt<std::string> ClFuncPrefix("alloc-token-prefix",
                                   cl::desc("The allocation function prefix"),
                                   cl::Hidden, cl::init("__alloc_token_"));
@@ -265,7 +249,7 @@ public:
       : Options(transformOptionsFromCl(std::move(Opts))), Mod(M),
         FAM(MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
         Mode(IncrementMode(*IntPtrTy, *Options.MaxTokens)) {
-    switch (ClMode.getValue()) {
+    switch (Options.Mode) {
     case TokenMode::Increment:
       break;
     case TokenMode::Random:
