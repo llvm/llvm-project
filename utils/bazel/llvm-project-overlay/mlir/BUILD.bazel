@@ -10173,7 +10173,27 @@ cc_library(
     deps = [
         ":IR",
         ":OpenACCDialect",
+        ":OpenACCUtils",
         ":Pass",
+    ],
+)
+
+cc_library(
+    name = "OpenACCUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/OpenACC/Utils/*.cpp",
+        ],
+    ),
+    includes = ["include"],
+    deps = [
+        ":OpenACCDialect",
+        ":OpenACCOpsIncGen",
+        ":OpenACCPassIncGen",
+        ":OpenACCTypeInterfacesIncGen",
+        ":Support",
+        ":ViewLikeInterface",
+        "//llvm:Support",
     ],
 )
 
