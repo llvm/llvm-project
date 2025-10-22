@@ -20,34 +20,14 @@
 #ifndef LLVM_ADT_INDEXEDMAP_H
 #define LLVM_ADT_INDEXEDMAP_H
 
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
-#include <type_traits>
 
 namespace llvm {
 
-namespace detail {
-// Helper to compute the IndexT for IndexedMap.
-template <typename ToIndexT, typename = void> struct DeduceIndexType {
-  using type =
-      std::conditional_t<std::is_same_v<ToIndexT, llvm::identity_cxx20>,
-                         unsigned, void>;
-};
-
-template <typename ToIndexT>
-struct DeduceIndexType<ToIndexT,
-                       std::void_t<typename ToIndexT::argument_type>> {
-  using type = typename ToIndexT::argument_type;
-};
-} // namespace detail
-
-template <typename T, typename ToIndexT = llvm::identity_cxx20,
-          typename IndexT = typename detail::DeduceIndexType<ToIndexT>::type>
+template <typename T, typename ToIndexT = llvm::identity_cxx20>
 class IndexedMap {
-  static_assert(!std::is_same_v<IndexT, void>,
-                "Could not deduce index type from the provided functor.");
   // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
   // can grow very large and SmallVector grows more efficiently as long as T
   // is trivially copyable.
@@ -62,14 +42,17 @@ public:
 
   explicit IndexedMap(const T &val) : nullVal_(val) {}
 
-  typename StorageT::reference operator[](IndexT n) {
-    assert(toIndex_(n) < storage_.size() && "index out of bounds!");
-    return storage_[toIndex_(n)];
+  template <typename IndexT> typename StorageT::reference operator[](IndexT n) {
+    unsigned Index = toIndex_(n);
+    assert(Index < storage_.size() && "index out of bounds!");
+    return storage_[Index];
   }
 
+  template <typename IndexT>
   typename StorageT::const_reference operator[](IndexT n) const {
-    assert(toIndex_(n) < storage_.size() && "index out of bounds!");
-    return storage_[toIndex_(n)];
+    unsigned Index = toIndex_(n);
+    assert(Index < storage_.size() && "index out of bounds!");
+    return storage_[Index];
   }
 
   void reserve(typename StorageT::size_type s) { storage_.reserve(s); }
@@ -78,13 +61,16 @@ public:
 
   void clear() { storage_.clear(); }
 
-  void grow(IndexT n) {
+  template <typename IndexT> void grow(IndexT n) {
     unsigned NewSize = toIndex_(n) + 1;
     if (NewSize > storage_.size())
       resize(NewSize);
   }
 
-  bool inBounds(IndexT n) const { return toIndex_(n) < storage_.size(); }
+  template <typename IndexT> bool inBounds(IndexT n) const {
+    unsigned Index = toIndex_(n);
+    return Index < storage_.size();
+  }
 
   typename StorageT::size_type size() const { return storage_.size(); }
 };
