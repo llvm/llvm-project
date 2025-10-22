@@ -6,4 +6,5 @@ module m
   integer(c_int), bind(C, name='c_global', CDEFINED) :: c  = 42
   ! CHECK: fir.global @c_global : i32
   ! CHECK-NOT: fir.zero_bits 
+  ! CHECK-NOT: arith.constant 42
 end
