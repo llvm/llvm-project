@@ -7,3 +7,12 @@
 
 mlbi alle1, x30
 // CHECK-ERROR: error: specified mlbi op does not use a register
+
+mlbi vmalle1, x30
+// CHECK-ERROR: error: specified mlbi op does not use a register
+
+mlbi vpide1
+// CHECK-ERROR: error: specified mlbi op requires a register
+
+mlbi vpmge1
+// CHECK-ERROR: error: specified mlbi op requires a register
