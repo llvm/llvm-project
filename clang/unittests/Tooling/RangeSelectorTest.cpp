@@ -527,6 +527,31 @@ TEST(RangeSelectorTest, NameOpDeclRefError) {
           AllOf(HasSubstr(Ref), HasSubstr("requires property 'identifier'")))));
 }
 
+TEST(RangeSelectorTest, NameOpDeclInMacroArg) {
+  StringRef Code = R"cc(
+  #define MACRO(name) int name;
+  MACRO(x)
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(select(name(ID), Match), HasValue("x"));
+}
+
+TEST(RangeSelectorTest, NameOpDeclInMacroBodyError) {
+  StringRef Code = R"cc(
+  #define MACRO int x;
+  MACRO
+  )cc";
+  const char *ID = "id";
+  TestMatch Match = matchCode(Code, varDecl().bind(ID));
+  EXPECT_THAT_EXPECTED(
+      name(ID)(Match.Result),
+      Failed<StringError>(testing::Property(
+          &StringError::getMessage,
+          AllOf(HasSubstr("range selected by name(node id="),
+                HasSubstr("' is different from decl name 'x'")))));
+}
+
 TEST(RangeSelectorTest, CallArgsOp) {
   const StringRef Code = R"cc(
     struct C {
