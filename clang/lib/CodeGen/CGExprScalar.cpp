@@ -3856,7 +3856,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
       uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
       isPowerOfTwo = llvm::isPowerOf2_64(StoreBits);
     }
-    if (!type->isBooleanType() && (isInteger || isFloat) && isPowerOfTwo &&
+    if (!type->isBooleanType() && (isInteger || (isPowerOfTwo && isFloat)) &&
         !(type->isUnsignedIntegerType() &&
           CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
         CGF.getLangOpts().getSignedOverflowBehavior() !=

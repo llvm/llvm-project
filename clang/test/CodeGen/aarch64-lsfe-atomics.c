@@ -3,6 +3,8 @@
 
 _Atomic(float) f;
 _Atomic(double) d;
+_Atomic(__bf16) bf;
+_Atomic(_Float16) h;
 
 // CHECK-LLVM-LABEL: define dso_local void @test_float_add(
 // CHECK-LLVM-SAME: float noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
@@ -32,6 +34,36 @@ void test_double_add(double val) {
   d += val;
 }
 
+// CHECK-LLVM-LABEL: define dso_local void @test_bf16_add(
+// CHECK-LLVM-SAME: bfloat noundef [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-LLVM-NEXT:    store bfloat [[VAL]], ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[EXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-LLVM-NEXT:    [[CONV:%.*]] = fptrunc float [[EXT]] to bfloat
+// CHECK-LLVM-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr @bf, bfloat [[CONV]] seq_cst, align 2
+// CHECK-LLVM-NEXT:    [[TMP2:%.*]] = fadd bfloat [[TMP1]], [[CONV]]
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_bf16_add(__bf16 val){
+  bf += val;
+}
+
+// CHECK-LLVM-LABEL: define dso_local void @test_f16_add(
+// CHECK-LLVM-SAME: half noundef [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca half, align 2
+// CHECK-LLVM-NEXT:    store half [[VAL]], ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP0:%.*]] = load half, ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP1:%.*]] = atomicrmw fadd ptr @h, half [[TMP0]] seq_cst, align 2
+// CHECK-LLVM-NEXT:    [[TMP2:%.*]] = fadd half [[TMP1]], [[TMP0]]
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_f16_add(_Float16 val){
+  h += val;
+}
+
 // CHECK-LLVM-LABEL: define dso_local void @test_float_sub(
 // CHECK-LLVM-SAME: float noundef [[VAL:%.*]]) #[[ATTR0]] {
 // CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
@@ -57,5 +89,35 @@ void test_float_sub(float val) {
 // CHECK-LLVM-NEXT:    ret void
 //
 void test_double_sub(double val){
-    d -= val;
+  d -= val;
+}
+
+// CHECK-LLVM-LABEL: define dso_local void @test_bf16_sub(
+// CHECK-LLVM-SAME: bfloat noundef [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca bfloat, align 2
+// CHECK-LLVM-NEXT:    store bfloat [[VAL]], ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP0:%.*]] = load bfloat, ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[EXT:%.*]] = fpext bfloat [[TMP0]] to float
+// CHECK-LLVM-NEXT:    [[CONV:%.*]] = fptrunc float [[EXT]] to bfloat
+// CHECK-LLVM-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr @bf, bfloat [[CONV]] seq_cst, align 2
+// CHECK-LLVM-NEXT:    [[TMP2:%.*]] = fsub bfloat [[TMP1]], [[CONV]]
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_bf16_sub(__bf16 val){
+  bf -= val;
+}
+
+// CHECK-LLVM-LABEL: define dso_local void @test_f16_sub(
+// CHECK-LLVM-SAME: half noundef [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-LLVM-NEXT:  [[ENTRY:.*:]]
+// CHECK-LLVM-NEXT:    [[VAL_ADDR:%.*]] = alloca half, align 2
+// CHECK-LLVM-NEXT:    store half [[VAL]], ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP0:%.*]] = load half, ptr [[VAL_ADDR]], align 2
+// CHECK-LLVM-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr @h, half [[TMP0]] seq_cst, align 2
+// CHECK-LLVM-NEXT:    [[TMP2:%.*]] = fsub half [[TMP1]], [[TMP0]]
+// CHECK-LLVM-NEXT:    ret void
+//
+void test_f16_sub(_Float16 val){
+  h -= val;
 }
