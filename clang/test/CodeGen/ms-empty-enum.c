@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fms-extensions -triple x86_64-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck --check-prefix=X64 %s
+// RUN: %clang_cc1 -fms-extensions -triple x86_64-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -triple i386-windows-msvc -Wno-implicit-function-declaration -emit-llvm %s -o - | FileCheck %s
 
 typedef enum tag1 {} A;
 
