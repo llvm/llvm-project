@@ -4152,9 +4152,6 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPValue VF;
 
-  /// Represents the symbolic unroll factor of the loop.
-  VPValue UF;
-
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
@@ -4308,9 +4305,6 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
-  /// Returns the symbolic UF of the vector loop region.
-  VPValue &getSymbolicUF() { return UF; };
-
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4319,12 +4313,6 @@ public:
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
-
-  /// Remove \p VF from the plan.
-  void removeVF(ElementCount VF) {
-    assert(hasVF(VF) && "tried to remove VF not present in plan");
-    VFs.remove(VF);
-  }
 
   void setVF(ElementCount VF) {
     assert(hasVF(VF) && "Cannot set VF not already in plan");
