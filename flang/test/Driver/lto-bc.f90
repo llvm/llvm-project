@@ -13,6 +13,9 @@
 
 ! RUN: %flang -flto=thin %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=THIN
 ! THIN-NOT: !{{.*}} = !{i32 1, !"ThinLTO", i32 0}
+! THIN-NOT: ^{{.*}} = module:
+! THIN-NOT: ^{{.*}} = gv: (name:
+! THIN-NOT: ^{{.*}} = blockcount:
 
 ! RUN: %flang -flto %s -c -o - | llvm-dis -o - | FileCheck %s --check-prefix=FULL
 ! FULL: define void @_QQmain()
