@@ -1484,6 +1484,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                               TentativeDefinitions.end());
+
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
       continue;
