@@ -51,7 +51,6 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
       return ExprError();
 
     TypeSourceInfo *TSI = nullptr;
-    QualType QT = Actions.GetTypeFromParser(TR.get(), &TSI);
 
     return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
   }
