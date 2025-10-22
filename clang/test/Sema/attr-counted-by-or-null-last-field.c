@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,immediate %s
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-late-parse-attributes -verify=expected,late %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,immediate %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -fexperimental-late-parse-attributes -verify=expected,late %s
 
 #define __counted_by_or_null(f)  __attribute__((counted_by_or_null(f)))
 
