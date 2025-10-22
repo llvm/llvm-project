@@ -3101,33 +3101,25 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool evalICmpImm(const uint8_t imm, const llvm::APSInt &A,
-                        const llvm::APSInt &B, bool IsUnsigned) {
+static bool evalICmpImm(const uint8_t imm, APSInt A, APSInt B,
+                        bool IsUnsigned) {
   switch (imm & 0x7) {
-  case 0x00:
+  case 0x00: // _MM_CMPINT_EQ
     return (A == B);
-    break;
-  case 0x01:
+  case 0x01: // _MM_CMPINT_LT
     return IsUnsigned ? A.ult(B) : A.slt(B);
-    break;
-  case 0x02:
+  case 0x02: // _MM_CMPINT_LE
     return IsUnsigned ? A.ule(B) : A.sle(B);
-    break;
-  case 0x03:
+  case 0x03: // _MM_CMPINT_FALSE
     return false;
-    break;
-  case 0x04:
+  case 0x04: // _MM_CMPINT_NE
     return (A != B);
-    break;
-  case 0x05:
+  case 0x05: // _MM_CMPINT_NLT
     return IsUnsigned ? A.ugt(B) : A.sgt(B);
-    break;
-  case 0x06:
+  case 0x06: // _MM_CMPINT_NLE
     return IsUnsigned ? A.uge(B) : A.sge(B);
-    break;
-  case 0x07:
+  case 0x07: // _MM_CMPINT_TRUE
     return true;
-    break;
   default:
     llvm_unreachable("Invalid Op");
   }
@@ -3151,13 +3143,14 @@ static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
   PrimType ElemT = LHS.getFieldDesc()->getPrimType();
 
   for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
+    APSInt A;
+    APSInt B;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      RetMask.setBitVal(ElemNum,
-                        Mask[ElemNum] &&
-                            evalICmpImm(CmpOp, LHS.elem<T>(ElemNum).toAPSInt(),
-                                        RHS.elem<T>(ElemNum).toAPSInt(),
-                                        IsUnsigned));
+      A = LHS.elem<T>(ElemNum).toAPSInt();
+      B = RHS.elem<T>(ElemNum).toAPSInt();
     });
+    RetMask.setBitVal(ElemNum,
+                      Mask[ElemNum] && evalICmpImm(CmpOp, A, B, IsUnsigned));
   }
   pushInteger(S, RetMask, Call->getType());
   return true;
