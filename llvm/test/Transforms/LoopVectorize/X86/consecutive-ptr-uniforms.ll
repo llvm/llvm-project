@@ -48,7 +48,7 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <16 x float> [[STRIDED_VEC2]], [[TMP1]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> [[TMP4]], <16 x ptr> align 4 [[TMP2]], <16 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <16 x i64> [[VEC_IND]], splat (i64 80)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <16 x i64> [[VEC_IND]], splat (i64 80)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6384
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
