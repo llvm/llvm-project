@@ -275,3 +275,40 @@
 // CHECK-CRTFASTMATH-X64: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-CRTFASTMATH-X64: "[[SYSROOT]]/usr/gcc/4.9/lib/gcc/i386-pc-solaris2.11/4.9.4/amd64{{/|\\\\}}crtfastmath.o"
 // CHECK-NOCRTFASTMATH-X64-NOT: crtfastmath.o
+
+// Check --ld-path flag with GNU ld
+// RUN: test -f /usr/gnu/bin/ld && %clang --ld-path=/usr/gnu/bin/ld -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-GNU-LD %s
+// CHECK-GNU-LD: /usr/gnu/bin/ld
+// CHECK-GNU-LD-NOT: "-C"
+
+// Check --ld-path flag with system linker
+// RUN: %clang --ld-path=/bin/ld -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SYSLINKER %s
+// CHECK-SYSLINKER: /bin/ld
+// CHECK-SYSLINKER: "-C"
+// CHECK-SYSLINKER-NOT: /usr/gnu/bin/ld
+
+// Check --ld-path flag with empty args errors out
+// RUN: not %clang --ld-path= -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOT_EXIST %s
+// NOT_EXIST: error: invalid linker name in argument '--ld-path='
+
+// Check --ld-path flag with non-existent linker errors out
+// RUN: not %clang --ld-path=bogus-nonsense -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=NOT_EXIST_BOGUS %s
+// NOT_EXIST_BOGUS: error: invalid linker name in argument '--ld-path=bogus-nonsense'
+
+// Check --ld-path flag takes precedence over -fuse-ld
+// RUN: %clang --ld-path=/bin/ld -fuse-ld=bfd -### %s \
+// RUN:        -rtlib=platform --unwindlib=platform \
+// RUN:        --sysroot=%S/Inputs/solaris_x86_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-SYSLINKER %s
