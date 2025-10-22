@@ -901,6 +901,21 @@ func.func @scope_merge_without_terminator() {
 
 // -----
 
+// CHECK-LABEL: func @extract_strided_metadata_of_cast
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?xf32>)
+//       CHECK: %[[C0:.*]] = arith.constant 0 : index
+//       CHECK: %[[C4:.*]] = arith.constant 4 : index
+//       CHECK: %[[C1:.*]] = arith.constant 1 : index
+//       CHECK: %[[BASE:.*]], %{{.*}}, %{{.*}}, %{{.*}} = memref.extract_strided_metadata %[[ARG]]
+//       CHECK: return %[[BASE]], %[[C0]], %[[C4]], %[[C1]]
+func.func @extract_strided_metadata_of_cast(%arg0: memref<?xf32>) -> (memref<f32>, index, index, index) {
+  %cast = memref.cast %arg0 : memref<?xf32> to memref<4xf32, strided<[?]>>
+  %base_buffer, %offset, %sizes, %strides = memref.extract_strided_metadata %cast : memref<4xf32, strided<[?]>> -> memref<f32>, index, index, index
+  return %base_buffer, %offset, %sizes, %strides : memref<f32>, index, index, index
+}
+
+// -----
+
 // CHECK-LABEL: func @reinterpret_noop
 //  CHECK-SAME: (%[[ARG:.*]]: memref<2x3x4xf32>)
 //  CHECK-NEXT: return %[[ARG]]
