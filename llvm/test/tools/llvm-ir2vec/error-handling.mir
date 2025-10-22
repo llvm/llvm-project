@@ -31,11 +31,11 @@ body:             |
     $eax = COPY %0
     RET 0, $eax
 
-# CHECK-NO-VOCAB: Error: Failed to load MIR2Vec vocabulary - MIR2Vec vocabulary file path not specified; set it using --mir2vec-vocab-path
+# CHECK-NO-VOCAB: error: Failed to load MIR2Vec vocabulary - MIR2Vec vocabulary file path not specified; set it using --mir2vec-vocab-path
 
-# CHECK-VOCAB-NOT-FOUND: Error: Failed to load MIR2Vec vocabulary
+# CHECK-VOCAB-NOT-FOUND: error: Failed to load MIR2Vec vocabulary
 # CHECK-VOCAB-NOT-FOUND: No such file or directory
 
-# CHECK-INVALID-VOCAB: Error: Failed to load MIR2Vec vocabulary - Missing 'Opcodes' section in vocabulary file
+# CHECK-INVALID-VOCAB: error: Failed to load MIR2Vec vocabulary - Missing 'Opcodes' section in vocabulary file
 
-# CHECK-FUNC-NOT-FOUND: Error: Function 'nonexistent_function' not found
+# CHECK-FUNC-NOT-FOUND: error: Function 'nonexistent_function' not found
