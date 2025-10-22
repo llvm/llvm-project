@@ -7600,7 +7600,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
   if (!SI->defaultDestUnreachable() || Case == SI->case_default()) {
     if (DTU)
       DTU->applyUpdates(Updates);
-    return false;
+    return !Updates.empty();
   }
 
   BasicBlock *Unreachable = SI->getDefaultDest();
