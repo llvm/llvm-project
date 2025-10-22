@@ -1517,19 +1517,43 @@ void OmpStructureChecker::Leave(const parser::OpenMPDepobjConstruct &x) {
 void OmpStructureChecker::Enter(const parser::OpenMPRequiresConstruct &x) {
   const auto &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
+  unsigned version{context_.langOptions().OpenMPVersion};
 
-  if (visitedAtomicSource_.empty()) {
-    return;
-  }
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     llvm::omp::Clause id{clause.Id()};
     if (id == llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-      parser::MessageFormattedText txt(
-          "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
-          parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-      parser::Message message(clause.source, txt);
-      message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
-      context_.Say(std::move(message));
+      if (!visitedAtomicSource_.empty()) {
+        parser::MessageFormattedText txt(
+            "REQUIRES directive with '%s' clause found lexically after atomic operation without a memory order clause"_err_en_US,
+            parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+        parser::Message message(clause.source, txt);
+        message.Attach(visitedAtomicSource_, "Previous atomic construct"_en_US);
+        context_.Say(std::move(message));
+      }
+    } else {
+      bool hasArgument{common::visit(
+          [&](auto &&s) {
+            using TypeS = llvm::remove_cvref_t<decltype(s)>;
+            if constexpr ( //
+                std::is_same_v<TypeS, parser::OmpClause::DeviceSafesync> ||
+                std::is_same_v<TypeS, parser::OmpClause::DynamicAllocators> ||
+                std::is_same_v<TypeS, parser::OmpClause::ReverseOffload> ||
+                std::is_same_v<TypeS, parser::OmpClause::SelfMaps> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedAddress> ||
+                std::is_same_v<TypeS, parser::OmpClause::UnifiedSharedMemory>) {
+              return s.v.has_value();
+            } else {
+              return false;
+            }
+          },
+          clause.u)};
+      if (version < 60 && hasArgument) {
+        context_.Say(clause.source,
+            "An argument to %s is an %s feature, %s"_warn_en_US,
+            parser::ToUpperCaseLetters(
+                llvm::omp::getOpenMPClauseName(clause.Id())),
+            ThisVersion(60), TryVersion(60));
+      }
     }
   }
 }
@@ -1538,21 +1562,11 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::CheckAlignValue(const parser::OmpClause &clause) {
-  if (auto *align{std::get_if<parser::OmpClause::Align>(&clause.u)}) {
-    if (const auto &v{GetIntValue(align->v)}; !v || *v <= 0) {
-      context_.Say(clause.source,
-          "The alignment value should be a constant positive integer"_err_en_US);
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
   isPredefinedAllocator = true;
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
   for (auto &[symbol, source] : currSymbols) {
@@ -1574,9 +1588,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
           "name"_err_en_US,
           source.ToString());
     }
-  }
-  for (const auto &clause : clauseList.v) {
-    CheckAlignValue(clause);
   }
   CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
 }
@@ -1984,9 +1995,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
 
   isPredefinedAllocator = true;
   const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  for (const auto &clause : clauseList.v) {
-    CheckAlignValue(clause);
-  }
   if (objectList) {
     CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
   }
@@ -2336,7 +2344,7 @@ private:
       }
       if (auto &repl{std::get<parser::OmpClause::Replayable>(clause.u).v}) {
         // Scalar<Logical<Constant<indirection<Expr>>>>
-        const parser::Expr &parserExpr{repl->v.thing.thing.thing.value()};
+        const auto &parserExpr{parser::UnwrapRef<parser::Expr>(repl)};
         if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
           return GetLogicalValue(*expr).value_or(true);
         }
@@ -2350,7 +2358,7 @@ private:
     bool isTransparent{true};
     if (auto &transp{std::get<parser::OmpClause::Transparent>(clause.u).v}) {
       // Scalar<Integer<indirection<Expr>>>
-      const parser::Expr &parserExpr{transp->v.thing.thing.value()};
+      const auto &parserExpr{parser::UnwrapRef<parser::Expr>(transp)};
       if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
         // If the argument is omp_not_impex (defined as 0), then
         // the task is not transparent, otherwise it is.
@@ -2389,8 +2397,8 @@ private:
       }
     }
     // Scalar<Logical<indirection<Expr>>>
-    auto &parserExpr{
-        std::get<parser::ScalarLogicalExpr>(ifc.v.t).thing.thing.value()};
+    const auto &parserExpr{parser::UnwrapRef<parser::Expr>(
+        std::get<parser::ScalarLogicalExpr>(ifc.v.t))};
     if (auto &&expr{GetEvaluateExpr(parserExpr)}) {
       // If the value is known to be false, an undeferred task will be
       // generated.
@@ -2594,7 +2602,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
   auto getNameFromArg{[](const parser::OmpArgument &arg) {
     if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
       if (auto *designator{omp::GetDesignatorFromObj(*object)}) {
-        return getDesignatorNameIfDataRef(*designator);
+        return parser::GetDesignatorNameIfDataRef(*designator);
       }
     }
     return static_cast<const parser::Name *>(nullptr);
@@ -3211,7 +3219,6 @@ CHECK_SIMPLE_CLAUSE(AdjustArgs, OMPC_adjust_args)
 CHECK_SIMPLE_CLAUSE(AppendArgs, OMPC_append_args)
 CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
-CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
@@ -3871,6 +3878,19 @@ void OmpStructureChecker::CheckIsLoopIvPartOfClause(
             name->ToString(),
             parser::ToUpperCaseLetters(getClauseName(clause).str()));
       }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Align &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_align);
+  if (const auto &v{GetIntValue(x.v.v)}) {
+    if (*v <= 0) {
+      context_.Say(GetContext().clauseSource,
+          "The alignment should be positive"_err_en_US);
+    } else if (!llvm::isPowerOf2_64(*v)) {
+      context_.Say(GetContext().clauseSource,
+          "The alignment should be a power of 2"_err_en_US);
     }
   }
 }
@@ -5170,6 +5190,10 @@ const parser::Name *OmpStructureChecker::GetObjectName(
 void OmpStructureChecker::Enter(
     const parser::OmpClause::AtomicDefaultMemOrder &x) {
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_atomic_default_mem_order);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::DeviceSafesync &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_device_safesync);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::DynamicAllocators &x) {

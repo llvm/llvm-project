@@ -644,7 +644,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
-  "DoWhileOp", "WhileOp", "ForOp"
+  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -791,7 +791,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "GlobalOp", "IfOp",
-  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp"
+  "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -2476,6 +2476,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     Similarly, for global destructors both `global_dtor` and
     `global_dtor(<priority>)` are available.
 
+    The `inline(never)` keyword marks a function that should not be inlined.
+    The `inline(always)` keyword marks a function that should always be inlined.
+    The `inline(hint)` keyword suggests that the function should be inlined.
+
     Example:
 
     ```mlir
@@ -2510,6 +2514,7 @@ def CIR_FuncOp : CIR_Op<"func", [
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<CIR_InlineAttr>:$inline_kind,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -2719,6 +2724,8 @@ def CIR_CopyOp : CIR_Op<"copy",[
     type of `src` and `dst` must match and both must implement the
     `DataLayoutTypeInterface`.
 
+    The `volatile` keyword indicates that the operation is volatile.
+
     Examples:
 
     ```mlir
@@ -2729,10 +2736,11 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-      Arg<CIR_PointerType, "", [MemRead]>:$src
+      Arg<CIR_PointerType, "", [MemRead]>:$src,
+      UnitAttr:$is_volatile
   );
 
-  let assemblyFormat = [{$src `to` $dst
+  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -4045,6 +4053,43 @@ def CIR_ExpectOp : CIR_Op<"expect", [
 }
 
 //===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
+  let summary = "Pointer subtraction arithmetic";
+  let description = [{
+    The cir.ptr_diff operation computes the difference between two pointers that
+    have the same element type.
+
+    The result reflects the ABI-defined size of the pointed-to type. For example,
+    subtracting two !cir.ptr<!u64i> values may yield 1, representing an 8-byte
+    difference. In contrast, for pointers to void or function types, a result of
+    8 corresponds to an 8-byte difference.
+
+    For pointers to types whose size are not aligned with the target data
+    layout, the size is generally rounded to the next power of 2 bits. For
+    example, subtracting two !cir.ptr<!s24i> values for the _BitInt(24) type may
+    yield 1, representing a 4-byte difference (as opposed to a 3-byte
+    difference).
+
+    Example:
+
+    ```mlir
+    %7 = cir.ptr_diff %0, %1 : !cir.ptr<!u64i> -> !u64i
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$lhs, CIR_PointerType:$rhs);
+  let results = (outs CIR_AnyFundamentalIntType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs  `:` qualified(type($lhs)) `->` qualified(type($result)) 
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
@@ -4326,8 +4371,164 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TryOp
+//===----------------------------------------------------------------------===//
+
+def CIR_TryOp : CIR_Op<"try",[
+  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+]> {
+  let summary = "C++ try block";
+  let description = [{
+    Holds the lexical scope of `try {}`. Note that resources used on catch
+    clauses are usually allocated in the same parent as `cir.try`.
+
+    `synthetic`: use `cir.try` to represent try/catches not originally
+    present in the source code. For example, a synthetic `cir.try` region
+    is created around the constructor call when `operator new` is used
+    so that the memory allocated will be freed if the constructor throws
+    an exception.
+
+    `cleanup`: indicates that there are cleanups that must be performed
+    when exiting the try region via exception, even if the exception is not
+    caught.
+
+    Example:
+
+    ```mlir
+    cir.try {
+      cir.call exception @function() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+      ...
+      cir.yield
+    } unwind {
+      cir.resume
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    UnitAttr:$synthetic,
+    UnitAttr:$cleanup,
+    DefaultValuedAttr<CIR_TryHandlerArrayAttr, "{}">:$handler_types
+  );
+
+  let regions = (region
+    AnyRegion:$try_region,
+    VariadicRegion<AnyRegion>:$handler_regions
+  );
+
+  let assemblyFormat = [{
+    (`synthetic` $synthetic^)?
+    (`cleanup` $cleanup^)?
+    $try_region
+    custom<TryHandlerRegions>($handler_regions, $handler_types)
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins
+      "llvm::function_ref<void(mlir::OpBuilder &, "
+        "mlir::Location)>":$tryBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location, "
+        "mlir::OperationState &)>":$handlersBuilder),
+    [{
+      assert(tryBuilder && "expected builder callback for 'cir.try' body");
+      assert(handlersBuilder
+        && "expected builder callback for 'handlers' body");
+
+      OpBuilder::InsertionGuard guard($_builder);
+
+      // Try body region
+      mlir::Region *tryBodyRegion = $_state.addRegion();
+
+      // Create try body region and set insertion point
+      $_builder.createBlock(tryBodyRegion);
+      tryBuilder($_builder, $_state.location);
+      handlersBuilder($_builder, $_state.location, $_state);
+    }]>
+  ];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
+
+def CIR_AtomicFetchKind : CIR_I32EnumAttr<
+  "AtomicFetchKind", "Binary opcode for atomic fetch-and-update operations", [
+    I32EnumAttrCase<"Add", 0, "add">,
+    I32EnumAttrCase<"Sub", 1, "sub">,
+    I32EnumAttrCase<"And", 2, "and">,
+    I32EnumAttrCase<"Xor", 3, "xor">,
+    I32EnumAttrCase<"Or", 4, "or">,
+    I32EnumAttrCase<"Nand", 5, "nand">,
+    I32EnumAttrCase<"Max", 6, "max">,
+    I32EnumAttrCase<"Min", 7, "min">
+]>;
+
+def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
+  AllTypesMatch<["result", "val"]>,
+  TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
+    "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Atomic fetch-and-update operation";
+  let description = [{
+    C/C++ atomic fetch-and-update operation. This operation implements the C/C++
+    builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
+    `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+
+    This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
+    type of `val` must match the pointee type of `ptr`. If the binary operation
+    is `add`, `sub`, `max`, or `min`, the type of `val` may either be an integer
+    type or a floating-point type. Otherwise, `val` must be an integer.
+
+    This operation atomically loads the value from `ptr`, performs the binary
+    operation as indicated by `binop` on the loaded value and `val`, and stores
+    the result back to `ptr`. If the `fetch_first` flag is present, the result
+    of this operation is the old value loaded from `ptr` before the binary
+    operation. Otherwise, the result of this operation is the result of the
+    binary operation.
+
+    Example:
+    %res = cir.atomic.fetch add seq_cst %ptr, %val
+        : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  }];
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins
+    Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyIntOrFloatType:$val,
+    CIR_AtomicFetchKind:$binop,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    UnitAttr:$is_volatile,
+    UnitAttr:$fetch_first
+  );
+
+  let assemblyFormat = [{
+    $binop $mem_order
+    (`fetch_first` $fetch_first^)?
+    $ptr `,` $val
+    (`volatile` $is_volatile^)?
+    `:` `(` qualified(type($ptr)) `,` qualified(type($val)) `)`
+    `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::Value buildPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                            mlir::ConversionPatternRewriter &rewriter,
+                            mlir::Value rmwVal, bool isInt) const;
+
+    mlir::Value buildMinMaxPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Value rmwVal, bool isInt,
+                                  bool isSigned) const;
+  }];
+}
 
 def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   AllTypesMatch<["result", "val"]>,
@@ -4426,6 +4627,68 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` functional-type(operands, results) attr-dict
+  }];
+}
+
+def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
+  let summary = "Atomic test and set";
+  let description = [{
+    C/C++ atomic test and set operation. Implements the builtin function
+    `__atomic_test_and_set`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically set the integer to an implementation-
+    defined non-zero "set" value. The result of the operation is a boolean value
+    indicating whether the previous value of the integer was the "set" value.
+
+    Example:
+    ```mlir
+      %res = cir.atomic.test_and_set seq_cst %ptr : !cir.ptr<!s8i> -> !cir.bool
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
+  let summary = "Atomic clear";
+  let description = [{
+    C/C++ atomic clear operation. Implements the builtin function
+    `__atomic_clear`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically sets the integer to zero.
+
+    Example:
+    ```mlir
+      cir.atomic.clear seq_cst %ptr : !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) attr-dict
   }];
 }
 
