@@ -26,7 +26,7 @@ TaskDispatcher::~TaskDispatcher() = default;
 
 void InPlaceTaskDispatcher::dispatch(std::unique_ptr<Task> T) { T->run(); }
 
-void InPlaceTaskDispatcher::shutdown() {}
+void InPlaceTaskDispatcher::run(bool cancel) {}
 
 #if LLVM_ENABLE_THREADS
 void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
@@ -105,9 +105,10 @@ void DynamicThreadPoolTaskDispatcher::dispatch(std::unique_ptr<Task> T) {
   }).detach();
 }
 
-void DynamicThreadPoolTaskDispatcher::shutdown() {
+void DynamicThreadPoolTaskDispatcher::run(bool cancel) {
   std::unique_lock<std::mutex> Lock(DispatchMutex);
-  Shutdown = true;
+  if (cancel)
+    Shutdown = true;
   OutstandingCV.wait(Lock, [this]() { return Outstanding == 0; });
 }
 

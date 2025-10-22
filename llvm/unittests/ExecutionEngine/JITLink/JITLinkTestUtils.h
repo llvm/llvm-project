@@ -133,7 +133,7 @@ public:
         HandleFailed(std::move(HandleFailed)) {}
 
   ~MockJITLinkContext() {
-    if (auto Err = MJMM->deallocate(std::move(FinalizedAllocs)))
+    if (auto Err = MJMM->Deallocate(std::move(FinalizedAllocs)))
       notifyFailed(std::move(Err));
   }
 

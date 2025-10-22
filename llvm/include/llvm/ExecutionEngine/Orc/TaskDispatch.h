@@ -112,14 +112,26 @@ public:
   virtual void dispatch(std::unique_ptr<Task> T) = 0;
 
   /// Called by ExecutionSession. Waits until all tasks have completed.
-  virtual void shutdown() = 0;
+  /// The TaskDispatcher may be reused immediatly afterwards.
+  void run_to_complete() { run(false); }
+
+  /// Called by ExecutionSession. Halts all in-progress work as soon as
+  /// possible. May cause deadlocks since promises will not be set, so this
+  /// should only be used immediately before exiting.
+  /// The TaskDispatcher should not be reused afterwards.
+  void shutdown() { run(true); }
+
+private:
+  virtual void run(bool cancel) = 0;
 };
 
 /// Runs all tasks on the current thread.
 class LLVM_ABI InPlaceTaskDispatcher : public TaskDispatcher {
 public:
   void dispatch(std::unique_ptr<Task> T) override;
-  void shutdown() override;
+
+private:
+  void run(bool cancel) override;
 };
 
 #if LLVM_ENABLE_THREADS
@@ -131,8 +143,9 @@ public:
       : MaxMaterializationThreads(MaxMaterializationThreads) {}
 
   void dispatch(std::unique_ptr<Task> T) override;
-  void shutdown() override;
+
 private:
+  void run(bool cancel) override;
   bool canRunMaterializationTaskNow();
   bool canRunIdleTaskNow();
 
