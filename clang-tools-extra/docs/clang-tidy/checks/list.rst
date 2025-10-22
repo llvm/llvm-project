@@ -117,6 +117,7 @@ Clang-Tidy Checks
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
    :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes"
+   :doc:`bugprone-mutatinb-copy <bugprone/mutating-copy>`,
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
    :doc:`bugprone-multiple-statement-macro <bugprone/multiple-statement-macro>`,
@@ -180,7 +181,6 @@ Clang-Tidy Checks
    :doc:`cert-mem57-cpp <cert/mem57-cpp>`,
    :doc:`cert-msc50-cpp <cert/msc50-cpp>`,
    :doc:`cert-msc51-cpp <cert/msc51-cpp>`,
-   :doc:`cert-oop57-cpp <cert/oop57-cpp>`,
    :doc:`cert-oop58-cpp <cert/oop58-cpp>`,
    :doc:`concurrency-mt-unsafe <concurrency/mt-unsafe>`,
    :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
@@ -458,6 +458,7 @@ Check aliases
    :doc:`cert-msc54-cpp <cert/msc54-cpp>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`cert-oop11-cpp <cert/oop11-cpp>`, :doc:`performance-move-constructor-init <performance/move-constructor-init>`,
    :doc:`cert-oop54-cpp <cert/oop54-cpp>`, :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
+   :doc:`cert-oop58-cpp <cert/oop58-cpp>`, :doc:`bugprone-mutating-copy <bugprone/mutating-copy>`,
    :doc:`cert-pos44-c <cert/pos44-c>`, :doc:`bugprone-bad-signal-to-kill-thread <bugprone/bad-signal-to-kill-thread>`,
    :doc:`cert-pos47-c <cert/pos47-c>`, :doc:`concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous>`,
    :doc:`cert-sig30-c <cert/sig30-c>`, :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
