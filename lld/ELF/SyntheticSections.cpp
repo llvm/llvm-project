@@ -397,6 +397,12 @@ BssSection::BssSection(Ctx &ctx, StringRef name, uint64_t size,
   this->size = size;
 }
 
+LbssSection::LbssSection(Ctx &ctx, StringRef name, uint64_t size,
+                         uint32_t alignment)
+    : BssSection(ctx, name, size, alignment) {
+  this->lbss = true;
+}
+
 EhFrameSection::EhFrameSection(Ctx &ctx)
     : SyntheticSection(ctx, ".eh_frame", SHT_PROGBITS, SHF_ALLOC, 1) {}
 

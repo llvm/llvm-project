@@ -172,7 +172,7 @@ private:
 // We create three instances of this class for .bss, .bss.rel.ro and "COMMON",
 // that are used for writable symbols, read-only symbols and common symbols,
 // respectively.
-class BssSection final : public SyntheticSection {
+class BssSection : public SyntheticSection {
 public:
   BssSection(Ctx &, StringRef name, uint64_t size, uint32_t addralign);
   void writeTo(uint8_t *) override {}
@@ -183,6 +183,17 @@ public:
     return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->bss;
   }
   uint64_t size;
+};
+
+// LbssSection is used to reserve space for large common symbols on x86-64,
+// "LARGE_COMMON".
+class LbssSection final : public BssSection {
+public:
+  LbssSection(Ctx &, StringRef name, uint64_t size, uint32_t addralign);
+
+  static bool classof(const SectionBase *s) {
+    return isa<SyntheticSection>(s) && cast<SyntheticSection>(s)->lbss;
+  }
 };
 
 class MipsGotSection final : public SyntheticSection {
