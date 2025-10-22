@@ -1002,11 +1002,12 @@ define i32 @test_and_with_phinode(i32 %x) {
 ; CHECK-NEXT:    [[XLT1:%.*]] = icmp ult i32 [[X]], 2
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[XGT0]], [[XLT1]]
 ; CHECK:         [[X_0_1:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[X_0_2:%.*]] = bitcast i32 [[X_0_1]] to i32
 ; CHECK-NEXT:    br i1 [[AND]], label [[PHI:%.*]], label [[NOPE:%.*]]
 ; CHECK:       nope:
 ; CHECK-NEXT:    br label [[PHI]]
 ; CHECK:       phi:
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X_0_1]], [[ENTRY:%.*]] ], [ 1, [[NOPE]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X_0_2]], [[ENTRY:%.*]] ], [ 1, [[NOPE]] ]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
