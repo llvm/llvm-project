@@ -166,7 +166,7 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_INCLUDE_DIR=/s/libxml2-v2.9.12/install/include/libxml2 -DBOOTSTRAP_LIBXML2_LIBRARIES=/s/libxml2-v2.9.12/install/lib/libxml2s.lib -DBOOTSTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=/s/libxml2-v2.9.12/install/include/libxml2 -DBOOTSTRAP_BOOTSTRAP_LIBXML2_LIBRARIES=/s/libxml2-v2.9.12/install/lib/libxml2s.lib"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_INCLUDE_DIR=/s/libxml-install/include/libxml2 -DBOOTSTRAP_LIBXML2_LIBRARIES=/s/libxml-install/lib/libxml2s.lib -DBOOTSTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=/s/libxml-install/include/libxml2 -DBOOTSTRAP_BOOTSTRAP_LIBXML2_LIBRARIES=/s/libxml-install/lib/libxml2s.lib"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -259,7 +259,7 @@ jobs:
         tar zxf libxml2-v2.9.12.tar.gz
 
         cmake -S libxml2-v2.9.12 -G Ninja -B libxml-build `
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install `
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=libxml-install `
         -DBUILD_SHARED_LIBS=OFF -DLIBXML2_WITH_C14N=OFF -DLIBXML2_WITH_CATALOG=OFF `
         -DLIBXML2_WITH_DEBUG=OFF -DLIBXML2_WITH_DOCB=OFF -DLIBXML2_WITH_FTP=OFF `
         -DLIBXML2_WITH_HTML=OFF -DLIBXML2_WITH_HTTP=OFF -DLIBXML2_WITH_ICONV=OFF `
