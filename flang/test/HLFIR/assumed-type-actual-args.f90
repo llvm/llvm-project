@@ -113,7 +113,7 @@ end subroutine
 ! CHECK-LABEL:   func.func @_QPtest2(
 ! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<!fir.array<?xnone>> {fir.bindc_name = "x"}) {
 ! CHECK:           %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_1:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_1:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_2]]) dummy_scope %[[DSCOPE]] {uniq_name = "_QFtest2Ex"} : (!fir.ref<!fir.array<?xnone>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xnone>>, !fir.ref<!fir.array<?xnone>>)
 ! CHECK:           fir.call @_QPs2(%[[VAL_3]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xnone>>) -> ()
