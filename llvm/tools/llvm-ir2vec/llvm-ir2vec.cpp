@@ -143,8 +143,6 @@ public:
       MaxRelation = std::max(MaxRelation, FuncMaxRelation);
     }
 
-    RelOS.flush();
-
     // Write metadata header followed by relationships
     OS << "MAX_RELATION=" << MaxRelation << '\n';
     OS << Relationships;
