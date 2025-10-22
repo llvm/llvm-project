@@ -36,7 +36,7 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
     TentativeParsingAction TPA(*this);
 
     if (SS.isValid() &&
-               SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
+        SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
       // Check for global namespace '^^::'
       TPA.Commit();
       Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
