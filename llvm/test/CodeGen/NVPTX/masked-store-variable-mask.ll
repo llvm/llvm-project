@@ -49,8 +49,8 @@ define void @global_variable_mask(ptr addrspace(1) %a, ptr addrspace(1) %b, <4 x
 ; CHECK-NEXT:  $L__BB0_8: // %else6
 ; CHECK-NEXT:    ret;
   %a.load = load <4 x i64>, ptr addrspace(1) %a
-  tail call void @llvm.masked.store.v4i64.p1(<4 x i64> %a.load, ptr addrspace(1) %b, i32 32, <4 x i1> %mask)
+  tail call void @llvm.masked.store.v4i64.p1(<4 x i64> %a.load, ptr addrspace(1) align 32 %b, <4 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v4i64.p1(<4 x i64>, ptr addrspace(1), i32, <4 x i1>)
+declare void @llvm.masked.store.v4i64.p1(<4 x i64>, ptr addrspace(1), <4 x i1>)
