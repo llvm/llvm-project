@@ -3842,9 +3842,8 @@ const SCEV *ScalarEvolution::getGEPExpr(const SCEV *BaseExpr,
   // Add the base address and the offset. We cannot use the nsw flag, as the
   // base address is unsigned. However, if we know that the offset is
   // non-negative, we can use nuw.
-  bool NUW =
-      hasFlags(OffsetWrap, SCEV::FlagNUW) ||
-      (hasFlags(OffsetWrap, SCEV::FlagNSW) && isKnownNonNegative(Offset));
+  bool NUW = NW.hasNoUnsignedWrap() ||
+             (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
   SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
   auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
