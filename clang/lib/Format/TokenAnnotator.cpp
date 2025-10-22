@@ -4343,7 +4343,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
       return Style.PenaltyReturnTypeOnItsOwnLine;
     return 200;
   }
-  if (Right.is(TT_PointerOrReference))
+  if (Left.is(TT_PointerOrReference) || Right.is(TT_PointerOrReference))
     return 190;
   if (Right.is(TT_LambdaArrow))
     return 110;
@@ -6262,8 +6262,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
   }
+  // It is fine to break the line when the * or & should be separate from the
+  // name according to the PointerAlignment config.
   if (Left.is(TT_PointerOrReference))
-    return false;
+    return Right.SpacesRequiredBefore;
   if (Right.isTrailingComment()) {
     // We rely on MustBreakBefore being set correctly here as we should not
     // change the "binding" behavior of a comment.
