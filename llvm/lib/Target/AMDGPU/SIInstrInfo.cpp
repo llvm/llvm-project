@@ -6031,7 +6031,7 @@ SIInstrInfo::getRegClass(const MCInstrDesc &TID, unsigned OpNum,
     return nullptr;
   const MCOperandInfo &OpInfo = TID.operands()[OpNum];
   int16_t RegClass = getOpRegClassID(OpInfo);
-  return RI.getRegClass(RegClass);
+  return RegClass < 0 ? nullptr : RI.getRegClass(RegClass);
 }
 
 const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
@@ -6049,7 +6049,8 @@ const TargetRegisterClass *SIInstrInfo::getOpRegClass(const MachineInstr &MI,
     return RI.getPhysRegBaseClass(Reg);
   }
 
-  return RI.getRegClass(getOpRegClassID(Desc.operands()[OpNo]));
+  int16_t RegClass = getOpRegClassID(Desc.operands()[OpNo]);
+  return RegClass < 0 ? nullptr : RI.getRegClass(RegClass);
 }
 
 void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
