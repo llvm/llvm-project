@@ -345,7 +345,6 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   Instruction *Instr = PredRecipe->getUnderlyingInstr();
   // Build the triangular if-then region.
   std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
-  assert(Instr->getParent() && "Predicated instruction not in any basic block");
   auto *BlockInMask = PredRecipe->getMask();
   auto *MaskDef = BlockInMask->getDefiningRecipe();
   auto *BOMRecipe = new VPBranchOnMaskRecipe(
@@ -399,8 +398,9 @@ static void addReplicateRegions(VPlan &Plan) {
     VPBasicBlock *SplitBlock = CurrentBlock->splitAt(RepR->getIterator());
 
     BasicBlock *OrigBB = RepR->getUnderlyingInstr()->getParent();
-    SplitBlock->setName(
-        OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
+    SplitBlock->setName((OrigBB && OrigBB->hasName())
+                            ? OrigBB->getName() + "." + Twine(BBNum++)
+                            : "");
     // Record predicated instructions for above packing optimizations.
     VPRegionBlock *Region = createReplicateRegion(RepR, Plan);
     Region->setParent(CurrentBlock->getParent());
