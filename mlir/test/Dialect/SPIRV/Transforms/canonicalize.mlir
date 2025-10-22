@@ -11,8 +11,8 @@ func.func @combine_full_access_chain() -> f32 {
   // CHECK-NEXT: spirv.Load "Function" %[[PTR]]
   %c0 = spirv.Constant 0: i32
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>
-  %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32
-  %2 = spirv.AccessChain %1[%c0, %c0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32
+  %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32 -> !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
+  %2 = spirv.AccessChain %1[%c0, %c0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   %3 = spirv.Load "Function" %2 : f32
   spirv.ReturnValue %3 : f32
 }
@@ -28,9 +28,9 @@ func.func @combine_access_chain_multi_use() -> !spirv.array<4xf32> {
   // CHECK-NEXT: spirv.Load "Function" %[[PTR_1]]
   %c0 = spirv.Constant 0: i32
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>
-  %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32
-  %2 = spirv.AccessChain %1[%c0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32
-  %3 = spirv.AccessChain %2[%c0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32
+  %1 = spirv.AccessChain %0[%c0] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32 -> !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
+  %2 = spirv.AccessChain %1[%c0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
+  %3 = spirv.AccessChain %2[%c0] : !spirv.ptr<!spirv.array<4xf32>, Function>, i32 -> !spirv.ptr<f32, Function>
   %4 = spirv.Load "Function" %2 : !spirv.array<4xf32>
   %5 = spirv.Load "Function" %3 : f32
   spirv.ReturnValue %4: !spirv.array<4xf32>
@@ -49,8 +49,8 @@ func.func @dont_combine_access_chain_without_common_base() -> !spirv.array<4xi32
   %c1 = spirv.Constant 1: i32
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>
-  %2 = spirv.AccessChain %0[%c1] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32
-  %3 = spirv.AccessChain %1[%c1] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32
+  %2 = spirv.AccessChain %0[%c1] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32 -> !spirv.ptr<!spirv.array<4xi32>, Function>
+  %3 = spirv.AccessChain %1[%c1] : !spirv.ptr<!spirv.struct<(!spirv.array<4x!spirv.array<4xf32>>, !spirv.array<4xi32>)>, Function>, i32 -> !spirv.ptr<!spirv.array<4xi32>, Function>
   %4 = spirv.Load "Function" %2 : !spirv.array<4xi32>
   %5 = spirv.Load "Function" %3 : !spirv.array<4xi32>
   spirv.ReturnValue %4 : !spirv.array<4xi32>
@@ -593,6 +593,13 @@ func.func @isub_x_x(%arg0: i32) -> i32 {
   return %0: i32
 }
 
+// CHECK-LABEL: @isub_vector_x_x
+func.func @isub_vector_x_x(%arg0: vector<3xi32>) -> vector<3xi32> {
+  // CHECK: spirv.Constant dense<0>
+  %0 = spirv.ISub %arg0, %arg0: vector<3xi32>
+  return %0: vector<3xi32>
+}
+
 // CHECK-LABEL: @const_fold_scalar_isub_normal
 func.func @const_fold_scalar_isub_normal() -> (i32, i32, i32) {
   %c5 = spirv.Constant 5 : i32
@@ -960,17 +967,17 @@ func.func @umod_fold(%arg0: i32) -> (i32, i32) {
   return %0, %1: i32, i32
 }
 
-// CHECK-LABEL: @umod_fail_vector_fold
+// CHECK-LABEL: @umod_vector_fold
 // CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
-func.func @umod_fail_vector_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+func.func @umod_vector_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
   // CHECK: %[[CONST4:.*]] = spirv.Constant dense<4> : vector<4xi32>
   // CHECK: %[[CONST32:.*]] = spirv.Constant dense<32> : vector<4xi32>
   %const1 = spirv.Constant dense<32> : vector<4xi32>
   %0 = spirv.UMod %arg0, %const1 : vector<4xi32>
-  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST32]]
   %const2 = spirv.Constant dense<4> : vector<4xi32>
   %1 = spirv.UMod %0, %const2 : vector<4xi32>
-  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST4]]
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST32]]
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[ARG]], %[[CONST4]]
   // CHECK: return %[[UMOD0]], %[[UMOD1]]
   return %0, %1: vector<4xi32>, vector<4xi32>
 } 
@@ -989,9 +996,9 @@ func.func @umod_fold_same_divisor(%arg0: i32) -> (i32, i32) {
   return %0, %1: i32, i32
 }
 
-// CHECK-LABEL: @umod_fail_fold
+// CHECK-LABEL: @umod_fail_1_fold
 // CHECK-SAME: (%[[ARG:.*]]: i32)
-func.func @umod_fail_fold(%arg0: i32) -> (i32, i32) {
+func.func @umod_fail_1_fold(%arg0: i32) -> (i32, i32) {
   // CHECK: %[[CONST5:.*]] = spirv.Constant 5
   // CHECK: %[[CONST32:.*]] = spirv.Constant 32
   %const1 = spirv.Constant 32 : i32
@@ -1002,6 +1009,51 @@ func.func @umod_fail_fold(%arg0: i32) -> (i32, i32) {
   // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST5]]
   // CHECK: return %[[UMOD0]], %[[UMOD1]]
   return %0, %1: i32, i32
+}
+
+// CHECK-LABEL: @umod_fail_2_fold
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @umod_fail_2_fold(%arg0: i32) -> (i32, i32) {
+  // CHECK: %[[CONST32:.*]] = spirv.Constant 32
+  // CHECK: %[[CONST4:.*]] = spirv.Constant 4
+  %const1 = spirv.Constant 4 : i32
+  %0 = spirv.UMod %arg0, %const1 : i32
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST4]]
+  %const2 = spirv.Constant 32 : i32
+  %1 = spirv.UMod %0, %const2 : i32
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST32]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: i32, i32
+}
+
+// CHECK-LABEL: @umod_vector_fail_1_fold
+// CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
+func.func @umod_vector_fail_1_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+  // CHECK: %[[CONST9:.*]] = spirv.Constant dense<9> : vector<4xi32>
+  // CHECK: %[[CONST64:.*]] = spirv.Constant dense<64> : vector<4xi32>
+  %const1 = spirv.Constant dense<64> : vector<4xi32>
+  %0 = spirv.UMod %arg0, %const1 : vector<4xi32>
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST64]]
+  %const2 = spirv.Constant dense<9> : vector<4xi32>
+  %1 = spirv.UMod %0, %const2 : vector<4xi32>
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST9]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: vector<4xi32>, vector<4xi32>
+}
+
+// CHECK-LABEL: @umod_vector_fail_2_fold
+// CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
+func.func @umod_vector_fail_2_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+  // CHECK: %[[CONST32:.*]] = spirv.Constant dense<32> : vector<4xi32>
+  // CHECK: %[[CONST4:.*]] = spirv.Constant dense<4> : vector<4xi32>
+  %const1 = spirv.Constant dense<4> : vector<4xi32>
+  %0 = spirv.UMod %arg0, %const1 : vector<4xi32>
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST4]]
+  %const2 = spirv.Constant dense<32> : vector<4xi32>
+  %1 = spirv.UMod %0, %const2 : vector<4xi32>
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST32]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: vector<4xi32>, vector<4xi32>
 }
 
 // -----

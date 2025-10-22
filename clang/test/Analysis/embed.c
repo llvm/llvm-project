@@ -8,5 +8,5 @@ int main() {
         #embed "embed.c"
     };
     clang_analyzer_dump_ptr(SelfBytes); // expected-warning {{&Element{SelfBytes,0 S64b,unsigned char}}}
-    clang_analyzer_dump(SelfBytes[0]); // expected-warning {{Unknown}} FIXME: This should be the `/` character.
+    clang_analyzer_dump(SelfBytes[0]); // expected-warning {{47 U8b}}
 }

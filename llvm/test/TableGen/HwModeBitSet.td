@@ -11,9 +11,17 @@ def TestTarget : Target {
   let InstructionSet = TestTargetInstrInfo;
 }
 
-def TestMode : HwMode<"+feat", []>;
-def TestMode1 : HwMode<"+feat1", []>;
-def TestMode2 : HwMode<"+feat2", []>;
+def Feat1 : SubtargetFeature<"feat1", "HasFeat1", "true", "enable feature 1">;
+def Feat2 : SubtargetFeature<"feat2", "HasFeat2", "true", "enable feature 2">;
+
+def HasFeat1 : Predicate<"Subtarget->hasFeat1()">,
+               AssemblerPredicate<(all_of Feat1)>;
+def HasFeat2 : Predicate<"Subtarget->hasFeat2()">,
+               AssemblerPredicate<(all_of Feat2)>;
+
+def TestMode : HwMode<[HasFeat1]>;
+def TestMode1 : HwMode<[HasFeat2]>;
+def TestMode2 : HwMode<[HasFeat1, HasFeat2]>;
 
 class MyReg<string n>
   : Register<n> {
@@ -120,13 +128,26 @@ def foo : Instruction {
   let AsmString = "foo  $factor";
 }
 
+// CHECK-SUBTARGET-LABEL:  unsigned TestTargetGenMCSubtargetInfo::getHwModeSet() const {
+// CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const FeatureBitset &FB = getFeatureBits();
+// CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
+// CHECK-SUBTARGET-NEXT:    unsigned Modes = 0;
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1]) Modes |= (1 << 0);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat2]) Modes |= (1 << 1);
+// CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat2]) Modes |= (1 << 2);
+// CHECK-SUBTARGET-NEXT:    return Modes;
+// CHECK-SUBTARGET-NEXT:  }
+
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwModeSet() const {
-// CHECK-SUBTARGET:         unsigned Modes = 0;
-// CHECK-SUBTARGET:         if (checkFeatures("+feat")) Modes |= (1 << 0);
-// CHECK-SUBTARGET:         if (checkFeatures("+feat1")) Modes |= (1 << 1);
-// CHECK-SUBTARGET:         if (checkFeatures("+feat2")) Modes |= (1 << 2);
-// CHECK-SUBTARGET:         return Modes;
-// CHECK-SUBTARGET:       }
+// CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =
+// CHECK-SUBTARGET-NEXT:        static_cast<const TestTargetSubtarget *>(this);
+// CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
+// CHECK-SUBTARGET-NEXT:    unsigned Modes = 0;
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat1())) Modes |= (1 << 0);
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat2())) Modes |= (1 << 1);
+// CHECK-SUBTARGET-NEXT:    if ((Subtarget->hasFeat1()) && (Subtarget->hasFeat2())) Modes |= (1 << 2);
+// CHECK-SUBTARGET-NEXT:    return Modes;
+// CHECK-SUBTARGET-NEXT:  }
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwMode(enum HwModeType type) const {
 // CHECK-SUBTARGET:         unsigned Modes = getHwModeSet();
 // CHECK-SUBTARGET:         if (!Modes)
@@ -159,4 +180,3 @@ def foo : Instruction {
 // CHECK-SUBTARGET:         llvm_unreachable("unexpected HwModeType");
 // CHECK-SUBTARGET:         return 0; // should not get here
 // CHECK-SUBTARGET:       }
-

@@ -21,24 +21,27 @@
 //===----------------------------------------------------------------------===//
 
 /// Log RAW or WAW conflict.
-static void LLVM_ATTRIBUTE_UNUSED logConflict(llvm::raw_ostream &os,
-                                              mlir::Value writtenOrReadVarA,
-                                              mlir::Value writtenVarB);
+[[maybe_unused]] static void logConflict(llvm::raw_ostream &os,
+                                         mlir::Value writtenOrReadVarA,
+                                         mlir::Value writtenVarB);
 /// Log when an expression evaluation must be saved.
-static void LLVM_ATTRIBUTE_UNUSED logSaveEvaluation(llvm::raw_ostream &os,
-                                                    unsigned runid,
-                                                    mlir::Region &yieldRegion,
-                                                    bool anyWrite);
+[[maybe_unused]] static void logSaveEvaluation(llvm::raw_ostream &os,
+                                               unsigned runid,
+                                               mlir::Region &yieldRegion,
+                                               bool anyWrite);
 /// Log when an assignment is scheduled.
-static void LLVM_ATTRIBUTE_UNUSED logAssignmentEvaluation(
-    llvm::raw_ostream &os, unsigned runid, hlfir::RegionAssignOp assign);
+[[maybe_unused]] static void
+logAssignmentEvaluation(llvm::raw_ostream &os, unsigned runid,
+                        hlfir::RegionAssignOp assign);
 /// Log when starting to schedule an order assignment tree.
-static void LLVM_ATTRIBUTE_UNUSED logStartScheduling(
-    llvm::raw_ostream &os, hlfir::OrderedAssignmentTreeOpInterface root);
+[[maybe_unused]] static void
+logStartScheduling(llvm::raw_ostream &os,
+                   hlfir::OrderedAssignmentTreeOpInterface root);
 /// Log op if effect value is not known.
-static void LLVM_ATTRIBUTE_UNUSED logIfUnkownEffectValue(
-    llvm::raw_ostream &os, mlir::MemoryEffects::EffectInstance effect,
-    mlir::Operation &op);
+[[maybe_unused]] static void
+logIfUnkownEffectValue(llvm::raw_ostream &os,
+                       mlir::MemoryEffects::EffectInstance effect,
+                       mlir::Operation &op);
 
 //===----------------------------------------------------------------------===//
 // Scheduling Implementation
@@ -137,7 +140,7 @@ private:
   // Schedule being built.
   hlfir::Schedule schedule;
   /// Leaf regions that have been saved so far.
-  llvm::SmallSet<mlir::Region *, 16> savedRegions;
+  llvm::SmallPtrSet<mlir::Region *, 16> savedRegions;
   /// Is schedule.back() a schedule that is only saving region with read
   /// effects?
   bool currentRunIsReadOnly = false;
@@ -377,7 +380,7 @@ void Scheduler::startSchedulingAssignment(hlfir::RegionAssignOp assign,
   // Unconditionally collect effects of the evaluations of LHS and RHS
   // in case they need to be analyzed for any parent that might be
   // affected by conflicts of these evaluations.
-  // This collection migth be skipped, if there are no such parents,
+  // This collection might be skipped, if there are no such parents,
   // but for the time being we run it always.
   gatherAssignEvaluationEffects(assign, leafRegionsMayOnlyRead,
                                 assignEvaluateEffects);
@@ -597,9 +600,12 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     // Look for conflicts between the RHS/LHS evaluation and the assignments.
     // The LHS yield has no implicit read effect on the produced variable (the
     // variable is not read before the assignment).
+    // During pointer assignments, the RHS data is not read, only the address
+    // is taken.
     scheduler.startIndependentEvaluationGroup();
-    scheduler.saveEvaluationIfConflict(assign.getRhsRegion(),
-                                       leafRegionsMayOnlyRead);
+    scheduler.saveEvaluationIfConflict(
+        assign.getRhsRegion(), leafRegionsMayOnlyRead,
+        /*yieldIsImplicitRead=*/!assign.isPointerAssignment());
     // There is no point to save the LHS outside of Forall and assignment to a
     // vector subscripted LHS because the LHS is already fully evaluated and
     // saved in the resulting SSA address value (that may be a descriptor or
@@ -698,23 +704,24 @@ static llvm::raw_ostream &printRegionPath(llvm::raw_ostream &os,
   return printRegionId(os, yieldRegion);
 }
 
-static void LLVM_ATTRIBUTE_UNUSED logSaveEvaluation(llvm::raw_ostream &os,
-                                                    unsigned runid,
-                                                    mlir::Region &yieldRegion,
-                                                    bool anyWrite) {
+[[maybe_unused]] static void logSaveEvaluation(llvm::raw_ostream &os,
+                                               unsigned runid,
+                                               mlir::Region &yieldRegion,
+                                               bool anyWrite) {
   os << "run " << runid << " save  " << (anyWrite ? "(w)" : "  ") << ": ";
   printRegionPath(os, yieldRegion) << "\n";
 }
 
-static void LLVM_ATTRIBUTE_UNUSED logAssignmentEvaluation(
-    llvm::raw_ostream &os, unsigned runid, hlfir::RegionAssignOp assign) {
+[[maybe_unused]] static void
+logAssignmentEvaluation(llvm::raw_ostream &os, unsigned runid,
+                        hlfir::RegionAssignOp assign) {
   os << "run " << runid << " evaluate: ";
   printNodePath(os, assign.getOperation()) << "\n";
 }
 
-static void LLVM_ATTRIBUTE_UNUSED logConflict(llvm::raw_ostream &os,
-                                              mlir::Value writtenOrReadVarA,
-                                              mlir::Value writtenVarB) {
+[[maybe_unused]] static void logConflict(llvm::raw_ostream &os,
+                                         mlir::Value writtenOrReadVarA,
+                                         mlir::Value writtenVarB) {
   auto printIfValue = [&](mlir::Value var) -> llvm::raw_ostream & {
     if (!var)
       return os << "<unknown>";
@@ -725,8 +732,9 @@ static void LLVM_ATTRIBUTE_UNUSED logConflict(llvm::raw_ostream &os,
   printIfValue(writtenVarB) << "\n";
 }
 
-static void LLVM_ATTRIBUTE_UNUSED logStartScheduling(
-    llvm::raw_ostream &os, hlfir::OrderedAssignmentTreeOpInterface root) {
+[[maybe_unused]] static void
+logStartScheduling(llvm::raw_ostream &os,
+                   hlfir::OrderedAssignmentTreeOpInterface root) {
   os << "------------ scheduling ";
   printNodePath(os, root.getOperation());
   if (auto funcOp = root->getParentOfType<mlir::func::FuncOp>())
@@ -734,9 +742,10 @@ static void LLVM_ATTRIBUTE_UNUSED logStartScheduling(
   os << "------------\n";
 }
 
-static void LLVM_ATTRIBUTE_UNUSED logIfUnkownEffectValue(
-    llvm::raw_ostream &os, mlir::MemoryEffects::EffectInstance effect,
-    mlir::Operation &op) {
+[[maybe_unused]] static void
+logIfUnkownEffectValue(llvm::raw_ostream &os,
+                       mlir::MemoryEffects::EffectInstance effect,
+                       mlir::Operation &op) {
   if (effect.getValue() != nullptr)
     return;
   os << "unknown effected value (";

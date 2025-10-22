@@ -71,35 +71,29 @@ void ADRRelaxationPass::runOnFunction(BinaryFunction &BF) {
             continue;
       }
 
-      MCPhysReg Reg;
-      BC.MIB->getADRReg(Inst, Reg);
-      int64_t Addend = BC.MIB->getTargetAddend(Inst);
-      InstructionListType Addr;
-
+      InstructionListType AdrpAdd;
       {
         auto L = BC.scopeLock();
-        Addr = BC.MIB->materializeAddress(Symbol, BC.Ctx.get(), Reg, Addend);
+        AdrpAdd = BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get());
       }
 
       if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
         It = BB.eraseInstruction(std::prev(It));
       } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
         BB.eraseInstruction(std::next(It));
-      } else if (!opts::StrictMode && !BF.isSimple()) {
+      } else if (!BF.isSimple()) {
         // If the function is not simple, it may contain a jump table undetected
         // by us. This jump table may use an offset from the branch instruction
         // to land in the desired place. If we add new instructions, we
         // invalidate this offset, so we have to rely on linker-inserted NOP to
         // replace it with ADRP, and abort if it is not present.
         auto L = BC.scopeLock();
-        BC.errs() << formatv(
-            "BOLT-ERROR: Cannot relax adr in non-simple function "
-            "{0}. Use --strict option to override\n",
-            BF.getOneName());
+        BC.errs() << "BOLT-ERROR: cannot relax ADR in non-simple function "
+                  << BF << '\n';
         PassFailed = true;
         return;
       }
-      It = BB.replaceInstruction(It, Addr);
+      It = BB.replaceInstruction(It, AdrpAdd);
     }
   }
 }

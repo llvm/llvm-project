@@ -1,0 +1,7 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-p670 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVWREDSUMU_VS_M8_E32 --min-instructions=100 | \
+# RUN:    FileCheck %s
+
+# Make sure reduction ops alias between vd and vs2
+# CHECK:      instructions:
+# CHECK-NEXT: PseudoVWREDSUMU_VS_M8_E32
+# CHECK-SAME:  V[[REG:[0-9]+]] V[[REG]] V{{[0-9]+}}M8

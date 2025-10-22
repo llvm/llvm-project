@@ -48,8 +48,6 @@ private:
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
   bool RunLdsBranchVmemWARHazardFixup;
-  BitVector VALUReadHazardSGPRs;
-  bool UseVALUReadHazardExhaustiveSearch;
 
   /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;
@@ -106,12 +104,16 @@ private:
   bool fixLdsDirectVMEMHazard(MachineInstr *MI);
   bool fixVALUPartialForwardingHazard(MachineInstr *MI);
   bool fixVALUTransUseHazard(MachineInstr *MI);
+  bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
-  void computeVALUHazardSGPRs(MachineFunction *MMF);
-  bool fixVALUReadSGPRHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
+  bool fixGetRegWaitIdle(MachineInstr *MI);
+  bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixScratchBaseForwardingHazard(MachineInstr *MI);
+  bool fixSetRegMode(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);
@@ -134,6 +136,7 @@ private:
   int checkMFMAPadding(MachineInstr *MI);
   int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
+  int checkPermlaneHazards(MachineInstr *MI);
 
 public:
   GCNHazardRecognizer(const MachineFunction &MF);

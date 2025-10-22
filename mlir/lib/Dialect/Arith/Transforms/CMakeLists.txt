@@ -8,10 +8,11 @@ add_mlir_dialect_library(MLIRArithTransforms
   ExpandOps.cpp
   IntRangeOptimizations.cpp
   ReifyValueBounds.cpp
+  ShardingInterfaceImpl.cpp
   UnsignedWhenEquivalent.cpp
 
   ADDITIONAL_HEADER_DIRS
-  {$MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith/Transforms
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Arith/Transforms
 
   DEPENDS
   MLIRArithTransformsIncGen
@@ -19,12 +20,16 @@ add_mlir_dialect_library(MLIRArithTransforms
   LINK_LIBS PUBLIC
   MLIRAnalysis
   MLIRArithDialect
+  MLIRBufferizationDialect
+  MLIRBufferizationTransforms
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface
   MLIRIR
   MLIRMemRefDialect
+  MLIRShardDialect
   MLIRPass
+  MLIRShardingInterface
   MLIRTensorDialect
   MLIRTransforms
   MLIRTransformUtils

@@ -1,4 +1,4 @@
-//===- RedirectionManager.h - Redirection manager interface -----*- C++ -*-===//
+//===- LazyObjectLinkingLayer.h - Link objects on first fn call -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Redirection manager interface that redirects a call to symbol to another.
+// Link object files lazily on first call.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_EXECUTIONENGINE_ORC_LAZYOBJECTLINKINGLAYER_H
@@ -14,22 +14,35 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Layer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::orc {
 
 class ObjectLinkingLayer;
-class LazyCallThroughManager;
+class LazyReexportsManager;
 class RedirectableSymbolManager;
 
-class LazyObjectLinkingLayer : public ObjectLayer {
+/// LazyObjectLinkingLayer is an adapter for ObjectLinkingLayer that builds
+/// lazy reexports for all function symbols in objects that are/ added to defer
+/// linking until the first call to a function defined in the object.
+///
+/// Linking is performed by emitting the object file via the base
+/// ObjectLinkingLayer.
+///
+/// No partitioning is performed: The first call to any function in the object
+/// will trigger linking of the whole object.
+///
+/// References to data symbols are not lazy and will trigger immediate linking
+/// (same os ObjectlinkingLayer).
+class LLVM_ABI LazyObjectLinkingLayer : public ObjectLayer {
 public:
   LazyObjectLinkingLayer(ObjectLinkingLayer &BaseLayer,
-                         LazyCallThroughManager &LCTMgr,
-                         RedirectableSymbolManager &RSMgr);
+                         LazyReexportsManager &LRMgr);
 
+  /// Add an object file to the JITDylib targeted by the given tracker.
   llvm::Error add(llvm::orc::ResourceTrackerSP RT,
-                  std::unique_ptr<llvm::MemoryBuffer> O,
-                  llvm::orc::MaterializationUnit::Interface I) override;
+                  std::unique_ptr<MemoryBuffer> O,
+                  MaterializationUnit::Interface I) override;
 
   void emit(std::unique_ptr<MaterializationResponsibility> R,
             std::unique_ptr<MemoryBuffer> O) override;
@@ -38,8 +51,7 @@ private:
   class RenamerPlugin;
 
   ObjectLinkingLayer &BaseLayer;
-  LazyCallThroughManager &LCTMgr;
-  RedirectableSymbolManager &RSMgr;
+  LazyReexportsManager &LRMgr;
 };
 
 } // namespace llvm::orc

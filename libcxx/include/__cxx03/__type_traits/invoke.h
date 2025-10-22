@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_INVOKE_H
-#define _LIBCPP___TYPE_TRAITS_INVOKE_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/conditional.h>
@@ -96,56 +96,49 @@ __nat __invoke(_Args&&... __args);
 
 // clang-format off
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet1<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((std::declval<_A0>().*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept((static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...)))
                { return (static_cast<_A0&&>(__a0).*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet2<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((std::declval<_A0>().get().*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept((__a0.get().*__f)(static_cast<_Args&&>(__args)...)))
                { return (__a0.get().*__f)(static_cast<_Args&&>(__args)...); }
 
 template <class _Fp, class _A0, class... _Args, class = __enable_if_bullet3<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(((*std::declval<_A0>()).*std::declval<_Fp>())(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _A0&& __a0, _Args&&... __args)
-    _NOEXCEPT_(noexcept(((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...)))
                { return ((*static_cast<_A0&&>(__a0)).*__f)(static_cast<_Args&&>(__args)...); }
 
 // bullets 4, 5 and 6
 
 template <class _Fp, class _A0, class = __enable_if_bullet4<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_A0>().*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept(static_cast<_A0&&>(__a0).*__f))
                { return static_cast<_A0&&>(__a0).*__f; }
 
 template <class _Fp, class _A0, class = __enable_if_bullet5<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_A0>().get().*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept(__a0.get().*__f))
                { return __a0.get().*__f; }
 
 template <class _Fp, class _A0, class = __enable_if_bullet6<_Fp, _A0> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype((*std::declval<_A0>()).*std::declval<_Fp>())
 __invoke(_Fp&& __f, _A0&& __a0)
-    _NOEXCEPT_(noexcept((*static_cast<_A0&&>(__a0)).*__f))
                { return (*static_cast<_A0&&>(__a0)).*__f; }
 
 // bullet 7
 
 template <class _Fp, class... _Args>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
+inline _LIBCPP_HIDE_FROM_ABI
 decltype(std::declval<_Fp>()(std::declval<_Args>()...))
 __invoke(_Fp&& __f, _Args&&... __args)
-    _NOEXCEPT_(noexcept(static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...)))
                { return static_cast<_Fp&&>(__f)(static_cast<_Args&&>(__args)...); }
 // clang-format on
 
@@ -181,21 +174,12 @@ struct __nothrow_invokable_r_imp<true, false, _Ret, _Fp, _Args...> {
   template <class _Tp>
   static void __test_noexcept(_Tp) _NOEXCEPT;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const bool value = false;
-#else
-  static const bool value =
-      noexcept(_ThisT::__test_noexcept<_Ret>(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...)));
-#endif
 };
 
 template <class _Ret, class _Fp, class... _Args>
 struct __nothrow_invokable_r_imp<true, true, _Ret, _Fp, _Args...> {
-#ifdef _LIBCPP_CXX03_LANG
   static const bool value = false;
-#else
-  static const bool value = noexcept(std::__invoke(std::declval<_Fp>(), std::declval<_Args>()...));
-#endif
 };
 
 template <class _Ret, class _Fp, class... _Args>
@@ -212,7 +196,7 @@ struct __invoke_of
 template <class _Ret, bool = is_void<_Ret>::value>
 struct __invoke_void_return_wrapper {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static _Ret __call(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI static _Ret __call(_Args&&... __args) {
     return std::__invoke(std::forward<_Args>(__args)...);
   }
 };
@@ -220,51 +204,11 @@ struct __invoke_void_return_wrapper {
 template <class _Ret>
 struct __invoke_void_return_wrapper<_Ret, true> {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static void __call(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI static void __call(_Args&&... __args) {
     std::__invoke(std::forward<_Args>(__args)...);
   }
 };
 
-#if _LIBCPP_STD_VER >= 17
-
-// is_invocable
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable : integral_constant<bool, __invokable<_Fn, _Args...>::value> {};
-
-template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_invocable_r : integral_constant<bool, __invokable_r<_Ret, _Fn, _Args...>::value> {};
-
-template <class _Fn, class... _Args>
-inline constexpr bool is_invocable_v = is_invocable<_Fn, _Args...>::value;
-
-template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_invocable_r_v = is_invocable_r<_Ret, _Fn, _Args...>::value;
-
-// is_nothrow_invocable
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable : integral_constant<bool, __nothrow_invokable<_Fn, _Args...>::value> {
-};
-
-template <class _Ret, class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_invocable_r
-    : integral_constant<bool, __nothrow_invokable_r<_Ret, _Fn, _Args...>::value> {};
-
-template <class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<_Fn, _Args...>::value;
-
-template <class _Ret, class _Fn, class... _Args>
-inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<_Ret, _Fn, _Args...>::value;
-
-template <class _Fn, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS invoke_result : __invoke_of<_Fn, _Args...> {};
-
-template <class _Fn, class... _Args>
-using invoke_result_t = typename invoke_result<_Fn, _Args...>::type;
-
-#endif // _LIBCPP_STD_VER >= 17
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_INVOKE_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_INVOKE_H

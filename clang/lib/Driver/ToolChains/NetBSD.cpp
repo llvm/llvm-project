@@ -10,8 +10,8 @@
 #include "Arch/ARM.h"
 #include "Arch/Mips.h"
 #include "Arch/Sparc.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -328,8 +328,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // AddRunTimeLibs).
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
 
@@ -564,18 +564,4 @@ void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())
     CC1Args.push_back("-D_REENTRANT");
-
-  VersionTuple OsVersion = getTriple().getOSVersion();
-  bool UseInitArrayDefault =
-      OsVersion >= VersionTuple(9) || OsVersion.getMajor() == 0 ||
-      getTriple().getArch() == llvm::Triple::aarch64 ||
-      getTriple().getArch() == llvm::Triple::aarch64_be ||
-      getTriple().getArch() == llvm::Triple::arm ||
-      getTriple().getArch() == llvm::Triple::armeb ||
-      getTriple().getArch() == llvm::Triple::riscv32 ||
-      getTriple().getArch() == llvm::Triple::riscv64;
-
-  if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
-                          options::OPT_fno_use_init_array, UseInitArrayDefault))
-    CC1Args.push_back("-fno-use-init-array");
 }

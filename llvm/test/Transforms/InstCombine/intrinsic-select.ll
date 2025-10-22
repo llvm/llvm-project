@@ -2,6 +2,7 @@
 ; RUN: opt -passes=instcombine -S < %s | FileCheck %s
 
 declare void @use(i32)
+declare void @usef32(float)
 
 declare i32 @llvm.ctlz.i32(i32, i1)
 declare <3 x i17> @llvm.ctlz.v3i17(<3 x i17>, i1)
@@ -209,7 +210,7 @@ declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 define <2 x i32> @non_speculatable(i1 %b) {
 ; CHECK-LABEL: @non_speculatable(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], ptr @g1, ptr @g2
-; CHECK-NEXT:    [[C:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr nonnull [[S]], i32 64, <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
+; CHECK-NEXT:    [[C:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr nonnull align 64 [[S]], <2 x i1> <i1 true, i1 false>, <2 x i32> poison)
 ; CHECK-NEXT:    ret <2 x i32> [[C]]
 ;
   %s = select i1 %b, ptr @g1, ptr @g2
@@ -343,4 +344,30 @@ define double @test_fabs_select_fmf2(i1 %cond, double %a) {
   %sel1 = select i1 %cond, double 0.0, double %a
   %fabs = call nnan ninf nsz double @llvm.fabs.f64(double %sel1)
   ret double %fabs
+}
+
+define float @test_fabs_select_multiuse(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fabs_select_multiuse(
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float [[X:%.*]], float 0x7FF0000000000000
+; CHECK-NEXT:    call void @usef32(float [[SELECT]])
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  call void @usef32(float %select)
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
+}
+
+define float @test_fabs_select_multiuse_both_constant(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fabs_select_multiuse_both_constant(
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], float -1.000000e+00, float -2.000000e+00
+; CHECK-NEXT:    call void @usef32(float [[SELECT]])
+; CHECK-NEXT:    [[FABS:%.*]] = select i1 [[COND]], float 1.000000e+00, float 2.000000e+00
+; CHECK-NEXT:    ret float [[FABS]]
+;
+  %select = select i1 %cond, float -1.0, float -2.0
+  call void @usef32(float %select)
+  %fabs = call float @llvm.fabs.f32(float %select)
+  ret float %fabs
 }

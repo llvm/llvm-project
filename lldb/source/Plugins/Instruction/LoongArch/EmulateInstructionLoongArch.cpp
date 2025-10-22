@@ -86,7 +86,6 @@ bool EmulateInstructionLoongArch::EvaluateInstruction(uint32_t options) {
   uint32_t inst_size = m_opcode.GetByteSize();
   uint32_t inst = m_opcode.GetOpcode32();
   bool increase_pc = options & eEmulateInstructionOptionAutoAdvancePC;
-  bool success = false;
 
   Opcode *opcode_data = GetOpcodeForInstruction(inst);
   if (!opcode_data)
@@ -94,9 +93,10 @@ bool EmulateInstructionLoongArch::EvaluateInstruction(uint32_t options) {
 
   lldb::addr_t old_pc = 0;
   if (increase_pc) {
-    old_pc = ReadPC(&success);
-    if (!success)
+    auto addr = ReadPC();
+    if (!addr)
       return false;
+    old_pc = *addr;
   }
 
   // Call the Emulate... function.
@@ -104,9 +104,10 @@ bool EmulateInstructionLoongArch::EvaluateInstruction(uint32_t options) {
     return false;
 
   if (increase_pc) {
-    lldb::addr_t new_pc = ReadPC(&success);
-    if (!success)
+    auto addr = ReadPC();
+    if (!addr)
       return false;
+    lldb::addr_t new_pc = *addr;
 
     if (new_pc == old_pc && !WritePC(old_pc + inst_size))
       return false;
@@ -115,13 +116,14 @@ bool EmulateInstructionLoongArch::EvaluateInstruction(uint32_t options) {
 }
 
 bool EmulateInstructionLoongArch::ReadInstruction() {
-  bool success = false;
-  m_addr = ReadPC(&success);
-  if (!success) {
+  auto addr = ReadPC();
+  if (!addr) {
     m_addr = LLDB_INVALID_ADDRESS;
     return false;
   }
+  m_addr = *addr;
 
+  bool success = false;
   Context ctx;
   ctx.type = eContextReadOpcode;
   ctx.SetNoArgs();
@@ -129,19 +131,6 @@ bool EmulateInstructionLoongArch::ReadInstruction() {
   m_opcode.SetOpcode32(inst, GetByteOrder());
 
   return true;
-}
-
-lldb::addr_t EmulateInstructionLoongArch::ReadPC(bool *success) {
-  return ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
-                              LLDB_INVALID_ADDRESS, success);
-}
-
-bool EmulateInstructionLoongArch::WritePC(lldb::addr_t pc) {
-  EmulateInstruction::Context ctx;
-  ctx.type = eContextAdvancePC;
-  ctx.SetNoArgs();
-  return WriteRegisterUnsigned(ctx, eRegisterKindGeneric,
-                               LLDB_REGNUM_GENERIC_PC, pc);
 }
 
 std::optional<RegisterInfo>
@@ -273,9 +262,12 @@ bool EmulateInstructionLoongArch::EmulateNonJMP(uint32_t inst) { return false; }
 bool EmulateInstructionLoongArch::EmulateBEQZ64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
@@ -293,9 +285,12 @@ bool EmulateInstructionLoongArch::EmulateBEQZ64(uint32_t inst) {
 bool EmulateInstructionLoongArch::EmulateBNEZ64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
@@ -313,9 +308,12 @@ bool EmulateInstructionLoongArch::EmulateBNEZ64(uint32_t inst) {
 bool EmulateInstructionLoongArch::EmulateBCEQZ64(uint32_t inst) {
   bool success = false;
   uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
   uint8_t cj_val =
       (uint8_t)ReadRegisterUnsigned(eRegisterKindLLDB, cj, 0, &success);
@@ -335,9 +333,12 @@ bool EmulateInstructionLoongArch::EmulateBCEQZ64(uint32_t inst) {
 bool EmulateInstructionLoongArch::EmulateBCNEZ64(uint32_t inst) {
   bool success = false;
   uint32_t cj = Bits32(inst, 7, 5) + fpr_fcc0_loongarch;
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint32_t offs21 = Bits32(inst, 25, 10) + (Bits32(inst, 4, 0) << 16);
   uint8_t cj_val =
       (uint8_t)ReadRegisterUnsigned(eRegisterKindLLDB, cj, 0, &success);
@@ -358,9 +359,12 @@ bool EmulateInstructionLoongArch::EmulateJIRL64(uint32_t inst) {
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
   bool success = false;
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   EmulateInstruction::Context ctx;
   if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, rd, pc + 4))
     return false;
@@ -374,10 +378,11 @@ bool EmulateInstructionLoongArch::EmulateJIRL64(uint32_t inst) {
 // b offs26
 // PC = PC + SignExtend({offs26, 2' b0}, GRLEN)
 bool EmulateInstructionLoongArch::EmulateB64(uint32_t inst) {
-  bool success = false;
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint32_t offs26 = Bits32(inst, 25, 10) + (Bits32(inst, 9, 0) << 16);
   uint64_t next_pc = pc + llvm::SignExtend64<28>(offs26 << 2);
   return WritePC(next_pc);
@@ -387,10 +392,11 @@ bool EmulateInstructionLoongArch::EmulateB64(uint32_t inst) {
 // GR[1] = PC + 4
 // PC = PC + SignExtend({offs26, 2'b0}, GRLEN)
 bool EmulateInstructionLoongArch::EmulateBL64(uint32_t inst) {
-  bool success = false;
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   EmulateInstruction::Context ctx;
   if (!WriteRegisterUnsigned(ctx, eRegisterKindLLDB, gpr_r1_loongarch, pc + 4))
     return false;
@@ -406,9 +412,12 @@ bool EmulateInstructionLoongArch::EmulateBEQ64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
     return false;
@@ -429,9 +438,12 @@ bool EmulateInstructionLoongArch::EmulateBNE64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
     return false;
@@ -452,9 +464,12 @@ bool EmulateInstructionLoongArch::EmulateBLT64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   int64_t rj_val =
       (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
@@ -477,9 +492,12 @@ bool EmulateInstructionLoongArch::EmulateBGE64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   int64_t rj_val =
       (int64_t)ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
@@ -502,9 +520,12 @@ bool EmulateInstructionLoongArch::EmulateBLTU64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
     return false;
@@ -525,9 +546,12 @@ bool EmulateInstructionLoongArch::EmulateBGEU64(uint32_t inst) {
   bool success = false;
   uint32_t rj = Bits32(inst, 9, 5);
   uint32_t rd = Bits32(inst, 4, 0);
-  uint64_t pc = ReadPC(&success);
-  if (!success)
+
+  auto addr = ReadPC();
+  if (!addr)
     return false;
+  uint64_t pc = *addr;
+
   uint64_t rj_val = ReadRegisterUnsigned(eRegisterKindLLDB, rj, 0, &success);
   if (!success)
     return false;

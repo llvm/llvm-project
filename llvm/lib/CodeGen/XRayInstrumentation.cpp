@@ -13,17 +13,21 @@
 //
 //===---------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -43,11 +47,11 @@ struct InstrumentationOptions {
   bool HandleAllReturns;
 };
 
-struct XRayInstrumentation : public MachineFunctionPass {
+struct XRayInstrumentationLegacy : public MachineFunctionPass {
   static char ID;
 
-  XRayInstrumentation() : MachineFunctionPass(ID) {
-    initializeXRayInstrumentationPass(*PassRegistry::getPassRegistry());
+  XRayInstrumentationLegacy() : MachineFunctionPass(ID) {
+    initializeXRayInstrumentationLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -58,6 +62,27 @@ struct XRayInstrumentation : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+struct XRayInstrumentation {
+  XRayInstrumentation(MachineDominatorTree *MDT, MachineLoopInfo *MLI)
+      : MDT(MDT), MLI(MLI) {}
+
+  bool run(MachineFunction &MF);
+
+  // Methods for use in the NPM and legacy passes, can be removed once migration
+  // is complete.
+  static bool alwaysInstrument(Function &F) {
+    auto InstrAttr = F.getFnAttribute("function-instrument");
+    return InstrAttr.isStringAttribute() &&
+           InstrAttr.getValueAsString() == "xray-always";
+  }
+
+  static bool needMDTAndMLIAnalyses(Function &F) {
+    auto IgnoreLoopsAttr = F.getFnAttribute("xray-ignore-loops");
+    auto AlwaysInstrument = XRayInstrumentation::alwaysInstrument(F);
+    return !AlwaysInstrument && !IgnoreLoopsAttr.isValid();
+  }
 
 private:
   // Replace the original RET instruction with the exit sled code ("patchable
@@ -81,6 +106,9 @@ private:
   void prependRetWithPatchableExit(MachineFunction &MF,
                                    const TargetInstrInfo *TII,
                                    InstrumentationOptions);
+
+  MachineDominatorTree *MDT;
+  MachineLoopInfo *MLI;
 };
 
 } // end anonymous namespace
@@ -111,8 +139,8 @@ void XRayInstrumentation::replaceRetWithPatchableRet(
         for (auto &MO : T.operands())
           MIB.add(MO);
         Terminators.push_back(&T);
-        if (T.shouldUpdateCallSiteInfo())
-          MF.eraseCallSiteInfo(&T);
+        if (T.shouldUpdateAdditionalCallInfo())
+          MF.eraseAdditionalCallInfo(&T);
       }
     }
   }
@@ -142,11 +170,42 @@ void XRayInstrumentation::prependRetWithPatchableExit(
     }
 }
 
-bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+XRayInstrumentationPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MachineDominatorTree *MDT = nullptr;
+  MachineLoopInfo *MLI = nullptr;
+
+  if (XRayInstrumentation::needMDTAndMLIAnalyses(MF.getFunction())) {
+    MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+    MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
+  }
+
+  if (!XRayInstrumentation(MDT, MLI).run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+bool XRayInstrumentationLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MachineDominatorTree *MDT = nullptr;
+  MachineLoopInfo *MLI = nullptr;
+  if (XRayInstrumentation::needMDTAndMLIAnalyses(MF.getFunction())) {
+    auto *MDTWrapper =
+        getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+  }
+  return XRayInstrumentation(MDT, MLI).run(MF);
+}
+
+bool XRayInstrumentation::run(MachineFunction &MF) {
   auto &F = MF.getFunction();
   auto InstrAttr = F.getFnAttribute("function-instrument");
-  bool AlwaysInstrument = InstrAttr.isStringAttribute() &&
-                          InstrAttr.getValueAsString() == "xray-always";
+  bool AlwaysInstrument = alwaysInstrument(F);
   bool NeverInstrument = InstrAttr.isStringAttribute() &&
                          InstrAttr.getValueAsString() == "xray-never";
   if (NeverInstrument && !AlwaysInstrument)
@@ -170,21 +229,16 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
 
     if (!IgnoreLoops) {
       // Get MachineDominatorTree or compute it on the fly if it's unavailable
-      auto *MDTWrapper =
-          getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-      auto *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       MachineDominatorTree ComputedMDT;
       if (!MDT) {
-        ComputedMDT.getBase().recalculate(MF);
+        ComputedMDT.recalculate(MF);
         MDT = &ComputedMDT;
       }
 
       // Get MachineLoopInfo or compute it on the fly if it's unavailable
-      auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
-      auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
       MachineLoopInfo ComputedMLI;
       if (!MLI) {
-        ComputedMLI.analyze(MDT->getBase());
+        ComputedMLI.analyze(*MDT);
         MLI = &ComputedMLI;
       }
 
@@ -211,8 +265,12 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   auto &FirstMI = *FirstMBB.begin();
 
   if (!MF.getSubtarget().isXRaySupported()) {
-    FirstMI.emitError("An attempt to perform XRay instrumentation for an"
-                      " unsupported target.");
+
+    const Function &Fn = FirstMBB.getParent()->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "An attempt to perform XRay instrumentation for an"
+            " unsupported target."));
+
     return false;
   }
 
@@ -233,10 +291,14 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     case Triple::ArchType::mips:
     case Triple::ArchType::mipsel:
     case Triple::ArchType::mips64:
-    case Triple::ArchType::mips64el: {
+    case Triple::ArchType::mips64el:
+    case Triple::ArchType::riscv32:
+    case Triple::ArchType::riscv64: {
       // For the architectures which don't have a single return instruction
       InstrumentationOptions op;
-      op.HandleTailcall = false;
+      // AArch64 and RISC-V support patching tail calls.
+      op.HandleTailcall = MF.getTarget().getTargetTriple().isAArch64() ||
+                          MF.getTarget().getTargetTriple().isRISCV();
       op.HandleAllReturns = true;
       prependRetWithPatchableExit(MF, TII, op);
       break;
@@ -264,10 +326,10 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-char XRayInstrumentation::ID = 0;
-char &llvm::XRayInstrumentationID = XRayInstrumentation::ID;
-INITIALIZE_PASS_BEGIN(XRayInstrumentation, "xray-instrumentation",
+char XRayInstrumentationLegacy::ID = 0;
+char &llvm::XRayInstrumentationID = XRayInstrumentationLegacy::ID;
+INITIALIZE_PASS_BEGIN(XRayInstrumentationLegacy, "xray-instrumentation",
                       "Insert XRay ops", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(XRayInstrumentation, "xray-instrumentation",
+INITIALIZE_PASS_END(XRayInstrumentationLegacy, "xray-instrumentation",
                     "Insert XRay ops", false, false)

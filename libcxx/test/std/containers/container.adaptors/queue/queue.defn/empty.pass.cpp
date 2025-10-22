@@ -15,14 +15,13 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    std::queue<int> q;
-    assert(q.empty());
-    q.push(1);
-    assert(!q.empty());
-    q.pop();
-    assert(q.empty());
+int main(int, char**) {
+  std::queue<int> q;
+  assert(q.empty());
+  q.push(1);
+  assert(!q.empty());
+  q.pop();
+  assert(q.empty());
 
   return 0;
 }

@@ -19,7 +19,9 @@
 //===----------------------------------------------------------------------===//
 
 def NeoverseV1Model : SchedMachineModel {
-  let IssueWidth            =  15; // Maximum micro-ops dispatch rate.
+  let IssueWidth            =   8; // This value comes from the decode bandwidth
+                                   // and empirical measurements showed that this
+                                   // value is better.
   let MicroOpBufferSize     = 256; // Micro-op re-order buffer.
   let LoadLatency           =   4; // Optimistic load latency.
   let MispredictPenalty     =  11; // Cycles cost of branch mispredicted.
@@ -55,10 +57,10 @@ def V1UnitV0  : ProcResource<1>;  // FP/ASIMD 0
 def V1UnitV1  : ProcResource<1>;  // FP/ASIMD 1
 def V1UnitV2  : ProcResource<1>;  // FP/ASIMD 2
 def V1UnitV3  : ProcResource<1>;  // FP/ASIMD 3
+def V1UnitFlg : ProcResource<3>;  // Flags
 
 def V1UnitI   : ProcResGroup<[V1UnitS,
                               V1UnitM0, V1UnitM1]>;   // Integer units
-def V1UnitJ   : ProcResGroup<[V1UnitS, V1UnitM0]>;    // Integer 0-2 units
 def V1UnitM   : ProcResGroup<[V1UnitM0, V1UnitM1]>;   // Integer multicycle units
 def V1UnitL   : ProcResGroup<[V1UnitL01, V1UnitL2]>;  // Load units
 def V1UnitV   : ProcResGroup<[V1UnitV0, V1UnitV1,
@@ -98,13 +100,14 @@ def V1Write_0c_0Z : SchedWriteRes<[]>;
 
 def V1Write_1c_1B      : SchedWriteRes<[V1UnitB]>   { let Latency = 1; }
 def V1Write_1c_1I      : SchedWriteRes<[V1UnitI]>   { let Latency = 1; }
-def V1Write_1c_1J      : SchedWriteRes<[V1UnitJ]>   { let Latency = 1; }
+def V1Write_1c_1I_1Flg : SchedWriteRes<[V1UnitI, V1UnitFlg]>   { let Latency = 1; }
 def V1Write_4c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 4; }
 def V1Write_6c_1L      : SchedWriteRes<[V1UnitL]>   { let Latency = 6; }
 def V1Write_1c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 1; }
 def V1Write_4c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 4; }
 def V1Write_6c_1L01    : SchedWriteRes<[V1UnitL01]> { let Latency = 6; }
 def V1Write_2c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 2; }
+def V1Write_2c_1M_1Flg : SchedWriteRes<[V1UnitM, V1UnitFlg]>   { let Latency = 2; }
 def V1Write_3c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 3; }
 def V1Write_4c_1M      : SchedWriteRes<[V1UnitM]>   { let Latency = 4; }
 def V1Write_1c_1M0     : SchedWriteRes<[V1UnitM0]>  { let Latency = 1; }
@@ -595,7 +598,7 @@ def : InstRW<[V1Write_1c_1B], (instregex "^[CT]BN?Z[XW]$")>;
 def : SchedAlias<WriteI, V1Write_1c_1I>;
 
 // ALU, basic, flagset
-def : InstRW<[V1Write_1c_1J],
+def : InstRW<[V1Write_1c_1I_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
@@ -614,8 +617,8 @@ def              : SchedAlias<WriteISReg, V1WriteISReg>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, flagset, LSR/ASR/ROR shift or LSL shift > 4
 def V1WriteISRegS : SchedWriteVariant<
-                      [SchedVar<IsCheapLSL,  [V1Write_1c_1J]>,
-                       SchedVar<NoSchedPred, [V1Write_2c_1M]>]>;
+                      [SchedVar<IsCheapLSL,  [V1Write_1c_1I_1Flg]>,
+                       SchedVar<NoSchedPred, [V1Write_2c_1M_1Flg]>]>;
 def               : InstRW<[V1WriteISRegS],
                            (instregex "^(ADD|SUB)S(([WX]r[sx])|Xrx64)$")>;
 
@@ -623,10 +626,10 @@ def               : InstRW<[V1WriteISRegS],
 def : InstRW<[V1Write_1c_1I], (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
 
 // Logical, shift, flagset
-def : InstRW<[V1Write_2c_1M], (instregex "^(AND|BIC)S[WX]rs$")>;
+def : InstRW<[V1Write_2c_1M_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Flag manipulation instructions
-def : InstRW<[V1Write_1c_1J], (instrs SETF8, SETF16, RMIF, CFINV)>;
+def : InstRW<[V1Write_1c_1I_1Flg], (instrs SETF8, SETF16, RMIF, CFINV)>;
 
 
 // Divide and multiply instructions
@@ -1552,14 +1555,14 @@ def : InstRW<[V1Write_20c7_1V0], (instregex "^[SU]DIVR?_ZPmZ_D",
                                              "^[SU]DIV_ZPZZ_D")>;
 
 // Dot product, 8 bit
-def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_S$")>;
+def : InstRW<[V1Wr_ZDOTB, V1Rd_ZDOTB], (instregex "^[SU]DOT_ZZZI?_BtoS$")>;
 
 // Dot product, 8 bit, using signed and unsigned integers
 def : InstRW<[V1Wr_ZUDOTB, V1Rd_ZUDOTB],
              (instrs SUDOT_ZZZI, USDOT_ZZZ, USDOT_ZZZI)>;
 
 // Dot product, 16 bit
-def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_D$")>;
+def : InstRW<[V1Wr_ZDOTH, V1Rd_ZDOTH], (instregex "^[SU]DOT_ZZZI?_HtoD$")>;
 
 // Duplicate, immediate and indexed form
 def : InstRW<[V1Write_2c_1V01], (instregex "^DUP_ZI_[BHSD]$",
@@ -1574,7 +1577,7 @@ def : InstRW<[V1Write_2c_1V1], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                           "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[V1Write_2c_1V01], (instrs EXT_ZZI)>;
+def : InstRW<[V1Write_2c_1V01], (instrs EXT_ZZI, EXT_ZZI_CONSTRUCTIVE)>;
 
 // Extract/insert operation, SIMD and FP scalar form
 def : InstRW<[V1Write_3c_1V1], (instregex "^LAST[AB]_VPZ_[BHSD]$",
@@ -1805,7 +1808,7 @@ def : InstRW<[V1Write_4c_1V0], (instrs BFCVT_ZPmZ, BFCVTNT_ZPmZ)>;
 def : InstRW<[V1Wr_ZBFDOT, V1Rd_ZBFDOT], (instrs BFDOT_ZZI, BFDOT_ZZZ)>;
 
 // Matrix multiply accumulate
-def : InstRW<[V1Wr_ZBFMMA, V1Rd_ZBFMMA], (instrs BFMMLA_ZZZ)>;
+def : InstRW<[V1Wr_ZBFMMA, V1Rd_ZBFMMA], (instrs BFMMLA_ZZZ_HtoS)>;
 
 // Multiply accumulate long
 def : InstRW<[V1Wr_ZBFMAL, V1Rd_ZBFMAL], (instregex "^BFMLAL[BT]_ZZZ(I)?$")>;

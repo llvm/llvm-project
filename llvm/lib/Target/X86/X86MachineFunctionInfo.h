@@ -38,8 +38,6 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
 
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
-  bool FPClobberedByCall;
-  bool HasPushSequences;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
@@ -51,8 +49,6 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
-    YamlIO.mapOptional("FPClobberedByCall", MFI.FPClobberedByCall, false);
-    YamlIO.mapOptional("hasPushSequences", MFI.HasPushSequences, false);
   }
 };
 } // end namespace yaml
@@ -153,7 +149,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
 
-  /// Ajust stack for push2/pop2
+  /// Adjust stack for push2/pop2
   bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2

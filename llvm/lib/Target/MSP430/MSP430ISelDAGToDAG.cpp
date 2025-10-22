@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430.h"
+#include "MSP430SelectionDAGInfo.h"
 #include "MSP430TargetMachine.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -278,7 +279,7 @@ bool MSP430DAGToDAGISel::SelectAddr(SDValue N,
     Disp = CurDAG->getTargetBlockAddress(AM.BlockAddr, MVT::i32, 0,
                                          0/*AM.SymbolFlags*/);
   else
-    Disp = CurDAG->getTargetConstant(AM.Disp, SDLoc(N), MVT::i16);
+    Disp = CurDAG->getSignedTargetConstant(AM.Disp, SDLoc(N), MVT::i16);
 
   return true;
 }

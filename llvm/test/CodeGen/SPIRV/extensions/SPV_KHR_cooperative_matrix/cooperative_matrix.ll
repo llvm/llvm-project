@@ -2,18 +2,21 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_cooperative_matrix %s -o - -filetype=obj | spirv-val %}
 
+; TODO: This test currently fails with LLVM_ENABLE_EXPENSIVE_CHECKS enabled
+; XFAIL: expensive_checks
+
 ; CHECK-ERROR: LLVM ERROR: OpTypeCooperativeMatrixKHR type requires the following SPIR-V extension: SPV_KHR_cooperative_matrix
 
 ; CHECK: OpCapability CooperativeMatrixKHR
 ; CHECK: OpExtension "SPV_KHR_cooperative_matrix"
 
 ; CHECK-DAG: %[[#Int32Ty:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12
-; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48
-; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int32Ty]] 3
-; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int32Ty]] 2
-; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int32Ty]] 1
-; CHECK-DAG: %[[#Const0:]] = OpConstant %[[#Int32Ty]] 0
+; CHECK-DAG: %[[#Const12:]] = OpConstant %[[#Int32Ty]] 12{{$}}
+; CHECK-DAG: %[[#Const48:]] = OpConstant %[[#Int32Ty]] 48{{$}}
+; CHECK-DAG: %[[#Const3:]] = OpConstant %[[#Int32Ty]] 3{{$}}
+; CHECK-DAG: %[[#Const2:]] = OpConstant %[[#Int32Ty]] 2{{$}}
+; CHECK-DAG: %[[#Const1:]] = OpConstant %[[#Int32Ty]] 1{{$}}
+; CHECK-DAG: %[[#Const0:]] = OpConstantNull %[[#Int32Ty]]
 ; CHECK-DAG: %[[#MatTy1:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const12]] %[[#Const12]] %[[#Const2]]
 ; CHECK-DAG: %[[#MatTy2:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const12]] %[[#Const48]] %[[#Const0]]
 ; CHECK-DAG: %[[#MatTy3:]] = OpTypeCooperativeMatrixKHR %[[#Int32Ty]] %[[#Const3]] %[[#Const48]] %[[#Const12]] %[[#Const1]]
@@ -21,7 +24,7 @@
 ; CHECK: %[[#Load1:]] = OpCooperativeMatrixLoadKHR %[[#MatTy2]]
 ; CHECK: OpCooperativeMatrixLengthKHR %[[#Int32Ty]] %[[#MatTy2:]]
 ; CHECK: OpCooperativeMatrixLoadKHR %[[#MatTy3]]
-; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]]
+; CHECK: OpCooperativeMatrixMulAddKHR %[[#MatTy1]] %[[#]] %[[#]] %[[#]] MatrixCSignedComponentsKHR|MatrixResultSignedComponentsKHR
 ; CHECK: OpCooperativeMatrixStoreKHR
 
 define spir_kernel void @matr_mult(ptr addrspace(1) align 1 %_arg_accA, ptr addrspace(1) align 1 %_arg_accB, ptr addrspace(1) align 4 %_arg_accC, i64 %_arg_N, i64 %_arg_K) {

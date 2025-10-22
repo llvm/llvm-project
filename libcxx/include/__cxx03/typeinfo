@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_TYPEINFO
-#define _LIBCPP_TYPEINFO
+#ifndef _LIBCPP___CXX03_TYPEINFO
+#define _LIBCPP___CXX03_TYPEINFO
 
 /*
 
@@ -96,7 +96,7 @@ public:
 
   size_t hash_code() const _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI bool operator==(const type_info& __arg) const _NOEXCEPT {
     // When evaluated in a constant expression, both type infos simply can't come
     // from different translation units, so it is sufficient to compare their addresses.
     if (__libcpp_is_constant_evaluated()) {
@@ -105,9 +105,7 @@ public:
     return __compare(__arg) == 0;
   }
 
-#    if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const type_info& __arg) const _NOEXCEPT { return !operator==(__arg); }
-#    endif
 };
 
 #  else // !defined(_LIBCPP_ABI_MICROSOFT)
@@ -184,12 +182,10 @@ public:
 struct __type_info_implementations {
   struct __string_impl_base {
     typedef const char* __type_name_t;
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static const char*
-    __type_name_to_string(__type_name_t __v) _NOEXCEPT {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
       return __v;
     }
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR static __type_name_t
-    __string_to_type_name(const char* __v) _NOEXCEPT {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
       return __v;
     }
   };
@@ -310,7 +306,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI size_t hash_code() const _NOEXCEPT { return __impl::__hash(__type_name); }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 bool operator==(const type_info& __arg) const _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI bool operator==(const type_info& __arg) const _NOEXCEPT {
     // When evaluated in a constant expression, both type infos simply can't come
     // from different translation units, so it is sufficient to compare their addresses.
     if (__libcpp_is_constant_evaluated()) {
@@ -319,9 +315,7 @@ public:
     return __impl::__eq(__type_name, __arg.__type_name);
   }
 
-#    if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const type_info& __arg) const _NOEXCEPT { return !operator==(__arg); }
-#    endif
 };
 #  endif // defined(_LIBCPP_ABI_MICROSOFT)
 
@@ -381,9 +375,9 @@ _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_cast() {
 }
 _LIBCPP_END_NAMESPACE_STD
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/type_traits>
 #endif
 
-#endif // _LIBCPP_TYPEINFO
+#endif // _LIBCPP___CXX03_TYPEINFO

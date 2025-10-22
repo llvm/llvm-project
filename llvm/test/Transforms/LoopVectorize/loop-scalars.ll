@@ -32,8 +32,8 @@ define void @vector_gep(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
+; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
@@ -192,8 +192,8 @@ define void @no_gep_or_bitcast(ptr noalias %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds ptr, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 0
-; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[WIDE_LOAD]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -206,7 +206,7 @@ define void @no_gep_or_bitcast(ptr noalias %a, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
 ; CHECK-NEXT:    [[VAR1:%.*]] = load ptr, ptr [[VAR0]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1

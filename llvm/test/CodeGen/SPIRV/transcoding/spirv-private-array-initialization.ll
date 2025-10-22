@@ -6,27 +6,27 @@
 ; CHECK-SPIRV-64-DAG: %[[#i64:]] = OpTypeInt 64 0
 
 ; CHECK-SPIRV-DAG:    %[[#i32:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG:    %[[#one:]] = OpConstant %[[#i32]] 1
-; CHECK-SPIRV-DAG:    %[[#two:]] = OpConstant %[[#i32]] 2
-; CHECK-SPIRV-DAG:    %[[#three:]] = OpConstant %[[#i32]] 3
+; CHECK-SPIRV-DAG:    %[[#one:]] = OpConstant %[[#i32]] 1{{$}}
+; CHECK-SPIRV-DAG:    %[[#two:]] = OpConstant %[[#i32]] 2{{$}}
+; CHECK-SPIRV-DAG:    %[[#three:]] = OpConstant %[[#i32]] 3{{$}}
 ; CHECK-SPIRV-DAG:    %[[#i32x3:]] = OpTypeArray %[[#i32]] %[[#three]]
 ; CHECK-SPIRV-DAG:    %[[#test_arr_init:]] = OpConstantComposite %[[#i32x3]] %[[#one]] %[[#two]] %[[#three]]
-; CHECK-SPIRV-DAG:    %[[#twelve:]] = OpConstant %[[#i32]] 12
+; CHECK-SPIRV-DAG:    %[[#twelve:]] = OpConstant %[[#i32]] 12{{$}}
 ; CHECK-SPIRV-DAG:    %[[#const_i32x3_ptr:]] = OpTypePointer UniformConstant %[[#i32x3]]
 
-; CHECK-SPIRV:        %[[#test_arr2:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
-; CHECK-SPIRV:        %[[#test_arr:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
+; CHECK-SPIRV-DAG:    %[[#test_arr1:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
+; CHECK-SPIRV-DAG:    %[[#test_arr2:]] = OpVariable %[[#const_i32x3_ptr]] UniformConstant %[[#test_arr_init]]
 
 ; CHECK-SPIRV-DAG:    %[[#i32x3_ptr:]] = OpTypePointer Function %[[#i32x3]]
 
-; CHECK-SPIRV:        %[[#arr:]] = OpVariable %[[#i32x3_ptr]] Function
+; CHECK-SPIRV:        %[[#arr1:]] = OpVariable %[[#i32x3_ptr]] Function
 ; CHECK-SPIRV:        %[[#arr2:]] = OpVariable %[[#i32x3_ptr]] Function
 
-; CHECK-SPIRV-32:     OpCopyMemorySized %[[#arr]] %[[#test_arr]] %[[#twelve]] Aligned 4
+; CHECK-SPIRV-32:     OpCopyMemorySized %[[#arr1]] %[[#test_arr1]] %[[#twelve]] Aligned 4
 ; CHECK-SPIRV-32:     OpCopyMemorySized %[[#arr2]] %[[#test_arr2]] %[[#twelve]] Aligned 4
 
 ; CHECK-SPIRV-64:     %[[#twelvezext1:]] = OpUConvert %[[#i64:]] %[[#twelve:]]
-; CHECK-SPIRV-64:     OpCopyMemorySized %[[#arr]] %[[#test_arr]] %[[#twelvezext1]] Aligned 4
+; CHECK-SPIRV-64:     OpCopyMemorySized %[[#arr1]] %[[#test_arr1]] %[[#twelvezext1]] Aligned 4
 ; CHECK-SPIRV-64:     %[[#twelvezext2:]] = OpUConvert %[[#i64:]] %[[#twelve:]]
 ; CHECK-SPIRV-64:     OpCopyMemorySized %[[#arr2]] %[[#test_arr2]] %[[#twelvezext2]] Aligned 4
 

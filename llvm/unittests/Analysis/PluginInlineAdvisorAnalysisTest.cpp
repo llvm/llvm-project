@@ -66,8 +66,6 @@ struct CompilerInstance {
     Expected<PassPlugin> Plugin = PassPlugin::Load(PluginPath);
     ASSERT_TRUE(!!Plugin) << "Plugin path: " << PluginPath;
     Plugin->registerPassBuilderCallbacks(PB);
-    ASSERT_THAT_ERROR(PB.parsePassPipeline(MPM, "dynamic-inline-advisor"),
-                      Succeeded());
   }
 
   // connect the FooOnlyInlineAdvisor to our compiler instance

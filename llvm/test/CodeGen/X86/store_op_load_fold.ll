@@ -23,7 +23,7 @@ define void @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl L_s2$non_lazy_ptr, %eax
-; CHECK-NEXT:    andl $-262144, 20(%eax) ## imm = 0xFFFC0000
+; CHECK-NEXT:    andl $-67108609, 19(%eax) ## imm = 0xFC0000FF
 ; CHECK-NEXT:    retl
   %bf.load35 = load i56, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 5), align 16
   %bf.clear36 = and i56 %bf.load35, -1125895611875329

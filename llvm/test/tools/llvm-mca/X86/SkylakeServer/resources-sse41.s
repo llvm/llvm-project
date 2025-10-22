@@ -171,7 +171,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  3      2     1.00           *            extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        insertps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  2      7     1.00    *                   insertps	$1, (%rax), %xmm2
-# CHECK-NEXT:  1      6     0.50    *                   movntdqa	(%rax), %xmm2
+# CHECK-NEXT:  2      7     0.50    *                   movntdqa	(%rax), %xmm2
 # CHECK-NEXT:  2      4     2.00                        mpsadbw	$1, %xmm0, %xmm2
 # CHECK-NEXT:  3      10    2.00    *                   mpsadbw	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        packusdw	%xmm0, %xmm2
@@ -266,7 +266,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -      -     38.17  29.67  23.67  23.67  5.00   64.67  0.50   1.67
+# CHECK-NEXT:  -      -     38.50  30.00  23.67  23.67  5.00   65.00  0.50   1.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -286,7 +286,7 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33   extractps	$1, %xmm0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     insertps	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     insertps	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     movntdqa	(%rax), %xmm2
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     movntdqa	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -     mpsadbw	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -     mpsadbw	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     packusdw	%xmm0, %xmm2

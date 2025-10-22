@@ -47,12 +47,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -63,7 +64,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class DwpOptTable : public opt::GenericOptTable {
 public:
-  DwpOptTable() : GenericOptTable(InfoTable) {}
+  DwpOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -92,7 +94,7 @@ getDWOFilenames(StringRef ExecFilename) {
         dwarf::toString(Die.find(dwarf::DW_AT_comp_dir), "");
     if (!DWOCompDir.empty()) {
       SmallString<16> DWOPath(DWOName);
-      sys::fs::make_absolute(DWOCompDir, DWOPath);
+      sys::path::make_absolute(DWOCompDir, DWOPath);
       if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
         DWOPaths.push_back(std::move(DWOName));
       else
@@ -215,20 +217,21 @@ int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   if (!TheTarget)
     return error(ErrorStr, Context);
   std::string TripleName = ErrOrTriple->getTriple();
+  Triple TheTriple(TripleName);
 
   // Create all the MC Objects.
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return error(Twine("no register info for target ") + TripleName, Context);
 
   MCTargetOptions MCOptions = llvm::mc::InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+      TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return error("no asm info for target " + TripleName, Context);
 
   std::unique_ptr<MCSubtargetInfo> MSTI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return error("no subtarget info for target " + TripleName, Context);
 

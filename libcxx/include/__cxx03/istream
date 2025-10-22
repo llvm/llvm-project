@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_ISTREAM
-#define _LIBCPP_ISTREAM
+#ifndef _LIBCPP___CXX03_ISTREAM
+#define _LIBCPP___CXX03_ISTREAM
 
 /*
     istream synopsis
@@ -515,31 +515,6 @@ __input_c_string(basic_istream<_CharT, _Traits>& __is, _CharT* __p, size_t __n) 
   return __is;
 }
 
-#if _LIBCPP_STD_VER >= 20
-
-template <class _CharT, class _Traits, size_t _Np>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, _CharT (&__buf)[_Np]) {
-  size_t __n = _Np;
-  if (__is.width() > 0)
-    __n = std::min(size_t(__is.width()), _Np);
-  return std::__input_c_string(__is, __buf, __n);
-}
-
-template <class _Traits, size_t _Np>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
-operator>>(basic_istream<char, _Traits>& __is, unsigned char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
-}
-
-template <class _Traits, size_t _Np>
-inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
-operator>>(basic_istream<char, _Traits>& __is, signed char (&__buf)[_Np]) {
-  return __is >> (char(&)[_Np])__buf;
-}
-
-#else
-
 template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, _CharT* __s) {
@@ -560,8 +535,6 @@ inline _LIBCPP_HIDE_FROM_ABI basic_istream<char, _Traits>&
 operator>>(basic_istream<char, _Traits>& __is, signed char* __s) {
   return __is >> (char*)__s;
 }
-
-#endif // _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, _CharT& __c) {
@@ -1361,8 +1334,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_iostream<char>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <__cxx03/concepts>
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
 #  include <__cxx03/iosfwd>
 #  include <__cxx03/ostream>
 #  include <__cxx03/type_traits>
@@ -1370,4 +1342,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_ISTREAM
+#endif // _LIBCPP___CXX03_ISTREAM

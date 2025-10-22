@@ -9,19 +9,23 @@
 # RUN: %{python} %s %{libcxx-dir}/utils %{libcxx-dir}/test/libcxx/feature_test_macro/test_data.json
 
 import sys
+import unittest
 
-sys.path.append(sys.argv[1])
+UTILS = sys.argv[1]
+TEST_DATA = sys.argv[2]
+del sys.argv[1:3]
+
+sys.path.append(UTILS)
 from generate_feature_test_macro_components import FeatureTestMacros
 
 
-def test(output, expected):
-    assert output == expected, f"expected\n{expected}\n\noutput\n{output}"
+class Test(unittest.TestCase):
+    def setUp(self):
+        self.ftm = FeatureTestMacros(TEST_DATA, ["charconv"])
+        self.maxDiff = None  # This causes the diff to be printed when the test fails
 
-
-ftm = FeatureTestMacros(sys.argv[2])
-test(
-    ftm.version_header,
-    """// -*- C++ -*-
+    def test_implementeation(self):
+        expected = """// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -30,8 +34,8 @@ test(
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_VERSION
-#define _LIBCPP_VERSION
+#ifndef _LIBCPP_VERSIONH
+#define _LIBCPP_VERSIONH
 
 #include <__config>
 
@@ -41,9 +45,11 @@ test(
 
 #if _LIBCPP_STD_VER >= 17
 #  define __cpp_lib_any 201606L
+#  define __cpp_lib_clamp 201603L
 #  define __cpp_lib_parallel_algorithm 201603L
+// define __cpp_lib_to_chars 201611L
 #  define __cpp_lib_variant 202102L
-// define __cpp_lib_missing_FTM_in_older_standard 2017L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2017L
 #endif // _LIBCPP_STD_VER >= 17
 
 #if _LIBCPP_STD_VER >= 20
@@ -52,7 +58,7 @@ test(
 #  endif
 // define __cpp_lib_format 202110L
 // define __cpp_lib_variant 202106L
-// define __cpp_lib_missing_FTM_in_older_standard 2020L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2020L
 #endif // _LIBCPP_STD_VER >= 20
 
 #if _LIBCPP_STD_VER >= 23
@@ -66,9 +72,13 @@ test(
 #  endif
 // define __cpp_lib_format 202311L
 // define __cpp_lib_variant 202306L
-// define __cpp_lib_missing_FTM_in_older_standard 2026L
+// define __cpp_lib_zz_missing_FTM_in_older_standard 2026L
 #endif // _LIBCPP_STD_VER >= 26
 
-#endif // _LIBCPP_VERSION
-""",
-)
+#endif // _LIBCPP_VERSIONH
+"""
+        self.assertEqual(self.ftm.version_header, expected)
+
+
+if __name__ == "__main__":
+    unittest.main()

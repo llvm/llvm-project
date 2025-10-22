@@ -27,13 +27,13 @@ define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-NEXT:    store i16 1, ptr [[B]], align 1
 ; CHECK-NEXT:    [[IV_NEXT_LVER_ORIG]] = add nuw nsw i16 [[IV_LVER_ORIG]], 1
 ; CHECK-NEXT:    [[C_1_LVER_ORIG:%.*]] = icmp ult i16 [[IV_LVER_ORIG]], 38
-; CHECK-NEXT:    br i1 [[C_1_LVER_ORIG]], label [[INNER_LVER_ORIG]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[C_1_LVER_ORIG]], label [[INNER_LVER_ORIG]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       inner.ph3.ldist1:
 ; CHECK-NEXT:    br label [[INNER_LDIST1:%.*]]
 ; CHECK:       inner.ldist1:
 ; CHECK-NEXT:    [[IV_LDIST1:%.*]] = phi i16 [ 0, [[INNER_PH3_LDIST1]] ], [ [[IV_NEXT_LDIST1:%.*]], [[INNER_LDIST1]] ]
-; CHECK-NEXT:    [[L_LDIST1:%.*]] = load <2 x i16>, ptr [[UGLYGEP]], align 1, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    store i16 0, ptr [[GEP_A_3]], align 1, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    [[L_LDIST1:%.*]] = load <2 x i16>, ptr [[UGLYGEP]], align 1, !alias.scope [[META2:![0-9]+]], !noalias [[META5:![0-9]+]]
+; CHECK-NEXT:    store i16 0, ptr [[GEP_A_3]], align 1, !alias.scope [[META2]], !noalias [[META5]]
 ; CHECK-NEXT:    [[IV_NEXT_LDIST1]] = add nuw nsw i16 [[IV_LDIST1]], 1
 ; CHECK-NEXT:    [[C_1_LDIST1:%.*]] = icmp ult i16 [[IV_LDIST1]], 38
 ; CHECK-NEXT:    br i1 [[C_1_LDIST1]], label [[INNER_LDIST1]], label [[INNER_PH3:%.*]]
@@ -41,7 +41,7 @@ define void @test_pr50940(ptr %A, ptr %B) {
 ; CHECK-NEXT:    br label [[INNER:%.*]]
 ; CHECK:       inner:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[INNER_PH3]] ], [ [[IV_NEXT:%.*]], [[INNER]] ]
-; CHECK-NEXT:    store i16 1, ptr [[B]], align 1, !alias.scope !3
+; CHECK-NEXT:    store i16 1, ptr [[B]], align 1, !alias.scope [[META5]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i16 [[IV]], 38
 ; CHECK-NEXT:    br i1 [[C_1]], label [[INNER]], label [[EXIT_LOOPEXIT4:%.*]]

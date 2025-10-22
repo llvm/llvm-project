@@ -235,13 +235,13 @@
 ! CHECK-NEXT: <MCInst #{{[0-9]+}} ADD_I_HI
 ! CHECK-NEXT: <MCOperand Reg:11>
 ! CHECK-NEXT: <MCOperand Reg:7>
-! CHECK-NEXT: <MCOperand Expr:(hi(x))>
+! CHECK-NEXT: <MCOperand Expr:specifier(1,x)>
 
     mov hi(l+4), %r7
 ! CHECK: encoding: [0x03,0x81,A,A]
-! CHECK-NEXT: fixup A - offset: 0, value: (hi(l))+4, kind: FIXUP_LANAI_HI16{{$}}
+! CHECK-NEXT: fixup A - offset: 0, value: hi(l)+4, kind: FIXUP_LANAI_HI16{{$}}
 ! CHECK-NEXT: <MCInst #{{[0-9]+}} ADD_I_HI
 ! CHECK-NEXT: <MCOperand Reg:14>
 ! CHECK-NEXT: <MCOperand Reg:7>
-! CHECK-NEXT: <MCOperand Expr:((hi(l))+4)>
+! CHECK-NEXT: <MCOperand Expr:specifier(1,l)+4>
 

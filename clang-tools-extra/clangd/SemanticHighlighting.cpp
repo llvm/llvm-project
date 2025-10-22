@@ -9,7 +9,6 @@
 #include "SemanticHighlighting.h"
 #include "Config.h"
 #include "FindTarget.h"
-#include "HeuristicResolver.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
@@ -27,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/HeuristicResolver.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -489,7 +489,7 @@ public:
     // Initializer lists can give duplicates of tokens, therefore all tokens
     // must be deduplicated.
     llvm::sort(Tokens);
-    auto Last = std::unique(Tokens.begin(), Tokens.end());
+    auto Last = llvm::unique(Tokens);
     Tokens.erase(Last, Tokens.end());
 
     // Macros can give tokens that have the same source range but conflicting
@@ -597,7 +597,7 @@ private:
 std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
-  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Lambda captures are considered function scope, not class scope.
@@ -725,11 +725,6 @@ public:
   }
   bool VisitMemberExpr(MemberExpr *E) {
     H.addAngleBracketTokens(E->getLAngleLoc(), E->getRAngleLoc());
-    return true;
-  }
-
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
-    H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
 
@@ -1087,11 +1082,12 @@ public:
     return true;
   }
 
-  bool VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
-        .addModifier(HighlightingModifier::DependentName)
-        .addModifier(HighlightingModifier::ClassScope);
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+    if (!L.getTypePtr()->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true))
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
+          .addModifier(HighlightingModifier::DependentName)
+          .addModifier(HighlightingModifier::ClassScope);
     H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }
@@ -1125,21 +1121,6 @@ public:
       break;
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
-  }
-
-  // findExplicitReferences will walk nested-name-specifiers and
-  // find anything that can be resolved to a Decl. However, non-leaf
-  // components of nested-name-specifiers which are dependent names
-  // (kind "Identifier") cannot be resolved to a decl, so we visit
-  // them here.
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
-    if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
-      if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::Type)
-            .addModifier(HighlightingModifier::DependentName)
-            .addModifier(HighlightingModifier::ClassScope);
-    }
-    return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
   }
 
 private:

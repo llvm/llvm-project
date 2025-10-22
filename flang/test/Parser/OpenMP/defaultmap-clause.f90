@@ -11,8 +11,8 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = From
 !PARSE-TREE: Block
@@ -27,11 +27,11 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = Firstprivate
-!PARSE-TREE: | | VariableCategory = Aggregate
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value = Aggregate
 
 subroutine f02
   !$omp target defaultmap(alloc: all)
@@ -43,11 +43,11 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = Alloc
-!PARSE-TREE: | | VariableCategory = All
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value = All
 
 ! Both "all" and "allocatable" are valid, and "all" is a prefix of
 ! "allocatable". Make sure we parse this correctly.
@@ -61,11 +61,11 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = Alloc
-!PARSE-TREE: | | VariableCategory = Allocatable
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value = Allocatable
 
 subroutine f04
   !$omp target defaultmap(tofrom: scalar)
@@ -77,8 +77,24 @@ end
 !UNPARSE: !$OMP END TARGET
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = target
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
 !PARSE-TREE: | | ImplicitBehavior = Tofrom
-!PARSE-TREE: | | VariableCategory = Scalar
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value  = Scalar
+
+subroutine f05
+  !$omp target defaultmap(present: scalar)
+  !$omp end target
+end
+
+!UNPARSE: SUBROUTINE f05
+!UNPARSE: !$OMP TARGET  DEFAULTMAP(PRESENT:SCALAR)
+!UNPARSE: !$OMP END TARGET
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = target
+!PARSE-TREE: | OmpClauseList -> OmpClause -> Defaultmap -> OmpDefaultmapClause
+!PARSE-TREE: | | ImplicitBehavior = Present
+!PARSE-TREE: | | Modifier -> OmpVariableCategory -> Value  = Scalar

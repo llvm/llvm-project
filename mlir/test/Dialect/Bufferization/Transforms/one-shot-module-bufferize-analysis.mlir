@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only dump-alias-sets" -split-input-file | FileCheck %s --check-prefix=CHECK-ALIAS
 
 // Run fuzzer with different seeds.
 // RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-heuristic=fuzzer analysis-fuzzer-seed=23" -split-input-file -o /dev/null
@@ -1064,7 +1065,7 @@ func.func @main_func(%A : tensor<?xf32> {bufferization.writable = true},
 func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
                                      %idx1: index, %idx2: index)
     -> vector<10xf32> {
-  %0 = bufferization.to_tensor %m restrict : memref<?xf32>
+  %0 = bufferization.to_tensor %m restrict : memref<?xf32> to tensor<?xf32>
 
   // Write to the tensor. Cannot be inplace due to tensor_load.
   //      CHECK: vector.transfer_write
@@ -1406,3 +1407,21 @@ func.func @caller(%c: i1, %t0: tensor<5xf32>, %t1: tensor<5xf32>, %t2: tensor<5x
   return %r : tensor<5xf32>
 }
 
+// -----
+
+// CHECK-ALIAS-LABEL: func @foo
+func.func @foo(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-ALIAS: return
+  // CHECK-ALIAS-SAME: __equivalent_func_args__ = [0]
+  return %arg0 : tensor<?xf32>
+}
+
+// CHECK-ALIAS: func @bar(%[[arg0:.*]]: tensor<?xf32>
+func.func @bar(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  // CHECK-ALIAS: %[[call:.*]] = call @foo(%[[arg0]])
+  // CHECK-ALIAS-SAME: {__inplace_operands_attr__ = ["true"], __opresult_alias_set_attr__ = [{{\[}}"%[[call]]", "%[[arg0]]"]]}
+  %x = call @foo(%arg0) : (tensor<?xf32>) -> tensor<?xf32>
+  // CHECK-ALIAS: return
+  // CHECK-ALIAS-SAME: __equivalent_func_args__ = [0]
+  return %x : tensor<?xf32>
+}

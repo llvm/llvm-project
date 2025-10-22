@@ -112,8 +112,14 @@ public:
   // fields that are only used in these.
   // Note: The operand of the `noexcept` operator is an unevaluated operand, but
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) override { return true; }
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) override { return true; }
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc,
+                               bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc,
+                                 bool TraverseQualifier) override {
+    return true;
+  }
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) override {
     if (TIE->isPotentiallyEvaluated())
       return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(TIE);
@@ -146,6 +152,10 @@ struct ReferencedDecls {
   /// Free functions and member functions which are referenced (but not
   /// necessarily called).
   llvm::DenseSet<const FunctionDecl *> Functions;
+  /// When analyzing a lambda's call operator, the set of all parameters (from
+  /// the surrounding function) that the lambda captures. Captured local
+  /// variables are already included in `Locals` above.
+  llvm::DenseSet<const ParmVarDecl *> LambdaCapturedParams;
 };
 
 /// Returns declarations that are declared in or referenced from `FD`.

@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/fcntl_macros.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -32,7 +32,6 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
     int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl, oldfd, F_GETFD);
 #elif defined(SYS_fcntl64)
     // Same as fcntl but can handle large offsets
-    static_assert(sizeof(off_t) == 8);
     int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_fcntl64, oldfd, F_GETFD);
 #else
 #error "SYS_fcntl and SYS_fcntl64 syscalls not available."

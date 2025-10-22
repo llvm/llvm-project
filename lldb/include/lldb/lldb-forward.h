@@ -164,13 +164,13 @@ class PersistentExpressionState;
 class Platform;
 class Process;
 class ProcessAttachInfo;
-class ProcessLaunchInfo;
 class ProcessInfo;
 class ProcessInstanceInfo;
 class ProcessInstanceInfoMatch;
 class ProcessLaunchInfo;
 class ProcessModID;
 class Property;
+class ProtocolServer;
 class Queue;
 class QueueImpl;
 class QueueItem;
@@ -187,7 +187,9 @@ class SaveCoreOptions;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
+class ScriptedFrameInterface;
 class ScriptedMetadata;
+class ScriptedBreakpointInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedStopHookInterface;
@@ -215,6 +217,7 @@ class StoppointCallbackContext;
 class Stream;
 class StreamFile;
 class StreamString;
+class LockableStreamFile;
 class StringList;
 class StringTableReader;
 class StructuredDataImpl;
@@ -233,6 +236,7 @@ class Symtab;
 class SyntheticChildren;
 class SyntheticChildrenFrontEnd;
 class SystemRuntime;
+class Progress;
 class Target;
 class TargetList;
 class TargetProperties;
@@ -389,6 +393,7 @@ typedef std::shared_ptr<lldb_private::Platform> PlatformSP;
 typedef std::shared_ptr<lldb_private::Process> ProcessSP;
 typedef std::shared_ptr<lldb_private::ProcessAttachInfo> ProcessAttachInfoSP;
 typedef std::shared_ptr<lldb_private::ProcessLaunchInfo> ProcessLaunchInfoSP;
+typedef std::unique_ptr<lldb_private::ProtocolServer> ProtocolServerUP;
 typedef std::weak_ptr<lldb_private::Process> ProcessWP;
 typedef std::shared_ptr<lldb_private::RegisterCheckpoint> RegisterCheckpointSP;
 typedef std::shared_ptr<lldb_private::RegisterContext> RegisterContextSP;
@@ -404,6 +409,8 @@ typedef std::shared_ptr<lldb_private::RecognizedStackFrame>
 typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
     ScriptSummaryFormatSP;
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
+typedef std::shared_ptr<lldb_private::ScriptedFrameInterface>
+    ScriptedFrameInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedMetadata> ScriptedMetadataSP;
 typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
     ScriptedPlatformInterfaceUP;
@@ -415,6 +422,8 @@ typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
     ScriptedThreadInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadPlanInterface>
     ScriptedThreadPlanInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedBreakpointInterface>
+    ScriptedBreakpointInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
@@ -430,7 +439,9 @@ typedef std::unique_ptr<lldb_private::StackFrameRecognizerManager>
     StackFrameRecognizerManagerUP;
 typedef std::shared_ptr<lldb_private::StopInfo> StopInfoSP;
 typedef std::shared_ptr<lldb_private::Stream> StreamSP;
+typedef std::unique_ptr<lldb_private::Stream> StreamUP;
 typedef std::shared_ptr<lldb_private::StreamFile> StreamFileSP;
+typedef std::shared_ptr<lldb_private::LockableStreamFile> LockableStreamFileSP;
 typedef std::shared_ptr<lldb_private::StringSummaryFormat>
     StringTypeSummaryImplSP;
 typedef std::unique_ptr<lldb_private::StructuredDataImpl> StructuredDataImplUP;

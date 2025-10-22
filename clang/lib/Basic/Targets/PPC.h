@@ -60,31 +60,17 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasAltivec = false;
   bool HasMMA = false;
   bool HasROPProtect = false;
-  bool HasPrivileged = false;
-  bool HasAIXSmallLocalExecTLS = false;
-  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
-  bool UseCRBits = false;
   bool HasP8Vector = false;
   bool HasP8Crypto = false;
-  bool HasDirectMove = false;
   bool HasHTM = false;
-  bool HasBPERMD = false;
-  bool HasExtDiv = false;
   bool HasP9Vector = false;
   bool HasSPE = false;
   bool HasFrsqrte = false;
   bool HasFrsqrtes = false;
-  bool PairedVectorMemops = false;
   bool HasP10Vector = false;
   bool HasPCRelativeMemops = false;
-  bool HasPrefixInstrs = false;
-  bool IsISA2_06 = false;
-  bool IsISA2_07 = false;
-  bool IsISA3_0 = false;
-  bool IsISA3_1 = false;
   bool HasQuadwordAtomics = false;
-  bool HasAIXShLibTLSModelOpt = false;
   bool UseLongCalls = false;
 
 protected:
@@ -102,7 +88,8 @@ public:
   }
 
   // Set the language option for altivec based on our value.
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 
   // Note: GCC recognizes the following additional cpus:
   //  401, 403, 405, 405fp, 440fp, 464, 464fp, 476, 476fp, 505, 740, 801,
@@ -187,7 +174,7 @@ public:
 
   StringRef getABI() const override { return ABI; }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   bool isCLZForZeroUndef() const override { return false; }
 
@@ -462,12 +449,12 @@ public:
 
     if (Triple.isOSAIX()) {
       // TODO: Set appropriate ABI for AIX platform.
-      DataLayout = "E-m:a-Fi64-i64:64-n32:64";
+      DataLayout = "E-m:a-Fi64-i64:64-i128:128-n32:64";
       LongDoubleWidth = 64;
       LongDoubleAlign = DoubleAlign = 32;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
     } else if ((Triple.getArch() == llvm::Triple::ppc64le)) {
-      DataLayout = "e-m:e-Fn32-i64:64-n32:64";
+      DataLayout = "e-m:e-Fn32-i64:64-i128:128-n32:64";
       ABI = "elfv2";
     } else {
       DataLayout = "E-m:e";
@@ -478,7 +465,7 @@ public:
         ABI = "elfv1";
         DataLayout += "-Fi64";
       }
-      DataLayout += "-i64:64-n32:64";
+      DataLayout += "-i64:64-i128:128-n32:64";
     }
 
     if (Triple.isOSFreeBSD() || Triple.isOSOpenBSD() || Triple.isMusl()) {

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ALGORITHM_HALF_POSITIVE_H
-#define _LIBCPP___ALGORITHM_HALF_POSITIVE_H
+#ifndef _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H
+#define _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/enable_if.h>
@@ -23,15 +23,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Perform division by two quickly for positive integers (llvm.org/PR39129)
 
 template <typename _Integral, __enable_if_t<is_integral<_Integral>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Integral __half_positive(_Integral __value) {
+_LIBCPP_HIDE_FROM_ABI _Integral __half_positive(_Integral __value) {
   return static_cast<_Integral>(static_cast<__make_unsigned_t<_Integral> >(__value) / 2);
 }
 
 template <typename _Tp, __enable_if_t<!is_integral<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp __half_positive(_Tp __value) {
+_LIBCPP_HIDE_FROM_ABI _Tp __half_positive(_Tp __value) {
   return __value / 2;
 }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ALGORITHM_HALF_POSITIVE_H
+#endif // _LIBCPP___CXX03___ALGORITHM_HALF_POSITIVE_H

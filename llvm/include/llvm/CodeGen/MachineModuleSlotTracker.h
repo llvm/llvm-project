@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -19,7 +20,7 @@ class MachineModuleInfo;
 class MachineFunction;
 class Module;
 
-class MachineModuleSlotTracker : public ModuleSlotTracker {
+class LLVM_ABI MachineModuleSlotTracker : public ModuleSlotTracker {
   const Function &TheFunction;
   const MachineModuleInfo &TheMMI;
   unsigned MDNStartSlot = 0, MDNEndSlot = 0;
@@ -36,7 +37,7 @@ public:
   MachineModuleSlotTracker(const MachineModuleInfo &MMI,
                            const MachineFunction *MF,
                            bool ShouldInitializeAllMetadata = true);
-  ~MachineModuleSlotTracker();
+  ~MachineModuleSlotTracker() override;
 
   void collectMachineMDNodes(MachineMDNodeListType &L) const;
 };

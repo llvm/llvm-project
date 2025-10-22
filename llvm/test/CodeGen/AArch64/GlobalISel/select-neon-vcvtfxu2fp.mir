@@ -23,11 +23,12 @@ body:             |
     liveins: $d0
 
     ; CHECK-LABEL: name: vcvtfxu2fp_s64_fpr
-    ; CHECK: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
-    ; CHECK: [[UCVTFd:%[0-9]+]]:fpr64 = UCVTFd [[COPY]], 12
-    ; CHECK: $d1 = COPY [[UCVTFd]]
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
+    ; CHECK-NEXT: [[UCVTFd:%[0-9]+]]:fpr64 = UCVTFd [[COPY]], 12
+    ; CHECK-NEXT: $d1 = COPY [[UCVTFd]]
     %0(s64) = COPY $d0
-    %1(s32) = G_CONSTANT i32 12
-    %2(s64) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.vcvtfxu2fp.f64), %0, %1
+    %2(s64) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.vcvtfxu2fp.f64), %0, 12
     $d1 = COPY %2(s64)
 ...

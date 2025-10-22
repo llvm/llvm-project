@@ -16,7 +16,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
@@ -26,11 +25,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>
@@ -64,7 +61,8 @@ static llvm::DenseMap<const ValueDecl *, StorageLocation *> intersectDeclToLoc(
 // expression must map to the same location / value. This is the case if we are
 // performing a join for control flow within a full-expression (which is the
 // only case when this function should be used).
-template <typename MapT> MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
+template <typename MapT>
+static MapT joinExprMaps(const MapT &Map1, const MapT &Map2) {
   MapT Result = Map1;
 
   for (const auto &Entry : Map2) {
@@ -204,10 +202,11 @@ static WidenResult widenDistinctValues(QualType Type, Value &Prev,
 // Returns whether the values in `Map1` and `Map2` compare equal for those
 // keys that `Map1` and `Map2` have in common.
 template <typename Key>
-bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
-                           const llvm::MapVector<Key, Value *> &Map2,
-                           const Environment &Env1, const Environment &Env2,
-                           Environment::ValueModel &Model) {
+static bool compareKeyToValueMaps(const llvm::MapVector<Key, Value *> &Map1,
+                                  const llvm::MapVector<Key, Value *> &Map2,
+                                  const Environment &Env1,
+                                  const Environment &Env2,
+                                  Environment::ValueModel &Model) {
   for (auto &Entry : Map1) {
     Key K = Entry.first;
     assert(K != nullptr);
@@ -260,7 +259,7 @@ joinLocToVal(const llvm::MapVector<const StorageLocation *, Value *> &LocToVal,
 // Perform widening on either `LocToVal` or `ExprToVal`. `Key` must be either
 // `const StorageLocation *` or `const Expr *`.
 template <typename Key>
-llvm::MapVector<Key, Value *>
+static llvm::MapVector<Key, Value *>
 widenKeyToValueMap(const llvm::MapVector<Key, Value *> &CurMap,
                    const llvm::MapVector<Key, Value *> &PrevMap,
                    Environment &CurEnv, const Environment &PrevEnv,
@@ -533,9 +532,11 @@ void Environment::initialize() {
           } else if (auto *FieldBeingInitialized =
                          dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
             // This is in a field initializer, rather than a method.
+            const RecordDecl *RD = FieldBeingInitialized->getParent();
+            const ASTContext &Ctx = RD->getASTContext();
+            CanQualType T = Ctx.getCanonicalTagType(RD);
             setThisPointeeStorageLocation(
-                cast<RecordStorageLocation>(createObject(QualType(
-                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+                cast<RecordStorageLocation>(createObject(T)));
           } else {
             assert(false && "Unexpected this-capturing lambda context.");
           }

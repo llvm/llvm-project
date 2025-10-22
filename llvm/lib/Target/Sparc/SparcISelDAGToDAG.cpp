@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SparcSelectionDAGInfo.h"
 #include "SparcTargetMachine.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -106,8 +107,8 @@ bool SparcDAGToDAGISel::SelectADDRri(SDValue Addr,
         } else {
           Base = Addr.getOperand(0);
         }
-        Offset = CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr),
-                                           MVT::i32);
+        Offset = CurDAG->getSignedTargetConstant(CN->getSExtValue(),
+                                                 SDLoc(Addr), MVT::i32);
         return true;
       }
     }

@@ -30,6 +30,7 @@ typedef enum {
   HSA_STATUS_INFO_BREAK = 0x1,
   HSA_STATUS_ERROR = 0x1000,
   HSA_STATUS_ERROR_INVALID_CODE_OBJECT = 0x1010,
+  HSA_STATUS_ERROR_INVALID_SYMBOL_NAME = 0x1013,
   HSA_STATUS_ERROR_NOT_INITIALIZED = 0x100B,
   HSA_STATUS_ERROR_EXCEPTION = 0x1016,
 } hsa_status_t;
@@ -50,6 +51,14 @@ typedef struct hsa_agent_s {
   uint64_t handle;
 } hsa_agent_t;
 
+typedef struct hsa_loaded_code_object_s {
+  uint64_t handle;
+} hsa_loaded_code_object_t;
+
+typedef struct hsa_code_object_reader_s {
+  uint64_t handle;
+} hsa_code_object_reader_t;
+
 typedef enum {
   HSA_DEVICE_TYPE_CPU = 0,
   HSA_DEVICE_TYPE_GPU = 1,
@@ -62,9 +71,15 @@ typedef enum {
 } hsa_isa_info_t;
 
 typedef enum {
+  HSA_MACHINE_MODEL_SMALL = 0,
+  HSA_MACHINE_MODEL_LARGE = 1
+} hsa_machine_model_t;
+
+typedef enum {
   HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_VENDOR_NAME = 1,
   HSA_AGENT_INFO_FEATURE = 2,
+  HSA_AGENT_INFO_MACHINE_MODEL = 3,
   HSA_AGENT_INFO_PROFILE = 4,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,
@@ -363,6 +378,18 @@ hsa_status_t hsa_amd_signal_async_handler(hsa_signal_t signal,
                                           hsa_signal_value_t value,
                                           hsa_amd_signal_handler handler,
                                           void *arg);
+
+hsa_status_t hsa_code_object_reader_create_from_memory(
+    const void *code_object, size_t size,
+    hsa_code_object_reader_t *code_object_reader);
+
+hsa_status_t
+hsa_code_object_reader_destroy(hsa_code_object_reader_t code_object_reader);
+
+hsa_status_t hsa_executable_load_agent_code_object(
+    hsa_executable_t executable, hsa_agent_t agent,
+    hsa_code_object_reader_t code_object_reader, const char *options,
+    hsa_loaded_code_object_t *loaded_code_object);
 
 #ifdef __cplusplus
 }

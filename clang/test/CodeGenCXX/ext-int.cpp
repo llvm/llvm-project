@@ -549,24 +549,6 @@ void Shift(_BitInt(28) Ext, _BitInt(65) LargeExt, int i) {
   // CHECK: ashr i65 {{.+}}, %[[PROMO]]
 }
 
-void ComplexTest(_Complex _BitInt(12) first, _Complex _BitInt(33) second) {
-  // LIN: define{{.*}} void @_Z11ComplexTestCDB12_CDB33_
-  // WIN: define dso_local void  @"?ComplexTest@@YAXU?$_Complex@U?$_BitInt@$0M@@__clang@@@__clang@@U?$_Complex@U?$_BitInt@$0CB@@__clang@@@2@@Z"
-  first + second;
-  // CHECK: %[[FIRST_REALP:.+]] = getelementptr inbounds nuw { i12, i12 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[FIRST_REAL:.+]] = load i12, ptr %[[FIRST_REALP]]
-  // CHECK: %[[FIRST_IMAGP:.+]] = getelementptr inbounds nuw { i12, i12 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[FIRST_IMAG:.+]] = load i12, ptr %[[FIRST_IMAGP]]
-  // CHECK: %[[FIRST_REAL_CONV:.+]] = sext i12 %[[FIRST_REAL]]
-  // CHECK: %[[FIRST_IMAG_CONV:.+]] = sext i12 %[[FIRST_IMAG]]
-  // CHECK: %[[SECOND_REALP:.+]] = getelementptr inbounds nuw { i33, i33 }, ptr %{{.+}}, i32 0, i32 0
-  // CHECK: %[[SECOND_REAL:.+]] = load i33, ptr %[[SECOND_REALP]]
-  // CHECK: %[[SECOND_IMAGP:.+]] = getelementptr inbounds nuw { i33, i33 }, ptr %{{.+}}, i32 0, i32 1
-  // CHECK: %[[SECOND_IMAG:.+]] = load i33, ptr %[[SECOND_IMAGP]]
-  // CHECK: %[[REAL:.+]] = add i33 %[[FIRST_REAL_CONV]], %[[SECOND_REAL]]
-  // CHECK: %[[IMAG:.+]] = add i33 %[[FIRST_IMAG_CONV]], %[[SECOND_IMAG]]
-}
-
 typedef  _BitInt(64) vint64_t16 __attribute__((vector_size(16)));
 void VectorTest(vint64_t16 first, vint64_t16 second) {
   // LIN: define{{.*}} void @_Z10VectorTestDv2_DB64_S0_(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
@@ -587,6 +569,41 @@ void VectorTest(uint16_t4 first, uint16_t4 second) {
   // CHECK: %[[Shuffle:.+]] = shufflevector <4 x i16> %{{.+}}, <4 x i16> poison, <3 x i32> <i32 0, i32 2, i32 3>
   // CHECK: %[[Shuffle1:.+]] = shufflevector <4 x i16> %{{.+}}, <4 x i16> poison, <3 x i32> <i32 2, i32 3, i32 0>
   // CHECK: %[[ADD:.+]] = add <3 x i16> %[[Shuffle]], %[[Shuffle1]]
+}
+
+typedef unsigned _BitInt(4) uint4_t4 __attribute__((ext_vector_type(4)));
+void VectorTest(uint4_t4 first, uint4_t4 second) {
+  // LIN64: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(i32 %{{.+}}, i32 %{{.+}})
+  // LIN32: define{{.*}} void @_Z10VectorTestDv4_DU4_S0_(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN64: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> %{{.+}}, <4 x i4> %{{.+}})
+  // WIN32: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$03@__clang@@$03@__clang@@0@Z"(<4 x i4> inreg %{{.+}}, <4 x i4> inreg %{{.+}})
+  first.xzw + second.zwx;
+  // CHECK: %[[Shuffle:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 0, i32 2, i32 3>
+  // CHECK: %[[Shuffle1:.+]] = shufflevector <4 x i4> %{{.+}}, <4 x i4> poison, <3 x i32> <i32 2, i32 3, i32 0>
+  // CHECK: %[[ADD:.+]] = add <3 x i4> %[[Shuffle]], %[[Shuffle1]]
+}
+
+typedef unsigned _BitInt(2) uint2_t2 __attribute__((ext_vector_type(2)));
+uint2_t2 TestBitIntVector2x2Alloca(uint2_t2 v1, uint2_t2 v2) {
+  // LIN64: define dso_local i16 @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(i16 %[[V1Coerce:.+]], i16 %[[V2Coerce:.+]])
+  // LIN64: %[[RetVal:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN64: %[[RetValCoerce:.+]] = alloca i16, align 2
+  // LIN64: call void @llvm.memcpy.p0.p0.i64(ptr align 2 %[[RetValCoerce]], ptr align 2 %[[RetVal]], i64 1, i1 false)
+  // LIN64: %[[Ret:.+]] = load i16, ptr %[[RetValCoerce]], align 2
+  // LIN64: ret i16 %[[Ret]]
+
+  // LIN32: define dso_local <2 x i2> @_Z25TestBitIntVector2x2AllocaDv2_DU2_S0_(<2 x i2> %{{.+}}, <2 x i2> %{{.+}})
+  // LIN32: %[[V1Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: %[[V2Addr:.+]] = alloca <2 x i2>, align 2
+  // LIN32: ret <2 x i2> %[[Ret:.+]]
+
+  // WIN: define dso_local <2 x i2> @"?TestBitIntVector2x2Alloca@@YAT?$__vector@U?$_UBitInt@$01@__clang@@$01@__clang@@T12@0@Z"(<2 x i2>{{.*}}, <2 x i2>{{.*}})
+  // WIN: %[[V1:.+]] = alloca <2 x i2>, align 2
+  // WIN: %[[V2:.+]] = alloca <2 x i2>, align 2
+  // WIN: ret <2 x i2> %[[Ret:.+]]
+  return v1 + v2;
 }
 
 // Ensure that these types don't alias the normal int types.

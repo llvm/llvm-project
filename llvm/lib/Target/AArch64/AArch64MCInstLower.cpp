@@ -13,7 +13,7 @@
 
 #include "AArch64MCInstLower.h"
 #include "AArch64MachineFunctionInfo.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -78,14 +78,10 @@ MCSymbol *AArch64MCInstLower::GetGlobalValueSymbol(const GlobalValue *GV,
         Printer.OutStreamer->emitSymbolAttribute(Printer.getSymbol(GV),
                                                  MCSA_WeakAntiDep);
         Printer.OutStreamer->emitAssignment(
-            Printer.getSymbol(GV),
-            MCSymbolRefExpr::create(MangledSym, MCSymbolRefExpr::VK_WEAKREF,
-                                    Ctx));
+            Printer.getSymbol(GV), MCSymbolRefExpr::create(MangledSym, Ctx));
         Printer.OutStreamer->emitSymbolAttribute(MangledSym, MCSA_WeakAntiDep);
         Printer.OutStreamer->emitAssignment(
-            MangledSym,
-            MCSymbolRefExpr::create(Printer.getSymbol(GV),
-                                    MCSymbolRefExpr::VK_WEAKREF, Ctx));
+            MangledSym, MCSymbolRefExpr::create(Printer.getSymbol(GV), Ctx));
       }
 
       if (TargetFlags & AArch64II::MO_ARM64EC_CALLMANGLE)
@@ -151,31 +147,32 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandMachO(const MachineOperand &MO,
                                                       MCSymbol *Sym) const {
   // FIXME: We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing.
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  auto Spec = AArch64::S_None;
   if ((MO.getTargetFlags() & AArch64II::MO_GOT) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_GOTPAGE;
+      Spec = AArch64::S_MACHO_GOTPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_GOTPAGEOFF;
+      Spec = AArch64::S_MACHO_GOTPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_GOT on GV operand");
   } else if ((MO.getTargetFlags() & AArch64II::MO_TLS) != 0) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_TLVPPAGE;
+      Spec = AArch64::S_MACHO_TLVPPAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_TLVPPAGEOFF;
+      Spec = AArch64::S_MACHO_TLVPPAGEOFF;
     else
       llvm_unreachable("Unexpected target flags with MO_TLS on GV operand");
   } else {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefKind = MCSymbolRefExpr::VK_PAGE;
+      Spec = AArch64::S_MACHO_PAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefKind = MCSymbolRefExpr::VK_PAGEOFF;
+      Spec = AArch64::S_MACHO_PAGEOFF;
   }
-  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, RefKind, Ctx);
+  // TODO: Migrate to MCSpecifierExpr::create like ELF.
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Spec, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
@@ -189,17 +186,21 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
   if (MO.getTargetFlags() & AArch64II::MO_GOT) {
     const MachineFunction *MF = MO.getParent()->getParent()->getParent();
     RefFlags |= (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
-                     ? AArch64MCExpr::VK_GOT_AUTH
-                     : AArch64MCExpr::VK_GOT);
+                     ? AArch64::S_GOT_AUTH
+                     : AArch64::S_GOT);
   } else if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     TLSModel::Model Model;
     if (MO.isGlobal()) {
-      const GlobalValue *GV = MO.getGlobal();
-      Model = Printer.TM.getTLSModel(GV);
-      if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
-          Model == TLSModel::LocalDynamic)
+      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      if (MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()) {
         Model = TLSModel::GeneralDynamic;
-
+      } else {
+        const GlobalValue *GV = MO.getGlobal();
+        Model = Printer.TM.getTLSModel(GV);
+        if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+            Model == TLSModel::LocalDynamic)
+          Model = TLSModel::GeneralDynamic;
+      }
     } else {
       assert(MO.isSymbol() &&
              StringRef(MO.getSymbolName()) == "_TLS_MODULE_BASE_" &&
@@ -210,55 +211,59 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandELF(const MachineOperand &MO,
     }
     switch (Model) {
     case TLSModel::InitialExec:
-      RefFlags |= AArch64MCExpr::VK_GOTTPREL;
+      RefFlags |= AArch64::S_GOTTPREL;
       break;
     case TLSModel::LocalExec:
-      RefFlags |= AArch64MCExpr::VK_TPREL;
+      RefFlags |= AArch64::S_TPREL;
       break;
     case TLSModel::LocalDynamic:
-      RefFlags |= AArch64MCExpr::VK_DTPREL;
+      RefFlags |= AArch64::S_DTPREL;
       break;
-    case TLSModel::GeneralDynamic:
-      RefFlags |= AArch64MCExpr::VK_TLSDESC;
+    case TLSModel::GeneralDynamic: {
+      // TODO: it's probably better to introduce MO_TLS_AUTH or smth and avoid
+      // running hasELFSignedGOT() every time, but existing flags already
+      // cover all 12 bits of SubReg_TargetFlags field in MachineOperand, and
+      // making the field wider breaks static assertions.
+      const MachineFunction *MF = MO.getParent()->getParent()->getParent();
+      RefFlags |= MF->getInfo<AArch64FunctionInfo>()->hasELFSignedGOT()
+                      ? AArch64::S_TLSDESC_AUTH
+                      : AArch64::S_TLSDESC;
       break;
     }
+    }
   } else if (MO.getTargetFlags() & AArch64II::MO_PREL) {
-    RefFlags |= AArch64MCExpr::VK_PREL;
+    RefFlags |= AArch64::S_PREL;
   } else {
     // No modifier means this is a generic reference, classified as absolute for
     // the cases where it matters (:abs_g0: etc).
-    RefFlags |= AArch64MCExpr::VK_ABS;
+    RefFlags |= AArch64::S_ABS;
   }
 
   if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-    RefFlags |= AArch64MCExpr::VK_PAGE;
+    RefFlags |= AArch64::S_PAGE;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
            AArch64II::MO_PAGEOFF)
-    RefFlags |= AArch64MCExpr::VK_PAGEOFF;
+    RefFlags |= AArch64::S_PAGEOFF;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G3)
-    RefFlags |= AArch64MCExpr::VK_G3;
+    RefFlags |= AArch64::S_G3;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G2)
-    RefFlags |= AArch64MCExpr::VK_G2;
+    RefFlags |= AArch64::S_G2;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G1)
-    RefFlags |= AArch64MCExpr::VK_G1;
+    RefFlags |= AArch64::S_G1;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G0)
-    RefFlags |= AArch64MCExpr::VK_G0;
+    RefFlags |= AArch64::S_G0;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_HI12)
-    RefFlags |= AArch64MCExpr::VK_HI12;
+    RefFlags |= AArch64::S_HI12;
 
   if (MO.getTargetFlags() & AArch64II::MO_NC)
-    RefFlags |= AArch64MCExpr::VK_NC;
+    RefFlags |= AArch64::S_NC;
 
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  AArch64MCExpr::VariantKind RefKind;
-  RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
-  Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
-
+  Expr = MCSpecifierExpr::create(Expr, RefFlags, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
@@ -268,31 +273,31 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
 
   if (MO.getTargetFlags() & AArch64II::MO_TLS) {
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGEOFF)
-      RefFlags |= AArch64MCExpr::VK_SECREL_LO12;
+      RefFlags |= AArch64::S_SECREL_LO12;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_HI12)
-      RefFlags |= AArch64MCExpr::VK_SECREL_HI12;
+      RefFlags |= AArch64::S_SECREL_HI12;
 
   } else if (MO.getTargetFlags() & AArch64II::MO_S) {
-    RefFlags |= AArch64MCExpr::VK_SABS;
+    RefFlags |= AArch64::S_SABS;
   } else {
-    RefFlags |= AArch64MCExpr::VK_ABS;
+    RefFlags |= AArch64::S_ABS;
 
     if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_PAGE)
-      RefFlags |= AArch64MCExpr::VK_PAGE;
+      RefFlags |= AArch64::S_PAGE;
     else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) ==
              AArch64II::MO_PAGEOFF)
-      RefFlags |= AArch64MCExpr::VK_PAGEOFF | AArch64MCExpr::VK_NC;
+      RefFlags |= AArch64::S_PAGEOFF | AArch64::S_NC;
   }
 
   if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G3)
-    RefFlags |= AArch64MCExpr::VK_G3;
+    RefFlags |= AArch64::S_G3;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G2)
-    RefFlags |= AArch64MCExpr::VK_G2;
+    RefFlags |= AArch64::S_G2;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G1)
-    RefFlags |= AArch64MCExpr::VK_G1;
+    RefFlags |= AArch64::S_G1;
   else if ((MO.getTargetFlags() & AArch64II::MO_FRAGMENT) == AArch64II::MO_G0)
-    RefFlags |= AArch64MCExpr::VK_G0;
+    RefFlags |= AArch64::S_G0;
 
   // FIXME: Currently we only set VK_NC for MO_G3/MO_G2/MO_G1/MO_G0. This is
   // because setting VK_NC for others would mean setting their respective
@@ -301,20 +306,15 @@ MCOperand AArch64MCInstLower::lowerSymbolOperandCOFF(const MachineOperand &MO,
     auto MOFrag = (MO.getTargetFlags() & AArch64II::MO_FRAGMENT);
     if (MOFrag == AArch64II::MO_G3 || MOFrag == AArch64II::MO_G2 ||
         MOFrag == AArch64II::MO_G1 || MOFrag == AArch64II::MO_G0)
-      RefFlags |= AArch64MCExpr::VK_NC;
+      RefFlags |= AArch64::S_NC;
   }
 
-  const MCExpr *Expr =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
-  auto RefKind = static_cast<AArch64MCExpr::VariantKind>(RefFlags);
-  assert(RefKind != AArch64MCExpr::VK_INVALID &&
-         "Invalid relocation requested");
-  Expr = AArch64MCExpr::create(Expr, RefKind, Ctx);
-
+  Expr = MCSpecifierExpr::create(Expr, RefFlags, Ctx);
   return MCOperand::createExpr(Expr);
 }
 

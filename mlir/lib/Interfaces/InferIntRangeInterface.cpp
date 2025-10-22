@@ -125,15 +125,15 @@ std::optional<APInt> ConstantIntRanges::getConstantValue() const {
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
-  return os << "unsigned : [" << range.umin() << ", " << range.umax()
-            << "] signed : [" << range.smin() << ", " << range.smax() << "]";
+  os << "unsigned : [";
+  range.umin().print(os, /*isSigned*/ false);
+  os << ", ";
+  range.umax().print(os, /*isSigned*/ false);
+  return os << "] signed : [" << range.smin() << ", " << range.smax() << "]";
 }
 
 IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
   unsigned width = ConstantIntRanges::getStorageBitwidth(value.getType());
-  if (width == 0)
-    return {};
-
   APInt umin = APInt::getMinValue(width);
   APInt umax = APInt::getMaxValue(width);
   APInt smin = width != 0 ? APInt::getSignedMinValue(width) : umin;
@@ -144,6 +144,25 @@ IntegerValueRange IntegerValueRange::getMaxRange(Value value) {
 raw_ostream &mlir::operator<<(raw_ostream &os, const IntegerValueRange &range) {
   range.print(os);
   return os;
+}
+
+SmallVector<IntegerValueRange>
+mlir::getIntValueRanges(ArrayRef<OpFoldResult> values,
+                        GetIntRangeFn getIntRange, int32_t indexBitwidth) {
+  SmallVector<IntegerValueRange> ranges;
+  ranges.reserve(values.size());
+  for (OpFoldResult ofr : values) {
+    if (auto value = dyn_cast<Value>(ofr)) {
+      ranges.push_back(getIntRange(value));
+      continue;
+    }
+
+    // Create a constant range.
+    auto attr = cast<IntegerAttr>(cast<Attribute>(ofr));
+    ranges.emplace_back(ConstantIntRanges::constant(
+        attr.getValue().sextOrTrunc(indexBitwidth)));
+  }
+  return ranges;
 }
 
 void mlir::intrange::detail::defaultInferResultRanges(

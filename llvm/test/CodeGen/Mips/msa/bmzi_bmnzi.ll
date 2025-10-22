@@ -1,4 +1,4 @@
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
 
 @llvm_mips_bmnzi_b_ARG1 = global <16 x i8> <i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15, i8 15>, align 16
 @llvm_mips_bmnzi_b_ARG2 = global <16 x i8> zeroinitializer, align 16

@@ -11,13 +11,10 @@
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
-#include "lld/Common/Args.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -26,11 +23,8 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -186,6 +180,13 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         std::string(ctx.arg.thinLTOPrefixReplaceNew),
         std::string(ctx.arg.thinLTOPrefixReplaceNativeObject),
         ctx.arg.thinLTOEmitImportsFiles, indexFile.get(), onIndexWrite);
+  } else if (!ctx.arg.dtltoDistributor.empty()) {
+    backend = lto::createOutOfProcessThinBackend(
+        llvm::hardware_concurrency(ctx.arg.thinLTOJobs), onIndexWrite,
+        ctx.arg.thinLTOEmitIndexFiles, ctx.arg.thinLTOEmitImportsFiles,
+        ctx.arg.outputFile, ctx.arg.dtltoDistributor,
+        ctx.arg.dtltoDistributorArgs, ctx.arg.dtltoCompiler,
+        ctx.arg.dtltoCompilerArgs, !ctx.arg.saveTempsArgs.empty());
   } else {
     backend = lto::createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(ctx.arg.thinLTOJobs),
@@ -250,13 +251,12 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // 5) Symbols that will be referenced after linker wrapping is performed.
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
-                            (r.Prevailing && sym->includeInDynsym(ctx)) ||
+                            (r.Prevailing && sym->isExported) ||
                             usedStartStop.count(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
-    r.ExportDynamic =
-        sym->computeBinding(ctx) != STB_LOCAL &&
-        (ctx.arg.exportDynamic || sym->exportDynamic || sym->inDynamicList);
+    r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
+                      (ctx.arg.exportDynamic || sym->isExported);
     const auto *dr = dyn_cast<Defined>(sym);
     r.FinalDefinitionInLinkageUnit =
         (isExec || sym->visibility() != STV_DEFAULT) && dr &&

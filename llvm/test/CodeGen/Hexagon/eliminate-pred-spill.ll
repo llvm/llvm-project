@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-bit=0 < %s | FileCheck %s
 
 ; This spill should be eliminated.
 ; CHECK-NOT: vmem(r29+#6)

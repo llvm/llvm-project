@@ -26,6 +26,10 @@
 
 using namespace llvm;
 
+void X86InstPrinterCommon::printExprOperand(raw_ostream &OS, const MCExpr &E) {
+  MAI.printExpr(OS, E);
+}
+
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
@@ -277,8 +281,8 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSDrmi_Int:   case X86::VCMPSDrri_Int:
   case X86::VCMPSDZrmi:      case X86::VCMPSDZrri:
   case X86::VCMPSDZrmi_Int:  case X86::VCMPSDZrri_Int:
-  case X86::VCMPSDZrmi_Intk: case X86::VCMPSDZrri_Intk:
-  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrrib_Intk:
+  case X86::VCMPSDZrmik_Int: case X86::VCMPSDZrrik_Int:
+  case X86::VCMPSDZrrib_Int: case X86::VCMPSDZrribk_Int:
     OS << "sd\t";
     break;
   case X86::CMPSSrmi:        case X86::CMPSSrri:
@@ -287,8 +291,8 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
   case X86::VCMPSSrmi_Int:   case X86::VCMPSSrri_Int:
   case X86::VCMPSSZrmi:      case X86::VCMPSSZrri:
   case X86::VCMPSSZrmi_Int:  case X86::VCMPSSZrri_Int:
-  case X86::VCMPSSZrmi_Intk: case X86::VCMPSSZrri_Intk:
-  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrrib_Intk:
+  case X86::VCMPSSZrmik_Int: case X86::VCMPSSZrrik_Int:
+  case X86::VCMPSSZrrib_Int: case X86::VCMPSSZrribk_Int:
     OS << "ss\t";
     break;
   case X86::VCMPPHZ128rmi:  case X86::VCMPPHZ128rri:
@@ -305,20 +309,20 @@ void X86InstPrinterCommon::printCMPMnemonic(const MCInst *MI, bool IsVCmp,
     break;
   case X86::VCMPSHZrmi:      case X86::VCMPSHZrri:
   case X86::VCMPSHZrmi_Int:  case X86::VCMPSHZrri_Int:
-  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrrib_Intk:
-  case X86::VCMPSHZrmi_Intk: case X86::VCMPSHZrri_Intk:
+  case X86::VCMPSHZrrib_Int: case X86::VCMPSHZrribk_Int:
+  case X86::VCMPSHZrmik_Int: case X86::VCMPSHZrrik_Int:
     OS << "sh\t";
     break;
-  case X86::VCMPPBF16Z128rmi:  case X86::VCMPPBF16Z128rri:
-  case X86::VCMPPBF16Z256rmi:  case X86::VCMPPBF16Z256rri:
-  case X86::VCMPPBF16Zrmi:     case X86::VCMPPBF16Zrri:
-  case X86::VCMPPBF16Z128rmik: case X86::VCMPPBF16Z128rrik:
-  case X86::VCMPPBF16Z256rmik: case X86::VCMPPBF16Z256rrik:
-  case X86::VCMPPBF16Zrmik:    case X86::VCMPPBF16Zrrik:
-  case X86::VCMPPBF16Z128rmbi: case X86::VCMPPBF16Z128rmbik:
-  case X86::VCMPPBF16Z256rmbi: case X86::VCMPPBF16Z256rmbik:
-  case X86::VCMPPBF16Zrmbi:    case X86::VCMPPBF16Zrmbik:
-    OS << "pbf16\t";
+  case X86::VCMPBF16Z128rmi:  case X86::VCMPBF16Z128rri:
+  case X86::VCMPBF16Z256rmi:  case X86::VCMPBF16Z256rri:
+  case X86::VCMPBF16Zrmi:     case X86::VCMPBF16Zrri:
+  case X86::VCMPBF16Z128rmik: case X86::VCMPBF16Z128rrik:
+  case X86::VCMPBF16Z256rmik: case X86::VCMPBF16Z256rrik:
+  case X86::VCMPBF16Zrmik:    case X86::VCMPBF16Zrrik:
+  case X86::VCMPBF16Z128rmbi: case X86::VCMPBF16Z128rmbik:
+  case X86::VCMPBF16Z256rmbi: case X86::VCMPBF16Z256rmbik:
+  case X86::VCMPBF16Zrmbi:    case X86::VCMPBF16Zrmbik:
+    OS << "bf16\t";
     break;
   }
 }
@@ -374,7 +378,7 @@ void X86InstPrinterCommon::printPCRelImm(const MCInst *MI, uint64_t Address,
       markup(O, Markup::Immediate) << formatHex((uint64_t)Address);
     } else {
       // Otherwise, just print the expression.
-      Op.getExpr()->print(O, &MAI);
+      printExprOperand(O, *Op.getExpr());
     }
   }
 }

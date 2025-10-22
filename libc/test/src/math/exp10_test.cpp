@@ -7,14 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/exp10.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcExp10Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -80,7 +85,7 @@ TEST_F(LlvmLibcExp10Test, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp10, x,
-                                   LIBC_NAMESPACE::exp10(x), 0.5);
+                                   LIBC_NAMESPACE::exp10(x), TOLERANCE + 0.5);
   }
 }
 
@@ -105,7 +110,6 @@ TEST_F(LlvmLibcExp10Test, InDoubleRange) {
       double x = FPBits(v).get_val();
       if (FPBits(v).is_nan() || FPBits(v).is_inf() || x < 0.0)
         continue;
-      LIBC_NAMESPACE::libc_errno = 0;
       double result = LIBC_NAMESPACE::exp10(x);
       ++cc;
       if (FPBits(result).is_nan() || FPBits(result).is_inf())
@@ -114,7 +118,7 @@ TEST_F(LlvmLibcExp10Test, InDoubleRange) {
       ++count;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp10, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Exp10, x,
                                                   result, tol, rounding_mode)) {
@@ -128,10 +132,10 @@ TEST_F(LlvmLibcExp10Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Exp10 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Exp10 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Exp10, mx, mr, 0.5, rounding_mode);
     }
   };

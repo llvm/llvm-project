@@ -10,9 +10,9 @@
 
 # Stage 1. Check out LLVM source code and run the build.
 # FIXME: Replace 'ubuntu' with your base image
-FROM ubuntu as builder
+FROM docker.io/ubuntu AS builder
 # FIXME: Change maintainer name
-LABEL maintainer "Maintainer <maintainer@email>"
+LABEL maintainer="Maintainer <maintainer@email>"
 # FIXME: Install llvm/clang build dependencies here. Including compiler to
 # build stage1, cmake, subversion, ninja, etc.
 
@@ -29,9 +29,9 @@ RUN /tmp/scripts/build_install_llvm.sh --to /tmp/clang-install ${buildscript_arg
 
 # Stage 2. Produce a minimal release image with build results.
 # FIXME: Replace 'ubuntu' with your base image.
-FROM ubuntu
+FROM docker.io/ubuntu
 # FIXME: Change maintainer name.
-LABEL maintainer "Maintainer <maintainer@email>"
+LABEL maintainer="Maintainer <maintainer@email>"
 # FIXME: Install all packages you want to have in your release container.
 # A minimal useful installation should include at least libstdc++ and binutils.
 

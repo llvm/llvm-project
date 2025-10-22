@@ -9,7 +9,7 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Func/Transforms/DecomposeCallGraphTypes.h"
+#include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -48,8 +48,8 @@ static SmallVector<Value> buildDecomposeTuple(OpBuilder &builder,
     }
     for (unsigned i = 0, e = tupleType.size(); i < e; ++i) {
       Type elementType = tupleType.getType(i);
-      Value element = builder.create<test::GetTupleElementOp>(
-          loc, elementType, tuple, builder.getI32IntegerAttr(i));
+      Value element = test::GetTupleElementOp::create(
+          builder, loc, elementType, tuple, builder.getI32IntegerAttr(i));
       decompose(element);
     }
   };
@@ -94,7 +94,7 @@ static Value buildMakeTupleOp(OpBuilder &builder, TupleType resultType,
   }
 
   // Assemble the tuple from the elements.
-  return builder.create<test::MakeTupleOp>(loc, resultType, elements);
+  return test::MakeTupleOp::create(builder, loc, resultType, elements);
 }
 
 /// A pass for testing call graph type decomposition.
@@ -139,10 +139,13 @@ struct TestDecomposeCallGraphTypes
           tupleType.getFlattenedTypes(types);
           return success();
         });
-    typeConverter.addArgumentMaterialization(buildMakeTupleOp);
+    typeConverter.addSourceMaterialization(buildMakeTupleOp);
     typeConverter.addTargetMaterialization(buildDecomposeTuple);
 
-    populateDecomposeCallGraphTypesPatterns(context, typeConverter, patterns);
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
+        patterns, typeConverter);
+    populateReturnOpTypeConversionPattern(patterns, typeConverter);
+    populateCallOpTypeConversionPattern(patterns, typeConverter);
 
     if (failed(applyPartialConversion(module, target, std::move(patterns))))
       return signalPassFailure();

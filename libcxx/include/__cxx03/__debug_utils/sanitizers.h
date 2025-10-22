@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
-#define _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#ifndef _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#define _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/integral_constant.h>
@@ -81,7 +81,7 @@ _LIBCPP_HIDE_FROM_ABI void __annotate_double_ended_contiguous_container(
 // __old_last_contained is the previously last allowed (unpoisoned) element, and
 // __new_last_contained is the new last allowed (unpoisoned) element.
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __annotate_contiguous_container(
+_LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(
     const void* __first_storage,
     const void* __last_storage,
     const void* __old_last_contained,
@@ -101,4 +101,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __annotate_contiguous_c
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LIBCXX_DEBUG_UTILS_SANITIZERS_H
+#endif // _LIBCPP___CXX03___LIBCXX_DEBUG_UTILS_SANITIZERS_H

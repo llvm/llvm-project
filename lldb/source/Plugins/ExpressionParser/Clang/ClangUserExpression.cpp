@@ -574,7 +574,7 @@ bool ClangUserExpression::TryParse(
 
   m_parser = std::make_unique<ClangExpressionParser>(
       exe_ctx.GetBestExecutionContextScope(), *this, generate_debug_info,
-      m_include_directories, m_filename);
+      diagnostic_manager, m_include_directories, m_filename);
 
   unsigned num_errors = m_parser->Parse(diagnostic_manager);
 
@@ -818,7 +818,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   }
 
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               false);
+                               false, diagnostic_manager);
 
   // We have to find the source code location where the user text is inside
   // the transformed expression code. When creating the transformed text, we
@@ -897,12 +897,13 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
     Status object_ptr_error;
 
     if (m_ctx_obj) {
-      AddressType address_type;
-      object_ptr = m_ctx_obj->GetAddressOf(false, &address_type);
-      if (object_ptr == LLDB_INVALID_ADDRESS ||
-          address_type != eAddressTypeLoad)
+      ValueObject::AddrAndType address = m_ctx_obj->GetAddressOf(false);
+      if (address.address == LLDB_INVALID_ADDRESS ||
+          address.type != eAddressTypeLoad)
         object_ptr_error = Status::FromErrorString("Can't get context object's "
                                                    "debuggee address");
+      else
+        object_ptr = address.address;
     } else {
       if (m_in_cplusplus_method) {
         object_ptr =

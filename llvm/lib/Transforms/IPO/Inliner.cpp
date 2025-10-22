@@ -26,6 +26,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -381,13 +382,17 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
           &FAM.getResult<BlockFrequencyAnalysis>(Callee));
 
-      InlineResult IR =
-          InlineFunction(*CB, IFI, /*MergeAttributes=*/true,
-                         &FAM.getResult<AAManager>(*CB->getCaller()));
+      InlineResult IR = InlineFunction(
+          *CB, IFI, /*MergeAttributes=*/true,
+          &FAM.getResult<AAManager>(*CB->getCaller()), true, nullptr,
+          &FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB->getCaller()));
       if (!IR.isSuccess()) {
         Advice->recordUnsuccessfulInlining(IR);
         continue;
       }
+      // TODO: Shouldn't we be invalidating all analyses on F here?
+      // The caller was modified, so invalidate Ephemeral Values.
+      FAM.getResult<EphemeralValuesAnalysis>(F).clear();
 
       DidInline = true;
       InlinedCallees.insert(&Callee);
@@ -454,6 +459,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                              }),
               Calls.end());
 
+          // Report inlining decision BEFORE deleting function contents, so we
+          // can still access e.g. the DebugLoc
+          Advice->recordInliningWithCalleeDeleted();
           // Clear the body and queue the function itself for call graph
           // updating when we finish inlining.
           makeFunctionBodyUnreachable(Callee);
@@ -465,9 +473,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           DeadFunctionsInComdats.push_back(&Callee);
         }
       }
-      if (CalleeWasDeleted)
-        Advice->recordInliningWithCalleeDeleted();
-      else
+      if (!CalleeWasDeleted)
         Advice->recordInlining();
     }
 

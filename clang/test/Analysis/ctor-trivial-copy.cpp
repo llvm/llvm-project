@@ -3,8 +3,10 @@
 
 
 void clang_analyzer_printState();
-template<typename T> void clang_analyzer_dump_lref(T&);
-template<typename T> void clang_analyzer_dump_val(T);
+template <typename T> void clang_analyzer_dump_lref(T& param);
+template <typename T> void clang_analyzer_dump_val(T param);
+template <typename T> void clang_analyzer_denote(T param, const char *name);
+template <typename T> void clang_analyzer_express(T param);
 template <typename T> T conjure();
 template <typename... Ts> void nop(const Ts &... args) {}
 
@@ -40,18 +42,14 @@ void test_assign_return() {
 namespace trivial_struct_copy {
 
 void _01_empty_structs() {
-  clang_analyzer_dump_val(conjure<empty>()); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_val(conjure<empty>()); // expected-warning {{conj_$}}
   empty Empty = conjure<empty>();
   empty Empty2 = Empty;
   empty Empty3 = Empty2;
-  // All of these should refer to the exact same LCV, because all of
-  // these trivial copies refer to the original conjured value.
-  // There were Unknown before:
-  clang_analyzer_dump_val(Empty);  // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Empty2); // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Empty3); // expected-warning {{lazyCompoundVal}}
 
-  // We should have the same Conjured symbol for "Empty", "Empty2" and "Empty3".
+  // We only have binding for the original Empty object, because copying empty
+  // objects is a no-op in the performTrivialCopy. This is fine, because empty
+  // objects don't have any data members that could be accessed anyway.
   clang_analyzer_printState();
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
@@ -62,12 +60,6 @@ void _01_empty_structs() {
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "Empty", "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ:conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+}]]" }
-  // CHECK-NEXT:    ]},
-  // CHECK-NEXT:    { "cluster": "Empty2", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
-  // CHECK-NEXT:    ]},
-  // CHECK-NEXT:    { "cluster": "Empty3", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "[[EMPTY_CONJ]]" }
   // CHECK-NEXT:    ]}
   // CHECK-NEXT:  ]},
 
@@ -75,15 +67,16 @@ void _01_empty_structs() {
 }
 
 void _02_structs_with_members() {
-  clang_analyzer_dump_val(conjure<aggr>()); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_dump_val(conjure<aggr>()); // expected-warning {{conj_$}}
   aggr Aggr = conjure<aggr>();
   aggr Aggr2 = Aggr;
   aggr Aggr3 = Aggr2;
-  // All of these should refer to the exact same LCV, because all of
+  // All of these should refer to the exact same symbol, because all of
   // these trivial copies refer to the original conjured value.
-  clang_analyzer_dump_val(Aggr);  // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Aggr2); // expected-warning {{lazyCompoundVal}}
-  clang_analyzer_dump_val(Aggr3); // expected-warning {{lazyCompoundVal}}
+  clang_analyzer_denote(Aggr, "$Aggr");
+  clang_analyzer_express(Aggr);  // expected-warning {{$Aggr}}
+  clang_analyzer_express(Aggr2); // expected-warning {{$Aggr}}
+  clang_analyzer_express(Aggr3); // expected-warning {{$Aggr}}
 
   // We should have the same Conjured symbol for "Aggr", "Aggr2" and "Aggr3".
   // We used to have Derived symbols for the individual fields that were

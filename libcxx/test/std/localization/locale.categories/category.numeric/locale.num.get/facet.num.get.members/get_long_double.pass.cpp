@@ -6,6 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO(mordante) Investigate
+// UNSUPPORTED: apple-clang
+
+// The fix for LWG2381 (https://github.com/llvm/llvm-project/pull/77948) changed behavior of
+// FP parsing. This requires 3e15c97fa3812993bdc319827a5c6d867b765ae8 in the dylib.
+// XFAIL: using-built-library-before-llvm-19
+
 // <locale>
 
 // class num_get<charT, InputIterator>

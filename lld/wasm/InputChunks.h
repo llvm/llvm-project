@@ -77,6 +77,7 @@ public:
   uint32_t getInputSectionOffset() const { return inputSectionOffset; }
 
   size_t getNumRelocations() const { return relocations.size(); }
+  size_t getNumLiveRelocations() const;
   void writeRelocations(llvm::raw_ostream &os) const;
   bool generateRelocationCode(raw_ostream &os) const;
 
@@ -112,7 +113,7 @@ protected:
   InputChunk(ObjFile *f, Kind k, StringRef name, uint32_t alignment = 0,
              uint32_t flags = 0)
       : name(name), file(f), alignment(alignment), flags(flags), sectionKind(k),
-        live(!config->gcSections), discarded(false) {}
+        live(!ctx.arg.gcSections), discarded(false) {}
   ArrayRef<uint8_t> data() const { return rawData; }
   uint64_t getTombstone() const;
 
@@ -156,7 +157,7 @@ class SyntheticMergedChunk;
 // be found by looking at the next one).
 struct SectionPiece {
   SectionPiece(size_t off, uint32_t hash, bool live)
-      : inputOff(off), live(live || !config->gcSections), hash(hash >> 1) {}
+      : inputOff(off), live(live || !ctx.arg.gcSections), hash(hash >> 1) {}
 
   uint32_t inputOff;
   uint32_t live : 1;

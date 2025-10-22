@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -136,9 +137,9 @@ public:
     auto buffer = saveResult.getMemref();
     mlir::Value arg = buffer;
     if (mustEmboxResult(result.getType(), shouldBoxResult))
-      arg = rewriter.create<fir::EmboxOp>(
-          loc, argType, buffer, saveResult.getShape(), /*slice*/ mlir::Value{},
-          saveResult.getTypeparams());
+      arg = fir::EmboxOp::create(rewriter, loc, argType, buffer,
+                                 saveResult.getShape(), /*slice*/ mlir::Value{},
+                                 saveResult.getTypeparams());
 
     llvm::SmallVector<mlir::Type> newResultTypes;
     bool isResultBuiltinCPtr = fir::isa_builtin_cptr_type(result.getType());
@@ -146,6 +147,7 @@ public:
       newResultTypes.emplace_back(getVoidPtrType(result.getContext()));
 
     Op newOp;
+    // TODO: propagate argument and result attributes (need to be shifted).
     // fir::CallOp specific handling.
     if constexpr (std::is_same_v<Op, fir::CallOp>) {
       if (op.getCallee()) {
@@ -153,8 +155,8 @@ public:
         if (!isResultBuiltinCPtr)
           newOperands.emplace_back(arg);
         newOperands.append(op.getOperands().begin(), op.getOperands().end());
-        newOp = rewriter.create<fir::CallOp>(loc, *op.getCallee(),
-                                             newResultTypes, newOperands);
+        newOp = fir::CallOp::create(rewriter, loc, *op.getCallee(),
+                                    newResultTypes, newOperands);
       } else {
         // Indirect calls.
         llvm::SmallVector<mlir::Type> newInputTypes;
@@ -167,13 +169,13 @@ public:
 
         llvm::SmallVector<mlir::Value> newOperands;
         newOperands.push_back(
-            rewriter.create<fir::ConvertOp>(loc, newFuncTy, op.getOperand(0)));
+            fir::ConvertOp::create(rewriter, loc, newFuncTy, op.getOperand(0)));
         if (!isResultBuiltinCPtr)
           newOperands.push_back(arg);
         newOperands.append(op.getOperands().begin() + 1,
                            op.getOperands().end());
-        newOp = rewriter.create<fir::CallOp>(loc, mlir::SymbolRefAttr{},
-                                             newResultTypes, newOperands);
+        newOp = fir::CallOp::create(rewriter, loc, mlir::SymbolRefAttr{},
+                                    newResultTypes, newOperands);
       }
     }
 
@@ -188,9 +190,11 @@ public:
       if (op.getPassArgPos())
         passArgPos =
             rewriter.getI32IntegerAttr(*op.getPassArgPos() + passArgShift);
-      newOp = rewriter.create<fir::DispatchOp>(
-          loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
+      // TODO: propagate argument and result attributes (need to be shifted).
+      newOp = fir::DispatchOp::create(
+          rewriter, loc, newResultTypes, rewriter.getStringAttr(op.getMethod()),
           op.getOperands()[0], newOperands, passArgPos,
+          /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           op.getProcedureAttrsAttr());
     }
 
@@ -233,6 +237,60 @@ public:
   }
 };
 
+template <typename OpTy>
+static mlir::LogicalResult
+processReturnLikeOp(OpTy ret, mlir::Value newArg,
+                    mlir::PatternRewriter &rewriter) {
+  auto loc = ret.getLoc();
+  rewriter.setInsertionPoint(ret);
+  mlir::Value resultValue = ret.getOperand(0);
+  fir::LoadOp resultLoad;
+  mlir::Value resultStorage;
+  // Identify result local storage.
+  if (auto load = resultValue.getDefiningOp<fir::LoadOp>()) {
+    resultLoad = load;
+    resultStorage = load.getMemref();
+    // The result alloca may be behind a fir.declare, if any.
+    if (auto declare = resultStorage.getDefiningOp<fir::DeclareOp>())
+      resultStorage = declare.getMemref();
+  }
+  // Replace old local storage with new storage argument, unless
+  // the derived type is C_PTR/C_FUN_PTR, in which case the return
+  // type is updated to return void* (no new argument is passed).
+  if (fir::isa_builtin_cptr_type(resultValue.getType())) {
+    auto module = ret->template getParentOfType<mlir::ModuleOp>();
+    FirOpBuilder builder(rewriter, module);
+    mlir::Value cptr = resultValue;
+    if (resultLoad) {
+      // Replace whole derived type load by component load.
+      cptr = resultLoad.getMemref();
+      rewriter.setInsertionPoint(resultLoad);
+    }
+    mlir::Value newResultValue =
+        fir::factory::genCPtrOrCFunptrValue(builder, loc, cptr);
+    newResultValue = builder.createConvert(
+        loc, getVoidPtrType(ret.getContext()), newResultValue);
+    rewriter.setInsertionPoint(ret);
+    rewriter.replaceOpWithNewOp<OpTy>(ret, mlir::ValueRange{newResultValue});
+  } else if (resultStorage) {
+    resultStorage.replaceAllUsesWith(newArg);
+    rewriter.replaceOpWithNewOp<OpTy>(ret);
+  } else {
+    // The result storage may have been optimized out by a memory to
+    // register pass, this is possible for fir.box results, or fir.record
+    // with no length parameters. Simply store the result in the result
+    // storage. at the return point.
+    fir::StoreOp::create(rewriter, loc, resultValue, newArg);
+    rewriter.replaceOpWithNewOp<OpTy>(ret);
+  }
+  // Delete result old local storage if unused.
+  if (resultStorage)
+    if (auto alloc = resultStorage.getDefiningOp<fir::AllocaOp>())
+      if (alloc->use_empty())
+        rewriter.eraseOp(alloc);
+  return mlir::success();
+}
+
 class ReturnOpConversion : public mlir::OpRewritePattern<mlir::func::ReturnOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -241,55 +299,23 @@ public:
   llvm::LogicalResult
   matchAndRewrite(mlir::func::ReturnOp ret,
                   mlir::PatternRewriter &rewriter) const override {
-    auto loc = ret.getLoc();
-    rewriter.setInsertionPoint(ret);
-    mlir::Value resultValue = ret.getOperand(0);
-    fir::LoadOp resultLoad;
-    mlir::Value resultStorage;
-    // Identify result local storage.
-    if (auto load = resultValue.getDefiningOp<fir::LoadOp>()) {
-      resultLoad = load;
-      resultStorage = load.getMemref();
-      // The result alloca may be behind a fir.declare, if any.
-      if (auto declare = resultStorage.getDefiningOp<fir::DeclareOp>())
-        resultStorage = declare.getMemref();
-    }
-    // Replace old local storage with new storage argument, unless
-    // the derived type is C_PTR/C_FUN_PTR, in which case the return
-    // type is updated to return void* (no new argument is passed).
-    if (fir::isa_builtin_cptr_type(resultValue.getType())) {
-      auto module = ret->getParentOfType<mlir::ModuleOp>();
-      FirOpBuilder builder(rewriter, module);
-      mlir::Value cptr = resultValue;
-      if (resultLoad) {
-        // Replace whole derived type load by component load.
-        cptr = resultLoad.getMemref();
-        rewriter.setInsertionPoint(resultLoad);
-      }
-      mlir::Value newResultValue =
-          fir::factory::genCPtrOrCFunptrValue(builder, loc, cptr);
-      newResultValue = builder.createConvert(
-          loc, getVoidPtrType(ret.getContext()), newResultValue);
-      rewriter.setInsertionPoint(ret);
-      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(
-          ret, mlir::ValueRange{newResultValue});
-    } else if (resultStorage) {
-      resultStorage.replaceAllUsesWith(newArg);
-      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
-    } else {
-      // The result storage may have been optimized out by a memory to
-      // register pass, this is possible for fir.box results, or fir.record
-      // with no length parameters. Simply store the result in the result
-      // storage. at the return point.
-      rewriter.create<fir::StoreOp>(loc, resultValue, newArg);
-      rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(ret);
-    }
-    // Delete result old local storage if unused.
-    if (resultStorage)
-      if (auto alloc = resultStorage.getDefiningOp<fir::AllocaOp>())
-        if (alloc->use_empty())
-          rewriter.eraseOp(alloc);
-    return mlir::success();
+    return processReturnLikeOp(ret, newArg, rewriter);
+  }
+
+private:
+  mlir::Value newArg;
+};
+
+class GPUReturnOpConversion
+    : public mlir::OpRewritePattern<mlir::gpu::ReturnOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  GPUReturnOpConversion(mlir::MLIRContext *context, mlir::Value newArg)
+      : OpRewritePattern(context), newArg{newArg} {}
+  llvm::LogicalResult
+  matchAndRewrite(mlir::gpu::ReturnOp ret,
+                  mlir::PatternRewriter &rewriter) const override {
+    return processReturnLikeOp(ret, newArg, rewriter);
   }
 
 private:
@@ -311,8 +337,8 @@ public:
       newFuncTy = getCPtrFunctionType(oldFuncTy);
     else
       newFuncTy = getNewFunctionType(oldFuncTy, shouldBoxResult);
-    auto newAddrOf = rewriter.create<fir::AddrOfOp>(addrOf.getLoc(), newFuncTy,
-                                                    addrOf.getSymbol());
+    auto newAddrOf = fir::AddrOfOp::create(rewriter, addrOf.getLoc(), newFuncTy,
+                                           addrOf.getSymbol());
     // Rather than converting all op a function pointer might transit through
     // (e.g calls, stores, loads, converts...), cast new type to the abstract
     // type. A conversion will be added when calling indirect calls of abstract
@@ -331,9 +357,10 @@ public:
   using fir::impl::AbstractResultOptBase<
       AbstractResultOpt>::AbstractResultOptBase;
 
-  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
-                              mlir::RewritePatternSet &patterns,
-                              mlir::ConversionTarget &target) {
+  template <typename OpTy>
+  void runOnFunctionLikeOperation(OpTy func, bool shouldBoxResult,
+                                  mlir::RewritePatternSet &patterns,
+                                  mlir::ConversionTarget &target) {
     auto loc = func.getLoc();
     auto *context = &getContext();
     // Convert function type itself if it has an abstract result.
@@ -360,17 +387,24 @@ public:
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, shouldBoxResult);
-        func.insertArgument(0u, argTy, {}, loc);
-        func.eraseResult(0u);
+        llvm::LogicalResult res = func.insertArgument(0u, argTy, {}, loc);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to insert function argument");
+        res = func.eraseResult(0u);
+        (void)res;
+        assert(llvm::succeeded(res) && "failed to erase function result");
         mlir::Value newArg = func.getArgument(0u);
         if (mustEmboxResult(resultType, shouldBoxResult)) {
           auto bufferType = fir::ReferenceType::get(resultType);
           rewriter.setInsertionPointToStart(&func.front());
-          newArg = rewriter.create<fir::BoxAddrOp>(loc, bufferType, newArg);
+          newArg = fir::BoxAddrOp::create(rewriter, loc, bufferType, newArg);
         }
         patterns.insert<ReturnOpConversion>(context, newArg);
         target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
             [](mlir::func::ReturnOp ret) { return ret.getOperands().empty(); });
+        patterns.insert<GPUReturnOpConversion>(context, newArg);
+        target.addDynamicallyLegalOp<mlir::gpu::ReturnOp>(
+            [](mlir::gpu::ReturnOp ret) { return ret.getOperands().empty(); });
         assert(func.getFunctionType() ==
                getNewFunctionType(funcTy, shouldBoxResult));
       } else {
@@ -382,6 +416,18 @@ public:
         func.setAllArgAttrs(allArgs);
       }
     }
+  }
+
+  void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
+  }
+
+  void runOnSpecificOperation(mlir::gpu::GPUFuncOp func, bool shouldBoxResult,
+                              mlir::RewritePatternSet &patterns,
+                              mlir::ConversionTarget &target) {
+    runOnFunctionLikeOperation(func, shouldBoxResult, patterns, target);
   }
 
   inline static bool containsFunctionTypeWithAbstractResult(mlir::Type type) {
@@ -446,9 +492,10 @@ public:
     const bool shouldBoxResult = this->passResultAsBox.getValue();
 
     mlir::TypeSwitch<mlir::Operation *, void>(op)
-        .Case<mlir::func::FuncOp, fir::GlobalOp>([&](auto op) {
-          runOnSpecificOperation(op, shouldBoxResult, patterns, target);
-        });
+        .Case<mlir::func::FuncOp, fir::GlobalOp, mlir::gpu::GPUFuncOp>(
+            [&](auto op) {
+              runOnSpecificOperation(op, shouldBoxResult, patterns, target);
+            });
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
     target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,

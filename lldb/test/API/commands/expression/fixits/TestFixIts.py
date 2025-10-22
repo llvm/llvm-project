@@ -53,7 +53,7 @@ class ExprCommandWithFixits(TestBase):
         expr = "struct MyTy { int m; }; MyTy x; MyTy *ptr = &x; int m = ptr.m;"
         value = frame.EvaluateExpression(expr, top_level_options)
         # A successfully parsed top-level expression will yield an
-        # unknown error . If a parsing error would have happened we
+        # unknown error. If a parsing error would have happened we
         # would get a different error kind, so let's check the error
         # kind here.
         self.assertEqual(value.GetError().GetCString(), "unknown error")

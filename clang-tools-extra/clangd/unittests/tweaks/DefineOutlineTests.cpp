@@ -15,6 +15,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using ::testing::UnorderedElementsAre;
+
 TWEAK_TEST(DefineOutline);
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
@@ -116,12 +118,6 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   EXPECT_UNAVAILABLE(R"cpp(
     template <typename T> void fo^o() {}
     template <> void fo^o<int>() {}
-  )cpp");
-
-  // Not available on member function templates with unnamed template
-  // parameters.
-  EXPECT_UNAVAILABLE(R"cpp(
-    struct Foo { template <typename> void ba^r() {} };
   )cpp");
 
   // Not available on methods of unnamed classes.
@@ -410,15 +406,15 @@ inline typename O1<T, U...>::template O2<V, A>::E O1<T, U...>::template O2<V, A>
       {
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
-              void ^bar() {}
+              template <typename T, typename, bool B = true>
+              T ^bar() { return {}; }
             };)cpp",
           R"cpp(
             struct Foo {
-              template <typename T, bool B = true>
-              void bar() ;
-            };template <typename T, bool B>
-inline void Foo::bar() {}
+              template <typename T, typename, bool B = true>
+              T bar() ;
+            };template <typename T, typename, bool B>
+inline T Foo::bar() { return {}; }
 )cpp",
           ""},
 
@@ -426,14 +422,14 @@ inline void Foo::bar() {}
       {
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> void ^bar(const T& t, const U& u) {}
+              template <typename U, bool> T ^bar(const T& t, const U& u) { return {}; }
             };)cpp",
           R"cpp(
             template <typename T> struct Foo {
-              template <typename U> void bar(const T& t, const U& u) ;
+              template <typename U, bool> T bar(const T& t, const U& u) ;
             };template <typename T>
-template <typename U>
-inline void Foo<T>::bar(const T& t, const U& u) {}
+template <typename U, bool>
+inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
 )cpp",
           ""},
   };
@@ -751,6 +747,43 @@ TEST_F(DefineOutlineTest, FailsMacroSpecifier) {
   for (const auto &Case : Cases) {
     EXPECT_EQ(apply(Case.first), Case.second);
   }
+}
+
+TWEAK_WORKSPACE_TEST(DefineOutline);
+
+// Test that DefineOutline's use of getCorrespondingHeaderOrSource()
+// to find the source file corresponding to a header file in which the
+// tweak is invoked is working as intended.
+TEST_F(DefineOutlineWorkspaceTest, FindsCorrespondingSource) {
+  llvm::Annotations HeaderBefore(R"cpp(
+class A {
+  void bar();
+  void f^oo(){}
+};
+)cpp");
+  std::string SourceBefore(R"cpp(
+#include "a.hpp"
+void A::bar(){}
+)cpp");
+  std::string HeaderAfter = R"cpp(
+class A {
+  void bar();
+  void foo();
+};
+)cpp";
+  std::string SourceAfter = R"cpp(
+#include "a.hpp"
+void A::bar(){}
+void A::foo(){}
+)cpp";
+  Workspace.addSource("a.hpp", HeaderBefore.code());
+  Workspace.addMainFile("a.cpp", SourceBefore);
+  auto Result = apply("a.hpp", {HeaderBefore.point(), HeaderBefore.point()});
+  EXPECT_THAT(Result,
+              AllOf(withStatus("success"),
+                    editedFiles(UnorderedElementsAre(
+                        FileWithContents(testPath("a.hpp"), HeaderAfter),
+                        FileWithContents(testPath("a.cpp"), SourceAfter)))));
 }
 
 } // namespace

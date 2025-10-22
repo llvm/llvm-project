@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_ADDRESSOF_H
-#define _LIBCPP___MEMORY_ADDRESSOF_H
+#ifndef _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
+#define _LIBCPP___CXX03___MEMORY_ADDRESSOF_H
 
 #include <__cxx03/__config>
 
@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX17 _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI _Tp* addressof(_Tp& __x) _NOEXCEPT {
+inline _LIBCPP_NO_CFI _LIBCPP_HIDE_FROM_ABI _Tp* addressof(_Tp& __x) _NOEXCEPT {
   return __builtin_addressof(__x);
 }
 
@@ -51,11 +51,6 @@ inline _LIBCPP_HIDE_FROM_ABI __unsafe_unretained _Tp* addressof(__unsafe_unretai
 }
 #endif
 
-#if !defined(_LIBCPP_CXX03_LANG)
-template <class _Tp>
-_Tp* addressof(const _Tp&&) noexcept = delete;
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_ADDRESSOF_H
+#endif // _LIBCPP___CXX03___MEMORY_ADDRESSOF_H

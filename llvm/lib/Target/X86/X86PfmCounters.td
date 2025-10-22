@@ -210,10 +210,7 @@ def AlderLakePfmCounters : ProcPfmCounters {
   let IssueCounters = [
     PfmIssueCounter<"ADLPPort00", "uops_dispatched:port_0">,
     PfmIssueCounter<"ADLPPort01", "uops_dispatched:port_1">,
-    // The perfmon documentation and thus libpfm seems to incorrectly label
-    // this performance counter, as ports 2,3, and 11 are actually grouped
-    // according to most documentation. See #113941 for additional details.
-    PfmIssueCounter<"ADLPPort02_03_11", "uops_dispatched:port_2_3_10">,
+    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched:port_2_3_10">,
     PfmIssueCounter<"ADLPPort04_09", "uops_dispatched:port_4_9">,
     PfmIssueCounter<"ADLPPort05_11", "uops_dispatched:port_5_11">,
     PfmIssueCounter<"ADLPPort06", "uops_dispatched:port_6">,
@@ -229,10 +226,7 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
   let IssueCounters = [
     PfmIssueCounter<"SPRPort00", "uops_dispatched:port_0">,
     PfmIssueCounter<"SPRPort01", "uops_dispatched:port_1">,
-    // The perfmon documentation and thus libpfm seems to incorrectly label
-    // this performance counter, as ports 2,3, and 11 are actually grouped
-    // according to most documentation. See #113941 for additional details.
-    PfmIssueCounter<"SPRPort02_03_11", "uops_dispatched:port_2_3_10">,
+    PfmIssueCounter<"SPRPort02_03_10", "uops_dispatched:port_2_3_10">,
     PfmIssueCounter<"SPRPort04_09", "uops_dispatched:port_4_9">,
     PfmIssueCounter<"SPRPort05_11", "uops_dispatched:port_5_11">,
     PfmIssueCounter<"SPRPort06", "uops_dispatched:port_6">,
@@ -241,6 +235,26 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
+
+def LunarLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    // Refer: https://perfmon-events.intel.com/ section Lunar Lake Hybrid Event
+    // ALU Dispatch - Any of ALUs with latency 1 cycle that is not jmp or Shift.
+    PfmIssueCounter<"LNLPVPort02_03", "uops_dispatched:alu">,
+    PfmIssueCounter<"LNLPPort00_01_02_03_04_05", "uops_dispatched:int_eu_all">,
+    PfmIssueCounter<"LNLPPort00_02_04", "uops_dispatched:jmp">,
+    PfmIssueCounter<"LNLPPort20_21_22", "uops_dispatched:load">,
+    PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:shift">,
+    // Slow Dispatch - If uops latency > 1, counted as slow. TBD
+    // PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:slow">,
+    PfmIssueCounter<"LNLPPort25_26_27", "uops_dispatched:sta">,
+    PfmIssueCounter<"LNLPPort10_11", "uops_dispatched:std">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"lunarlake", LunarLakePfmCounters>;
 
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [

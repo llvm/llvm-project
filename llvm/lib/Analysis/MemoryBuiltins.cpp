@@ -428,6 +428,9 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 Constant *llvm::getInitialValueOfAllocation(const Value *V,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
+  if (isa<AllocaInst>(V))
+    return UndefValue::get(Ty);
+
   auto *Alloc = dyn_cast<CallBase>(V);
   if (!Alloc)
     return nullptr;
@@ -565,10 +568,7 @@ static APInt getSizeWithOverflow(const SizeOffsetAPInt &Data) {
   APInt Size = Data.Size;
   APInt Offset = Data.Offset;
 
-  assert(!Offset.isNegative() &&
-         "size for a pointer before the allocated object is ambiguous");
-
-  if (Size.ult(Offset))
+  if (Offset.isNegative() || Size.ult(Offset))
     return APInt::getZero(Size.getBitWidth());
 
   return Size - Offset;
@@ -587,6 +587,59 @@ bool llvm::getObjectSize(const Value *Ptr, uint64_t &Size, const DataLayout &DL,
 
   Size = getSizeWithOverflow(Data).getZExtValue();
   return true;
+}
+
+std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
+                                                const DataLayout &DL,
+                                                const TargetLibraryInfo *TLI,
+                                                ObjectSizeOpts Opts) {
+  assert(Opts.EvalMode == ObjectSizeOpts::Mode::ExactSizeFromOffset &&
+         "Other modes are currently not supported");
+
+  auto Align = [&](TypeSize Size, MaybeAlign Alignment) {
+    if (Opts.RoundToAlign && Alignment && !Size.isScalable())
+      return TypeSize::getFixed(alignTo(Size.getFixedValue(), *Alignment));
+    return Size;
+  };
+
+  if (isa<UndefValue>(Ptr))
+    return TypeSize::getZero();
+
+  if (isa<ConstantPointerNull>(Ptr)) {
+    if (Opts.NullIsUnknownSize || Ptr->getType()->getPointerAddressSpace())
+      return std::nullopt;
+    return TypeSize::getZero();
+  }
+
+  if (auto *GV = dyn_cast<GlobalVariable>(Ptr)) {
+    if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
+        !GV->hasInitializer() || GV->isInterposable())
+      return std::nullopt;
+    return Align(DL.getTypeAllocSize(GV->getValueType()), GV->getAlign());
+  }
+
+  if (auto *A = dyn_cast<Argument>(Ptr)) {
+    Type *MemoryTy = A->getPointeeInMemoryValueType();
+    if (!MemoryTy || !MemoryTy->isSized())
+      return std::nullopt;
+    return Align(DL.getTypeAllocSize(MemoryTy), A->getParamAlign());
+  }
+
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
+    if (std::optional<TypeSize> Size = AI->getAllocationSize(DL))
+      return Align(*Size, AI->getAlign());
+    return std::nullopt;
+  }
+
+  if (auto *CB = dyn_cast<CallBase>(Ptr)) {
+    if (std::optional<APInt> Size = getAllocSize(CB, TLI)) {
+      if (std::optional<uint64_t> ZExtSize = Size->tryZExtValue())
+        return TypeSize::getFixed(*ZExtSize);
+    }
+    return std::nullopt;
+  }
+
+  return std::nullopt;
 }
 
 Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
@@ -693,18 +746,14 @@ static std::optional<APInt> aggregatePossibleConstantValuesImpl(
 
   if (const auto *CI = dyn_cast<ConstantInt>(V)) {
     return CI->getValue();
-  }
-
-  else if (const auto *SI = dyn_cast<SelectInst>(V)) {
+  } else if (const auto *SI = dyn_cast<SelectInst>(V)) {
     return combinePossibleConstantValues(
         aggregatePossibleConstantValuesImpl(SI->getTrueValue(), EvalMode,
                                             recursionDepth + 1),
         aggregatePossibleConstantValuesImpl(SI->getFalseValue(), EvalMode,
                                             recursionDepth + 1),
         EvalMode);
-  }
-
-  else if (const auto *PN = dyn_cast<PHINode>(V)) {
+  } else if (const auto *PN = dyn_cast<PHINode>(V)) {
     unsigned Count = PN->getNumIncomingValues();
     if (Count == 0)
       return std::nullopt;
@@ -712,7 +761,7 @@ static std::optional<APInt> aggregatePossibleConstantValuesImpl(
         PN->getIncomingValue(0), EvalMode, recursionDepth + 1);
     for (unsigned I = 1; Acc && I < Count; ++I) {
       auto Tmp = aggregatePossibleConstantValuesImpl(
-          PN->getIncomingValue(1), EvalMode, recursionDepth + 1);
+          PN->getIncomingValue(I), EvalMode, recursionDepth + 1);
       Acc = combinePossibleConstantValues(Acc, Tmp, EvalMode);
     }
     return Acc;
@@ -844,10 +893,17 @@ OffsetSpan ObjectSizeOffsetVisitor::computeImpl(Value *V) {
   }
 
   // We end up pointing on a location that's outside of the original object.
-  // This is UB, and we'd rather return an empty location then.
   if (ORT.knownBefore() && ORT.Before.isNegative()) {
-    ORT.Before = APInt::getZero(ORT.Before.getBitWidth());
-    ORT.After = APInt::getZero(ORT.Before.getBitWidth());
+    // This means that we *may* be accessing memory before the allocation.
+    // Conservatively return an unknown size.
+    //
+    // TODO: working with ranges instead of value would make it possible to take
+    // a better decision.
+    if (Options.EvalMode == ObjectSizeOpts::Mode::Min ||
+        Options.EvalMode == ObjectSizeOpts::Mode::Max) {
+      return ObjectSizeOffsetVisitor::unknown();
+    }
+    // Otherwise it's fine, caller can handle negative offset.
   }
   return ORT;
 }
