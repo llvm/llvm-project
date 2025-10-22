@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX906 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX10 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX11 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX12 %s
@@ -92,7 +92,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -109,7 +109,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -126,7 +126,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -139,10 +139,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -153,7 +153,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -170,7 +170,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -187,7 +187,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -209,7 +209,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -226,7 +226,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -243,7 +243,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -260,7 +260,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -268,10 +268,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -282,7 +282,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -299,7 +299,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -316,7 +316,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -338,7 +338,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -355,7 +355,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -372,7 +372,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -385,10 +385,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -399,7 +399,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -416,7 +416,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -433,7 +433,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -455,7 +455,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -472,7 +472,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -489,7 +489,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -502,10 +502,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_daz(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -516,7 +516,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -533,7 +533,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -550,7 +550,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -572,7 +572,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -589,7 +589,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -606,7 +606,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -619,10 +619,10 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[TMP5:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[TMP5]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory___denormal_fp_mode_f64_dynamic(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -633,7 +633,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -650,7 +650,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -667,7 +667,7 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
 ; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
@@ -682,186 +682,619 @@ define double @test_atomicrmw_fadd_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
+; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; COMMON-NEXT:    [[TMP5:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP5]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED1:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    [[NEWLOADED]] = bitcast i64 [[NEWLOADED1]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[NEWLOADED]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[NEWLOADED]]
+; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP5]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP5]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP5]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP5]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[NEWLOADED]]
+; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP5]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP5]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX90A-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX90A-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret double [[TMP5]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP5]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP5]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[NEWLOADED]]
+; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP5]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP5]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP5]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP5]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(ptr addrspace(1) %ptr, double %value) #0 {
-; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1:[0-9]+]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[NEWLOADED]]
+; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP5]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP5]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP5]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP5]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_daz(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR1]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(ptr addrspace(1) %ptr, double %value) #1 {
-; COMMON-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2:[0-9]+]] {
-; COMMON-NEXT:    [[TMP1:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP3:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP5:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP1]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP1]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP1]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP5]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { double, i1 } [[TMP8]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[NEWLOADED]]
+; GFX803-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX803-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX803-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX906-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX906-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP5]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX908-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX908-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP5]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fadd ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX10-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX10-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP5]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX11-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX11-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP5]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fadd_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory__denormal_mode_dynamic(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR2]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[NEW:%.*]] = fadd double [[LOADED]], [[VALUE]]
+; GFX12-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GFX12-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -901,7 +1334,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_mem
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -923,7 +1356,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_remote_memory(pt
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -945,7 +1378,7 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_mem
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
 ; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
-; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
 ; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
 ; COMMON-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -960,124 +1393,88 @@ define double @test_atomicrmw_fsub_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP9:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP9]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[TMP5]] = extractvalue { double, i1 } [[TMP8]], 0
+; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP9:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP9]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[TMP5]] = extractvalue { double, i1 } [[TMP8]], 0
+; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP9:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP9]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[TMP5]] = extractvalue { double, i1 } [[TMP8]], 0
+; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fsub_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP2:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE]]
-; COMMON-NEXT:    [[TMP4:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    store double [[NEW]], ptr addrspace(5) [[TMP2]], align 8
-; COMMON-NEXT:    [[TMP9:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP4]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP2]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP2]])
-; COMMON-NEXT:    [[TMP6:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP7:%.*]] = insertvalue { double, i1 } poison, double [[TMP6]], 0
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } [[TMP7]], i1 [[TMP9]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP8]], 1
-; COMMON-NEXT:    [[TMP5]] = extractvalue { double, i1 } [[TMP8]], 0
+; COMMON-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; COMMON-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP5]]
 ;
-  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1117,7 +1514,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1134,7 +1531,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1151,7 +1548,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1164,10 +1561,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1183,7 +1580,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1200,7 +1597,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1222,7 +1619,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1239,7 +1636,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1256,7 +1653,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1273,7 +1670,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX90A-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -1281,10 +1678,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1295,7 +1692,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX10-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX10-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX10-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -1312,7 +1709,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1329,7 +1726,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1351,7 +1748,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1368,7 +1765,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1385,7 +1782,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1398,10 +1795,10 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1417,7 +1814,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1434,7 +1831,7 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1449,124 +1846,361 @@ define double @test_atomicrmw_fmax_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret double [[RES]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret double [[TMP6]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP6]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmax ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret double [[RES]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmax_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.maxnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmax ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -1606,7 +2240,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1623,7 +2257,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1640,7 +2274,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1653,10 +2287,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1672,7 +2306,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1689,7 +2323,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1711,7 +2345,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1728,7 +2362,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1745,7 +2379,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1762,7 +2396,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX90A-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -1770,10 +2404,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX90A:       atomicrmw.end:
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1784,7 +2418,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX10-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX10-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX10-NEXT:    [[RES]] = bitcast i64 [[NEWLOADED]] to double
@@ -1801,7 +2435,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1818,7 +2452,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_remote_memory(pt
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1840,7 +2474,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1857,7 +2491,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1874,7 +2508,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1887,10 +2521,10 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX90A-NEXT:    ret double [[RES]]
 ;
-; GFX940-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; GFX940-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
-; GFX940-NEXT:    ret double [[RES]]
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
 ;
 ; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
 ; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
@@ -1906,7 +2540,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1923,7 +2557,7 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 ; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
 ; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -1938,124 +2572,361 @@ define double @test_atomicrmw_fmin_f64_global_system__amdgpu_no_fine_grained_mem
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode(ptr addrspace(1) %ptr, double %value) {
 ; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode(
 ; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
+; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
 ; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; COMMON:       atomicrmw.start:
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
+; COMMON-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; COMMON-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; COMMON-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
+; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; COMMON-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; COMMON-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; COMMON:       atomicrmw.end:
 ; COMMON-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.ignore.denormal.mode !0
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret double [[RES]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX90A:       atomicrmw.start:
+; GFX90A-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX90A-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX90A-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A:       atomicrmw.end:
+; GFX90A-NEXT:    ret double [[TMP6]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX10-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX10:       atomicrmw.start:
+; GFX10-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX10-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX10-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX10-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX10-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX10-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX10-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX10-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX10-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX10:       atomicrmw.end:
+; GFX10-NEXT:    ret double [[TMP6]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
 define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(ptr addrspace(1) %ptr, double %value) {
-; COMMON-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
-; COMMON-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
-; COMMON-NEXT:    [[TMP3:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP4:%.*]] = alloca double, align 8, addrspace(5)
-; COMMON-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 4
-; COMMON-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; COMMON:       atomicrmw.start:
-; COMMON-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; COMMON-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
-; COMMON-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    store double [[LOADED]], ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    store double [[TMP2]], ptr addrspace(5) [[TMP4]], align 8
-; COMMON-NEXT:    [[TMP10:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 8, ptr [[TMP5]], ptr addrspace(5) [[TMP3]], ptr addrspace(5) [[TMP4]], i32 5, i32 5)
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP4]])
-; COMMON-NEXT:    [[TMP7:%.*]] = load double, ptr addrspace(5) [[TMP3]], align 8
-; COMMON-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[TMP3]])
-; COMMON-NEXT:    [[TMP8:%.*]] = insertvalue { double, i1 } poison, double [[TMP7]], 0
-; COMMON-NEXT:    [[TMP9:%.*]] = insertvalue { double, i1 } [[TMP8]], i1 [[TMP10]], 1
-; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { double, i1 } [[TMP9]], 1
-; COMMON-NEXT:    [[TMP6]] = extractvalue { double, i1 } [[TMP9]], 0
-; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
-; COMMON:       atomicrmw.end:
-; COMMON-NEXT:    ret double [[TMP6]]
+; GFX803-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX803-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX803-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX803-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX803:       atomicrmw.start:
+; GFX803-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX803-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX803-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX803-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX803-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX803-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX803-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX803-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX803-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX803:       atomicrmw.end:
+; GFX803-NEXT:    ret double [[TMP6]]
 ;
-  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 4, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
+; GFX906-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX906-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX906-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX906-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX906:       atomicrmw.start:
+; GFX906-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX906-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX906-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX906-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX906-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX906-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX906-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX906-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX906-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX906:       atomicrmw.end:
+; GFX906-NEXT:    ret double [[TMP6]]
+;
+; GFX908-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX908-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX908-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX908-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX908:       atomicrmw.start:
+; GFX908-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX908-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX908-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX908-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX908-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX908-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX908-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX908-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX908-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX908:       atomicrmw.end:
+; GFX908-NEXT:    ret double [[TMP6]]
+;
+; GFX90A-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX90A-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX90A-NEXT:    ret double [[RES]]
+;
+; GFX942-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX942-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX942-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX942-NEXT:    ret double [[RES]]
+;
+; GFX10-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX10-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[RES:%.*]] = atomicrmw fmin ptr addrspace(1) [[PTR]], double [[VALUE]] seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]], !amdgpu.ignore.denormal.mode [[META0]]
+; GFX10-NEXT:    ret double [[RES]]
+;
+; GFX11-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX11-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX11-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX11-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX11:       atomicrmw.start:
+; GFX11-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX11-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX11-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX11-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX11-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX11-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX11-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX11-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX11-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX11:       atomicrmw.end:
+; GFX11-NEXT:    ret double [[TMP6]]
+;
+; GFX12-LABEL: define double @test_atomicrmw_fmin_f64_global_system__amdgpu_ignore_denormal_mode__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory(
+; GFX12-SAME: ptr addrspace(1) [[PTR:%.*]], double [[VALUE:%.*]]) #[[ATTR0]] {
+; GFX12-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR]], align 8
+; GFX12-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GFX12:       atomicrmw.start:
+; GFX12-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GFX12-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE]])
+; GFX12-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
+; GFX12-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
+; GFX12-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
+; GFX12-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
+; GFX12-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
+; GFX12-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GFX12-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX12:       atomicrmw.end:
+; GFX12-NEXT:    ret double [[TMP6]]
+;
+  %res = atomicrmw fmin ptr addrspace(1) %ptr, double %value seq_cst, align 8, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0, !amdgpu.ignore.denormal.mode !0
   ret double %res
 }
 
@@ -2072,7 +2943,7 @@ attributes #1 = { "denormal-fp-mode"="dynamic,dynamic" }
 ;.
 ; GFX90A: [[META0]] = !{}
 ;.
-; GFX940: [[META0]] = !{}
+; GFX942: [[META0]] = !{}
 ;.
 ; GFX10: [[META0]] = !{}
 ;.

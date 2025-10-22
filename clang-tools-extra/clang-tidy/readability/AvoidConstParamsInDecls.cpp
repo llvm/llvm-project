@@ -1,4 +1,4 @@
-//===--- AvoidConstParamsInDecls.cpp - clang-tidy--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,9 +15,8 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-namespace {
 
-SourceRange getTypeRange(const ParmVarDecl &Param) {
+static SourceRange getTypeRange(const ParmVarDecl &Param) {
   return {Param.getBeginLoc(), Param.getLocation().getLocWithOffset(-1)};
 }
 
@@ -38,8 +37,6 @@ findConstToRemove(const ParmVarDecl &Param,
   return tidy::utils::lexer::getQualifyingToken(
       tok::kw_const, FileRange, *Result.Context, *Result.SourceManager);
 }
-
-} // namespace
 
 void AvoidConstParamsInDecls::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);

@@ -3,16 +3,16 @@
 # RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch10 -show-encoding %s | FileCheck %s
 
 #CHECK: bpp	0, .[[LAB:L.*]]-65536, 0   # encoding: [0xc7,0x00,0x00,0x00,A,A]
-#CHECK: fixup A - offset: 4, value: (.[[LAB]]-65536)+4, kind: FK_390_PC16DBL
+#CHECK: fixup A - offset: 4, value: .[[LAB]]-65536+4, kind: FK_390_PC16DBL
         bpp	0, -0x10000, 0
 #CHECK: bpp     0, .[[LAB:L.*]]-2, 0       # encoding: [0xc7,0x00,0x00,0x00,A,A]
-#CHECK: fixup A - offset: 4, value: (.[[LAB]]-2)+4, kind: FK_390_PC16DBL
+#CHECK: fixup A - offset: 4, value: .[[LAB]]-2+4, kind: FK_390_PC16DBL
         bpp	0, -2, 0
 #CHECK: bpp	0, .[[LAB:L.*]], 0         # encoding: [0xc7,0x00,0x00,0x00,A,A]
 #CHECK: fixup A - offset: 4, value: .[[LAB]]+4, kind: FK_390_PC16DBL
         bpp    0, 0, 0
 #CHECK: bpp  	0, .[[LAB:L.*]]+65534, 0   # encoding: [0xc7,0x00,0x00,0x00,A,A]
-#CHECK: fixup A - offset: 4, value: (.[[LAB]]+65534)+4, kind: FK_390_PC16DBL
+#CHECK: fixup A - offset: 4, value: .[[LAB]]+65534+4, kind: FK_390_PC16DBL
         bpp    	0, 0xfffe, 0
 
 #CHECK: bpp	0, foo, 4095(%r3)          # encoding: [0xc7,0x00,0x3f,0xff,A,A]
@@ -24,9 +24,9 @@
 	bpp	15, foo, 1(%r11)
 
 #CHECK: bpp	3, bar+100, 4095           # encoding: [0xc7,0x30,0x0f,0xff,A,A]
-#CHECK: fixup A - offset: 4, value: (bar+100)+4, kind: FK_390_PC16DBL
+#CHECK: fixup A - offset: 4, value: bar+100+4, kind: FK_390_PC16DBL
 #CHECK: bpp	4, bar+100, 1              # encoding: [0xc7,0x40,0x00,0x01,A,A]
-#CHECK: fixup A - offset: 4, value: (bar+100)+4, kind: FK_390_PC16DBL
+#CHECK: fixup A - offset: 4, value: bar+100+4, kind: FK_390_PC16DBL
 
 	bpp	3, bar+100, 4095
 	bpp	4, bar+100, 1
@@ -40,11 +40,11 @@
 	bpp	8, frob@PLT, 0
 
 #CHECK: bprp   	0, .[[LABA:L.*]]-4096, .[[LABB:L.*]]      # encoding: [0xc5,0b0000AAAA,A,B,B,B]
-#CHECK: fixup A - offset: 1, value: (.[[LABA]]-4096)+1, kind: FK_390_PC12DBL
+#CHECK: fixup A - offset: 1, value: .[[LABA]]-4096+1, kind: FK_390_PC12DBL
 #CHECK: fixup B - offset: 3, value: .[[LABB]]+3, kind: FK_390_PC24DBL
         bprp   	0, -0x1000, 0
 #CHECK: bprp   	0, .[[LABA:L.*]]-2, .[[LABB:L.*]]         # encoding: [0xc5,0b0000AAAA,A,B,B,B]
-#CHECK: fixup A - offset: 1, value: (.[[LABA]]-2)+1, kind: FK_390_PC12DBL
+#CHECK: fixup A - offset: 1, value: .[[LABA]]-2+1, kind: FK_390_PC12DBL
 #CHECK: fixup B - offset: 3, value: .[[LABB]]+3, kind: FK_390_PC24DBL
         bprp   	0, -2, 0
 #CHECK: bprp   	0, .[[LABA:L.*]], .[[LABB:L.*]]           # encoding: [0xc5,0b0000AAAA,A,B,B,B]
@@ -52,16 +52,16 @@
 #CHECK: fixup B - offset: 3, value: .[[LABB]]+3, kind: FK_390_PC24DBL
         bprp   	0, 0, 0
 #CHECK: bprp   	0, .[[LABA:L.*]]+4094, .[[LABB:L.*]]      # encoding: [0xc5,0b0000AAAA,A,B,B,B]
-#CHECK: fixup A - offset: 1, value: (.[[LABA]]+4094)+1, kind: FK_390_PC12DBL
+#CHECK: fixup A - offset: 1, value: .[[LABA]]+4094+1, kind: FK_390_PC12DBL
 #CHECK: fixup B - offset: 3, value: .[[LABB]]+3, kind: FK_390_PC24DBL
         bprp   	0, 0xffe, 0
 #CHECK: bprp   	15, .[[LABA:L.*]], .[[LABB:L.*]]-16777216 # encoding: [0xc5,0b1111AAAA,A,B,B,B]
 #CHECK: fixup A - offset: 1, value: .[[LABA]]+1, kind: FK_390_PC12DBL
-#CHECK: fixup B - offset: 3, value: (.[[LABB]]-16777216)+3, kind: FK_390_PC24DBL
+#CHECK: fixup B - offset: 3, value: .[[LABB]]-16777216+3, kind: FK_390_PC24DBL
         bprp   	15, 0, -0x1000000
 #CHECK: bprp   	15, .[[LABA:L.*]], .[[LABB:L.*]]-2        # encoding: [0xc5,0b1111AAAA,A,B,B,B]
 #CHECK: fixup A - offset: 1, value: .[[LABA]]+1, kind: FK_390_PC12DBL
-#CHECK: fixup B - offset: 3, value: (.[[LABB]]-2)+3, kind: FK_390_PC24DBL
+#CHECK: fixup B - offset: 3, value: .[[LABB]]-2+3, kind: FK_390_PC24DBL
         bprp   	15, 0, -2
 #CHECK: bprp   	15, .[[LABA:L.*]], .[[LABB:L.*]]          # encoding: [0xc5,0b1111AAAA,A,B,B,B]
 #CHECK: fixup A - offset: 1, value: .[[LABA]]+1, kind: FK_390_PC12DBL
@@ -69,7 +69,7 @@
         bprp   	15, 0, 0
 #CHECK: bprp   	15, .[[LABA:L.*]], .[[LABB:L.*]]+16777214 # encoding: [0xc5,0b1111AAAA,A,B,B,B]
 #CHECK: fixup A - offset: 1, value: .[[LABA]]+1, kind: FK_390_PC12DBL
-#CHECK: fixup B - offset: 3, value: (.[[LABB]]+16777214)+3, kind: FK_390_PC24DBL
+#CHECK: fixup B - offset: 3, value: .[[LABB]]+16777214+3, kind: FK_390_PC24DBL
         bprp   	15, 0, 0xfffffe
 
 #CHECK: bprp	1, branch, target           # encoding: [0xc5,0b0001AAAA,A,B,B,B]
@@ -87,14 +87,14 @@
 	bprp	3, branch, target
 
 #CHECK: bprp	4, branch+100, target       # encoding: [0xc5,0b0100AAAA,A,B,B,B]
-#CHECK: fixup A - offset: 1, value: (branch+100)+1, kind: FK_390_PC12DBL
+#CHECK: fixup A - offset: 1, value: branch+100+1, kind: FK_390_PC12DBL
 #CHECK: fixup B - offset: 3, value: target+3, kind: FK_390_PC24DBL
 #CHECK: bprp	5, branch, target+100       # encoding: [0xc5,0b0101AAAA,A,B,B,B]
 #CHECK: fixup A - offset: 1, value: branch+1, kind: FK_390_PC12DBL
-#CHECK: fixup B - offset: 3, value: (target+100)+3, kind: FK_390_PC24DBL
+#CHECK: fixup B - offset: 3, value: target+100+3, kind: FK_390_PC24DBL
 #CHECK: bprp	6, branch+100, target+100   # encoding: [0xc5,0b0110AAAA,A,B,B,B]
-#CHECK: fixup A - offset: 1, value: (branch+100)+1, kind: FK_390_PC12DBL
-#CHECK: fixup B - offset: 3, value: (target+100)+3, kind: FK_390_PC24DBL
+#CHECK: fixup A - offset: 1, value: branch+100+1, kind: FK_390_PC12DBL
+#CHECK: fixup B - offset: 3, value: target+100+3, kind: FK_390_PC24DBL
 
 	bprp	4, branch+100, target
 	bprp	5, branch, target+100

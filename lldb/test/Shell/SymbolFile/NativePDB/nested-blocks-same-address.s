@@ -4,7 +4,7 @@
 # Test when nested S_BLOCK32 have same address range, ResolveSymbolContext should return the innnermost block.
 # RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %s > %t.obj
 # RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe /base:0x140000000
-# RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -o "image lookup -a 0x14000103c -v" -o "exit" | FileCheck %s
+# RUN: %lldb -f %t.exe -o "image lookup -a 0x14000103c -v" -o "exit" | FileCheck %s
 
 # This file is compiled from following source file:
 # $ clang-cl /Z7 /GS- /c /O2 test.cpp /Fatest.s
@@ -30,6 +30,7 @@
 # CHECK-NEXT:            id = {{.*}}, range = [0x140001025-0x140001046)
 # CHECK-NEXT:            id = {{.*}}, range = [0x140001025-0x140001046)
 # CHECK-NEXT: LineEntry: [0x0000000140001035-0x0000000140001046): /tmp/test.cpp:10
+# CHECK-NEXT:    Symbol: id = {{.*}}, range = [0x0000000140001020-0x000000014000104d), name="main"
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "path", type = "volatile char[10]", valid ranges = <block>, location = [0x0000000140001025, 0x0000000140001046) -> DW_OP_breg7 RSP+40, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "kMfDLL", type = "const char *", valid ranges = <block>, location = [0x000000014000103c, 0x0000000140001046) -> DW_OP_reg2 RCX, decl =
 # CHECK-NEXT:  Variable: id = {{.*}}, name = "__range1", type = "const char *const (&)[1]", valid ranges = <block>, location = <empty>, decl =

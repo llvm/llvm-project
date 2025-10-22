@@ -21,7 +21,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -145,7 +144,7 @@ std::vector<StringRef> Input::keys() {
   return Ret;
 }
 
-bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
+bool Input::preflightKey(StringRef Key, bool Required, bool, bool &UseDefault,
                          void *&SaveInfo) {
   UseDefault = false;
   if (EC)
@@ -169,7 +168,7 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
       UseDefault = true;
     return false;
   }
-  MN->ValidKeys.push_back(Key);
+  MN->ValidKeys.push_back(Key.str());
   HNode *Value = MN->Mapping[Key].first;
   if (!Value) {
     if (Required)
@@ -267,7 +266,7 @@ void Input::beginEnumScalar() {
   ScalarMatchFound = false;
 }
 
-bool Input::matchEnumScalar(const char *Str, bool) {
+bool Input::matchEnumScalar(StringRef Str, bool) {
   if (ScalarMatchFound)
     return false;
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
@@ -303,7 +302,7 @@ bool Input::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Input::bitSetMatch(const char *Str, bool) {
+bool Input::bitSetMatch(StringRef Str, bool) {
   if (EC)
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
@@ -542,7 +541,7 @@ std::vector<StringRef> Output::keys() {
   report_fatal_error("invalid call");
 }
 
-bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
+bool Output::preflightKey(StringRef Key, bool Required, bool SameAsDefault,
                           bool &UseDefault, void *&SaveInfo) {
   UseDefault = false;
   SaveInfo = nullptr;
@@ -667,7 +666,7 @@ void Output::beginEnumScalar() {
   EnumerationMatchFound = false;
 }
 
-bool Output::matchEnumScalar(const char *Str, bool Match) {
+bool Output::matchEnumScalar(StringRef Str, bool Match) {
   if (Match && !EnumerationMatchFound) {
     newLineCheck();
     outputUpToEndOfLine(Str);
@@ -696,7 +695,7 @@ bool Output::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Output::bitSetMatch(const char *Str, bool Matches) {
+bool Output::bitSetMatch(StringRef Str, bool Matches) {
   if (Matches) {
     if (NeedBitValueComma)
       output(", ");
@@ -726,18 +725,18 @@ void Output::blockScalarString(StringRef &S) {
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
-  outputNewLine();
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 
   auto Buffer = MemoryBuffer::getMemBuffer(S, "", false);
   for (line_iterator Lines(*Buffer, false); !Lines.is_at_end(); ++Lines) {
+    outputNewLine();
     for (unsigned I = 0; I < Indent; ++I) {
       output("  ");
     }
     output(*Lines);
-    outputNewLine();
   }
+  outputUpToEndOfLine("");
 }
 
 void Output::scalarTag(std::string &Tag) {
@@ -750,6 +749,8 @@ void Output::scalarTag(std::string &Tag) {
 
 void Output::setError(const Twine &message) {
 }
+
+std::error_code Output::error() { return {}; }
 
 bool Output::canElideEmptySequence() {
   // Normally, with an optional key/value where the value is an empty sequence,
@@ -838,26 +839,40 @@ void Output::newLineCheck(bool EmptySequence) {
     return;
 
   unsigned Indent = StateStack.size() - 1;
-  bool OutputDash = false;
+  bool PossiblyNestedSeq = false;
+  auto I = StateStack.rbegin(), E = StateStack.rend();
 
-  if (StateStack.back() == inSeqFirstElement ||
-      StateStack.back() == inSeqOtherElement) {
-    OutputDash = true;
-  } else if ((StateStack.size() > 1) &&
-             ((StateStack.back() == inMapFirstKey) ||
-              inFlowSeqAnyElement(StateStack.back()) ||
-              (StateStack.back() == inFlowMapFirstKey)) &&
-             inSeqAnyElement(StateStack[StateStack.size() - 2])) {
-    --Indent;
-    OutputDash = true;
+  if (inSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true; // Not possibly but always.
+    ++Indent;
+  } else if (*I == inMapFirstKey || *I == inFlowMapFirstKey ||
+             inFlowSeqAnyElement(*I)) {
+    PossiblyNestedSeq = true;
+    ++I; // Skip back().
   }
 
-  for (unsigned i = 0; i < Indent; ++i) {
+  unsigned OutputDashCount = 0;
+  if (PossiblyNestedSeq) {
+    // Count up consecutive inSeqFirstElement from the end, unless
+    // inSeqFirstElement is the top of nested sequence.
+    while (I != E) {
+      // Don't count the top of nested sequence.
+      if (!inSeqAnyElement(*I))
+        break;
+
+      ++OutputDashCount;
+
+      // Stop counting if consecutive inSeqFirstElement ends.
+      if (*I++ != inSeqFirstElement)
+        break;
+    }
+  }
+
+  for (unsigned I = OutputDashCount; I < Indent; ++I)
     output("  ");
-  }
-  if (OutputDash) {
+
+  for (unsigned I = 0; I < OutputDashCount; ++I)
     output("- ");
-  }
 }
 
 void Output::paddedKey(StringRef key) {

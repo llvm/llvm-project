@@ -15,8 +15,8 @@ tlbi vmalle1os
 .INST 0x5e104020
 // CHECK: .inst 0x5e104020
 
-.RELOC 0, R_AARCH64_NONE, 8
-// CHECK: .reloc 0, R_AARCH64_NONE, 8
+.RELOC ., R_AARCH64_NONE, 8
+// CHECK: .reloc {{.*}}, R_AARCH64_NONE, 8
 
 .HWORD 0x1234
 // CHECK: .hword  4660
@@ -32,10 +32,12 @@ fred .REQ x5
 
 .CFI_STARTPROC
 .CFI_NEGATE_RA_STATE
+.CFI_NEGATE_RA_STATE_WITH_PC
 .CFI_B_KEY_FRAME
 .CFI_ENDPROC
 // CHECK: .cfi_startproc
 // CHECK: .cfi_negate_ra_state
+// CHECK: .cfi_negate_ra_state_with_pc
 // CHECK: .cfi_b_key_frame
 // CHECK: .cfi_endproc
 

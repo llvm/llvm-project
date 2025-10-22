@@ -1354,7 +1354,7 @@ define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdat
 ;
 ; GFX12-LABEL: store_1d_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_RT_WB a16 ; encoding: [0x40,0x80,0xc1,0xd3,0x00,0x00,0x30,0x00,0x04,0x00,0x00,0x00]
+; GFX12-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB a16 ; encoding: [0x40,0x80,0xc1,0xd3,0x00,0x00,0x30,0x00,0x04,0x00,0x00,0x00]
 ; GFX12-NEXT:    s_endpgm ; encoding: [0x00,0x00,0xb0,0xbf]
 main_body:
   %s = extractelement <2 x i16> %coords, i32 0

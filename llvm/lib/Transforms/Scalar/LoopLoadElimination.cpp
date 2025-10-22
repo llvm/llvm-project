@@ -42,7 +42,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -50,7 +49,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
@@ -119,7 +117,7 @@ struct StoreToLoadForwardingCandidate {
     if (std::abs(StrideLoad) != 1)
       return false;
 
-    unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
+    unsigned TypeByteSize = DL.getTypeAllocSize(LoadType);
 
     auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
     auto *StorePtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));
@@ -444,7 +442,7 @@ public:
     assert(PH && "Preheader should exist!");
     Value *InitialPtr = SEE.expandCodeFor(PtrSCEV->getStart(), Ptr->getType(),
                                           PH->getTerminator());
-    Value *Initial =
+    Instruction *Initial =
         new LoadInst(Cand.Load->getType(), InitialPtr, "load_initial",
                      /* isVolatile */ false, Cand.Load->getAlign(),
                      PH->getTerminator()->getIterator());
@@ -452,6 +450,7 @@ public:
     // into the loop's preheader. A debug location inside the loop will cause
     // a misleading stepping when debugging. The test update-debugloc-store
     // -forwarded.ll checks this.
+    Initial->setDebugLoc(DebugLoc::getDropped());
 
     PHINode *PHI = PHINode::Create(Initial->getType(), 2, "store_forwarded");
     PHI->insertBefore(L->getHeader()->begin());
@@ -586,11 +585,8 @@ public:
       }
 
       auto *HeaderBB = L->getHeader();
-      auto *F = HeaderBB->getParent();
-      bool OptForSize = F->hasOptSize() ||
-                        llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
-                                                    PGSOQueryType::IRPass);
-      if (OptForSize) {
+      if (llvm::shouldOptimizeForSize(HeaderBB, PSI, BFI,
+                                      PGSOQueryType::IRPass)) {
         LLVM_DEBUG(
             dbgs() << "Versioning is needed but not allowed when optimizing "
                       "for size.\n");

@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "resolve-names-utils.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -20,6 +18,8 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <initializer_list>
 #include <variant>
 
@@ -492,12 +492,14 @@ bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
             const auto &range{std::get<parser::SubstringRange>(x.t)};
             bool ok{CheckDataRef(designator.source, dataRef)};
             if (const auto &lb{std::get<0>(range.t)}) {
-              ok &= CheckSubstringBound(lb->thing.thing.value(), true);
+              ok &= CheckSubstringBound(
+                  parser::UnwrapRef<parser::Expr>(lb), true);
             } else {
               currObject_.substringStart = 1;
             }
             if (const auto &ub{std::get<1>(range.t)}) {
-              ok &= CheckSubstringBound(ub->thing.thing.value(), false);
+              ok &= CheckSubstringBound(
+                  parser::UnwrapRef<parser::Expr>(ub), false);
             }
             return ok;
           },
@@ -528,7 +530,8 @@ bool EquivalenceSets::CheckDataRef(
                         return false;
                       },
                       [&](const parser::IntExpr &y) {
-                        return CheckArrayBound(y.thing.value());
+                        return CheckArrayBound(
+                            parser::UnwrapRef<parser::Expr>(y));
                       },
                   },
                   subscript.u);
@@ -762,7 +765,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
-              proc.set_type(*mappedType);
+              if (proc.type()) {
+                CHECK(*proc.type() == *mappedType);
+              } else {
+                proc.set_type(*mappedType);
+              }
             }
             if (proc.init()) {
               if (const Symbol * mapped{MapSymbol(*proc.init())}) {

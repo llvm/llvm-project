@@ -6,7 +6,7 @@
 ; CHECK-LABEL: @unreachable(
 ; CHECK: entry:
 ; CHECK-NOT: irr.guard:
-define void @unreachable(i32 %n) {
+define void @unreachable(i32 %n, i1 %arg) {
 entry:
   br label %loop.body
 
@@ -17,7 +17,7 @@ unreachable.block:
   br label %inner.block
 
 inner.block:
-  br i1 undef, label %loop.exit, label %loop.latch
+  br i1 %arg, label %loop.exit, label %loop.latch
 
 loop.latch:
   br label %loop.body

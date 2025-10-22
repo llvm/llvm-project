@@ -6,22 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_LOGNORMAL_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_LOGNORMAL_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_LOGNORMAL_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_LOGNORMAL_DISTRIBUTION_H
 
-#include <__config>
-#include <__random/is_valid.h>
-#include <__random/normal_distribution.h>
-#include <cmath>
-#include <iosfwd>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_valid.h>
+#include <__cxx03/__random/normal_distribution.h>
+#include <__cxx03/cmath>
+#include <__cxx03/iosfwd>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -57,12 +57,7 @@ private:
 
 public:
   // constructor and reset functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI lognormal_distribution() : lognormal_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(result_type __m, result_type __s = 1) : __nd_(__m, __s) {}
-#else
   _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(result_type __m = 0, result_type __s = 1) : __nd_(__m, __s) {}
-#endif
   _LIBCPP_HIDE_FROM_ABI explicit lognormal_distribution(const param_type& __p) : __nd_(__p.m(), __p.s()) {}
   _LIBCPP_HIDE_FROM_ABI void reset() { __nd_.reset(); }
 
@@ -123,4 +118,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_LOGNORMAL_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_LOGNORMAL_DISTRIBUTION_H

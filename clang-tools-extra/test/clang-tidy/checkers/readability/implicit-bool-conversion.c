@@ -1,8 +1,8 @@
-// RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t -- -- -std=c23
-// RUN: %check_clang_tidy -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
+// RUN: %check_clang_tidy -std=c23-or-later %s readability-implicit-bool-conversion %t
+// RUN: %check_clang_tidy -std=c23-or-later -check-suffix=UPPER-CASE %s readability-implicit-bool-conversion %t -- \
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-implicit-bool-conversion.UseUpperCaseLiteralSuffix: true \
-// RUN:     }}' -- -std=c23
+// RUN:     }}'
 
 #undef NULL
 #define NULL 0L
@@ -304,6 +304,15 @@ void implicitConversionToBoolFromUnaryMinusAndZeroLiterals() {
   // CHECK-FIXES: functionTakingBool((-0.0) != 0.0);
 }
 
+void ignoreImplicitCastToBoolForComparisonResult() {
+  bool boolFromComparison0 = 1 != 0;
+  bool boolFromComparison1 = 1 == 0;
+  bool boolFromComparison2 = 1 > 0;
+  bool boolFromComparison3 = 1 >= 0;
+  bool boolFromComparison4 = 1 < 0;
+  bool boolFromComparison5 = 1 <= 0;
+}
+
 void ignoreExplicitCastsToBool() {
   int integer = 10;
   bool boolComingFromInt = (bool)integer;
@@ -332,28 +341,28 @@ int implicitConversionReturnInt()
 {
     return true;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 int implicitConversionReturnIntWithParens()
 {
     return (true);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'bool' -> 'int'
-    // CHECK-FIXES: return 1
+    // CHECK-FIXES: return 1;
 }
 
 bool implicitConversionReturnBool()
 {
     return 1;
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 bool implicitConversionReturnBoolWithParens()
 {
     return (1);
     // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: implicit conversion 'int' -> 'bool'
-    // CHECK-FIXES: return true
+    // CHECK-FIXES: return true;
 }
 
 int keepCompactReturnInC_PR71848() {

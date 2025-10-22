@@ -9,7 +9,10 @@
 
 # Flip off to disable MODULE.bazel until we're ready.
 # https://github.com/llvm/llvm-project/issues/55924
-common --enable_bzlmod=false
+common --enable_bzlmod=false --enable_workspace
+
+# TODO: Remove lit test reliance on this
+common --legacy_external_runfiles
 
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
@@ -54,6 +57,11 @@ build --experimental_cc_shared_library
 # https://github.com/bazelbuild/bazel/issues/6627 and
 # https://github.com/bazelbuild/bazel/commit/03246077f948f2790a83520e7dccc2625650e6df
 build --build_runfile_links=false
+
+# Enable header processing to verify that header-only libraries are
+# self-contained (for sub-projects that enable "parse_headers" feature).
+# See https://bazel.build/docs/bazel-and-cpp#toolchain-features
+build --process_headers_in_dependencies
 
 ###############################################################################
 # Options to select different strategies for linking potential dependent

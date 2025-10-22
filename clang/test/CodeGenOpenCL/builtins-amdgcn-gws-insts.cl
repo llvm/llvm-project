@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx906 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90c -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx940 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx942 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1030 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -emit-llvm -o - %s | FileCheck %s
@@ -13,7 +13,7 @@
 typedef unsigned int uint;
 
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_builtins_amdgcn_gws_insts
-// CHECK-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space !4 !kernel_arg_access_qual !5 !kernel_arg_type !6 !kernel_arg_base_type !6 !kernel_arg_type_qual !7 {
+// CHECK-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space !8 !kernel_arg_access_qual !9 !kernel_arg_type !10 !kernel_arg_base_type !10 !kernel_arg_type_qual !11 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.amdgcn.ds.gws.init(i32 [[A]], i32 [[B]])
 // CHECK-NEXT:    tail call void @llvm.amdgcn.ds.gws.barrier(i32 [[A]], i32 [[B]])

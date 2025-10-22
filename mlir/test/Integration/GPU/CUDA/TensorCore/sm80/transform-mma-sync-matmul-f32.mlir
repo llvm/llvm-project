@@ -12,7 +12,7 @@
 // RUN:   -transform-interpreter \
 // RUN:   -test-transform-dialect-erase-schedule \
 // RUN:   -gpu-lower-to-nvvm-pipeline="cubin-chip=sm_80 cubin-features=+ptx76 cubin-format=%gpu_compilation_format" \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
@@ -47,21 +47,21 @@ func.func @main() {
   %f0 = arith.constant 0.0e+00 : f32
   %c32 = arith.constant 32 : index
 
-  // Intialize the lhs matrix with a linspace function.
+  // Initialize the lhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %K step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %K) : (index, index, index) -> f32
       memref.store %idx, %lhs[%r, %c] : !lhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %K step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f32
       memref.store %idx, %rhs[%r, %c] : !rhs_memref_type
     }
   }
-  // Intialize the rhs matrix with a linspace function.
+  // Initialize the rhs matrix with a linspace function.
   scf.for %r = %c0 to %M step %c1 {
     scf.for %c = %c0 to %N step %c1 {
       %idx = func.call @compute_linspace_val(%r, %c, %N) : (index, index, index) -> f32

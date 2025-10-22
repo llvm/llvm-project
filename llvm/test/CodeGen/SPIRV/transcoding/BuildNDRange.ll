@@ -4,7 +4,7 @@
 ; CHECK-SPIRV-DAG: %[[#]] = OpBuildNDRange %[[#]] %[[#GWS:]] %[[#LWS:]] %[[#GWO:]]
 ; CHECK-SPIRV-DAG: %[[#GWS]] = OpConstant %[[#]] 123
 ; CHECK-SPIRV-DAG: %[[#LWS]] = OpConstant %[[#]] 456
-; CHECK-SPIRV-DAG: %[[#GWO]] = OpConstant %[[#]] 0
+; CHECK-SPIRV-DAG: %[[#GWO]] = OpConstantNull %[[#]]
 
 %struct.ndrange_t = type { i32, [3 x i32], [3 x i32], [3 x i32] }
 

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -29,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -71,6 +73,7 @@ class PHIEliminationImpl {
   LiveIntervals *LIS = nullptr;
   MachineLoopInfo *MLI = nullptr;
   MachineDominatorTree *MDT = nullptr;
+  MachinePostDominatorTree *PDT = nullptr;
 
   /// EliminatePHINodes - Eliminate phi nodes by inserting copy instructions
   /// in predecessor basic blocks.
@@ -90,7 +93,8 @@ class PHIEliminationImpl {
   /// Split critical edges where necessary for good coalescer performance.
   bool SplitPHIEdges(MachineFunction &MF, MachineBasicBlock &MBB,
                      MachineLoopInfo *MLI,
-                     std::vector<SparseBitVector<>> *LiveInSets);
+                     std::vector<SparseBitVector<>> *LiveInSets,
+                     MachineDomTreeUpdater &MDTU);
 
   // These functions are temporary abstractions around LiveVariables and
   // LiveIntervals, so they can go away when LiveVariables does.
@@ -108,7 +112,7 @@ class PHIEliminationImpl {
 
   // Map reusable lowered PHI node -> incoming join register.
   using LoweredPHIMap =
-      DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>;
+      DenseMap<MachineInstr *, Register, MachineInstrExpressionTrait>;
   LoweredPHIMap LoweredPHIs;
 
   MachineFunctionPass *P = nullptr;
@@ -121,17 +125,22 @@ public:
     auto *MLIWrapper = P->getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
     auto *MDTWrapper =
         P->getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+    auto *PDTWrapper =
+        P->getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
     LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
     LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
     MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
     MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+    PDT = PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
   }
 
   PHIEliminationImpl(MachineFunction &MF, MachineFunctionAnalysisManager &AM)
       : LV(AM.getCachedResult<LiveVariablesAnalysis>(MF)),
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
-        MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)), MFAM(&AM) {}
+        MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
+        PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
+        MFAM(&AM) {}
 
   bool run(MachineFunction &MF);
 };
@@ -150,8 +159,7 @@ public:
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -171,6 +179,7 @@ PHIEliminationPass::run(MachineFunction &MF,
   PA.preserve<LiveVariablesAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachinePostDominatorTreeAnalysis>();
   PA.preserve<MachineLoopAnalysis>();
   return PA;
 }
@@ -196,12 +205,16 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved<MachineLoopInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
 bool PHIEliminationImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
+
+  MachineDomTreeUpdater MDTU(MDT, PDT,
+                             MachineDomTreeUpdater::UpdateStrategy::Lazy);
 
   bool Changed = false;
 
@@ -237,7 +250,8 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
     }
 
     for (auto &MBB : MF)
-      Changed |= SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr));
+      Changed |=
+          SplitPHIEdges(MF, MBB, MLI, (LV ? &LiveInSets : nullptr), MDTU);
   }
 
   // This pass takes the function out of SSA form.
@@ -268,15 +282,11 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
     MF.deleteMachineInstr(I.first);
   }
 
-  // TODO: we should use the incremental DomTree updater here.
-  if (Changed && MDT)
-    MDT->getBase().recalculate(MF);
-
   LoweredPHIs.clear();
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
-  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+  MF.getProperties().setNoPHIs();
 
   return Changed;
 }
@@ -312,7 +322,7 @@ bool PHIEliminationImpl::EliminatePHINodes(MachineFunction &MF,
 
 /// Return true if all defs of VirtReg are implicit-defs.
 /// This includes registers with no defs.
-static bool isImplicitlyDefined(unsigned VirtReg,
+static bool isImplicitlyDefined(Register VirtReg,
                                 const MachineRegisterInfo &MRI) {
   for (MachineInstr &DI : MRI.def_instructions(VirtReg))
     if (!DI.isImplicitDef())
@@ -348,7 +358,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
 
   // Create a new register for the incoming PHI arguments.
   MachineFunction &MF = *MBB.getParent();
-  unsigned IncomingReg = 0;
+  Register IncomingReg;
   bool EliminateNow = true;    // delay elimination of nodes in LoweredPHIs
   bool reusedIncoming = false; // Is IncomingReg reused from an earlier PHI?
 
@@ -367,7 +377,7 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
     // typically those created by tail duplication. Typically, an identical PHI
     // node can't occur, so avoid hashing/storing such PHIs, which is somewhat
     // expensive.
-    unsigned *Entry = nullptr;
+    Register *Entry = nullptr;
     if (AllEdgesCritical)
       Entry = &LoweredPHIs[MPhi];
     if (Entry && *Entry) {
@@ -752,7 +762,7 @@ void PHIEliminationImpl::analyzePHINodes(const MachineFunction &MF) {
 
 bool PHIEliminationImpl::SplitPHIEdges(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineLoopInfo *MLI,
-    std::vector<SparseBitVector<>> *LiveInSets) {
+    std::vector<SparseBitVector<>> *LiveInSets, MachineDomTreeUpdater &MDTU) {
   if (MBB.empty() || !MBB.front().isPHI() || MBB.isEHPad())
     return false; // Quick exit for basic blocks without PHIs.
 
@@ -819,8 +829,8 @@ bool PHIEliminationImpl::SplitPHIEdges(
       }
       if (!ShouldSplit && !SplitAllCriticalEdges)
         continue;
-      if (!(P ? PreMBB->SplitCriticalEdge(&MBB, *P, LiveInSets)
-              : PreMBB->SplitCriticalEdge(&MBB, *MFAM, LiveInSets))) {
+      if (!(P ? PreMBB->SplitCriticalEdge(&MBB, *P, LiveInSets, &MDTU)
+              : PreMBB->SplitCriticalEdge(&MBB, *MFAM, LiveInSets, &MDTU))) {
         LLVM_DEBUG(dbgs() << "Failed to split critical edge.\n");
         continue;
       }

@@ -113,7 +113,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:    .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM:    .byte   0x00                            # Version = 0
 ; ASM:    .byte   0x09                            # Language = CPlusPlus
-; ASM:    .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM:    .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM:                                    # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM:                                    # -HasControlledStorage, -IsTOCless
 ; ASM:                                    # -IsFloatingPointPresent

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s
+; RUN: llc -mtriple=hexagon < %s
 ; REQUIRES: asserts
 ; Used to fail with "Cannot select: 0x17300f0: v2i32 = any_extend"
 

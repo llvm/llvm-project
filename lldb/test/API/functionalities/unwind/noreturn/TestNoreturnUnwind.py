@@ -11,7 +11,7 @@ from lldbsuite.test import lldbutil
 class NoreturnUnwind(TestBase):
     @skipIfWindows  # clang-cl does not support gcc style attributes.
     # clang does not preserve LR in noreturn functions, making unwinding impossible
-    @skipIf(compiler="clang", archs=["arm"], oslist=["linux"])
+    @skipIf(compiler="clang", archs=["arm$"], oslist=["linux"])
     @expectedFailureAll(bugnumber="llvm.org/pr33452", triple="^mips")
     def test(self):
         """Test that we can backtrace correctly with 'noreturn' functions on the stack"""

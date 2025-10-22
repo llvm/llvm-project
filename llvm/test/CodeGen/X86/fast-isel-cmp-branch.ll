@@ -5,9 +5,9 @@
 ; The machine verifier will catch and complain about this case.
 ; CHECK-LABEL: baz
 ; CHECK: retq
-define void @baz() {
+define void @baz(i1 %arg) {
 entry:
-  br i1 undef, label %exit, label %exit
+  br i1 %arg, label %exit, label %exit
 
 exit:
   ret void

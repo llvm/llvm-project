@@ -13,13 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolWasm.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
@@ -115,7 +113,9 @@ void WebAssemblyTargetAsmStreamer::emitExportName(const MCSymbolWasm *Sym,
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
-  OS << "\t.indidx  \t" << *Value << '\n';
+  OS << "\t.indidx\t";
+  getContext().getAsmInfo()->printExpr(OS, *Value);
+  OS << '\n';
 }
 
 void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {

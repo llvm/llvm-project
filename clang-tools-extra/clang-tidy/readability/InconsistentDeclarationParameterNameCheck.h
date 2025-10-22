@@ -18,15 +18,15 @@ namespace clang::tidy::readability {
 /// Checks for declarations of functions which differ in parameter names.
 ///
 /// For detailed documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/inconsistent-declaration-parameter-name.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/inconsistent-declaration-parameter-name.html
 ///
 class InconsistentDeclarationParameterNameCheck : public ClangTidyCheck {
 public:
   InconsistentDeclarationParameterNameCheck(StringRef Name,
                                             ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)),
-        Strict(Options.getLocalOrGlobal("Strict", false)) {}
+        IgnoreMacros(Options.get("IgnoreMacros", true)),
+        Strict(Options.get("Strict", false)) {}
 
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;

@@ -27,12 +27,15 @@ set(ANALYSIS_TEST_SOURCES
   DDGTest.cpp
   DomTreeUpdaterTest.cpp
   DXILResourceTest.cpp
+  EphemeralValuesCacheTest.cpp
   GraphWriterTest.cpp
   GlobalsModRefTest.cpp
   FunctionPropertiesAnalysisTest.cpp
   InlineCostTest.cpp
+  IR2VecTest.cpp
   IRSimilarityIdentifierTest.cpp
   IVDescriptorsTest.cpp
+  LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
   LoopInfoTest.cpp

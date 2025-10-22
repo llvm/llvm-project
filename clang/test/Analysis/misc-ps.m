@@ -1,6 +1,6 @@
 // NOTE: Use '-fobjc-gc' to test the analysis being run twice, and multiple reports are not issued.
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -Wno-strict-prototypes -Wno-pointer-to-int-cast -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -Wno-strict-prototypes -Wno-pointer-to-int-cast -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -analyzer-disable-checker=core.FixedAddressDereference -Wno-strict-prototypes -Wno-pointer-to-int-cast -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,alpha.core,osx.cocoa.AtSync -analyzer-disable-checker=core.FixedAddressDereference -Wno-strict-prototypes -Wno-pointer-to-int-cast -verify -fblocks -Wno-unreachable-code -Wno-null-dereference -Wno-objc-root-class %s
 
 #ifndef __clang_analyzer__
 #error __clang_analyzer__ not defined
@@ -1045,18 +1045,6 @@ void r8360854(int n) {
   }
   int *p = 0;
   *p = 0xDEADBEEF; // expected-warning{{null pointer}}
-}
-
-// PR 8050 - crash in CastSizeChecker when pointee is an incomplete type
-typedef long unsigned int __darwin_size_t;
-typedef __darwin_size_t size_t;
-void *malloc(size_t);
-
-struct PR8050;
-
-void pr8050(struct PR8050 **arg)
-{
-    *arg = malloc(1);
 }
 
 // Switch on enum should not consider default case live if all enum values are

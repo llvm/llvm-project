@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
-#define _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
+#ifndef _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_NEWLIB_H
+#define _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_NEWLIB_H
 
-#endif // _LIBCPP___LOCALE_LOCALE_BASE_API_NEWLIB_H
+#endif // _LIBCPP___CXX03___LOCALE_LOCALE_BASE_API_NEWLIB_H

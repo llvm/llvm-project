@@ -14,6 +14,7 @@ add_libc_unittest(
     libc.src.fcntl.creat
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -32,6 +33,7 @@ add_libc_unittest(
     libc.src.unistd.getpid
     libc.hdr.types.struct_flock
     libc.hdr.fcntl_macros
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -42,11 +44,12 @@ add_libc_unittest(
   SRCS
     openat_test.cpp
   DEPENDS
-    libc.include.fcntl
+    libc.hdr.fcntl_macros
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.unistd.close
     libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

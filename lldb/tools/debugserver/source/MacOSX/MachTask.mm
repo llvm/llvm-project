@@ -213,7 +213,7 @@ nub_size_t MachTask::WriteMemory(nub_addr_t addr, nub_size_t size,
 }
 
 //----------------------------------------------------------------------
-// MachTask::MemoryRegionInfo
+// MachTask::GetMemoryRegionInfo
 //----------------------------------------------------------------------
 int MachTask::GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info) {
   task_t task = TaskPort();
@@ -221,12 +221,29 @@ int MachTask::GetMemoryRegionInfo(nub_addr_t addr, DNBRegionInfo *region_info) {
     return -1;
 
   int ret = m_vm_memory.GetMemoryRegionInfo(task, addr, region_info);
-  DNBLogThreadedIf(LOG_MEMORY, "MachTask::MemoryRegionInfo ( addr = 0x%8.8llx "
-                               ") => %i  (start = 0x%8.8llx, size = 0x%8.8llx, "
-                               "permissions = %u)",
+  DNBLogThreadedIf(LOG_MEMORY,
+                   "MachTask::GetMemoryRegionInfo ( addr = 0x%8.8llx ) => %i  "
+                   "(start = 0x%8.8llx, size = 0x%8.8llx, permissions = %u)",
                    (uint64_t)addr, ret, (uint64_t)region_info->addr,
                    (uint64_t)region_info->size, region_info->permissions);
   return ret;
+}
+
+//----------------------------------------------------------------------
+// MachTask::GetMemoryTags
+//----------------------------------------------------------------------
+nub_bool_t MachTask::GetMemoryTags(nub_addr_t addr, nub_size_t size,
+                                   std::vector<uint8_t> &tags) {
+  task_t task = TaskPort();
+  if (task == TASK_NULL)
+    return false;
+
+  bool ok = m_vm_memory.GetMemoryTags(task, addr, size, tags);
+  DNBLogThreadedIf(LOG_MEMORY, "MachTask::GetMemoryTags ( addr = 0x%8.8llx, "
+                               "size = 0x%8.8llx ) => %s ( tag count = %llu)",
+                  (uint64_t)addr, (uint64_t)size, (ok ? "ok" : "err"),
+                  (uint64_t)tags.size());
+  return ok;
 }
 
 #define TIME_VALUE_TO_TIMEVAL(a, r)                                            \
@@ -877,6 +894,17 @@ void *MachTask::ExceptionThread(void *arg) {
       if (exception_message.CatchExceptionRaise(task)) {
         if (exception_message.state.task_port != task) {
           if (exception_message.state.IsValid()) {
+            pid_t new_pid = -1;
+            kern_return_t kr =
+                pid_for_task(exception_message.state.task_port, &new_pid);
+            pid_t old_pid = mach_proc->ProcessID();
+            if (kr == KERN_SUCCESS && old_pid != new_pid) {
+              DNBLogError("Got an exec mach message but the pid of "
+                          "the new task and the pid of the old task "
+                          "do not match, something is wrong.");
+              // exit the thread.
+              break;
+            }
             // We exec'ed and our task port changed on us.
             DNBLogThreadedIf(LOG_EXCEPTIONS,
                              "task port changed from 0x%4.4x to 0x%4.4x",

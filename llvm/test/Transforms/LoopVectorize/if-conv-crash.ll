@@ -4,19 +4,19 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define fastcc void @DD_dump() nounwind uwtable ssp {
 entry:
-  br i1 undef, label %lor.lhs.false, label %if.end25
+  br i1 true, label %lor.lhs.false, label %if.end25
 
 lor.lhs.false:                                    ; preds = %entry
-  br i1 undef, label %if.end21, label %if.else
+  br i1 false, label %if.end21, label %if.else
 
 if.else:                                          ; preds = %lor.lhs.false
-  br i1 undef, label %num_q.exit, label %while.body.i.preheader
+  br i1 false, label %num_q.exit, label %while.body.i.preheader
 
 while.body.i.preheader:                           ; preds = %if.else
   br label %while.body.i
 
 while.body.i:                                     ; preds = %if.end.i, %while.body.i.preheader
-  switch i8 undef, label %if.end.i [
+  switch i8 0, label %if.end.i [
     i8 39, label %if.then.i
     i8 92, label %if.then.i
   ]
@@ -25,7 +25,7 @@ if.then.i:                                        ; preds = %while.body.i, %whil
   br label %if.end.i
 
 if.end.i:                                         ; preds = %if.then.i, %while.body.i
-  br i1 undef, label %num_q.exit, label %while.body.i
+  br i1 false, label %num_q.exit, label %while.body.i
 
 num_q.exit:                                       ; preds = %if.end.i, %if.else
   unreachable

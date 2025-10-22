@@ -23,6 +23,12 @@ def enable_deterministic_archives
     : Flag<["--"], "enable-deterministic-archives">,
       HelpText<"Enable deterministic mode when operating on archives (use "
                "zero for UIDs, GIDs, and timestamps).">;
+
+defm extract_section
+    : Eq<"extract-section",
+         "Extract section named <section> into standalone object in file <file>">,
+      MetaVarName<"section=file">;
+
 def D : Flag<["-"], "D">,
         Alias<enable_deterministic_archives>,
         HelpText<"Alias for --enable-deterministic-archives">;

@@ -64,11 +64,14 @@ static constexpr auto programUnit{
     construct<ProgramUnit>(indirect(subroutineSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<Submodule>{})) ||
     construct<ProgramUnit>(indirect(Parser<BlockData>{})) ||
-    lookAhead(validFunctionStmt) >>
+    lookAhead(maybe(label) >> validFunctionStmt) >>
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
-static constexpr auto normalProgramUnit{StartNewSubprogram{} >> programUnit /
-        skipMany(";"_tok) / space / recovery(endOfLine, SkipPast<'\n'>{})};
+
+static constexpr auto normalProgramUnit{
+    !consumedAllInput >> StartNewSubprogram{} >> programUnit /
+        skipMany(";"_tok) / space / recovery(endOfLine, skipToNextLineIfAny)};
+
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
 
@@ -86,7 +89,7 @@ static constexpr auto globalOpenACCCompilerDirective{
 TYPE_PARSER(
     construct<Program>(extension<LanguageFeature::EmptySourceFile>(
                            "nonstandard usage: empty source file"_port_en_US,
-                           skipStuffBeforeStatement >> !nextCh >>
+                           skipStuffBeforeStatement >> consumedAllInput >>
                                pure<std::list<ProgramUnit>>()) ||
         some(globalCompilerDirective || globalOpenACCCompilerDirective ||
             normalProgramUnit) /
@@ -107,8 +110,8 @@ constexpr auto actionStmtLookAhead{first(actionStmt >> ok,
     // first in the execution part
     "ALLOCATE ("_tok, "CALL" >> name >> "("_tok, "GO TO"_tok, "OPEN ("_tok,
     "PRINT"_tok / space / !"("_tok, "READ ("_tok, "WRITE ("_tok)};
-constexpr auto execPartLookAhead{first(actionStmtLookAhead >> ok,
-    openaccConstruct >> ok, openmpConstruct >> ok, "ASSOCIATE ("_tok,
+constexpr auto execPartLookAhead{first(actionStmtLookAhead,
+    openaccConstruct >> ok, openmpExecDirective >> ok, "ASSOCIATE ("_tok,
     "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok,
     "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{
@@ -474,10 +477,13 @@ TYPE_CONTEXT_PARSER("function reference"_en_US,
 
 // R1521 call-stmt -> CALL procedure-designator [chevrons]
 ///                          [( [actual-arg-spec-list] )]
-// (CUDA) chevrons -> <<< scalar-expr, scalar-expr [, scalar-int-expr
+// (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [, scalar-int-expr
 //                      [, scalar-int-expr ] ] >>>
+constexpr auto starOrExpr{
+    construct<CallStmt::StarOrExpr>("*" >> pure<std::optional<ScalarExpr>>() ||
+        applyFunction(presentOptional<ScalarExpr>, scalarExpr))};
 TYPE_PARSER(extension<LanguageFeature::CUDA>(
-    "<<<" >> construct<CallStmt::Chevrons>(scalarExpr, "," >> scalarExpr,
+    "<<<" >> construct<CallStmt::Chevrons>(starOrExpr, ", " >> scalarExpr,
                  maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
         ">>>"))
 constexpr auto actualArgSpecList{optionalList(actualArgSpec)};

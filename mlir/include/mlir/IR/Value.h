@@ -97,30 +97,6 @@ class Value {
 public:
   constexpr Value(detail::ValueImpl *impl = nullptr) : impl(impl) {}
 
-  template <typename U>
-  [[deprecated("Use mlir::isa<U>() instead")]]
-  bool isa() const {
-    return llvm::isa<U>(*this);
-  }
-
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast<U>() instead")]]
-  U dyn_cast() const {
-    return llvm::dyn_cast<U>(*this);
-  }
-
-  template <typename U>
-  [[deprecated("Use mlir::dyn_cast_or_null<U>() instead")]]
-  U dyn_cast_or_null() const {
-    return llvm::dyn_cast_or_null<U>(*this);
-  }
-
-  template <typename U>
-  [[deprecated("Use mlir::cast<U>() instead")]]
-  U cast() const {
-    return llvm::cast<U>(*this);
-  }
-
   explicit operator bool() const { return impl; }
   bool operator==(const Value &other) const { return impl == other.impl; }
   bool operator!=(const Value &other) const { return !(*this == other); }
@@ -211,8 +187,22 @@ public:
   /// Returns a range of all uses, which is useful for iterating over all uses.
   use_range getUses() const { return {use_begin(), use_end()}; }
 
+  /// This method computes the number of uses of this Value.
+  ///
+  /// This is a linear time operation.  Use hasOneUse, hasNUses, or
+  /// hasNUsesOrMore to check for specific values.
+  unsigned getNumUses() const;
+
   /// Returns true if this value has exactly one use.
   bool hasOneUse() const { return impl->hasOneUse(); }
+
+  /// Return true if this Value has exactly n uses.
+  bool hasNUses(unsigned n) const;
+
+  /// Return true if this value has n uses or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUsesOrMore(unsigned n) const;
 
   /// Returns true if this value has no uses.
   bool use_empty() const { return impl->use_empty(); }

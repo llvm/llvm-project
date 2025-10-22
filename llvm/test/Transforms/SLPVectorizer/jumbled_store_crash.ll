@@ -23,7 +23,7 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <2 x i32> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <2 x i32> [[TMP6]] to <2 x float>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP7]], <float 1.000000e+01, float 1.000000e+01>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[TMP7]], splat (float 1.000000e+01)
 ; CHECK-NEXT:    [[TMP9:%.*]] = fsub <2 x float> <float 1.000000e+00, float 0.000000e+00>, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[TMP10]], i32 1

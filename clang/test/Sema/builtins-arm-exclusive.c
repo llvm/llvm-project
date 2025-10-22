@@ -1,5 +1,13 @@
 // RUN: %clang_cc1 -triple armv7 -fsyntax-only -verify %s
 
+// General tests of __builtin_arm_ldrex and __builtin_arm_strex error checking.
+//
+// This test is compiled for Armv7-A, which provides exclusive load/store
+// instructions for 1-, 2-, 4- and 8-byte quantities. Other Arm architecture
+// versions provide subsets of those, requiring different error reporting.
+// Those are tested in builtins-arm-exclusive-124.c, builtins-arm-exclusive-4.c
+// and builtins-arm-exclusive-none.c.
+
 struct Simple {
   char a, b;
 };

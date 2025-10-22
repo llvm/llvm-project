@@ -1,0 +1,63 @@
+# REQUIRES: aarch64-registered-target, amdgpu-registered-target
+
+# RUN: split-file %s %t
+
+# RUN: llc -mtriple=aarch64 -run-pass=none -o - %t/valid.mir
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -o - %t/lower.mir 2>&1 | FileCheck %t/lower.mir
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -o - %t/overlap.mir 2>&1 | FileCheck %t/overlap.mir
+# RUN: not --crash llc -mtriple=amdgcn -run-pass=none -o - %t/higher.mir 2>&1 | FileCheck %t/higher.mir
+
+;--- valid.mir
+---
+name:            valid
+frameInfo:
+  stackSize:       16
+  stackProtector:  '%stack.1'
+stack:
+  - { id: 0, offset: -24, size: 8, alignment: 8, stack-id: default }
+  - { id: 1, offset: -16, size: 8, alignment: 8, stack-id: default }
+body:             |
+  bb.0:
+...
+
+;--- lower.mir
+# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+---
+name:            lower
+frameInfo:
+  stackSize:       16
+  stackProtector:  '%stack.1'
+stack:
+  - { id: 0, offset: -16, size: 8, alignment: 8, stack-id: default }
+  - { id: 1, offset: -24, size: 8, alignment: 8, stack-id: default }
+body:             |
+  bb.0:
+...
+
+;--- overlap.mir
+# CHECK: *** Bad machine code: Stack protector overlaps with another stack object ***
+---
+name:            overlap
+frameInfo:
+  stackSize:       16
+  stackProtector:  '%stack.1'
+stack:
+  - { id: 0, offset: -20, size: 8, alignment: 4, stack-id: default }
+  - { id: 1, offset: -16, size: 8, alignment: 8, stack-id: default }
+body:             |
+  bb.0:
+...
+
+;--- higher.mir
+# CHECK: *** Bad machine code: Stack protector is not the top-most object on the stack ***
+---
+name:            higher
+frameInfo:
+  stackSize:       16
+  stackProtector:  '%stack.1'
+stack:
+  - { id: 0, offset: 16, size: 8, alignment: 8, stack-id: default }
+  - { id: 1, offset: 24, size: 8, alignment: 8, stack-id: default }
+body:             |
+  bb.0:
+...

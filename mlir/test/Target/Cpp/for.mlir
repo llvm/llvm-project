@@ -1,16 +1,16 @@
-// RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s -check-prefix=CPP-DEFAULT
-// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
+// RUN: mlir-translate -mlir-to-cpp %s | FileCheck --match-full-lines %s -check-prefix=CPP-DEFAULT
+// RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck --match-full-lines %s -check-prefix=CPP-DECLTOP
 
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
-  %lb = emitc.expression : index {
+  %lb = emitc.expression %arg0, %arg1 : (index, index) -> index {
     %a = emitc.add %arg0, %arg1 : (index, index) -> index
     emitc.yield %a : index
   }
-  %ub = emitc.expression : index {
+  %ub = emitc.expression %arg1, %arg2 : (index, index) -> index {
     %a = emitc.mul %arg1, %arg2 : (index, index) -> index
     emitc.yield %a : index
   }
-  %step = emitc.expression : index {
+  %step = emitc.expression %arg0, %arg2 : (index, index) -> index {
     %a = emitc.div %arg0, %arg2 : (index, index) -> index
     emitc.yield %a : index
   }
@@ -160,5 +160,5 @@ func.func @test_for_yield_2() {
   return
 }
 // CPP-DEFAULT: void test_for_yield_2() {
-// CPP-DEFAULT: {{.*}}= M_PI
+// CPP-DEFAULT: {{.*}}= M_PI;
 // CPP-DEFAULT: for (size_t [[IN:.*]] = 0; [[IN]] < 10; [[IN]] += 1) {

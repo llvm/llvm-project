@@ -18,22 +18,13 @@
 
 namespace llvm {
 
-class MCSymbol;
-
 class MCSectionSPIRV final : public MCSection {
   friend class MCContext;
 
   MCSectionSPIRV()
-      : MCSection(SV_SPIRV, "", /*IsText=*/true, /*IsVirtual=*/false,
+      : MCSection("", /*IsText=*/true, /*IsVirtual=*/false,
                   /*Begin=*/nullptr) {}
   // TODO: Add StringRef Name to MCSectionSPIRV.
-
-public:
-  ~MCSectionSPIRV() = default;
-  void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                            raw_ostream &OS,
-                            uint32_t Subsection) const override {}
-  bool useCodeAlign() const override { return false; }
 };
 
 } // end namespace llvm

@@ -16,9 +16,9 @@ using namespace llvm::orc;
 void RedirectionManager::anchor() {}
 
 Error RedirectableSymbolManager::createRedirectableSymbols(
-    ResourceTrackerSP RT, const SymbolMap &InitialDests) {
+    ResourceTrackerSP RT, SymbolMap InitialDests) {
   auto &JD = RT->getJITDylib();
-  return JD.define(
-      std::make_unique<RedirectableMaterializationUnit>(*this, InitialDests),
-      RT);
+  return JD.define(std::make_unique<RedirectableMaterializationUnit>(
+                       *this, std::move(InitialDests)),
+                   RT);
 }

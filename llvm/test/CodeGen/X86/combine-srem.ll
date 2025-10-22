@@ -255,35 +255,35 @@ define <4 x i32> @combine_vec_srem_by_pow2b(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_srem_by_pow2b:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrld $29, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    psrld $31, %xmm3
-; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    psrld $30, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; SSE-NEXT:    paddd %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrad $3, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm3
+; SSE-NEXT:    psrld $31, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrad $31, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm3
+; SSE-NEXT:    psrld $29, %xmm3
+; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm1[0,1,2,3],xmm3[4,5,6,7]
+; SSE-NEXT:    psrld $30, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; SSE-NEXT:    paddd %xmm0, %xmm2
+; SSE-NEXT:    movdqa %xmm2, %xmm1
+; SSE-NEXT:    psrad $3, %xmm1
+; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psrad $1, %xmm3
-; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    psrad $2, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE-NEXT:    psubd %xmm1, %xmm0
+; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm1[4,5,6,7]
+; SSE-NEXT:    psrad $2, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,3],xmm2[4,5],xmm3[6,7]
+; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0,1],xmm2[2,3,4,5,6,7]
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,2,4,8]
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_vec_srem_by_pow2b:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrld $29, %xmm1, %xmm2
-; AVX1-NEXT:    vpsrld $31, %xmm1, %xmm3
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpsrld $30, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
+; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm1
+; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm2
+; AVX1-NEXT:    vpsrld $29, %xmm2, %xmm3
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
+; AVX1-NEXT:    vpsrld $30, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrad $3, %xmm1, %xmm2
 ; AVX1-NEXT:    vpsrad $1, %xmm1, %xmm3
@@ -291,7 +291,7 @@ define <4 x i32> @combine_vec_srem_by_pow2b(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrad $2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,2,4,8]
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -320,10 +320,10 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; SSE-NEXT:    movdqa %xmm1, %xmm3
 ; SSE-NEXT:    psrld $30, %xmm3
 ; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    psrld $29, %xmm2
-; SSE-NEXT:    psrld $31, %xmm1
-; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    psrld $31, %xmm2
+; SSE-NEXT:    psrld $29, %xmm1
+; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm2[0,1,2,3],xmm1[4,5,6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
 ; SSE-NEXT:    paddd %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
@@ -336,7 +336,7 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; SSE-NEXT:    psrld $1, %xmm1
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
-; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [4294967294,4294967292,4294967288,4294967280]
 ; SSE-NEXT:    paddd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -346,9 +346,9 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrld $28, %xmm1, %xmm2
 ; AVX1-NEXT:    vpsrld $30, %xmm1, %xmm3
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm3[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpsrld $29, %xmm1, %xmm3
-; AVX1-NEXT:    vpsrld $31, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
+; AVX1-NEXT:    vpsrld $31, %xmm0, %xmm3
+; AVX1-NEXT:    vpsrld $29, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm3[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX1-NEXT:    vpsrad $4, %xmm1, %xmm2
@@ -358,7 +358,7 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; AVX1-NEXT:    vpsrld $1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [4294967294,4294967292,4294967288,4294967280]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -368,7 +368,7 @@ define <4 x i32> @combine_vec_srem_by_pow2b_neg(<4 x i32> %x) {
 ; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX2-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [4294967294,4294967292,4294967288,4294967280]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %1 = srem <4 x i32> %x, <i32 -2, i32 -4, i32 -8, i32 -16>

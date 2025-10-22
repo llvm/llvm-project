@@ -95,6 +95,10 @@ public:
     /// push {r0-r7, lr}
     /// push {r8-r12}
     /// vpush {d8-d15}
+    /// Note that Thumb1 changes this layout when the frame pointer is R11,
+    /// using a longer sequence of instructions because R11 can't be used by a
+    /// Thumb1 push instruction. This doesn't currently have a separate enum
+    /// value, and is handled entriely within Thumb1FrameLowering::emitPrologue.
     SplitR7,
 
     /// When the stack frame size is not known (because of variable-sized
@@ -147,9 +151,6 @@ protected:
   ///  blocks.
   bool RestrictIT = false;
 
-  /// UseSjLjEH - If true, the target uses SjLj exception handling (e.g. iOS).
-  bool UseSjLjEH = false;
-
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
@@ -185,6 +186,12 @@ protected:
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
+  /// DM - Denormal mode
+  /// NEON and VFP RunFast mode are not IEEE 754 compliant,
+  /// use this field to determine whether to generate NEON/VFP
+  /// instructions in related function.
+  DenormalMode DM;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -205,7 +212,7 @@ public:
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
-               bool MinSize = false);
+               bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -266,7 +273,6 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
 
-  void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
   ARMFrameLowering *initializeFrameLowering(StringRef CPU, StringRef FS);
 
@@ -287,7 +293,9 @@ public:
   bool isCortexA15() const { return ARMProcFamily == CortexA15; }
   bool isSwift()    const { return ARMProcFamily == Swift; }
   bool isCortexM3() const { return ARMProcFamily == CortexM3; }
+  bool isCortexM55() const { return ARMProcFamily == CortexM55; }
   bool isCortexM7() const { return ARMProcFamily == CortexM7; }
+  bool isCortexM85() const { return ARMProcFamily == CortexM85; }
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
@@ -315,7 +323,6 @@ public:
   }
   bool useFPVFMx16() const { return useFPVFMx() && hasFullFP16(); }
   bool useFPVFMx64() const { return useFPVFMx() && hasFP64(); }
-  bool useSjLjEH() const { return UseSjLjEH; }
   bool hasBaseDSP() const {
     if (isThumb())
       return hasThumb2() && hasDSP();
@@ -328,13 +335,16 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// @{
+  /// These properties are per-module, please use the TargetMachine
+  /// TargetTriple.
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
   bool isTargetWatchABI() const { return TargetTriple.isWatchABI(); }
   bool isTargetDriverKit() const { return TargetTriple.isDriverKit(); }
+  bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
-  bool isTargetNaCl() const { return TargetTriple.isOSNaCl(); }
   bool isTargetNetBSD() const { return TargetTriple.isOSNetBSD(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
 
@@ -342,39 +352,18 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  // ARM EABI is the bare-metal EABI described in ARM ABI documents and
-  // can be accessed via -target arm-none-eabi. This is NOT GNUEABI.
-  // FIXME: Add a flag for bare-metal for that target and set Triple::EABI
-  // even for GNUEABI, so we can make a distinction here and still conform to
-  // the EABI on GNU (and Android) mode. This requires change in Clang, too.
-  // FIXME: The Darwin exception is temporary, while we move users to
-  // "*-*-*-macho" triples as quickly as possible.
-  bool isTargetAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::EABI ||
-            TargetTriple.getEnvironment() == Triple::EABIHF) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetGNUAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetMuslAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-            TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
+  bool isTargetAEABI() const { return TargetTriple.isTargetAEABI(); }
+
+  bool isTargetGNUAEABI() const { return TargetTriple.isTargetGNUAEABI(); }
+
+  bool isTargetMuslAEABI() const { return TargetTriple.isTargetMuslAEABI(); }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
     return TargetTriple.isTargetEHABICompatible();
   }
-
-  bool isTargetHardFloat() const;
+  /// @}
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
@@ -383,10 +372,6 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
   bool isXRaySupported() const override;
-
-  bool isAPCS_ABI() const;
-  bool isAAPCS_ABI() const;
-  bool isAAPCS16_ABI() const;
 
   bool isROPI() const;
   bool isRWPI() const;
@@ -517,7 +502,7 @@ public:
   }
 
   bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                   unsigned PhysReg) const override;
+                                   MCRegister PhysReg) const override;
   unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 

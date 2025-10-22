@@ -64,6 +64,13 @@
 // - Perhaps a post-inlining function specialization pass could be more
 //   aggressive on literal constants.
 //
+// Limitations:
+// ------------
+// - We are unable to consider specializations of functions called from indirect
+//   callsites whose pointer operand has a lattice value that is known to be
+//   constant, either from IPSCCP or previous iterations of FuncSpec. This is
+//   because SCCP has not yet replaced the uses of the known constant.
+//
 // References:
 // -----------
 // 2021 LLVM Dev Mtg “Introducing function specialisation, and can we enable
@@ -79,6 +86,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -112,8 +120,7 @@ struct SpecSig {
   }
 
   friend hash_code hash_value(const SpecSig &S) {
-    return hash_combine(hash_value(S.Key),
-                        hash_combine_range(S.Args.begin(), S.Args.end()));
+    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args));
   }
 };
 
@@ -131,13 +138,16 @@ struct Spec {
   // Profitability of the specialization.
   unsigned Score;
 
+  // Number of instructions in the specialization.
+  unsigned CodeSize;
+
   // List of call sites, matching this specialization.
   SmallVector<CallBase *> CallSites;
 
-  Spec(Function *F, const SpecSig &S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
-  Spec(Function *F, const SpecSig &&S, unsigned Score)
-      : F(F), Sig(S), Score(Score) {}
+  Spec(Function *F, const SpecSig &S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
+  Spec(Function *F, const SpecSig &&S, unsigned Score, unsigned CodeSize)
+      : F(F), Sig(S), Score(Score), CodeSize(CodeSize) {}
 };
 
 class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
@@ -145,7 +155,7 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   Function *F;
   const DataLayout &DL;
   TargetTransformInfo &TTI;
-  SCCPSolver &Solver;
+  const SCCPSolver &Solver;
 
   ConstMap KnownConstants;
   // Basic blocks known to be unreachable after constant propagation.
@@ -166,21 +176,22 @@ public:
                   SCCPSolver &Solver)
       : GetBFI(GetBFI), F(F), DL(DL), TTI(TTI), Solver(Solver) {}
 
-  bool isBlockExecutable(BasicBlock *BB) {
+  bool isBlockExecutable(BasicBlock *BB) const {
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
+  LLVM_ABI Cost getCodeSizeSavingsForArg(Argument *A, Constant *C);
 
-  Cost getCodeSizeSavingsFromPendingPHIs();
+  LLVM_ABI Cost getCodeSizeSavingsFromPendingPHIs();
 
-  Cost getLatencySavingsForKnownConstants();
+  LLVM_ABI Cost getLatencySavingsForKnownConstants();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
-  static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
-                                    DenseSet<BasicBlock *> &DeadBlocks);
+  Constant *findConstantFor(Value *V) const;
+
+  bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ) const;
 
   Cost getCodeSizeSavingsForUser(Instruction *User, Value *Use = nullptr,
                                  Constant *C = nullptr);
@@ -235,7 +246,7 @@ class FunctionSpecializer {
   std::function<AssumptionCache &(Function &)> GetAC;
 
   SmallPtrSet<Function *, 32> Specializations;
-  SmallPtrSet<Function *, 32> FullySpecialized;
+  SmallPtrSet<Function *, 32> DeadFunctions;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;
@@ -250,14 +261,16 @@ public:
       : Solver(Solver), M(M), FAM(FAM), GetBFI(GetBFI), GetTLI(GetTLI),
         GetTTI(GetTTI), GetAC(GetAC) {}
 
-  ~FunctionSpecializer();
+  LLVM_ABI ~FunctionSpecializer();
 
-  bool run();
+  LLVM_ABI bool run();
 
   InstCostVisitor getInstCostVisitorFor(Function *F) {
     auto &TTI = GetTTI(*F);
     return InstCostVisitor(GetBFI, F, M.getDataLayout(), TTI, Solver);
   }
+
+  bool isDeadFunction(Function *F) { return DeadFunctions.contains(F); }
 
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);

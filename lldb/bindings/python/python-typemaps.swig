@@ -233,6 +233,11 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 }
 
 
+// For lldb::SBFileSpec::GetPath
+%typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+%typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+
+
 // typemap for an outgoing buffer
 // See also SBEvent::SBEvent(uint32_t event, const char *cstr, uint32_t cstr_len).
 // Ditto for SBProcess::PutSTDIN(const char *src, size_t src_len).
@@ -472,6 +477,25 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 }
 
 %typemap(typecheck) (lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
+}
+
+// For lldb::SBCommandPrintCallback
+%typemap(in) (lldb::SBCommandPrintCallback callback, void *baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  // Don't lose the callback reference.
+  Py_INCREF($input);
+  $1 = LLDBSwigPythonCallPythonCommandPrintCallback;
+  $2 = $input;
+}
+
+%typemap(typecheck) (lldb::SBCommandPrintCallback callback, void *baton) {
   $1 = $input == Py_None;
   $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }

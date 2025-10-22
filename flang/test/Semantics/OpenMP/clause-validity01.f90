@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=50
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags %openmp_module_flag -fopenmp-version=52
 use omp_lib
 ! Check OpenMP clause validity for the following directives:
 !
@@ -21,8 +21,8 @@ use omp_lib
   integer(omp_allocator_handle_kind) :: xy_alloc
   xy_alloc = omp_init_allocator(xy_memspace, 1, xy_traits)
 
-  arrayA = 1.414
-  arrayB = 3.14
+  arrayA = 1.414d0
+  arrayB = 3.14d0
   N = 1024
 
 ! 2.5 parallel-clause -> if-clause |
@@ -163,8 +163,7 @@ use omp_lib
   !$omp parallel
   do i = 1, N
   enddo
-  !ERROR: Unmatched END TARGET directive
-  !$omp end target
+  !$omp end parallel
 
   ! OMP 5.0 - 2.6 Restriction point 1
   outofparallel: do k =1, 10
@@ -221,7 +220,15 @@ use omp_lib
 
   !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
   !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !ERROR: 'b' appears in more than one data-sharing clause on the same OpenMP directive
   !$omp do ordered(1-1) private(b) linear(b) linear(a)
+  do i = 1, N
+     a = 3.14
+  enddo
+
+  !ERROR: Clause LINEAR is not allowed if clause ORDERED appears on the DO directive
+  !ERROR: The parameter of the ORDERED clause must be a constant positive integer expression
+  !$omp do ordered(1-1) linear(a)
   do i = 1, N
      a = 3.14
   enddo
@@ -241,7 +248,7 @@ use omp_lib
   enddo
   !$omp end parallel do simd
 
-  !ERROR: Unmatched directive name modifier TARGET on the IF clause
+  !ERROR: TARGET is not a constituent of the PARALLEL DO directive
   !$omp parallel do if(target:a>1.)
   do i = 1, N
   enddo
@@ -322,11 +329,12 @@ use omp_lib
   !$omp parallel
   b = 1
   !ERROR: LASTPRIVATE clause is not allowed on the SINGLE directive
-  !ERROR: NOWAIT clause is not allowed on the OMP SINGLE directive, use it on OMP END SINGLE directive 
+  !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on the SINGLE directive
   !$omp single private(a) lastprivate(c) nowait
   a = 3.14
-  !ERROR: Clause NOWAIT is not allowed if clause COPYPRIVATE appears on the END SINGLE directive
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
+  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+  !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
   !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
@@ -343,7 +351,6 @@ use omp_lib
   a = 1.0
   !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
-  !ERROR: NOWAIT clause is not allowed on the OMP WORKSHARE directive, use it on OMP END WORKSHARE directive 
   !$omp workshare nowait
   !$omp end workshare
   !$omp end parallel
@@ -376,7 +383,7 @@ use omp_lib
      a = 3.14
   enddo
 
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
@@ -412,7 +419,6 @@ use omp_lib
   !$omp parallel
   !ERROR: No ORDERED clause with a parameter can be specified on the DO SIMD directive
   !ERROR: NOGROUP clause is not allowed on the DO SIMD directive
-  !ERROR: NOWAIT clause is not allowed on the OMP DO SIMD directive, use it on OMP END DO SIMD directive 
   !$omp do simd ordered(2) NOGROUP nowait
   do i = 1, N
      do j = 1, N
@@ -476,14 +482,14 @@ use omp_lib
 ! 2.13.1 master
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
   !$omp master
   a=3.14
   !$omp end master
   !$omp end parallel
 
   !$omp parallel
-  !WARNING: OpenMP directive 'master' has been deprecated, please use 'masked' instead.
+  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead. [-Wopen-mp-usage]
   !ERROR: NUM_THREADS clause is not allowed on the MASTER directive
   !$omp master num_threads(4)
   a=3.14
@@ -495,20 +501,26 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
-  !ERROR: DEPEND(SOURCE) or DEPEND(SINK : vec) can be used only with the ordered directive. Used here in the TASKWAIT construct.
+  !WARNING: SOURCE dependence type is deprecated in OpenMP v5.2
+  !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
   !$omp taskwait depend(source)
   ! !$omp taskwait depend(sink:i-1)
   ! !$omp target enter data map(to:arrayA) map(alloc:arrayB)
   ! !$omp target update from(arrayA) to(arrayB)
   ! !$omp target exit data map(from:arrayA) map(delete:arrayB)
   !$omp flush (c)
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush acq_rel
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush release
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush acquire
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !ERROR: If memory-order-clause is RELEASE, ACQUIRE, or ACQ_REL, list items must not be specified on the FLUSH directive
   !$omp flush release (c)
-  !ERROR: SEQ_CST clause is not allowed on the FLUSH directive
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !$omp flush seq_cst
+  !WARNING: The syntax "FLUSH clause (object, ...)" has been deprecated, use "FLUSH(object, ...) clause" instead
   !ERROR: RELAXED clause is not allowed on the FLUSH directive
   !$omp flush relaxed
 
@@ -533,7 +545,7 @@ use omp_lib
   a = 1.
   !$omp end task
 
-  !ERROR: Unmatched directive name modifier TASKLOOP on the IF clause
+  !ERROR: TASKLOOP is not a constituent of the TASK directive
   !$omp task private(a) if(taskloop:a.eq.1)
   a = 1.
   !$omp end task
@@ -573,7 +585,7 @@ use omp_lib
 
   allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
-  !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
+  !ERROR: The alignment value should be a constant positive integer
   !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
      allc = 3.14

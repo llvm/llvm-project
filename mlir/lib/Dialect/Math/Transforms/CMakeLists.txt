@@ -1,8 +1,9 @@
 add_mlir_dialect_library(MLIRMathTransforms
   AlgebraicSimplification.cpp
-  ExpandPatterns.cpp
+  ExpandOps.cpp
   ExtendToSupportedTypes.cpp
   PolynomialApproximation.cpp
+  SincosFusion.cpp
   UpliftToFMA.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -13,6 +14,7 @@ add_mlir_dialect_library(MLIRMathTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRComplexDialect
   MLIRDialectUtils
   MLIRIR
   MLIRMathDialect

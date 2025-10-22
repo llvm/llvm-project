@@ -251,9 +251,6 @@ private:
 
   void SetThread(const lldb::ThreadSP &lldb_object_sp);
 
-  SBError ResumeNewPlan(lldb_private::ExecutionContext &exe_ctx,
-                        lldb_private::ThreadPlan *new_plan);
-
   lldb::ThreadSP GetSP() const;
 
   lldb::ExecutionContextRefSP m_opaque_sp;

@@ -325,7 +325,7 @@ define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[STRUCT_TEST8:%.*]], align 16
-; CHECK-NEXT:    store <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, ptr [[MEMTMP]], align 16
+; CHECK-NEXT:    store <4 x i32> splat (i32 -1), ptr [[MEMTMP]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

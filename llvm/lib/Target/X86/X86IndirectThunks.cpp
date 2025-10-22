@@ -31,17 +31,11 @@
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -121,7 +115,7 @@ bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
                                           bool ExistingThunks) {
   if (ExistingThunks)
     return false;
-  if (MMI.getTarget().getTargetTriple().getArch() == Triple::x86_64)
+  if (MMI.getTarget().getTargetTriple().isX86_64())
     createThunkFunction(MMI, R11RetpolineName);
   else
     for (StringRef Name : {EAXRetpolineName, ECXRetpolineName, EDXRetpolineName,
@@ -131,7 +125,7 @@ bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
-  bool Is64Bit = MF.getTarget().getTargetTriple().getArch() == Triple::x86_64;
+  bool Is64Bit = MF.getTarget().getTargetTriple().isX86_64();
   Register ThunkReg;
   if (Is64Bit) {
     assert(MF.getName() == "__llvm_retpoline_r11" &&

@@ -10,6 +10,7 @@ target_link_libraries(tco PRIVATE
   CUFAttrs
   CUFDialect
   FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -18,8 +19,14 @@ target_link_libraries(tco PRIVATE
   HLFIRDialect
   HLFIRTransforms
   flangPasses
+  FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
-  FortranCommon
+  FortranSupport
+  MIFDialect
+)
+
+mlir_target_link_libraries(tco PRIVATE
   ${dialect_libs}
   ${extension_libs}
   MLIRIR

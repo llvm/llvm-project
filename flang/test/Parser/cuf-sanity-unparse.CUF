@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fdebug-unparse %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fdebug-unparse -x cuda %s 2>&1 | FileCheck %s
 include "cuf-sanity-common"
 !CHECK: SUBROUTINE atcuf
 !CHECK: END SUBROUTINE
@@ -43,6 +43,7 @@ include "cuf-sanity-common"
 !CHECK:    CALL globalsub<<<1_4,2_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4>>>()
 !CHECK:    CALL globalsub<<<1_4,2_4,3_4,4_4>>>()
+!CHECK:    CALL globalsub<<<-1_4,5_4>>>()
 !CHECK:   ALLOCATE(pa(32_4), PINNED=ispinned)
 !CHECK:  END SUBROUTINE
 !CHECK: END MODULE

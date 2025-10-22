@@ -1,4 +1,4 @@
-//===--- ImplicitBoolConversionCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,6 +10,7 @@
 #include "../utils/FixItHintUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/FixIt.h"
 #include <queue>
@@ -26,6 +27,8 @@ AST_MATCHER(Stmt, isMacroExpansion) {
   return SM.isMacroBodyExpansion(Loc) || SM.isMacroArgExpansion(Loc);
 }
 
+AST_MATCHER(Stmt, isC23) { return Finder->getASTContext().getLangOpts().C23; }
+
 bool isNULLMacroExpansion(const Stmt *Statement, ASTContext &Context) {
   SourceManager &SM = Context.getSourceManager();
   const LangOptions &LO = Context.getLangOpts();
@@ -38,15 +41,17 @@ AST_MATCHER(Stmt, isNULLMacroExpansion) {
   return isNULLMacroExpansion(&Node, Finder->getASTContext());
 }
 
-StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
-                                             QualType Type,
-                                             ASTContext &Context) {
+} // namespace
+
+static StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
+                                                    QualType Type,
+                                                    ASTContext &Context) {
   switch (CastExprKind) {
   case CK_IntegralToBoolean:
     return Type->isUnsignedIntegerType() ? "0u" : "0";
 
   case CK_FloatingToBoolean:
-    return Context.hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
+    return ASTContext::hasSameType(Type, Context.FloatTy) ? "0.0f" : "0.0";
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
@@ -59,15 +64,15 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
   }
 }
 
-bool isUnaryLogicalNotOperator(const Stmt *Statement) {
+static bool isUnaryLogicalNotOperator(const Stmt *Statement) {
   const auto *UnaryOperatorExpr = dyn_cast<UnaryOperator>(Statement);
   return UnaryOperatorExpr && UnaryOperatorExpr->getOpcode() == UO_LNot;
 }
 
-void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
-                              const ImplicitCastExpr *Cast, const Stmt *Parent,
-                              ASTContext &Context,
-                              bool UseUpperCaseLiteralSuffix) {
+static void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
+                                     const ImplicitCastExpr *Cast,
+                                     const Stmt *Parent, ASTContext &Context,
+                                     bool UseUpperCaseLiteralSuffix) {
   // In case of expressions like (! integer), we should remove the redundant not
   // operator and use inverted comparison (integer == 0).
   bool InvertComparison =
@@ -84,7 +89,8 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens = utils::fixit::areParensNeededForStatement(*SubExpr);
+  bool NeedInnerParens =
+      utils::fixit::areParensNeededForStatement(*SubExpr->IgnoreImpCasts());
   bool NeedOuterParens =
       Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 
@@ -130,8 +136,8 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
   Diag << FixItHint::CreateInsertion(EndLoc, EndLocInsertion);
 }
 
-StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
-                                          ASTContext &Context) {
+static StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
+                                                 ASTContext &Context) {
   if (isNULLMacroExpansion(Expression, Context)) {
     return "false";
   }
@@ -158,7 +164,7 @@ StringRef getEquivalentBoolLiteralForExpr(const Expr *Expression,
   return {};
 }
 
-bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
+static bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   SourceRange PrefixRange(Loc.getLocWithOffset(-1), Loc);
   StringRef SpaceBeforeStmtStr = Lexer::getSourceText(
       CharSourceRange::getCharRange(PrefixRange), Context.getSourceManager(),
@@ -170,9 +176,10 @@ bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
   return !AllowedCharacters.contains(SpaceBeforeStmtStr.back());
 }
 
-void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
-                                const ImplicitCastExpr *Cast,
-                                ASTContext &Context, StringRef OtherType) {
+static void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
+                                       const ImplicitCastExpr *Cast,
+                                       ASTContext &Context,
+                                       StringRef OtherType) {
   if (!Context.getLangOpts().CPlusPlus) {
     Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(),
                                        (Twine("(") + OtherType + ")").str());
@@ -197,8 +204,9 @@ void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
   }
 }
 
-StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
-                                      QualType DestType, ASTContext &Context) {
+static StringRef
+getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
+                            QualType DestType, ASTContext &Context) {
   // Prior to C++11, false literal could be implicitly converted to pointer.
   if (!Context.getLangOpts().CPlusPlus11 &&
       (DestType->isPointerType() || DestType->isMemberPointerType()) &&
@@ -207,7 +215,7 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   }
 
   if (DestType->isFloatingType()) {
-    if (Context.hasSameType(DestType, Context.FloatTy)) {
+    if (ASTContext::hasSameType(DestType, Context.FloatTy)) {
       return BoolLiteral->getValue() ? "1.0f" : "0.0f";
     }
     return BoolLiteral->getValue() ? "1.0" : "0.0";
@@ -219,8 +227,8 @@ StringRef getEquivalentForBoolLiteral(const CXXBoolLiteralExpr *BoolLiteral,
   return BoolLiteral->getValue() ? "1" : "0";
 }
 
-bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
-                              ASTContext &Context) {
+static bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
+                                     ASTContext &Context) {
   std::queue<const Stmt *> Q;
   Q.push(Cast);
 
@@ -247,8 +255,6 @@ bool isCastAllowedInCondition(const ImplicitCastExpr *Cast,
   }
   return false;
 }
-
-} // anonymous namespace
 
 ImplicitBoolConversionCheck::ImplicitBoolConversionCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -298,6 +304,11 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                          hasCastKind(CK_FloatingToBoolean),
                          hasCastKind(CK_PointerToBoolean),
                          hasCastKind(CK_MemberPointerToBoolean)),
+                   // Exclude cases of C23 comparison result.
+                   unless(allOf(isC23(),
+                                hasSourceExpression(ignoringParens(
+                                    binaryOperator(hasAnyOperatorName(
+                                        ">", ">=", "==", "!=", "<", "<=")))))),
                    // Exclude case of using if or while statements with variable
                    // declaration, e.g.:
                    //   if (int var = functionCall()) {}
@@ -340,8 +351,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
-              anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
-                    anything()),
+              optionally(
+                  hasParent(implicitCastExpr().bind("furtherImplicitCast"))),
               unless(isInTemplateInstantiation()),
               unless(IsInCompilerGeneratedFunction))),
       this);
@@ -353,14 +364,15 @@ void ImplicitBoolConversionCheck::check(
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
-    return handleCastToBool(CastToBool, Parent, *Result.Context);
+    handleCastToBool(CastToBool, Parent, *Result.Context);
+    return;
   }
 
   if (const auto *CastFromBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
     const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
-    return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
+    handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
   }
 }
 
