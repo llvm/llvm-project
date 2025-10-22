@@ -66,5 +66,9 @@ class FoundationTestCaseNSError(TestBase):
         self.assertTrue(os.path.exists(logfile))
         log_text = open(logfile).read()
         log_text = log_text.split("StartTesting", 1)[-1].split("EndTesting", 1)[0]
+
+        # This test is only checking that the packet it used at all (and that
+        # no errors are produced). It doesn't check that the packet is being
+        # used to solve a problem in an optimal way.
         self.assertIn("MultiMemRead:", log_text)
         self.assertNotIn("MultiMemRead error", log_text)
