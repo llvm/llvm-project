@@ -35,6 +35,11 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
+static cl::opt<bool> EnableSpillCFISavedRegs(
+    "amdgpu-spill-cfi-saved-regs",
+    cl::desc("Enable spilling the registers required for CFI emission"),
+    cl::ReallyHidden, cl::init(false), cl::ZeroOrMore);
+
 std::array<std::vector<int16_t>, 32> SIRegisterInfo::RegSplitParts;
 std::array<std::array<uint16_t, 32>, 9> SIRegisterInfo::SubRegFromChannelTable;
 
@@ -557,6 +562,10 @@ unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
   assert(NumRegIndex && "Not implemented");
   assert(Channel < SubRegFromChannelTable[NumRegIndex - 1].size());
   return SubRegFromChannelTable[NumRegIndex - 1][Channel];
+}
+
+bool SIRegisterInfo::isCFISavedRegsSpillEnabled() const {
+  return EnableSpillCFISavedRegs;
 }
 
 MCRegister

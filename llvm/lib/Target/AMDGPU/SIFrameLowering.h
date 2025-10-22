@@ -114,6 +114,13 @@ private:
 public:
   bool requiresStackPointerReference(const MachineFunction &MF) const;
 
+  /// If '-amdgpu-spill-cfi-saved-regs' is enabled, emit RA/EXEC spills to
+  /// a free VGPR (lanes) or memory and corresponding CFI rules.
+  void emitCFISavedRegSpills(MachineFunction &MF, MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator MBBI,
+                             LiveRegUnits &LiveRegs,
+                             bool emitSpillsToMem) const;
+
   /// Create a CFI index for CFIInst and build a MachineInstr around it.
   MachineInstr *
   buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,

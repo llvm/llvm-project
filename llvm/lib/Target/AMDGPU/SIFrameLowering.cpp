@@ -671,12 +671,21 @@ void SIFrameLowering::emitEntryFunctionFlatScratchInit(
 }
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
-// memory. They should have been removed by now.
-static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
+// memory. They should have been removed by now, except CFI Saved Reg spills.
+static bool allStackObjectsAreDead(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
   for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
-    if (!MFI.isDeadObjectIndex(I))
+    if (!MFI.isDeadObjectIndex(I)) {
+      // determineCalleeSaves() might have added the SGPRSpill stack IDs for
+      // CFI saves into scratch VGPR, ignore them
+      if (MFI.getStackID(I) == TargetStackID::SGPRSpill &&
+          FuncInfo->checkIndexInPrologEpilogSGPRSpills(I)) {
+        continue;
+      }
       return false;
+    }
   }
 
   return true;
@@ -696,8 +705,8 @@ Register SIFrameLowering::getEntryFunctionReservedScratchRsrcReg(
 
   Register ScratchRsrcReg = MFI->getScratchRSrcReg();
 
-  if (!ScratchRsrcReg || (!MRI.isPhysRegUsed(ScratchRsrcReg) &&
-                          allStackObjectsAreDead(MF.getFrameInfo())))
+  if (!ScratchRsrcReg ||
+      (!MRI.isPhysRegUsed(ScratchRsrcReg) && allStackObjectsAreDead(MF)))
     return Register();
 
   if (ST.hasSGPRInitBug() ||
@@ -925,7 +934,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   bool NeedsFlatScratchInit =
       MFI->getUserSGPRInfo().hasFlatScratchInit() &&
       (MRI.isPhysRegUsed(AMDGPU::FLAT_SCR) || FrameInfo.hasCalls() ||
-       (!allStackObjectsAreDead(FrameInfo) && ST.enableFlatScratch()));
+       (!allStackObjectsAreDead(MF) && ST.enableFlatScratch()));
 
   if ((NeedsFlatScratchInit || ScratchRsrcReg) &&
       PreloadedScratchWaveOffsetReg && !ST.flatScratchIsArchitected()) {
@@ -1306,6 +1315,11 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
         LiveUnits.addReg(Reg);
     }
   }
+
+  // Remove the spill entry created for EXEC. It is needed only for CFISaves in
+  // the prologue.
+  if (TRI.isCFISavedRegsSpillEnabled())
+    FuncInfo->removePrologEpilogSGPRSpillEntry(TRI.getExec());
 }
 
 void SIFrameLowering::emitCSRSpillRestores(
@@ -1789,14 +1803,14 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   // can. Any remaining SGPR spills will go to memory, so move them back to the
   // default stack.
   bool HaveSGPRToVMemSpill =
-      FuncInfo->removeDeadFrameIndices(MFI, /*ResetSGPRSpillStackIDs*/ true);
+      FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ true);
   assert(allSGPRSpillsAreDead(MF) &&
          "SGPR spill should have been removed in SILowerSGPRSpills");
 
   // FIXME: The other checks should be redundant with allStackObjectsAreDead,
   // but currently hasNonSpillStackObjects is set only from source
   // allocas. Stack temps produced from legalization are not counted currently.
-  if (!allStackObjectsAreDead(MFI)) {
+  if (!allStackObjectsAreDead(MF)) {
     assert(RS && "RegScavenger required if spilling");
 
     // Add an emergency spill slot
@@ -1896,6 +1910,18 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
     MFI->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 
+  if (TRI->isCFISavedRegsSpillEnabled()) {
+    Register Exec = TRI->getExec();
+    assert(!MFI->hasPrologEpilogSGPRSpillEntry(Exec) &&
+           "Re-reserving spill slot for EXEC");
+    // FIXME: Machine Copy Propagation currently optimizes away the EXEC copy to
+    // the scratch as we emit it only in the prolog. This optimization should
+    // not happen for frame related instructions. Until this is fixed ignore
+    // copy to scratch SGPR.
+    getVGPRSpillLaneOrTempRegister(MF, LiveUnits, Exec, RC,
+                                   /*IncludeScratchCopy=*/false);
+  }
+
   // hasFP only knows about stack objects that already exist. We're now
   // determining the stack slots that will be created, so we have to predict
   // them. Stack objects force FP usage with calls.
@@ -1905,8 +1931,7 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
   //
   // FIXME: Is this really hasReservedCallFrame?
   const bool WillHaveFP =
-      FrameInfo.hasCalls() &&
-      (SavedVGPRs.any() || !allStackObjectsAreDead(FrameInfo));
+      FrameInfo.hasCalls() && (SavedVGPRs.any() || !allStackObjectsAreDead(MF));
 
   if (WillHaveFP || hasFP(MF)) {
     Register FramePtrReg = MFI->getFrameOffsetReg();
