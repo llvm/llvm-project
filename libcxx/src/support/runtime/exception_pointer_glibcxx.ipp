@@ -27,6 +27,8 @@ struct exception_ptr {
   exception_ptr(const exception_ptr&) noexcept;
   exception_ptr& operator=(const exception_ptr&) noexcept;
   ~exception_ptr() noexcept;
+
+  void _M_release() noexcept;
 };
 
 } // namespace __exception_ptr

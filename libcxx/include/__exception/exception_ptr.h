@@ -16,6 +16,7 @@
 #include <__memory/construct_at.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_pointer.h>
+#include <__utility/move.h>
 #include <cstdlib>
 #include <typeinfo>
 
@@ -75,7 +76,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI exception_ptr(nullptr_t) _NOEXCEPT : __ptr_() {}
 
   exception_ptr(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr(exception_ptr&&) _NOEXCEPT;
   exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI exception_ptr& operator=(exception_ptr&&) _NOEXCEPT;
   ~exception_ptr() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI explicit operator bool() const _NOEXCEPT { return __ptr_ != nullptr; }
@@ -88,9 +91,25 @@ public:
     return !(__x == __y);
   }
 
+  friend _LIBCPP_HIDE_FROM_ABI void swap(exception_ptr& __x, exception_ptr& __y) _NOEXCEPT {
+    void* __tmp = __x.__ptr_;
+    __x.__ptr_  = __y.__ptr_;
+    __y.__ptr_  = __tmp;
+  }
+
   friend _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr::exception_ptr(exception_ptr&& __other) _NOEXCEPT : __ptr_(__other.__ptr_) {
+  __other.__ptr_ = nullptr;
+}
+
+_LIBCPP_HIDE_FROM_ABI inline exception_ptr& exception_ptr::operator=(exception_ptr&& __other) _NOEXCEPT {
+  exception_ptr __tmp(std::move(__other));
+  swap(__tmp, *this);
+  return *this;
+}
 
 #  if _LIBCPP_HAS_EXCEPTIONS
 #    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
