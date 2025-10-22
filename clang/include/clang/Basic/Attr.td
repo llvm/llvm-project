@@ -1623,7 +1623,7 @@ def SYCLKernel : InheritableAttr {
   let Documentation = [SYCLKernelDocs];
 }
 
-def DeviceKernel : DeclOrTypeAttr {
+def DeviceKernel : InheritableAttr {
   let Spellings = [Clang<"device_kernel">,
                    Clang<"nvptx_kernel">, Clang<"amdgpu_kernel">,
                    CustomKeyword<"__kernel">, CustomKeyword<"kernel">];
