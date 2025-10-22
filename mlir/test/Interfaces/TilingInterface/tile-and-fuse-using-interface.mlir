@@ -663,15 +663,15 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:   %[[ARG1:.*]]: tensor<16x96x48x128xf32>
 //       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 //  CHECK-SAME:     iter_args(%[[ITERARG0:.+]] = %[[ARG1]])
-//       CHECK:   scf.for %[[IV1:[a-zA-Z0-9]+]] =
-//  CHECK-SAME:     iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
-//       CHECK:   scf.for %[[IV2:[a-zA-Z0-9]+]] =
-//  CHECK-SAME:     iter_args(%[[ITERARG2:.+]] = %[[ITERARG1]])
-//       CHECK:   scf.for %[[IV3:[a-zA-Z0-9]+]] =
-//  CHECK-SAME:     iter_args(%[[ITERARG3:.+]] = %[[ITERARG2]])
-//       CHECK:     %[[TILEDARG0:.*]] = tensor.extract_slice %[[ARG0]]{{\[}}%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
-//       CHECK:     %[[TILEDARG1:.*]] = tensor.extract_slice %[[ITERARG3]]{{\[}}%[[IV0]], %[[IV3]], %[[IV2]], %[[IV1]]]
-//       CHECK:     %[[RES:.*]] = linalg.generic
-//  CHECK-SAME:     ins(%[[TILEDARG0]]
-//  CHECK-SAME:     outs(%[[TILEDARG1]]
-//       CHECK:     tensor.insert_slice %[[RES:.*]]
+//       CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:       iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
+//       CHECK:       scf.for %[[IV2:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:         iter_args(%[[ITERARG2:.+]] = %[[ITERARG1]])
+//       CHECK:         scf.for %[[IV3:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:           iter_args(%[[ITERARG3:.+]] = %[[ITERARG2]])
+//       CHECK:           %[[TILEDARG0:.*]] = tensor.extract_slice %[[ARG0]]{{\[}}%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
+//       CHECK:           %[[TILEDARG1:.*]] = tensor.extract_slice %[[ITERARG3]]{{\[}}%[[IV0]], %[[IV3]], %[[IV2]], %[[IV1]]]
+//       CHECK:           %[[RES:.*]] = linalg.generic
+//  CHECK-SAME:           ins(%[[TILEDARG0]]
+//  CHECK-SAME:           outs(%[[TILEDARG1]]
+//       CHECK:           tensor.insert_slice %[[RES:.*]]
