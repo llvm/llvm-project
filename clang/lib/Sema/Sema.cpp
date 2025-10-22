@@ -276,10 +276,9 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
       SourceMgr(PP.getSourceManager()), APINotes(SourceMgr, LangOpts),
       AnalysisWarnings(*this), ThreadSafetyDeclCache(nullptr),
-      LateTemplateParser(nullptr), LateTemplateParserCleanup(nullptr),
-      OpaqueParser(nullptr), CurContext(nullptr), ExternalSource(nullptr),
-      StackHandler(Diags), CurScope(nullptr), Ident_super(nullptr),
-      AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
+      LateTemplateParser(nullptr), OpaqueParser(nullptr), CurContext(nullptr),
+      ExternalSource(nullptr), StackHandler(Diags), CurScope(nullptr),
+      Ident_super(nullptr), AMDGPUPtr(std::make_unique<SemaAMDGPU>(*this)),
       ARMPtr(std::make_unique<SemaARM>(*this)),
       AVRPtr(std::make_unique<SemaAVR>(*this)),
       BPFPtr(std::make_unique<SemaBPF>(*this)),
@@ -1253,9 +1252,6 @@ void Sema::ActOnEndOfTranslationUnit() {
             ? TUFragmentKind::Private
             : TUFragmentKind::Normal);
 
-    if (LateTemplateParserCleanup)
-      LateTemplateParserCleanup(OpaqueParser);
-
     CheckDelayedMemberExceptionSpecs();
   } else {
     // If we are building a TU prefix for serialization, it is safe to transfer
@@ -1488,6 +1484,13 @@ void Sema::ActOnEndOfTranslationUnit() {
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
   }
+
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                               TentativeDefinitions.end());
 
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
