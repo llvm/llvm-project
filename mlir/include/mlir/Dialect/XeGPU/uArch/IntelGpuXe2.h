@@ -49,7 +49,9 @@ protected:
 struct StoreNdInstruction : public Instruction {
   StoreNdInstruction()
       : Instruction(InstructionKind::STORE_ND, InstructionScope::Subgroup) {}
-
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::STORE_ND;
+  }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
   // Reads 1, 2, 4, or 8 uints of data for each work item in the sub-group from
@@ -63,7 +65,9 @@ struct StoreNdInstruction : public Instruction {
 struct LoadNdInstruction : public Instruction {
   LoadNdInstruction()
       : Instruction(InstructionKind::LOAD_ND, InstructionScope::Subgroup) {}
-
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LOAD_ND;
+  }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
   // Writes 1, 2, 4, or 8 uints of data for each work item in the sub-group to
@@ -77,7 +81,9 @@ struct LoadNdInstruction : public Instruction {
 struct PrefetchNdInstruction : public Instruction {
   PrefetchNdInstruction()
       : Instruction(InstructionKind::PREFETCH_ND, InstructionScope::Subgroup) {}
-
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::PREFETCH_ND;
+  }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
   llvm::ArrayRef<int> getSortedLaneVectorLengths(int elementBitwidth) const {
@@ -103,6 +109,9 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
         packedFormatBitSizeA(packedFormatBitSizeA),
         packedFormatBitSizeB(packedFormatBitSizeB),
         packedFormatBitSizeC(packedFormatBitSizeC) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::DPAS;
+  }
   // Source:
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html
 
@@ -146,16 +155,20 @@ protected:
 //===----------------------------------------------------------------------===//
 
 struct PVCuArch final : public Xe2Plus {
-  inline static const DPASInstruction dpasInst{16, 32, 32};
-  inline static const StoreNdInstruction loadNdInst;
-  inline static const StoreNdInstruction storeNdInst;
-  inline static const PrefetchNdInstruction prefetchNdInst;
-  inline static const Instruction *const instructionRegistryArr[] = {
-      &dpasInst, &loadNdInst, &storeNdInst, &prefetchNdInst};
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const DPASInstruction dpasInst{16, 32, 32};
+    static const StoreNdInstruction loadNdInst;
+    static const StoreNdInstruction storeNdInst;
+    static const PrefetchNdInstruction prefetchNdInst;
+    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
+                                       &prefetchNdInst};
+    return arr;
+  }
+
   PVCuArch()
       : Xe2Plus("pvc",                        // archName
                 "Ponte Vecchio Architecture", // archDescription
-                instructionRegistryArr,
+                getInstructionRegistryArr(),
                 XeCoreInfo(8, SharedMemory(512 * 1024, 4), 8, 8) // xeCore
         ) {}
   static const uArch *getInstance() {
@@ -165,16 +178,20 @@ struct PVCuArch final : public Xe2Plus {
 };
 
 struct BMGuArch : public Xe2Plus {
-  inline static const DPASInstruction dpasInst{16, 32, 32};
-  inline static const StoreNdInstruction loadNdInst;
-  inline static const StoreNdInstruction storeNdInst;
-  inline static const PrefetchNdInstruction prefetchNdInst;
-  inline static const Instruction *const instructionRegistryArr[] = {
-      &dpasInst, &loadNdInst, &storeNdInst, &prefetchNdInst};
+  static llvm::ArrayRef<const Instruction *> getInstructionRegistryArr() {
+    static const DPASInstruction dpasInst{16, 32, 32};
+    static const StoreNdInstruction loadNdInst;
+    static const StoreNdInstruction storeNdInst;
+    static const PrefetchNdInstruction prefetchNdInst;
+    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
+                                       &prefetchNdInst};
+    return arr;
+  }
+
   BMGuArch()
       : Xe2Plus("bmg",                     // archName
                 "Battlemage Architecture", // archDescription
-                instructionRegistryArr,
+                getInstructionRegistryArr(),
                 XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
         ) {}
   static const uArch *getInstance() {
