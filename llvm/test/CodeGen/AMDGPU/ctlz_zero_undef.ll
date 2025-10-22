@@ -714,9 +714,8 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i16_with_select(ptr addrspace(1) no
 ; VI-NEXT:    s_lshl_b32 s2, s2, 8
 ; VI-NEXT:    s_or_b32 s2, s2, s3
 ; VI-NEXT:    s_lshl_b32 s3, s2, 16
-; VI-NEXT:    s_and_b32 s2, s2, 0xffff
 ; VI-NEXT:    s_flbit_i32_b32 s3, s3
-; VI-NEXT:    s_cmp_lg_u32 s2, 0
+; VI-NEXT:    s_and_b32 s2, s2, 0xffff
 ; VI-NEXT:    s_cselect_b32 s2, s3, 32
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
