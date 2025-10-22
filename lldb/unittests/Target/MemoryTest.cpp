@@ -245,7 +245,7 @@ public:
     if (read_more_than_requested)
       size *= 2;
     uint8_t *buffer = static_cast<uint8_t *>(buf);
-    for (size_t addr = vm_addr; addr < vm_addr + size; addr++)
+    for (lldb::addr_t addr = vm_addr; addr < vm_addr + size; addr++)
       buffer[addr - vm_addr] = static_cast<uint8_t>(addr); // LSB of addr.
     return size;
   }
