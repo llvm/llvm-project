@@ -34,7 +34,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/LLVMDriver.h"
+#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -3465,6 +3465,7 @@ static int order_main() {
 }
 
 int main(int argc, const char *argv[]) {
+  InitLLVM X(argc, argv);
   StringRef ProgName(sys::path::filename(argv[0]));
 
   if (argc < 2) {
