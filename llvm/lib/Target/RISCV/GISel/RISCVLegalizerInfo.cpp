@@ -733,10 +733,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   };
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
-      .legalIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
-                   InsertVectorEltPred, typeIs(2, sXLen)))
-      .legalIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
-                   typeIs(2, sXLen)));
+      .customIf(all(typeIsLegalIntOrFPVec(0, IntOrFPVecTys, ST),
+                    InsertVectorEltPred, typeIs(2, sXLen)))
+      .customIf(all(typeIsLegalBoolVec(0, BoolVecTys, ST), InsertVectorEltPred,
+                    typeIs(2, sXLen)));
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -1361,6 +1361,101 @@ bool RISCVLegalizerInfo::legalizeInsertSubvector(MachineInstr &MI,
   return true;
 }
 
+static std::optional<LLT>
+getSmallestVectorTypeForIndex(LLT VecTy, unsigned MaxIdx,
+                              const RISCVSubtarget &Subtarget) {
+  MVT VecVT = getMVTForLLT(VecTy);
+  assert(VecVT.isScalableVector());
+  const unsigned EltSize = VecVT.getScalarSizeInBits();
+  const unsigned VectorBitsMin = Subtarget.getRealMinVLen();
+  const unsigned MinVLMAX = VectorBitsMin / EltSize;
+  MVT SmallerVT;
+  if (MaxIdx < MinVLMAX)
+    SmallerVT = RISCVTargetLowering::getM1VT(VecVT);
+  else if (MaxIdx < MinVLMAX * 2)
+    SmallerVT =
+        RISCVTargetLowering::getM1VT(VecVT).getDoubleNumVectorElementsVT();
+  else if (MaxIdx < MinVLMAX * 4)
+    SmallerVT = RISCVTargetLowering::getM1VT(VecVT)
+                    .getDoubleNumVectorElementsVT()
+                    .getDoubleNumVectorElementsVT();
+  if (!SmallerVT.isValid() || !VecVT.bitsGT(SmallerVT))
+    return std::nullopt;
+  return getLLTForMVT(SmallerVT);
+}
+
+bool RISCVLegalizerInfo::legalizeInsertVectotElt(MachineInstr &MI,
+                                                 LegalizerHelper &Helper,
+                                                 MachineIRBuilder &MIB) const {
+  MachineOperand &Dst = MI.getOperand(0); // Destination vector
+  MachineOperand &Src = MI.getOperand(1); // Source vector
+  MachineOperand &Elt = MI.getOperand(2); // Element to insert
+  MachineOperand &Idx = MI.getOperand(3); // Index to insert at
+  MachineRegisterInfo &MRI = *MIB.getMRI();
+
+  Register Vec = Src.getReg();
+
+  LLT OrigVecTy = MRI.getType(Vec);
+  LLT ContainerTy = OrigVecTy;
+
+  // If we know the index we're going to insert at, we can shrink Vec so that
+  // we're performing the scalar inserts and slideup on a smaller LMUL.
+  std::optional<unsigned> AlignedIdx;
+  if (auto IdxConst = getIConstantVRegValWithLookThrough(Idx.getReg(), MRI)) {
+    unsigned IdxVal = IdxConst->Value.getZExtValue();
+
+    // Do we know an upper bound on LMUL?
+    if (auto ShrunkTy = getSmallestVectorTypeForIndex(OrigVecTy, IdxVal, STI)) {
+      ContainerTy = *ShrunkTy;
+      AlignedIdx = 0;
+    }
+
+    if (AlignedIdx)
+      Vec = MIB.buildExtractSubvector(ContainerTy, Src, *AlignedIdx).getReg(0);
+  }
+
+  // TODO: i64 in rv32
+
+  auto [Mask, VL] = buildDefaultVLOps(ContainerTy, MIB, MRI);
+
+  if (auto IdxConst = getIConstantVRegValWithLookThrough(Idx.getReg(), MRI)) {
+    unsigned IdxVal = IdxConst->Value.getZExtValue();
+    // For zero index, only need vmv.
+    if (IdxVal == 0) {
+      auto VMVOp =
+          MIB.buildInstr(RISCV::G_VMV_S_VL, {ContainerTy}, {Vec, Elt, VL});
+      if (AlignedIdx)
+        VMVOp = MIB.buildInsertSubvector(OrigVecTy, Src, VMVOp, *AlignedIdx);
+      VMVOp->getOperand(0).setReg(Dst.getReg());
+      MI.eraseFromParent();
+      return true;
+    }
+  }
+
+  auto VMVOp = MIB.buildInstr(RISCV::G_VMV_S_VL, {ContainerTy},
+                              {MIB.buildUndef(ContainerTy), Elt, VL});
+
+  // InSertVL
+  const LLT sXLen = LLT::scalar(STI.getXLen());
+  auto CstOne = MIB.buildConstant(sXLen, 1);
+  auto Add = MIB.buildAdd(sXLen, Idx, CstOne);
+
+  // Build Slide
+  unsigned Policy = RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED;
+
+  auto Slideup = MIB.buildInstr(RISCV::G_VSLIDEUP_VL, {ContainerTy},
+                                {Vec, VMVOp, Idx, Mask, Add})
+                     .addImm(Policy);
+
+  if (AlignedIdx)
+    Slideup = MIB.buildInsertSubvector(OrigVecTy, Src, Slideup, *AlignedIdx);
+
+  Slideup->getOperand(0).setReg(Dst.getReg());
+
+  MI.eraseFromParent();
+  return true;
+}
+
 static unsigned getRISCVWOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
@@ -1552,6 +1647,8 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, Helper, MIRBuilder);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return legalizeInsertVectotElt(MI, Helper, MIRBuilder);
   }
 
   llvm_unreachable("expected switch to return");

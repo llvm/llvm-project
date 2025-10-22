@@ -35,4 +35,5 @@ def RISCVPostLegalizerCombiner
                   identity_combines, shift_immed_chain,
                   commute_constant_to_rhs, simplify_neg_minmax,
                   fold_fp_zero_store]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }

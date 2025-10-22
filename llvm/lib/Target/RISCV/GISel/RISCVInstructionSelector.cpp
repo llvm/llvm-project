@@ -1478,6 +1478,19 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
     MRI->setType(DstReg, sXLen);
     break;
   }
+  case RISCV::G_VMV_S_VL: {
+    Register ScalarReg = MI.getOperand(2).getReg();
+    if (isRegInFprb(ScalarReg))
+      MI.setDesc(TII.get(RISCV::G_VFMV_S_F_VL));
+    else {
+      const LLT sXLen = LLT::scalar(STI.getXLen());
+      auto AnyExt = MIB.buildInstr(TargetOpcode::COPY, {sXLen}, {ScalarReg});
+      RBI.constrainGenericRegister(AnyExt.getReg(0), RISCV::GPRRegClass, *MRI);
+      MI.getOperand(2).setReg(AnyExt.getReg(0));
+      MI.setDesc(TII.get(RISCV::G_VMV_S_X_VL));
+    }
+    break;
+  }
   }
 }
 
