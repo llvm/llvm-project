@@ -260,7 +260,8 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
   // next to the defs they must go with so that we can know it's time to pop
   // the stack when we hit the end of the phi uses for a given def.
   const ValueDFS &Top = *Stack.back().V;
-  if (Top.LocalNum == LN_Last && Top.PInfo) {
+  assert(Top.PInfo && "RenameStack should only contain predicate infos (defs)");
+  if (Top.LocalNum == LN_Last) {
     if (!VDUse.U) {
       assert(VDUse.PInfo && "A non-use VDUse should have a predicate info");
       // We should reserve adjacent LN_Last defs for the same phi use.
