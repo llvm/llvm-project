@@ -5505,14 +5505,13 @@ class CXXReflectExpr : public Expr {
   CXXReflectExpr(EmptyShell Empty);
 
 public:
-
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
                                 SourceLocation ArgLoc, QualType Operand);
 
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
                                 SourceLocation OperandLoc, Decl *Operand);
 
-  static CXXReflectExpr *CreateEmpty(ASTContext& C);
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY {

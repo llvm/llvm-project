@@ -1940,16 +1940,19 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 }
 
 CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty)
-: Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
+    : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
 
-CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg, bool IsNamespace)
-: Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
+CXXReflectExpr::CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg,
+                               bool IsNamespace)
+    : Expr(CXXReflectExprClass, T, VK_PRValue, OK_Ordinary) {}
 
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
-: Expr(CXXReflectExprClass, Empty) {}
+    : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C, SourceLocation OperatorLoc,
-                                SourceLocation OperandLoc, QualType Operand) {
+CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
+                                       SourceLocation OperatorLoc,
+                                       SourceLocation OperandLoc,
+                                       QualType Operand) {
   CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.DependentTy, Operand);
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
@@ -1962,8 +1965,9 @@ CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        Decl *Operand) {
   bool IsNamespace = isa<TranslationUnitDecl>(Operand);
 
-  CXXReflectExpr *E = new (C) CXXReflectExpr(C, C.DependentTy, Operand,
-                                             IsNamespace);
+  CXXReflectExpr *E =
+      new (C) CXXReflectExpr(C, C.DependentTy, Operand, IsNamespace);
+
   E->setOperatorLoc(OperatorLoc);
   E->setOperandRange(OperandLoc);
   return E;

@@ -17760,8 +17760,10 @@ void Sema::PushExpressionEvaluationContextForFunction(
   }
 }
 
-ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo* TSI) {
-  return BuildCXXReflectExpr(OpLoc, TSI->getTypeLoc().getBeginLoc(), TSI->getType());
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(OpLoc, TSI->getTypeLoc().getBeginLoc(),
+                             TSI->getType());
 }
 
 ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,

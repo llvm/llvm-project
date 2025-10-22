@@ -5169,9 +5169,9 @@ private:
   ///@{
 
 
-    //===--------------------------------------------------------------------===//
-    // C++2c: Reflection [P2996]
-    ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
+  //===--------------------------------------------------------------------===//
+  // C++2c: Reflection [P2996]
+  ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
 
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
@@ -7683,7 +7683,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

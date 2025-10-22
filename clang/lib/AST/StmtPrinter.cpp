@@ -2566,7 +2566,6 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
     OS << ')';
 }
 
-
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   // TODO: Make this better.
   OS << "^(...)";
