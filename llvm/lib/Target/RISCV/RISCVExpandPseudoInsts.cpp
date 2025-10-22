@@ -46,6 +46,8 @@ private:
                 MachineBasicBlock::iterator &NextMBBI);
   bool expandCCOp(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                   MachineBasicBlock::iterator &NextMBBI);
+  bool expandCCOpToCMov(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI);
   bool expandVMSET_VMCLR(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, unsigned Opcode);
   bool expandMV_FPR16INX(MachineBasicBlock &MBB,
@@ -178,6 +180,9 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
 bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
                                    MachineBasicBlock::iterator &NextMBBI) {
+  // First try expanding to a Conditional Move rather than a branch+mv
+  if (expandCCOpToCMov(MBB, MBBI))
+    return true;
 
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
@@ -274,6 +279,86 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   computeAndAddLiveIns(LiveRegs, *TrueBB);
   computeAndAddLiveIns(LiveRegs, *MergeBB);
 
+  return true;
+}
+
+bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() != RISCV::PseudoCCMOVGPR &&
+      MI.getOpcode() != RISCV::PseudoCCMOVGPRNoX0)
+    return false;
+
+  if (!STI->hasVendorXqcicm())
+    return false;
+
+  // FIXME: Would be wonderful to support LHS=X0, but not very easy.
+  if (MI.getOperand(1).getReg() == RISCV::X0 ||
+      MI.getOperand(4).getReg() == RISCV::X0 ||
+      MI.getOperand(5).getReg() == RISCV::X0)
+    return false;
+
+  auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+
+  unsigned CMovOpcode, CMovIOpcode;
+  switch (CC) {
+  default:
+    llvm_unreachable("Unhandled CC");
+  case RISCVCC::COND_EQ:
+    CMovOpcode = RISCV::QC_MVEQ;
+    CMovIOpcode = RISCV::QC_MVEQI;
+    break;
+  case RISCVCC::COND_NE:
+    CMovOpcode = RISCV::QC_MVNE;
+    CMovIOpcode = RISCV::QC_MVNEI;
+    break;
+  case RISCVCC::COND_LT:
+    CMovOpcode = RISCV::QC_MVLT;
+    CMovIOpcode = RISCV::QC_MVLTI;
+    break;
+  case RISCVCC::COND_GE:
+    CMovOpcode = RISCV::QC_MVGE;
+    CMovIOpcode = RISCV::QC_MVGEI;
+    break;
+  case RISCVCC::COND_LTU:
+    CMovOpcode = RISCV::QC_MVLTU;
+    CMovIOpcode = RISCV::QC_MVLTUI;
+    break;
+  case RISCVCC::COND_GEU:
+    CMovOpcode = RISCV::QC_MVGEU;
+    CMovIOpcode = RISCV::QC_MVGEUI;
+    break;
+  }
+
+  if (MI.getOperand(2).getReg() == RISCV::X0) {
+    // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
+    // $dst = PseudoCCMOVGPRNoX0 $lhs, X0, $cc, $falsev (=$dst), $truev
+    // =>
+    // $dst = QC_MVccI $falsev (=$dst), $lhs, 0, $truev
+    BuildMI(MBB, MBBI, DL, TII->get(CMovIOpcode))
+        .addDef(MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(4).getReg())
+        .addReg(MI.getOperand(1).getReg())
+        .addImm(0)
+        .addReg(MI.getOperand(5).getReg());
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  // $dst = PseudoCCMOVGPR $lhs, $rhs, $cc, $falsev (=$dst), $truev
+  // $dst = PseudoCCMOVGPRNoX0 $lhs, $rhs, $cc, $falsev (=$dst), $truev
+  // =>
+  // $dst = QC_MVcc $falsev (=$dst), $lhs, $rhs, $truev
+  BuildMI(MBB, MBBI, DL, TII->get(CMovOpcode))
+      .addDef(MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(4).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addReg(MI.getOperand(2).getReg())
+      .addReg(MI.getOperand(5).getReg());
+  MI.eraseFromParent();
   return true;
 }
 

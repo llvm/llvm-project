@@ -405,7 +405,7 @@ class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         !if(!eq(vt.Size, 64),
-                            (ins VSrc_f64:$src0, VReg_64:$src1, ImmOpType:$imm),
+                            (ins VSrc_f64:$src0, VReg_64_AlignTarget:$src1, ImmOpType:$imm),
                             (ins VSrc_f16:$src0, VGPR_32:$src1, ImmOpType:$imm)));
   field dag InsVOPDX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$imm);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, VGPR_32:$vsrc1X, ImmOpType:$immX);
@@ -474,10 +474,10 @@ def VOP_MADMK_F64 : VOP_MADMK <f64>;
 // given VT.
 class getVOP3VRegForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 0> {
    RegisterOperand ret =
-   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128>,
-         !eq(VT.Size, 96)  : RegisterOperand<VReg_96>,
-         !eq(VT.Size, 64)  : RegisterOperand<VReg_64>,
-         !eq(VT.Size, 48)  : RegisterOperand<VReg_64>,
+   !cond(!eq(VT.Size, 128) : RegisterOperand<VReg_128_AlignTarget>,
+         !eq(VT.Size, 96)  : RegisterOperand<VReg_96_AlignTarget>,
+         !eq(VT.Size, 64)  : RegisterOperand<VReg_64_AlignTarget>,
+         !eq(VT.Size, 48)  : RegisterOperand<VReg_64_AlignTarget>,
          !eq(VT.Size, 16)  : !if(IsTrue16,
                                  !if(IsFake16, RegisterOperand<VGPR_32>,
                                                RegisterOperand<VGPR_16>),

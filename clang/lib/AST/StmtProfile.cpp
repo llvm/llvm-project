@@ -550,7 +550,10 @@ void OMPClauseProfiler::VisitOMPOrderedClause(const OMPOrderedClause *C) {
     Profiler->VisitStmt(Num);
 }
 
-void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *) {}
+void OMPClauseProfiler::VisitOMPNowaitClause(const OMPNowaitClause *C) {
+  if (C->getCondition())
+    Profiler->VisitStmt(C->getCondition());
+}
 
 void OMPClauseProfiler::VisitOMPUntiedClause(const OMPUntiedClause *) {}
 
@@ -2591,8 +2594,6 @@ void OpenACCClauseProfiler::VisitPrivateClause(
 
   for (auto &Recipe : Clause.getInitRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
   }
 }
 
@@ -2602,8 +2603,6 @@ void OpenACCClauseProfiler::VisitFirstPrivateClause(
 
   for (auto &Recipe : Clause.getInitRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
     Profiler.VisitDecl(Recipe.InitFromTemporary);
   }
 }
@@ -2709,12 +2708,19 @@ void OpenACCClauseProfiler::VisitReductionClause(
 
   for (auto &Recipe : Clause.getRecipes()) {
     Profiler.VisitDecl(Recipe.AllocaDecl);
-    if (Recipe.InitExpr)
-      Profiler.VisitExpr(Recipe.InitExpr);
+
     // TODO: OpenACC: Make sure we remember to update this when we figure out
     // what we're adding for the operation recipe, in the meantime, a static
     // assert will make sure we don't add something.
-    static_assert(sizeof(OpenACCReductionRecipe) == 2 * sizeof(int *));
+    static_assert(sizeof(OpenACCReductionRecipe::CombinerRecipe) ==
+                  3 * sizeof(int *));
+    for (auto &CombinerRecipe : Recipe.CombinerRecipes) {
+      if (CombinerRecipe.Op) {
+        Profiler.VisitDecl(CombinerRecipe.LHS);
+        Profiler.VisitDecl(CombinerRecipe.RHS);
+        Profiler.VisitStmt(CombinerRecipe.Op);
+      }
+    }
   }
 }
 

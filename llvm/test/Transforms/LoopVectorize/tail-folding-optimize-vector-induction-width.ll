@@ -34,15 +34,6 @@ define void @canonical_small_tc_i8(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 15
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -94,15 +85,6 @@ define void @canonical_upper_limit_i8(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 255
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -154,15 +136,6 @@ define void @canonical_lower_limit_i16(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 257
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -214,15 +187,6 @@ define void @canonical_upper_limit_i16(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 65535
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -274,15 +238,6 @@ define void @canonical_lower_limit_i32(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 65537
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -334,15 +289,6 @@ define void @canonical_upper_limit_i32(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 4294967295
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -394,15 +340,6 @@ define void @canonical_lower_limit_i64(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], 4294967297
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -454,15 +391,6 @@ define void @canonical_upper_limit_i64(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IV_NEXT]], -1
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -514,15 +442,6 @@ define void @canonical_lower_limit_i128(ptr nocapture noundef writeonly %p) {
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[END:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i256 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P_IV:%.*]] = getelementptr inbounds i16, ptr [[P]], i256 [[IV]]
-; CHECK-NEXT:    store i16 1, ptr [[P_IV]], align 2
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i256 [[IV]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i256 [[IV_NEXT]], 18446744073709551617
-; CHECK-NEXT:    br i1 [[COND]], label %[[END]], label %[[LOOP]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;

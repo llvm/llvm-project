@@ -44,7 +44,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         """
         process = self.launch()
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_SUCCESS)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_SUCCESS)
 
     def test_invalid_header(self):
         """
@@ -54,7 +54,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"not the correct message header")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_partial_header(self):
         """
@@ -64,7 +64,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: ")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_incorrect_content_length(self):
         """
@@ -74,7 +74,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: abc")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)
 
     def test_partial_content_length(self):
         """
@@ -84,4 +84,4 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: 10\r\n\r\n{")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), EXIT_FAILURE)
+        self.assertEqual(process.wait(timeout=self.DEFAULT_TIMEOUT), EXIT_FAILURE)

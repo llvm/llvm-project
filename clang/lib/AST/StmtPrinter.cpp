@@ -152,13 +152,13 @@ public:
       StmtVisitor<StmtPrinter>::Visit(S);
   }
 
-  void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
-    Indent() << "<<unknown stmt type>>" << NL;
-  }
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
+      Indent() << "<<unknown stmt type>>" << NL;
+    }
 
-  void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
-    OS << "<<unknown expr type>>";
-  }
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
+      OS << "<<unknown expr type>>";
+    }
 
   void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
 

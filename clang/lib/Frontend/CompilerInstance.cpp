@@ -160,8 +160,6 @@ bool CompilerInstance::createTarget() {
 }
 
 void CompilerInstance::setFileManager(IntrusiveRefCntPtr<FileManager> Value) {
-  if (!hasVirtualFileSystem())
-    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
   assert(Value == nullptr ||
          getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
   FileMgr = std::move(Value);
@@ -382,17 +380,18 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
 
 // File Manager
 
-FileManager *CompilerInstance::createFileManager() {
+void CompilerInstance::createFileManager() {
   assert(VFS && "CompilerInstance needs a VFS for creating FileManager");
   FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(getFileSystemOpts(), VFS);
-  return FileMgr.get();
 }
 
 // Source Manager
 
-void CompilerInstance::createSourceManager(FileManager &FileMgr) {
-  SourceMgr =
-      llvm::makeIntrusiveRefCnt<SourceManager>(getDiagnostics(), FileMgr);
+void CompilerInstance::createSourceManager() {
+  assert(Diagnostics && "DiagnosticsEngine needed for creating SourceManager");
+  assert(FileMgr && "FileManager needed for creating SourceManager");
+  SourceMgr = llvm::makeIntrusiveRefCnt<SourceManager>(getDiagnostics(),
+                                                       getFileManager());
 }
 
 // Initialize the remapping of files to alternative contents, e.g.,
@@ -1186,7 +1185,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
-  Instance.createSourceManager(Instance.getFileManager());
+  Instance.createSourceManager();
   SourceManager &SourceMgr = Instance.getSourceManager();
 
   if (ThreadSafeConfig) {
