@@ -45,11 +45,18 @@ discussion is actively continuing on the proposal.
 
 Trivial Acceptance or Rejection
 -------------------------------
-If the proposal has obvious consensus (for or against), a maintainer for each
-of the impacted parts of the project will explicitly accept or reject the RFC
-by leaving a comment stating their decision and possibly detailing any
-provisions for their acceptance. Overall consensus is determined once a
-maintainer from each impacted part of the project has accepted the proposal.
+Some proposals have obvious consensus (for or against) after discussion in the
+community. It is acceptable to presume a post which appears to have obvious
+consensus has been accepted.
+
+Non-trivial Acceptance or Rejection
+-----------------------------------
+If the proposal has does not have obvious consensus after community discussion,
+a maintainer for each of the impacted parts of the project should explicitly
+accept or reject the RFC by leaving a comment stating their decision and
+possibly detailing any provisions for their acceptance. Overall consensus is
+determined once a maintainer from each impacted part of the project has
+accepted the proposal.
 
 Low Engagement Level
 ~~~~~~~~~~~~~~~~~~~~
