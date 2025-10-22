@@ -1021,7 +1021,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::ModulePassManager mpm;
   // The module summary should be emitted by default for regular LTO
   // except for ld64 targets.
-  bool emitSummary = opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
+  bool emitSummary =
+      opts.PrepareForFullLTO && (triple.getVendor() != llvm::Triple::Apple);
   if (opts.PrepareForFatLTO)
     mpm = pb.buildFatLTODefaultPipeline(level, opts.PrepareForThinLTO,
                                         emitSummary);
