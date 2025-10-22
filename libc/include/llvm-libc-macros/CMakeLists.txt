@@ -346,6 +346,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  nl_types_macros
+  HDR
+    nl-types-macros.h
+)
+
+add_macro_header(
   pthread_macros
   HDR
     pthread-macros.h
