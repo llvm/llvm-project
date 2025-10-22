@@ -187,7 +187,7 @@ protected:
 
     // Access the first element of the structure.
     OwningOpRef<cir::GetMemberOp> access1 = cir::GetMemberOp::create(
-        b, loc, cir::PointerType::get(ty1), val, b.getStringAttr("f1"), 0u);
+        b, loc, cir::PointerType::get(ty1), val, "f1", 0u);
     mlir::Value accessVal1 = access1.get();
 
     // Verify that we get the expected element type.
@@ -205,7 +205,7 @@ protected:
 
     // Access the second element of the structure.
     OwningOpRef<cir::GetMemberOp> access2 = cir::GetMemberOp::create(
-        b, loc, cir::PointerType::get(ty2), val, b.getStringAttr("f2"), 1);
+        b, loc, cir::PointerType::get(ty2), val, "f2", 1u);
     mlir::Value accessVal2 = access2.get();
 
     // Verify that we get the expected element type.
