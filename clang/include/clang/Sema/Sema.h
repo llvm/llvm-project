@@ -14664,7 +14664,6 @@ public:
   ///@{
 
 public:
-
   ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *T);
   ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, SourceLocation ArgLoc,
                                  Decl *D);
