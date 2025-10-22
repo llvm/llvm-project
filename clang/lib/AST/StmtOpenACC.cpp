@@ -12,7 +12,9 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
+
 using namespace clang;
 
 OpenACCComputeConstruct *
@@ -320,6 +322,38 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
   auto *Inst = new (Mem) OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind,
                                                 End, Clauses, AssociatedStmt);
   return Inst;
+}
+
+const OpenACCAtomicConstruct::StmtInfo
+OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
+  // This ends up being a vastly simplified version of SemaOpenACCAtomic, since
+  // it doesn't have to worry about erroring out, but we should do a lot of
+  // asserts to ensure we don't get off into the weeds.
+  assert(getAssociatedStmt() && "invalid associated stmt?");
+
+  switch (AtomicKind) {
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Write:
+  case OpenACCAtomicKind::Update:
+  case OpenACCAtomicKind::Capture:
+    assert(false && "Only 'read' has been implemented here");
+    return {};
+  case OpenACCAtomicKind::Read: {
+    // Read only supports the format 'v = x'; where both sides are a scalar
+    // expression. This can come in 2 forms; BinaryOperator or
+    // CXXOperatorCallExpr (rarely).
+    const Expr *AssignExpr = cast<const Expr>(getAssociatedStmt());
+    if (const auto *BO = dyn_cast<BinaryOperator>(AssignExpr)) {
+      assert(BO->getOpcode() == BO_Assign);
+      return {BO->getLHS()->IgnoreImpCasts(), BO->getRHS()->IgnoreImpCasts()};
+    }
+
+    const auto *OO = cast<CXXOperatorCallExpr>(AssignExpr);
+    assert(OO->getOperator() == OO_Equal);
+
+    return {OO->getArg(0)->IgnoreImpCasts(), OO->getArg(1)->IgnoreImpCasts()};
+  }
+  }
 }
 
 OpenACCCacheConstruct *OpenACCCacheConstruct::CreateEmpty(const ASTContext &C,
