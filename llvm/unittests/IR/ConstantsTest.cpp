@@ -835,5 +835,19 @@ TEST(ConstantsTest, BlockAddressCAPITest) {
   EXPECT_EQ(&BB, OutBB);
 }
 
+TEST(ConstantsTest, Float128Test) {
+  LLVMTypeRef Ty128 = LLVMFP128TypeInContext(LLVMGetGlobalContext());
+  LLVMTypeRef TyPPC128 = LLVMPPCFP128TypeInContext(LLVMGetGlobalContext());
+  LLVMBuilderRef Builder = LLVMCreateBuilder();
+  uint64_t n[2] = {0x4000000000000000, 0x0}; //+2
+  uint64_t m[2] = {0xC000000000000000, 0x0}; //-2
+  LLVMValueRef val1 = LLVMConstFP128(Ty128, n);
+  LLVMValueRef val2 = LLVMConstFP128(Ty128, m);
+  LLVMValueRef val3 = LLVMBuildFAdd(Builder, val1, val2, "test");
+  EXPECT_TRUE(val3 != nullptr);
+  LLVMValueRef val4 = LLVMConstFP128(TyPPC128, n);
+  EXPECT_TRUE(val4 != nullptr);
+}
+
 } // end anonymous namespace
 } // end namespace llvm
