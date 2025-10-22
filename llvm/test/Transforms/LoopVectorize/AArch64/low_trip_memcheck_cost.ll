@@ -250,6 +250,44 @@ outer.exit:
   ret void
 }
 
+define void @outer_cannot_hoist(ptr nocapture noundef %dst, ptr nocapture noundef readonly %src, ptr nocapture noundef readonly %offsets, i64 noundef %n) {
+; CHECK-LABEL: LV: Checking a loop in 'outer_cannot_hoist'
+; CHECK:      Calculating cost of runtime checks:
+; CHECK-NOT:  We expect runtime memory checks to be hoisted out of the outer loop.
+; CHECK:      Total cost of runtime checks: 7
+; CHECK-NEXT: LV: Minimum required TC for runtime checks to be profitable:8
+entry:
+  br label %outer.loop
+
+outer.loop:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %inner.exit ]
+  %offset.ptr = getelementptr inbounds i64, ptr %offsets, i64 %outer.iv
+  %offset = load i64, ptr %offset.ptr, align 8
+  %0 = mul nsw i64 %offset, %n
+  br label %inner.loop
+
+inner.loop:
+  %iv.inner = phi i64 [ 0, %outer.loop ], [ %iv.inner.next, %inner.loop ]
+  %1 = add nuw nsw i64 %iv.inner, %0
+  %arrayidx.us = getelementptr inbounds i32, ptr %src, i64 %1
+  %2 = load i32, ptr %arrayidx.us, align 4
+  %arrayidx8.us = getelementptr inbounds i32, ptr %dst, i64 %1
+  %3 = load i32, ptr %arrayidx8.us, align 4
+  %add9.us = add nsw i32 %3, %2
+  store i32 %add9.us, ptr %arrayidx8.us, align 4
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %inner.exit.cond = icmp eq i64 %iv.inner.next, %n
+  br i1 %inner.exit.cond, label %inner.exit, label %inner.loop
+
+inner.exit:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.exit.cond = icmp eq i64 %outer.iv.next, 3
+  br i1 %outer.exit.cond, label %outer.exit, label %outer.loop
+
+outer.exit:
+  ret void
+}
+
 
 !0 = !{!"branch_weights", i32 10, i32 20}
 !1 = !{!"branch_weights", i32 1, i32 -1}
