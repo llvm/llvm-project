@@ -3601,14 +3601,17 @@ static SDValue performMulCombine(SDNode *N,
 SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT OutVT = N->getValueType(0);
-  if (N->getValueType(0) == MVT::v4i8) {
-    // v4f32 -> v4i32
+  if (N->getValueType(0) == MVT::v4i8 &&
+      N->getOperand(0)->getValueType(0) == MVT::v4f32) {
+    // First, convert to i32.
     EVT InVT = MVT::v4i32;
     SDValue ToInt = DAG.getNode(N->getOpcode(), DL, InVT, N->getOperand(0));
     APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
                                       OutVT.getScalarSizeInBits());
+    // Mask out the top 3 MSBs.
     SDValue Masked =
         DAG.getNode(ISD::AND, DL, InVT, ToInt, DAG.getConstant(Mask, DL, InVT));
+    // Create a wide enough vector that we can use narrow: v16i32 -> v16i8.
     SDValue BigFakeVector =
         DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i32,
                     DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32, Masked,
