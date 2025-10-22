@@ -5519,7 +5519,7 @@ defm VMIN : avx512_binop_s_sae<0x5D, "vmin", X86any_fmin, X86fmins, X86fminSAEs,
 defm VMAX : avx512_binop_s_sae<0x5F, "vmax", X86any_fmax, X86fmaxs, X86fmaxSAEs,
                                SchedWriteFCmpSizes, 0>;
 
-// MIN/MAX nodes are commutable under "unsafe-fp-math". In this case we use
+// MIN/MAX nodes are commutable under (nnan + ninf). In this case we use
 // X86fminc and X86fmaxc instead of X86fmin and X86fmax
 multiclass avx512_comutable_binop_s<bits<8> opc, string OpcodeStr,
                                     X86VectorVTInfo _, SDNode OpNode,
