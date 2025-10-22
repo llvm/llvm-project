@@ -1315,22 +1315,25 @@ def pmax : PatFrags<(ops node:$lhs, node:$rhs), [
 ]>;
 defm PMAX : SIMDBinaryFP<pmax, "pmax", 235>;
 
+multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$rhs)),
+                      (vec.vt (bitconvert V128:$lhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMinInst $lhs, $rhs)>;
+  def : Pat<(vec.int_vt (vselect
+              (setolt (vec.vt (bitconvert V128:$lhs)),
+                      (vec.vt (bitconvert V128:$rhs))),
+              V128:$rhs, V128:$lhs)),
+            (baseMaxInst $lhs, $rhs)>;
+}
 // Also match the pmin/pmax cases where the operands are int vectors (but the
 // comparison is still a floating point comparison). This can happen when using
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
-defvar pmin = !cast<NI>("PMIN_"#vec);
-defvar pmax = !cast<NI>("PMAX_"#vec);
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$rhs)),
-                    (vec.vt (bitconvert V128:$lhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmin $lhs, $rhs)>;
-def : Pat<(vec.int_vt (vselect
-            (setolt (vec.vt (bitconvert V128:$lhs)),
-                    (vec.vt (bitconvert V128:$rhs))),
-            V128:$rhs, V128:$lhs)),
-          (pmax $lhs, $rhs)>;
+  defvar pmin = !cast<NI>("PMIN_"#vec);
+  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
 // And match the pmin/pmax LLVM intrinsics as well
@@ -1713,17 +1716,7 @@ let Predicates = [HasRelaxedSIMD] in {
                 (relaxed_min $lhs, $rhs)>;
       def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
                 (relaxed_max $lhs, $rhs)>;
-
-      def : Pat<(vec.int_vt (vselect
-                  (setolt (vec.vt (bitconvert V128:$rhs)),
-                          (vec.vt (bitconvert V128:$lhs))),
-                  V128:$rhs, V128:$lhs)),
-                (relaxed_min $lhs, $rhs)>;
-      def : Pat<(vec.int_vt (vselect
-                  (setolt (vec.vt (bitconvert V128:$lhs)),
-                          (vec.vt (bitconvert V128:$rhs))),
-                  V128:$rhs, V128:$lhs)),
-                (relaxed_max $lhs, $rhs)>;
+      defm : PMinMaxInt<vec, relaxed_min, relaxed_max>;
     }
   }
 }
