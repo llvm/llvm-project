@@ -379,7 +379,7 @@ bool SwitchCG::SwitchLowering::buildBitTests(CaseClusterVector &Clusters,
     assert(Clusters[I].Kind == CC_Range);
     unsigned NumCmp = (Clusters[I].Low == Clusters[I].High) ? 1 : 2;
     const BasicBlock *BB = Clusters[I].MBB->getBasicBlock();
-    DestMap[BB] = DestMap.count(BB) ? (DestMap[BB] + NumCmp) : NumCmp;
+    DestMap[BB] += NumCmp;
   }
 
   APInt Low = Clusters[First].Low->getValue();

@@ -91,10 +91,10 @@ static cl::opt<unsigned> OptsizeJumpTableDensity(
     cl::desc("Minimum density for building a jump table in "
              "an optsize function"));
 
-static cl::opt<unsigned>
-    MinimumBitTestCmps("min-bit-test-cmps", cl::init(2), cl::Hidden,
-                       cl::desc("Set minimum of largest number of comparisons "
-                                "to use bit test for switch."));
+static cl::opt<unsigned> MinimumBitTestCmpsOverride(
+    "min-bit-test-cmps", cl::init(2), cl::Hidden,
+    cl::desc("Set minimum of largest number of comparisons "
+             "to use bit test for switch."));
 
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
@@ -725,6 +725,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
+
+  MinimumBitTestCmps = MinimumBitTestCmpsOverride;
 }
 
 // Define the virtual destructor out-of-line to act as a key method to anchor
