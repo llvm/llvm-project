@@ -17,7 +17,7 @@ information is coded in a declarative style involving classes and records,
 which are then processed by TableGen. The internalized records are passed on
 to various backends, which extract information from a subset of the records
 and generate an output file. These output files are typically ``.inc`` files
-for C++, but may be any type of file that the backend developer needs.
+for C++, but they may be any type of file that the backend developer needs.
 
 This document is a guide to writing a backend for TableGen. It is not a
 complete reference manual, but rather a guide to using the facilities
@@ -114,7 +114,7 @@ The ``Record`` class provides many useful functions.
   superclasses.
 
 * Functions to get a particular field value by specifying its name in various
-  forms, and returning its value in various forms
+  forms and returning its value in various forms
   (see `Getting Record Names and Fields`_).
 
 * Boolean functions to check the various attributes of the record.
@@ -301,7 +301,7 @@ The ``BitInit`` class is a subclass of ``TypedInit``. Its instances
 represent the possible values of a bit: 0 or 1. It includes a data member
 that contains the bit.
 
-*All* of the classes derived from ``TypedInit`` provide the following functions.
+*All* of the classes derived from ``TypedInit`` provide the following functions:
 
 * A static function named ``get()`` that returns an ``Init`` representing
   the specified value(s). In the case of ``BitInit``, ``get(true)`` returns
@@ -334,7 +334,7 @@ The class provides the following additional functions.
 ~~~~~~~~~~~
 
 The ``DagInit`` class is a subclass of ``TypedInit``. Its instances
-represent the possible direct acyclic graphs (``dag``).
+represent the possible directed acyclic graphs (``dag``).
 
 The class includes a pointer to an ``Init`` for the DAG operator and a
 pointer to a ``StringInit`` for the operator name. It includes the count of
@@ -357,7 +357,7 @@ The class provides many additional functions:
 * Functions to get the operands, both individually and together.
 
 * Functions to determine whether there are any names and to
-  get the number of names
+  get the number of names.
 
 * Functions to get the names, both individually and together.
 
@@ -410,7 +410,7 @@ The class provides the usual ``get()`` and ``getValues()`` functions. The
 latter function returns an ``ArrayRef`` of the vector of pointers to ``Init``
 instances.
 
-The class provides these additional functions.
+The class provides these additional functions:
 
 * A function to get the element type.
 
@@ -461,7 +461,7 @@ The Backend Skeleton
 ====================
 
 The file ``TableGenBackendSkeleton.cpp`` provides a skeleton C++ translation
-unit for writing a new TableGen backend. Here are a few notes on the file.
+unit for writing a new TableGen backend. Here are a few notes on the file:
 
 * The list of includes is the minimal list required by most backends.
 
@@ -484,7 +484,7 @@ unit for writing a new TableGen backend. Here are a few notes on the file.
 * The ``run`` function should use the ``emitSourceFileHeader`` helper function
   to include a standard header in the emitted file.
 
-* Register the class or the function as the command line option
+* Register the class or the function as the command-line option
   with ``llvm/TableGen/TableGenBackend.h``.
 
   * Use ``llvm::TableGen::Emitter::OptClass<AddressModesEmitter>``
@@ -516,7 +516,7 @@ If you need to iterate over all the class records:
     ...
   }
 
-``ClassPair.second`` gets the class's ``unique_ptr``, then ``.get()`` gets the
+``ClassPair.second`` gets the class's ``unique_ptr``, and then ``.get()`` gets the
 class ``Record`` itself.
 
 
@@ -612,7 +612,7 @@ Getting Record Superclasses
 
 The ``Record`` class provides a function to obtain the direct superclasses
 of a record. It is named ``getDirectSuperClasses`` and returns an
-``ArrayRef`` of an array of ``std::pair`` pairs. Each pair consists of a
+``ArrayRef`` of an array of ``std::pair`` instances. Each pair consists of a
 pointer to the ``Record`` instance for a superclass record and an instance
 of the ``SMRange`` class. The range indicates the source file locations of
 the beginning and end of the class definition.
@@ -630,7 +630,7 @@ then iterates over the pairs in the returned array.
 
 The ``Record`` class also provides a function, ``getSuperClasses``, to
 return a vector of *all* superclasses of a record. The superclasses are in
-post-order: the order in which the superclasses were visited while copying
+postorder: the order in which the superclasses were visited while copying
 their fields into the record.
 
 Emitting Text to the Output Stream
@@ -752,7 +752,7 @@ The ``PrintDetailedRecords`` Backend
 The TableGen command option ``--print-detailed-records`` invokes a backend
 that prints all the global variables, classes, and records defined in the
 source files. The format of the output is *not* guaranteed to be constant
-over time. The output looks like this.
+over time. The output looks like this:
 
 .. code-block:: text
 
