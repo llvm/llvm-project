@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/asinhf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAsinhf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
@@ -28,7 +35,8 @@ TEST_F(LlvmLibcAsinhf16Test, PositiveRange) {
     float16 x = FPBits(v).get_val();
 
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   LIBC_NAMESPACE::asinhf16(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf16(x),
+                                   TOLERANCE + 0.5);
   }
 }
 
@@ -37,6 +45,7 @@ TEST_F(LlvmLibcAsinhf16Test, NegativeRange) {
     float16 x = FPBits(v).get_val();
 
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinh, x,
-                                   LIBC_NAMESPACE::asinhf16(x), 0.5);
+                                   LIBC_NAMESPACE::asinhf16(x),
+                                   TOLERANCE + 0.5);
   }
 }

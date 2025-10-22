@@ -454,6 +454,8 @@ struct DeclareOpConversion : public mlir::OpRewritePattern<fir::DeclareOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    if (op.getResult().getUsers().empty())
+      return success();
     if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
       if (auto global = symTab.lookup<fir::GlobalOp>(
               addrOfOp.getSymbol().getRootReference().getValue())) {
@@ -963,6 +965,8 @@ public:
     }
 
     target.addDynamicallyLegalOp<fir::DeclareOp>([&](fir::DeclareOp op) {
+      if (op.getResult().getUsers().empty())
+        return true;
       if (inDeviceContext(op))
         return true;
       if (auto addrOfOp = op.getMemref().getDefiningOp<fir::AddrOfOp>()) {
