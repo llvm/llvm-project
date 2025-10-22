@@ -1136,4 +1136,37 @@ bool fromJSON(const json::Value &Param, Variable &V, json::Path Path) {
                                Path, /*required=*/false);
 }
 
+json::Value toJSON(const ExceptionBreakMode Mode) {
+  switch (Mode) {
+  case eExceptionBreakModeNever:
+    return "never";
+  case eExceptionBreakModeAlways:
+    return "always";
+  case eExceptionBreakModeUnhandled:
+    return "unhandled";
+  case eExceptionBreakModeUserUnhandled:
+    return "userUnhandled";
+  }
+  llvm_unreachable("unhandled exception breakMode.");
+}
+
+json::Value toJSON(const ExceptionDetails &ED) {
+  json::Object result;
+
+  if (!ED.message.empty())
+    result.insert({"message", ED.message});
+  if (!ED.typeName.empty())
+    result.insert({"typeName", ED.typeName});
+  if (!ED.fullTypeName.empty())
+    result.insert({"fullTypeName", ED.fullTypeName});
+  if (!ED.evaluateName.empty())
+    result.insert({"evaluateName", ED.evaluateName});
+  if (!ED.stackTrace.empty())
+    result.insert({"stackTrace", ED.stackTrace});
+  if (!ED.innerException.empty())
+    result.insert({"innerException", ED.innerException});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol
