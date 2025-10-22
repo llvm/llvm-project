@@ -260,7 +260,8 @@ class PrepareForOMPOffloadPrivatizationPass
           auto memberMapInfoOp = cast<omp::MapInfoOp>(member.getDefiningOp());
           if (!usesVarPtr(memberMapInfoOp))
             continue;
-          memberMapInfoOp = cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
+          memberMapInfoOp =
+              cast<omp::MapInfoOp>(cloneModifyAndErase(memberMapInfoOp));
           rewriter.setInsertionPoint(memberMapInfoOp);
 
           if (memberMapInfoOp.getVarPtrPtr()) {
