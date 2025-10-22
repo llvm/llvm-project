@@ -442,14 +442,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
 
   // If we're enabling GP optimizations, use hardware square root
-  if (!Subtarget.hasFSQRT() &&
-      !(TM.Options.UnsafeFPMath && Subtarget.hasFRSQRTE() &&
-        Subtarget.hasFRE()))
+  if (!Subtarget.hasFSQRT() && !(Subtarget.hasFRSQRTE() && Subtarget.hasFRE()))
     setOperationAction(ISD::FSQRT, MVT::f64, Expand);
 
   if (!Subtarget.hasFSQRT() &&
-      !(TM.Options.UnsafeFPMath && Subtarget.hasFRSQRTES() &&
-        Subtarget.hasFRES()))
+      !(Subtarget.hasFRSQRTES() && Subtarget.hasFRES()))
     setOperationAction(ISD::FSQRT, MVT::f32, Expand);
 
   if (Subtarget.hasFCPSGN()) {
@@ -565,16 +562,15 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::BITCAST, MVT::i32, Legal);
     setOperationAction(ISD::BITCAST, MVT::i64, Legal);
     setOperationAction(ISD::BITCAST, MVT::f64, Legal);
-    if (TM.Options.UnsafeFPMath) {
-      setOperationAction(ISD::LRINT, MVT::f64, Legal);
-      setOperationAction(ISD::LRINT, MVT::f32, Legal);
-      setOperationAction(ISD::LLRINT, MVT::f64, Legal);
-      setOperationAction(ISD::LLRINT, MVT::f32, Legal);
-      setOperationAction(ISD::LROUND, MVT::f64, Legal);
-      setOperationAction(ISD::LROUND, MVT::f32, Legal);
-      setOperationAction(ISD::LLROUND, MVT::f64, Legal);
-      setOperationAction(ISD::LLROUND, MVT::f32, Legal);
-    }
+
+    setOperationAction(ISD::STRICT_LRINT, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LRINT, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LLRINT, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LROUND, MVT::f32, Custom);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f64, Custom);
+    setOperationAction(ISD::STRICT_LLROUND, MVT::f32, Custom);
   } else {
     setOperationAction(ISD::BITCAST, MVT::f32, Expand);
     setOperationAction(ISD::BITCAST, MVT::i32, Expand);
@@ -1034,11 +1030,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f64, Legal);
 
       // The nearbyint variants are not allowed to raise the inexact exception
-      // so we can only code-gen them with unsafe math.
-      if (TM.Options.UnsafeFPMath) {
-        setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
-        setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
-      }
+      // so we can only code-gen them with fpexcept.ignore.
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f64, Custom);
+      setOperationAction(ISD::STRICT_FNEARBYINT, MVT::f32, Custom);
 
       setOperationAction(ISD::FFLOOR, MVT::v2f64, Legal);
       setOperationAction(ISD::FCEIL, MVT::v2f64, Legal);
@@ -8911,11 +8905,13 @@ SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
     // be lost at this stage, but is below the single-precision rounding
     // position.
     //
-    // However, if -enable-unsafe-fp-math is in effect, accept double
+    // However, if afn is in effect, accept double
     // rounding to avoid the extra overhead.
-    if (Op.getValueType() == MVT::f32 &&
-        !Subtarget.hasFPCVT() &&
-        !DAG.getTarget().Options.UnsafeFPMath) {
+    // FIXME: Currently INT_TO_FP can't support fast math flags because
+    // of nneg flag, thus Op->getFlags().hasApproximateFuncs() is always
+    // false.
+    if (Op.getValueType() == MVT::f32 && !Subtarget.hasFPCVT() &&
+        !Op->getFlags().hasApproximateFuncs()) {
 
       // Twiddle input to make sure the low 11 bits are zero.  (If this
       // is the case, we are guaranteed the value will fit into the 53 bit
@@ -12759,6 +12755,14 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerADDSUBO_CARRY(Op, DAG);
   case ISD::UCMP:
     return LowerUCMP(Op, DAG);
+  case ISD::STRICT_LRINT:
+  case ISD::STRICT_LLRINT:
+  case ISD::STRICT_LROUND:
+  case ISD::STRICT_LLROUND:
+  case ISD::STRICT_FNEARBYINT:
+    if (Op->getFlags().hasNoFPExcept())
+      return Op;
+    return SDValue();
   }
 }
 
@@ -13088,7 +13092,9 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(BB, dl, TII->get(StoreMnemonic))
     .addReg(TmpReg).addReg(ptrA).addReg(ptrB);
   BuildMI(BB, dl, TII->get(PPC::BCC))
-    .addImm(PPC::PRED_NE).addReg(PPC::CR0).addMBB(loopMBB);
+      .addImm(PPC::PRED_NE_MINUS)
+      .addReg(PPC::CR0)
+      .addMBB(loopMBB);
   BB->addSuccessor(loopMBB);
   BB->addSuccessor(exitMBB);
 
@@ -13346,7 +13352,7 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
       .addReg(ZeroReg)
       .addReg(PtrReg);
   BuildMI(BB, dl, TII->get(PPC::BCC))
-      .addImm(PPC::PRED_NE)
+      .addImm(PPC::PRED_NE_MINUS)
       .addReg(PPC::CR0)
       .addMBB(loopMBB);
   BB->addSuccessor(loopMBB);
@@ -14177,7 +14183,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(dest)
         .addReg(oldval);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-        .addImm(PPC::PRED_NE)
+        .addImm(PPC::PRED_NE_MINUS)
         .addReg(CrReg)
         .addMBB(exitMBB);
     BB->addSuccessor(loop2MBB);
@@ -14189,7 +14195,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addReg(ptrA)
         .addReg(ptrB);
     BuildMI(BB, dl, TII->get(PPC::BCC))
-        .addImm(PPC::PRED_NE)
+        .addImm(PPC::PRED_NE_MINUS)
         .addReg(PPC::CR0)
         .addMBB(loop1MBB);
     BuildMI(BB, dl, TII->get(PPC::B)).addMBB(exitMBB);
@@ -18707,11 +18713,12 @@ bool PPCTargetLowering::isProfitableToHoist(Instruction *I) const {
     const Function *F = I->getFunction();
     const DataLayout &DL = F->getDataLayout();
     Type *Ty = User->getOperand(0)->getType();
+    bool AllowContract = I->getFastMathFlags().allowContract() &&
+                         User->getFastMathFlags().allowContract();
 
-    return !(
-        isFMAFasterThanFMulAndFAdd(*F, Ty) &&
-        isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-        (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath));
+    return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
+             isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
+             (AllowContract || Options.AllowFPOpFusion == FPOpFusion::Fast));
   }
   case Instruction::Load: {
     // Don't break "store (load float*)" pattern, this pattern will be combined

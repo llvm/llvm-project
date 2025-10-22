@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
@@ -294,42 +295,46 @@ private:
 
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
-      EXPECT_EQ(actual, expected);                                             \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
+      if (math_errhandling & MATH_ERRNO) {                                     \
+        int actual = libc_errno;                                               \
+        libc_errno = 0;                                                        \
+        EXPECT_EQ(actual, expected);                                           \
+      }                                                                        \
   } while (0)
 
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
-      ASSERT_EQ(actual, expected);                                             \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
+      if (math_errhandling & MATH_ERRNO) {                                     \
+        int actual = libc_errno;                                               \
+        libc_errno = 0;                                                        \
+        ASSERT_EQ(actual, expected);                                           \
+      }                                                                        \
   } while (0)
 
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(                                                               \
-          LIBC_NAMESPACE::fputil::test_except(                                 \
-              static_cast<int>(FE_ALL_EXCEPT)) &                               \
-              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
-          (expected));                                                         \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
+      if (math_errhandling & MATH_ERREXCEPT) {                                 \
+        EXPECT_EQ(                                                             \
+            LIBC_NAMESPACE::fputil::test_except(                               \
+                static_cast<int>(FE_ALL_EXCEPT)) &                             \
+                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
+            (expected));                                                       \
+      }                                                                        \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(                                                               \
-          LIBC_NAMESPACE::fputil::test_except(                                 \
-              static_cast<int>(FE_ALL_EXCEPT)) &                               \
-              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
-          (expected));                                                         \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
+      if (math_errhandling & MATH_ERREXCEPT) {                                 \
+        ASSERT_EQ(                                                             \
+            LIBC_NAMESPACE::fputil::test_except(                               \
+                static_cast<int>(FE_ALL_EXCEPT)) &                             \
+                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
+            (expected));                                                       \
+      }                                                                        \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
