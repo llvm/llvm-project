@@ -1,0 +1,6 @@
+!RUN: %flang_fc1 -x cuda -fdebug-unparse %s 2>&1 | FileCheck %s
+!CHECK: ATTRIBUTES(DEVICE) FUNCTION foo()
+!@cuf attributes(device) &
+function foo()
+  foo = 1.
+end

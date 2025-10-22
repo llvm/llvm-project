@@ -135,8 +135,14 @@ public:
                               cir::PointerType destCIRTy, bool isRefCast,
                               Address src) override;
 
-  /**************************** RTTI Uniqueness ******************************/
+  Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
+                                mlir::Value numElements, const CXXNewExpr *e,
+                                QualType elementType) override;
+
 protected:
+  CharUnits getArrayCookieSizeImpl(QualType elementType) override;
+
+  /**************************** RTTI Uniqueness ******************************/
   /// Returns true if the ABI requires RTTI type_info objects to be unique
   /// across a program.
   virtual bool shouldRTTIBeUnique() const { return true; }
@@ -744,8 +750,8 @@ static bool shouldUseExternalRttiDescriptor(CIRGenModule &cgm, QualType ty) {
     return false;
 
   if (const auto *recordTy = dyn_cast<RecordType>(ty)) {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl())->getDefinitionOrSelf();
+    const auto *rd =
+        cast<CXXRecordDecl>(recordTy->getDecl())->getDefinitionOrSelf();
     if (!rd->hasDefinition())
       return false;
 
@@ -859,9 +865,7 @@ static bool canUseSingleInheritance(const CXXRecordDecl *rd) {
 
 /// IsIncompleteClassType - Returns whether the given record type is incomplete.
 static bool isIncompleteClassType(const RecordType *recordTy) {
-  return !recordTy->getOriginalDecl()
-              ->getDefinitionOrSelf()
-              ->isCompleteDefinition();
+  return !recordTy->getDecl()->getDefinitionOrSelf()->isCompleteDefinition();
 }
 
 /// Returns whether the given type contains an
@@ -939,8 +943,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Atomic:
   // FIXME: GCC treats block pointers as fundamental types?!
   case Type::BlockPointer:
-    cgm.errorNYI("VTableClassNameForType: __fundamental_type_info");
-    break;
+    return "_ZTVN10__cxxabiv123__fundamental_type_infoE";
   case Type::ConstantArray:
   case Type::IncompleteArray:
   case Type::VariableArray:
@@ -953,13 +956,11 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
     break;
 
   case Type::Enum:
-    cgm.errorNYI("VTableClassNameForType: Enum");
-    break;
+    return "_ZTVN10__cxxabiv116__enum_type_infoE";
 
   case Type::Record: {
-    const CXXRecordDecl *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
 
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       return classTypeInfo;
@@ -1031,8 +1032,8 @@ static cir::GlobalLinkageKind getTypeInfoLinkage(CIRGenModule &cgm,
       return cir::GlobalLinkageKind::LinkOnceODRLinkage;
 
     if (const RecordType *record = dyn_cast<RecordType>(ty)) {
-      const CXXRecordDecl *rd =
-          cast<CXXRecordDecl>(record->getOriginalDecl())->getDefinitionOrSelf();
+      const auto *rd =
+          cast<CXXRecordDecl>(record->getDecl())->getDefinitionOrSelf();
       if (rd->hasAttr<WeakAttr>())
         return cir::GlobalLinkageKind::WeakODRLinkage;
 
@@ -1382,9 +1383,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::Record: {
-    const auto *rd =
-        cast<CXXRecordDecl>(cast<RecordType>(ty)->getOriginalDecl())
-            ->getDefinitionOrSelf();
+    const auto *rd = cast<CXXRecordDecl>(cast<RecordType>(ty)->getDecl())
+                         ->getDefinitionOrSelf();
     if (!rd->hasDefinition() || !rd->getNumBases()) {
       // We don't need to emit any fields.
       break;
@@ -1651,8 +1651,7 @@ void CIRGenItaniumCXXABI::emitThrow(CIRGenFunction &cgf,
   // Lowering pass to skip passing the trivial function.
   //
   if (const RecordType *recordTy = clangThrowType->getAs<RecordType>()) {
-    CXXRecordDecl *rec =
-        cast<CXXRecordDecl>(recordTy->getOriginalDecl()->getDefinition());
+    auto *rec = cast<CXXRecordDecl>(recordTy->getDecl()->getDefinition());
     assert(!cir::MissingFeatures::isTrivialCtorOrDtor());
     if (!rec->hasTrivialDestructor()) {
       cgm.errorNYI("emitThrow: non-trivial destructor");
@@ -1810,8 +1809,8 @@ CIRGenItaniumCXXABI::getVTableAddressPoint(BaseSubobject base,
   mlir::OpBuilder &builder = cgm.getBuilder();
   auto vtablePtrTy = cir::VPtrType::get(builder.getContext());
 
-  return builder.create<cir::VTableAddrPointOp>(
-      cgm.getLoc(vtableClass->getSourceRange()), vtablePtrTy,
+  return cir::VTableAddrPointOp::create(
+      builder, cgm.getLoc(vtableClass->getSourceRange()), vtablePtrTy,
       mlir::FlatSymbolRefAttr::get(vtable.getSymNameAttr()),
       cir::AddressPointAttr::get(cgm.getBuilder().getContext(),
                                  addressPoint.VTableIndex,
@@ -1951,6 +1950,15 @@ static cir::FuncOp getItaniumDynamicCastFn(CIRGenFunction &cgf) {
   return cgf.cgm.createRuntimeFunction(FTy, "__dynamic_cast");
 }
 
+static Address emitDynamicCastToVoid(CIRGenFunction &cgf, mlir::Location loc,
+                                     QualType srcRecordTy, Address src) {
+  bool vtableUsesRelativeLayout =
+      cgf.cgm.getItaniumVTableContext().isRelativeLayout();
+  mlir::Value ptr = cgf.getBuilder().createDynCastToVoid(
+      loc, src.getPointer(), vtableUsesRelativeLayout);
+  return Address{ptr, src.getAlignment()};
+}
+
 static cir::DynamicCastInfoAttr emitDynamicCastInfo(CIRGenFunction &cgf,
                                                     mlir::Location loc,
                                                     QualType srcRecordTy,
@@ -1985,10 +1993,8 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
   bool isCastToVoid = destRecordTy.isNull();
   assert((!isCastToVoid || !isRefCast) && "cannot cast to void reference");
 
-  if (isCastToVoid) {
-    cgm.errorNYI(loc, "emitDynamicCastToVoid");
-    return {};
-  }
+  if (isCastToVoid)
+    return emitDynamicCastToVoid(cgf, loc, srcRecordTy, src).getPointer();
 
   // If the destination is effectively final, the cast succeeds if and only
   // if the dynamic type of the pointer is exactly the destination type.
@@ -2002,4 +2008,71 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
       emitDynamicCastInfo(cgf, loc, srcRecordTy, destRecordTy);
   return cgf.getBuilder().createDynCast(loc, src.getPointer(), destCIRTy,
                                         isRefCast, castInfo);
+}
+
+/************************** Array allocation cookies **************************/
+
+CharUnits CIRGenItaniumCXXABI::getArrayCookieSizeImpl(QualType elementType) {
+  // The array cookie is a size_t; pad that up to the element alignment.
+  // The cookie is actually right-justified in that space.
+  return std::max(
+      cgm.getSizeSize(),
+      cgm.getASTContext().getPreferredTypeAlignInChars(elementType));
+}
+
+Address CIRGenItaniumCXXABI::initializeArrayCookie(CIRGenFunction &cgf,
+                                                   Address newPtr,
+                                                   mlir::Value numElements,
+                                                   const CXXNewExpr *e,
+                                                   QualType elementType) {
+  assert(requiresArrayCookie(e));
+
+  // TODO: When sanitizer support is implemented, we'll need to
+  // get the address space from `newPtr`.
+  assert(!cir::MissingFeatures::addressSpace());
+  assert(!cir::MissingFeatures::sanitizers());
+
+  ASTContext &ctx = cgm.getASTContext();
+  CharUnits sizeSize = cgf.getSizeSize();
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  // The size of the cookie.
+  CharUnits cookieSize =
+      std::max(sizeSize, ctx.getPreferredTypeAlignInChars(elementType));
+  assert(cookieSize == getArrayCookieSizeImpl(elementType));
+
+  cir::PointerType u8PtrTy = cgf.getBuilder().getUInt8PtrTy();
+  mlir::Value baseBytePtr =
+      cgf.getBuilder().createPtrBitcast(newPtr.getPointer(), u8PtrTy);
+
+  // Compute an offset to the cookie.
+  CharUnits cookieOffset = cookieSize - sizeSize;
+  mlir::Value cookiePtrValue = baseBytePtr;
+  if (!cookieOffset.isZero()) {
+    mlir::Value offsetOp = cgf.getBuilder().getSignedInt(
+        loc, cookieOffset.getQuantity(), /*width=*/32);
+    cookiePtrValue =
+        cgf.getBuilder().createPtrStride(loc, cookiePtrValue, offsetOp);
+  }
+
+  CharUnits baseAlignment = newPtr.getAlignment();
+  CharUnits cookiePtrAlignment = baseAlignment.alignmentAtOffset(cookieOffset);
+  Address cookiePtr(cookiePtrValue, u8PtrTy, cookiePtrAlignment);
+
+  // Write the number of elements into the appropriate slot.
+  Address numElementsPtr =
+      cookiePtr.withElementType(cgf.getBuilder(), cgf.SizeTy);
+  cgf.getBuilder().createStore(loc, numElements, numElementsPtr);
+
+  // Finally, compute a pointer to the actual data buffer by skipping
+  // over the cookie completely.
+  mlir::Value dataOffset =
+      cgf.getBuilder().getSignedInt(loc, cookieSize.getQuantity(),
+                                    /*width=*/32);
+  mlir::Value dataPtr =
+      cgf.getBuilder().createPtrStride(loc, baseBytePtr, dataOffset);
+  mlir::Value finalPtr =
+      cgf.getBuilder().createPtrBitcast(dataPtr, newPtr.getElementType());
+  CharUnits finalAlignment = baseAlignment.alignmentAtOffset(cookieSize);
+  return Address(finalPtr, newPtr.getElementType(), finalAlignment);
 }

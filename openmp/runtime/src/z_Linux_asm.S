@@ -18,6 +18,7 @@
 #include "kmp_config.h"
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
+.att_syntax
 
 # if defined(__ELF__) && defined(__CET__) && defined(__has_include)
 # if __has_include(<cet.h>)
@@ -120,7 +121,8 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS || KMP_OS_OPENBSD) &&     \
+    (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -188,7 +190,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-# if KMP_OS_LINUX
+# if KMP_OS_LINUX || KMP_OS_OPENBSD
 // BTI and PAC gnu property note
 #  define NT_GNU_PROPERTY_TYPE_0 5
 #  define GNU_PROPERTY_AARCH64_FEATURE_1_AND 0xc0000000
@@ -235,7 +237,8 @@ KMP_PREFIX_UNDERSCORE(\proc):
 #  define PACBTI_RET
 #  define GNU_PROPERTY_BTI_PAC
 # endif
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
+#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS || KMP_OS_OPENBSD) && \
+          (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32 || KMP_ARCH_ARM)
 
 .macro COMMON name, size, align_power
 #if KMP_OS_DARWIN
@@ -2516,6 +2519,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
 # endif
 #endif
 
-#if KMP_OS_LINUX && (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
+#if (KMP_OS_LINUX || KMP_OS_OPENBSD) &&                                        \
+    (KMP_ARCH_AARCH64 || KMP_ARCH_AARCH64_32)
 GNU_PROPERTY_BTI_PAC
 #endif

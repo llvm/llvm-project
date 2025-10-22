@@ -413,6 +413,10 @@ Below are some guidelines about the format of the message itself:
   message self-explanatory. Note that such non-public links should not be
   included in the submitted code.
 
+* Avoid 'tagging' someone's username in your commits and PR descriptions
+  (e.g., `@<someUser>`), doing so results in that account receiving a notification
+  every time the commit is cherry-picked and/or pushed to a fork.
+
 LLVM uses a squash workflow for pull requests, so as the pull request evolves
 during review, it's important to update the pull request description over the
 course of a review. GitHub uses the initial commit message to create the pull
