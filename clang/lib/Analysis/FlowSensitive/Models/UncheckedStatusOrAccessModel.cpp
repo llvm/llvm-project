@@ -213,12 +213,12 @@ static auto isStatusConstructor() {
 }
 
 static auto isNonConstMemberCall() {
-  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
 
 static auto isNonConstMemberOperatorCall() {
-  using namespace ::clang::ast_matchers;  // NOLINT: Too many names
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxOperatorCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
 
@@ -296,11 +296,6 @@ clang::ast_matchers::DeclarationMatcher statusOrOperatorBaseClass() {
 clang::ast_matchers::TypeMatcher statusOrType() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return hasCanonicalType(qualType(hasDeclaration(statusOrClass())));
-}
-
-bool isRecordTypeWithName(QualType Type, llvm::StringRef TypeName) {
-  return Type->isRecordType() &&
-         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() == TypeName;
 }
 
 bool isStatusOrType(QualType Type) {
@@ -381,6 +376,8 @@ static void transferStatusOkCall(const CXXMemberCallExpr *Expr,
 static void transferStatusUpdateCall(const CXXMemberCallExpr *Expr,
                                      const MatchFinder::MatchResult &,
                                      LatticeTransferState &State) {
+  // S.Update(OtherS) sets S to the error code of OtherS if it is OK,
+  // otherwise does nothing.
   assert(Expr->getNumArgs() == 1);
   auto *Arg = Expr->getArg(0);
   RecordStorageLocation *ArgRecord =
@@ -466,9 +463,6 @@ static BoolValue *evaluateEquality(const Expr *LhsExpr, const Expr *RhsExpr,
       return nullptr;
 
     return evaluateStatusOrEquality(*LhsStatusOrLoc, *RhsStatusOrLoc, Env);
-
-    // Check the type of both sides in case an operator== is added that admits
-    // different types.
   }
   if (isStatusType(LhsExpr->getType()) && isStatusType(RhsExpr->getType())) {
     auto *LhsStatusLoc = Env.get<RecordStorageLocation>(*LhsExpr);
@@ -619,9 +613,9 @@ static void transferStatusConstructor(const CXXConstructExpr *Expr,
     initializeStatus(StatusLoc, State.Env);
 }
 
-static void transferStatusOrReturningCall(const CallExpr* Expr,
-                                          LatticeTransferState& State) {
-  RecordStorageLocation* StatusOrLoc =
+static void transferStatusOrReturningCall(const CallExpr *Expr,
+                                          LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
       Expr->isPRValue() ? &State.Env.getResultObjectLocation(*Expr)
                         : State.Env.get<RecordStorageLocation>(*Expr);
   if (StatusOrLoc != nullptr &&
@@ -629,28 +623,30 @@ static void transferStatusOrReturningCall(const CallExpr* Expr,
     initializeStatusOr(*StatusOrLoc, State.Env);
 }
 
-static void handleNonConstMemberCall(const CallExpr* Expr,
-                                     RecordStorageLocation* RecordLoc,
-                                     const MatchFinder::MatchResult& Result,
-                                     LatticeTransferState& State) {
-  if (RecordLoc == nullptr) return;
+static void handleNonConstMemberCall(const CallExpr *Expr,
+                                     RecordStorageLocation *RecordLoc,
+                                     const MatchFinder::MatchResult &Result,
+                                     LatticeTransferState &State) {
+  if (RecordLoc == nullptr)
+    return;
   State.Lattice.clearConstMethodReturnValues(*RecordLoc);
   State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
 
   if (isStatusOrType(Expr->getType()))
     transferStatusOrReturningCall(Expr, State);
 }
-static void transferNonConstMemberCall(const CXXMemberCallExpr* Expr,
-                                       const MatchFinder::MatchResult& Result,
-                                       LatticeTransferState& State) {
+static void transferNonConstMemberCall(const CXXMemberCallExpr *Expr,
+                                       const MatchFinder::MatchResult &Result,
+                                       LatticeTransferState &State) {
   handleNonConstMemberCall(Expr, getImplicitObjectLocation(*Expr, State.Env),
                            Result, State);
 }
 
-static void transferNonConstMemberOperatorCall(
-    const CXXOperatorCallExpr* Expr, const MatchFinder::MatchResult& Result,
-    LatticeTransferState& State) {
-  auto* RecordLoc = cast_or_null<RecordStorageLocation>(
+static void
+transferNonConstMemberOperatorCall(const CXXOperatorCallExpr *Expr,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<RecordStorageLocation>(
       State.Env.getStorageLocation(*Expr->getArg(0)));
   handleNonConstMemberCall(Expr, RecordLoc, Result, State);
 }

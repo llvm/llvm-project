@@ -1198,7 +1198,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
-                       UI64Attr:$map_type,
+                       ClauseMapFlagsAttr:$map_type,
                        VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
