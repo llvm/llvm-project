@@ -546,7 +546,7 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_PRODUCT_NAME:
     return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_UID:
-    return Info.writeString(GenericPluginTy::getHostDeviceUid());
+    return Info.writeString(GenericPluginTy::getInitialDeviceUid());
   case OL_DEVICE_INFO_VENDOR:
     return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:

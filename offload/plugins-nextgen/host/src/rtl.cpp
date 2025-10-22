@@ -148,9 +148,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Create the device with a specific id.
   GenELF64DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                    int32_t NumDevices)
-      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues) {
-    DeviceUid = Plugin.getHostDeviceUid();
-  }
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues) {}
 
   ~GenELF64DeviceTy() {}
 
