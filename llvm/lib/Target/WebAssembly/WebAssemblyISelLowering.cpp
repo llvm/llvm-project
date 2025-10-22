@@ -216,7 +216,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
     // into conversion ops
     setTargetDAGCombine({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
-                         ISD::FP_ROUND, ISD::CONCAT_VECTORS});
+                         ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_ROUND,
+                         ISD::CONCAT_VECTORS});
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
@@ -3597,6 +3598,29 @@ static SDValue performMulCombine(SDNode *N,
   }
 }
 
+SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT OutVT = N->getValueType(0);
+  if (N->getValueType(0) == MVT::v4i8) {
+    // v4f32 -> v4i32
+    EVT InVT = MVT::v4i32;
+    SDValue ToInt = DAG.getNode(N->getOpcode(), DL, InVT, N->getOperand(0));
+    APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
+                                      OutVT.getScalarSizeInBits());
+    SDValue Masked =
+        DAG.getNode(ISD::AND, DL, InVT, ToInt, DAG.getConstant(Mask, DL, InVT));
+    SDValue BigFakeVector =
+        DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i32,
+                    DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32, Masked,
+                                DAG.getUNDEF(MVT::v4i32)),
+                    DAG.getUNDEF(MVT::v8i32));
+    SDValue Trunc =
+        truncateVectorWithNARROW(MVT::v16i8, BigFakeVector, DL, DAG);
+    return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 32));
+  }
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3623,6 +3647,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_ROUND:
   case ISD::CONCAT_VECTORS:
     return performVectorTruncZeroCombine(N, DCI);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return performConvertFPCombine(N, DCI.DAG);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
