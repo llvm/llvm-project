@@ -12802,7 +12802,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
 
     unsigned VecLen = Src.getVectorLength();
-    unsigned Shift = Imm.getZExtValue();
+    unsigned Shift = Imm.getZExtValue() & 0xff;
 
     SmallVector<APValue> ResultElements;
     for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
