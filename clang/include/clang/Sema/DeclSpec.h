@@ -1238,6 +1238,9 @@ struct DeclaratorChunk {
 
   ParsedAttributesView AttrList;
 
+  using LateAttrListTy = SmallVector<void *, 1>;
+  LateAttrListTy LateAttrList;
+
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
     LLVM_PREFERRED_TYPE(DeclSpec::TQ)
@@ -2325,13 +2328,16 @@ public:
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+                   SourceLocation EndLoc,
+                   const DeclaratorChunk::LateAttrListTy &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.assign(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to

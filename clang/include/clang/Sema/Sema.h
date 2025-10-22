@@ -2457,8 +2457,8 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
-                                 bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, unsigned Level,
+                                 bool CountInBytes, bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
@@ -4198,7 +4198,8 @@ public:
 
   /// ActOnFinishDelayedAttribute - Invoked when we have finished parsing an
   /// attribute for which parsing is delayed.
-  void ActOnFinishDelayedAttribute(Scope *S, Decl *D, ParsedAttributes &Attrs);
+  void ActOnFinishDelayedAttribute(Scope *S, Decl *D, ParsedAttributes &Attrs,
+                                   unsigned NestedTypeLevel = 0);
 
   /// Diagnose any unused parameters in the given sequence of
   /// ParmVarDecl pointers.
@@ -5071,7 +5072,8 @@ public:
   void ProcessDeclAttributeList(Scope *S, Decl *D,
                                 const ParsedAttributesView &AttrList,
                                 const ProcessDeclAttributeOptions &Options =
-                                    ProcessDeclAttributeOptions());
+                                    ProcessDeclAttributeOptions(),
+                                unsigned NestedTypeLevel = 0);
 
   /// Annotation attributes are the only attributes allowed after an access
   /// specifier.
