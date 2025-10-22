@@ -750,6 +750,31 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
             *MDNode::get(Ctx, {MDB.createCallbackEncoding(
                                   2, {-1, -1}, /* VarArgsArePassed */ true)}));
       }
+
+    } else if (FnID == OMPRTL___kmpc_distribute_static_loop_4 ||
+               FnID == OMPRTL___kmpc_distribute_static_loop_4u ||
+               FnID == OMPRTL___kmpc_distribute_static_loop_8 ||
+               FnID == OMPRTL___kmpc_distribute_static_loop_8u ||
+               FnID == OMPRTL___kmpc_distribute_for_static_loop_4 ||
+               FnID == OMPRTL___kmpc_distribute_for_static_loop_4u ||
+               FnID == OMPRTL___kmpc_distribute_for_static_loop_8 ||
+               FnID == OMPRTL___kmpc_distribute_for_static_loop_8u ||
+               FnID == OMPRTL___kmpc_for_static_loop_4 ||
+               FnID == OMPRTL___kmpc_for_static_loop_4u ||
+               FnID == OMPRTL___kmpc_for_static_loop_8 ||
+               FnID == OMPRTL___kmpc_for_static_loop_8u) {
+      if (!Fn->hasMetadata(LLVMContext::MD_callback)) {
+        LLVMContext &Ctx = Fn->getContext();
+        MDBuilder MDB(Ctx);
+        // Annotate the callback behavior of the runtime function:
+        //  - The callback callee is argument number 1.
+        //  - The first argument of the callback callee is unknown (-1).
+        //  - The second argument of the callback callee is argument number 2
+        Fn->addMetadata(
+            LLVMContext::MD_callback,
+            *MDNode::get(Ctx, {MDB.createCallbackEncoding(
+                                  1, {-1, 2}, /* VarArgsArePassed */ false)}));
+      }
     }
 
     LLVM_DEBUG(dbgs() << "Created OpenMP runtime function " << Fn->getName()
