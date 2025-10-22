@@ -601,6 +601,35 @@ sees fit (generally the section that would provide the best locality).
 
 .. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
 
+``SHT_LLVM_CALL_GRAPH`` Section (Call Graph)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This section is used to store the call graph. It has a type of
+``SHT_LLVM_CALL_GRAPH`` (0x6fff4c0f). Details of call graph section layout
+are described in :doc:`CallGraphSection`.
+
+For example:
+
+.. code-block:: gas
+
+  .section  ".llvm.callgraph","",@llvm_call_graph
+  .byte   0
+  .byte   7
+  .quad   .Lball
+  .quad   0
+  .byte   3
+  .quad   foo
+  .quad   bar
+  .quad   baz
+  .byte   3
+  .quad   4524972987496481828
+  .quad   3498816979441845844
+  .quad   8646233951371320954
+
+This indicates that ``ball`` calls ``foo``, ``bar`` and ``baz`` directly;
+``ball`` indirectly calls functions whose types are ``4524972987496481828``,
+``3498816979441845844`` and ``8646233951371320954``.
+
 CodeView-Dependent
 ------------------
 
