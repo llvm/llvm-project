@@ -38,7 +38,7 @@ end subroutine
 
 !CHECK: %[[X:.*]] = fir.alloca !fir.char<1> {bindc_name = "x", uniq_name = "_QFuninitialized_characterEx"}
 !CHECK: %[[X_DECL:.*]] = fir.declare %[[X]]  typeparams %c1 {uniq_name = "_QFuninitialized_characterEx"} : (!fir.ref<!fir.char<1>>, index) -> !fir.ref<!fir.char<1>>
-!CHECK: %[[ADDR:.*]] = fir.address_of(@_QQclX00) : !fir.ref<!fir.char<1>>
+!CHECK: %[[ADDR:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1>>
 !CHECK: %[[FUNC_DECL:.*]] = fir.declare %[[ADDR]] {{.*}}
 !CHECK: %[[LOAD:.*]] = fir.load %[[FUNC_DECL]]
 !CHECK: fir.store %[[LOAD]] to %[[X_DECL]]
@@ -46,7 +46,7 @@ subroutine uninitialized_character
    character :: x
 end subroutine
 
-!CHECK: fir.global linkonce @_QQclX00 constant : !fir.char<1> {
+!CHECK: fir.global linkonce @{{.*}} constant : !fir.char<1> {
 !CHECK: %[[VAL:.*]] = fir.string_lit "\00"(1) : !fir.char<1>
 !CHECK: fir.has_value %[[VAL]] : !fir.char<1>
 !CHECK: }
