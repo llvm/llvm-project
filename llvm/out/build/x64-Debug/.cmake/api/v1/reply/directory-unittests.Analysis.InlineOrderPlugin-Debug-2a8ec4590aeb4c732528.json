@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "unittests/Analysis/InlineOrderPlugin",
+		"source" : "unittests/Analysis/InlineOrderPlugin"
+	}
+}

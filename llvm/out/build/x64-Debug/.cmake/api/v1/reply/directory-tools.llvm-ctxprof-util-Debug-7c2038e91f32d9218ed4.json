@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"llvm_add_tool",
+			"add_llvm_tool"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/llvm-ctxprof-util/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 8,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 1525,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1497,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "llvm-ctxprof-util",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/llvm-ctxprof-util.exe"
+			],
+			"targetId" : "llvm-ctxprof-util::@d8dc59f46f5c30903e4d",
+			"targetIndex" : 2319,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/llvm-ctxprof-util",
+		"source" : "tools/llvm-ctxprof-util"
+	}
+}

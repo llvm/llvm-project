@@ -1,0 +1,123 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"tools/opt-viewer/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 10,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/opt-diff.py"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/opt-stats.py"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/opt-viewer.py"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/optpmap.py"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/optrecord.py"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "opt-viewer",
+			"destination" : "share/opt-viewer",
+			"paths" : 
+			[
+				"tools/opt-viewer/style.css"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/opt-viewer",
+		"source" : "tools/opt-viewer"
+	}
+}

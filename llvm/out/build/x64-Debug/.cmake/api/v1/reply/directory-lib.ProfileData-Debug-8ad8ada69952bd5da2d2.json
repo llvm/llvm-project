@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/ProfileData/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "LLVMProfileData",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMProfileData.lib"
+			],
+			"targetId" : "LLVMProfileData::@b9974079c57e2c563b37",
+			"targetIndex" : 252,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/ProfileData",
+		"source" : "lib/ProfileData"
+	}
+}

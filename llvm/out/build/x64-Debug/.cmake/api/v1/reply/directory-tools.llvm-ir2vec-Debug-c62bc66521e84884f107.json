@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"llvm_add_tool",
+			"add_llvm_tool"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/llvm-ir2vec/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 8,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 1525,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1497,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "llvm-ir2vec",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/llvm-ir2vec.exe"
+			],
+			"targetId" : "llvm-ir2vec::@bf4e89aa18d16db050c6",
+			"targetIndex" : 2340,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/llvm-ir2vec",
+		"source" : "tools/llvm-ir2vec"
+	}
+}

@@ -1,0 +1,4544 @@
+{
+	"inputs" : 
+	[
+		{
+			"path" : "CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeDependentOption.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/cmake/Modules/CMakePolicy.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/cmake/Modules/LLVMVersion.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeSystem.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Users/30513/vcpkg/scripts/buildsystems/vcpkg.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeDependentOption.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeSystemSpecificInitialize.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows-Initialize.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeCCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeCXXCompiler.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeASMCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeSystemSpecificInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeGenericSystem.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeInitializeConfigs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/WindowsPaths.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/MSVC-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/MSVC.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC-C.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC.cmake"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeRCCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeRCInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCXXInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeLanguageInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/MSVC.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/CMakeCommonCompilerMacros.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC-CXX.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows-MSVC.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCommonLanguageInclude.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeASMInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Compiler/MSVC-ASM.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"path" : "cmake/modules/VersionFromVCS.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CPack.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CPackComponent.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Templates/CPackConfig.cmake.in"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Templates/CPackConfig.cmake.in"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/cmake/Modules/GNUInstallPackageDir.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPython3.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPython/Support.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/config-ix.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckSymbolExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSymbolExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckSymbolExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckFunctionExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckStructHasMember.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckFlagCommonConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakePushCheckState.cmake"
+		},
+		{
+			"path" : "cmake/modules/CheckCompilerVersion.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"path" : "cmake/modules/CheckProblematicConfigurations.cmake"
+		},
+		{
+			"path" : "cmake/modules/HandleLLVMStdlib.cmake"
+		},
+		{
+			"path" : "cmake/modules/DetermineGCCCompatible.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckFlagCommonConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Internal/CheckSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeCheckCompilerFlagCommonPatterns.cmake"
+		},
+		{
+			"path" : "cmake/modules/FindLibpfm.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "C:/Users/30513/vcpkg/installed/x64-windows/share/zlib/vcpkg-cmake-wrapper.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindZLIB.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/SelectLibraryConfigurations.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/modules/Findzstd.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindLibXml2.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPkgConfig.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindBacktrace.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakePushCheckState.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckSymbolExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/modules/CheckAtomic.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"path" : "cmake/modules/GetErrcMessages.cmake"
+		},
+		{
+			"path" : "cmake/modules/GetHostTriple.cmake"
+		},
+		{
+			"path" : "cmake/modules/FindOCaml.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "cmake/modules/AddOCaml.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/Windows.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/Platform/WindowsPaths.cmake"
+		},
+		{
+			"path" : "cmake/modules/HandleLLVMOptions.cmake"
+		},
+		{
+			"path" : "cmake/modules/CheckCompilerVersion.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"path" : "cmake/modules/CheckProblematicConfigurations.cmake"
+		},
+		{
+			"path" : "cmake/modules/HandleLLVMStdlib.cmake"
+		},
+		{
+			"path" : "cmake/modules/DetermineGCCCompatible.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckSymbolExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeDependentOption.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMProcessSources.cmake"
+		},
+		{
+			"path" : "include/llvm/Config/AsmPrinters.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/AsmParsers.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/Disassemblers.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/Targets.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/TargetMCAs.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/TargetExegesis.def.in"
+		},
+		{
+			"path" : "include/llvm/Config/config.h.cmake"
+		},
+		{
+			"path" : "include/llvm/Config/llvm-config.h.cmake"
+		},
+		{
+			"path" : "include/llvm/Config/Targets.h.cmake"
+		},
+		{
+			"path" : "include/llvm/Config/abi-breaking.h.cmake"
+		},
+		{
+			"path" : "cmake/modules/AddLLVM.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMDistributionSupport.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMProcessSources.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVM-Config.cmake"
+		},
+		{
+			"path" : "cmake/modules/DetermineGCCCompatible.cmake"
+		},
+		{
+			"path" : "cmake/modules/TableGen.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMDistributionSupport.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMDistributionSupport.cmake"
+		},
+		{
+			"path" : "cmake/modules/CoverageReport.cmake"
+		},
+		{
+			"path" : "lib/Demangle/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Support/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/GetLibraryName.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Support/BLAKE3/CMakeLists.txt"
+		},
+		{
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/CMakeFiles/3.30.5-msvc23/CMakeASM_MASMCompiler.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeASM_MASMInformation.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakeASMInformation.cmake"
+		},
+		{
+			"path" : "lib/TableGen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/TableGen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/TableGen/Basic/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/TableGen/Common/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "include/CMakeLists.txt"
+		},
+		{
+			"path" : "include/module.modulemap.build"
+		},
+		{
+			"path" : "include/llvm/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/CodeGen/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/IR/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/Support/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"path" : "include/llvm/Frontend/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/Frontend/OpenACC/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/Frontend/OpenMP/CMakeLists.txt"
+		},
+		{
+			"path" : "include/llvm/TargetParser/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/LLVM-Build.cmake"
+		},
+		{
+			"path" : "lib/IR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/FuzzMutate/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/FileCheck/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/InterfaceStub/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/IRPrinter/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/IRReader/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CGData/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGen/SelectionDAG/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGen/AsmPrinter/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGen/MIRParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGen/GlobalISel/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/CodeGenTypes/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/BinaryFormat/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Bitcode/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/Bitcode/Reader/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Bitcode/Writer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Bitstream/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/Bitstream/Reader/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DWARFLinker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DWARFLinker/Classic/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DWARFLinker/Parallel/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Extensions/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/Frontend/Atomic/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/Directive/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/Driver/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/HLSL/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/OpenACC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/OpenMP/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Frontend/Offloading/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/Transforms/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/Instrumentation/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/AggressiveInstCombine/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/InstCombine/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/Scalar/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/IPO/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/Vectorize/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/ObjCARC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/Coroutines/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/CFGuard/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Transforms/HipStdPar/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Linker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Analysis/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXSymbolExists.cmake"
+		},
+		{
+			"path" : "lib/LTO/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/MC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/MC/MCParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/MC/MCDisassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/MCA/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ObjCopy/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Object/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ObjectYAML/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Option/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Remarks/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Debuginfod/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/DebugInfo/DWARF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/DWARF/LowLevel/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/GSYM/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/LogicalView/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/MSF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/CodeView/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/PDB/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/Symbolize/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DebugInfo/BTF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DWARFCFIChecker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/DWP/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/Interpreter/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/JITLink/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/MCJIT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/Orc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/Orc/Debugging/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/Orc/Shared/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/Orc/TargetProcess/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ExecutionEngine/RuntimeDyld/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AArch64/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/MCA/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AMDGPU/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/ARM/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AVR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AVR/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AVR/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AVR/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/AVR/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/BPF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/BPF/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/BPF/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/BPF/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/BPF/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Hexagon/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Hexagon/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Hexagon/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Hexagon/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Hexagon/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Lanai/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Lanai/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Lanai/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Lanai/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Lanai/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/LoongArch/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/LoongArch/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/LoongArch/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/LoongArch/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/LoongArch/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Mips/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Mips/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Mips/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Mips/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Mips/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/MSP430/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/MSP430/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/MSP430/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/MSP430/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/MSP430/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/NVPTX/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/NVPTX/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/NVPTX/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/PowerPC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/PowerPC/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/PowerPC/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/PowerPC/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/PowerPC/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/MCA/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/RISCV/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Sparc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Sparc/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Sparc/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Sparc/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/Sparc/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SPIRV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SPIRV/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SPIRV/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SPIRV/Analysis/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SystemZ/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SystemZ/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SystemZ/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SystemZ/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/SystemZ/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/VE/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/VE/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/VE/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/VE/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/VE/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/WebAssembly/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/MCA/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/X86/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/XCore/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/XCore/Disassembler/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/XCore/MCTargetDesc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Target/XCore/TargetInfo/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/SandboxIR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/LineEditor/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ProfileData/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ProfileData/Coverage/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Passes/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/TargetParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/TextAPI/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/TextAPI/BinaryReader/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Telemetry/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ToolDrivers/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/ToolDrivers/llvm-dlltool/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/ToolDrivers/llvm-lib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/XRay/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Testing/CMakeLists.txt"
+		},
+		{
+			"path" : "lib/Testing/Annotations/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/Testing/Support/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/WindowsDriver/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "lib/WindowsManifest/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/GetLibraryName.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/FileCheck/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/PerfectShuffle/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/count/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/not/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/UnicodeData/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/yaml-bench/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/split-file/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/mlgo-utils/CMakeLists.txt"
+		},
+		{
+			"path" : "utils/mlgo-utils/tests/lit.site.cfg.in"
+		},
+		{
+			"path" : "utils/llvm-test-mustache-spec/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/unittest/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/unittest/UnitTestMain/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "projects/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/lto/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/gold/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-ar/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-config/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-config/BuildVariables.inc.in"
+		},
+		{
+			"path" : "tools/llvm-ctxprof-util/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-lto/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-profdata/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/bugpoint/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/bugpoint-passes/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/dsymutil/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/dxil-dis/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/lli/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/lli/ChildTarget/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-as/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-as-fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-bcanalyzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-c-test/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cat/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cfi-verify/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cfi-verify/lib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cgdata/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cov/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cvtres/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cxxdump/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cxxfilt/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-cxxmap/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-debuginfo-analyzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-debuginfod/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-debuginfod-find/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-diff/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-diff/lib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-dis/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-dis-fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-dlang-demangle-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-dwarfdump/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-dwarfdump/fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-dwarfutil/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-dwp/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/X86/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/AArch64/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/PowerPC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/Mips/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-exegesis/lib/RISCV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-extract/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-gsymutil/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-ifs/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-ir2vec/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-isel-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-itanium-demangle-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-jitlink/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-jitlink/llvm-jitlink-executor/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-libtool-darwin/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-link/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-lipo/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-lto2/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-mc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-mc-assemble-fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-mc-disassemble-fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-mca/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-microsoft-demangle-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-ml/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-modextract/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-mt/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/llvm-nm/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-objcopy/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-objdump/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-opt-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-opt-report/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-pdbutil/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-profgen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-rc/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-readobj/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-readtapi/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-reduce/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-remarkutil/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-rtdyld/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-rust-demangle-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-shlib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-sim/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-size/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-special-case-list-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-split/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-stress/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-strings/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-symbolizer/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-tli-checker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-undname/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-xray/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-yaml-numeric-parser-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/llvm-yaml-parser-fuzzer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/obj2yaml/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/opt/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/opt-viewer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/reduce-chunk-list/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/remarks-shlib/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/sancov/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/llvm-driver-template.cpp.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/sanstats/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/spirv-tools/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/verify-uselistorder/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "tools/vfabi-demangle-fuzzer/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/xcode-toolchain/CMakeLists.txt"
+		},
+		{
+			"path" : "tools/yaml2obj/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "runtimes/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/LLVMExternalProjectUtils.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/ExternalProject.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/ExternalProject/shared_internal_commands.cmake"
+		},
+		{
+			"path" : "examples/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/BrainF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Fibonacci/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/HowToUseJIT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/HowToUseLLJIT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/IRTransforms/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/Kaleidoscope/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/Kaleidoscope/BuildingAJIT/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/Kaleidoscope/BuildingAJIT/Chapter1/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/BuildingAJIT/Chapter2/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/BuildingAJIT/Chapter3/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/BuildingAJIT/Chapter4/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter2/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter3/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter4/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter5/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter6/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter7/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter8/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Kaleidoscope/Chapter9/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/ModuleMaker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/CMakeLists.txt"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITDumpObjects/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITRemovableCode/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithCustomObjectLinkingLayer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithExecutorProcessControl/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithGDBRegistrationListener/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithInitializers/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithLazyReexports/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithObjectCache/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithOptimizingIRTransform/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/LLJITWithThinLTOSummaries/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsAddObjectFile/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsBasicUsage/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsDumpObjects/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsIRTransforms/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsMCJITLikeMemoryManager/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsRemovableCode/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsLazy/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/OrcV2Examples/OrcV2CBindingsVeryLazy/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/SpeculativeJIT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "examples/Bye/CMakeLists.txt"
+		},
+		{
+			"path" : "utils/lit/CMakeLists.txt"
+		},
+		{
+			"path" : "utils/lit/tests/lit.site.cfg.in"
+		},
+		{
+			"path" : "test/CMakeLists.txt"
+		},
+		{
+			"path" : "test/lit.site.cfg.py.in"
+		},
+		{
+			"path" : "test/Unit/lit.site.cfg.py.in"
+		},
+		{
+			"path" : "unittests/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/ADT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Analysis/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/unittest.cfg.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Analysis/InlineAdvisorPlugin/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/Analysis/InlineOrderPlugin/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/AsmParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/BinaryFormat/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Bitcode/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Bitstream/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/CGData/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/CodeGen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/CodeGen/GlobalISel/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/CodeGen/CGPluginTest/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/CodeGen/CGPluginTest/Plugin/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/DebugInfo/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/DebugInfo/CodeView/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/BTF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/DWARF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/GSYM/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/LogicalView/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/unittest.cfg.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/MSF/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/PDB/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/unittest.cfg.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DebugInfo/Symbolizer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Debuginfod/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Demangle/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/DWARFLinkerParallel/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ExecutionEngine/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ExecutionEngine/JITLink/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ExecutionEngine/Orc/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ExecutionEngine/MCJIT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/FileCheck/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Frontend/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/FuzzMutate/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/InterfaceStub/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/IR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/LineEditor/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Linker/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MC/AMDGPU/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MC/SystemZ/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MC/X86/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MI/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/MIR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ObjCopy/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Object/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/ObjectYAML/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Option/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Remarks/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Passes/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/Passes/PassBuilderBindings/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Passes/Plugins/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/ProfileData/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/SandboxIR/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Support/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Support/DynamicLibrary/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Support/CommandLineInit/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/TableGen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/AArch64/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/AMDGPU/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/ARM/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/LoongArch/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/PowerPC/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/RISCV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/SPIRV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/VE/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/WebAssembly/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Target/X86/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/TargetParser/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Telemetry/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Testing/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/Testing/ADT/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Testing/Annotations/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Testing/Support/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/TextAPI/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/Transforms/Coroutines/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/Instrumentation/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/IPO/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/Scalar/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/Utils/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/Vectorize/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/Transforms/Vectorize/SandboxVectorizer/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/XRay/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/tools/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-cfi-verify/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/X86/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/AArch64/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/PowerPC/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/Mips/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-exegesis/RISCV/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/tools/llvm-profdata/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/tools/llvm-profgen/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "unittests/tools/llvm-mca/CMakeLists.txt"
+		},
+		{
+			"path" : "unittests/tools/llvm-mca/X86/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/KillTheDoctor/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "docs/CMakeLists.txt"
+		},
+		{
+			"path" : "cmake/modules/CMakeLists.txt"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/cmake/Modules/ExtendPath.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMDistributionSupport.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/cmake/Modules/FindPrefixFromConfig.cmake"
+		},
+		{
+			"path" : "cmake/modules/LLVMConfig.cmake.in"
+		},
+		{
+			"path" : "cmake/modules/LLVMConfig.cmake.in"
+		},
+		{
+			"path" : "cmake/modules/LLVMConfigVersion.cmake.in"
+		},
+		{
+			"path" : "utils/llvm-lit/CMakeLists.txt"
+		},
+		{
+			"path" : "utils/llvm-lit/llvm-lit.in"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/CMakeLists.txt"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/GetGitVersion.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindGit.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/AddCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCXXCompilerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/CXXFeatureCheck.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindThreads.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLibraryExists.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckIncludeFile.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckCSourceCompiles.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageHandleStandardArgs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/FindPackageMessage.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/GNUInstallDirs.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CMakePackageConfigHelpers.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/WriteBasicConfigVersionFile.cmake"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/Config.cmake.in"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/BasicConfigVersion-SameMajorVersion.cmake.in"
+		},
+		{
+			"isExternal" : true,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/benchmark.pc.in"
+		},
+		{
+			"path" : "benchmarks/CMakeLists.txt"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"isCMake" : true,
+			"isExternal" : true,
+			"path" : "D:/VisualStudio/n/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/share/cmake-3.30/Modules/CheckLinkerFlag.cmake"
+		},
+		{
+			"path" : "utils/llvm-locstats/CMakeLists.txt"
+		}
+	],
+	"kind" : "cmakeFiles",
+	"paths" : 
+	{
+		"build" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug",
+		"source" : "D:/CMakeAndLLVM/llvm-project/llvm"
+	},
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 1
+	}
+}

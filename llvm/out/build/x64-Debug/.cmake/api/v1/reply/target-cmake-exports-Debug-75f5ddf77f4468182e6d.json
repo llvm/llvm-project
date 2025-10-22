@@ -1,0 +1,35 @@
+{
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target"
+		],
+		"files" : 
+		[
+			"cmake/modules/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 189,
+				"parent" : 0
+			}
+		]
+	},
+	"id" : "cmake-exports::@6790388e3ded12aa3919",
+	"name" : "cmake-exports",
+	"paths" : 
+	{
+		"build" : "cmake/modules",
+		"source" : "cmake/modules"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}

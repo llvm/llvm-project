@@ -1,0 +1,119 @@
+{
+	"backtrace" : 3,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"add_lit_target",
+			"add_lit_testsuite",
+			"add_dependencies"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"utils/mlgo-utils/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 7,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 2185,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2104,
+				"parent" : 2
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2118,
+				"parent" : 2
+			}
+		]
+	},
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 4,
+			"id" : "FileCheck::@09bac3cf726c1488c914"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "count::@1848ee2bede5a1584fa8"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "not::@7726f5738bf8037ed68b"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "split-file::@0adf5237f696346a9620"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "llvm-objcopy::@c5905f69fadc0487d333"
+		},
+		{
+			"backtrace" : 4,
+			"id" : "yaml2obj::@1ace74fd1e5f08965ec9"
+		}
+	],
+	"folder" : 
+	{
+		"name" : "LLVM/Tests"
+	},
+	"id" : "check-mlgo-utils::@6ce4a9e85793d7cd8593",
+	"name" : "check-mlgo-utils",
+	"paths" : 
+	{
+		"build" : "utils/mlgo-utils",
+		"source" : "utils/mlgo-utils"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 3,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/mlgo-utils/CMakeFiles/check-mlgo-utils",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "out/build/x64-Debug/utils/mlgo-utils/CMakeFiles/check-mlgo-utils.rule",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "UTILITY"
+}

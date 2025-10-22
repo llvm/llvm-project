@@ -1,0 +1,47 @@
+{
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"add_llvm_component_group"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Target/BPF/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 891,
+				"parent" : 1
+			}
+		]
+	},
+	"folder" : 
+	{
+		"name" : "LLVM/Component Groups"
+	},
+	"id" : "BPF::@54542e166df3307f87d2",
+	"name" : "BPF",
+	"paths" : 
+	{
+		"build" : "lib/Target/BPF",
+		"source" : "lib/Target/BPF"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}

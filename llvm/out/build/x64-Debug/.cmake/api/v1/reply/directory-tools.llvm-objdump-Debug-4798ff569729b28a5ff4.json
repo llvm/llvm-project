@@ -1,0 +1,98 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"llvm_add_tool",
+			"add_llvm_tool",
+			"llvm_install_symlink",
+			"llvm_add_tool_symlink",
+			"add_llvm_tool_symlink"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/llvm-objdump/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 27,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 1525,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1497,
+				"parent" : 2
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 46,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 2421,
+				"parent" : 4
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2415,
+				"parent" : 5
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2317,
+				"parent" : 6
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "llvm-objdump",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/llvm-objdump.exe"
+			],
+			"targetId" : "llvm-objdump::@2ec370e9f30813b8b31c",
+			"targetIndex" : 2362,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "llvm-otool",
+			"scriptFile" : "cmake/modules/LLVMInstallSymlink.cmake",
+			"type" : "script"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "llvm-otool",
+			"type" : "code"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/llvm-objdump",
+		"source" : "tools/llvm-objdump"
+	}
+}

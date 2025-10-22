@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/CodeGen/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 25,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "LLVMCodeGen",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMCodeGen.lib"
+			],
+			"targetId" : "LLVMCodeGen::@47ff7fadf09d83e77685",
+			"targetIndex" : 144,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/CodeGen",
+		"source" : "lib/CodeGen"
+	}
+}

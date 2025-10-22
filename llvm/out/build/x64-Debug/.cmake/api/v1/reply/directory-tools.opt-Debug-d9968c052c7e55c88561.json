@@ -1,0 +1,85 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"llvm_add_tool",
+			"add_llvm_tool"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/opt/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 33,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 42,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 1525,
+				"parent" : 3
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1497,
+				"parent" : 4
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "LLVMOptDriver",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMOptDriver.lib"
+			],
+			"targetId" : "LLVMOptDriver::@b47735b880bc6d502d77",
+			"targetIndex" : 238,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "opt",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/opt.exe"
+			],
+			"targetId" : "opt::@b47735b880bc6d502d77",
+			"targetIndex" : 2405,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/opt",
+		"source" : "tools/opt"
+	}
+}

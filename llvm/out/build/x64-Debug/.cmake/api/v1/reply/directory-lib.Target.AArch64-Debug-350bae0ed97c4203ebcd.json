@@ -1,0 +1,67 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library",
+			"add_llvm_target"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Target/AArch64/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 33,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 1616,
+				"parent" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 2
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 3
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 4,
+			"component" : "LLVMAArch64CodeGen",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMAArch64CodeGen.lib"
+			],
+			"targetId" : "LLVMAArch64CodeGen::@25f5795ff74cb2a7293e",
+			"targetIndex" : 105,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/Target/AArch64",
+		"source" : "lib/Target/AArch64"
+	}
+}

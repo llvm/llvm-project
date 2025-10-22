@@ -489,6 +489,7 @@ FUNCTION_PASS("pa-eval", PAEvalPass())
 FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
+FUNCTION_PASS("pointer-type-in-function", PointerTypeInFunctionPass())
 FUNCTION_PASS("print", PrintFunctionPass(errs()))
 // TODO: rename to print<foo> after NPM switch
 FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(errs()))

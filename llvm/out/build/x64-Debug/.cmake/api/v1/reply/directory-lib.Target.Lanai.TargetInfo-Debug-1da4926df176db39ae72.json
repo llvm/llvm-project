@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Target/Lanai/TargetInfo/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "LLVMLanaiInfo",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMLanaiInfo.lib"
+			],
+			"targetId" : "LLVMLanaiInfo::@054f8d7dd21ff4831b56",
+			"targetIndex" : 205,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/Target/Lanai/TargetInfo",
+		"source" : "lib/Target/Lanai/TargetInfo"
+	}
+}

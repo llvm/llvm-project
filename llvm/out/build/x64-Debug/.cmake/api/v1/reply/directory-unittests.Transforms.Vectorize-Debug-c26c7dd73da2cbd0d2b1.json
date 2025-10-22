@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "unittests/Transforms/Vectorize",
+		"source" : "unittests/Transforms/Vectorize"
+	}
+}

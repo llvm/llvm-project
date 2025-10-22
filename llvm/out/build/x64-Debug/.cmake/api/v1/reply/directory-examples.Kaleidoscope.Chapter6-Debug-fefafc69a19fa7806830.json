@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "examples/Kaleidoscope/Chapter6",
+		"source" : "examples/Kaleidoscope/Chapter6"
+	}
+}

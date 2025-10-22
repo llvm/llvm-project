@@ -1,0 +1,719 @@
+{
+	"archive" : 
+	{
+		"commandFragments" : 
+		[
+			{
+				"fragment" : "/machine:x64",
+				"role" : "flags"
+			}
+		]
+	},
+	"artifacts" : 
+	[
+		{
+			"path" : "lib/benchmark.lib"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"_add_library",
+			"add_library",
+			"target_compile_definitions",
+			"add_compile_definitions",
+			"include",
+			"add_definitions",
+			"cxx_feature_check",
+			"include_directories",
+			"set_property"
+		],
+		"files" : 
+		[
+			"C:/Users/30513/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/CMakeLists.txt",
+			"cmake/modules/HandleLLVMOptions.cmake",
+			"CMakeLists.txt",
+			"D:/CMakeAndLLVM/llvm-project/third-party/benchmark/cmake/CXXFeatureCheck.cmake",
+			"D:/CMakeAndLLVM/llvm-project/third-party/benchmark/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 20,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 639,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 70,
+				"parent" : 0
+			},
+			{
+				"file" : 3
+			},
+			{
+				"command" : 4,
+				"file" : 3,
+				"line" : 1092,
+				"parent" : 4
+			},
+			{
+				"file" : 2,
+				"parent" : 5
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 216,
+				"parent" : 6
+			},
+			{
+				"file" : 5
+			},
+			{
+				"command" : 6,
+				"file" : 5,
+				"line" : 311,
+				"parent" : 8
+			},
+			{
+				"command" : 5,
+				"file" : 4,
+				"line" : 28,
+				"parent" : 9
+			},
+			{
+				"command" : 6,
+				"file" : 5,
+				"line" : 322,
+				"parent" : 8
+			},
+			{
+				"command" : 5,
+				"file" : 4,
+				"line" : 70,
+				"parent" : 11
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 581,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 570,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 137,
+				"parent" : 6
+			},
+			{
+				"command" : 5,
+				"file" : 5,
+				"line" : 160,
+				"parent" : 8
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 1104,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 1105,
+				"parent" : 6
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 1106,
+				"parent" : 6
+			},
+			{
+				"command" : 7,
+				"file" : 3,
+				"line" : 1295,
+				"parent" : 4
+			},
+			{
+				"command" : 7,
+				"file" : 5,
+				"line" : 333,
+				"parent" : 8
+			},
+			{
+				"command" : 8,
+				"file" : 1,
+				"line" : 31,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive-  -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /W4  -EHs-  -EHa- /Ob0 /Od /RTC1 -std:c++14 -MDd -Zi"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "BENCHMARK_STATIC_DEFINE"
+				},
+				{
+					"backtrace" : 22,
+					"define" : "BENCHMARK_VERSION=\"v0.0.0\""
+				},
+				{
+					"backtrace" : 7,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 10,
+					"define" : "HAVE_STD_REGEX"
+				},
+				{
+					"backtrace" : 12,
+					"define" : "HAVE_STEADY_CLOCK"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/third-party/benchmark/src"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 21,
+					"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					2
+				],
+				"standard" : "14"
+			},
+			"sourceIndexes" : 
+			[
+				3
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "/DWIN32 /D_WINDOWS   /Zc:inline /Zc:preprocessor /Zc:__cplusplus /Oi /bigobj /permissive-  -wd4141 -wd4146 -wd4244 -wd4267 -wd4291 -wd4351 -wd4456 -wd4457 -wd4458 -wd4459 -wd4503 -wd4624 -wd4722 -wd4100 -wd4127 -wd4512 -wd4505 -wd4610 -wd4510 -wd4702 -wd4245 -wd4706 -wd4310 -wd4701 -wd4703 -wd4389 -wd4611 -wd4805 -wd4204 -wd4577 -wd4091 -wd4592 -wd4319 -wd4709 -wd5105 -wd4324 -wd4251 -wd4275 -w14062 -we4238 /W4  -EHs-  -EHa- /Ob0 /Od /RTC1 -std:c++14 -MDd -Zi"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 3,
+					"define" : "BENCHMARK_STATIC_DEFINE"
+				},
+				{
+					"backtrace" : 7,
+					"define" : "EXPERIMENTAL_KEY_INSTRUCTIONS"
+				},
+				{
+					"backtrace" : 10,
+					"define" : "HAVE_STD_REGEX"
+				},
+				{
+					"backtrace" : 12,
+					"define" : "HAVE_STEADY_CLOCK"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "UNICODE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_NONSTDC_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_NONSTDC_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_CRT_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 15,
+					"define" : "_GLIBCXX_ASSERTIONS"
+				},
+				{
+					"backtrace" : 16,
+					"define" : "_HAS_EXCEPTIONS=0"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_SCL_SECURE_NO_DEPRECATE"
+				},
+				{
+					"backtrace" : 14,
+					"define" : "_SCL_SECURE_NO_WARNINGS"
+				},
+				{
+					"backtrace" : 13,
+					"define" : "_UNICODE"
+				},
+				{
+					"backtrace" : 17,
+					"define" : "__STDC_CONSTANT_MACROS"
+				},
+				{
+					"backtrace" : 18,
+					"define" : "__STDC_FORMAT_MACROS"
+				},
+				{
+					"backtrace" : 19,
+					"define" : "__STDC_LIMIT_MACROS"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/third-party/benchmark/src"
+				},
+				{
+					"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/out/build/x64-Debug/include"
+				},
+				{
+					"backtrace" : 20,
+					"path" : "D:/CMakeAndLLVM/llvm-project/llvm/include"
+				},
+				{
+					"backtrace" : 21,
+					"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					2
+				],
+				"standard" : "14"
+			},
+			"sourceIndexes" : 
+			[
+				4,
+				6,
+				7,
+				9,
+				11,
+				13,
+				15,
+				17,
+				19,
+				20,
+				22,
+				25,
+				28,
+				31,
+				32,
+				34,
+				36,
+				39
+			]
+		}
+	],
+	"folder" : 
+	{
+		"name" : "Third-Party/Google Benchmark"
+	},
+	"id" : "benchmark::@d4f64cf0f57ed78b9a8d",
+	"name" : "benchmark",
+	"nameOnDisk" : "benchmark.lib",
+	"paths" : 
+	{
+		"build" : "third-party/benchmark/src",
+		"source" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				5,
+				8,
+				10,
+				12,
+				14,
+				16,
+				18,
+				21,
+				23,
+				24,
+				26,
+				27,
+				29,
+				30,
+				33,
+				35,
+				37,
+				38,
+				40
+			]
+		},
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				3,
+				4,
+				6,
+				7,
+				9,
+				11,
+				13,
+				15,
+				17,
+				19,
+				20,
+				22,
+				25,
+				28,
+				31,
+				32,
+				34,
+				36,
+				39
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/include/benchmark/benchmark.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/include/benchmark/export.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/arraysize.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_api_internal.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_api_internal.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_name.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_register.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_register.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_runner.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/benchmark_runner.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/check.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/check.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/colorprint.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/colorprint.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/commandlineflags.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/commandlineflags.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/complexity.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/complexity.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/console_reporter.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/counter.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/counter.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/csv_reporter.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/cycleclock.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/internal_macros.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/json_reporter.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/log.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/mutex.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/perf_counters.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/perf_counters.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/re.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/reporter.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/statistics.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/statistics.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/string_util.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/string_util.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/sysinfo.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/thread_manager.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/thread_timer.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/timers.cc",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark/src/timers.h",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

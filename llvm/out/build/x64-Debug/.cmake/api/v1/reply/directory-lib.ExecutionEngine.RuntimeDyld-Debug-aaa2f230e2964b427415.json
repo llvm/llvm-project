@@ -1,0 +1,60 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/ExecutionEngine/RuntimeDyld/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "LLVMRuntimeDyld",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMRuntimeDyld.lib"
+			],
+			"targetId" : "LLVMRuntimeDyld::@05427d74520b18362f83",
+			"targetIndex" : 260,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/ExecutionEngine/RuntimeDyld",
+		"source" : "lib/ExecutionEngine/RuntimeDyld"
+	}
+}

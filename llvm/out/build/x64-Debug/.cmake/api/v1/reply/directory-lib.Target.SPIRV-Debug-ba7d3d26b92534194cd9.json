@@ -1,0 +1,67 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library",
+			"add_llvm_component_library",
+			"add_llvm_target"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Target/SPIRV/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 18,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 1616,
+				"parent" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 917,
+				"parent" : 2
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 3
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 4,
+			"component" : "LLVMSPIRVCodeGen",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMSPIRVCodeGen.lib"
+			],
+			"targetId" : "LLVMSPIRVCodeGen::@011e0c550fe71a7facd0",
+			"targetIndex" : 262,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "lib/Target/SPIRV",
+		"source" : "lib/Target/SPIRV"
+	}
+}

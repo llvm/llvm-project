@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "third-party/benchmark",
+		"source" : "D:/CMakeAndLLVM/llvm-project/third-party/benchmark"
+	}
+}

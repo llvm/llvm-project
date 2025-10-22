@@ -1,0 +1,53 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"utils/TableGen/Basic/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 11,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 1
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "LLVMTableGenBasic",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVMTableGenBasic.lib"
+			],
+			"targetId" : "LLVMTableGenBasic::@f338039207a1268f4c5f",
+			"targetIndex" : 282,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "utils/TableGen/Basic",
+		"source" : "utils/TableGen/Basic"
+	}
+}

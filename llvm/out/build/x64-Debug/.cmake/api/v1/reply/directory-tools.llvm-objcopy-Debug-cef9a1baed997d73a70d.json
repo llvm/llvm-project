@@ -1,0 +1,168 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"llvm_add_tool",
+			"add_llvm_tool",
+			"llvm_install_symlink",
+			"llvm_add_tool_symlink",
+			"add_llvm_tool_symlink"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/llvm-objcopy/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 27,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 1525,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 1497,
+				"parent" : 2
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 37,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 2421,
+				"parent" : 4
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2415,
+				"parent" : 5
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2317,
+				"parent" : 6
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 38,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 2421,
+				"parent" : 8
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2415,
+				"parent" : 9
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2317,
+				"parent" : 10
+			},
+			{
+				"command" : 5,
+				"file" : 1,
+				"line" : 39,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 2421,
+				"parent" : 12
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 2415,
+				"parent" : 13
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2317,
+				"parent" : 14
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 3,
+			"component" : "llvm-objcopy",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/llvm-objcopy.exe"
+			],
+			"targetId" : "llvm-objcopy::@c5905f69fadc0487d333",
+			"targetIndex" : 2361,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "llvm-install-name-tool",
+			"scriptFile" : "cmake/modules/LLVMInstallSymlink.cmake",
+			"type" : "script"
+		},
+		{
+			"backtrace" : 7,
+			"component" : "llvm-install-name-tool",
+			"type" : "code"
+		},
+		{
+			"backtrace" : 11,
+			"component" : "llvm-bitcode-strip",
+			"scriptFile" : "cmake/modules/LLVMInstallSymlink.cmake",
+			"type" : "script"
+		},
+		{
+			"backtrace" : 11,
+			"component" : "llvm-bitcode-strip",
+			"type" : "code"
+		},
+		{
+			"backtrace" : 15,
+			"component" : "llvm-strip",
+			"scriptFile" : "cmake/modules/LLVMInstallSymlink.cmake",
+			"type" : "script"
+		},
+		{
+			"backtrace" : 15,
+			"component" : "llvm-strip",
+			"type" : "code"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/llvm-objcopy",
+		"source" : "tools/llvm-objcopy"
+	}
+}

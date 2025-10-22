@@ -1,0 +1,82 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/remarks-shlib/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 16,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 1
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 23,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "Remarks",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/Remarks.lib"
+			],
+			"targetId" : "Remarks::@f7dec6e8b9f0a1fc96de",
+			"targetIndex" : 374,
+			"targetIsImportLibrary" : true,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Remarks",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/Remarks.dll"
+			],
+			"targetId" : "Remarks::@f7dec6e8b9f0a1fc96de",
+			"targetIndex" : 374,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Remarks",
+			"destination" : "include/llvm-c",
+			"paths" : 
+			[
+				"include/llvm-c/Remarks.h"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/remarks-shlib",
+		"source" : "tools/remarks-shlib"
+	}
+}

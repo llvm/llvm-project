@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "unittests/tools/llvm-exegesis",
+		"source" : "unittests/tools/llvm-exegesis"
+	}
+}

@@ -1,0 +1,28 @@
+1. Basic pointer operations:
+Value of num: 42
+Address of num: 0x7ffd4d3a4a3c
+Value of ptr: 0x7ffd4d3a4a3c
+Value pointed by ptr: 42
+
+2. After dereferencing and modification:
+New value of num: 100
+
+3. Pointer arithmetic with array:
+First element: 10 at 0x7ffd4d3a4a20
+Second element: 20 at 0x7ffd4d3a4a24
+Third element: 30 at 0x7ffd4d3a4a28
+
+4. Dynamic memory allocation:
+Dynamically allocated value: 200 at 0x55a1f2a6aeb0
+
+5. Pointers and const:
+Constant value through pointer: 300
+
+6. Array of pointers:
+Pointer 0 points to value: 100
+Pointer 1 points to value: 20
+Pointer 2 points to value: 200
+
+7. Pointer comparison:
+ptr is pointing to num
+arrPtr is ahead of arr in memory

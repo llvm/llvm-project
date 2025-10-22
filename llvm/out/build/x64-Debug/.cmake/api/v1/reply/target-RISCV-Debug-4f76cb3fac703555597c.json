@@ -1,0 +1,47 @@
+{
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_custom_target",
+			"add_llvm_component_group"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"lib/Target/RISCV/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 1,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 891,
+				"parent" : 1
+			}
+		]
+	},
+	"folder" : 
+	{
+		"name" : "LLVM/Component Groups"
+	},
+	"id" : "RISCV::@98d65cef627e5d36508a",
+	"name" : "RISCV",
+	"paths" : 
+	{
+		"build" : "lib/Target/RISCV",
+		"source" : "lib/Target/RISCV"
+	},
+	"sources" : [],
+	"type" : "UTILITY"
+}

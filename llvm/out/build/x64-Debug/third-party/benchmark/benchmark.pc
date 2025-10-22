@@ -1,0 +1,12 @@
+prefix=D:/CMakeAndLLVM/llvm-project/llvm/out/install/x64-Debug
+exec_prefix=${prefix}
+libdir=D:/CMakeAndLLVM/llvm-project/llvm/out/install/x64-Debug/lib
+includedir=D:/CMakeAndLLVM/llvm-project/llvm/out/install/x64-Debug/include
+
+Name: benchmark
+Description: Google microbenchmark framework
+Version: v0.0.0
+
+Libs: -L${libdir} -lbenchmark
+Libs.private: -lpthread
+Cflags: -I${includedir}

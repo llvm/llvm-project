@@ -1,0 +1,66 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_llvm_library"
+		],
+		"files" : 
+		[
+			"cmake/modules/AddLLVM.cmake",
+			"tools/llvm-shlib/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 205,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 975,
+				"parent" : 1
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "LLVM-C",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"lib/LLVM-C.lib"
+			],
+			"targetId" : "LLVM-C::@866bfa9ea8450298f76f",
+			"targetIndex" : 102,
+			"targetIsImportLibrary" : true,
+			"type" : "target"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "LLVM-C",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/LLVM-C.dll"
+			],
+			"targetId" : "LLVM-C::@866bfa9ea8450298f76f",
+			"targetIndex" : 102,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "tools/llvm-shlib",
+		"source" : "tools/llvm-shlib"
+	}
+}

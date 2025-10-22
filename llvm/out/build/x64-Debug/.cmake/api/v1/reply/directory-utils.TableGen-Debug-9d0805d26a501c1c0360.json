@@ -1,0 +1,53 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"add_tablegen"
+		],
+		"files" : 
+		[
+			"cmake/modules/TableGen.cmake",
+			"utils/TableGen/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 31,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 234,
+				"parent" : 1
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 2,
+			"component" : "llvm-tblgen",
+			"destination" : "bin",
+			"paths" : 
+			[
+				"bin/llvm-tblgen.exe"
+			],
+			"targetId" : "llvm-tblgen::@dca47d54282c16282dfc",
+			"targetIndex" : 2386,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "utils/TableGen",
+		"source" : "utils/TableGen"
+	}
+}
