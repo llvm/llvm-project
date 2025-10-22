@@ -1,4 +1,14 @@
 {
+  "sdk": {
+    "version": "10.0.100-rc.1.25420.111",
+    "allowPrerelease": true,
+    "rollForward": "major",
+    "paths": [
+      ".dotnet",
+      "$host$"
+    ],
+    "errorMessage": "The required .NET SDK wasn't found. Please run ./eng/common/dotnet.cmd/sh to install it."
+  },
   "tools": {
     "dotnet": "10.0.100-rc.1.25420.111"
   },
