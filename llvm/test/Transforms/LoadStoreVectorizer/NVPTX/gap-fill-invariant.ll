@@ -62,7 +62,7 @@ define i32 @noGapsMissingInvariant(ptr %in) {
 define i32 @twoGaps(ptr %in) {
 ; CHECK-LABEL: define i32 @twoGaps(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[IN]], i32 16, <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison), !invariant.load [[META0]]
 ; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
