@@ -17,7 +17,6 @@
 using namespace clang;
 
 ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
-  assert(Tok.is(tok::caretcaret) && "expected '^^'");
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
