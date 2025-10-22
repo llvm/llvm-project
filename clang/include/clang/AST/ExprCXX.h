@@ -5493,7 +5493,9 @@ public:
   }
 };
 
-/// Represents a C++2c reflect expression (P2996).
+/// Represents a C++26 reflect expression. The operand of of the expression
+/// is either a global namespace, a reflection-name, a type-id, or an
+/// id-expression.
 class CXXReflectExpr : public Expr {
 
   // Source locations.
