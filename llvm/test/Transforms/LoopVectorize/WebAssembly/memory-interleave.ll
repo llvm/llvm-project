@@ -1779,7 +1779,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: LV: Scalar loop costs: 24
 ; CHECK: LV: Vector loop of width 2 costs: 33
 ; CHECK: LV: Vector loop of width 4 costs: 30
-; CHECK: LV: Selecting VF: 4
+; CHECK: LV: Selecting VF: 1
 define hidden void @four_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0
