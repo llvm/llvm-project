@@ -15,14 +15,15 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcFOpenTest, PrintToFile) {
+  int result;
 
   FILE *file =
       LIBC_NAMESPACE::fopen(APPEND_LIBC_TEST("testdata/test.txt"), "w");
   ASSERT_FALSE(file == nullptr);
 
   static constexpr char STRING[] = "A simple string written to a file\n";
-  size_t result = LIBC_NAMESPACE::fwrite(STRING, 1, sizeof(STRING) - 1, file);
-  EXPECT_GE(result, static_cast<size_t>(0));
+  result = LIBC_NAMESPACE::fwrite(STRING, 1, sizeof(STRING) - 1, file);
+  EXPECT_GE(result, 0);
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(file));
 
