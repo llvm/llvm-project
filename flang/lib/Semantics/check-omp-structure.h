@@ -188,10 +188,12 @@ private:
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);
   bool IsNestedInDirective(llvm::omp::Directive directive);
+  bool InTargetRegion();
   void HasInvalidTeamsNesting(
       const llvm::omp::Directive &dir, const parser::CharBlock &source);
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
+  bool HasRequires(llvm::omp::Clause req);
   // specific clause related
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
@@ -261,6 +263,9 @@ private:
   bool CheckTargetBlockOnlyTeams(const parser::Block &);
   void CheckWorkshareBlockStmts(const parser::Block &, parser::CharBlock);
   void CheckWorkdistributeBlockStmts(const parser::Block &, parser::CharBlock);
+  void CheckAllocateDirective(parser::CharBlock source,
+      const parser::OmpObjectList &objects,
+      const parser::OmpClauseList &clauses);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);
@@ -378,6 +383,7 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
+  bool inExecutableAllocate_{false};
   parser::CharBlock visitedAtomicSource_;
   SymbolSourceMap deferredNonVariables_;
 
