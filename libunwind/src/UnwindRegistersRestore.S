@@ -25,6 +25,8 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
+
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
 #
 # extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
@@ -69,6 +71,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip gs
 
 #elif defined(__x86_64__) && !defined(__arm64ec__)
+.att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #

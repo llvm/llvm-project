@@ -4841,46 +4841,39 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
       return !NeedsOp || this->emitCheckDecl(VD, VD);
     };
 
-    auto initGlobal = [&](unsigned GlobalIndex) -> bool {
-      assert(Init);
-
-      if (VarT) {
-        if (!this->visit(Init))
-          return checkDecl() && false;
-
-        return checkDecl() && this->emitInitGlobal(*VarT, GlobalIndex, VD);
-      }
-
-      if (!checkDecl())
-        return false;
-
-      if (!this->emitGetPtrGlobal(GlobalIndex, Init))
-        return false;
-
-      if (!visitInitializer(Init))
-        return false;
-
-      return this->emitFinishInitGlobal(Init);
-    };
-
     DeclScope<Emitter> LocalScope(this, VD);
 
-    // We've already seen and initialized this global.
-    if (UnsignedOrNone GlobalIndex = P.getGlobal(VD)) {
+    UnsignedOrNone GlobalIndex = P.getGlobal(VD);
+    if (GlobalIndex) {
+      // We've already seen and initialized this global.
       if (P.getPtrGlobal(*GlobalIndex).isInitialized())
         return checkDecl();
-
       // The previous attempt at initialization might've been unsuccessful,
       // so let's try this one.
-      return Init && checkDecl() && initGlobal(*GlobalIndex);
+    } else if ((GlobalIndex = P.createGlobal(VD, Init))) {
+    } else {
+      return false;
     }
+    if (!Init)
+      return true;
 
-    UnsignedOrNone GlobalIndex = P.createGlobal(VD, Init);
-
-    if (!GlobalIndex)
+    if (!checkDecl())
       return false;
 
-    return !Init || (checkDecl() && initGlobal(*GlobalIndex));
+    if (VarT) {
+      if (!this->visit(Init))
+        return false;
+
+      return this->emitInitGlobal(*VarT, *GlobalIndex, VD);
+    }
+
+    if (!this->emitGetPtrGlobal(*GlobalIndex, Init))
+      return false;
+
+    if (!visitInitializer(Init))
+      return false;
+
+    return this->emitFinishInitGlobal(Init);
   }
   // Local variables.
   InitLinkScope<Emitter> ILS(this, InitLink::Decl(VD));
@@ -4890,36 +4883,37 @@ Compiler<Emitter>::visitVarDecl(const VarDecl *VD, const Expr *Init,
         VD, *VarT, VD->getType().isConstQualified(),
         VD->getType().isVolatileQualified(), nullptr, ScopeKind::Block,
         IsConstexprUnknown);
-    if (Init) {
-      // If this is a toplevel declaration, create a scope for the
-      // initializer.
-      if (Toplevel) {
-        LocalScope<Emitter> Scope(this);
-        if (!this->visit(Init))
-          return false;
-        return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
-      }
-        if (!this->visit(Init))
-          return false;
-        return this->emitSetLocal(*VarT, Offset, VD);
-    }
-  } else {
-    if (UnsignedOrNone Offset = this->allocateLocal(
-            VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
-      if (!Init)
-        return true;
 
-      if (!this->emitGetPtrLocal(*Offset, Init))
+    if (!Init)
+      return true;
+
+    // If this is a toplevel declaration, create a scope for the
+    // initializer.
+    if (Toplevel) {
+      LocalScope<Emitter> Scope(this);
+      if (!this->visit(Init))
         return false;
-
-      if (!visitInitializer(Init))
-        return false;
-
-      return this->emitFinishInitPop(Init);
+      return this->emitSetLocal(*VarT, Offset, VD) && Scope.destroyLocals();
     }
-    return false;
+    if (!this->visit(Init))
+      return false;
+    return this->emitSetLocal(*VarT, Offset, VD);
   }
-  return true;
+  // Local composite variables.
+  if (UnsignedOrNone Offset = this->allocateLocal(
+          VD, VD->getType(), nullptr, ScopeKind::Block, IsConstexprUnknown)) {
+    if (!Init)
+      return true;
+
+    if (!this->emitGetPtrLocal(*Offset, Init))
+      return false;
+
+    if (!visitInitializer(Init))
+      return false;
+
+    return this->emitFinishInitPop(Init);
+  }
+  return false;
 }
 
 template <class Emitter>
@@ -6633,7 +6627,7 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
-    if (!this->emitCheckNull(E))
+    if (!SubExpr->getType()->isFunctionPointerType() && !this->emitCheckNull(E))
       return false;
 
     if (classifyPrim(SubExpr) == PT_Ptr)
