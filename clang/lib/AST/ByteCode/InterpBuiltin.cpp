@@ -3817,7 +3817,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_psignd256:
     return interp__builtin_elementwise_int_binop(
         S, OpPC, Call, [](const APInt &AElem, const APInt &BElem) {
-       if (BElem.isZero())
+          if (BElem.isZero())
             return APInt::getZero(AElem.getBitWidth());
           if (BElem.isNegative())
             return -AElem;
