@@ -17,8 +17,9 @@ define void @vp_smax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -74,8 +75,9 @@ define void @vp_smin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -131,8 +133,9 @@ define void @vp_umax(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -188,8 +191,9 @@ define void @vp_umin(ptr %a, ptr %b, ptr %c, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -245,8 +249,9 @@ define void @vp_ctlz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -297,8 +302,9 @@ define void @vp_cttz(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -349,8 +355,9 @@ define void @vp_lrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -405,8 +412,9 @@ define void @vp_llrint(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -461,8 +469,9 @@ define void @vp_abs(ptr %a, ptr %b, i64 %N) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>

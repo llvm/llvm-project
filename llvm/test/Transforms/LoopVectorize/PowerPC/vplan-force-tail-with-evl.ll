@@ -21,8 +21,9 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.*]]>
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): pred.store
@@ -88,8 +89,9 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer ir<%a1>

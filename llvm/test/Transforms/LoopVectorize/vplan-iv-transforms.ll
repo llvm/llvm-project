@@ -16,8 +16,9 @@ define void @iv_no_binary_op_in_descriptor(i1 %c, ptr %dst) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[STEPS:%.+]]>
@@ -72,8 +73,9 @@ define void @iv_expand(ptr %p, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'iv_expand'
 ; CHECK:      VPlan 'Initial VPlan for VF={8},UF>=1' {
 ; CHECK:      <x1> vector loop: {
+; CHECK-NEXT:   vp<{{.+}}> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION  ir<0>, ir<1>, vp<%0>
 ; CHECK-NEXT:     vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%q> = getelementptr ir<%p>, vp<%4>

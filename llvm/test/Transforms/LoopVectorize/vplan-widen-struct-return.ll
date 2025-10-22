@@ -16,8 +16,9 @@ define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
 ; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
@@ -72,8 +73,9 @@ define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly 
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%in>, vp<[[STEPS]]>
 ; CHECK-NEXT:      vp<[[IN_VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>

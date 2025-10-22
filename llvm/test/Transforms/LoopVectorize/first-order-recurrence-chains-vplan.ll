@@ -17,8 +17,9 @@ define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]>    = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -94,8 +95,9 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.1> = phi ir<22>, ir<%for.1.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.2> = phi ir<33>, vp<[[FOR1_SPLICE:%.+]]>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.3> = phi ir<33>, vp<[[FOR2_SPLICE:%.+]]>
@@ -184,8 +186,9 @@ define i32 @test_chained_first_order_recurrences_4(ptr %base, i64 %x) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
@@ -260,8 +263,9 @@ define i32 @test_chained_first_order_recurrences_5_hoist_to_load(ptr %base) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.x> = phi ir<0>, ir<%for.x.next>
 ; CHECK-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for.y> = phi ir<0>, ir<%for.x.prev>
 ; CHECK-NEXT:     vp<[[SCALAR_STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>

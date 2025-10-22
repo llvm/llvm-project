@@ -19,8 +19,9 @@
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>, vp<[[VF]]>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
@@ -81,8 +82,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<false> + vp<[[CAN_IV]]> * ir<true>
 ; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<true>
 ; DBG-NEXT:   Successor(s): pred.store
@@ -205,8 +207,9 @@ exit:
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
 ; DBG-NEXT:     EMIT-SCALAR vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, ir<1>, vp<[[VF]]

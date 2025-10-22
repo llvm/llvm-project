@@ -40,6 +40,7 @@ class VPUser;
 class VPRecipeBase;
 class VPInterleaveBase;
 class VPPhiAccessors;
+struct VPRegionValue;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
 /// data flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -51,6 +52,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend class VPInterleaveBase;
   friend class VPlan;
   friend class VPExpressionRecipe;
+  friend struct VPRegionValue;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -89,7 +91,9 @@ public:
   enum {
     VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
                /// that defines multiple values.
-    VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
+    VPVRecipeSC,     /// A VPValue sub-class that is a VPRecipeBase.
+    VPRegionValueSC, /// A VPValue sub-class that is defined by a region, like
+                     /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -165,10 +169,15 @@ public:
   const VPRecipeBase *getDefiningRecipe() const;
 
   /// Returns true if this VPValue is defined by a recipe.
-  bool hasDefiningRecipe() const { return getDefiningRecipe(); }
+  bool hasDefiningRecipe() const {
+    return SubclassID == VPVRecipeSC ||
+           (SubclassID == VPValueSC && getDefiningRecipe());
+  }
 
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
-  bool isLiveIn() const { return !hasDefiningRecipe(); }
+  bool isLiveIn() const {
+    return SubclassID == VPValueSC && !getDefiningRecipe();
+  }
 
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef
@@ -186,6 +195,17 @@ public:
   void setUnderlyingValue(Value *Val) {
     assert(!UnderlyingVal && "Underlying Value is already set.");
     UnderlyingVal = Val;
+  }
+};
+
+/// VPValues defined by a VPRegionBlock, like the canonical IV.
+struct VPRegionValue : public VPValue {
+  VPRegionValue() : VPValue(VPValue::VPRegionValueSC) {}
+
+  ~VPRegionValue() override = default;
+
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPRegionValueSC;
   }
 };
 
@@ -364,7 +384,6 @@ public:
     VPPredInstPHISC,
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
-    VPCanonicalIVPHISC,
     VPActiveLaneMaskPHISC,
     VPEVLBasedIVPHISC,
     VPFirstOrderRecurrencePHISC,
@@ -374,7 +393,7 @@ public:
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes
     VPFirstPHISC = VPWidenPHISC,
-    VPFirstHeaderPHISC = VPCanonicalIVPHISC,
+    VPFirstHeaderPHISC = VPActiveLaneMaskPHISC,
     VPLastHeaderPHISC = VPReductionPHISC,
     VPLastPHISC = VPReductionPHISC,
   };

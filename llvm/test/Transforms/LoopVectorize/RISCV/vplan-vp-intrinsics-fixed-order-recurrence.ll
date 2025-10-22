@@ -22,8 +22,9 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): vector loop
 ; IF-EVL-EMPTY:
 ; IF-EVL: <x1> vector loop: {
+; IF-EVL-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
+; IF-EVL-EMPTY:
 ; IF-EVL-NEXT:   vector.body:
-; IF-EVL-NEXT:     EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
 ; IF-EVL-NEXT:     EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI:%.+]]> = phi ir<33>, ir<[[LD:%.+]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%TC>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
@@ -39,8 +40,8 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
 ; IF-EVL-NEXT:     WIDEN vp.store vp<[[PTR2]]>, ir<[[ADD]]>, vp<[[EVL]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
-; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
-; IF-EVL-NEXT:     EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[CAST]]>
+; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT:%.+]]> = add vp<[[CAST]]>, vp<[[EVL_PHI]]>
+; IF-EVL-NEXT:     EMIT vp<[[AVL_NEXT:%.+]]> = sub nuw vp<[[AVL]]>, vp<[[CAST]]>
 ; IF-EVL-NEXT:     EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:     EMIT branch-on-count  vp<[[IV_NEXT_EXIT]]>, vp<[[VTC]]>
 ; IF-EVL-NEXT:   No successors
