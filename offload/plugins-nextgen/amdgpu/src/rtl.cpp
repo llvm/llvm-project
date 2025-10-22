@@ -2091,11 +2091,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     //
     // Agents that do not support UUID will return the string "GPU-XX" or
     // "CPU-XX" or "DSP-XX" depending on their device type.
-    char Uuid[24] = {0};
-    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, Uuid))
+    char UUID[24] = {0};
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_UUID, UUID))
       return Err;
-    if (strcmp(Uuid + 3, "-XX") != 0)
-      setDeviceUidFromVendorUid(Uuid);
+    if (!StringRef(UUID).ends_with("-XX"))
+      setDeviceUidFromVendorUid(UUID);
 
     // Get the wavefront size.
     uint32_t WavefrontSize = 0;
