@@ -50,6 +50,13 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
       return ExprError();
 
     TypeSourceInfo *TSI = nullptr;
+    QualType QT = Actions.GetTypeFromParser(TR.get(), &TSI);
+
+    if (QT.isNull())
+      return ExprError();
+
+    if (!TSI)
+      TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, /*Loc=*/OpLoc);
 
     return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
   }
