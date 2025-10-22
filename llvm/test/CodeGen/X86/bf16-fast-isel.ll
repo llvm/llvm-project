@@ -15,6 +15,20 @@ entry:
   ret i8 %call2
 }
 
+define i8 @test_fast_direct_call(ptr %f) nounwind {
+; CHECK-LABEL: test_fast_direct_call:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq foo_fast@PLT
+; CHECK-NEXT:    callq bar@PLT
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+entry:
+  %call = call fastcc bfloat @foo_fast(ptr %f)
+  %call2 = call zeroext i8 @bar(bfloat %call)
+  ret i8 %call2
+}
+
 define i8 @test_indirect_all(ptr %fptr, ptr %f) nounwind {
 ; CHECK-LABEL: test_indirect_all:
 ; CHECK:       # %bb.0: # %entry
@@ -31,5 +45,22 @@ entry:
   ret i8 %call2
 }
 
+define i8 @test_fast_indirect_all(ptr %fptr, ptr %f) nounwind {
+; CHECK-LABEL: test_fast_indirect_all:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    callq foo@PLT
+; CHECK-NEXT:    callq *%rbx
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+entry:
+  %call = call fastcc bfloat @foo(ptr %f)
+  %call2 = call zeroext i8 %fptr(bfloat %call)
+  ret i8 %call2
+}
+
 declare bfloat @foo(ptr %f)
 declare zeroext i8 @bar(bfloat)
+declare fastcc bfloat @foo_fast(ptr %f)
