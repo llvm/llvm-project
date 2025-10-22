@@ -5,13 +5,13 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-struct O {
+struct BitfieldStruct {
   unsigned int a:4;
   unsigned int b:14;
   unsigned int c:14;
 };
 
-O overlapping_init = { 3, 2, 1 };
+BitfieldStruct overlapping_init = { 3, 2, 1 };
 
 // This is unintuitive. The bitfields are initialized using a struct of constants
 // that maps to the bitfields but splits the value into bytes.
