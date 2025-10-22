@@ -3843,9 +3843,8 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
       if (!HandleConversionToBool(Original, BoolResult))
         return false;
       uint64_t IntResult = BoolResult;
-      Result = APValue(Info.Ctx.MakeIntValue(IntResult, DestTy));
-      // TODO destty is wrong here if destty is float....
-      // can we use sourcety here?
+      Result = APValue(Info.Ctx.MakeIntValue(
+          IntResult, Info.Ctx.getIntTypeForBitwidth(64, true)));
     }
     if (DestTy->isFloatingType()) {
       APValue Result2 = APValue(APFloat(0.0));
@@ -3897,8 +3896,6 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
     }
   }
 
-  // Info.FFDiag(E, diag::err_convertvector_constexpr_unsupported_vector_cast)
-  //   << SourceTy << DestTy;
   return false;
 }
 
@@ -3917,7 +3914,7 @@ static bool constructAggregate(EvalInfo &Info, const FPOptions FPO,
   while (!WorkList.empty() && ElI < Elements.size()) {
     auto [Res, Type, BitWidth] = WorkList.pop_back_val();
 
-    if (Type->isRealFloatingType() || Type->isBooleanType()) {
+    if (Type->isRealFloatingType()) {
       if (!handleScalarCast(Info, FPO, E, ElTypes[ElI], Type, Elements[ElI],
                             *Res))
         return false;
@@ -3978,10 +3975,10 @@ static bool constructAggregate(EvalInfo &Info, const FPOptions FPO,
       // we need to traverse backwards
       // Visit the base classes.
       if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        // todo assert there is only 1 base at most
-        for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
-          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
-          ReverseList.emplace_back(&Res->getStructBase(I), BS.getType(), 0u);
+        if (CXXRD->getNumBases() > 0) {
+          assert(CXXRD->getNumBases() == 1);
+          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[0];
+          ReverseList.emplace_back(&Res->getStructBase(0), BS.getType(), 0u);
         }
       }
 
@@ -4057,13 +4054,12 @@ static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
     }
     if (Type->isRecordType()) {
       const RecordDecl *RD = Type->getAsRecordDecl();
-      // const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
       // Visit the base classes.
       if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
-        // todo assert there is only 1 base at most
-        for (size_t I = 0, E = CXXRD->getNumBases(); I != E; ++I) {
-          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[I];
+        if (CXXRD->getNumBases() > 0) {
+          assert(CXXRD->getNumBases() == 1);
+          const CXXBaseSpecifier &BS = CXXRD->bases_begin()[0];
           WorkList.push_back(BS.getType());
         }
       }
@@ -4126,7 +4122,6 @@ static bool flattenAPValue(const ASTContext &Ctx, APValue Value,
       for (FieldDecl *FD : RD->fields()) {
         if (FD->isUnnamedBitField())
           continue;
-        // if (FD->isBitField()) {
         ReverseList.emplace_back(Work.getStructField(FD->getFieldIndex()),
                                  FD->getType());
       }

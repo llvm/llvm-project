@@ -27,6 +27,13 @@ struct B2 : B1 {
 };
 
 export void fn() {
+/*
+  _Static_assert(((float4)(int[6]){1,2,3,4,5,6}).x == 1.0, "Woo!");
+
+  // This compiling successfully verifies that the array constant expression
+  // gets truncated to a float at compile time for instantiation via the
+  // flat cast
+  _Static_assert(((int)(int[2]){1,2}) == 1, "Woo!");
 
   // truncation tests
   // result type int
@@ -73,4 +80,13 @@ export void fn() {
   _Static_assert(SB.U[1] == 1000, "Woo!");
   _Static_assert(SB.I == 8, "Woo!");
   _Static_assert(SB.I2 == 0, "Woo!");
+*/
+  // Make sure we read bitfields correctly
+  constexpr Base BB = {222.22, {100, 200}, -2, 7};
+  constexpr int Arr[5] = (int[5])BB;
+  _Static_assert(Arr[0] == 222, "Woo!");
+  _Static_assert(Arr[1] == 100, "Woo!");
+  _Static_assert(Arr[2] == 200, "Woo!");
+  _Static_assert(Arr[3] == -2, "Woo!");
+  _Static_assert(Arr[4] == 7, "Woo!");
 }
