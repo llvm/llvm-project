@@ -1210,8 +1210,8 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     break;
   case tok::caretcaret: {
     if (getLangOpts().Reflection) {
-      SourceLocation FirstCaret = ConsumeToken(); // eat first '^'
-      Res = ParseCXXReflectExpression(/*OpLoc=*/FirstCaret);
+      SourceLocation DoubleCaret = ConsumeToken();
+      Res = ParseCXXReflectExpression(/*OpLoc=*/DoubleCaret);
     }
     break;
   }
