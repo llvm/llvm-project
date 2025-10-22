@@ -49,6 +49,138 @@ namespace clang {
   class Sema;
   class Declarator;
   struct TemplateIdAnnotation;
+  class Parser;
+
+  /// A set of tokens that has been cached for later parsing.
+  typedef SmallVector<Token, 4> CachedTokens;
+
+  /// [class.mem]p1: "... the class is regarded as complete within
+  /// - function bodies
+  /// - default arguments
+  /// - exception-specifications (TODO: C++0x)
+  /// - and brace-or-equal-initializers for non-static data members
+  /// (including such things in nested classes)."
+  /// LateParsedDeclarations build the tree of those elements so they can
+  /// be parsed after parsing the top-level class.
+  class LateParsedDeclaration {
+  public:
+    virtual ~LateParsedDeclaration();
+
+    virtual void ParseLexedMethodDeclarations();
+    virtual void ParseLexedMemberInitializers();
+    virtual void ParseLexedMethodDefs();
+    virtual void ParseLexedAttributes();
+    virtual void ParseLexedTypeAttributes();
+    virtual void ParseLexedPragmas();
+  };
+
+/// Contains the lexed tokens of an attribute with arguments that
+/// may reference member variables and so need to be parsed at the
+/// end of the class declaration after parsing all other member
+/// member declarations.
+/// FIXME: Perhaps we should change the name of LateParsedDeclaration to
+/// LateParsedTokens.
+struct LateParsedAttribute : public LateParsedDeclaration {
+
+  enum LPA_Kind {
+    LPA_Declaration,
+    LPA_Type,
+  };
+
+  Parser *Self;
+  CachedTokens Toks;
+  IdentifierInfo &AttrName;
+  IdentifierInfo *MacroII = nullptr;
+  SourceLocation AttrNameLoc;
+  SmallVector<Decl *, 2> Decls;
+
+private:
+  LPA_Kind Kind;
+
+public:
+  explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
+                               SourceLocation Loc,
+                               LPA_Kind Kind = LPA_Declaration)
+      : Self(P), AttrName(Name), AttrNameLoc(Loc), Kind(Kind) {}
+
+  void ParseLexedAttributes() override;
+
+  void addDecl(Decl *D) { Decls.push_back(D); }
+
+  LPA_Kind getKind() const { return Kind; }
+
+  // LLVM-style RTTI support
+  static bool classof(const LateParsedAttribute* LA) {
+      // LateParsedAttribute matches both Declaration and Type kinds
+      return LA->getKind() == LPA_Declaration || LA->getKind() == LPA_Type;
+  }
+};
+
+/// Contains the lexed tokens of an attribute with arguments that
+/// may reference member variables and so need to be parsed at the
+/// end of the class declaration after parsing all other member
+/// member declarations.
+/// FIXME: Perhaps we should change the name of LateParsedDeclaration to
+/// LateParsedTokens.
+struct LateParsedTypeAttribute : public LateParsedAttribute {
+
+  explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
+                                SourceLocation Loc)
+      : LateParsedAttribute(P, Name, Loc, LPA_Type) {}
+
+  void ParseLexedAttributes() override;
+  void ParseLexedTypeAttributes() override;
+
+  void addDecl(Decl *D) { Decls.push_back(D); }
+
+  /// Parse this late-parsed type attribute and store results in OutAttrs.
+  /// This method can be called from Sema during type transformation to
+  /// parse the cached tokens and produce the final attribute.
+  void ParseInto(ParsedAttributes &OutAttrs);
+
+  // LLVM-style RTTI support
+  static bool classof(const LateParsedAttribute* LA) {
+      return LA->getKind() == LPA_Type;
+  }
+};
+
+// A list of late-parsed attributes.  Used by ParseGNUAttributes.
+class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
+public:
+  LateParsedAttrList(bool PSoon = false,
+                      bool LateAttrParseExperimentalExtOnly = false,
+                      bool LateAttrParseTypeAttrOnly = false)
+      : ParseSoon(PSoon),
+        LateAttrParseExperimentalExtOnly(LateAttrParseExperimentalExtOnly),
+        LateAttrParseTypeAttrOnly(LateAttrParseTypeAttrOnly) {}
+
+  bool parseSoon() { return ParseSoon; }
+  /// returns true iff the attribute to be parsed should only be late parsed
+  /// if it is annotated with `LateAttrParseExperimentalExt`
+  bool lateAttrParseExperimentalExtOnly() {
+    return LateAttrParseExperimentalExtOnly;
+  }
+
+  bool lateAttrParseTypeAttrOnly() {
+    return LateAttrParseTypeAttrOnly;
+  }
+
+  void takeTypeAttrsAppendingFrom(LateParsedAttrList &Other) {
+    auto it = std::remove_if(Other.begin(), Other.end(), [&](LateParsedAttribute *LA){
+          if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
+            push_back(LTA);
+            return true;
+          }
+          return false;
+        });
+    Other.erase(it, Other.end());
+  }
+
+private:
+  bool ParseSoon; // Are we planning to parse these shortly after creation?
+  bool LateAttrParseExperimentalExtOnly;
+  bool LateAttrParseTypeAttrOnly;
+};
 
 /// Represents a C++ nested-name-specifier or a global scope specifier.
 ///
@@ -391,6 +523,9 @@ private:
   // attributes.
   ParsedAttributes Attrs;
 
+  // late attributes
+  LateParsedAttrList LateParsedAttrs;
+
   // Scope specifier for the type spec, if applicable.
   CXXScopeSpec TypeScope;
 
@@ -465,7 +600,7 @@ public:
         FS_noreturn_specified(false), FriendSpecifiedFirst(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
-        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), LateParsedAttrs(true, true, true), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -843,8 +978,16 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
+  LateParsedAttrList *getLateAttributePtr() { return &LateParsedAttrs;  }
+  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs;  }
+  const LateParsedAttrList &getLateAttributes() const { return LateParsedAttrs;  }
+
   void takeAttributesAppendingingFrom(ParsedAttributes &attrs) {
     Attrs.takeAllAppendingFrom(attrs);
+  }
+
+  void takeLateTypeAttributesAppendingingFrom(LateParsedAttrList &lateAttrs) {
+    LateParsedAttrs.takeTypeAttrsAppendingFrom(lateAttrs);
   }
 
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
@@ -1211,15 +1354,12 @@ public:
   SourceLocation getEndLoc() const LLVM_READONLY { return EndLocation; }
 };
 
-/// A set of tokens that has been cached for later parsing.
-typedef SmallVector<Token, 4> CachedTokens;
-
 /// One instance of this struct is used for each type in a
 /// declarator that is parsed.
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() {};
+  DeclaratorChunk() : LateAttrList(true, true, true) {};
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
@@ -1237,6 +1377,7 @@ struct DeclaratorChunk {
   }
 
   ParsedAttributesView AttrList;
+  LateParsedAttrList LateAttrList;
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
@@ -1937,6 +2078,8 @@ private:
   /// corresponding constructor parameter.
   const ParsedAttributesView &DeclarationAttrs;
 
+  LateParsedAttrList LateParsedAttrs;
+
   /// The asm label, if specified.
   Expr *AsmLabel;
 
@@ -2002,7 +2145,7 @@ public:
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
-        DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
+        DeclarationAttrs(DeclarationAttrs), LateParsedAttrs(true, true, true), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
         InventedTemplateParameterList(nullptr) {
     assert(llvm::all_of(DeclarationAttrs,
@@ -2324,14 +2467,18 @@ public:
   /// EndLoc, which should be the last token of the chunk.
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
-  void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+  void
+  AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
+              SourceLocation EndLoc,
+              const LateParsedAttrList &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.append(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
@@ -2659,6 +2806,13 @@ public:
 
   const ParsedAttributesView &getDeclarationAttributes() const {
     return DeclarationAttrs;
+  }
+
+  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs;  }
+  const LateParsedAttrList &getLateAttributes() const { return LateParsedAttrs;  }
+
+  void takeLateTypeAttributesAppending(LateParsedAttrList &lateAttrs) {
+    LateParsedAttrs.takeTypeAttrsAppendingFrom(lateAttrs);
   }
 
   /// hasAttributes - do we contain any attributes?

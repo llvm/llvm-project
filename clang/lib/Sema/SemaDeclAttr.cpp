@@ -6756,45 +6756,6 @@ static void handleZeroCallUsedRegsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(ZeroCallUsedRegsAttr::Create(S.Context, Kind, AL));
 }
 
-static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = dyn_cast<FieldDecl>(D);
-  assert(FD);
-
-  auto *CountExpr = AL.getArgAsExpr(0);
-  if (!CountExpr)
-    return;
-
-  bool CountInBytes;
-  bool OrNull;
-  switch (AL.getKind()) {
-  case ParsedAttr::AT_CountedBy:
-    CountInBytes = false;
-    OrNull = false;
-    break;
-  case ParsedAttr::AT_CountedByOrNull:
-    CountInBytes = false;
-    OrNull = true;
-    break;
-  case ParsedAttr::AT_SizedBy:
-    CountInBytes = true;
-    OrNull = false;
-    break;
-  case ParsedAttr::AT_SizedByOrNull:
-    CountInBytes = true;
-    OrNull = true;
-    break;
-  default:
-    llvm_unreachable("unexpected counted_by family attribute");
-  }
-
-  if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
-    return;
-
-  QualType CAT = S.BuildCountAttributedArrayOrPointerType(
-      FD->getType(), CountExpr, CountInBytes, OrNull);
-  FD->setType(CAT);
-}
-
 static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
   StringRef KindStr;
@@ -7856,13 +7817,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
     break;
 
-  case ParsedAttr::AT_CountedBy:
-  case ParsedAttr::AT_CountedByOrNull:
-  case ParsedAttr::AT_SizedBy:
-  case ParsedAttr::AT_SizedByOrNull:
-    handleCountedByAttrField(S, D, AL);
-    break;
-
   // Microsoft attributes:
   case ParsedAttr::AT_LayoutVersion:
     handleLayoutVersion(S, D, AL);
@@ -8155,9 +8109,9 @@ static bool isKernelDecl(Decl *D) {
          D->hasAttr<CUDAGlobalAttr>();
 }
 
-void Sema::ProcessDeclAttributeList(
-    Scope *S, Decl *D, const ParsedAttributesView &AttrList,
-    const ProcessDeclAttributeOptions &Options) {
+void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
+                                    const ParsedAttributesView &AttrList,
+                                    const ProcessDeclAttributeOptions &Options) {
   if (AttrList.empty())
     return;
 
