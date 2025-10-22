@@ -253,7 +253,6 @@ jobs:
 
     - name: Install libxml2 for Windows
       if: runner.os == 'Windows'
-      shell: bash
       run: |
         # Build libxml2 for windows
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
