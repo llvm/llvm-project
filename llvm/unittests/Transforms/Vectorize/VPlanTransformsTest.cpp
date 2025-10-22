@@ -20,8 +20,9 @@ using VPlanTransformsTest = VPlanTestBase;
 // Test we create and merge replicate regions:
 // VPBB1:
 //   REPLICATE %Rep0 = add
-//   REPLICATE %Rep1 = add
-//   REPLICATE %Rep2 = add
+//   REPLICATE %Rep1 = add, %Mask
+//   REPLICATE %Rep2 = add, %Mask
+//   REPLICATE %Rep3 = add, %Mask
 // No successors
 //
 // ->
@@ -35,6 +36,7 @@ using VPlanTransformsTest = VPlanTestBase;
 //     REPLICATE %Rep0 = add
 //     REPLICATE %Rep1 = add
 //     REPLICATE %Rep2 = add
+//     REPLICATE %Rep3 = add %Rep0
 //   Successor(s): pred.add.continue
 //
 //   pred.add.continue:
@@ -42,6 +44,7 @@ using VPlanTransformsTest = VPlanTestBase;
 // }
 TEST_F(VPlanTransformsTest, createAndOptimizeReplicateRegions) {
   VPlan &Plan = getPlan();
+  Plan.addVF(ElementCount::getFixed(4));
 
   IntegerType *Int32 = IntegerType::get(C, 32);
   auto *AI = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
@@ -52,12 +55,16 @@ TEST_F(VPlanTransformsTest, createAndOptimizeReplicateRegions) {
   VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB1, VPBB1, "R1");
   VPBlockUtils::connectBlocks(VPBB0, R1);
   auto *Mask = new VPInstruction(0, {});
-  auto *Rep0 = new VPReplicateRecipe(AI, {}, false, Mask);
+  // Not masked, but should still be sunk into Rep3's region.
+  auto *Rep0 = new VPReplicateRecipe(AI, {}, false);
+  // Masked, should each create a replicate region and get merged.
   auto *Rep1 = new VPReplicateRecipe(AI, {}, false, Mask);
   auto *Rep2 = new VPReplicateRecipe(AI, {}, false, Mask);
+  auto *Rep3 = new VPReplicateRecipe(AI, {Rep0}, false, Mask);
   VPBB1->appendRecipe(Rep0);
   VPBB1->appendRecipe(Rep1);
   VPBB1->appendRecipe(Rep2);
+  VPBB1->appendRecipe(Rep3);
 
   VPlanTransforms::createAndOptimizeReplicateRegions(Plan);
 
@@ -67,7 +74,7 @@ TEST_F(VPlanTransformsTest, createAndOptimizeReplicateRegions) {
   EXPECT_EQ(ReplicatorEntry->size(), 1u);
   EXPECT_TRUE(isa<VPBranchOnMaskRecipe>(ReplicatorEntry->front()));
   auto *ReplicatorIf = cast<VPBasicBlock>(ReplicatorEntry->getSuccessors()[0]);
-  EXPECT_EQ(ReplicatorIf->size(), 3u);
+  EXPECT_EQ(ReplicatorIf->size(), 4u);
   EXPECT_EQ(ReplicatorEntry->getSuccessors()[1],
             ReplicatorIf->getSingleSuccessor());
   EXPECT_EQ(ReplicatorIf->getSingleSuccessor(), Replicator->getExiting());
