@@ -1011,9 +1011,9 @@ public:
   }
 
   mlir::Attribute VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die, QualType t) {
-    cgm.errorNYI(die->getBeginLoc(),
-                 "ConstExprEmitter::VisitCXXDefaultInitExpr");
-    return {};
+    // No need for a DefaultInitExprScope: we don't handle 'this' in a
+    // constant expression.
+    return Visit(die->getExpr(), t);
   }
 
   mlir::Attribute VisitExprWithCleanups(ExprWithCleanups *e, QualType t) {
