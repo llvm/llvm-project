@@ -1271,7 +1271,7 @@ bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
     // the module flags.
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-      HasBranchTargetEnforcement = (BTE->getZExtValue() != 0);
+      HasBranchTargetEnforcement = !BTE->isZero();
     else
       HasBranchTargetEnforcement = 0;
   }
