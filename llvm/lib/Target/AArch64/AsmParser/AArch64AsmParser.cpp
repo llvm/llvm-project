@@ -4046,7 +4046,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = GIC->NeedsReg;
+    ExpectRegister = true;
     createSysAlias(GIC->Encoding, Operands, S);
   } else if (Mnemonic == "gsb") {
     const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByName(Op);

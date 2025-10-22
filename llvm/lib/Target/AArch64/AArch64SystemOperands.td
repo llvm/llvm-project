@@ -2586,14 +2586,14 @@ foreach n=0-15 in {
 //===----------------------------------------------------------------------===//
 
 // GIC
-class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
+class GIC<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
-  bit NeedsReg = needsreg;
+  bit NeedsReg = 1;
   string RequiresStr = [{ {AArch64::FeatureGCIE} }];
 }
 
@@ -2609,14 +2609,14 @@ class GSB<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
 }
 
 // GICR
-class GICR<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2, bit needsreg> {
+class GICR<string name, bits<3> op1, bits<4> crn, bits<4> crm, bits<3> op2> {
   string Name = name;
   bits<14> Encoding;
   let Encoding{13-11} = op1;
   let Encoding{10-7} = crn;
   let Encoding{6-3} = crm;
   let Encoding{2-0} = op2;
-  bit NeedsReg = needsreg;
+  bit NeedsReg = 1;
   string RequiresStr = [{ {AArch64::FeatureGCIE} }];
 }
 
@@ -2666,31 +2666,33 @@ def lookupGICRByName : SearchIndex {
 def : GSB<"sys",      0b000, 0b1100, 0b0000, 0b000>;
 def : GSB<"ack",      0b000, 0b1100, 0b0000, 0b001>;
 
-//                    Op1    CRn     CRm     Op2    needsReg
-def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011, 1>;
-def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000, 1>;
-def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000, 1>;
-def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001, 1>;
-def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111, 1>;
-def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001, 1>;
-def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100, 1>;
-def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010, 1>;
-def : GIC<"cdrcfg",   0b000, 0b1100, 0b0001, 0b101, 1>;
-def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000, 1>;
-def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001, 1>;
-def : GIC<"vdaff",    0b100, 0b1100, 0b0001, 0b011, 1>;
-def : GIC<"vddi",     0b100, 0b1100, 0b0010, 0b000, 1>;
-def : GIC<"vddis",    0b100, 0b1100, 0b0001, 0b000, 1>;
-def : GIC<"vden",     0b100, 0b1100, 0b0001, 0b001, 1>;
-def : GIC<"vdhm",     0b100, 0b1100, 0b0010, 0b001, 1>;
-def : GIC<"vdpend",   0b100, 0b1100, 0b0001, 0b100, 1>;
-def : GIC<"vdpri",    0b100, 0b1100, 0b0001, 0b010, 1>;
-def : GIC<"vdrcfg",   0b100, 0b1100, 0b0001, 0b101, 1>;
-def : GIC<"ldaff",    0b110, 0b1100, 0b0001, 0b011, 1>;
-def : GIC<"lddi",     0b110, 0b1100, 0b0010, 0b000, 1>;
-def : GIC<"lddis",    0b110, 0b1100, 0b0001, 0b000, 1>;
-def : GIC<"lden",     0b110, 0b1100, 0b0001, 0b001, 1>;
-def : GIC<"ldhm",     0b110, 0b1100, 0b0010, 0b001, 1>;
-def : GIC<"ldpend",   0b110, 0b1100, 0b0001, 0b100, 1>;
-def : GIC<"ldpri",    0b110, 0b1100, 0b0001, 0b010, 1>;
-def : GIC<"ldrcfg",   0b110, 0b1100, 0b0001, 0b101, 1>;
+//                    Op1    CRn     CRm     Op2
+def : GICR<"cdia",    0b000, 0b1100, 0b0011, 0b000>;
+def : GICR<"cdnmia",  0b000, 0b1100, 0b0011, 0b001>;
+
+//                    Op1    CRn     CRm     Op2
+def : GIC<"cdaff",    0b000, 0b1100, 0b0001, 0b011>;
+def : GIC<"cddi",     0b000, 0b1100, 0b0010, 0b000>;
+def : GIC<"cddis",    0b000, 0b1100, 0b0001, 0b000>;
+def : GIC<"cden",     0b000, 0b1100, 0b0001, 0b001>;
+def : GIC<"cdeoi",    0b000, 0b1100, 0b0001, 0b111>;
+def : GIC<"cdhm",     0b000, 0b1100, 0b0010, 0b001>;
+def : GIC<"cdpend",   0b000, 0b1100, 0b0001, 0b100>;
+def : GIC<"cdpri",    0b000, 0b1100, 0b0001, 0b010>;
+def : GIC<"cdrcfg",   0b000, 0b1100, 0b0001, 0b101>;
+def : GIC<"vdaff",    0b100, 0b1100, 0b0001, 0b011>;
+def : GIC<"vddi",     0b100, 0b1100, 0b0010, 0b000>;
+def : GIC<"vddis",    0b100, 0b1100, 0b0001, 0b000>;
+def : GIC<"vden",     0b100, 0b1100, 0b0001, 0b001>;
+def : GIC<"vdhm",     0b100, 0b1100, 0b0010, 0b001>;
+def : GIC<"vdpend",   0b100, 0b1100, 0b0001, 0b100>;
+def : GIC<"vdpri",    0b100, 0b1100, 0b0001, 0b010>;
+def : GIC<"vdrcfg",   0b100, 0b1100, 0b0001, 0b101>;
+def : GIC<"ldaff",    0b110, 0b1100, 0b0001, 0b011>;
+def : GIC<"lddi",     0b110, 0b1100, 0b0010, 0b000>;
+def : GIC<"lddis",    0b110, 0b1100, 0b0001, 0b000>;
+def : GIC<"lden",     0b110, 0b1100, 0b0001, 0b001>;
+def : GIC<"ldhm",     0b110, 0b1100, 0b0010, 0b001>;
+def : GIC<"ldpend",   0b110, 0b1100, 0b0001, 0b100>;
+def : GIC<"ldpri",    0b110, 0b1100, 0b0001, 0b010>;
+def : GIC<"ldrcfg",   0b110, 0b1100, 0b0001, 0b101>;

@@ -1034,7 +1034,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
       if (!GIC || !GIC->haveFeatures(STI.getFeatureBits()))
         return false;
 
-      NeedsReg = GIC->NeedsReg;
+      NeedsReg = true;
       Ins = "gic\t";
       Name = std::string(GIC->Name);
     } else {
