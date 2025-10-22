@@ -90,9 +90,7 @@ namespace llvm {
     /// zero-indexed exclusive
     std::pair<unsigned, unsigned> getPrevTokEndLineColumnPos() {
       auto LC = SM.getLineAndColumn(SMLoc::getFromPointer(PrevTokEnd));
-      --LC.first;
-      --LC.second;
-      return LC;
+      return {LC.first - 1, LC.second - 1};
     }
 
     // This returns true as a convenience for the parser functions that return

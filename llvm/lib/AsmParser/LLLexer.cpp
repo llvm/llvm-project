@@ -191,8 +191,7 @@ int LLLexer::getNextChar() {
 }
 
 lltok::Kind LLLexer::LexToken() {
-  // Set token end to next location, since the end is
-  // exclusive
+  // Set token end to next location, since the end is exclusive.
   PrevTokEnd = CurPtr;
   while (true) {
     TokStart = CurPtr;
