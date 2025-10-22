@@ -1039,7 +1039,7 @@ v_trunc_f32 v0, lit(0.159154943091895317852646485335)
 
 // SICI: v_trunc_f32_e32 v0, 0x3e22f983 ; encoding: [0xff,0x42,0x00,0x7e,0x83,0xf9,0x22,0x3e]
 // GFX89: v_trunc_f32_e32 v0, 0.15915494 ; encoding: [0xf8,0x38,0x00,0x7e]
-v_trunc_f32 v0, INV2PI64
+v_trunc_f32 v0, INV2PI
 
 //---------------------------------------------------------------------------//
 // integer literal truncation checks

@@ -16,9 +16,6 @@ v_pk_add_f16 v1, -0.15915494, v2
 v_pk_add_f16 v1, -INV2PI, v2
 // GFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 
-v_pk_add_f16 v1, -INV2PI64, v2
-// GFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
-
 v_pk_add_f16 v1, -0.0, v2
 // GFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 
