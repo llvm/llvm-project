@@ -1,4 +1,4 @@
-! Test lower of elemental user defined assignments
+! Test lower of FORALL polymorphic pointer assignment 
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 !! Test when LHS is polymorphic and RHS is not polymorphic
