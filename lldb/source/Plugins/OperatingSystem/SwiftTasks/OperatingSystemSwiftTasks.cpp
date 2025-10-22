@@ -180,21 +180,52 @@ FindTaskAddresses(TaskInspector &task_inspector,
   return task_addrs;
 }
 
-static std::optional<uint64_t> FindTaskId(addr_t task_addr, Process &process) {
-  size_t ptr_size = process.GetAddressByteSize();
+static llvm::SmallVector<std::optional<uint64_t>>
+FindTaskIds(llvm::ArrayRef<std::optional<addr_t>> maybe_task_addrs,
+            Process &process) {
+  llvm::SmallVector<std::optional<uint64_t>> final_results;
+  llvm::SmallVector<addr_t> to_read;
+  final_results.reserve(maybe_task_addrs.size());
+  to_read.reserve(maybe_task_addrs.size());
+
   // Offset of a Task ID inside a Task data structure, guaranteed by the ABI.
   // See Job in swift/RemoteInspection/RuntimeInternals.h.
+  size_t ptr_size = process.GetAddressByteSize();
   const offset_t job_id_offset = 4 * ptr_size + 4;
 
-  Status error;
-  // The Task ID is at offset job_id_offset from the Task pointer.
-  constexpr uint32_t num_bytes_task_id = 4;
-  auto task_id = process.ReadUnsignedIntegerFromMemory(
-      task_addr + job_id_offset, num_bytes_task_id, LLDB_INVALID_ADDRESS,
-      error);
-  if (error.Fail())
-    return {};
-  return task_id;
+  /// Propagate input errors directly to the output, forward proper inputs to
+  /// `to_read`.
+  for (std::optional<addr_t> maybe_ptr : maybe_task_addrs) {
+    if (!maybe_ptr)
+      final_results.emplace_back(std::nullopt);
+    else {
+      final_results.push_back(0);
+      to_read.push_back(*maybe_ptr + job_id_offset);
+    }
+  }
+
+  /// TODO: replace this loop with a vectorized memory read.
+  llvm::SmallVector<std::optional<addr_t>> read_results;
+  for (addr_t task_id_addr : to_read) {
+    Status error;
+    // The Task ID is at offset job_id_offset from the Task pointer.
+    constexpr uint32_t num_bytes_task_id = 4;
+    auto task_id = process.ReadUnsignedIntegerFromMemory(
+        task_id_addr, num_bytes_task_id, LLDB_INVALID_ADDRESS, error);
+    if (error.Fail())
+      read_results.push_back(std::nullopt);
+    else
+      read_results.push_back(task_id);
+  }
+
+  // Move the results into the slots not filled by errors from the input.
+  llvm::ArrayRef<std::optional<addr_t>> results_ref = read_results;
+  for (std::optional<addr_t> &maybe_result : final_results)
+    if (maybe_result)
+      maybe_result = results_ref.consume_front();
+  assert(results_ref.empty());
+
+  return final_results;
 }
 
 bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
@@ -208,35 +239,29 @@ bool OperatingSystemSwiftTasks::UpdateThreadList(ThreadList &old_thread_list,
   llvm::SmallVector<std::optional<addr_t>> task_addrs =
       FindTaskAddresses(m_task_inspector, locked_core_threads);
 
-  for (const auto &[real_thread, task_addr] :
-       llvm::zip(locked_core_threads, task_addrs)) {
+  assert(m_process != nullptr);
+  llvm::SmallVector<std::optional<addr_t>> task_ids =
+      FindTaskIds(task_addrs, *m_process);
+
+  for (const auto &[real_thread, task_addr, task_id] :
+       llvm::zip(locked_core_threads, task_addrs, task_ids)) {
     // If this is not a thread running a Task, add it to the list as is.
-    if (!task_addr) {
-      new_thread_list.AddThread(real_thread);
-      LLDB_LOGF(log,
-                "OperatingSystemSwiftTasks: thread %" PRIx64
-                " is not executing a Task",
-                real_thread->GetID());
-      continue;
-    }
-
-    assert(m_process != nullptr);
-    std::optional<uint64_t> task_id = FindTaskId(*task_addr, *m_process);
     if (!task_id) {
-      LLDB_LOG(log, "OperatingSystemSwiftTasks: could not get ID of Task {0:x}",
-               *task_addr);
+      LLDB_LOG(log,
+               "OperatingSystemSwiftTasks: thread {0:x} is not running a task",
+               real_thread->GetID());
+      new_thread_list.AddThread(real_thread);
       continue;
     }
 
+    LLDB_LOG(log, "OperatingSystemSwiftTasks: TID to task ID: {0:x} -> {1:x}",
+             real_thread->GetID(), *task_id);
     ThreadSP swift_thread = FindOrCreateSwiftThread(old_thread_list, *task_id);
     static_cast<SwiftTaskThreadMemory &>(*swift_thread)
         .UpdateBackingThread(real_thread, *task_addr);
     new_thread_list.AddThread(swift_thread);
-    LLDB_LOGF(log,
-              "OperatingSystemSwiftTasks: mapping thread IDs: %" PRIx64
-              " -> %" PRIx64,
-              real_thread->GetID(), swift_thread->GetID());
   }
+
   return true;
 }
 
