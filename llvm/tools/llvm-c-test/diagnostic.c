@@ -45,7 +45,7 @@ static void diagnosticHandler(LLVMDiagnosticInfoRef DI, void *C) {
 static int handlerCalled = 0;
 
 int llvm_test_diagnostic_handler(void) {
-  LLVMContextRef C = LLVMGetGlobalContext();
+  LLVMContextRef C = LLVMContextCreate();
   LLVMContextSetDiagnosticHandler(C, diagnosticHandler, &handlerCalled);
 
   if (LLVMContextGetDiagnosticHandler(C) != diagnosticHandler) {
@@ -79,5 +79,6 @@ int llvm_test_diagnostic_handler(void) {
     fprintf(stderr, "Diagnostic handler was not called while loading module\n");
   }
 
+  LLVMContextDispose(C);
   return 0;
 }
