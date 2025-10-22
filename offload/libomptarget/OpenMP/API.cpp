@@ -226,6 +226,34 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   return Rc;
 }
 
+/// Check whether a pointer is accessible from a device.
+/// Returns true when accessibility is guaranteed otherwise returns false.
+EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
+                                    int DeviceNum) {
+  TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  DP("Call to omp_target_is_accessible for device %d, address " DPxMOD
+     ", size %zu\n",
+     DeviceNum, DPxPTR(Ptr), Size);
+
+  if (!Ptr) {
+    DP("Call to omp_target_is_accessible with NULL ptr returning false\n");
+    return false;
+  }
+
+  if (DeviceNum == omp_get_initial_device() || DeviceNum == -1) {
+    DP("Call to omp_target_is_accessible on host, returning true\n");
+    return true;
+  }
+
+  // The device number must refer to a valid device
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  return DeviceOrErr->isAccessiblePtr(Ptr, Size);
+}
+
 EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                              size_t DstOffset, size_t SrcOffset, int DstDevice,
                              int SrcDevice) {

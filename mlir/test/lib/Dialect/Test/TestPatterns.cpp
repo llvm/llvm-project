@@ -2137,7 +2137,7 @@ struct TestTypeConversionDriver
                                           Location loc) -> Value {
       if (inputs.size() != 1 || !inputs[0].getType().isInteger(37))
         return Value();
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResult(0);
     });
 
