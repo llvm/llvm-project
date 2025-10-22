@@ -64,6 +64,15 @@ TEST(SmartPointerAccessorCachingTest, MatchesClassWithStarArrowGet) {
                       isSmartPointerLikeOperatorArrow()));
   EXPECT_TRUE(matches(Decls, "int target(UniquePtrAlias<S> P) { return P->i; }",
                       isPointerLikeOperatorArrow()));
+
+  EXPECT_TRUE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, MatchesClassWithStarArrow) {
@@ -101,6 +110,15 @@ TEST(SmartPointerAccessorCachingTest, MatchesClassWithStarArrow) {
                        isSmartPointerLikeOperatorArrow()));
   EXPECT_TRUE(matches(Decls, "int target(UniquePtrAlias<S> P) { return P->i; }",
                       isPointerLikeOperatorArrow()));
+
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_TRUE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, NoMatchIfUnexpectedReturnTypes) {
@@ -141,6 +159,15 @@ TEST(SmartPointerAccessorCachingTest, NoMatchIfUnexpectedReturnTypes) {
   EXPECT_TRUE(matches(Decls,
                       "int target(std::unique_ptr<S, S> P) { return P->i; }",
                       isPointerLikeOperatorArrow()));
+
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S, T>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S, T>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, NoMatchIfBinaryStar) {
@@ -163,6 +190,15 @@ TEST(SmartPointerAccessorCachingTest, NoMatchIfBinaryStar) {
   EXPECT_FALSE(
       matches(Decls, "int target(std::unique_ptr<S> P) { return (P * 10).i; }",
               isPointerLikeOperatorStar()));
+
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, NoMatchIfNoConstOverloads) {
@@ -196,6 +232,15 @@ TEST(SmartPointerAccessorCachingTest, NoMatchIfNoConstOverloads) {
   EXPECT_FALSE(
       matches(Decls, "int target(std::unique_ptr<S> P) { return P.get()->i; }",
               isSmartPointerLikeGetMethodCall()));
+
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, NoMatchIfNoStarMethod) {
@@ -221,6 +266,15 @@ TEST(SmartPointerAccessorCachingTest, NoMatchIfNoStarMethod) {
   EXPECT_FALSE(matches(Decls,
                        "int target(std::unique_ptr<S> P) { return P->i; }",
                        isSmartPointerLikeGetMethodCall()));
+
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_FALSE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, MatchesWithValueAndNonConstOverloads) {
@@ -276,6 +330,13 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithValueAndNonConstOverloads) {
       Decls,
       "int target(const std::optional<S> &Const) { return Const.value().i; }",
       isSmartPointerLikeValueMethodCall()));
+
+  EXPECT_TRUE(matches(
+      Decls, "std::optional<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
+  EXPECT_TRUE(matches(
+      Decls, "std::optional<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, MatchesWithTypeAliases) {
@@ -329,6 +390,9 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithTypeAliases) {
   EXPECT_TRUE(matches(
       Decls, "int target(const HasGetAndValue<S> &Const) { return Const->i; }",
       isPointerLikeOperatorArrow()));
+  EXPECT_TRUE(matches(
+      Decls, "HasGetAndValue<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 
   EXPECT_TRUE(matches(
       Decls,
@@ -346,6 +410,9 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithTypeAliases) {
       Decls,
       "int target(const HasGetAndValue<S> &Const) { return Const.get()->i; }",
       isSmartPointerLikeGetMethodCall()));
+  EXPECT_TRUE(matches(
+      Decls, "HasGetAndValue<S>& Helper(); int target() { auto S = Helper(); }",
+      isSmartPointerLikeConstructor()));
 }
 
 TEST(SmartPointerAccessorCachingTest, Renamed) {
@@ -390,6 +457,11 @@ TEST(SmartPointerAccessorCachingTest, Renamed) {
 
   EXPECT_TRUE(matches(Decls, "int target(UniquePtrAlias<S> P) { return P->i; }",
                       isPointerLikeOperatorArrow()));
+
+  EXPECT_TRUE(matches(
+      Decls,
+      "std::unique_ptr<S>& Helper(); int target() { auto S = Helper(); }",
+      isPointerLikeConstructor()));
 }
 
 } // namespace

@@ -25,6 +25,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"
@@ -209,6 +210,16 @@ static auto isStatusOrConstructor() {
 static auto isStatusConstructor() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return cxxConstructExpr(hasType(statusType()));
+}
+
+static auto isNonConstMemberCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxMemberCallExpr(callee(cxxMethodDecl(unless(isConst()))));
+}
+
+static auto isNonConstMemberOperatorCall() {
+  using namespace ::clang::ast_matchers; // NOLINT: Too many names
+  return cxxOperatorCallExpr(callee(cxxMethodDecl(unless(isConst()))));
 }
 
 static auto
@@ -602,6 +613,65 @@ static void transferStatusConstructor(const CXXConstructExpr *Expr,
     initializeStatus(StatusLoc, State.Env);
 }
 
+static void transferStatusOrReturningCall(const CallExpr *Expr,
+                                          LatticeTransferState &State) {
+  RecordStorageLocation *StatusOrLoc =
+      Expr->isPRValue() ? &State.Env.getResultObjectLocation(*Expr)
+                        : State.Env.get<RecordStorageLocation>(*Expr);
+  if (StatusOrLoc != nullptr &&
+      State.Env.getValue(locForOk(locForStatus(*StatusOrLoc))) == nullptr)
+    initializeStatusOr(*StatusOrLoc, State.Env);
+}
+
+static void handleNonConstMemberCall(const CallExpr *Expr,
+                                     RecordStorageLocation *RecordLoc,
+                                     const MatchFinder::MatchResult &Result,
+                                     LatticeTransferState &State) {
+  if (RecordLoc == nullptr)
+    return;
+  State.Lattice.clearConstMethodReturnValues(*RecordLoc);
+  State.Lattice.clearConstMethodReturnStorageLocations(*RecordLoc);
+
+  if (isStatusOrType(Expr->getType()))
+    transferStatusOrReturningCall(Expr, State);
+}
+static void transferNonConstMemberCall(const CXXMemberCallExpr *Expr,
+                                       const MatchFinder::MatchResult &Result,
+                                       LatticeTransferState &State) {
+  handleNonConstMemberCall(Expr, getImplicitObjectLocation(*Expr, State.Env),
+                           Result, State);
+}
+
+static void
+transferNonConstMemberOperatorCall(const CXXOperatorCallExpr *Expr,
+                                   const MatchFinder::MatchResult &Result,
+                                   LatticeTransferState &State) {
+  auto *RecordLoc = cast_or_null<RecordStorageLocation>(
+      State.Env.getStorageLocation(*Expr->getArg(0)));
+  handleNonConstMemberCall(Expr, RecordLoc, Result, State);
+}
+
+static RecordStorageLocation *
+getSmartPtrLikeStorageLocation(const Expr &E, const Environment &Env) {
+  if (!E.isPRValue())
+    return dyn_cast_or_null<RecordStorageLocation>(Env.getStorageLocation(E));
+  if (auto *PointerVal = dyn_cast_or_null<PointerValue>(Env.getValue(E)))
+    return dyn_cast_or_null<RecordStorageLocation>(
+        &PointerVal->getPointeeLoc());
+  return nullptr;
+}
+
+static void maybeInitLocForCtor(QualType T, StorageLocation &Loc,
+                                Environment &Env) {
+  if (isStatusOrType(T)) {
+    initializeStatusOr(cast<RecordStorageLocation>(Loc), Env);
+  } else if (isStatusType(T)) {
+    initializeStatus(cast<RecordStorageLocation>(Loc), Env);
+  } else {
+    llvm::errs() << T << "\n";
+  }
+}
+
 CFGMatchSwitch<LatticeTransferState>
 buildTransferMatchSwitch(ASTContext &Ctx,
                          CFGMatchSwitchBuilder<LatticeTransferState> Builder) {
@@ -661,6 +731,51 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                                        transferStatusOrConstructor)
       .CaseOfCFGStmt<CXXConstructExpr>(isStatusConstructor(),
                                        transferStatusConstructor)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getSmartPtrLikeStorageLocation(*E->getArg(0), State.Env),
+                State, [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXConstructExpr>(
+          isSmartPointerLikeConstructor(),
+          [](const CXXConstructExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeConstructor(
+                E, &State.Env.getResultObjectLocation(*E), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [&](QualType T, StorageLocation &Loc) {
+                  maybeInitLocForCtor(T, Loc, State.Env);
+                });
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
+                                        transferNonConstMemberCall)
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(isNonConstMemberOperatorCall(),
+                                          transferNonConstMemberOperatorCall)
       .Build();
 }
 
