@@ -227,7 +227,7 @@ public:
       const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       const mlir::Value vecValue = Visit(e->getBase());
       const mlir::Value indexValue = Visit(e->getIdx());
-      return cir::VecExtractOp::create(cfg.builder, loc, vecValue, indexValue);
+      return cir::VecExtractOp::create(cgf.builder, loc, vecValue, indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -239,7 +239,7 @@ public:
       mlir::Value inputVec = Visit(e->getExpr(0));
       mlir::Value indexVec = Visit(e->getExpr(1));
       return cir::VecShuffleDynamicOp::create(
-          cfg.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+          cgf.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
     }
 
     mlir::Value vec1 = Visit(e->getExpr(0));
@@ -257,7 +257,7 @@ public:
                                 .getSExtValue()));
     }
 
-    return cir::VecShuffleOp::create(cir.builder,
+    return cir::VecShuffleOp::create(cgf.builder,
                                      cgf.getLoc(e->getSourceRange()),
                                      cgf.convertType(e->getType()), vec1, vec2,
                                      cgf.builder.getArrayAttr(indices));
