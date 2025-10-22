@@ -800,6 +800,35 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_THAT(drop_end(vec), ElementsAre(0, 1, 2, 3));
 }
 
+TEST(STLExtrasTest, TakeBeginTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  for (int n = 0; n < 5; ++n) {
+    EXPECT_THAT(take_begin(vec, n), ElementsAreArray(ArrayRef(vec.data(), n)));
+  }
+}
+
+TEST(STLExtrasTest, TakeBeginDefaultTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  EXPECT_THAT(take_begin(vec), ElementsAre(0));
+}
+
+TEST(STLExtrasTest, TakeEndTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  for (int n = 0; n < 5; ++n) {
+    EXPECT_THAT(take_end(vec, n),
+                ElementsAreArray(ArrayRef(&vec[vec.size() - n], n)));
+  }
+}
+
+TEST(STLExtrasTest, TakeEndDefaultTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  EXPECT_THAT(take_end(vec), ElementsAre(4));
+}
+
 TEST(STLExtrasTest, MapRangeTest) {
   SmallVector<int, 5> Vec{0, 1, 2};
   EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),

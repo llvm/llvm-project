@@ -325,6 +325,20 @@ template <typename T> auto drop_end(T &&RangeOrContainer, size_t N = 1) {
                     std::prev(adl_end(RangeOrContainer), N));
 }
 
+/// Return a range covering \p RangeOrContainer with the first N elements
+/// included.
+template <typename T> auto take_begin(T &&RangeOrContainer, size_t N = 1) {
+  return make_range(adl_begin(RangeOrContainer),
+                    std::next(adl_begin(RangeOrContainer), N));
+}
+
+/// Return a range covering \p RangeOrContainer with the last N elements
+/// included.
+template <typename T> auto take_end(T &&RangeOrContainer, size_t N = 1) {
+  return make_range(std::prev(adl_end(RangeOrContainer), N),
+                    adl_end(RangeOrContainer));
+}
+
 // mapped_iterator - This is a simple iterator adapter that causes a function to
 // be applied whenever operator* is invoked on the iterator.
 
