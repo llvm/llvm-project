@@ -53,6 +53,8 @@ private:
   std::vector<std::string> &Deps;
 };
 
+// FIXME: Use the regular Service/Worker/Collector APIs instead of
+//        reimplementing the action.
 class TestDependencyScanningAction : public tooling::ToolAction {
 public:
   TestDependencyScanningAction(std::vector<std::string> &Deps) : Deps(Deps) {}
@@ -63,6 +65,7 @@ public:
                      DiagnosticConsumer *DiagConsumer) override {
     CompilerInstance Compiler(std::move(Invocation),
                               std::move(PCHContainerOps));
+    Compiler.setVirtualFileSystem(FileMgr->getVirtualFileSystemPtr());
     Compiler.setFileManager(FileMgr);
 
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);

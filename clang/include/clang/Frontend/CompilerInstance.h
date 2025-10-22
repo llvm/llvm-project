@@ -504,8 +504,12 @@ public:
     FileMgr.resetWithoutRelease();
   }
 
-  /// Replace the current file manager and virtual file system.
+  /// Replace the current file manager.
   void setFileManager(FileManager *Value);
+
+  /// @}
+  /// @name Output Manager
+  /// @{
 
   /// Set the output manager.
   void setOutputBackend(IntrusiveRefCntPtr<llvm::vfs::OutputBackend> NewOutputs);

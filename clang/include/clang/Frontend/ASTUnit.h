@@ -488,6 +488,11 @@ public:
     return *PPOpts;
   }
 
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystemPtr() {
+    // FIXME: Don't defer VFS ownership to the FileManager.
+    return FileMgr->getVirtualFileSystemPtr();
+  }
+
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
 
