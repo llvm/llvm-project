@@ -49,7 +49,7 @@ private:
   /// Common pool of AsyncQueue
   AsyncQueuePoolTy AsyncQueuePool;
 
-  auto &getTLS() { return ThreadTLSTable.get(); }
+  L0ThreadTLSTy &getTLS() { return ThreadTLSTable.get(); }
 
   /// Find L0 devices and initialize device properties.
   /// Returns number of devices reported to omptarget.
@@ -59,12 +59,14 @@ public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() {}
 
-  auto &getDeviceTLS(int32_t DeviceId) { return DeviceTLSTable.get(DeviceId); }
-  auto &getContextTLS(ze_context_handle_t Context) {
+  L0DeviceTLSTy &getDeviceTLS(int32_t DeviceId) {
+    return DeviceTLSTable.get(DeviceId);
+  }
+  L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
     return ContextTLSTable.get(Context);
   }
 
-  static const auto &getOptions() { return Options; }
+  static const L0OptionsTy &getOptions() { return Options; }
 
   L0DeviceTy &getDeviceFromId(int32_t DeviceId) const {
     return static_cast<L0DeviceTy &>(getDevice(DeviceId));

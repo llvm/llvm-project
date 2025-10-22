@@ -156,40 +156,44 @@ public:
   L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
   L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
 
-  auto getCmdList() const { return CmdList; }
+  ze_command_list_handle_t getCmdList() const { return CmdList; }
   void setCmdList(ze_command_list_handle_t _CmdList) { CmdList = _CmdList; }
 
-  auto getCopyCmdList() const { return CopyCmdList; }
+  ze_command_list_handle_t getCopyCmdList() const { return CopyCmdList; }
   void setCopyCmdList(ze_command_list_handle_t _CopyCmdList) {
     CopyCmdList = _CopyCmdList;
   }
 
-  auto getLinkCopyCmdList() const { return LinkCopyCmdList; }
+  ze_command_list_handle_t getLinkCopyCmdList() const {
+    return LinkCopyCmdList;
+  }
   void setLinkCopyCmdList(ze_command_list_handle_t _LinkCopyCmdList) {
     LinkCopyCmdList = _LinkCopyCmdList;
   }
 
-  auto getImmCmdList() const { return ImmCmdList; }
+  ze_command_list_handle_t getImmCmdList() const { return ImmCmdList; }
   void setImmCmdList(ze_command_list_handle_t ImmCmdListIn) {
     ImmCmdList = ImmCmdListIn;
   }
 
-  auto getImmCopyCmdList() const { return ImmCopyCmdList; }
+  ze_command_list_handle_t getImmCopyCmdList() const { return ImmCopyCmdList; }
   void setImmCopyCmdList(ze_command_list_handle_t ImmCopyCmdListIn) {
     ImmCopyCmdList = ImmCopyCmdListIn;
   }
 
-  auto getCmdQueue() const { return CmdQueue; }
+  ze_command_queue_handle_t getCmdQueue() const { return CmdQueue; }
   void setCmdQueue(ze_command_queue_handle_t CmdQueueIn) {
     CmdQueue = CmdQueueIn;
   }
 
-  auto getCopyCmdQueue() const { return CopyCmdQueue; }
+  ze_command_queue_handle_t getCopyCmdQueue() const { return CopyCmdQueue; }
   void setCopyCmdQueue(ze_command_queue_handle_t CopyCmdQueueIn) {
     CopyCmdQueue = CopyCmdQueueIn;
   }
 
-  auto getLinkCopyCmdQueue() const { return LinkCopyCmdQueue; }
+  ze_command_queue_handle_t getLinkCopyCmdQueue() const {
+    return LinkCopyCmdQueue;
+  }
   void setLinkCopyCmdQueue(ze_command_queue_handle_t LinkCopyCmdQueueIn) {
     LinkCopyCmdQueue = LinkCopyCmdQueueIn;
   }
@@ -288,13 +292,13 @@ public:
     return static_cast<L0DeviceTy &>(Device);
   }
 
-  auto &getPlugin() { return (LevelZeroPluginTy &)Plugin; }
+  LevelZeroPluginTy &getPlugin() { return (LevelZeroPluginTy &)Plugin; }
   L0DeviceTLSTy &getTLS();
 
   Error setContext() override { return Plugin::success(); }
   Error initImpl(GenericPluginTy &Plugin) override;
   Error deinitImpl() override;
-  auto getZeDevice() const { return zeDevice; }
+  ze_device_handle_t getZeDevice() const { return zeDevice; }
 
   const L0ContextTy &getL0Context() const { return l0Context; }
   L0ContextTy &getL0Context() { return l0Context; }
@@ -307,14 +311,16 @@ public:
 
   std::mutex &getMutex() { return Mutex; }
 
-  auto getComputeIndex() const { return ComputeIndex; }
-  auto getIndirectFlags() const { return IndirectAccessFlags; }
+  uint32_t getComputeIndex() const { return ComputeIndex; }
+  ze_kernel_indirect_access_flags_t getIndirectFlags() const {
+    return IndirectAccessFlags;
+  }
 
-  auto getNumGlobalModules() const { return GlobalModules.size(); }
+  size_t getNumGlobalModules() const { return GlobalModules.size(); }
   void addGlobalModule(ze_module_handle_t Module) {
     GlobalModules.push_back(Module);
   }
-  auto getGlobalModulesArray() { return GlobalModules.data(); }
+  ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
 
   L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
     for (auto &PGM : Programs)
@@ -332,42 +338,45 @@ public:
   }
 
   // add a new program to the device. Return a reference to the new program
-  auto &addProgram(int32_t ImageId, std::unique_ptr<MemoryBuffer> &&Image) {
+  L0ProgramTy &addProgram(int32_t ImageId,
+                          std::unique_ptr<MemoryBuffer> &&Image) {
     Programs.emplace_back(ImageId, *this, std::move(Image));
     return Programs.back();
   }
 
-  const auto &getLastProgram() const { return Programs.back(); }
-  auto &getLastProgram() { return Programs.back(); }
+  const L0ProgramTy &getLastProgram() const { return Programs.back(); }
+  L0ProgramTy &getLastProgram() { return Programs.back(); }
   // Device properties getters
-  auto getVendorId() const { return DeviceProperties.vendorId; }
+  uint32_t getVendorId() const { return DeviceProperties.vendorId; }
   bool isGPU() const { return DeviceProperties.type == ZE_DEVICE_TYPE_GPU; }
 
-  auto getPCIId() const { return DeviceProperties.deviceId; }
-  auto getNumThreadsPerEU() const { return DeviceProperties.numThreadsPerEU; }
-  auto getSIMDWidth() const { return DeviceProperties.physicalEUSimdWidth; }
-  auto getNumEUsPerSubslice() const {
+  uint32_t getPCIId() const { return DeviceProperties.deviceId; }
+  uint32_t getNumThreadsPerEU() const {
+    return DeviceProperties.numThreadsPerEU;
+  }
+  uint32_t getSIMDWidth() const { return DeviceProperties.physicalEUSimdWidth; }
+  uint32_t getNumEUsPerSubslice() const {
     return DeviceProperties.numEUsPerSubslice;
   }
-  auto getNumSubslicesPerSlice() const {
+  uint32_t getNumSubslicesPerSlice() const {
     return DeviceProperties.numSubslicesPerSlice;
   }
-  auto getNumSlices() const { return DeviceProperties.numSlices; }
-  auto getNumSubslices() const {
+  uint32_t getNumSlices() const { return DeviceProperties.numSlices; }
+  uint32_t getNumSubslices() const {
     return DeviceProperties.numSubslicesPerSlice * DeviceProperties.numSlices;
   }
   uint32_t getNumEUs() const {
     return DeviceProperties.numEUsPerSubslice * getNumSubslices();
   }
-  auto getTotalThreads() const {
+  uint32_t getTotalThreads() const {
     return DeviceProperties.numThreadsPerEU * getNumEUs();
   }
-  auto getNumThreadsPerSubslice() const {
+  uint32_t getNumThreadsPerSubslice() const {
     return getNumEUsPerSubslice() * getNumThreadsPerEU();
   }
-  auto getClockRate() const { return DeviceProperties.coreClockRate; }
+  uint32_t getClockRate() const { return DeviceProperties.coreClockRate; }
 
-  auto getMaxSharedLocalMemory() const {
+  uint32_t getMaxSharedLocalMemory() const {
     return ComputeProperties.maxSharedLocalMemory;
   }
   auto getMaxGroupSize() const { return ComputeProperties.maxTotalGroupSize; }

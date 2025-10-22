@@ -24,8 +24,8 @@ class L0ContextTLSTy {
   StagingBufferTy StagingBuffer;
 
 public:
-  auto &getStagingBuffer() { return StagingBuffer; }
-  const auto &getStagingBuffer() const { return StagingBuffer; }
+  StagingBufferTy &getStagingBuffer() { return StagingBuffer; }
+  const StagingBufferTy &getStagingBuffer() const { return StagingBuffer; }
 
   Error deinit() { return StagingBuffer.clear(); }
 };
@@ -86,7 +86,7 @@ public:
   Error init();
   Error deinit();
 
-  auto &getPlugin() const { return Plugin; }
+  LevelZeroPluginTy &getPlugin() const { return Plugin; }
 
   StagingBufferTy &getStagingBuffer();
 
@@ -124,8 +124,8 @@ public:
   ze_api_version_t getDriverAPIVersion() const { return APIVersion; }
 
   /// Return the event pool of this driver
-  auto &getEventPool() { return EventPool; }
-  const auto &getEventPool() const { return EventPool; }
+  EventPoolTy &getEventPool() { return EventPool; }
+  const EventPoolTy &getEventPool() const { return EventPool; }
 
   bool supportsLargeMem() const {
     // Large memory support is available since API version 1.1

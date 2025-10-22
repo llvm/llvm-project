@@ -108,7 +108,7 @@ class L0KernelTy : public GenericKernelTy {
   ze_kernel_handle_t zeKernel;
   // Kernel Properties
   KernelPropertiesTy Properties;
-  auto &getProperties() { return Properties; }
+  KernelPropertiesTy &getProperties() { return Properties; }
 
   Error runTargetTeamRegion(L0DeviceTy &Device, KernelArgsTy &KernelArgs,
                             KernelLaunchParamsTy LaunchParams,
@@ -140,7 +140,7 @@ public:
   L0KernelTy &operator=(const L0KernelTy &) = delete;
   L0KernelTy &operator=(const L0KernelTy &&) = delete;
 
-  const auto &getProperties() const { return Properties; }
+  const KernelPropertiesTy &getProperties() const { return Properties; }
 
   /// Initialize the L0 kernel.
   Error initImpl(GenericDeviceTy &GenericDevice, DeviceImageTy &Image) override;
