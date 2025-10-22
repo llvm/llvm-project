@@ -582,7 +582,7 @@ lldb::LanguageType SourceLanguage::AsLanguageType() const {
 
 llvm::StringRef SourceLanguage::GetDescription() const {
   return llvm::dwarf::LanguageDescription(
-      static_cast<llvm::dwarf::SourceLanguageName>(name));
+      static_cast<llvm::dwarf::SourceLanguageName>(name), version);
 }
 bool SourceLanguage::IsC() const { return name == llvm::dwarf::DW_LNAME_C; }
 

@@ -23,8 +23,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/XRayRecord.h"
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 class RecordVisitor;
 class RecordInitializer;
@@ -444,7 +443,6 @@ public:
   Error visit(TypedEventRecord &) override;
 };
 
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
 
 #endif // LLVM_XRAY_FDRRECORDS_H
