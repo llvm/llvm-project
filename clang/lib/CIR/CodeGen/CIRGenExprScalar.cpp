@@ -227,7 +227,7 @@ public:
       const mlir::Location loc = cgf.getLoc(e->getSourceRange());
       const mlir::Value vecValue = Visit(e->getBase());
       const mlir::Value indexValue = Visit(e->getIdx());
-      return VecExtractOp::create(cgf.cir.builder, loc, vecValue, indexValue);
+      return cir::VecExtractOp::create(cfg.builder, loc, vecValue, indexValue);
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);
@@ -238,8 +238,8 @@ public:
       // The undocumented form of __builtin_shufflevector.
       mlir::Value inputVec = Visit(e->getExpr(0));
       mlir::Value indexVec = Visit(e->getExpr(1));
-      return VecShuffleDynamicOp::create(
-          cgf.cir.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
+      return cir::VecShuffleDynamicOp::create(
+          cfg.builder, cgf.getLoc(e->getSourceRange()), inputVec, indexVec);
     }
 
     mlir::Value vec1 = Visit(e->getExpr(0));
@@ -257,10 +257,10 @@ public:
                                 .getSExtValue()));
     }
 
-    return VecShuffleOp::create(cgf.cir.builder,
-                                cgf.getLoc(e->getSourceRange()),
-                                cgf.convertType(e->getType()), vec1, vec2,
-                                cgf.builder.getArrayAttr(indices));
+    return cir::VecShuffleOp::create(cir.builder,
+                                     cgf.getLoc(e->getSourceRange()),
+                                     cgf.convertType(e->getType()), vec1, vec2,
+                                     cgf.builder.getArrayAttr(indices));
   }
 
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *e) {
