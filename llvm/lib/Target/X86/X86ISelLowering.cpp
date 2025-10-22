@@ -29507,11 +29507,14 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
 
-  if (DAG.isKnownNeverNaN(NewX))
+  if (IsNum)
+    NewY = MinMax;
+  else if (DAG.isKnownNeverNaN(NewX))
     NewX = NewY;
+  else
+    NewY = NewX;
 
-  SDValue IsNaN =
-      DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
+  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NewY, NewY, ISD::SETUO);
 
   return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
 }
