@@ -43,7 +43,7 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
   for (const MDNode *MD : CBufMD->operands()) {
     assert(MD->getNumOperands() && "Invalid cbuffer metadata");
 
-    // For an unused cbuffer, the handle may have been optimizzd out
+    // For an unused cbuffer, the handle may have been optimized out
     Metadata *OpMD = MD->getOperand(0);
     if (!OpMD)
       continue;
