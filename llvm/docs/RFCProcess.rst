@@ -51,7 +51,7 @@ consensus has been accepted.
 
 Non-trivial Acceptance or Rejection
 -----------------------------------
-If the proposal has does not have obvious consensus after community discussion,
+If the proposal does not have obvious consensus after community discussion,
 a maintainer for each of the impacted parts of the project should explicitly
 accept or reject the RFC by leaving a comment stating their decision and
 possibly detailing any provisions for their acceptance. Overall consensus is
@@ -60,7 +60,7 @@ accepted the proposal.
 
 Low Engagement Level
 ~~~~~~~~~~~~~~~~~~~~
-If a proposal gets little or no engagement by the community, it is a sign that
+If the proposal gets little or no engagement by the community, it is a sign that
 the proposal does not have consensus and is rejected. Engagement means comments
 on the proposal. If there are few or no comments but the are a lot of people
 pressing the like/heart button on the post, maintainers can make a value
