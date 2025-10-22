@@ -89,14 +89,32 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
       return A.Name.size() < B.Name.size();
     });
   }
+
+  for (auto &G : Globs) {
+    StringRef Prefix = G.Pattern.prefix();
+    StringRef Suffix = G.Pattern.suffix();
+
+    auto &SToGlob = PrefixSuffixToGlob.emplace(Prefix).first->second;
+    auto &V = SToGlob.emplace(reverse(Suffix)).first->second;
+    V.emplace_back(&G);
+  }
 }
 
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &G : reverse(Globs))
-    if (G.Pattern.match(Query))
-      return Cb(G.Name, G.LineNo);
+  if (!PrefixSuffixToGlob.empty()) {
+    for (const auto &[_, SToGlob] : PrefixSuffixToGlob.find_prefixes(Query)) {
+      for (const auto &[_, V] : SToGlob.find_prefixes(reverse(Query))) {
+        for (const auto *G : reverse(V)) {
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
