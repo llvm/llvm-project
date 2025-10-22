@@ -787,6 +787,21 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 
+// The mapping of firstprivate cannot be represented through an `acc.copyin`
+// since that operation includes present counter updates (and private variables
+// do not impact counters). Instead, the below operation is used to represent
+// the mapping of that initial value which can be used to initialize the private
+// copies.
+def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
+    "mlir::acc::DataClause::acc_firstprivate", "", [],
+    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+  let summary = "Used to decompose firstprivate semantics and represents the "
+                "mapping of the initial value.";
+  let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
+                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+  let extraClassDeclaration = extraClassDeclarationBase;
+}
+
 //===----------------------------------------------------------------------===//
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
