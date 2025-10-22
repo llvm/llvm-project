@@ -1505,8 +1505,8 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     } else if (!rvVendor.empty()) {
       Err(ctx) << getErrorLoc(ctx, loc)
                << "unknown vendor-specific relocation (" << type.v
-               << ") in vendor namespace \"" << rvVendor << "\" against symbol "
-               << &sym;
+               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
+               << "'";
       rvVendor = "";
       continue;
     }
