@@ -1833,6 +1833,13 @@ public:
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
+  /// Create and attach type metadata if the function is a potential indirect
+  /// call target to support call graph section.
+  void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
+
+  /// Create and attach type metadata to the given call.
+  void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
+
   /// Set type metadata to the given function.
   void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
 
