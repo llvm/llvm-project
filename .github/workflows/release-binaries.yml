@@ -156,7 +156,7 @@ jobs:
           # that builds more quickly. 
           macos-13 | macos-14)
             bootstrap_prefix="BOOTSTRAP"
-            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF -D${bootstrap_prefix}-LLVM_TARGETS_TO_BUILD=Native -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly'"
+            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF -DLLVM_RELEASE_ENABLE_PGO=OFF -D${bootstrap_prefix}-LLVM_TARGETS_TO_BUILD=Native"
             ;;
           *)
             bootstrap_prefix="BOOTSTRAP_BOOTSTRAP"
@@ -273,7 +273,11 @@ jobs:
     name: "Test Release Package Mac OS (flang)"
     needs:
       - prepare
+    # Flang is currently disabled on Mac due to
+    # https://github.com/llvm/llvm-project/issues/160546
+    # so we don't need to test it.
     if: >-
+      false && 
       github.event_name == 'pull_request' &&
       (needs.prepare.outputs.build-runs-on == 'macos-13' ||
        needs.prepare.outputs.build-runs-on == 'macos-14')
