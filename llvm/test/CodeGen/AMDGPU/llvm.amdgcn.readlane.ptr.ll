@@ -5,12 +5,8 @@ define void @test_readlane_p0(ptr addrspace(1) %out, ptr %src, i32 %src1) {
 ; CHECK-SDAG-LABEL: test_readlane_p0:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v4
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s[4:5]
+; CHECK-SDAG-NEXT:    ; use v[2:3]
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call ptr @llvm.amdgcn.readlane.p0(ptr %src, i32 %src1)
@@ -22,16 +18,8 @@ define void @test_readlane_v3p0(ptr addrspace(1) %out, <3 x ptr> %src, i32 %src1
 ; CHECK-SDAG-LABEL: test_readlane_v3p0:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s9, v7, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s8, v6, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s7, v5, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s[4:9]
+; CHECK-SDAG-NEXT:    ; use v[2:7]
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call <3 x ptr> @llvm.amdgcn.readlane.v3p0(<3 x ptr> %src, i32 %src1)
@@ -43,11 +31,8 @@ define void @test_readlane_p3(ptr addrspace(1) %out, ptr addrspace(3) %src, i32 
 ; CHECK-SDAG-LABEL: test_readlane_p3:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ; use v2
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call ptr addrspace(3) @llvm.amdgcn.readlane.p3(ptr addrspace(3) %src, i32 %src1)
@@ -59,13 +44,8 @@ define void @test_readlane_v3p3(ptr addrspace(1) %out, <3 x ptr addrspace(3)> %s
 ; CHECK-SDAG-LABEL: test_readlane_v3p3:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v5
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s[4:6]
+; CHECK-SDAG-NEXT:    ; use v[2:4]
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call <3 x ptr addrspace(3)> @llvm.amdgcn.readlane.v3p3(<3 x ptr addrspace(3)> %src, i32 %src1)
@@ -77,11 +57,8 @@ define void @test_readlane_p5(ptr addrspace(1) %out, ptr addrspace(5) %src, i32 
 ; CHECK-SDAG-LABEL: test_readlane_p5:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ; use v2
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call ptr addrspace(5) @llvm.amdgcn.readlane.p5(ptr addrspace(5) %src, i32 %src1)
@@ -93,13 +70,8 @@ define void @test_readlane_v3p5(ptr addrspace(1) %out, <3 x ptr addrspace(5)> %s
 ; CHECK-SDAG-LABEL: test_readlane_v3p5:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v5
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s[4:6]
+; CHECK-SDAG-NEXT:    ; use v[2:4]
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call <3 x ptr addrspace(5)> @llvm.amdgcn.readlane.v3p5(<3 x ptr addrspace(5)> %src, i32 %src1)
@@ -111,11 +83,8 @@ define void @test_readlane_p6(ptr addrspace(1) %out, ptr addrspace(6) %src, i32 
 ; CHECK-SDAG-LABEL: test_readlane_p6:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v3
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s4
+; CHECK-SDAG-NEXT:    ; use v2
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call ptr addrspace(6) @llvm.amdgcn.readlane.p6(ptr addrspace(6) %src, i32 %src1)
@@ -127,13 +96,8 @@ define void @test_readlane_v3p6(ptr addrspace(1) %out, <3 x ptr addrspace(6)> %s
 ; CHECK-SDAG-LABEL: test_readlane_v3p6:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s4, v5
-; CHECK-SDAG-NEXT:    s_nop 3
-; CHECK-SDAG-NEXT:    v_readlane_b32 s6, v4, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s5, v3, s4
-; CHECK-SDAG-NEXT:    v_readlane_b32 s4, v2, s4
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
-; CHECK-SDAG-NEXT:    ; use s[4:6]
+; CHECK-SDAG-NEXT:    ; use v[2:4]
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
 ; CHECK-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %x = call <3 x ptr addrspace(6)> @llvm.amdgcn.readlane.v3p6(<3 x ptr addrspace(6)> %src, i32 %src1)
