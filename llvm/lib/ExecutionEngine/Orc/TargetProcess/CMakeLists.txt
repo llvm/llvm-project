@@ -38,6 +38,7 @@ add_llvm_component_library(LLVMOrcTargetProcess
 
   LINK_COMPONENTS
   ${intel_jit_profiling}
+  BinaryFormat
   Object
   OrcShared
   Support
