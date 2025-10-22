@@ -261,8 +261,14 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
   // the stack when we hit the end of the phi uses for a given def.
   const ValueDFS &Top = *Stack.back().V;
   if (Top.LocalNum == LN_Last && Top.PInfo) {
-    if (!VDUse.U)
-      return false;
+    if (!VDUse.U) {
+      assert(VDUse.PInfo && "A non-use VDUse should have a predicate info");
+      // We should reserve adjacent LN_Last defs for the same phi use.
+      return VDUse.LocalNum == LN_Last &&
+             // If the two phi defs have the same edge, they must be designated
+             // for the same succ BB.
+             getBlockEdge(Top.PInfo) == getBlockEdge(VDUse.PInfo);
+    }
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
     if (!PHI)
       return false;
