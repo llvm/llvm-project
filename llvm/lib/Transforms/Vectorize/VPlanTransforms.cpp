@@ -6060,8 +6060,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
   VPTypeAnalysis TypeInfo(Plan);
   DenseMap<VPWidenGEPRecipe *, std::tuple<VPValue *, VPValue *, Type *>>
       StrideCache;
-  SmallVector<VPRecipeBase *> ToErase;
-  SmallPtrSet<VPValue *, 4> PossiblyDead;
+  SmallVector<VPWidenMemoryRecipe *> ToErase;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6084,23 +6083,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       if (!PtrUV)
         continue;
 
-      // Try to get base and stride here.
-      VPValue *BasePtr, *StrideInElement;
-      Type *ElementTy;
-      auto It = StrideCache.find(Ptr);
-      if (It != StrideCache.end())
-        std::tie(BasePtr, StrideInElement, ElementTy) = It->second;
-      else
-        std::tie(BasePtr, StrideInElement, ElementTy) = StrideCache[Ptr] =
-            determineBaseAndStride(Ptr);
-
-      // Skip if the memory access is not a strided access.
-      if (!BasePtr) {
-        assert(!StrideInElement && !ElementTy);
-        continue;
-      }
-      assert(StrideInElement && ElementTy);
-
       Instruction &Ingredient = MemR->getIngredient();
       auto IsProfitable = [&](ElementCount VF) -> bool {
         Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
@@ -6118,12 +6100,25 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       };
 
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
-                                                              Range)) {
-        PossiblyDead.insert(BasePtr);
-        PossiblyDead.insert(StrideInElement);
+                                                              Range))
+        continue;
+
+      // Try to get base and stride here.
+      VPValue *BasePtr, *StrideInElement;
+      Type *ElementTy;
+      auto It = StrideCache.find(Ptr);
+      if (It != StrideCache.end())
+        std::tie(BasePtr, StrideInElement, ElementTy) = It->second;
+      else
+        std::tie(BasePtr, StrideInElement, ElementTy) = StrideCache[Ptr] =
+            determineBaseAndStride(Ptr);
+
+      // Skip if the memory access is not a strided access.
+      if (!BasePtr) {
+        assert(!StrideInElement && !ElementTy);
         continue;
       }
-      PossiblyDead.insert(Ptr);
+      assert(StrideInElement && ElementTy);
 
       // Create a new vector pointer for strided access.
       auto *GEP = dyn_cast<GetElementPtrInst>(PtrUV->stripPointerCasts());
@@ -6159,9 +6154,10 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
     }
   }
 
-  // Clean up dead memory access recipes, and unused base address and stride.
-  for (auto *R : ToErase)
+  // Clean up dead recipes.
+  for (auto *R : ToErase) {
+    VPValue *Addr = R->getAddr();
     R->eraseFromParent();
-  for (auto *V : PossiblyDead)
-    recursivelyDeleteDeadRecipes(V);
+    recursivelyDeleteDeadRecipes(Addr);
+  }
 }
