@@ -369,6 +369,7 @@ add_header_macro(
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.__qsortrcompare_t
     .llvm-libc-types.__search_compare_t
+    .llvm-libc-types.constraint_handler_t
     .llvm-libc-types.div_t
     .llvm-libc-types.ldiv_t
     .llvm-libc-types.lldiv_t
