@@ -118,14 +118,14 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
   return new_thread_sp;
 }
 
-void DAPSessionManager::StoreTargetById(uint32_t target_id,
+void DAPSessionManager::StoreTargetById(lldb::user_id_t target_id,
                                         lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
   m_target_map[target_id] = target;
 }
 
 std::optional<lldb::SBTarget>
-DAPSessionManager::TakeTargetById(uint32_t target_id) {
+DAPSessionManager::TakeTargetById(lldb::user_id_t target_id) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
   auto pos = m_target_map.find(target_id);
   if (pos == m_target_map.end())

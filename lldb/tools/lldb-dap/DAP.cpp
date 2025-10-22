@@ -1309,7 +1309,7 @@ void DAP::StartEventThreads() {
   StartEventThread();
 }
 
-llvm::Error DAP::InitializeDebugger(std::optional<uint32_t> target_id) {
+llvm::Error DAP::InitializeDebugger(std::optional<lldb::user_id_t> target_id) {
   // Initialize debugger instance (shared or individual).
   if (target_id) {
     std::optional<lldb::SBTarget> shared_target =
@@ -1569,7 +1569,7 @@ void DAP::EventThread() {
           auto target = lldb::SBTarget::GetTargetFromEvent(event);
 
           // Generate unique target ID and store the target for handoff.
-          uint32_t target_id = target.GetGloballyUniqueID();
+          lldb::user_id_t target_id = target.GetGloballyUniqueID();
           DAPSessionManager::GetInstance().StoreTargetById(target_id, target);
 
           // We create an attach config that will select the unique

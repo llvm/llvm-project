@@ -72,10 +72,29 @@ public:
   llvm::Error WaitForAllSessionsToDisconnect();
 
   /// Store a target for later retrieval by another session.
-  void StoreTargetById(uint32_t target_id, lldb::SBTarget target);
+  ///
+  /// When a new target is dynamically created (e.g., via scripting hooks or
+  /// child process debugging), it needs to be handed off to a new DAP session.
+  /// This method stores the target in a temporary map using its globally unique
+  /// ID so that the new session can retrieve it via TakeTargetById().
+  ///
+  /// \param target_id The globally unique ID of the target (from
+  ///                  SBTarget::GetGloballyUniqueID()).
+  /// \param target The target to store.
+  void StoreTargetById(lldb::user_id_t target_id, lldb::SBTarget target);
 
   /// Retrieve and remove a stored target by its globally unique target ID.
-  std::optional<lldb::SBTarget> TakeTargetById(uint32_t target_id);
+  ///
+  /// This method is called during the attach request when a new DAP session
+  /// wants to attach to a dynamically created target. The target is removed
+  /// from the map after retrieval because:
+  /// 1. Each target should only be attached to by one DAP session
+  /// 2. Once attached, the DAP session takes ownership of the target
+  /// 3. Keeping the target in the map would prevent proper cleanup
+  ///
+  /// \param target_id The globally unique ID of the target to retrieve.
+  /// \return The target if found, std::nullopt otherwise.
+  std::optional<lldb::SBTarget> TakeTargetById(lldb::user_id_t target_id);
 
   /// Get or create event thread for a specific debugger.
   std::shared_ptr<ManagedEventThread>
@@ -112,7 +131,7 @@ private:
 
   /// Map from target ID to target for handing off newly created targets
   /// between sessions.
-  std::map<uint32_t, lldb::SBTarget> m_target_map;
+  std::map<lldb::user_id_t, lldb::SBTarget> m_target_map;
 
   /// Map from debugger ID to its event thread, used when multiple DAP sessions
   /// share the same debugger instance.
