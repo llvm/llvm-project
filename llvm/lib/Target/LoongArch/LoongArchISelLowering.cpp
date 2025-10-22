@@ -2615,8 +2615,7 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                                                Subtarget)))
       return Result;
     // Try to widen vectors to gain more optimization opportunities.
-    if (SDValue NewShuffle = widenShuffleMask(
-            DL, Mask, VT, V1, DAG.getUNDEF(V1.getValueType()), DAG))
+    if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
       return NewShuffle;
     if ((Result =
              lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
