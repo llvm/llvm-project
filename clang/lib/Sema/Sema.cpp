@@ -1489,7 +1489,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   // emitted to codegen, drop them to prevent re-emission in future PTUs.
   if (PP.isIncrementalProcessingEnabled())
     TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
-                                TentativeDefinitions.end());
+                               TentativeDefinitions.end());
 
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
