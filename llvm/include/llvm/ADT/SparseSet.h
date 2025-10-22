@@ -117,7 +117,7 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
 template <typename ValueT, typename KeyT = unsigned,
-          typename KeyFunctorT = identity_cxx20, typename SparseT = uint8_t>
+          typename KeyFunctorT = identity, typename SparseT = uint8_t>
 class SparseSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
