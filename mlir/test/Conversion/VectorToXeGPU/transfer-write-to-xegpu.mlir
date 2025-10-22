@@ -84,15 +84,9 @@ gpu.func @store_dynamic_source(%vec: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[VEC:.+]]: vector<8x16xf32>,
 // STORE-ND-SAME:  %[[SRC:.+]]: memref<?x?x?xf32>,
 // STORE-ND-SAME:  %[[OFFSET:.+]]: index
-// STORE-ND-DAG:   %[[C0:.+]] = arith.constant 0 : index
-// STORE-ND-DAG:   %[[C1:.+]] = arith.constant 1 : index
-// STORE-ND-DAG:   %[[C2:.+]] = arith.constant 2 : index
-// STORE-ND-DAG:   %[[DIM_0:.+]] = memref.dim %[[SRC]], %[[C0]]
-// STORE-ND-DAG:   %[[DIM_1:.+]] = memref.dim %[[SRC]], %[[C1]]
-// STORE-ND-DAG:   %[[DIM_2:.+]] = memref.dim %[[SRC]], %[[C2]]
-// STORE-ND:       {{.*}} %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
+// STORE-ND:       {{.*}} %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata
 // STORE-ND:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]]
-// STORE-ND-SAME:  , shape : [%[[DIM_0]], %[[DIM_1]], %[[DIM_2]]], strides : [%[[STRIDES]]#0, %[[STRIDES]]#1, %c1]
+// STORE-ND-SAME:  , shape : [%[[SIZES]]#0, %[[SIZES]]#1, %[[SIZES]]#2], strides : [%[[STRIDES]]#0, %[[STRIDES]]#1, 1]
 // STORE-ND-SAME:    memref<?x?x?xf32> -> !xegpu.tensor_desc<8x16xf32
 // STORE-ND:       xegpu.store_nd %[[VEC]], %[[DESC]][%[[OFFSET]], %[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>
 

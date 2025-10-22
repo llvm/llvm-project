@@ -110,24 +110,10 @@ static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
   } else {
     // In case of any dynamic shapes, source's shape and strides have to be
     // explicitly provided.
-    SmallVector<Value> sourceDims;
-    unsigned srcRank = srcTy.getRank();
-    for (unsigned i = 0; i < srcRank; ++i)
-      sourceDims.push_back(memref::DimOp::create(rewriter, loc, src, i));
-
-    SmallVector<OpFoldResult> mixedShapes;
-    for (auto [idx, shape] : llvm::enumerate(srcTy.getShape())) {
-      if (shape == ShapedType::kDynamic)
-        mixedShapes.push_back(sourceDims[idx]);
-      else
-        mixedShapes.push_back(rewriter.getI64IntegerAttr(shape));
-    }
-
     auto meta = memref::ExtractStridedMetadataOp::create(rewriter, loc, src);
-    SmallVector<OpFoldResult> mixedStrides(meta.getStrides().begin(),
-                                           meta.getStrides().end());
     ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
-                                           mixedShapes, mixedStrides);
+                                           meta.getConstifiedMixedSizes(),
+                                           meta.getConstifiedMixedStrides());
   }
 
   return ndDesc;

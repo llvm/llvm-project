@@ -144,13 +144,7 @@ gpu.func @load_dynamic_source(%source: memref<?x?x?xf32>,
 // LOAD-ND-LABEL:  @load_dynamic_source(
 // LOAD-ND-SAME:   %[[SRC:.+]]: memref<?x?x?xf32>,
 // LOAD-ND-SAME:   %[[OFFSET:.+]]: index
-// LOAD-ND:        %[[C2:.+]] = arith.constant 2 : index
-// LOAD-ND:        %[[C1:.+]] = arith.constant 1 : index
-// LOAD-ND:        %[[C0:.+]] = arith.constant 0 : index
-// LOAD-ND-DAG:    %[[DIM_0:.+]] = memref.dim %[[SRC]], %[[C0]]
-// LOAD-ND-DAG:    %[[DIM_1:.+]] = memref.dim %[[SRC]], %[[C1]]
-// LOAD-ND-DAG:    %[[DIM_2:.+]] = memref.dim %[[SRC]], %[[C2]]
-// LOAD-ND:        {{.*}} %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
+// LOAD-ND:        {{.*}} %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata %[[SRC]]
 // LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]]
 // LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%[[OFFSET:.+]], %[[OFFSET:.+]], %[[OFFSET:.+]]]{{.*}}-> vector<8x16xf32>
 // LOAD-ND:        return %[[VEC]]
@@ -184,9 +178,8 @@ gpu.func @load_dynamic_source2(%source: memref<?x8x16xf32>,
 }
 
 // LOAD-ND-LABEL:  @load_dynamic_source2(
-// LOAD-ND-DAG:    %[[C0:.+]] = arith.constant 0 : index
-// LOAD-ND-DAG:    %[[DIM:.+]] = memref.dim %{{.*}}, %[[C0]] : memref<?x8x16xf32>
-// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %{{.*}}, shape : [%[[DIM]], 8, 16], strides : [%c128, %c16, %c1] : memref<?x8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
+// LOAD-ND-DAG:    {{.*}} %[[SIZES:.+]]:3, %[[STRIDES:.+]]:3 = memref.extract_strided_metadata
+// LOAD-ND:        %[[DESC:.+]] = xegpu.create_nd_tdesc %{{.*}}, shape : [%[[SIZES]]#0, 8, 16], strides : [128, 16, 1] : memref<?x8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>>
 // LOAD-ND:        %[[VEC:.+]] = xegpu.load_nd %[[DESC]][%{{.*}}, %{{.*}}, %{{.*}}] : !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<boundary_check = false>> -> vector<8x16xf32>
 // LOAD-ND:        return %[[VEC]] : vector<8x16xf32>
 
