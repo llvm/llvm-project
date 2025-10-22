@@ -285,7 +285,7 @@ public:
   }
 
   /// Construct from a StringRef.
-  /*implicit*/ Twine(const StringRef &Str) : LHSKind(PtrAndLengthKind) {
+  /*implicit*/ Twine(StringRef Str) : LHSKind(PtrAndLengthKind) {
     LHS.ptrAndLength.ptr = Str.data();
     LHS.ptrAndLength.length = Str.size();
     assert(isValid() && "Invalid twine!");
@@ -352,7 +352,7 @@ public:
   // right thing. Yet.
 
   /// Construct as the concatenation of a C string and a StringRef.
-  /*implicit*/ Twine(const char *LHS, const StringRef &RHS)
+  /*implicit*/ Twine(const char *LHS, StringRef RHS)
       : LHSKind(CStringKind), RHSKind(PtrAndLengthKind) {
     this->LHS.cString = LHS;
     this->RHS.ptrAndLength.ptr = RHS.data();
@@ -361,7 +361,7 @@ public:
   }
 
   /// Construct as the concatenation of a StringRef and a C string.
-  /*implicit*/ Twine(const StringRef &LHS, const char *RHS)
+  /*implicit*/ Twine(StringRef LHS, const char *RHS)
       : LHSKind(PtrAndLengthKind), RHSKind(CStringKind) {
     this->LHS.ptrAndLength.ptr = LHS.data();
     this->LHS.ptrAndLength.length = LHS.size();
@@ -530,14 +530,14 @@ inline Twine operator+(const Twine &LHS, const Twine &RHS) {
 /// Additional overload to guarantee simplified codegen; this is equivalent to
 /// concat().
 
-inline Twine operator+(const char *LHS, const StringRef &RHS) {
+inline Twine operator+(const char *LHS, StringRef RHS) {
   return Twine(LHS, RHS);
 }
 
 /// Additional overload to guarantee simplified codegen; this is equivalent to
 /// concat().
 
-inline Twine operator+(const StringRef &LHS, const char *RHS) {
+inline Twine operator+(StringRef LHS, const char *RHS) {
   return Twine(LHS, RHS);
 }
 
