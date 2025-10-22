@@ -5457,6 +5457,16 @@ struct BoundsAttributedObject {
   const ValueDecl *Decl = nullptr;
   const Expr *MemberBase = nullptr;
   int DerefLevel = 0;
+
+  bool operator==(const BoundsAttributedObject &Other) const {
+    if (Other.Decl != Decl || Other.DerefLevel != DerefLevel)
+      return false;
+    if (Other.MemberBase == MemberBase)
+      return true;
+    if (Other.MemberBase == nullptr || MemberBase == nullptr)
+      return false;
+    return isSameMemberBase(Other.MemberBase, MemberBase);
+  }
 };
 
 static std::optional<BoundsAttributedObject>
@@ -5500,7 +5510,7 @@ struct BoundsAttributedAssignmentGroup {
   DependentDeclSetTy DeclClosure;
   llvm::SmallVector<const BinaryOperator *, 4> Assignments;
   llvm::SmallVector<BoundsAttributedObject, 4> AssignedObjects;
-  using DeclUseTy = std::pair<const ValueDecl *, const Expr *>;
+  llvm::SmallDenseMap<const ValueDecl *, const Expr *, 4> Uses;
   const Expr *MemberBase = nullptr;
 
   void init(const BoundsAttributedObject &Object) {
@@ -5512,6 +5522,7 @@ struct BoundsAttributedAssignmentGroup {
     DeclClosure.clear();
     Assignments.clear();
     AssignedObjects.clear();
+    Uses.clear();
     MemberBase = nullptr;
   }
 
@@ -5653,6 +5664,22 @@ struct BoundsAttributedGroupFinder
     if (DA.has_value())
       TooComplexAssignHandler(E, DA->Decl);
   }
+
+  // Collect uses of decls belonging to the current group by visiting all DREs
+  // and MemberExprs.
+
+  void addUseIfPartOfCurGroup(const Expr *E) {
+    const auto DA = getBoundsAttributedObject(E);
+    if (DA.has_value() && CurGroup.isPartOfGroup(*DA))
+      CurGroup.Uses.insert({DA->Decl, E});
+  }
+
+  void VisitDeclRefExpr(const DeclRefExpr *DRE) { addUseIfPartOfCurGroup(DRE); }
+
+  void VisitMemberExpr(const MemberExpr *ME) {
+    addUseIfPartOfCurGroup(ME);
+    Visit(ME->getBase());
+  }
 };
 
 // Checks if the bounds-attributed group does not assign to implicitly
@@ -5784,6 +5811,52 @@ static bool checkMissingAndDuplicatedAssignments(
   return IsGroupSafe;
 }
 
+// Checks if the bounds-attributed group has assignments to objects that are
+// also used in the same group. In those cases, the correctness of the group
+// might depend on the order of assignments. We conservatively disallow such
+// assignments.
+//
+// In the example below, the bounds-check in `sp.first()` uses the value of `b`
+// before the later update, which can lead to OOB if `b` was less than 42.
+//   void foo(int *__counted_by(a + b) p, int a, int b, std::span<int> sp) {
+//     p = sp.first(b + 42).data();
+//     b = 42; // b is assigned and used
+//     a = b;
+//   }
+static bool checkAssignedAndUsed(const BoundsAttributedAssignmentGroup &Group,
+                                 UnsafeBufferUsageHandler &Handler,
+                                 ASTContext &Ctx) {
+  const auto &Uses = Group.Uses;
+  if (Uses.empty())
+    return true;
+
+  bool IsGroupSafe = true;
+
+  for (size_t I = 0, N = Group.AssignedObjects.size(); I < N; ++I) {
+    const BoundsAttributedObject &LHSObj = Group.AssignedObjects[I];
+    const BinaryOperator *Assign = Group.Assignments[I];
+
+    // Ignore self assignments, because they don't matter, since the value stays
+    // the same.
+    const auto RHSObj = getBoundsAttributedObject(Assign->getRHS());
+    bool IsSelfAssign = RHSObj.has_value() && *RHSObj == LHSObj;
+    if (IsSelfAssign)
+      continue;
+
+    const ValueDecl *VD = LHSObj.Decl;
+    const auto It = Uses.find(VD);
+    if (It == Uses.end())
+      continue;
+
+    const Expr *Use = It->second;
+    Handler.handleAssignedAndUsed(Assign, Use, VD,
+                                  /*IsRelatedToDecl=*/false, Ctx);
+    IsGroupSafe = false;
+  }
+
+  return IsGroupSafe;
+}
+
 // Checks if the bounds-attributed group is safe. This function returns false
 // iff the assignment group is unsafe and diagnostics have been emitted.
 static bool
@@ -5792,6 +5865,8 @@ checkBoundsAttributedGroup(const BoundsAttributedAssignmentGroup &Group,
   if (!checkImmutableBoundsAttributedObjects(Group, Handler, Ctx))
     return false;
   if (!checkMissingAndDuplicatedAssignments(Group, Handler, Ctx))
+    return false;
+  if (!checkAssignedAndUsed(Group, Handler, Ctx))
     return false;
   // TODO: Add more checks.
   return true;

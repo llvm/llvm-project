@@ -2675,6 +2675,16 @@ public:
     S.Diag(PrevAssign->getOperatorLoc(),
            diag::note_bounds_safety_previous_assignment);
   }
+
+  void handleAssignedAndUsed(const BinaryOperator *Assign, const Expr *Use,
+                             const ValueDecl *VD,
+                             [[maybe_unused]] bool IsRelatedToDecl,
+                             [[maybe_unused]] ASTContext &Ctx) override {
+    S.Diag(Assign->getOperatorLoc(),
+           diag::warn_assigned_and_used_in_bounds_attributed_group)
+        << getBoundsAttributedObjectKind(VD) << VD;
+    S.Diag(Use->getBeginLoc(), diag::note_used_here);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,

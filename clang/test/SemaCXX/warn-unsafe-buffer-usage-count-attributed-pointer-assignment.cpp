@@ -339,6 +339,24 @@ void duplicated_complex(int *__counted_by(a + b) p,
   q = nullptr; // expected-warning{{duplicated assignment to parameter 'q' in bounds-attributed group}}
 }
 
+// Assigned and used
+
+void good_assigned_and_used(int *__counted_by(count) p, int count, std::span<int> sp) {
+  p = sp.first(count).data();
+  count = count;
+}
+
+void bad_assigned_and_used(int *__counted_by(count) p, int count, std::span<int> sp, int new_count) {
+  p = sp.first(count).data(); // expected-note{{used here}}
+  count = new_count;          // expected-warning{{parameter 'count' is assigned and used in the same bounds-attributed group}}
+}
+
+void bad_assigned_and_used2(int *__counted_by(a + b) p, int a, int b, std::span<int> sp) {
+  p = sp.first(b + 42).data(); // expected-note{{used here}}
+  b = 42;                      // expected-warning{{parameter 'b' is assigned and used in the same bounds-attributed group}}
+  a = b;
+}
+
 // Assigns to bounds-attributed that we consider too complex to analyze.
 
 void too_complex_assign_to_ptr(int *__counted_by(count) p, int count, int *q) {

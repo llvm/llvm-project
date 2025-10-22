@@ -14127,6 +14127,9 @@ def warn_missing_assignments_in_bounds_attributed_group : Warning<
 def warn_duplicated_assignment_in_bounds_attributed_group : Warning<
   "duplicated assignment to %select{variable|parameter|member}0 %1 in "
   "bounds-attributed group">, InGroup<UnsafeBufferUsage>, DefaultIgnore;
+def warn_assigned_and_used_in_bounds_attributed_group : Warning<
+  "%select{variable|parameter|member}0 %1 is assigned and used in the same "
+  "bounds-attributed group">, InGroup<UnsafeBufferUsage>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

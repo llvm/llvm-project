@@ -180,6 +180,12 @@ public:
                                           ASTContext &Ctx) {
     handleUnsafeOperation(Assign, IsRelatedToDecl, Ctx);
   }
+
+  virtual void handleAssignedAndUsed(const BinaryOperator *Assign,
+                                     const Expr *Use, const ValueDecl *VD,
+                                     bool IsRelatedToDecl, ASTContext &Ctx) {
+    handleUnsafeOperation(Assign, IsRelatedToDecl, Ctx);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Invoked when a fix is suggested against a variable. This function groups
