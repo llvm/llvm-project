@@ -4720,12 +4720,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       if (!Ptr)
         continue;
 
-      // Memory cost model requires the pointer operand of memory access
-      // instruction.
-      Value *PtrUV = Ptr->getUnderlyingValue();
-      if (!PtrUV)
-        continue;
-
       Instruction &Ingredient = MemR->getIngredient();
       auto IsProfitable = [&](ElementCount VF) -> bool {
         Type *DataTy = toVectorTy(getLoadStoreType(&Ingredient), VF);
@@ -4734,9 +4728,9 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
           return false;
         const InstructionCost CurrentCost = MemR->computeCost(VF, Ctx);
         const InstructionCost StridedLoadStoreCost =
-            Ctx.TTI.getStridedMemoryOpCost(Instruction::Load, DataTy, PtrUV,
-                                           MemR->isMasked(), Alignment,
-                                           Ctx.CostKind, &Ingredient);
+            Ctx.TTI.getStridedMemoryOpCost(
+                Instruction::Load, DataTy, Ptr->getUnderlyingValue(),
+                MemR->isMasked(), Alignment, Ctx.CostKind, &Ingredient);
         return StridedLoadStoreCost < CurrentCost;
       };
 
