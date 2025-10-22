@@ -60,7 +60,6 @@ private:
 
 protected:
   // Basic subtarget description.
-  Triple TargetTriple;
   AMDGPU::IsaInfo::AMDGPUTargetID TargetID;
   unsigned Gen = INVALID;
   InstrItineraryData InstrItins;

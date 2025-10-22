@@ -32,7 +32,7 @@ RUN:   --block-size=1024 | FileCheck --check-prefix CHECK-HEATMAP-BAT-1K %s
 CHECK-HEATMAP-BAT-1K: HEATMAP: dumping heatmap with bucket size 1024
 CHECK-HEATMAP-BAT-1K-NOT: HEATMAP: dumping heatmap with bucket size
 
-CHECK-HEATMAP: PERF2BOLT: read 81 aggregated LBR entries
+CHECK-HEATMAP: PERF2BOLT: read 81 aggregated brstack entries
 CHECK-HEATMAP: HEATMAP: invalid traces: 1
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 64
 CHECK-HEATMAP: HEATMAP: dumping heatmap with bucket size 128
@@ -71,7 +71,7 @@ CHECK-HM-1024-NEXT: 0
 CHECK-BAT-HM-64: (349, 1126]
 CHECK-BAT-HM-4K: (605, 2182]
 
-CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated LBR entries
+CHECK-HEATMAP-BAT: PERF2BOLT: read 79 aggregated brstack entries
 CHECK-HEATMAP-BAT: HEATMAP: invalid traces: 2
 CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 64
 CHECK-HEATMAP-BAT: HEATMAP: dumping heatmap with bucket size 4096
