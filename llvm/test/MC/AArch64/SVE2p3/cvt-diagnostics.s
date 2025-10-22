@@ -27,9 +27,9 @@ fcvtzsn z0.b, { z1.h, z2.h }
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-fcvtzsn z0.b, { z0.h, z1.h }
+fcvtzsn z0.b, { z2.h, z3.h }
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: fcvtzsn z0.b, { z0.h, z1.h }
+// CHECK-NEXT: fcvtzsn z0.b, { z2.h, z3.h }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -59,9 +59,9 @@ fcvtzun z0.b, { z1.h, z2.h }
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-fcvtzun z0.b, { z0.h, z1.h }
+fcvtzun z0.b, { z2.h, z3.h }
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: fcvtzun z0.b, { z0.h, z1.h }
+// CHECK-NEXT: fcvtzun z0.b, { z2.h, z3.h }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -91,9 +91,9 @@ scvtf z0.d, z0.d
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-scvtf z0.h, z0.b
+scvtf z0.h, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: scvtf z0.h, z0.b
+// CHECK-NEXT: scvtf z0.h, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -123,9 +123,9 @@ scvtflt z0.d, z0.d
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-scvtflt z0.h, z0.b
+scvtflt z0.h, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: scvtflt z0.h, z0.b
+// CHECK-NEXT: scvtflt z0.h, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -155,9 +155,9 @@ ucvtf z0.d, z0.d
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-ucvtf z0.h, z0.b
+ucvtf z0.h, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: ucvtf z0.h, z0.b
+// CHECK-NEXT: ucvtf z0.h, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
@@ -187,7 +187,7 @@ ucvtflt z0.d, z0.d
 // Negative tests for instructions that are incompatible with movprfx
 
 movprfx z0, z7
-ucvtflt z0.h, z0.b
+ucvtflt z0.h, z1.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
-// CHECK-NEXT: ucvtflt z0.h, z0.b
+// CHECK-NEXT: ucvtflt z0.h, z1.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
