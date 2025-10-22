@@ -1789,7 +1789,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
     if (Error Err = FiniCB(PreFiniIP))
       return Err;
   } else {
-    llvm::IRBuilderBase::InsertPointGuard Guard{Builder};
+    IRBuilderBase::InsertPointGuard Guard{Builder};
     Builder.restoreIP(PreFiniIP);
     Builder.CreateBr(FiniInfo.FiniBB);
     // There's currently a branch to omp.par.exit. Delete it. We will get there
