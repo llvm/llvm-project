@@ -535,12 +535,16 @@ for.end:                                          ; preds = %for.body
 ;;      if (i < 3000000000)
 ;;        A[i] = 0;
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between A[i] and
-; itself, but it does exist.
+; FIXME: DependenceAnalysis fails to detect the dependency between A[i] and
+; itself, while Strong SIV has been able to prove it.
 define void @strong11(ptr %A) nounwind uwtable ssp {
-; CHECK-LABEL: 'strong11'
-; CHECK-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
-; CHECK-NEXT:    da analyze - none!
+; CHECK-ALL-LABEL: 'strong11'
+; CHECK-ALL-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
+; CHECK-ALL-NEXT:    da analyze - none!
+;
+; CHECK-STRONG-SIV-LABEL: 'strong11'
+; CHECK-STRONG-SIV-NEXT:  Src: store i32 0, ptr %arrayidx, align 4 --> Dst: store i32 0, ptr %arrayidx, align 4
+; CHECK-STRONG-SIV-NEXT:    da analyze - consistent output [0 S]!
 ;
 entry:
   br label %for.cond1.preheader
