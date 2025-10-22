@@ -6651,7 +6651,7 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
 defm : FPToIntegerSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
 defm : FPToIntegerSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
 
-multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, string INST> {
+multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
   def : Pat<(i32 (to_int (round f32:$Rn))),
             (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
   def : Pat<(i64 (to_int (round f32:$Rn))),
@@ -6660,6 +6660,19 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, strin
             (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
   def : Pat<(i64 (to_int (round f64:$Rn))),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
+
+  // For global-isel we can use register classes to determine
+  // which FCVT instruction to use.
+  let Predicates = [HasFPRCVT] in {
+  def : Pat<(i64 (to_int (round f32:$Rn))),
+            (!cast<Instruction>(INST # DSr) f32:$Rn)>;
+  def : Pat<(i32 (to_int (round f64:$Rn))),
+            (!cast<Instruction>(INST # SDr) f64:$Rn)>;
+  }
+  def : Pat<(i32 (to_int (round f32:$Rn))),
+            (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
+  def : Pat<(i64 (to_int (round f64:$Rn))),
+            (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 
   let Predicates = [HasFPRCVT] in {
   def : Pat<(f64 (bitconvert (i64 (to_int (round f32:$Rn))))),
@@ -6687,6 +6700,23 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, strin
             (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
   def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
+
+  // For global-isel we can use register classes to determine
+  // which FCVT instruction to use.
+  let Predicates = [HasFPRCVT] in {
+    def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
+              (!cast<Instruction>(INST # SHr) f16:$Rn)>;
+    def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
+              (!cast<Instruction>(INST # DHr) f16:$Rn)>;
+    def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
+              (!cast<Instruction>(INST # DSr) f32:$Rn)>;
+    def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
+              (!cast<Instruction>(INST # SDr) f64:$Rn)>;
+  }
+  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
+            (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
+  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
+            (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
             
   let Predicates = [HasFPRCVT] in {
     def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f16:$Rn), i32)))),
@@ -6704,14 +6734,14 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, strin
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 }
 
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fceil,  "FCVTPS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fceil,  "FCVTPU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ffloor, "FCVTMS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ffloor, "FCVTMU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ftrunc, "FCVTZS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ftrunc, "FCVTZU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fround, "FCVTAS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fround, "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,  "FCVTPS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,  "FCVTPU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor, "FCVTMS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor, "FCVTMU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc, "FCVTZS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc, "FCVTZU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround, "FCVTAS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround, "FCVTAU">;
 
 // f16 -> s16 conversions
 let Predicates = [HasFullFP16] in {
