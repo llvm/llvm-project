@@ -181,9 +181,9 @@ class PrepareForOMPOffloadPrivatizationPass
           if (usesVarPtr(memberMap))
             chainOfOps.push_back(memberMap);
           if (memberMap.getVarPtrPtr()) {
-              Operation  *defOp = memberMap.getVarPtrPtr().getDefiningOp();
-              if (defOp && usesVarPtr(defOp))
-                chainOfOps.push_back(defOp);
+            Operation *defOp = memberMap.getVarPtrPtr().getDefiningOp();
+            if (defOp && usesVarPtr(defOp))
+              chainOfOps.push_back(defOp);
           }
         }
 
