@@ -14,6 +14,7 @@
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -188,7 +189,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                          LegalizeMutations::changeElementCountTo(
                              0, ElementCount::getFixed(4)))
         .lowerIf(vectorElementCountIsGreaterThan(1, 4))
-        .alwaysLegal();
+        .custom();
     getActionDefinitionsBuilder(G_CONCAT_VECTORS)
         .legalFor(allShaderVectors)
         .lower();
@@ -415,6 +416,11 @@ bool SPIRVLegalizerInfo::legalizeCustom(
   default:
     // TODO: implement legalization for other opcodes.
     return true;
+  case TargetOpcode::G_BITCAST:
+    return legalizeBitcast(Helper, MI);
+  case TargetOpcode::G_INTRINSIC:
+    return legalizeIntrinsic(Helper, MI);
+
   case TargetOpcode::G_IS_FPCLASS:
     return legalizeIsFPClass(Helper, MI, LocObserver);
   case TargetOpcode::G_ICMP: {
@@ -439,6 +445,41 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     return true;
   }
   }
+}
+
+bool SPIRVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
+                                           MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  auto IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  if (IntrinsicID == Intrinsic::spv_bitcast) {
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(2).getReg();
+    LLT DstTy = MRI.getType(DstReg);
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    bool isLongVector = (DstTy.isVector() && DstTy.getNumElements() > 4) ||
+                        (SrcTy.isVector() && SrcTy.getNumElements() > 4);
+
+    if (isLongVector) {
+      MIRBuilder.buildBitcast(DstReg, SrcReg);
+      MI.eraseFromParent();
+    }
+    return true;
+  }
+  return true;
+}
+
+bool SPIRVLegalizerInfo::legalizeBitcast(LegalizerHelper &Helper,
+                                         MachineInstr &MI) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  SmallVector<Register, 1> DstRegs = {DstReg};
+  MIRBuilder.buildIntrinsic(Intrinsic::spv_bitcast, DstRegs).addUse(SrcReg);
+  MI.eraseFromParent();
+  return true;
 }
 
 // Note this code was copied from LegalizerHelper::lowerISFPCLASS and adjusted

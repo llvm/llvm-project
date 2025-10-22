@@ -49,7 +49,8 @@ static bool mayBeInserted(unsigned Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_UNMERGE_VALUES:
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-  case TargetOpcode::G_BITCAST:
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_SMAX:
   case TargetOpcode::G_UMAX:
   case TargetOpcode::G_SMIN:
@@ -201,7 +202,11 @@ static bool processInstr(MachineInstr *I, MachineFunction &MF,
     }
     break;
   }
-  case TargetOpcode::G_BITCAST: {
+  case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+    if (!isSpvIntrinsic(*I, Intrinsic::spv_bitcast))
+      break;
+
     for (const auto &Use : MRI.use_nodbg_instructions(ResVReg)) {
       const unsigned UseOpc = Use.getOpcode();
       assert(UseOpc == TargetOpcode::G_EXTRACT_VECTOR_ELT ||
@@ -326,13 +331,10 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   // TODO: Move this into is own function.
   SmallVector<MachineInstr *, 8> ExtractInstrs;
-  SmallVector<MachineInstr *, 8> BitcastInstrs;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
         ExtractInstrs.push_back(&MI);
-      } else if (MI.getOpcode() == TargetOpcode::G_BITCAST) {
-        BitcastInstrs.push_back(&MI);
       }
     }
   }
@@ -343,27 +345,12 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
     Register Vec = MI->getOperand(1).getReg();
     Register Idx = MI->getOperand(2).getReg();
 
-    auto Intr =
-        MIB.buildIntrinsic(Intrinsic::spv_extractelt, Dst, false, false);
+    auto Intr = MIB.buildIntrinsic(Intrinsic::spv_extractelt, Dst, true, false);
     Intr.addUse(Vec);
     Intr.addUse(Idx);
 
     MI->eraseFromParent();
   }
-
-  for (MachineInstr *MI : BitcastInstrs) {
-    MachineIRBuilder MIB(*MI);
-    Register Dst = MI->getOperand(0).getReg();
-    Register Src = MI->getOperand(1).getReg();
-    SPIRVType *DstType = GR->getSPIRVTypeForVReg(Dst);
-    assert(DstType && "Destination of G_BITCAST must have a type");
-    MIB.buildInstr(SPIRV::OpBitcast)
-        .addDef(Dst)
-        .addUse(GR->getSPIRVTypeID(DstType))
-        .addUse(Src);
-    MI->eraseFromParent();
-  }
-
   return true;
 }
 

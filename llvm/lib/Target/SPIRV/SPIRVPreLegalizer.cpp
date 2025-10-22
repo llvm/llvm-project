@@ -216,29 +216,15 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
 // in https://github.com/llvm/llvm-project/pull/110270 for even more context.
 static void selectOpBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                              MachineIRBuilder MIB) {
-  // TODO: This change will still cause failures for the machine verifier.
-  // This is done so that the G_Bitcast legalization rules can be used.
-  // We will have to add rules to legalize the intrinsic. Note that we cannot
-  // try to lower only bitcast the verify will complain about. You could cast
-  // a long vector of float to a long vector of ints. That has to be legalized
-  // but is also an invalid G_Bitcast.
-  //
-  // Could we use G_COPY? for cases where the LLT are the same? Then lowering
-  // the G_COPY could be either an OpBitcast or OpCopyObject denpending on the
-  // source and result type.
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 16> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != TargetOpcode::G_BITCAST)
         continue;
-      Register DstReg = MI.getOperand(0).getReg();
-      if (MRI.getType(DstReg).isPointer()) {
-        MIB.setInsertPt(*MI.getParent(), MI);
-        buildOpBitcast(GR, MIB, DstReg, MI.getOperand(1).getReg());
-        ToErase.push_back(&MI);
-      }
+      MIB.setInsertPt(*MI.getParent(), MI);
+      buildOpBitcast(GR, MIB, MI.getOperand(0).getReg(),
+                     MI.getOperand(1).getReg());
+      ToErase.push_back(&MI);
     }
   }
   for (MachineInstr *MI : ToErase) {
@@ -255,7 +241,7 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_bitcast) &&
+      if (/* !isSpvIntrinsic(MI, Intrinsic::spv_bitcast) && */
           !isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
         continue;
       assert(MI.getOperand(2).isReg());
