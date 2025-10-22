@@ -355,9 +355,8 @@ struct ExecuteRegionForwardingEliminator
     // results. scf.execute_region must have at least one yield operation.
     for (auto *yieldOp : yieldOps) {
       rewriter.setInsertionPoint(yieldOp);
-      rewriter.eraseOp(yieldOp);
-      rewriter.create<scf::YieldOp>(yieldOp->getLoc(),
-                                    ValueRange(internalValues));
+      rewriter.replaceOpWithNewOp<scf::YieldOp>(yieldOp,
+                                                ValueRange(internalValues));
     }
 
     // Replace the old operation with the external values directly.
