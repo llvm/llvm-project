@@ -1250,13 +1250,23 @@ llvm::json::Value toJSON(const CodeAction &);
 
 enum class MessageType { Error = 1, Warning = 2, Info = 3, Log = 4, Debug = 5 };
 
+struct MessageActionItem {
+  /// A short title like 'Retry', 'Open Log' etc.
+  std::string title;
+};
+
 struct ShowMessageParams {
   ShowMessageParams(MessageType Type, std::string Message)
       : type(Type), message(Message) {}
   MessageType type;
   /// The actual message.
   std::string message;
+  /// The message action items to present.
+  std::optional<std::vector<MessageActionItem>> actions;
 };
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const MessageActionItem &Params);
 
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const ShowMessageParams &Params);
