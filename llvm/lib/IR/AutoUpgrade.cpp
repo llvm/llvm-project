@@ -5262,33 +5262,47 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       return;
     }
 
+    auto GetMaybeAlign = [](Value *Op) {
+      if (auto *CI = dyn_cast<ConstantInt>(Op)) {
+        uint64_t Val = CI->getZExtValue();
+        if (Val == 0)
+          return MaybeAlign();
+        if (isPowerOf2_64(Val))
+          return MaybeAlign(Val);
+      }
+      reportFatalUsageError("Invalid alignment argument");
+    };
+    auto GetAlign = [&](Value *Op) {
+      MaybeAlign Align = GetMaybeAlign(Op);
+      if (Align)
+        return *Align;
+      reportFatalUsageError("Invalid zero alignment argument");
+    };
+
     const DataLayout &DL = CI->getDataLayout();
     switch (NewFn->getIntrinsicID()) {
     case Intrinsic::masked_load:
       NewCall = Builder.CreateMaskedLoad(
-          CI->getType(), CI->getArgOperand(0),
-          cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue(),
+          CI->getType(), CI->getArgOperand(0), GetAlign(CI->getArgOperand(1)),
           CI->getArgOperand(2), CI->getArgOperand(3));
       break;
     case Intrinsic::masked_gather:
       NewCall = Builder.CreateMaskedGather(
           CI->getType(), CI->getArgOperand(0),
-          DL.getValueOrABITypeAlignment(
-              cast<ConstantInt>(CI->getArgOperand(1))->getMaybeAlignValue(),
-              CI->getType()->getScalarType()),
+          DL.getValueOrABITypeAlignment(GetMaybeAlign(CI->getArgOperand(1)),
+                                        CI->getType()->getScalarType()),
           CI->getArgOperand(2), CI->getArgOperand(3));
       break;
     case Intrinsic::masked_store:
       NewCall = Builder.CreateMaskedStore(
           CI->getArgOperand(0), CI->getArgOperand(1),
-          cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue(),
-          CI->getArgOperand(3));
+          GetAlign(CI->getArgOperand(2)), CI->getArgOperand(3));
       break;
     case Intrinsic::masked_scatter:
       NewCall = Builder.CreateMaskedScatter(
           CI->getArgOperand(0), CI->getArgOperand(1),
           DL.getValueOrABITypeAlignment(
-              cast<ConstantInt>(CI->getArgOperand(2))->getMaybeAlignValue(),
+              GetMaybeAlign(CI->getArgOperand(2)),
               CI->getArgOperand(0)->getType()->getScalarType()),
           CI->getArgOperand(3));
       break;
