@@ -111,11 +111,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x100;
   if (hasUnifiedLTO())
     Flags |= 0x200;
+  if (withInternalizeAndPromote())
+    Flags |= 0x400;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x2ff && "Unexpected bits in flag");
+  assert(Flags <= 0x7ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -154,6 +156,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x200)
     setUnifiedLTO();
+  // 1 bit: WithInternalizeAndPromote flag.
+  // Set on combined index only.
+  if (Flags & 0x400)
+    setWithInternalizeAndPromote();
 }
 
 // Collect for the given module the list of function it defines

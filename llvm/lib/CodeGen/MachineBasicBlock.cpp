@@ -1137,7 +1137,7 @@ public:
     MF.setDelegate(this);
   }
 
-  ~SlotIndexUpdateDelegate() {
+  ~SlotIndexUpdateDelegate() override {
     MF.resetDelegate(this);
     for (auto MI : Insertions)
       Indexes->insertMachineInstrInMaps(*MI);

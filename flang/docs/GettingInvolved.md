@@ -41,7 +41,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Slack Workspace
 
 -   There is a Slack workspace dedicated to Flang.
--   There are a number of topic-oriented channels available (e.g., #driver, #f18-semantics, #fir).
+-   There are a number of topic-oriented channels available (e.g., #driver, #fir).
 -   Add yourself via the *[invitation link](https://join.slack.com/t/flang-compiler/shared_invite/zt-2pcn51lh-VrRQL_YUOkxA_1CEfMGQhw "title")*
 
 ## Calls

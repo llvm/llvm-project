@@ -994,3 +994,30 @@ define void @test_assume_deep_and_tree(i1 %a1) {
   call void @foo(i1 %a15)
   ret void
 }
+
+define i32 @test_and_with_phinode(i32 %x) {
+; CHECK-LABEL: @test_and_with_phinode(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XGE1:%.*]] = icmp uge i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[XLT2:%.*]] = icmp ult i32 [[X]], 2
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[XGE1]], [[XLT2]]
+; CHECK:         [[X_0_1:%.*]] = bitcast i32 [[X]] to i32
+; CHECK:         [[X_0_2:%.*]] = bitcast i32 [[X_0_1]] to i32
+; CHECK-NEXT:    br i1 [[AND]], label [[PHI:%.*]], label [[NOPE:%.*]]
+; CHECK:       nope:
+; CHECK-NEXT:    br label [[PHI]]
+; CHECK:       phi:
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[X_0_2]], [[ENTRY:%.*]] ], [ 1, [[NOPE]] ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  %xge1 = icmp uge i32 %x, 1
+  %xlt2 = icmp ult i32 %x, 2
+  %and = and i1 %xge1, %xlt2
+  br i1 %and, label %phi, label %nope
+nope:
+  br label %phi
+phi:
+  %res = phi i32 [ %x, %entry ], [ 1, %nope ]
+  ret i32 %res
+}

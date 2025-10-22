@@ -306,7 +306,7 @@ struct GlobalOutlinedFunction : public OutlinedFunction {
   }
 
   GlobalOutlinedFunction() = delete;
-  ~GlobalOutlinedFunction() = default;
+  ~GlobalOutlinedFunction() override = default;
 };
 
 } // namespace outliner

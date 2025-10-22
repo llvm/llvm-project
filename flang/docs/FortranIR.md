@@ -171,7 +171,7 @@ FIR is intentionally similar to SIL from the statement level up to the level of 
 Program, procedure, region, and basic block all leverage code from LLVM, in much the same way as SIL. These data structures have significant investment and engineering behind their use in compilers, and it makes sense to leverage that work.
 
 * Pro: Uses LLVM data structures, pervasive in compiler projects such as LLVM, SIL, etc.
-* Pro: Get used to seeing and using LLVM, as f18 aims to be an LLVM project
+* Pro: Get used to seeing and using LLVM, as Flang aims to be an LLVM project
 * Con: Uses LLVM data structures, which the project has been avoiding
 
 #### Alternative: C++ Standard Template Library

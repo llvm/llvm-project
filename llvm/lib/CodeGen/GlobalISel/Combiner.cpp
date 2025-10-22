@@ -62,7 +62,7 @@ public:
   static std::unique_ptr<WorkListMaintainer>
   create(Level Lvl, WorkListTy &WorkList, MachineRegisterInfo &MRI);
 
-  virtual ~WorkListMaintainer() = default;
+  ~WorkListMaintainer() override = default;
 
   void reportFullyCreatedInstrs() {
     LLVM_DEBUG({
@@ -95,7 +95,7 @@ public:
   WorkListMaintainerImpl(WorkListTy &WorkList, MachineRegisterInfo &MRI)
       : WorkList(WorkList), MRI(MRI) {}
 
-  virtual ~WorkListMaintainerImpl() = default;
+  ~WorkListMaintainerImpl() override = default;
 
   void reset() override {
     DeferList.clear();

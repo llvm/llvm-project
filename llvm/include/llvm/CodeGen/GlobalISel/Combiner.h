@@ -60,7 +60,7 @@ public:
   Combiner(MachineFunction &MF, CombinerInfo &CInfo,
            const TargetPassConfig *TPC, GISelValueTracking *VT,
            GISelCSEInfo *CSEInfo = nullptr);
-  virtual ~Combiner();
+  ~Combiner() override;
 
   virtual bool tryCombineAll(MachineInstr &I) const = 0;
 
