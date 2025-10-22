@@ -180,4 +180,17 @@ define i64 @sme_cntsd_mul_neg() {
   ret i64 %res
 }
 
-declare i64 @llvm.aarch64.sme.cntsd()
+; Negative test for optimization failure
+define i64 @sme_cntsd_mul_fail() {
+; CHECK-LABEL: sme_cntsd_mul_fail:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov w9, #993 // =0x3e1
+; CHECK-NEXT:    lsr x8, x8, #3
+; CHECK-NEXT:    mul x0, x8, x9
+; CHECK-NEXT:    ret
+  %v = call i64 @llvm.aarch64.sme.cntsd()
+  %res = mul nuw nsw i64 %v, 993
+  ret i64 %res
+}
+
