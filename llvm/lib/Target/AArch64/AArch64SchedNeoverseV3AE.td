@@ -94,7 +94,7 @@ def V3AEWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
 // Define generic 1 micro-op types
 
 def V3AEWrite_1c_1B    : SchedWriteRes<[V3AEUnitB]>   { let Latency = 1; }
-def V3AEWrite_1c_1I_1Flg : SchedWriteRes<[V3AEUnitI, V3AEUnitFlg]>   { let Latency = 1; }
+def V3AEWrite_1c_1F_1Flg : SchedWriteRes<[V3AEUnitI, V3AEUnitFlg]>   { let Latency = 1; }
 def V3AEWrite_1c_1I    : SchedWriteRes<[V3AEUnitI]>   { let Latency = 1; }
 def V3AEWrite_1c_1M    : SchedWriteRes<[V3AEUnitM]>   { let Latency = 1; }
 def V3AEWrite_1c_1SA   : SchedWriteRes<[V3AEUnitSA]>  { let Latency = 1; }
@@ -780,8 +780,12 @@ def V3AEWrite_ArithI : SchedWriteVariant<[
                        SchedVar<IsCheapLSL,  [V3AEWrite_1c_1I]>,
                        SchedVar<NoSchedPred, [V3AEWrite_2c_1M]>]>;
 
+def V3AEWrite_ArithF : SchedWriteVariant<[
+                       SchedVar<IsCheapLSL,  [V3AEWrite_1c_1F_1Flg]>,
+                       SchedVar<NoSchedPred, [V3AEWrite_2c_1M_1Flg]>]>;
+
 def V3AEWrite_Logical : SchedWriteVariant<[
-                        SchedVar<NeoverseNoLSL, [V3AEWrite_1c_1I_1Flg]>,
+                        SchedVar<NeoverseNoLSL, [V3AEWrite_1c_1F_1Flg]>,
                         SchedVar<NoSchedPred,   [V3AEWrite_2c_1M_1Flg]>]>;
 
 def V3AEWrite_Extr : SchedWriteVariant<[
@@ -975,7 +979,7 @@ def : InstRW<[V3AEWrite_1c_1B_1S], (instrs BL, BLR)>;
 def : SchedAlias<WriteI, V3AEWrite_1c_1I>;
 
 // ALU, basic, flagset
-def : InstRW<[V3AEWrite_1c_1I_1Flg],
+def : InstRW<[V3AEWrite_1c_1F_1Flg],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
@@ -989,14 +993,14 @@ def : SchedAlias<WriteIEReg, V3AEWrite_2c_1M>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def : SchedAlias<WriteISReg, V3AEWrite_ArithI>;
-def : InstRW<[V3AEWrite_ArithI],
+def : InstRW<[V3AEWrite_ArithF],
              (instregex "^(ADD|SUB)S[WX]rs$")>;
 
 // Arithmetic, immediate to logical address tag
 def : InstRW<[V3AEWrite_2c_1M], (instrs ADDG, SUBG)>;
 
 // Conditional compare
-def : InstRW<[V3AEWrite_1c_1I_1Flg], (instregex "^CCM[NP][WX][ir]")>;
+def : InstRW<[V3AEWrite_1c_1F_1Flg], (instregex "^CCM[NP][WX][ir]")>;
 
 // Convert floating-point condition flags
 // Flag manipulation instructions
@@ -1010,7 +1014,7 @@ def : InstRW<[V3AEWrite_2c_1M], (instrs IRG, IRGstack)>;
 def : InstRW<[V3AEWrite_1c_1I], (instrs GMI, SUBP)>;
 
 // Subtract Pointer, flagset
-def : InstRW<[V3AEWrite_1c_1I_1Flg], (instrs SUBPS)>;
+def : InstRW<[V3AEWrite_1c_1F_1Flg], (instrs SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[V3AEWrite_1c_1I],    (instregex "^(AND|BIC|EON|EOR|ORN)[WX]rs$")>;
