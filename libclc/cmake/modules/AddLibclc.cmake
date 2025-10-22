@@ -392,7 +392,7 @@ function(add_libclc_builtin_set)
   list( PREPEND bytecode_files ${bytecode_ir_files} )
 
   if( NOT bytecode_files )
-    message(FATAL_ERROR "Cannot create an empty builtins library")
+    message(FATAL_ERROR "Cannot create an empty builtins library for ${ARG_ARCH_SUFFIX}")
   endif()
 
   set( builtins_link_lib_tgt builtins.link.${ARG_ARCH_SUFFIX} )
