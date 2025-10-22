@@ -7,7 +7,8 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-6.f90 -o - | FileCheck %t/omp-declare-mapper-6.f90
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-7.f90 -o - | FileCheck %t/omp-declare-mapper-7.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -module-dir %t %t/omp-declare-mapper-7.mod.f90 -o - >/dev/null
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -J %t %t/omp-declare-mapper-7.use.f90 -o - | FileCheck %t/omp-declare-mapper-7.use.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -303,8 +304,8 @@ subroutine declare_mapper_nested_parent
   !$omp end target
 end subroutine declare_mapper_nested_parent
 
-!--- omp-declare-mapper-7.f90
-! Check mappers declared inside modules and used via USE association.
+!--- omp-declare-mapper-7.mod.f90
+! Module with DECLARE MAPPER to be compiled separately
 module m_mod
   implicit none
   type :: mty
@@ -313,13 +314,13 @@ module m_mod
   !$omp declare mapper(mymap : mty :: v) map(tofrom: v%x)
 end module m_mod
 
+!--- omp-declare-mapper-7.use.f90
+! Consumer program that USEs the module and applies the mapper by name.
+! CHECK: %{{.*}} = omp.map.info {{.*}} mapper(@{{.*mymap}}) {{.*}} {name = "a"}
 program use_module_mapper
   use m_mod
   implicit none
   type(mty) :: a
-
-  ! CHECK: omp.declare_mapper @[[MODMAP:[^ ]*mymap]]
-  ! CHECK: %{{.*}} = omp.map.info {{.*}} mapper(@[[MODMAP]]) {{.*}} {name = "a"}
   !$omp target map(mapper(mymap) : a)
     a%x = 42
   !$omp end target

@@ -1852,8 +1852,10 @@ bool OmpVisitor::Pre(const parser::OmpMapClause &x) {
       // TODO: Do we need a specific flag or type here, to distinghuish against
       // other ConstructName things? Leaving this for the full implementation
       // of mapper lowering.
-      auto *misc{symbol->GetUltimate().detailsIf<MiscDetails>()};
-      if (!misc || misc->kind() != MiscDetails::Kind::ConstructName)
+      auto &ultimate{symbol->GetUltimate()};
+      auto *misc{ultimate.detailsIf<MiscDetails>()};
+      auto *md{ultimate.detailsIf<MapperDetails>()};
+      if (!md && (!misc || misc->kind() != MiscDetails::Kind::ConstructName))
         context().Say(mapper->v.source,
             "Name '%s' should be a mapper name"_err_en_US, mapper->v.source);
       else
@@ -1882,8 +1884,15 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   // the type has been fully processed.
   BeginDeclTypeSpec();
   auto &mapperName{std::get<std::string>(spec.t)};
-  MakeSymbol(parser::CharBlock(mapperName), Attrs{},
-      MiscDetails{MiscDetails::Kind::ConstructName});
+  // Create or update the mapper symbol with MapperDetails and
+  // keep track of the declarative construct for module emission.
+  Symbol &mapperSym{MakeSymbol(parser::CharBlock(mapperName), Attrs{})};
+  if (auto *md{mapperSym.detailsIf<MapperDetails>()}) {
+    md->AddDecl(declaratives_.back());
+  } else if (mapperSym.has<UnknownDetails>() || mapperSym.has<MiscDetails>()) {
+    mapperSym.set_details(MapperDetails{});
+    mapperSym.get<MapperDetails>().AddDecl(declaratives_.back());
+  }
   PushScope(Scope::Kind::OtherConstruct, nullptr);
   Walk(std::get<parser::TypeSpec>(spec.t));
   auto &varName{std::get<parser::Name>(spec.t)};
@@ -3614,11 +3623,13 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
       // Default USE imports public names, excluding intrinsic-only and most
-      // miscellaneous details. However, allow OpenMP mapper identifiers,
-      // which are currently represented with MiscDetails::ConstructName.
-      bool isMapper{false};
-      if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
-        isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
+      // miscellaneous details. Allow OpenMP mapper identifiers represented
+      // as MapperDetails, and also legacy MiscDetails::ConstructName.
+      bool isMapper{symbol->has<MapperDetails>()};
+      if (!isMapper) {
+        if (const auto *misc{symbol->detailsIf<MiscDetails>()}) {
+          isMapper = misc->kind() == MiscDetails::Kind::ConstructName;
+        }
       }
       if (symbol->attrs().test(Attr::PUBLIC) && !IsUseRenamed(symbol->name()) &&
           (!symbol->implicitAttrs().test(Attr::INTRINSIC) ||
