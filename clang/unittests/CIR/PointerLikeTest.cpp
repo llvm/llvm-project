@@ -187,7 +187,7 @@ protected:
 
     // Access the first element of the structure.
     OwningOpRef<cir::GetMemberOp> access1 = cir::GetMemberOp::create(
-        b, loc, cir::PointerType::get(ty1), val, b.getStringAttr("f1"), 0);
+        b, loc, cir::PointerType::get(ty1), val, b.getStringAttr("f1"), 0u);
     mlir::Value accessVal1 = access1.get();
 
     // Verify that we get the expected element type.
