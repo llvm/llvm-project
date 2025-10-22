@@ -451,6 +451,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeModuleFlags(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  copyModuleAttrToFunctions(*M);
 
   if (!Slots)
     return false;
@@ -1270,7 +1271,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
       if (parseToken(lltok::StringConstant, "expected partition string"))
         return true;
     } else if (!IsAlias && Lex.getKind() == lltok::MetadataVar) {
-      if (parseGlobalObjectMetadataAttachment(*GI.get()))
+      if (parseGlobalObjectMetadataAttachment(*GI))
         return true;
     } else {
       return tokError("unknown alias or ifunc property!");
@@ -5876,6 +5877,7 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   REQUIRED(file, MDField, (/* AllowNull */ false));                            \
   OPTIONAL(language, DwarfLangField, );                                        \
   OPTIONAL(sourceLanguageName, DwarfSourceLangNameField, );                    \
+  OPTIONAL(sourceLanguageVersion, MDUnsignedField, (0, UINT32_MAX));           \
   OPTIONAL(producer, MDStringField, );                                         \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(flags, MDStringField, );                                            \
@@ -5905,10 +5907,15 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
     return error(Loc, "can only specify one of 'language' and "
                       "'sourceLanguageName' on !DICompileUnit");
 
+  if (sourceLanguageVersion.Seen && !sourceLanguageName.Seen)
+    return error(Loc, "'sourceLanguageVersion' requires an associated "
+                      "'sourceLanguageName' on !DICompileUnit");
+
   Result = DICompileUnit::getDistinct(
       Context,
       language.Seen ? DISourceLanguageName(language.Val)
-                    : DISourceLanguageName(sourceLanguageName.Val, 0),
+                    : DISourceLanguageName(sourceLanguageName.Val,
+                                           sourceLanguageVersion.Val),
       file.Val, producer.Val, isOptimized.Val, flags.Val, runtimeVersion.Val,
       splitDebugFilename.Val, emissionKind.Val, enums.Val, retainedTypes.Val,
       globals.Val, imports.Val, macros.Val, dwoId.Val, splitDebugInlining.Val,
