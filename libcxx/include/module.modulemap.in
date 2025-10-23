@@ -265,10 +265,6 @@ module std_core [system] {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_replaceable {
       header "__type_traits/is_replaceable.h"
       export std_core.type_traits.integral_constant
@@ -1079,6 +1075,7 @@ module std [system] {
     module invocable                { header "__concepts/invocable.h" }
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
