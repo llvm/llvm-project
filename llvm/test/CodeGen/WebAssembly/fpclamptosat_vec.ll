@@ -2808,6 +2808,348 @@ entry:
   ret <4 x i32> %spec.store.select7
 }
 
+define <2 x i8> @fptosi_v2f32_v2i8(<2 x float> %x) {
+; CHECK-LABEL: fptosi_v2f32_v2i8:
+; CHECK:         .functype fptosi_v2f32_v2i8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <2 x float> %x to <2 x i8>
+  ret <2 x i8> %conv
+}
+
+define <2 x i8> @fptoui_v2f32_v2i8(<2 x float> %x) {
+; CHECK-LABEL: fptoui_v2f32_v2i8:
+; CHECK:         .functype fptoui_v2f32_v2i8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <2 x float> %x to <2 x i8>
+  ret <2 x i8> %conv
+}
+
+define <2 x i16> @fptosi_v2f32_v2i16(<2 x float> %x) {
+; CHECK-LABEL: fptosi_v2f32_v2i16:
+; CHECK:         .functype fptosi_v2f32_v2i16 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <2 x float> %x to <2 x i16>
+  ret <2 x i16> %conv
+}
+
+define <2 x i16> @fptoui_v2f32_v2i16(<2 x float> %x) {
+; CHECK-LABEL: fptoui_v2f32_v2i16:
+; CHECK:         .functype fptoui_v2f32_v2i16 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <2 x float> %x to <2 x i16>
+  ret <2 x i16> %conv
+}
+
+define <4 x i8> @fptosi_v4f32_v4i8(<4 x float> %x) {
+; CHECK-LABEL: fptosi_v4f32_v4i8:
+; CHECK:         .functype fptosi_v4f32_v4i8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <4 x float> %x to <4 x i8>
+  ret <4 x i8> %conv
+}
+
+define <4 x i8> @fptoui_v4f32_v4i8(<4 x float> %x) {
+; CHECK-LABEL: fptoui_v4f32_v4i8:
+; CHECK:         .functype fptoui_v4f32_v4i8 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <4 x float> %x to <4 x i8>
+  ret <4 x i8> %conv
+}
+
+define <4 x i16> @fptosi_v4f32_v4i16(<4 x float> %x) {
+; CHECK-LABEL: fptosi_v4f32_v4i16:
+; CHECK:         .functype fptosi_v4f32_v4i16 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <4 x float> %x to <4 x i16>
+  ret <4 x i16> %conv
+}
+
+define <4 x i16> @fptoui_v4f32_v4i16(<4 x float> %x) {
+; CHECK-LABEL: fptoui_v4f32_v4i16:
+; CHECK:         .functype fptoui_v4f32_v4i16 (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <4 x float> %x to <4 x i16>
+  ret <4 x i16> %conv
+}
+
+define <8 x i8> @fptosi_v8f32_v8i8(<8 x float> %x) {
+; CHECK-LABEL: fptosi_v8f32_v8i8:
+; CHECK:         .functype fptosi_v8f32_v8i8 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <8 x float> %x to <8 x i8>
+  ret <8 x i8> %conv
+}
+
+define <8 x i8> @fptoui_v8f32_v8i8(<8 x float> %x) {
+; CHECK-LABEL: fptoui_v8f32_v8i8:
+; CHECK:         .functype fptoui_v8f32_v8i8 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <8 x float> %x to <8 x i8>
+  ret <8 x i8> %conv
+}
+
+define <8 x i16> @fptosi_v8f32_v8i16(<8 x float> %x) {
+; CHECK-LABEL: fptosi_v8f32_v8i16:
+; CHECK:         .functype fptosi_v8f32_v8i16 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <8 x float> %x to <8 x i16>
+  ret <8 x i16> %conv
+}
+
+define <8 x i16> @fptoui_v8f32_v8i16(<8 x float> %x) {
+; CHECK-LABEL: fptoui_v8f32_v8i16:
+; CHECK:         .functype fptoui_v8f32_v8i16 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <8 x float> %x to <8 x i16>
+  ret <8 x i16> %conv
+}
+
+define <16 x i8> @fptosi_v16f32_v16i8(<16 x float> %x) {
+; CHECK-LABEL: fptosi_v16f32_v16i8:
+; CHECK:         .functype fptosi_v16f32_v16i8 (v128, v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <16 x float> %x to <16 x i8>
+  ret <16 x i8> %conv
+}
+
+define <16 x i8> @fptoui_v16f32_v16i8(<16 x float> %x) {
+; CHECK-LABEL: fptoui_v16f32_v16i8:
+; CHECK:         .functype fptoui_v16f32_v16i8 (v128, v128, v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 255, 255, 255, 255
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    i8x16.narrow_i16x8_u
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <16 x float> %x to <16 x i8>
+  ret <16 x i8> %conv
+}
+
+define <16 x i16> @fptosi_v16f32_v16i16(<16 x float> %x) {
+; CHECK-LABEL: fptosi_v16f32_v16i16:
+; CHECK:         .functype fptosi_v16f32_v16i16 (i32, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptosi <16 x float> %x to <16 x i16>
+  ret <16 x i16> %conv
+}
+
+define <16 x i16> @fptoui_v16f32_v16i16(<16 x float> %x) {
+; CHECK-LABEL: fptoui_v16f32_v16i16:
+; CHECK:         .functype fptoui_v16f32_v16i16 (i32, v128, v128, v128, v128) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    v128.const 65535, 65535, 65535, 65535
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 4
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.trunc_sat_f32x4_u
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i16x8.narrow_i32x4_u
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %conv = fptoui <16 x float> %x to <16 x i16>
+  ret <16 x i16> %conv
+}
+
 declare <2 x i32> @llvm.smin.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.smax.v2i32(<2 x i32>, <2 x i32>)
 declare <2 x i32> @llvm.umin.v2i32(<2 x i32>, <2 x i32>)

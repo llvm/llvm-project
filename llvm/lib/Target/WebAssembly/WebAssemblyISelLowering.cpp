@@ -3598,36 +3598,60 @@ static SDValue performMulCombine(SDNode *N,
   }
 }
 
-SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
-  SDLoc DL(N);
-  EVT OutVT = N->getValueType(0);
-  if (N->getOperand(0)->getValueType(0) == MVT::v4f32) {
-    // First, convert to i32.
-    EVT InVT = MVT::v4i32;
-    SDValue ToInt = DAG.getNode(N->getOpcode(), DL, InVT, N->getOperand(0));
-    APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
-                                      OutVT.getScalarSizeInBits());
-    // Mask out the top MSBs.
-    SDValue Masked =
-        DAG.getNode(ISD::AND, DL, InVT, ToInt, DAG.getConstant(Mask, DL, InVT));
+SDValue DoubleVectorWidth(SDValue In, EVT InVT, unsigned RequiredNumElems,
+                          SelectionDAG &DAG) {
+  SDLoc DL(In);
+  LLVMContext &Ctx = *DAG.getContext();
+  unsigned NumElems = InVT.getVectorNumElements() * 2;
+  EVT OutVT = EVT::getVectorVT(Ctx, MVT::i32, NumElems);
+  SDValue Concat =
+      DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getUNDEF(InVT));
+  if (NumElems < RequiredNumElems) {
+    return DoubleVectorWidth(Concat, OutVT, RequiredNumElems, DAG);
+  }
+  return Concat;
+}
 
-    if (N->getValueType(0) == MVT::v4i8) {
-      // Create a wide enough vector that we can use narrow: v16i32 -> v16i8.
-      SDValue WideVector =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i32,
-                      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32, Masked,
-                                  DAG.getUNDEF(MVT::v4i32)),
-                      DAG.getUNDEF(MVT::v8i32));
-      SDValue Trunc = truncateVectorWithNARROW(MVT::v16i8, WideVector, DL, DAG);
-      return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 32));
-    }
-    if (N->getValueType(0) == MVT::v4i16) {
-      // Create a wide enough vector that we can use narrow: v8i32 -> v8i16.
-      SDValue WideVector = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32,
-                                       Masked, DAG.getUNDEF(MVT::v4i32));
-      SDValue Trunc = truncateVectorWithNARROW(MVT::v8i16, WideVector, DL, DAG);
-      return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 64));
-    }
+SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
+  EVT OutVT = N->getValueType(0);
+  if (!OutVT.isVector())
+    return SDValue();
+
+  EVT OutElTy = OutVT.getVectorElementType();
+  if (OutElTy != MVT::i8 && OutElTy != MVT::i16)
+    return SDValue();
+
+  unsigned NumElems = OutVT.getVectorNumElements();
+  if (!isPowerOf2_32(NumElems))
+    return SDValue();
+
+  EVT FPVT = N->getOperand(0)->getValueType(0);
+  if (FPVT.getVectorElementType() != MVT::f32)
+    return SDValue();
+
+  SDLoc DL(N);
+
+  // First, convert to i32.
+  LLVMContext &Ctx = *DAG.getContext();
+  EVT IntVT = EVT::getVectorVT(Ctx, MVT::i32, NumElems);
+  SDValue ToInt = DAG.getNode(N->getOpcode(), DL, IntVT, N->getOperand(0));
+  APInt Mask = APInt::getLowBitsSet(IntVT.getScalarSizeInBits(),
+                                    OutVT.getScalarSizeInBits());
+  // Mask out the top MSBs.
+  SDValue Masked =
+      DAG.getNode(ISD::AND, DL, IntVT, ToInt, DAG.getConstant(Mask, DL, IntVT));
+
+  if (OutVT.getSizeInBits() < 128) {
+    // Create a wide enough vector that we can use narrow.
+    EVT NarrowedVT = OutElTy == MVT::i8 ? MVT::v16i8 : MVT::v8i16;
+    unsigned NumRequiredElems = NarrowedVT.getVectorNumElements();
+    SDValue WideVector =
+        DoubleVectorWidth(Masked, IntVT, NumRequiredElems, DAG);
+    SDValue Trunc = truncateVectorWithNARROW(NarrowedVT, WideVector, DL, DAG);
+    return DAG.getBitcast(
+        OutVT, extractSubVector(Trunc, 0, DAG, DL, OutVT.getSizeInBits()));
+  } else {
+    return truncateVectorWithNARROW(OutVT, Masked, DL, DAG);
   }
   return SDValue();
 }
