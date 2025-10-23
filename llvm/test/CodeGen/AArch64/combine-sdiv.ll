@@ -1859,3 +1859,43 @@ define <16 x i16> @combine_vec_sdiv_by_one_obfuscated(<16 x i16> %x) "target-fea
   %div = sdiv <16 x i16> %x, %zero_and_ones
   ret <16 x i16> %div
 }
+
+define <8 x i32> @combine_vec_sdiv_zero_obfuscated(<8 x i32> %x) {
+; CHECK-SD-LABEL: combine_vec_sdiv_zero_obfuscated:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    fmov w10, s0
+; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    mov w9, v0.s[1]
+; CHECK-SD-NEXT:    mov w11, v0.s[2]
+; CHECK-SD-NEXT:    mov w12, v0.s[3]
+; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-SD-NEXT:    sdiv w10, w8, w10
+; CHECK-SD-NEXT:    sdiv w9, w8, w9
+; CHECK-SD-NEXT:    fmov s0, w10
+; CHECK-SD-NEXT:    sdiv w11, w8, w11
+; CHECK-SD-NEXT:    mov v0.s[1], w9
+; CHECK-SD-NEXT:    sdiv w8, w8, w12
+; CHECK-SD-NEXT:    mov v0.s[2], w11
+; CHECK-SD-NEXT:    mov v0.s[3], w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: combine_vec_sdiv_zero_obfuscated:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w10, v0.s[1]
+; CHECK-GI-NEXT:    mov w11, v0.s[2]
+; CHECK-GI-NEXT:    mov w12, v0.s[3]
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    sdiv w9, w8, w9
+; CHECK-GI-NEXT:    sdiv w10, w8, w10
+; CHECK-GI-NEXT:    fmov s0, w9
+; CHECK-GI-NEXT:    sdiv w11, w8, w11
+; CHECK-GI-NEXT:    mov v0.s[1], w10
+; CHECK-GI-NEXT:    sdiv w8, w8, w12
+; CHECK-GI-NEXT:    mov v0.s[2], w11
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    ret
+  %1 = sdiv <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0>, %x
+  ret <8 x i32> %1
+}
