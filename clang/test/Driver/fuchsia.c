@@ -312,3 +312,13 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-NOSTDLIB-NOLIBC
 // CHECK-NOSTDLIB-NOLIBC-NOT: "warning:"
 // CHECK-NOSTDLIB-NOLIBC-NOT: "error:"
+
+// RUN: not %clang -### %s --target=aarch64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// RUN: not %clang -### %s --target=riscv64-unknown-fuchsia \
+// RUN:     -fsanitize=safe-stack 2>&1 \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     | FileCheck %s -check-prefix=CHECK-NONX86-SAFESTACK
+// CHECK-NONX86-SAFESTACK: error: unsupported option '-fsanitize=safe-stack' for target '{{.*}}'
