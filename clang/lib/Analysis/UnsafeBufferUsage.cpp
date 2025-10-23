@@ -5857,6 +5857,60 @@ static bool checkAssignedAndUsed(const BoundsAttributedAssignmentGroup &Group,
   return IsGroupSafe;
 }
 
+// Checks if each assignment to count-attributed pointer in the group is safe.
+static bool
+checkAssignmentPatterns(const BoundsAttributedAssignmentGroup &Group,
+                        UnsafeBufferUsageHandler &Handler, ASTContext &Ctx) {
+  // Collect dependent values.
+  DependentValuesTy DependentValues;
+  for (size_t I = 0, N = Group.AssignedObjects.size(); I < N; ++I) {
+    const ValueDecl *VD = Group.AssignedObjects[I].Decl;
+    const auto *Attr = VD->getAttr<DependerDeclsAttr>();
+    if (!Attr)
+      continue;
+
+    const BinaryOperator *Assign = Group.Assignments[I];
+    const Expr *Value = Assign->getRHS();
+
+    [[maybe_unused]] bool Inserted =
+        DependentValues.insert({{VD, Attr->getIsDeref()}, Value}).second;
+    // Previous checks in `checkBoundsAttributedGroup` should have validated
+    // that we have only a single assignment.
+    assert(Inserted);
+  }
+
+  bool IsGroupSafe = true;
+
+  // Check every pointer in the group.
+  for (size_t I = 0, N = Group.AssignedObjects.size(); I < N; ++I) {
+    const ValueDecl *VD = Group.AssignedObjects[I].Decl;
+
+    QualType Ty = VD->getType();
+    const auto *CAT = Ty->getAs<CountAttributedType>();
+    if (!CAT && Ty->isPointerType())
+      CAT = Ty->getPointeeType()->getAs<CountAttributedType>();
+    if (!CAT)
+      continue;
+
+    const BinaryOperator *Assign = Group.Assignments[I];
+
+    // TODO: Move this logic to isCountAttributedPointerArgumentSafeImpl.
+    const Expr *CountArg =
+        DependentValues.size() == 1 ? DependentValues.begin()->second : nullptr;
+
+    bool IsSafe = isCountAttributedPointerArgumentSafeImpl(
+        Ctx, Assign->getRHS(), CountArg, CAT, CAT->getCountExpr(),
+        CAT->isCountInBytes(), CAT->isOrNull(), &DependentValues);
+    if (!IsSafe) {
+      Handler.handleUnsafeCountAttributedPointerAssignment(
+          Assign, /*IsRelatedToDecl=*/false, Ctx);
+      IsGroupSafe = false;
+    }
+  }
+
+  return IsGroupSafe;
+}
+
 // Checks if the bounds-attributed group is safe. This function returns false
 // iff the assignment group is unsafe and diagnostics have been emitted.
 static bool
@@ -5868,8 +5922,7 @@ checkBoundsAttributedGroup(const BoundsAttributedAssignmentGroup &Group,
     return false;
   if (!checkAssignedAndUsed(Group, Handler, Ctx))
     return false;
-  // TODO: Add more checks.
-  return true;
+  return checkAssignmentPatterns(Group, Handler, Ctx);
 }
 
 static void

@@ -2685,6 +2685,13 @@ public:
         << getBoundsAttributedObjectKind(VD) << VD;
     S.Diag(Use->getBeginLoc(), diag::note_used_here);
   }
+
+  void handleUnsafeCountAttributedPointerAssignment(
+      const BinaryOperator *Assign, [[maybe_unused]] bool IsRelatedToDecl,
+      [[maybe_unused]] ASTContext &Ctx) override {
+    S.Diag(Assign->getOperatorLoc(),
+           diag::warn_unsafe_count_attributed_pointer_assignment);
+  }
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   void handleUnsafeVariableGroup(const VarDecl *Variable,
