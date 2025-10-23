@@ -411,6 +411,8 @@ def HasS1POE2        : Predicate<"Subtarget->hasS1POE2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureS1POE2), "poe2">;
 def HasTEV           : Predicate<"Subtarget->hasTEV()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTEV), "tev">;
+def HasMOPS_GO       : Predicate<"Subtarget->hasMOPS_GO()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureMOPS_GO), "mops-go">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -10724,6 +10726,15 @@ let Predicates = [HasMOPS, HasMTE], Defs = [NZCV], Size = 12, mayLoad = 0, maySt
   def MOPSMemorySetTaggingPseudo : Pseudo<(outs GPR64common:$Rd_wb, GPR64:$Rn_wb),
                                           (ins GPR64common:$Rd, GPR64:$Rn, GPR64:$Rm),
                                           [], "$Rd = $Rd_wb,$Rn = $Rn_wb">, Sched<[]>;
+}
+
+//-----------------------------------------------------------------------------
+// MOPS Granule Only Protection (FEAT_MOPS_GO)
+
+let Predicates = [HasMOPS_GO, HasMTE] in {
+    defm SETGOP : MOPSGoMemorySetTaggingInsns<0b00, "setgop">;
+    defm SETGOM : MOPSGoMemorySetTaggingInsns<0b01, "setgom">;
+    defm SETGOE : MOPSGoMemorySetTaggingInsns<0b10, "setgoe">;
 }
 
 //-----------------------------------------------------------------------------

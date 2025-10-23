@@ -638,6 +638,9 @@ def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
 def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
   "Enable TIndex Exception-like Vector instructions">;
 
+def FeatureMOPS_GO: ExtensionWithMArch<"mops-go", "MOPS_GO", "FEAT_MOPS_GO",
+  "Enable memset acceleration granule only">;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
