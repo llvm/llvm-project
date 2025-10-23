@@ -1161,14 +1161,10 @@ bool DevirtIndex::tryFindVirtualCallTargets(
     // and therefore the same GUID. This can happen if there isn't enough
     // distinguishing path when compiling the source file. In that case we
     // conservatively return false early.
+    if (P.VTableVI.hasLocal() && P.VTableVI.getSummaryList().size() > 1)
+      return false;
     const GlobalVarSummary *VS = nullptr;
-    bool LocalFound = false;
     for (const auto &S : P.VTableVI.getSummaryList()) {
-      if (GlobalValue::isLocalLinkage(S->linkage())) {
-        if (LocalFound)
-          return false;
-        LocalFound = true;
-      }
       auto *CurVS = cast<GlobalVarSummary>(S->getBaseObject());
       if (!CurVS->vTableFuncs().empty() ||
           // Previously clang did not attach the necessary type metadata to
@@ -1184,6 +1180,7 @@ bool DevirtIndex::tryFindVirtualCallTargets(
         // with public LTO visibility.
         if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
           return false;
+        break;
       }
     }
     // There will be no VS if all copies are available_externally having no
@@ -2590,6 +2587,11 @@ bool DevirtModule::run() {
 void DevirtIndex::run() {
   if (ExportSummary.typeIdCompatibleVtableMap().empty())
     return;
+
+  // Assert that we haven't made any changes that would affect the hasLocal()
+  // flag on the GUID summary info.
+  assert(!ExportSummary.withInternalizeAndPromote() &&
+         "Expect index-based WPD to run before internalization and promotion");
 
   DenseMap<GlobalValue::GUID, std::vector<StringRef>> NameByGUID;
   for (const auto &P : ExportSummary.typeIdCompatibleVtableMap()) {
