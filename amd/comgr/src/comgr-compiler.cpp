@@ -639,9 +639,10 @@ void logArgv(raw_ostream &OS, StringRef ProgramName,
   OS.flush();
 }
 
-amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
-                                  DiagnosticOptions &DiagOpts,
-                                  llvm::vfs::FileSystem &FS) {
+amd_comgr_status_t
+executeCommand(const Command &Job, raw_ostream &LogS,
+               DiagnosticOptions &DiagOpts,
+               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   TextDiagnosticPrinter DiagClient(LogS, DiagOpts);
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
   DiagnosticsEngine Diags(DiagID, DiagOpts, &DiagClient, false);
@@ -661,7 +662,7 @@ amd_comgr_status_t executeCommand(const Command &Job, raw_ostream &LogS,
 
     std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
     Clang->setVerboseOutputStream(LogS);
-    Clang->setFileManager(new FileManager(Clang->getFileSystemOpts(), &FS));
+    Clang->setVirtualFileSystem(FS);
     if (!Argv.back()) {
       Argv.pop_back();
     }
@@ -777,7 +778,7 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
 
   auto Cache = CommandCache::get(LogS);
   for (auto &Job : C->getJobs()) {
-    ClangCommand C(Job, *DiagOpts, *OverlayFS, executeCommand);
+    ClangCommand C(Job, *DiagOpts, OverlayFS, executeCommand);
     if (Cache) {
       if (auto Status = Cache->execute(C, LogS)) {
         return Status;

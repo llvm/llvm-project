@@ -96,7 +96,8 @@ SmallVector<StringRef, 1> getInputFiles(driver::Command &Command) {
 
 } // namespace
 ClangCommand::ClangCommand(driver::Command &Command,
-                           DiagnosticOptions &DiagOpts, vfs::FileSystem &VFS,
+                           DiagnosticOptions &DiagOpts,
+                           IntrusiveRefCntPtr<vfs::FileSystem> VFS,
                            ExecuteFnTy &&ExecuteImpl)
     : Command(Command), DiagOpts(DiagOpts), VFS(VFS),
       ExecuteImpl(std::move(ExecuteImpl)) {}
