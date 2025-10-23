@@ -717,7 +717,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
       CommandLine, OverlayFS, DiagPrinterWithOS->DiagPrinter);
 
   std::tie(Driver, Compilation) = buildCompilation(
-      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
+      CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS, Alloc);
 
   if (!Compilation) {
     return llvm::make_error<llvm::StringError>("Failed to build compilation",

@@ -168,6 +168,9 @@ class CompilerInstanceWithContext {
   std::unique_ptr<DignosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts;
 
   // Context - compiler invocation
+  // Compilation's command's arguments may be owned by Alloc when expanded from
+  // response files, so we need to keep Alloc alive in the context.
+  llvm::BumpPtrAllocator Alloc;
   std::unique_ptr<clang::driver::Driver> Driver;
   std::unique_ptr<clang::driver::Compilation> Compilation;
   std::unique_ptr<CompilerInvocation> OriginalInvocation;
