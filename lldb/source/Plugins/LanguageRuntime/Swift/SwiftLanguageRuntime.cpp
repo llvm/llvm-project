@@ -2964,18 +2964,8 @@ MultiReadPointers(Process &process,
     }
   }
 
-  /// TODO: convert this loop into a call to the vectorized memory read, once
-  /// that is available in Process.
-  llvm::SmallVector<std::optional<addr_t>> read_results;
-  for (addr_t pointer : to_read) {
-    Status status;
-    addr_t result = process.ReadPointerFromMemory(pointer, status);
-    if (status.Fail())
-      read_results.push_back(std::nullopt);
-    else
-      read_results.push_back(result);
-  }
-
+  llvm::SmallVector<std::optional<addr_t>> read_results =
+      process.ReadPointersFromMemory(to_read);
   llvm::MutableArrayRef<std::optional<addr_t>> results_ref = read_results;
 
   // Move the results in the slots not filled by errors from the input.
