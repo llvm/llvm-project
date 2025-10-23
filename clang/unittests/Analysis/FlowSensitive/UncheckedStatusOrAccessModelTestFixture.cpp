@@ -2956,10 +2956,10 @@ TEST_P(UncheckedStatusOrAccessModelTest, Emplace) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
 
-    void target(bool b) {
+    void target() {
       STATUSOR_INT sor;
       bool sor_ok = sor.ok();
-      if (b)
+      if (!sor_ok)
         sor.emplace(42);
       sor.value();
     }

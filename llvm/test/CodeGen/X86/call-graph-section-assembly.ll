@@ -36,7 +36,7 @@ entry:
 !4 = !{!5}
 !5 = !{i64 0, !"_ZTSFPvS_E.generalized"}
 
-; CHECK: .section .llvm.callgraph,"o",@progbits,.text
+; CHECK: .section .llvm.callgraph,"o",@llvm_call_graph,.text
 ;; Version
 ; CHECK-NEXT: .byte   0
 ;; Flags
