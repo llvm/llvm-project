@@ -4675,7 +4675,7 @@ class WMMA_INSTR<string _Intr, list<dag> _Args>
 //
 
 class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
-  : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record,
+  : WMMA_INSTR<WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.record_name,
                               [!con((ins ADDR:$src),
                                     !if(WithStride, (ins B32:$ldm), (ins)))]>,
     Requires<Frag.Predicates> {
@@ -4714,7 +4714,7 @@ class WMMA_LOAD<WMMA_REGINFO Frag, string Layout, string Space, bit WithStride>
 //
 class WMMA_STORE_D<WMMA_REGINFO Frag, string Layout, string Space,
                    bit WithStride>
-  : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record,
+  : WMMA_INSTR<WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.record_name,
                [!con((ins ADDR:$dst),
                      Frag.Ins,
                      !if(WithStride, (ins B32:$ldm), (ins)))]>,
@@ -4778,7 +4778,7 @@ class MMA_OP_PREDICATES<WMMA_REGINFO FragA, string b1op> {
 class WMMA_MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
                string ALayout, string BLayout, int Satfinite, string rnd, string b1op>
-  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, FragA, FragB, FragC, FragD>.record,
+  : WMMA_INSTR<WMMA_NAME<ALayout, BLayout, Satfinite, rnd, b1op, FragA, FragB, FragC, FragD>.record_name,
                          [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
@@ -4837,7 +4837,7 @@ defset list<WMMA_INSTR> WMMAs  = {
 class MMA<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
                WMMA_REGINFO FragC, WMMA_REGINFO FragD,
                string ALayout, string BLayout, int Satfinite, string b1op, string Kind>
-  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, Kind, FragA, FragB, FragC, FragD>.record,
+  : WMMA_INSTR<MMA_NAME<ALayout, BLayout, Satfinite, b1op, Kind, FragA, FragB, FragC, FragD>.record_name,
                         [FragA.Ins, FragB.Ins, FragC.Ins]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
     // We set it here anyways and propagate to the Pat<> we construct below.
@@ -4891,7 +4891,7 @@ class MMA_SP<WMMA_REGINFO FragA, WMMA_REGINFO FragB,
              WMMA_REGINFO FragC, WMMA_REGINFO FragD,
              string Metadata, string Kind, int Satfinite>
   : WMMA_INSTR<MMA_SP_NAME<Metadata, Kind, Satfinite,
-                           FragA, FragB, FragC, FragD>.record,
+                           FragA, FragB, FragC, FragD>.record_name,
                [FragA.Ins, FragB.Ins, FragC.Ins,
                 (ins B32:$metadata, i32imm:$selector)]>,
     // Requires does not seem to have effect on Instruction w/o Patterns.
@@ -4946,7 +4946,7 @@ defset list<WMMA_INSTR> MMA_SPs = {
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins ADDR:$src)]>,
+  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record_name, [(ins ADDR:$src)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
@@ -4981,7 +4981,7 @@ defset list<WMMA_INSTR> LDMATRIXs  = {
 // stmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class STMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record, [!con((ins ADDR:$dst), Frag.Ins)]>,
+  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record_name, [!con((ins ADDR:$dst), Frag.Ins)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   dag PFOperands = !con((ops node:$dst),
@@ -5376,7 +5376,7 @@ class Tcgen05MMAInst<bit Sp, string KindStr, string ASpace,
          Requires<PTXPredicates> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record
+                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record_name
                      );
 
   dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
@@ -5618,7 +5618,7 @@ class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string KindStr,
          Requires<[hasTcgen05Instructions, PTXPredicate]> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record);
+                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record_name);
 
   dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
   dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin i32:$spmetadata), (Intrin));
@@ -5702,7 +5702,7 @@ class Tcgen05MMAWSInst<bit Sp, string ASpace, string KindStr,
          Requires<[hasTcgen05Instructions]> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record);
+                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record_name);
 
   dag ZeroColMaskIns = !if(!eq(HasZeroColMask, 1),
                               (ins B64:$zero_col_mask), (ins));

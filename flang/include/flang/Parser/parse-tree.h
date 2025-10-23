@@ -3502,6 +3502,16 @@ struct OmpDirectiveName {
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
 
+// type-name list item
+struct OmpTypeName {
+  UNION_CLASS_BOILERPLATE(OmpTypeName);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3539,21 +3549,12 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
+struct OmpCombinerExpression {
+  UNION_CLASS_BOILERPLATE(OmpCombinerExpression);
   std::variant<AssignmentStmt, FunctionReference> u;
 };
 
 inline namespace arguments {
-struct OmpTypeSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
-  std::variant<TypeSpec, DeclarationTypeSpec> u;
-};
-
-struct OmpTypeNameList {
-  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeSpecifier>);
-};
-
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
@@ -3596,7 +3597,7 @@ struct OmpMapperSpecifier {
 struct OmpReductionSpecifier {
   TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
   std::tuple<OmpReductionIdentifier, OmpTypeNameList,
-      std::optional<OmpReductionCombiner>>
+      std::optional<OmpCombinerExpression>>
       t;
 };
 

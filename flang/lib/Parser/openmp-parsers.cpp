@@ -367,8 +367,8 @@ struct OmpArgumentListParser {
 };
 
 TYPE_PARSER( //
-    construct<OmpTypeSpecifier>(Parser<DeclarationTypeSpec>{}) ||
-    construct<OmpTypeSpecifier>(Parser<TypeSpec>{}))
+    construct<OmpTypeName>(Parser<DeclarationTypeSpec>{}) ||
+    construct<OmpTypeName>(Parser<TypeSpec>{}))
 
 // 2.15.3.6 REDUCTION (reduction-identifier: variable-name-list)
 TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
@@ -376,8 +376,8 @@ TYPE_PARSER(construct<OmpReductionIdentifier>(Parser<DefinedOperator>{}) ||
 
 TYPE_PARSER(construct<OmpReductionSpecifier>( //
     Parser<OmpReductionIdentifier>{},
-    ":"_tok >> nonemptyList(Parser<OmpTypeSpecifier>{}),
-    maybe(":"_tok >> Parser<OmpReductionCombiner>{})))
+    ":"_tok >> nonemptyList(Parser<OmpTypeName>{}),
+    maybe(":"_tok >> Parser<OmpCombinerExpression>{})))
 
 // --- Parsers for context traits -------------------------------------
 
@@ -1832,8 +1832,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
         IsDirective(llvm::omp::Directive::OMPD_declare_mapper)) >=
     Parser<OmpDirectiveSpecification>{})))
 
-TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
-    construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
+TYPE_PARSER(construct<OmpCombinerExpression>(Parser<AssignmentStmt>{}) ||
+    construct<OmpCombinerExpression>(Parser<FunctionReference>{}))
 
 TYPE_PARSER(sourced(construct<OpenMPCriticalConstruct>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical})))

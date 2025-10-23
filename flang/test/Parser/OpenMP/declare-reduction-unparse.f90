@@ -25,9 +25,9 @@ function func(x, n, init)
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr = '4_4'
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec -> KindSelector -> Scalar -> Integer -> Constant -> Expr = '4_4'
 !PARSE-TREE: | | | LiteralConstant -> IntLiteralConstant = '4'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=omp_out+omp_in'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=omp_out+omp_in'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> OmpInitializerProc
 !PARSE-TREE: | | ProcedureDesignator -> Name = 'initme'
 
@@ -73,6 +73,6 @@ end program main
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'my_add_red'
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=omp_out+omp_in'
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=omp_out+omp_in'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv=0_4'

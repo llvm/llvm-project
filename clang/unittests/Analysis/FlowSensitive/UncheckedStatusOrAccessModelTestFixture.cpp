@@ -2928,6 +2928,53 @@ TEST_P(UncheckedStatusOrAccessModelTest, PointerEqualityCheck) {
       )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, Emplace) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      Foo(int);
+    };
+
+    void target(absl::StatusOr<Foo> sor, int value) {
+      sor.emplace(value);
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      Foo(std::initializer_list<int>, int);
+    };
+
+    void target(absl::StatusOr<Foo> sor, int value) {
+      sor.emplace({1, 2, 3}, value);
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor;
+      bool sor_ok = sor.ok();
+      if (!sor_ok)
+        sor.emplace(42);
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(bool b) {
+      STATUSOR_INT sor;
+      if (b) sor.emplace(42);
+      if (b) sor.value();
+    }
+  )cc");
+}
+
 } // namespace
 
 std::string

@@ -86,9 +86,9 @@ end
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 't'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%x=omp_out%x+omp_in%x'
 !PARSE-TREE: | | | Variable = 'omp_out%x'
 !PARSE-TREE: | | | | Designator -> DataRef -> StructureComponent
 !PARSE-TREE: | | | | | DataRef -> Name = 'omp_out'

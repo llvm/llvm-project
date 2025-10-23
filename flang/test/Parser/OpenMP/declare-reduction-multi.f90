@@ -32,9 +32,9 @@ program omp_examples
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%r=omp_out%r+omp_in%r'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%r=omp_out%r+omp_in%r'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=0._4'
 
   !$omp declare reduction(*:tt:omp_out%r = omp_out%r * omp_in%r) initializer(omp_priv%r = 1)
@@ -44,9 +44,9 @@ program omp_examples
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%r=omp_out%r*omp_in%r'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%r=omp_out%r*omp_in%r'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=1._4'
 
   !$omp declare reduction(max:tt:omp_out = mymax(omp_out, omp_in)) initializer(omp_priv%r = 0)
@@ -56,9 +56,9 @@ program omp_examples
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'max'
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=mymax(omp_out,omp_in)'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=mymax(omp_out,omp_in)'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=0._4'
 
   !$omp declare reduction(min:tt:omp_out%r = min(omp_out%r, omp_in%r)) initializer(omp_priv%r = 1)
@@ -68,9 +68,9 @@ program omp_examples
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'min'
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%r=min(omp_out%r,omp_in%r)'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%r=min(omp_out%r,omp_in%r)'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv%r=1._4'
 
   call random_number(values%r)
