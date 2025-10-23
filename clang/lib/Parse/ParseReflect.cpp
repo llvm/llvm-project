@@ -17,26 +17,17 @@
 using namespace clang;
 
 ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
+  // TODO(reflection) : support parsing for more reflect-expressions.
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated);
 
   SourceLocation OperandLoc = Tok.getLocation();
 
-  // Parse a leading nested-name-specifier
-  CXXScopeSpec SS;
-  if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                     /*ObjectHasErrors=*/false,
-                                     /*EnteringContext=*/false)) {
-    SkipUntil(tok::semi, StopAtSemi | StopBeforeMatch);
-    return ExprError();
-  }
-
   {
     TentativeParsingAction TPA(*this);
-
-    if (SS.isValid() &&
-        SS.getScopeRep().getKind() == NestedNameSpecifier::Kind::Global) {
-      // Check for global namespace '^^::'
+    // global namespace ::
+    if (Tok.is(tok::coloncolon)) {
+      ConsumeToken();
       TPA.Commit();
       Decl *TUDecl = Actions.getASTContext().getTranslationUnitDecl();
       return Actions.ActOnCXXReflectExpr(OpLoc, SourceLocation(), TUDecl);
@@ -58,7 +49,11 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
     if (!TSI)
       TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
-    return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
+    QualType Canon = QT.getCanonicalType();
+    if(Canon->isBuiltinType()) {
+      // Only supports builtin types for now
+      return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
+    }
   }
 
   Diag(OperandLoc, diag::err_cannot_reflect_operand);
