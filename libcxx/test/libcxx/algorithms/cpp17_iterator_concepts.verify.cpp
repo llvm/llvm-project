@@ -143,7 +143,7 @@ void check_forward_iterator_requirements() {
   // expected-note@*:* {{because 'not_default_constructible' does not satisfy '__cpp17_default_constructible'}}
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(postincrement_not_ref, ""); // expected-error {{static assertion failed}}
 #ifndef _AIX
-  // expected-note-re@*:* {{because type constraint 'convertible_to<{{(valid_iterator<postincrement_not_ref>::)?}}Proxy, const postincrement_not_ref &>' was not satisfied}}
+  // expected-note-re@*:* {{'convertible_to<{{(valid_iterator<postincrement_not_ref>::)?}}Proxy, const postincrement_not_ref &>'}}
 #endif
 }
 
@@ -173,7 +173,7 @@ void check_bidirectional_iterator_requirements() {
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(missing_postdecrement, ""); // expected-error {{static assertion failed}}
   // expected-note@*:* {{cannot decrement value of type 'missing_postdecrement'}}
   _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(not_returning_iter_reference, ""); // expected-error {{static assertion failed}}
-  // expected-note-re@*:* {{because type constraint 'same_as<int, __iter_reference<not_returning_iter_reference>{{ ?}}>' was not satisfied}}
+  // expected-note-re@*:* {{'same_as<int, __iter_reference<not_returning_iter_reference>{{ ?}}>'}}
   // clang-format on
 }
 

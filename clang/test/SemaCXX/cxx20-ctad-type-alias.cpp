@@ -586,3 +586,35 @@ Baz a{};
 static_assert(__is_same(decltype(a), A<A<int>>));
 
 } // namespace GH133132
+
+namespace GH131408 {
+
+struct Node {};
+
+template <class T, Node>
+struct A {
+    A(T) {}
+};
+
+template <class T>
+using AA = A<T, {}>;
+
+AA a{0};
+
+static_assert(__is_same(decltype(a), A<int, Node{}>));
+}
+
+namespace GH130604 {
+template <typename T> struct A {
+    A(T);
+};
+
+template <typename T, template <typename> class TT = A> using Alias = TT<T>; // #gh130604-alias
+template <typename T> using Alias2 = Alias<T>;
+
+Alias2 a(42);
+// expected-error@-1 {{no viable constructor or deduction guide for deduction of template arguments of 'Alias2'}}
+Alias  b(42);
+// expected-error@-1 {{alias template 'Alias' requires template arguments; argument deduction only allowed for class templates or alias template}}
+// expected-note@#gh130604-alias {{template is declared here}}
+}

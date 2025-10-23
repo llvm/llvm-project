@@ -2115,6 +2115,13 @@ void RewriteInstance::adjustCommandLineOptions() {
     opts::SplitEH = false;
   }
 
+  if (BC->isAArch64() && !opts::CompactCodeModel &&
+      opts::SplitStrategy == opts::SplitFunctionsStrategy::CDSplit) {
+    BC->errs() << "BOLT-ERROR: CDSplit is not supported with LongJmp. Try with "
+                  "'--compact-code-model'\n";
+    exit(1);
+  }
+
   if (opts::StrictMode && !BC->HasRelocations) {
     BC->errs()
         << "BOLT-WARNING: disabling strict mode (-strict) in non-relocation "
@@ -2274,8 +2281,7 @@ uint32_t getRelocationSymbol(const ELFObjectFileBase *Obj,
 bool RewriteInstance::analyzeRelocation(
     const RelocationRef &Rel, uint32_t &RType, std::string &SymbolName,
     bool &IsSectionRelocation, uint64_t &SymbolAddress, int64_t &Addend,
-    uint64_t &ExtractedValue, bool &Skip) const {
-  Skip = false;
+    uint64_t &ExtractedValue) const {
   if (!Relocation::isSupported(RType))
     return false;
 
@@ -2707,22 +2713,13 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   int64_t Addend;
   uint64_t ExtractedValue;
   bool IsSectionRelocation;
-  bool Skip;
   if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
-                         SymbolAddress, Addend, ExtractedValue, Skip)) {
+                         SymbolAddress, Addend, ExtractedValue)) {
     LLVM_DEBUG({
       dbgs() << "BOLT-WARNING: failed to analyze relocation @ offset = "
              << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
     });
     ++NumFailedRelocations;
-    return;
-  }
-
-  if (Skip) {
-    LLVM_DEBUG({
-      dbgs() << "BOLT-DEBUG: skipping relocation @ offset = "
-             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
-    });
     return;
   }
 
@@ -3341,6 +3338,8 @@ void RewriteInstance::initializeMetadataManager() {
   MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createSDTRewriter(*BC));
+
+  MetadataManager.registerRewriter(createGNUPropertyRewriter(*BC));
 }
 
 void RewriteInstance::processSectionMetadata() {

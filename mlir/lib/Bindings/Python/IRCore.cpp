@@ -3219,13 +3219,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("end_line"), nb::arg("end_col"),
           nb::arg("context") = nb::none(), kContextGetFileRangeDocstring)
       .def("is_a_file", mlirLocationIsAFileLineColRange)
-      .def_prop_ro(
-          "filename",
-          [](MlirLocation loc) {
-            return mlirIdentifierStr(
-                mlirLocationFileLineColRangeGetFilename(loc));
-          },
-          nb::sig("def filename(self) -> str"))
+      .def_prop_ro("filename",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(
+                         mlirLocationFileLineColRangeGetFilename(loc));
+                   })
       .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine)
       .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn)
       .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine)
@@ -3274,12 +3272,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("name"), nb::arg("childLoc") = nb::none(),
           nb::arg("context") = nb::none(), kContextGetNameLocationDocString)
       .def("is_a_name", mlirLocationIsAName)
-      .def_prop_ro(
-          "name_str",
-          [](MlirLocation loc) {
-            return mlirIdentifierStr(mlirLocationNameGetName(loc));
-          },
-          nb::sig("def name_str(self) -> str"))
+      .def_prop_ro("name_str",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(mlirLocationNameGetName(loc));
+                   })
       .def_prop_ro("child_loc",
                    [](PyLocation &self) {
                      return PyLocation(self.getContext(),
@@ -3453,15 +3449,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return concreteOperation.getContext().getObject();
           },
           "Context that owns the Operation")
-      .def_prop_ro(
-          "name",
-          [](PyOperationBase &self) {
-            auto &concreteOperation = self.getOperation();
-            concreteOperation.checkValid();
-            MlirOperation operation = concreteOperation.get();
-            return mlirIdentifierStr(mlirOperationGetName(operation));
-          },
-          nb::sig("def name(self) -> str"))
+      .def_prop_ro("name",
+                   [](PyOperationBase &self) {
+                     auto &concreteOperation = self.getOperation();
+                     concreteOperation.checkValid();
+                     MlirOperation operation = concreteOperation.get();
+                     return mlirIdentifierStr(mlirOperationGetName(operation));
+                   })
       .def_prop_ro("operands",
                    [](PyOperationBase &self) {
                      return PyOpOperandList(self.getOperation().getRef());
@@ -3485,15 +3479,21 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")
-      .def_prop_ro(
+      .def_prop_rw(
           "location",
           [](PyOperationBase &self) {
             PyOperation &operation = self.getOperation();
             return PyLocation(operation.getContext(),
                               mlirOperationGetLocation(operation.get()));
           },
-          "Returns the source location the operation was defined or derived "
-          "from.")
+          [](PyOperationBase &self, const PyLocation &location) {
+            PyOperation &operation = self.getOperation();
+            mlirOperationSetLocation(operation.get(), location.get());
+          },
+          nb::for_getter("Returns the source location the operation was "
+                         "defined or derived from."),
+          nb::for_setter("Sets the source location the operation was defined "
+                         "or derived from."))
       .def_prop_ro("parent",
                    [](PyOperationBase &self)
                        -> std::optional<nb::typed<nb::object, PyOperation>> {
@@ -3597,12 +3597,11 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           },
           "Reports if the operation is attached to its parent block.")
       .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
-      .def(
-          "walk", &PyOperationBase::walk, nb::arg("callback"),
-          nb::arg("walk_order") = MlirWalkPostOrder,
-          // clang-format off
-          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder = " MAKE_MLIR_PYTHON_QUALNAME("ir.WalkOrder.POST_ORDER") ") -> None")
-          // clang-format on
+      .def("walk", &PyOperationBase::walk, nb::arg("callback"),
+           nb::arg("walk_order") = MlirWalkPostOrder,
+           // clang-format off
+          nb::sig("def walk(self, callback: Callable[[Operation], WalkResult], walk_order: WalkOrder) -> None")
+           // clang-format on
       );
 
   nb::class_<PyOperation, PyOperationBase>(m, "Operation")
@@ -4118,7 +4117,6 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           [](PyNamedAttribute &self) {
             return mlirIdentifierStr(self.namedAttr.name);
           },
-          nb::sig("def name(self) -> str"),
           "The name of the NamedAttribute binding")
       .def_prop_ro(
           "attr",
@@ -4336,17 +4334,15 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kValueReplaceAllUsesWithDocstring)
       .def(
           "replace_all_uses_except",
-          [](MlirValue self, MlirValue with, PyOperation &exception) {
+          [](PyValue &self, PyValue &with, PyOperation &exception) {
             MlirOperation exceptedUser = exception.get();
             mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
           },
           nb::arg("with_"), nb::arg("exceptions"),
-          nb::sig("def replace_all_uses_except(self, with_: Value, exceptions: "
-                  "Operation) -> None"),
           kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
-          [](MlirValue self, MlirValue with, nb::list exceptions) {
+          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
             // Convert Python list to a SmallVector of MlirOperations
             llvm::SmallVector<MlirOperation> exceptionOps;
             for (nb::handle exception : exceptions) {
@@ -4358,8 +4354,6 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                 exceptionOps.data());
           },
           nb::arg("with_"), nb::arg("exceptions"),
-          nb::sig("def replace_all_uses_except(self, with_: Value, exceptions: "
-                  "Sequence[Operation]) -> None"),
           kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",

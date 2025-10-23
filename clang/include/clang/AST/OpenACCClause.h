@@ -840,14 +840,13 @@ public:
 // alloca at the level of the base, and the init at the element level.
 struct OpenACCPrivateRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
 
-  OpenACCPrivateRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {}
+  OpenACCPrivateRecipe(VarDecl *A) : AllocaDecl(A) {}
 
   bool isSet() const { return AllocaDecl; }
 
   static OpenACCPrivateRecipe Empty() {
-    return OpenACCPrivateRecipe(nullptr, nullptr);
+    return OpenACCPrivateRecipe(/*AllocaDecl=*/nullptr);
   }
 };
 
@@ -899,18 +898,17 @@ public:
 // InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
 struct OpenACCFirstPrivateRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
   VarDecl *InitFromTemporary;
-  OpenACCFirstPrivateRecipe(VarDecl *A, Expr *I, VarDecl *T)
-      : AllocaDecl(A), InitExpr(I), InitFromTemporary(T) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
+  OpenACCFirstPrivateRecipe(VarDecl *A, VarDecl *T)
+      : AllocaDecl(A), InitFromTemporary(T) {
     assert(!InitFromTemporary || InitFromTemporary->getInit() == nullptr);
   }
 
   bool isSet() const { return AllocaDecl; }
 
   static OpenACCFirstPrivateRecipe Empty() {
-    return OpenACCFirstPrivateRecipe(nullptr, nullptr, nullptr);
+    return OpenACCFirstPrivateRecipe(/*AllocaDecl=*/nullptr,
+                                     /*InitFromTemporary=*/nullptr);
   }
 };
 
@@ -1282,16 +1280,13 @@ public:
 // 'main' declaration used for initializaiton, which is fixed. 
 struct OpenACCReductionRecipe {
   VarDecl *AllocaDecl;
-  Expr *InitExpr;
   // TODO: OpenACC: this should eventually have the operations here too.
 
-  OpenACCReductionRecipe(VarDecl *A, Expr *I) : AllocaDecl(A), InitExpr(I) {
-    assert(!AllocaDecl || AllocaDecl->getInit() == nullptr);
-  }
+  OpenACCReductionRecipe(VarDecl *A) : AllocaDecl(A) {}
 
   bool isSet() const { return AllocaDecl; }
   static OpenACCReductionRecipe Empty() {
-    return OpenACCReductionRecipe(nullptr, nullptr);
+    return OpenACCReductionRecipe(/*AllocaDecl=*/nullptr);
   }
 };
 

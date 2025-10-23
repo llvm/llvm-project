@@ -1387,6 +1387,8 @@ private:
 // Create scopes for OpenACC constructs
 class AccVisitor : public virtual DeclarationVisitor {
 public:
+  explicit AccVisitor(SemanticsContext &context) : context_{context} {}
+
   void AddAccSourceRange(const parser::CharBlock &);
 
   static bool NeedsScope(const parser::OpenACCBlockConstruct &);
@@ -1395,6 +1397,7 @@ public:
   void Post(const parser::OpenACCBlockConstruct &);
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &);
+  bool Pre(const parser::AccClause::UseDevice &x);
   bool Pre(const parser::AccBeginBlockDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1430,6 +1433,11 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+
+  void CopySymbolWithDevice(const parser::Name *name);
+
+private:
+  SemanticsContext &context_;
 };
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
@@ -1457,6 +1465,60 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
     PushScope(Scope::Kind::OpenACCConstruct, nullptr);
   }
   return true;
+}
+
+void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
+  // When CUDA Fortran is enabled together with OpenACC, new
+  // symbols are created for the one appearing in the use_device
+  // clause. These new symbols have the CUDA Fortran device
+  // attribute.
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    name->symbol = currScope().CopySymbol(*name->symbol);
+    if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
+      object->set_cudaDataAttr(common::CUDADataAttr::Device);
+    }
+  }
+}
+
+bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
+  for (const auto &accObject : x.v.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *name{
+                      semantics::getDesignatorNameIfDataRef(designator)}) {
+                Symbol *prev{currScope().FindSymbol(name->source)};
+                if (prev != name->symbol) {
+                  name->symbol = prev;
+                }
+                CopySymbolWithDevice(name);
+              } else {
+                if (const auto *dataRef{
+                        std::get_if<parser::DataRef>(&designator.u)}) {
+                  using ElementIndirection =
+                      common::Indirection<parser::ArrayElement>;
+                  if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
+                    const parser::ArrayElement &arrayElement{ind->value()};
+                    Walk(arrayElement.subscripts);
+                    const parser::DataRef &base{arrayElement.base};
+                    if (auto *name{std::get_if<parser::Name>(&base.u)}) {
+                      Symbol *prev{currScope().FindSymbol(name->source)};
+                      if (prev != name->symbol) {
+                        name->symbol = prev;
+                      }
+                      CopySymbolWithDevice(name);
+                    }
+                  }
+                }
+              }
+            },
+            [&](const parser::Name &name) {
+              // TODO: common block in use_device?
+            },
+        },
+        accObject.u);
+  }
+  return false;
 }
 
 void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
@@ -2038,7 +2100,8 @@ public:
 
   ResolveNamesVisitor(
       SemanticsContext &context, ImplicitRulesMap &rules, Scope &top)
-      : BaseVisitor{context, *this, rules}, topScope_{top} {
+      : BaseVisitor{context, *this, rules}, AccVisitor(context),
+        topScope_{top} {
     PushScope(top);
   }
 

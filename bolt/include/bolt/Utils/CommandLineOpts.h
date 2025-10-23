@@ -29,6 +29,25 @@ enum HeatmapModeKind {
   HM_Optional   // perf2bolt --heatmap
 };
 
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot, warm, and cold fragment using
+  /// profiling information.
+  CDSplit,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split each function into N fragments at a randomly chosen split points
+  /// (ignoring any available profiling information).
+  RandomN,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
+};
+
 using HeatmapBlockSizes = std::vector<unsigned>;
 struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
   explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
@@ -78,6 +97,7 @@ extern llvm::cl::opt<std::string> OutputFilename;
 extern llvm::cl::opt<std::string> PerfData;
 extern llvm::cl::opt<bool> PrintCacheMetrics;
 extern llvm::cl::opt<bool> PrintSections;
+extern llvm::cl::opt<SplitFunctionsStrategy> SplitStrategy;
 
 // The format to use with -o in aggregation mode (perf2bolt)
 enum ProfileFormatKind { PF_Fdata, PF_YAML };

@@ -109,16 +109,17 @@ def : LdPat<extloadi8, LBU, i16>; // Prefer unsigned due to no c.lb in Zcb.
 def : StPat<truncstorei8, SB, GPR, i16>;
 
 let Predicates = [HasAtomicLdSt] in {
-  def : LdPat<atomic_load_aext_8,  LB, i16>;
-  def : LdPat<atomic_load_nonext_16, LH, i16>;
+  // Prefer unsigned due to no c.lb in Zcb.
+  def : LdPat<relaxed_load<atomic_load_aext_8>,    LBU, i16>;
+  def : LdPat<relaxed_load<atomic_load_nonext_16>, LH,  i16>;
 
-  def : StPat<atomic_store_8,  SB, GPR, i16>;
-  def : StPat<atomic_store_16, SH, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_8>,  SB, GPR, i16>;
+  def : StPat<relaxed_store<atomic_store_16>, SH, GPR, i16>;
 }
 
 let Predicates = [HasAtomicLdSt, IsRV64] in {
-  def : LdPat<atomic_load_nonext_32, LW, i32>;
-  def : StPat<atomic_store_32, SW, GPR, i32>;
+  // Load pattern is in RISCVInstrInfoA.td and shared with RV32.
+  def : StPat<relaxed_store<atomic_store_32>, SW, GPR, i32>;
 }
 
 //===----------------------------------------------------------------------===//

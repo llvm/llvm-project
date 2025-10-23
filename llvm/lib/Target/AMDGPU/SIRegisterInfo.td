@@ -1163,6 +1163,22 @@ def VS_64_Lo256 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32,
   let HasSGPR = 1;
   let Size = 64;
 }
+
+def VS_128 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
+                             (add VReg_128, SReg_128)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 128;
+}
+
+def VS_128_Align2 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
+                                    (add VReg_128_Align2, SReg_128)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+  let HasSGPR = 1;
+  let Size = 128;
+}
 } // End GeneratePressureSet = 0
 
 // Define a register tuple class, along with one requiring an even

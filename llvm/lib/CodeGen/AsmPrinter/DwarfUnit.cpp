@@ -1889,11 +1889,12 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     bool IsBitfield = DT->isBitField();
 
     // Handle the size.
-    if (auto *Var = dyn_cast_or_null<DIVariable>(DT->getRawSizeInBits())) {
+    if (DT->getRawSizeInBits() == nullptr) {
+      // No size, just ignore.
+    } else if (auto *Var = dyn_cast<DIVariable>(DT->getRawSizeInBits())) {
       if (auto *VarDIE = getDIE(Var))
         addDIEEntry(MemberDie, dwarf::DW_AT_bit_size, *VarDIE);
-    } else if (auto *Exp =
-                   dyn_cast_or_null<DIExpression>(DT->getRawSizeInBits())) {
+    } else if (auto *Exp = dyn_cast<DIExpression>(DT->getRawSizeInBits())) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, getCU(), *Loc);
       DwarfExpr.setMemoryLocationKind();

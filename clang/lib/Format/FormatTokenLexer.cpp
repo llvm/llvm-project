@@ -733,7 +733,7 @@ void FormatTokenLexer::tryParseJavaTextBlock() {
 // its text if successful.
 void FormatTokenLexer::tryParseJSRegexLiteral() {
   FormatToken *RegexToken = Tokens.back();
-  if (!RegexToken->isOneOf(tok::slash, tok::slashequal))
+  if (RegexToken->isNoneOf(tok::slash, tok::slashequal))
     return;
 
   FormatToken *Prev = nullptr;
@@ -1041,7 +1041,7 @@ void FormatTokenLexer::handleTemplateStrings() {
 
 void FormatTokenLexer::tryParsePythonComment() {
   FormatToken *HashToken = Tokens.back();
-  if (!HashToken->isOneOf(tok::hash, tok::hashhash))
+  if (HashToken->isNoneOf(tok::hash, tok::hashhash))
     return;
   // Turn the remainder of this line into a comment.
   const char *CommentBegin =

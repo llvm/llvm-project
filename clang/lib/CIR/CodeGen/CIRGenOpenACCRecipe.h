@@ -35,6 +35,10 @@ class OpenACCRecipeBuilderBase {
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes);
 
+  void makeBoundsInit(mlir::Value alloca, mlir::Location loc,
+                      mlir::Block *block, const VarDecl *allocaDecl,
+                      QualType origType, bool isInitSection);
+
 protected:
   CIRGen::CIRGenFunction &cgf;
   CIRGen::CIRGenBuilderTy &builder;
@@ -66,8 +70,7 @@ protected:
                                mlir::acc::PrivateRecipeOp recipe,
                                size_t numBounds,
                                llvm::ArrayRef<QualType> boundTypes,
-                               const VarDecl *allocaDecl, QualType origType,
-                               const Expr *initExpr);
+                               const VarDecl *allocaDecl, QualType origType);
 
   void createRecipeDestroySection(mlir::Location loc, mlir::Location locEnd,
                                   mlir::Value mainOp, CharUnits alignment,
@@ -208,15 +211,12 @@ public:
   OpenACCRecipeBuilder(CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder)
       : OpenACCRecipeBuilderBase(cgf, builder) {}
-  RecipeTy getOrCreateRecipe(ASTContext &astCtx,
-                             mlir::OpBuilder::InsertPoint &insertLocation,
-                             const Expr *varRef, const VarDecl *varRecipe,
-                             const Expr *initExpr, const VarDecl *temporary,
-                             OpenACCReductionOperator reductionOp,
-                             DeclContext *dc, QualType origType,
-                             size_t numBounds,
-                             llvm::ArrayRef<QualType> boundTypes,
-                             QualType baseType, mlir::Value mainOp) {
+  RecipeTy getOrCreateRecipe(
+      ASTContext &astCtx, mlir::OpBuilder::InsertPoint &insertLocation,
+      const Expr *varRef, const VarDecl *varRecipe, const VarDecl *temporary,
+      OpenACCReductionOperator reductionOp, DeclContext *dc, QualType origType,
+      size_t numBounds, llvm::ArrayRef<QualType> boundTypes, QualType baseType,
+      mlir::Value mainOp) {
     assert(!varRecipe->getType()->isSpecificBuiltinType(
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
@@ -262,7 +262,7 @@ public:
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::PrivateRecipeOp>) {
       createPrivateInitRecipe(loc, locEnd, varRef->getSourceRange(), mainOp,
                               recipe, numBounds, boundTypes, varRecipe,
-                              origType, initExpr);
+                              origType);
     } else {
       createRecipeInitCopy(loc, locEnd, varRef->getSourceRange(), mainOp,
                            recipe, varRecipe, temporary);

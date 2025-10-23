@@ -104,6 +104,29 @@ ExecutionCountThreshold("execution-count-threshold",
   cl::Hidden,
   cl::cat(BoltOptCategory));
 
+cl::opt<SplitFunctionsStrategy> SplitStrategy(
+    "split-strategy", cl::init(SplitFunctionsStrategy::Profile2),
+    cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
+                          "split each function into a hot and cold fragment "
+                          "using profiling information")),
+    cl::values(clEnumValN(SplitFunctionsStrategy::CDSplit, "cdsplit",
+                          "split each function into a hot, warm, and cold "
+                          "fragment using profiling information")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::Random2, "random2",
+        "split each function into a hot and cold fragment at a randomly chosen "
+        "split point (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::RandomN, "randomN",
+        "split each function into N fragments at a randomly chosen split "
+        "points (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::All, "all",
+        "split all basic blocks of each function into fragments such that each "
+        "fragment contains exactly a single basic block")),
+    cl::desc("strategy used to partition blocks into fragments"),
+    cl::cat(BoltOptCategory));
+
 bool HeatmapBlockSpecParser::parse(cl::Option &O, StringRef ArgName,
                                    StringRef Arg, HeatmapBlockSizes &Val) {
   // Parses a human-readable suffix into a shift amount or nullopt on error.

@@ -1636,7 +1636,11 @@ static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
       case file_magic::macho_object: {
         auto Obj = ExitOnErr(
             object::ObjectFile::createObjectFile(ObjBuffer->getMemBufferRef()));
-        Triple TT = Obj->makeTriple();
+        Triple TT;
+        if (auto *MachOObj = dyn_cast<object::MachOObjectFile>(Obj.get()))
+          TT = MachOObj->getArchTriple();
+        else
+          TT = Obj->makeTriple();
         if (Magic == file_magic::coff_object) {
           // TODO: Move this to makeTriple() if possible.
           TT.setObjectFormat(Triple::COFF);
