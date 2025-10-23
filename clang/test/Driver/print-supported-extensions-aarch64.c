@@ -47,6 +47,7 @@
 // CHECK-NEXT:     mops                FEAT_MOPS                                              Enable Armv8.8-A memcpy and memset acceleration instructions
 // CHECK-NEXT:     mpamv2              FEAT_MPAMv2                                            Enable Armv9.7-A MPAMv2 Lookaside Buffer Invalidate instructions
 // CHECK-NEXT:     memtag              FEAT_MTE, FEAT_MTE2                                    Enable Memory Tagging Extension
+// CHECK-NEXT:     mtetc               FEAT_MTETC                                             Enable Virtual Memory Tagging Extension
 // CHECK-NEXT:     simd                FEAT_AdvSIMD                                           Enable Advanced SIMD instructions
 // CHECK-NEXT:     occmo               FEAT_OCCMO                                             Enable Armv9.6-A Outer cacheable cache maintenance operations
 // CHECK-NEXT:     pauth               FEAT_PAuth                                             Enable Armv8.3-A Pointer Authentication extension
