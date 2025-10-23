@@ -129,10 +129,14 @@ static void validateLoopMetadata(Module &M, MDNode *LoopMD) {
     return false;
   };
 
-  if (HintStr->getString() == "llvm.loop.unroll.count" &&
-      !ValidCountNode(LoopMD)) {
-    reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
-                       "must be a constant integer");
+  if (HintStr->getString() == "llvm.loop.unroll.count") {
+    if (!ValidCountNode(LoopMD)) {
+      reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
+                         "must be a constant integer");
+      return;
+    }
+  } else if (LoopMD->getNumOperands() != 1) {
+    reportLoopError(M, "Can't have a second operand");
     return;
   }
 }
