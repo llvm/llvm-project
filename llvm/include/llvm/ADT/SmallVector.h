@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_SMALLVECTOR_H
 #define LLVM_ADT_SMALLVECTOR_H
 
+#include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
@@ -1295,28 +1296,27 @@ inline size_t capacity_in_bytes(const SmallVector<T, N> &X) {
 
 template <typename RangeType>
 using ValueTypeFromRangeType =
-    std::remove_const_t<std::remove_reference_t<decltype(*std::begin(
-        std::declval<RangeType &>()))>>;
+    std::remove_const_t<detail::ValueOfRange<RangeType>>;
 
 /// Given a range of type R, iterate the entire range and return a
 /// SmallVector with elements of the vector.  This is useful, for example,
 /// when you want to iterate a range and then sort the results.
 template <unsigned Size, typename R>
 SmallVector<ValueTypeFromRangeType<R>, Size> to_vector(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 template <typename R>
 SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 template <typename Out, unsigned Size, typename R>
 SmallVector<Out, Size> to_vector_of(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
-  return {std::begin(Range), std::end(Range)};
+  return {adl_begin(Range), adl_end(Range)};
 }
 
 // Explicit instantiations
