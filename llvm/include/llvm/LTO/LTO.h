@@ -317,6 +317,8 @@ LLVM_ABI ThinBackend createInProcessThinBackend(
 /// distributor.
 /// RemoteCompiler specifies the path to a Clang executable to be invoked for
 /// the backend jobs.
+/// RemoteCompilerPrependArgs specifies a list of prepend arguments to be
+/// applied to the backend compilations.
 /// RemoteCompilerArgs specifies a list of arguments to be applied to the
 /// backend compilations.
 /// SaveTemps is a debugging tool that prevents temporary files created by this
@@ -326,6 +328,7 @@ LLVM_ABI ThinBackend createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps);
 
 /// This ThinBackend writes individual module indexes to files, instead of
