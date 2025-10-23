@@ -9,7 +9,7 @@ Finds redundant uses of the ``typename`` keyword.
 
 .. code-block:: c++
 
-  /* typename */ std::vector<int>::size_type size;
+  /*typename*/ std::vector<int>::size_type size;
 
 And second, since C++20, before dependent names that appear in a context
 where only a type is allowed (the following example shows just a few of them):
@@ -17,7 +17,7 @@ where only a type is allowed (the following example shows just a few of them):
 .. code-block:: c++
 
   template <typename T>
-  using trait = /* typename */ T::type;
+  using trait = /*typename*/ T::type;
 
   template <typename T>
   /*typename*/ T::underlying_type as_underlying(T n) {
