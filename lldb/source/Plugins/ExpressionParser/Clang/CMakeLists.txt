@@ -5,7 +5,6 @@ add_lldb_library(lldbPluginExpressionParserClang
   ClangASTImporter.cpp
   ClangASTMetadata.cpp
   ClangASTSource.cpp
-  ClangDeclVendor.cpp
   ClangExpressionDeclMap.cpp
   ClangExpressionHelper.cpp
   ClangExpressionParser.cpp

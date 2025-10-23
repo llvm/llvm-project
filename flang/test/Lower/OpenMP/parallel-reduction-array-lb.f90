@@ -24,7 +24,6 @@ end program
 ! CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
 ! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<3x2xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<3x2xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x2xi32>>, !fir.heap<!fir.array<3x2xi32>>)
-! CHECK:           %[[VAL_7:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.array<3x2xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index

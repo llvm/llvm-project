@@ -1421,7 +1421,7 @@ void TypePrinter::printDeducedTemplateSpecializationBefore(
     } else {
       // Should only get here for canonical types.
       const auto *CD = cast<ClassTemplateSpecializationDecl>(
-          cast<RecordType>(T->getDeducedType())->getOriginalDecl());
+          cast<RecordType>(T->getDeducedType())->getDecl());
       DeducedTD = CD->getSpecializedTemplate();
       Args = CD->getTemplateArgs().asArray();
     }
@@ -1565,7 +1565,7 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
 }
 
 void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
-  TagDecl *D = T->getOriginalDecl();
+  TagDecl *D = T->getDecl();
 
   if (Policy.IncludeTagDefinition && T->isTagOwned()) {
     D->print(OS, Policy, Indentation);
@@ -1669,11 +1669,11 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
   // Print the preferred name if we have one for this type.
   if (Policy.UsePreferredNames) {
-    for (const auto *PNA : T->getOriginalDecl()
+    for (const auto *PNA : T->getDecl()
                                ->getMostRecentDecl()
                                ->specific_attrs<PreferredNameAttr>()) {
       if (!declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
-                              T->getOriginalDecl()))
+                              T->getDecl()))
         continue;
       // Find the outermost typedef or alias template.
       QualType T = PNA->getTypedefType();
@@ -1700,11 +1700,11 @@ void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 
 void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
                                                raw_ostream &OS) {
-  const ASTContext &Ctx = T->getOriginalDecl()->getASTContext();
+  const ASTContext &Ctx = T->getDecl()->getASTContext();
   IncludeStrongLifetimeRAII Strong(Policy);
   T->getTemplateName(Ctx).print(OS, Policy);
   if (Policy.PrintInjectedClassNameWithArguments) {
-    auto *Decl = T->getOriginalDecl();
+    auto *Decl = T->getDecl();
     // FIXME: Use T->getTemplateArgs(Ctx) when that supports as-written
     // arguments.
     if (auto *RD = dyn_cast<ClassTemplateSpecializationDecl>(Decl)) {
@@ -2147,9 +2147,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::DeviceKernel:
-    OS << T->getAttr()->getSpelling();
-    break;
   case attr::IntelOclBicc:
     OS << "inteloclbicc";
     break;

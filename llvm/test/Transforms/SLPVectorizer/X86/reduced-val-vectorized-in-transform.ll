@@ -5,23 +5,22 @@ define i32 @test(i1 %cond) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[OR92:%.*]] = or i32 1, 0
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[OR92:%.*]], %[[BB]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[OR92]], %[[BB]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP8:%.*]], %[[BB]] ], [ zeroinitializer, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 0>, <4 x i32> <i32 poison, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> poison, i32 [[P1]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP10]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> zeroinitializer, [[TMP4]]
-; CHECK-NEXT:    [[OR92]] = or i32 1, 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.xor.v4i32(<4 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[OR92]], i32 0
-; CHECK-NEXT:    [[TMP8]] = xor <2 x i32> [[TMP9]], [[TMP7]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = xor i32 [[TMP6]], [[OR92]]
+; CHECK-NEXT:    [[TMP8]] = xor <2 x i32> [[TMP9]], <i32 1, i32 0>
 ; CHECK-NEXT:    br i1 [[COND]], label %[[EXIT:.*]], label %[[BB]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[OP_RDX:%.*]] = extractelement <2 x i32> [[TMP8]], i32 0
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 entry:

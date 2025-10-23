@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes -std=c++14-or-later %s modernize-avoid-bind %t
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-avoid-bind %t
 
 namespace std {
 inline namespace impl {
@@ -229,19 +229,19 @@ void testFunctionObjects() {
   D *e = nullptr;
   auto AAA = std::bind(d, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto AAA = [d] { d(1, 2); }
+  // CHECK-FIXES: auto AAA = [d] { d(1, 2); };
 
   auto BBB = std::bind(*e, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto BBB = [e] { (*e)(1, 2); }
+  // CHECK-FIXES: auto BBB = [e] { (*e)(1, 2); };
 
   auto CCC = std::bind(D{}, 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto CCC = [] { D{}(1, 2); }
+  // CHECK-FIXES: auto CCC = [] { D{}(1, 2); };
 
   auto DDD = std::bind(D(), 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
-  // CHECK-FIXES: auto DDD = [] { D()(1, 2); }
+  // CHECK-FIXES: auto DDD = [] { D()(1, 2); };
 
   auto EEE = std::bind(*D::create(), 1, 2);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: prefer a lambda to std::bind
@@ -384,11 +384,11 @@ struct E {
 
     auto III = std::bind(&D::operator(), d, 1, 2);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
-    // CHECK-FIXES: auto III = [d] { (*d)(1, 2); }
+    // CHECK-FIXES: auto III = [d] { (*d)(1, 2); };
 
     auto JJJ = std::bind(&D::operator(), &dd, 1, 2);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
-    // CHECK-FIXES: auto JJJ = [ObjectPtr = &dd] { (*ObjectPtr)(1, 2); }
+    // CHECK-FIXES: auto JJJ = [ObjectPtr = &dd] { (*ObjectPtr)(1, 2); };
 
     auto KKK = std::bind(&D::operator(), _1, 1, 2);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
@@ -396,11 +396,11 @@ struct E {
 
     auto LLL = std::bind(&D::operator bool, d);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
-    // CHECK-FIXES: auto LLL = [d] { return d->operator bool(); }
+    // CHECK-FIXES: auto LLL = [d] { return d->operator bool(); };
 
     auto MMM = std::bind(&E::operator(), this, 1, 2);
     // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer a lambda to std::bind
-    // CHECK-FIXES: auto MMM = [this] { return (*this)(1, 2); }
+    // CHECK-FIXES: auto MMM = [this] { return (*this)(1, 2); };
   }
 };
 
