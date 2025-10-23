@@ -960,7 +960,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto RetTy = cast<VectorType>(ICA.getReturnType());
     EVT RetVT = getTLI()->getValueType(DL, RetTy);
     EVT OpVT = getTLI()->getValueType(DL, ICA.getArgTypes()[0]);
-    bool ShouldExpand = getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT);
+    if (getTLI()->shouldExpandGetActiveLaneMask(RetVT, OpVT))
+      break;
+
     if (RetTy->isScalableTy()) {
       if (TLI->getTypeAction(RetTy->getContext(), RetVT) !=
           TargetLowering::TypeSplitVector)
@@ -968,12 +970,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
       auto LT = getTypeLegalizationCost(RetTy);
       InstructionCost Cost = LT.first;
-
       // When SVE2p1 or SME2 is available, we can halve getTypeLegalizationCost
       // as get_active_lane_mask may lower to the sve_whilelo_x2 intrinsic, e.g.
       //   nxv32i1 = get_active_lane_mask(base, idx) ->
       //    {nxv16i1, nxv16i1} = sve_whilelo_x2(base, idx)
-      if (!ShouldExpand && (ST->hasSVE2p1() || ST->hasSME2())) {
+      if (ST->hasSVE2p1() || ST->hasSME2()) {
         Cost /= 2;
         if (Cost == 1)
           return Cost;
@@ -989,7 +990,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       SplitCost += getCmpSelInstrCost(Instruction::Select, OpTy, CondTy,
                                       CmpInst::ICMP_UGT, CostKind);
       return Cost + (SplitCost * (Cost - 1));
-    } else if (!ShouldExpand && !getTLI()->isTypeLegal(RetVT)) {
+    } else if (!getTLI()->isTypeLegal(RetVT)) {
       // We don't have enough context at this point to determine if the mask
       // is going to be kept live after the block, which will force the vXi1
       // type to be expanded to legal vectors of integers, e.g. v4i1->v4i32.
