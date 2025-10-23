@@ -2224,6 +2224,7 @@ class OutOfProcessThinBackend : public CGThinBackend {
   ArrayRef<StringRef> DistributorArgs;
 
   SString RemoteCompiler;
+  ArrayRef<StringRef> RemoteCompilerPrependArgs;
   ArrayRef<StringRef> RemoteCompilerArgs;
 
   bool SaveTemps;
@@ -2260,12 +2261,14 @@ public:
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+      ArrayRef<StringRef> RemoteCompilerPrependArgs,
       ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
+        RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
@@ -2386,6 +2389,11 @@ public:
 
         JOS.attributeArray("args", [&]() {
           JOS.value(RemoteCompiler);
+
+          // Forward any supplied prepend options.
+          if (!RemoteCompilerPrependArgs.empty())
+            for (auto &A : RemoteCompilerPrependArgs)
+              JOS.value(A);
 
           JOS.value("-c");
 
@@ -2517,6 +2525,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
@@ -2526,7 +2535,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
             LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
-            RemoteCompilerArgs, SaveTemps);
+            RemoteCompilerPrependArgs, RemoteCompilerArgs, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);
 }

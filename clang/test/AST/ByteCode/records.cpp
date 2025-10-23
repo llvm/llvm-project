@@ -1162,6 +1162,19 @@ namespace IndirectFieldInit {
   static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
 
 #endif
+
+
+  struct B {
+    struct {
+      union {
+        int x = 3;
+      };
+      int y = this->x;
+    };
+
+    constexpr B() {}
+  };
+  static_assert(B().y == 3, "");
 }
 
 namespace InheritedConstructor {
@@ -1839,4 +1852,12 @@ namespace DiamondDowncast {
   constexpr Top &top1 = (Middle1&)bottom;
   constexpr Middle2 &fail = (Middle2&)top1; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{cannot cast object of dynamic type 'const Bottom' to type 'Middle2'}}
+}
+
+namespace PrimitiveInitializedByInitList {
+  constexpr struct {
+    int a;
+    int b{this->a};
+  } c{ 17 };
+  static_assert(c.b == 17, "");
 }
