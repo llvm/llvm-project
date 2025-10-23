@@ -15,6 +15,7 @@
 #define BUILTIN_ATTRIBUTES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -1200,6 +1201,47 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef", "symbol_ref"> {
     StringAttr getLeafReference() const;
   }];
   let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SymbolVisibilityAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_SymbolVisibilityAttr : I32EnumAttr<
+  "SymbolVisibility", "sym_visibility", [
+    I32EnumAttrCase<"Public", 0, "public">,
+    I32EnumAttrCase<"Private", 1, "private">,
+    I32EnumAttrCase<"Nested", 2, "nested">
+]> {
+  let summary = "An Attribute representing the visibility of a symbol";
+  let description = [{
+    Syntax:
+
+    ```
+    symbol-visibility-attribute ::= `public` | `private` | `nested`
+    ```
+
+    The visibility of a symbol defines its structural reachability within the
+    IR. A symbol has one of the following visibilities:
+
+    - Public (Default): The symbol may be referenced from outside of the visible
+    IR. We cannot assume that all of the uses of this symbol are observable. If
+    the operation declares a symbol (as opposed to defining it), public
+    visibility is not allowed because symbol declarations are not intended to be
+    used from outside the visible IR.
+
+    - Private: The symbol may only be referenced from within the current symbol
+    table.
+
+    - Nested: The symbol may be referenced by operations outside of the current
+    symbol table, but not outside of the visible IR, as long as each symbol
+    table parent also defines a non-private symbol.
+
+    See [`Symbols And SymbolTables`](../SymbolsAndSymbolTables.md) for more
+    information.
+  }];
+
+  let cppNamespace = "mlir";
 }
 
 //===----------------------------------------------------------------------===//
