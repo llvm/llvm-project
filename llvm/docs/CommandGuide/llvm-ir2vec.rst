@@ -68,32 +68,52 @@ these two modes are used to generate the triplets and entity mappings.
 Triplet Generation
 ~~~~~~~~~~~~~~~~~~
 
-With the `triplets` subcommand, :program:`llvm-ir2vec` analyzes LLVM IR and extracts
-numeric triplets consisting of opcode IDs, type IDs, and operand IDs. These triplets
+With the `triplets` subcommand, :program:`llvm-ir2vec` analyzes LLVM IR or Machine IR
+and extracts numeric triplets consisting of opcode IDs and operand IDs. These triplets
 are generated in the standard format used for knowledge graph embedding training.
-The tool outputs numeric IDs directly using the ir2vec::Vocabulary mapping
-infrastructure, eliminating the need for string-to-ID preprocessing.
+The tool outputs numeric IDs directly using the vocabulary mapping infrastructure,
+eliminating the need for string-to-ID preprocessing.
 
-Usage:
+Usage for LLVM IR:
 
 .. code-block:: bash
 
-   llvm-ir2vec triplets input.bc -o triplets_train2id.txt
+   llvm-ir2vec triplets --mode=llvm input.bc -o triplets_train2id.txt
+
+Usage for Machine IR:
+
+.. code-block:: bash
+
+   llvm-ir2vec triplets --mode=mir input.mir -o triplets_train2id.txt
 
 Entity Mapping Generation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 With the `entities` subcommand, :program:`llvm-ir2vec` generates the entity mappings
-supported by IR2Vec in the standard format used for knowledge graph embedding
-training. This subcommand outputs all supported entities (opcodes, types, and
-operands) with their corresponding numeric IDs, and is not specific for an
-LLVM IR file.
+supported by IR2Vec or MIR2Vec in the standard format used for knowledge graph embedding
+training. This subcommand outputs all supported entities with their corresponding numeric IDs.
 
-Usage:
+For LLVM IR, entities include opcodes, types, and operands. For Machine IR, entities include
+machine opcodes, common operands, and register classes (both physical and virtual).
+
+Usage for LLVM IR:
 
 .. code-block:: bash
 
-   llvm-ir2vec entities -o entity2id.txt
+   llvm-ir2vec entities --mode=llvm -o entity2id.txt
+
+Usage for Machine IR:
+
+.. code-block:: bash
+
+   llvm-ir2vec entities --mode=mir input.mir -o entity2id.txt
+
+.. note::
+
+   For LLVM IR mode, the entity mapping is target-independent and does not require an input file.
+   For Machine IR mode, an input .mir file is required to determine the target architecture,
+   as entity mappings vary by target (different architectures have different instruction sets
+   and register classes).
 
 Embedding Generation
 ~~~~~~~~~~~~~~~~~~~~
@@ -222,12 +242,17 @@ Subcommand-specific options:
 
 .. option:: <input-file>
 
-   The input LLVM IR or bitcode file to process. This positional argument is
-   required for the `triplets` subcommand.
+   The input LLVM IR/bitcode file (.ll/.bc) or Machine IR file (.mir) to process. 
+   This positional argument is required for the `triplets` subcommand.
 
 **entities** subcommand:
 
-   No subcommand-specific options.
+.. option:: <input-file>
+
+   The input Machine IR file (.mir) to process. This positional argument is required
+   for the `entities` subcommand when using ``--mode=mir``, as the entity mappings
+   are target-specific. For ``--mode=llvm``, no input file is required as IR2Vec
+   entity mappings are target-independent.
 
 OUTPUT FORMAT
 -------------
@@ -240,19 +265,37 @@ metadata headers. The format includes:
 
 .. code-block:: text
 
-   MAX_RELATIONS=<max_relations_count>
+   MAX_RELATION=<max_relation_count>
    <head_entity_id> <tail_entity_id> <relation_id>
    <head_entity_id> <tail_entity_id> <relation_id>
    ...
 
 Each line after the metadata header represents one instruction relationship,
-with numeric IDs for head entity, relation, and tail entity. The metadata 
-header (MAX_RELATIONS) provides counts for post-processing and training setup.
+with numeric IDs for head entity, tail entity, and relation type. The metadata 
+header (MAX_RELATION) indicates the maximum relation ID used.
+
+**Relation Types:**
+
+For LLVM IR (IR2Vec):
+  * **0** = Type relationship (instruction to its type)
+  * **1** = Next relationship (sequential instructions)
+  * **2+** = Argument relationships (Arg0, Arg1, Arg2, ...)
+
+For Machine IR (MIR2Vec):
+  * **0** = Next relationship (sequential instructions)
+  * **1+** = Argument relationships (Arg0, Arg1, Arg2, ...)
+
+**Entity IDs:**
+
+For LLVM IR: Entity IDs represent opcodes, types, and operands as defined by the IR2Vec vocabulary.
+
+For Machine IR: Entity IDs represent machine opcodes, common operands (immediate, frame index, etc.),
+physical register classes, and virtual register classes as defined by the MIR2Vec vocabulary. The entity layout is target-specific.
 
 Entity Mode Output
 ~~~~~~~~~~~~~~~~~~
 
-In entity mode, the output consists of entity mapping in the format:
+In entity mode, the output consists of entity mappings in the format:
 
 .. code-block:: text
 
@@ -263,6 +306,13 @@ In entity mode, the output consists of entity mapping in the format:
 
 The first line contains the total number of entities, followed by one entity
 mapping per line with tab-separated entity string and numeric ID.
+
+For LLVM IR, entities include instruction opcodes (e.g., "Add", "Ret"), types 
+(e.g., "INT", "PTR"), and operand kinds.
+
+For Machine IR, entities include machine opcodes (e.g., "COPY", "ADD"), 
+common operands (e.g., "Immediate", "FrameIndex"), physical register classes 
+(e.g., "PhyReg_GR32"), and virtual register classes (e.g., "VirtReg_GR32").
 
 Embedding Mode Output
 ~~~~~~~~~~~~~~~~~~~~~
