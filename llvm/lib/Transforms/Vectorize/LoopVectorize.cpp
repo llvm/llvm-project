@@ -1011,6 +1011,10 @@ public:
   /// \returns True if instruction \p I can be truncated to a smaller bitwidth
   /// for vectorization factor \p VF.
   bool canTruncateToMinimalBitwidth(Instruction *I, ElementCount VF) const {
+    // Truncs must truncate at most to their destination type.
+    if (isa_and_nonnull<TruncInst>(I) && MinBWs.contains(I) &&
+        I->getType()->getScalarSizeInBits() < MinBWs.lookup(I))
+      return false;
     return VF.isVector() && MinBWs.contains(I) &&
            !isProfitableToScalarize(I, VF) &&
            !isScalarAfterVectorization(I, VF);
@@ -7192,7 +7196,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::materializeBuildVectors, BestVPlan);
+  VPlanTransforms::runPass(VPlanTransforms::materializePacksAndUnpacks,
+                           BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
@@ -9854,6 +9859,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
+  if (UserIC > 1 && !LVL.isSafeForAnyVectorWidth())
+    UserIC = 1;
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
@@ -9918,7 +9925,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
+  if (UserIC == 1 && Hints.getInterleave() > 1) {
+    assert(!LVL.isSafeForAnyVectorWidth() &&
+           "UserIC should only be ignored due to unsafe dependencies");
+    LLVM_DEBUG(dbgs() << "LV: Ignoring user-specified interleave count.\n");
+    IntDiagMsg = {"InterleavingUnsafe",
+                  "Ignoring user-specified interleave count due to possibly "
+                  "unsafe dependencies in the loop."};
+    InterleaveLoop = false;
+  } else if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "

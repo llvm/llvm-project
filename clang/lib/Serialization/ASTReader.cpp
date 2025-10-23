@@ -5811,7 +5811,13 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+    auto Entry =
+        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    if (!Entry) {
+      llvm::consumeError(Entry.takeError());
+      return true;
+    }
+    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);

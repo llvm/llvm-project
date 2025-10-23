@@ -2724,6 +2724,8 @@ def CIR_CopyOp : CIR_Op<"copy",[
     type of `src` and `dst` must match and both must implement the
     `DataLayoutTypeInterface`.
 
+    The `volatile` keyword indicates that the operation is volatile.
+
     Examples:
 
     ```mlir
@@ -2734,10 +2736,11 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
   let arguments = (ins
       Arg<CIR_PointerType, "", [MemWrite]>:$dst,
-      Arg<CIR_PointerType, "", [MemRead]>:$src
+      Arg<CIR_PointerType, "", [MemRead]>:$src,
+      UnitAttr:$is_volatile
   );
 
-  let assemblyFormat = [{$src `to` $dst
+  let assemblyFormat = [{$src `to` $dst (`volatile` $is_volatile^)?
                         attr-dict `:` qualified(type($dst))
   }];
   let hasVerifier = 1;
@@ -4454,6 +4457,79 @@ def CIR_TryOp : CIR_Op<"try",[
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
+def CIR_AtomicFetchKind : CIR_I32EnumAttr<
+  "AtomicFetchKind", "Binary opcode for atomic fetch-and-update operations", [
+    I32EnumAttrCase<"Add", 0, "add">,
+    I32EnumAttrCase<"Sub", 1, "sub">,
+    I32EnumAttrCase<"And", 2, "and">,
+    I32EnumAttrCase<"Xor", 3, "xor">,
+    I32EnumAttrCase<"Or", 4, "or">,
+    I32EnumAttrCase<"Nand", 5, "nand">,
+    I32EnumAttrCase<"Max", 6, "max">,
+    I32EnumAttrCase<"Min", 7, "min">
+]>;
+
+def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
+  AllTypesMatch<["result", "val"]>,
+  TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
+    "ptr", "val", "mlir::cast<cir::PointerType>($_self).getPointee()">
+]> {
+  let summary = "Atomic fetch-and-update operation";
+  let description = [{
+    C/C++ atomic fetch-and-update operation. This operation implements the C/C++
+    builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
+    `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
+    opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, and `min`.
+
+    This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
+    type of `val` must match the pointee type of `ptr`. If the binary operation
+    is `add`, `sub`, `max`, or `min`, the type of `val` may either be an integer
+    type or a floating-point type. Otherwise, `val` must be an integer.
+
+    This operation atomically loads the value from `ptr`, performs the binary
+    operation as indicated by `binop` on the loaded value and `val`, and stores
+    the result back to `ptr`. If the `fetch_first` flag is present, the result
+    of this operation is the old value loaded from `ptr` before the binary
+    operation. Otherwise, the result of this operation is the result of the
+    binary operation.
+
+    Example:
+    %res = cir.atomic.fetch add seq_cst %ptr, %val
+        : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  }];
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins
+    Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
+    CIR_AnyIntOrFloatType:$val,
+    CIR_AtomicFetchKind:$binop,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    UnitAttr:$is_volatile,
+    UnitAttr:$fetch_first
+  );
+
+  let assemblyFormat = [{
+    $binop $mem_order
+    (`fetch_first` $fetch_first^)?
+    $ptr `,` $val
+    (`volatile` $is_volatile^)?
+    `:` `(` qualified(type($ptr)) `,` qualified(type($val)) `)`
+    `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+
+  let extraLLVMLoweringPatternDecl = [{
+    mlir::Value buildPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                            mlir::ConversionPatternRewriter &rewriter,
+                            mlir::Value rmwVal, bool isInt) const;
+
+    mlir::Value buildMinMaxPostOp(cir::AtomicFetchOp op, OpAdaptor adaptor,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::Value rmwVal, bool isInt,
+                                  bool isSigned) const;
+  }];
+}
+
 def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   AllTypesMatch<["result", "val"]>,
   TypesMatchWith<"type of 'val' must match the pointee type of 'ptr'",
@@ -4551,6 +4627,68 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
     `:` functional-type(operands, results) attr-dict
+  }];
+}
+
+def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
+  let summary = "Atomic test and set";
+  let description = [{
+    C/C++ atomic test and set operation. Implements the builtin function
+    `__atomic_test_and_set`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically set the integer to an implementation-
+    defined non-zero "set" value. The result of the operation is a boolean value
+    indicating whether the previous value of the integer was the "set" value.
+
+    Example:
+    ```mlir
+      %res = cir.atomic.test_and_set seq_cst %ptr : !cir.ptr<!s8i> -> !cir.bool
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
+  }];
+}
+
+def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
+  let summary = "Atomic clear";
+  let description = [{
+    C/C++ atomic clear operation. Implements the builtin function
+    `__atomic_clear`.
+
+    The operation takes as its only operand a pointer to an 8-bit signed
+    integer. The operation atomically sets the integer to zero.
+
+    Example:
+    ```mlir
+      cir.atomic.clear seq_cst %ptr : !cir.ptr<!s8i>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
+    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    OptionalAttr<I64Attr>:$alignment,
+    UnitAttr:$is_volatile
+  );
+
+  let assemblyFormat = [{
+    $mem_order $ptr
+    (`volatile` $is_volatile^)?
+    `:` qualified(type($ptr)) attr-dict
   }];
 }
 
