@@ -7,15 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "EventHelper.h"
+#include "Breakpoint.h"
+#include "BreakpointBase.h"
 #include "DAP.h"
 #include "DAPError.h"
+#include "DAPLog.h"
+#include "DAPSessionManager.h"
+#include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBListener.h"
+#include "lldb/API/SBStream.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Threading.h"
+#include <mutex>
 #include <utility>
 
 #if defined(_WIN32)
@@ -293,6 +305,269 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
   if (body.memoryReference == LLDB_INVALID_ADDRESS)
     return;
   dap.Send(protocol::Event{"memory", std::move(body)});
+}
+
+// Note: EventThread() is architecturally different from the other functions in
+// this file. While the functions above are event helpers that operate on a
+// single DAP instance (taking `DAP &dap` as a parameter), EventThread() is a
+// shared event processing loop that:
+// 1. Listens to events from a shared debugger instance
+// 2. Uses DAPSessionManager::FindDAP() to find the appropriate DAP instance
+//    for each event
+// 3. Dispatches events to multiple different DAP sessions
+// This allows multiple DAP sessions to share a single debugger and event
+// thread, which is essential for the target handoff mechanism where child
+// processes/targets are debugged in separate DAP sessions.
+//
+// All events from the debugger, target, process, thread and frames are
+// received in this function that runs in its own thread. We are using a
+// "FILE *" to output packets back to VS Code and they have mutexes in them
+// them prevent multiple threads from writing simultaneously so no locking
+// is required.
+void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
+                 llvm::StringRef client_name, Log *log) {
+  llvm::set_thread_name("lldb.DAP.client." + client_name + ".event_handler");
+  lldb::SBEvent event;
+  lldb::SBListener listener = debugger.GetListener();
+  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
+  debugger.GetBroadcaster().AddListener(
+      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
+  bool done = false;
+  while (!done) {
+    if (listener.WaitForEvent(1, event)) {
+      const auto event_mask = event.GetType();
+      if (lldb::SBProcess::EventIsProcessEvent(event)) {
+        lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
+        // Find the DAP instance that owns this process's target.
+        DAP *dap_instance = DAPSessionManager::FindDAP(process.GetTarget());
+        if (!dap_instance) {
+          DAP_LOG(log, "Unable to find DAP instance for process {0}",
+                  process.GetProcessID());
+          continue;
+        }
+
+        if (event_mask & lldb::SBProcess::eBroadcastBitStateChanged) {
+          auto state = lldb::SBProcess::GetStateFromEvent(event);
+          switch (state) {
+          case lldb::eStateConnected:
+          case lldb::eStateDetached:
+          case lldb::eStateInvalid:
+          case lldb::eStateUnloaded:
+            break;
+          case lldb::eStateAttaching:
+          case lldb::eStateCrashed:
+          case lldb::eStateLaunching:
+          case lldb::eStateStopped:
+          case lldb::eStateSuspended:
+            // Only report a stopped event if the process was not
+            // automatically restarted.
+            if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
+              SendStdOutStdErr(*dap_instance, process);
+              if (llvm::Error err = SendThreadStoppedEvent(*dap_instance))
+                DAP_LOG_ERROR(dap_instance->log, std::move(err),
+                              "({1}) reporting thread stopped: {0}",
+                              dap_instance->GetClientName());
+            }
+            break;
+          case lldb::eStateRunning:
+          case lldb::eStateStepping:
+            dap_instance->WillContinue();
+            SendContinuedEvent(*dap_instance);
+            break;
+          case lldb::eStateExited:
+            lldb::SBStream stream;
+            process.GetStatus(stream);
+            dap_instance->SendOutput(OutputType::Console, stream.GetData());
+
+            // When restarting, we can get an "exited" event for the process we
+            // just killed with the old PID, or even with no PID. In that case
+            // we don't have to terminate the session.
+            if (process.GetProcessID() == LLDB_INVALID_PROCESS_ID ||
+                process.GetProcessID() == dap_instance->restarting_process_id) {
+              dap_instance->restarting_process_id = LLDB_INVALID_PROCESS_ID;
+            } else {
+              // Run any exit LLDB commands the user specified in the
+              // launch.json
+              dap_instance->RunExitCommands();
+              SendProcessExitedEvent(*dap_instance, process);
+              dap_instance->SendTerminatedEvent();
+              done = true;
+            }
+            break;
+          }
+        } else if ((event_mask & lldb::SBProcess::eBroadcastBitSTDOUT) ||
+                   (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
+          SendStdOutStdErr(*dap_instance, process);
+        }
+      } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
+        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
+            event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
+          lldb::SBTarget event_target =
+              lldb::SBTarget::GetTargetFromEvent(event);
+          // Find the DAP instance that owns this target.
+          DAP *dap_instance = DAPSessionManager::FindDAP(event_target);
+          if (!dap_instance)
+            continue;
+
+          const uint32_t num_modules =
+              lldb::SBTarget::GetNumModulesFromEvent(event);
+          const bool remove_module =
+              event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
+
+          std::lock_guard<std::mutex> guard(dap_instance->modules_mutex);
+          for (uint32_t i = 0; i < num_modules; ++i) {
+            lldb::SBModule module =
+                lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
+
+            std::optional<protocol::Module> p_module =
+                CreateModule(dap_instance->target, module, remove_module);
+            if (!p_module)
+              continue;
+
+            llvm::StringRef module_id = p_module->id;
+
+            const bool module_exists =
+                dap_instance->modules.contains(module_id);
+            if (remove_module && module_exists) {
+              dap_instance->modules.erase(module_id);
+              dap_instance->Send(protocol::Event{
+                  "module", protocol::ModuleEventBody{
+                                std::move(p_module).value(),
+                                protocol::ModuleEventBody::eReasonRemoved}});
+            } else if (module_exists) {
+              dap_instance->Send(protocol::Event{
+                  "module", protocol::ModuleEventBody{
+                                std::move(p_module).value(),
+                                protocol::ModuleEventBody::eReasonChanged}});
+            } else if (!remove_module) {
+              dap_instance->modules.insert(module_id);
+              dap_instance->Send(protocol::Event{
+                  "module", protocol::ModuleEventBody{
+                                std::move(p_module).value(),
+                                protocol::ModuleEventBody::eReasonNew}});
+            }
+          }
+        } else if (event_mask & lldb::SBTarget::eBroadcastBitNewTargetCreated) {
+          auto target = lldb::SBTarget::GetTargetFromEvent(event);
+
+          // Find the DAP instance that owns this target to check if we should
+          // ignore this event.
+          DAP *dap_instance = DAPSessionManager::FindDAP(target);
+
+          // Get the target and debugger IDs for the new session to use.
+          lldb::user_id_t target_id = target.GetGloballyUniqueID();
+          lldb::SBDebugger target_debugger = target.GetDebugger();
+          int debugger_id = target_debugger.GetID();
+
+          // We create an attach config that contains the debugger ID and target
+          // ID. The new DAP instance will use these IDs to find the existing
+          // debugger and target via FindDebuggerWithID and
+          // FindTargetByGloballyUniqueID.
+          llvm::json::Object attach_config;
+
+          attach_config.try_emplace("type", "lldb");
+          attach_config.try_emplace("debuggerId", debugger_id);
+          attach_config.try_emplace("targetId", target_id);
+          const char *session_name = target.GetTargetSessionName();
+          attach_config.try_emplace("name", session_name);
+
+          // 2. Construct the main 'startDebugging' request arguments.
+          llvm::json::Object start_debugging_args{
+              {"request", "attach"},
+              {"configuration", std::move(attach_config)}};
+
+          // Send the request. Note that this is a reverse request, so you don't
+          // expect a direct response in the same way as a client request.
+          // If we don't have a dap_instance (target wasn't found), get any
+          // active instance
+          if (!dap_instance) {
+            std::vector<DAP *> active_instances =
+                DAPSessionManager::GetInstance().GetActiveSessions();
+            if (!active_instances.empty())
+              dap_instance = active_instances[0];
+          }
+
+          if (dap_instance) {
+            dap_instance->SendReverseRequest<LogFailureResponseHandler>(
+                "startDebugging", std::move(start_debugging_args));
+          }
+        }
+      } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
+        lldb::SBBreakpoint bp =
+            lldb::SBBreakpoint::GetBreakpointFromEvent(event);
+        if (!bp.IsValid())
+          continue;
+
+        lldb::SBTarget event_target = bp.GetTarget();
+
+        // Find the DAP instance that owns this target.
+        DAP *dap_instance = DAPSessionManager::FindDAP(event_target);
+        if (!dap_instance)
+          continue;
+
+        if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
+          auto event_type =
+              lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
+          auto breakpoint = Breakpoint(*dap_instance, bp);
+          // If the breakpoint was set through DAP, it will have the
+          // BreakpointBase::kDAPBreakpointLabel. Regardless of whether
+          // locations were added, removed, or resolved, the breakpoint isn't
+          // going away and the reason is always "changed".
+          if ((event_type & lldb::eBreakpointEventTypeLocationsAdded ||
+               event_type & lldb::eBreakpointEventTypeLocationsRemoved ||
+               event_type & lldb::eBreakpointEventTypeLocationsResolved) &&
+              breakpoint.MatchesName(BreakpointBase::kDAPBreakpointLabel)) {
+            // As the DAP client already knows the path of this breakpoint, we
+            // don't need to send it back as part of the "changed" event. This
+            // avoids sending paths that should be source mapped. Note that
+            // CreateBreakpoint doesn't apply source mapping and certain
+            // implementation ignore the source part of this event anyway.
+            protocol::Breakpoint protocol_bp =
+                breakpoint.ToProtocolBreakpoint();
+            // "source" is not needed here, unless we add adapter data to be
+            // saved by the client.
+            if (protocol_bp.source && !protocol_bp.source->adapterData)
+              protocol_bp.source = std::nullopt;
+
+            llvm::json::Object body;
+            body.try_emplace("breakpoint", protocol_bp);
+            body.try_emplace("reason", "changed");
+
+            llvm::json::Object bp_event = CreateEventObject("breakpoint");
+            bp_event.try_emplace("body", std::move(body));
+
+            dap_instance->SendJSON(llvm::json::Value(std::move(bp_event)));
+          }
+        }
+      } else if (event_mask & lldb::eBroadcastBitError ||
+                 event_mask & lldb::eBroadcastBitWarning) {
+        // Global debugger events - send to all DAP instances.
+        std::vector<DAP *> active_instances =
+            DAPSessionManager::GetInstance().GetActiveSessions();
+        for (DAP *dap_instance : active_instances) {
+          if (!dap_instance)
+            continue;
+
+          lldb::SBStructuredData data =
+              lldb::SBDebugger::GetDiagnosticFromEvent(event);
+          if (!data.IsValid())
+            continue;
+
+          std::string type = GetStringValue(data.GetValueForKey("type"));
+          std::string message = GetStringValue(data.GetValueForKey("message"));
+          dap_instance->SendOutput(
+              OutputType::Important,
+              llvm::formatv("{0}: {1}", type, message).str());
+        }
+      } else if (event.BroadcasterMatchesRef(broadcaster)) {
+        if (event_mask & eBroadcastBitStopEventThread) {
+          done = true;
+        }
+      }
+    }
+  }
 }
 
 } // namespace lldb_dap
