@@ -3598,16 +3598,17 @@ static SDValue performMulCombine(SDNode *N,
   }
 }
 
-SDValue DoubleVectorWidth(SDValue In, EVT InVT, unsigned RequiredNumElems,
+SDValue DoubleVectorWidth(SDValue In, unsigned RequiredNumElems,
                           SelectionDAG &DAG) {
   SDLoc DL(In);
   LLVMContext &Ctx = *DAG.getContext();
+  EVT InVT = In.getValueType();
   unsigned NumElems = InVT.getVectorNumElements() * 2;
-  EVT OutVT = EVT::getVectorVT(Ctx, MVT::i32, NumElems);
+  EVT OutVT = EVT::getVectorVT(Ctx, InVT.getVectorElementType(), NumElems);
   SDValue Concat =
       DAG.getNode(ISD::CONCAT_VECTORS, DL, OutVT, In, DAG.getUNDEF(InVT));
   if (NumElems < RequiredNumElems) {
-    return DoubleVectorWidth(Concat, OutVT, RequiredNumElems, DAG);
+    return DoubleVectorWidth(Concat, RequiredNumElems, DAG);
   }
   return Concat;
 }
@@ -3645,8 +3646,7 @@ SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
     // Create a wide enough vector that we can use narrow.
     EVT NarrowedVT = OutElTy == MVT::i8 ? MVT::v16i8 : MVT::v8i16;
     unsigned NumRequiredElems = NarrowedVT.getVectorNumElements();
-    SDValue WideVector =
-        DoubleVectorWidth(Masked, IntVT, NumRequiredElems, DAG);
+    SDValue WideVector = DoubleVectorWidth(Masked, NumRequiredElems, DAG);
     SDValue Trunc = truncateVectorWithNARROW(NarrowedVT, WideVector, DL, DAG);
     return DAG.getBitcast(
         OutVT, extractSubVector(Trunc, 0, DAG, DL, OutVT.getSizeInBits()));
