@@ -3600,8 +3600,6 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
-      if (!this->emitStartLifetime(E))
-        return false;
       if (!this->emitGetLocal(SizeT, ArrayLen, E))
         return false;
       if (!this->emitCheckNewTypeMismatchArray(SizeT, E, E))
@@ -3741,10 +3739,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
     if (PlacementDest) {
       if (!this->visit(PlacementDest))
         return false;
-      if (!this->emitStartLifetime(E))
-        return false;
       if (!this->emitCheckNewTypeMismatch(E, E))
         return false;
+
     } else {
       // Allocate just one element.
       if (!this->emitAlloc(Desc, E))
