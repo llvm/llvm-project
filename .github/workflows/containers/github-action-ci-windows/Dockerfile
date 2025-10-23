@@ -124,9 +124,7 @@ RUN powershell -Command \
     Set-Location C:\ ; \
     Remove-Item C:\temp-download -Recurse -Force; \
     Remove-Item C:\xz-utils -Recurse -Force; \
-
-# Shorten path to clang files.
-RUN powershell -Command \
+    # -- 5. Shorten path to clang files & remove unnecessary files -- \
     Set-Location C:\clang ; \
     Rename-Item -Path "C:\clang\clang+llvm-21.1.2-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ; \
     Set-Location C:\clang\clang-msvc ; \
