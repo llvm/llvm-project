@@ -12,12 +12,14 @@
 #include "InterpHelpers.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
 
@@ -1304,6 +1306,45 @@ interp__builtin_ptrauth_string_discriminator(InterpState &S, CodePtr OpPC,
   StringRef R(&Ptr.deref<char>(), Ptr.getFieldDesc()->getNumElems() - 1);
   uint64_t Result = getPointerAuthStableSipHash(R);
   pushInteger(S, Result, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
+                                              const InterpFrame *Frame,
+                                              const CallExpr *Call) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  uint64_t BitWidth = ASTCtx.getTypeSize(ASTCtx.getSizeType());
+  auto Mode =
+      ASTCtx.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+  uint64_t MaxTokens =
+      ASTCtx.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+
+  // We do not read any of the arguments; discard them.
+  for (int I = Call->getNumArgs() - 1; I >= 0; --I)
+    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
+
+  // Note: Type inference from a surrounding cast is not supported in
+  // constexpr evaluation.
+  QualType AllocType = infer_alloc::inferPossibleType(Call, ASTCtx, nullptr);
+  if (AllocType.isNull()) {
+    S.CCEDiag(Call,
+              diag::note_constexpr_infer_alloc_token_type_inference_failed);
+    return false;
+  }
+
+  auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, ASTCtx);
+  if (!ATMD) {
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_no_metadata);
+    return false;
+  }
+
+  auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
+  if (!MaybeToken) {
+    S.CCEDiag(Call, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    return false;
+  }
+
+  pushInteger(S, llvm::APInt(BitWidth, *MaybeToken), ASTCtx.getSizeType());
   return true;
 }
 
@@ -3693,6 +3734,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     return interp__builtin_ptrauth_string_discriminator(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_infer_alloc_token:
+    return interp__builtin_infer_alloc_token(S, OpPC, Frame, Call);
 
   case Builtin::BI__noop:
     pushInteger(S, 0, Call->getType());

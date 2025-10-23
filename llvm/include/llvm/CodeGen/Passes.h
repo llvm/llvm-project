@@ -69,6 +69,9 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
