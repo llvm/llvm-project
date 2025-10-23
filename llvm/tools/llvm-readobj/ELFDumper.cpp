@@ -5385,11 +5385,9 @@ template <class ELFT> bool ELFDumper<ELFT>::processCallGraphSection() {
                   "While reading call graph info's Flags");
     callgraph::Flags CGFlags = static_cast<callgraph::Flags>(FlagsVal);
     if (FlagsVal > 7) {
-      reportError(
-          createError(
-              "Unknown Flags. Expected a value in the range [0-7] but found [" +
-              std::to_string(FlagsVal) + "]"),
-          "While reading call graph info's Flags");
+      reportError(createError("Unexpected value. Expected [0-7] but found [" +
+                              std::to_string(FlagsVal) + "]"),
+                  "While reading call graph info's Flags");
     }
     uint64_t FuncAddrOffset = Offset;
     typename ELFT::uint FuncAddr =

@@ -8,7 +8,7 @@
 # RUN: not llvm-readelf --elf-output-style=LLVM --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 # RUN: not llvm-readelf --elf-output-style=JSON --pretty-print --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
 
-# ERR: error: 'While reading call graph info's Flags': Unknown Flags. Expected a value in the range [0-7] but found [8]
+# ERR: error: 'While reading call graph info's Flags': Unexpected value. Expected [0-7] but found [8]
 
 .text
 .globl _Z3foov
