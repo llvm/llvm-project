@@ -4946,7 +4946,7 @@ defset list<WMMA_INSTR> MMA_SPs = {
 // ldmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class LDMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record, [(ins ADDR:$src)]>,
+  : WMMA_INSTR<LDMATRIX_NAME<Frag, Transposed>.record_name, [(ins ADDR:$src)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   PatFrag IntrFrag = PatFrag<(ops node:$src), (Intr node:$src),
@@ -4981,7 +4981,7 @@ defset list<WMMA_INSTR> LDMATRIXs  = {
 // stmatrix.sync.aligned.m8n8[|.trans][|.shared].b16
 //
 class STMATRIX<WMMA_REGINFO Frag, bit Transposed, string Space>
-  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record, [!con((ins ADDR:$dst), Frag.Ins)]>,
+  : WMMA_INSTR<STMATRIX_NAME<Frag, Transposed>.record_name, [!con((ins ADDR:$dst), Frag.Ins)]>,
     Requires<Frag.Predicates> {
   // Build PatFrag that only matches particular address space.
   dag PFOperands = !con((ops node:$dst),
@@ -5376,7 +5376,7 @@ class Tcgen05MMAInst<bit Sp, string KindStr, string ASpace,
          Requires<PTXPredicates> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record
+                        NVVM_TCGEN05_MMA<Sp, ASpace, AShift, ScaleInputD>.record_name
                      );
 
   dag ScaleInpIns = !if(!eq(ScaleInputD, 1), (ins i64imm:$scale_input_d), (ins));
@@ -5618,7 +5618,7 @@ class Tcgen05MMABlockScaleInst<bit Sp, string ASpace, string KindStr,
          Requires<[hasTcgen05Instructions, PTXPredicate]> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record);
+                             NVVM_TCGEN05_MMA_BLOCKSCALE<Sp, ASpace, KindStr, ScaleVecSize>.record_name);
 
   dag SparseMetadataIns = !if(!eq(Sp, 1), (ins B32:$spmetadata), (ins));
   dag SparseMetadataIntr = !if(!eq(Sp, 1), (Intrin i32:$spmetadata), (Intrin));
@@ -5702,7 +5702,7 @@ class Tcgen05MMAWSInst<bit Sp, string ASpace, string KindStr,
          Requires<[hasTcgen05Instructions]> {
 
   Intrinsic Intrin = !cast<Intrinsic>(
-                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record);
+                            NVVM_TCGEN05_MMA_WS<Sp, ASpace, HasZeroColMask>.record_name);
 
   dag ZeroColMaskIns = !if(!eq(HasZeroColMask, 1),
                               (ins B64:$zero_col_mask), (ins));
