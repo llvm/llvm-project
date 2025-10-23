@@ -273,11 +273,12 @@ jobs:
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        cmake --debug-trycompile --trace-expand -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
+        cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DCMAKE_CXX_FLAGS=-DLIBXML_STATIC \
             -DCMAKE_C_FLAGS=-DLIBXML_STATIC \
+            -DCMAKE_PREFIX_PATH=/s/libxml-install \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build
@@ -286,14 +287,6 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      if: always()
-      with:
-        name: debug
-        path: |
-          build/
-          libxml-install/
 
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
