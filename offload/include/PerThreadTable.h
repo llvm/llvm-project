@@ -49,21 +49,21 @@ private:
 
 protected:
   ObjectType &getThreadEntry() {
-    auto &ThData = getThreadData();
-    if (ThData.ThEntry)
-      return *ThData.ThEntry;
-    ThData.ThEntry = std::make_unique<ObjectType>();
-    return *ThData.ThEntry;
+    auto &ThreadData = getThreadData();
+    if (ThreadData.ThreadEntry)
+      return *ThreadData.ThreadEntry;
+    ThreadData.ThreadEntry = std::make_unique<ObjectType>();
+    return *ThreadData.ThreadEntry;
   }
 
 public:
   ObjectType &get() { return getThreadEntry(); }
 
   template <class F> void clear(F f) {
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry)
+    for (auto ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry)
         continue;
-      f(*ThData->ThEntry);
+      f(*ThreadData->ThreadEntry);
     }
     ThreadDataList.clear();
   }
