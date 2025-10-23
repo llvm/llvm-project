@@ -1,6 +1,13 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outside.func", linkage_type = <Import>>
+    spirv.func @outside.func.with.linkage(%arg0 : i8) -> () "Pure" attributes {
+      linkage_attributes=#spirv.linkage_attributes<
+        linkage_name="outside.func",
+        linkage_type=<Import>
+      >
+    }
     spirv.func @linkage_attr_test_kernel()  "DontInline"  attributes {}  {
         %uchar_0 = spirv.Constant 0 : i8
         %ushort_1 = spirv.Constant 1 : i16
@@ -8,7 +15,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
         spirv.FunctionCall @outside.func.with.linkage(%uchar_0):(i8) -> ()
         spirv.Return
     }
-    // CHECK: linkage_attributes = #spirv.linkage_attributes<linkage_name = "outside.func", linkage_type = <Import>>
+    spirv.func @inside.func() -> () "Pure" attributes {} {spirv.Return}
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int8, Int16], []> {
+    spirv.func @linkage_attr_test_kernel()  "DontInline"  attributes {}  {
+        %uchar_0 = spirv.Constant 0 : i8
+        %ushort_1 = spirv.Constant 1 : i16
+        %uint_0 = spirv.Constant 0 : i32
+        spirv.FunctionCall @outside.func.with.linkage(%uchar_0):(i8) -> ()
+        spirv.Return
+    }
+    // expected-error@+1 {{all functions declarations in 'spirv.module' must happen before any definitions}}
     spirv.func @outside.func.with.linkage(%arg0 : i8) -> () "Pure" attributes {
       linkage_attributes=#spirv.linkage_attributes<
         linkage_name="outside.func",

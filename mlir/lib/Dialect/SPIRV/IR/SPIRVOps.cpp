@@ -1516,6 +1516,7 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
   DenseMap<std::pair<spirv::FuncOp, spirv::ExecutionModel>, spirv::EntryPointOp>
       entryPoints;
   mlir::SymbolTable table(*this);
+  bool encounteredFuncDefinition = false;
 
   for (auto &op : *getBody()) {
     if (op.getDialect() != dialect)
@@ -1561,10 +1562,23 @@ LogicalResult spirv::ModuleOp::verifyRegions() {
       auto hasImportLinkage =
           linkageAttr && (linkageAttr.value().getLinkageType().getValue() ==
                           spirv::LinkageType::Import);
-      if (funcOp.isExternal() && !hasImportLinkage)
-        return op.emitError(
-            "'spirv.module' cannot contain external functions "
-            "without 'Import' linkage_attributes (LinkageAttributes)");
+      if (funcOp.isExternal()) {
+        if (!hasImportLinkage)
+          return op.emitError(
+              "'spirv.module' cannot contain external functions "
+              "without 'Import' linkage_attributes (LinkageAttributes)");
+        // This is stronger than necessary. It should be sufficient to
+        // ensure any declarations precede their uses and not all definitions,
+        // however this allows to avoid analysing every function in the module
+        // this way.
+        if (encounteredFuncDefinition)
+          return op.emitError("all functions declarations in 'spirv.module' "
+                              "must happen before any definitions");
+      }
+
+      // In SPIR-V "declarations" are functions without a body and "definitions"
+      // functions with a body.
+      encounteredFuncDefinition |= !funcOp.getBody().empty();
 
       // TODO: move this check to spirv.func.
       for (auto &block : funcOp)
