@@ -3086,6 +3086,7 @@ bool SemaOpenACC::CreateReductionCombinerRecipe(
     case OpenACCReductionOperator::Invalid:
       llvm_unreachable("Invalid should have been caught above");
     }
+    llvm_unreachable("Unhandled case");
   };
 
   auto tryCombiner = [&, this](DeclRefExpr *LHSDRE, DeclRefExpr *RHSDRE,

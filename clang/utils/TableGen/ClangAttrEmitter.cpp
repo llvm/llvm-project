@@ -3078,6 +3078,17 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
 
       OS << "  {\n";
 
+      // The generator puts the arguments for each attribute in the child class,
+      // even if those are set in the inherited attribute class (in the TD
+      // file). This means I cannot access those from the parent class, and have
+      // to do this weirdness. Maybe the generator should be changed to
+      // arguments are put in the class they are declared in inside the TD file?
+      if (HLSLSemantic) {
+        OS << "  if (SemanticExplicitIndex)\n";
+        OS << "    setSemanticIndex(SemanticIndex);\n";
+        OS << "  setTargetDecl(Target);\n";
+      }
+
       for (auto const &ai : Args) {
         if (!shouldEmitArg(ai))
           continue;

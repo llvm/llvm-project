@@ -168,6 +168,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayHaveSideEffects();
   case VPBlendSC:
   case VPReductionEVLSC:
+  case VPPartialReductionSC:
   case VPReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
@@ -300,14 +301,23 @@ InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
   std::optional<unsigned> Opcode;
-  VPValue *Op = getOperand(0);
-  VPRecipeBase *OpR = Op->getDefiningRecipe();
-
-  // If the partial reduction is predicated, a select will be operand 0
-  if (match(getOperand(1), m_Select(m_VPValue(), m_VPValue(Op), m_VPValue()))) {
-    OpR = Op->getDefiningRecipe();
+  VPValue *Op = getVecOp();
+  uint64_t MulConst;
+  // If the partial reduction is predicated, a select will be operand 1.
+  // If it isn't predicated and the mul isn't operating on a constant, then it
+  // should have been turned into a VPExpressionRecipe.
+  // FIXME: Replace the entire function with this once all partial reduction
+  // variants are bundled into VPExpressionRecipe.
+  if (!match(Op, m_Select(m_VPValue(), m_VPValue(Op), m_VPValue())) &&
+      !match(Op, m_Mul(m_VPValue(), m_ConstantInt(MulConst)))) {
+    auto *PhiType = Ctx.Types.inferScalarType(getChainOp());
+    auto *InputType = Ctx.Types.inferScalarType(getVecOp());
+    return Ctx.TTI.getPartialReductionCost(getOpcode(), InputType, InputType,
+                                           PhiType, VF, TTI::PR_None,
+                                           TTI::PR_None, {}, Ctx.CostKind);
   }
 
+  VPRecipeBase *OpR = Op->getDefiningRecipe();
   Type *InputTypeA = nullptr, *InputTypeB = nullptr;
   TTI::PartialReductionExtendKind ExtAType = TTI::PR_None,
                                   ExtBType = TTI::PR_None;
@@ -2856,11 +2866,19 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
-    return Ctx.TTI.getExtendedReductionCost(
-        Opcode,
-        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
-            Instruction::ZExt,
-        RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(
+        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
+    auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    return isa<VPPartialReductionRecipe>(ExpressionRecipes.back())
+               ? Ctx.TTI.getPartialReductionCost(
+                     Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr,
+                     RedTy, VF,
+                     TargetTransformInfo::getPartialReductionExtendKind(
+                         ExtR->getOpcode()),
+                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind)
+               : Ctx.TTI.getExtendedReductionCost(
+                     Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
+                     SrcVecTy, std::nullopt, Ctx.CostKind);
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
@@ -2871,6 +2889,19 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     Opcode = Instruction::Sub;
     [[fallthrough]];
   case ExpressionTypes::ExtMulAccReduction: {
+    if (isa<VPPartialReductionRecipe>(ExpressionRecipes.back())) {
+      auto *Ext0R = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+      auto *Ext1R = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
+      auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)),
+          Ctx.Types.inferScalarType(getOperand(1)), RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext0R->getOpcode()),
+          TargetTransformInfo::getPartialReductionExtendKind(
+              Ext1R->getOpcode()),
+          Mul->getOpcode(), Ctx.CostKind);
+    }
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
@@ -2910,12 +2941,13 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  bool IsPartialReduction = isa<VPPartialReductionRecipe>(Red);
 
   switch (ExpressionType) {
   case ExpressionTypes::ExtendedReduction: {
     getOperand(1)->printAsOperand(O, SlotTracker);
-    O << " +";
-    O << " reduce." << Instruction::getOpcodeName(Opcode) << " (";
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(Opcode) << " (";
     getOperand(0)->printAsOperand(O, SlotTracker);
     Red->printFlags(O);
 
@@ -2931,8 +2963,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    O << " + reduce."
-      << Instruction::getOpcodeName(
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (sub (0, mul";
     auto *Mul = cast<VPWidenRecipe>(ExpressionRecipes[2]);
@@ -2956,9 +2988,8 @@ void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
   case ExpressionTypes::MulAccReduction:
   case ExpressionTypes::ExtMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
-    O << " + ";
-    O << "reduce."
-      << Instruction::getOpcodeName(
+    O << " + " << (IsPartialReduction ? "partial." : "") << "reduce.";
+    O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (";
     O << "mul";
