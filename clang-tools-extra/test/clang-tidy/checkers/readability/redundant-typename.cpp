@@ -231,6 +231,17 @@ public:
 #endif
 };
 
+#if __cplusplus >= 201703L
+
+template <typename T, typename U = typename T::R>
+// CHECK-MESSAGES-20: :[[@LINE-1]]:36: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: template <typename T, typename U = T::R>
+A(T, typename T::R) -> A<typename T::R, typename NotDependent::R>;
+// CHECK-MESSAGES-17: :[[@LINE-1]]:41: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-17: A(T, typename T::R) -> A<typename T::R, NotDependent::R>;
+
+#endif
+
 #define TYPENAME_KEYWORD_IN_MACRO typename
 TYPENAME_KEYWORD_IN_MACRO NotDependent::R Macro1;
 
