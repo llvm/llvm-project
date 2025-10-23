@@ -4272,9 +4272,9 @@ def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$MulLHS, nxv8i16:$
 defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00, int_aarch64_sve_sqcvtn_x2>;
 defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01, int_aarch64_sve_uqcvtn_x2>;
 defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10, int_aarch64_sve_sqcvtun_x2>;
-defm SQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"sqrshrn", 0b101, int_aarch64_sve_sqrshrn_x2>;
-defm UQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"uqrshrn", 0b111, int_aarch64_sve_uqrshrn_x2>;
-defm SQRSHRUN_Z2ZI_StoH : sve2p1_multi_vec_shift_narrow<"sqrshrun", 0b001, int_aarch64_sve_sqrshrun_x2>;
+defm SQRSHRN_Z2ZI_StoH  : sve_multi_vec_shift_narrow<"sqrshrn", 0b101, int_aarch64_sve_sqrshrn_x2>;
+defm UQRSHRN_Z2ZI_StoH  : sve_multi_vec_shift_narrow<"uqrshrn", 0b111, int_aarch64_sve_uqrshrn_x2>;
+defm SQRSHRUN_Z2ZI_StoH : sve_multi_vec_shift_narrow<"sqrshrun", 0b001, int_aarch64_sve_sqrshrun_x2>;
 
 defm WHILEGE_2PXX : sve2p1_int_while_rr_pair<"whilege", 0b000>;
 defm WHILEGT_2PXX : sve2p1_int_while_rr_pair<"whilegt", 0b001>;
@@ -4648,6 +4648,17 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm SCVTFLT_ZZ : sve2_int_to_fp_upcvt<"scvtflt", 0b10>;
   defm UCVTF_ZZ   : sve2_int_to_fp_upcvt<"ucvtf",   0b01>;
   defm UCVTFLT_ZZ : sve2_int_to_fp_upcvt<"ucvtflt", 0b11>;
+
+  // SVE2 saturating shift right narrow by immediate and interleave
+  defm SQRSHRN_Z2ZI_HtoB  : sve_multi_vec_round_shift_narrow<"sqrshrn",  0b101>;
+  defm SQRSHRUN_Z2ZI_HtoB : sve_multi_vec_round_shift_narrow<"sqrshrun", 0b001>;
+  defm SQSHRN_Z2ZI_HtoB   : sve_multi_vec_round_shift_narrow<"sqshrn",   0b000>;
+  defm SQSHRUN_Z2ZI_HtoB  : sve_multi_vec_round_shift_narrow<"sqshrun",  0b100>;
+  defm UQRSHRN_Z2ZI_HtoB  : sve_multi_vec_round_shift_narrow<"uqrshrn",  0b111>;
+  defm UQSHRN_Z2ZI_HtoB   : sve_multi_vec_round_shift_narrow<"uqshrn",   0b010>;
+  defm SQSHRUN_Z2ZI_StoH  : sve_multi_vec_shift_narrow<"sqshrun",  0b100, null_frag>;
+  defm SQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"sqshrn",   0b000, null_frag>;
+  defm UQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"uqshrn",   0b010, null_frag>;
 } // End HasSME2p3orSVE2p3
 
 //===----------------------------------------------------------------------===//
