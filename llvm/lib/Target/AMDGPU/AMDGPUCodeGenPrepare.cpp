@@ -1991,7 +1991,7 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
 
 bool AMDGPUCodeGenPrepareImpl::visitCtpop(IntrinsicInst &I) {
   uint32_t BitWidth, DestinationWidth, IntrinsicWidth;
-  if (!I.hasOneUse() ||
+  if (!I.hasOneUse() || !I.getType()->isIntegerTy() ||
       !ST.hasBCNT(BitWidth = I.getType()->getIntegerBitWidth()))
     return false;
 
