@@ -204,19 +204,9 @@ FindTaskIds(llvm::ArrayRef<std::optional<addr_t>> maybe_task_addrs,
     }
   }
 
-  /// TODO: replace this loop with a vectorized memory read.
-  llvm::SmallVector<std::optional<addr_t>> read_results;
-  for (addr_t task_id_addr : to_read) {
-    Status error;
-    // The Task ID is at offset job_id_offset from the Task pointer.
-    constexpr uint32_t num_bytes_task_id = 4;
-    auto task_id = process.ReadUnsignedIntegerFromMemory(
-        task_id_addr, num_bytes_task_id, LLDB_INVALID_ADDRESS, error);
-    if (error.Fail())
-      read_results.push_back(std::nullopt);
-    else
-      read_results.push_back(task_id);
-  }
+  constexpr uint32_t num_bytes_task_id = 4;
+  llvm::SmallVector<std::optional<addr_t>> read_results =
+      process.ReadUnsignedIntegersFromMemory(to_read, num_bytes_task_id);
 
   // Move the results into the slots not filled by errors from the input.
   llvm::ArrayRef<std::optional<addr_t>> results_ref = read_results;
