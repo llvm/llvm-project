@@ -176,7 +176,7 @@ public:
   }
 
   template <class F> void clear(F f) {
-    for (auto ThreadData : ThreadDataList) {
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       if constexpr (has_clearAll<ContainerType>::value) {
