@@ -1,7 +1,5 @@
-; Check the basic block sections labels option
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,UNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=false -basic-block-address-map | FileCheck %s --check-prefixes=CHECK,NOUNIQ
-; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -split-machine-functions | FileCheck %s --check-prefixes=CHECK,UNIQ
+; Check the basic block sections labels option works when used along with -emit-bb-hash.
+; RUN: llc < %s -mtriple=x86_64 -function-sections -unique-section-names=true -basic-block-address-map -emit-bb-hash | FileCheck %s --check-prefixes=CHECK,UNIQ
 
 define void @_Z3bazb(i1 zeroext, i1 zeroext) personality ptr @__gxx_personality_v0 {
   br i1 %0, label %3, label %8
@@ -53,7 +51,7 @@ declare i32 @__gxx_personality_v0(...)
 ;; Verify that with -unique-section-names=false, the unique id of the text section gets assigned to the llvm_bb_addr_map section.
 ; NOUNIQ:		.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text,unique,1
 ; CHECK-NEXT:   .byte   4		# version
-; CHECK-NEXT:   .byte   32		# feature
+; CHECK-NEXT:   .byte   96		# feature
 ; CHECK-NEXT:	.quad	.Lfunc_begin0	# function address
 ; CHECK-NEXT:	.byte	6		# number of basic blocks
 ; CHECK-NEXT:   .byte	0		# BB id
@@ -61,30 +59,36 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-NEXT:   .byte	0		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_0-.Lfunc_begin0
 ; CHECK-NEXT:	.byte	8
+; CHECK-NEXT:   .quad	{{-?[0-9]+}}
 ; CHECK-NEXT:   .byte	1		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_1-.LBB_END0_0
 ; CHECK-NEXT:   .byte	1		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB0_1_CS0-.LBB0_1
 ; CHECK-NEXT:	.uleb128 .LBB_END0_1-.LBB0_1_CS0
 ; CHECK-NEXT:	.byte	8
+; CHECK-NEXT:   .quad	{{-?[0-9]+}}
 ; CHECK-NEXT:   .byte	3		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_2-.LBB_END0_1
 ; CHECK-NEXT:   .byte	1		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB0_2_CS0-.LBB0_2
 ; CHECK-NEXT:	.uleb128 .LBB_END0_2-.LBB0_2_CS0
 ; CHECK-NEXT:	.byte	8
+; CHECK-NEXT:   .quad	{{-?[0-9]+}}
 ; CHECK-NEXT:   .byte	4		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_3-.LBB_END0_2
 ; CHECK-NEXT:   .byte	0		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_3-.LBB0_3
 ; CHECK-NEXT:	.byte	16
+; CHECK-NEXT:   .quad {{-?[0-9]+}}
 ; CHECK-NEXT:   .byte	5		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_4-.LBB_END0_3
 ; CHECK-NEXT:   .byte	0		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_4-.LBB0_4
 ; CHECK-NEXT:	.byte	1
+; CHECK-NEXT:   .quad {{-?[0-9]+}}
 ; CHECK-NEXT:   .byte	2		# BB id
 ; CHECK-NEXT:	.uleb128 .LBB0_5-.LBB_END0_4
 ; CHECK-NEXT:   .byte	0		# number of callsites
 ; CHECK-NEXT:	.uleb128 .LBB_END0_5-.LBB0_5
 ; CHECK-NEXT:	.byte	5
+; CHECK-NEXT:   .quad {{-?[0-9]+}}
