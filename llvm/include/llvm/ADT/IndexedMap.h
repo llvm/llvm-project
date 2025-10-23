@@ -44,11 +44,11 @@ class IndexedMap {
   using StorageT = SmallVector<T, 0>;
 
   StorageT storage_;
-  T nullVal_;
+  T nullVal_ = T();
   ToIndexT toIndex_;
 
 public:
-  IndexedMap() : nullVal_(T()) {}
+  IndexedMap() = default;
 
   explicit IndexedMap(const T &val) : nullVal_(val) {}
 
