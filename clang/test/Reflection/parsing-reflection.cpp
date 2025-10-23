@@ -27,14 +27,14 @@ int main()
     (void)(^^float);
     (void)(^^double);
 
-    // Not supported yet. 
+    // Not supported yet.
     (void)^^a; // expected-error {{expected reflectable entity}}
     (void)^^a::; // expected-error {{expected reflectable entity}}
     (void)^^a::b::T; // expected-error {{expected reflectable entity}}
     (void)^^a::T::; // expected-error {{expected reflectable entity}}
     (void)(^^a::b); // expected-error {{expected reflectable entity}}
     (void)^^a::b::; // expected-error {{expected reflectable entity}}
-    (void)^^a::b::U; // expected-error {{parsing of this type-id is not implemented yet}}
+    (void)^^a::b::U; // expected-error {{expected reflectable entity}}
     (void)^^a::b::x; // expected-error {{expected reflectable entity}}
     (void)^^a::b::U::; // expected-error {{expected reflectable entity}}
 }
