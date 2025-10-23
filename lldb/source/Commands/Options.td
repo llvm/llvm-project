@@ -1504,6 +1504,10 @@ let Command = "target dependents" in {
              "'true'.">;
 }
 
+let Command = "target frame_provider_register" in {
+  // Options are provided by OptionGroupPythonClassWithDict
+}
+
 let Command = "target modules dump" in {
   def target_modules_dump_verbose : Option<"verbose", "v">,
                                     Desc<"Enable verbose dump.">;

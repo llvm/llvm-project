@@ -13,7 +13,6 @@
 #include "OperatingSystemPython.h"
 
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
-#include "Plugins/Process/Utility/RegisterContextMemory.h"
 #include "Plugins/Process/Utility/ThreadMemory.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -23,6 +22,7 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/RegisterContextMemory.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"

@@ -50,6 +50,7 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -59,6 +60,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -2407,4 +2409,56 @@ lldb::SBMutex SBTarget::GetAPIMutex() const {
   if (TargetSP target_sp = GetSP())
     return lldb::SBMutex(target_sp);
   return lldb::SBMutex();
+}
+
+lldb::SBError
+SBTarget::RegisterScriptedFrameProvider(const char *class_name,
+                                        lldb::SBStructuredData args_dict) {
+  LLDB_INSTRUMENT_VA(this, class_name, args_dict);
+
+  SBError error;
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    error.SetErrorString("invalid target");
+    return error;
+  }
+
+  if (!class_name || !class_name[0]) {
+    error.SetErrorString("invalid class name");
+    return error;
+  }
+
+  // Extract the dictionary from SBStructuredData
+  StructuredData::DictionarySP dict_sp;
+  if (args_dict.IsValid() && args_dict.m_impl_up) {
+    StructuredData::ObjectSP obj_sp = args_dict.m_impl_up->GetObjectSP();
+    if (obj_sp && obj_sp->GetType() == lldb::eStructuredDataTypeDictionary) {
+      dict_sp = std::make_shared<StructuredData::Dictionary>(obj_sp);
+    }
+  }
+
+  // Create the ScriptedMetadata
+  ScriptedMetadataSP metadata_sp =
+      std::make_shared<ScriptedMetadata>(class_name, dict_sp);
+
+  // Create a descriptor (applies to all threads by default)
+  SyntheticFrameProviderDescriptor descriptor(metadata_sp);
+
+  // Register the descriptor with the target
+  return target_sp->SetScriptedFrameProviderDescriptor(descriptor);
+}
+
+lldb::SBError SBTarget::ClearScriptedFrameProvider() {
+  LLDB_INSTRUMENT_VA(this);
+
+  SBError error;
+  TargetSP target_sp = GetSP();
+  if (!target_sp) {
+    error.SetErrorString("invalid target");
+    return error;
+  }
+
+  target_sp->ClearScriptedFrameProviderDescriptor();
+
+  return {};
 }

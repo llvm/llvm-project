@@ -27,6 +27,9 @@ public:
     }
   }
 
+  ScriptedMetadata(const ScriptedMetadata &other)
+      : m_class_name(other.m_class_name), m_args_sp(other.m_args_sp) {}
+
   explicit operator bool() const { return !m_class_name.empty(); }
 
   llvm::StringRef GetClassName() const { return m_class_name; }

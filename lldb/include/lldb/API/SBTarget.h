@@ -986,6 +986,25 @@ public:
 
   lldb::SBMutex GetAPIMutex() const;
 
+  /// Register a scripted frame provider for this target.
+  ///
+  /// \param[in] class_name
+  ///     The name of the Python class that implements the frame provider.
+  ///
+  /// \param[in] args_dict
+  ///     A dictionary of arguments to pass to the frame provider class.
+  ///
+  /// \return
+  ///     An error object indicating success or failure.
+  lldb::SBError RegisterScriptedFrameProvider(const char *class_name,
+                                              lldb::SBStructuredData args_dict);
+
+  /// Clear the scripted frame provider for this target.
+  ///
+  /// \return
+  ///     An error object indicating success or failure.
+  lldb::SBError ClearScriptedFrameProvider();
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
