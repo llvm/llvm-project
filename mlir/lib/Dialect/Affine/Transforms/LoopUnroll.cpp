@@ -82,12 +82,17 @@ static void gatherInnermostLoops(FunctionOpInterface f,
 }
 
 void LoopUnroll::runOnOperation() {
+  if (!(unrollFactor.getValue() > 0 || unrollFactor.getValue() == -1)) {
+    emitError(UnknownLoc::get(&getContext()),
+              "Invalid option: 'unroll-factor' should be greater than 0 or "
+              "equal to -1");
+    return signalPassFailure();
+  }
   FunctionOpInterface func = getOperation();
   if (func.isExternal())
     return;
 
-  if (unrollFactor.hasValue() && unrollFactor.getValue() == -1 &&
-      unrollFullThreshold.hasValue()) {
+  if (unrollFactor.getValue() == -1 && unrollFullThreshold.hasValue()) {
     // Store short loops as we walk.
     SmallVector<AffineForOp, 4> loops;
 
@@ -128,7 +133,7 @@ LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
     return loopUnrollByFactor(forOp, getUnrollFactor(forOp),
                               /*annotateFn=*/nullptr, cleanUpUnroll);
   // Unroll completely if full loop unroll was specified.
-  if (unrollFactor.hasValue() && unrollFactor.getValue() == -1)
+  if (unrollFactor.getValue() == -1)
     return loopUnrollFull(forOp);
   // Otherwise, unroll by the given unroll factor.
   if (unrollUpToFactor)

@@ -53,6 +53,12 @@ struct TestLoopUnrollingPass
   }
 
   void runOnOperation() override {
+    if (!(unrollFactor.getValue() > 0 || unrollFactor.getValue() == -1)) {
+      emitError(UnknownLoc::get(&getContext()),
+                "Invalid option: 'unroll-factor' should be greater than 0 or "
+                "equal to -1");
+      return signalPassFailure();
+    }
     SmallVector<scf::ForOp, 4> loops;
     getOperation()->walk([&](scf::ForOp forOp) {
       if (getNestingDepth(forOp) == loopDepth)
@@ -64,7 +70,7 @@ struct TestLoopUnrollingPass
       }
     };
     for (auto loop : loops) {
-      if (unrollFactor.hasValue() && unrollFactor.getValue() == -1)
+      if (unrollFactor.getValue() == -1)
         (void)loopUnrollFull(loop);
       else
         (void)loopUnrollByFactor(loop, unrollFactor, annotateFn);
