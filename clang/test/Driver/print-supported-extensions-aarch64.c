@@ -18,6 +18,7 @@
 // CHECK-NEXT:     d128                FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128 Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers and instructions
 // CHECK-NEXT:     dit                 FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
 // CHECK-NEXT:     dotprod             FEAT_DotProd                                           Enable dot product support
+// CHECK-NEXT:     f16mm               FEAT_F16MM                                             Enable Armv9.7-A non-widening half-precision matrix multiply-accumulate
 // CHECK-NEXT:     f32mm               FEAT_F32MM                                             Enable Matrix Multiply FP32 Extension
 // CHECK-NEXT:     f64mm               FEAT_F64MM                                             Enable Matrix Multiply FP64 Extension
 // CHECK-NEXT:     f8f16mm             FEAT_F8F16MM                                           Enable Armv9.6-A FP8 to Half-Precision Matrix Multiplication
@@ -95,6 +96,7 @@
 // CHECK-NEXT:     sve-aes             FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions
 // CHECK-NEXT:     sve-aes2            FEAT_SVE_AES2                                          Enable Armv9.6-A SVE multi-vector AES and multi-vector quadword polynomial multiply instructions
 // CHECK-NEXT:     sve-b16b16          FEAT_SVE_B16B16                                        Enable SVE2 non-widening and SME2 Z-targeting non-widening BFloat16 instructions
+// CHECK-NEXT:     sve-b16mm           FEAT_SVE_B16MM                                         Enable Armv9.7-A SVE non-widening BFloat16 matrix multiply-accumulate
 // CHECK-NEXT:     sve-bfscale         FEAT_SVE_BFSCALE                                       Enable Armv9.6-A SVE BFloat16 scaling instructions
 // CHECK-NEXT:     sve-bitperm         FEAT_SVE_BitPerm                                       Enable bit permutation SVE2 instructions
 // CHECK-NEXT:     sve-f16f32mm        FEAT_SVE_F16F32MM                                      Enable Armv9.6-A FP16 to FP32 Matrix Multiply

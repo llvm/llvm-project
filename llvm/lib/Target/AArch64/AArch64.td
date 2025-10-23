@@ -74,7 +74,7 @@ def SVEUnsupported : AArch64Unsupported {
 }
 
 def SME2p3Unsupported : AArch64Unsupported {
-  let F = [HasSVE2p3_or_SME2p3];
+  let F = [HasSVE2p3_or_SME2p3, HasSVE_B16MM];
 }
 
 def SME2p2Unsupported : AArch64Unsupported {
