@@ -5223,18 +5223,64 @@ private:
 #pragma mark CommandObjectTargetStopHookList
 
 // CommandObjectTargetStopHookList
+#define LLDB_OPTIONS_target_stop_hook_list
+#include "CommandOptions.inc"
 
 class CommandObjectTargetStopHookList : public CommandObjectParsed {
 public:
   CommandObjectTargetStopHookList(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "target stop-hook list",
-                            "List all stop-hooks.", "target stop-hook list") {}
+                            "List all stop-hooks.") {}
 
   ~CommandObjectTargetStopHookList() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() = default;
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'i':
+        m_internal = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_internal = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_target_stop_hook_list_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    bool m_internal = false;
+  };
 
 protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
+
+    if (m_options.m_internal) {
+      for (auto &hook : target.GetInternalStopHooks()) {
+        hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+        result.GetOutputStream().PutCString("\n");
+      }
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
 
     size_t num_hooks = target.GetNumStopHooks();
     if (num_hooks == 0) {
@@ -5250,6 +5296,9 @@ protected:
     }
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
+
+private:
+  CommandOptions m_options;
 };
 
 #pragma mark CommandObjectMultiwordTargetStopHooks

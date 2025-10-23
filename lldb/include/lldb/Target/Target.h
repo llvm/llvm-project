@@ -1552,6 +1552,10 @@ public:
 
   void SetAllStopHooksActiveState(bool active_state);
 
+  const std::vector<StopHookSP> &GetInternalStopHooks() const {
+    return m_internal_stop_hooks;
+  }
+
   size_t GetNumStopHooks() const { return m_stop_hooks.size(); }
 
   StopHookSP GetStopHookAtIndex(size_t index) {
