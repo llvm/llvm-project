@@ -70,10 +70,11 @@ using namespace clang;
 CompilerInstance::CompilerInstance(
     std::shared_ptr<CompilerInvocation> Invocation,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    ModuleCache *ModCache)
-    : ModuleLoader(/*BuildingModule=*/ModCache),
+    std::shared_ptr<ModuleCache> ModCache)
+    : ModuleLoader(/*BuildingModule=*/ModCache != nullptr),
       Invocation(std::move(Invocation)),
-      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
+      ModCache(ModCache ? std::move(ModCache)
+                        : createCrossProcessModuleCache()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {
   assert(this->Invocation && "Invocation must not be null");
 }
@@ -1155,7 +1156,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      std::move(Invocation), getPCHContainerOperations(), &getModuleCache());
+      std::move(Invocation), getPCHContainerOperations(), ModCache);
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();

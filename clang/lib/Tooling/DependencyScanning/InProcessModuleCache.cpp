@@ -114,7 +114,7 @@ public:
 };
 } // namespace
 
-IntrusiveRefCntPtr<ModuleCache>
+std::shared_ptr<ModuleCache>
 dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries) {
-  return llvm::makeIntrusiveRefCnt<InProcessModuleCache>(Entries);
+  return std::make_shared<InProcessModuleCache>(Entries);
 }
