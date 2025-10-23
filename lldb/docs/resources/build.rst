@@ -102,6 +102,8 @@ to be performed once.
 Build Requirements
 ^^^^^^^^^^^^^^^^^^
 
+Please follow the steps below if you only want to **build** lldb.
+
 1. Install `Visual Studio <https://visualstudio.microsoft.com>` with the
    "Desktop Development with C++" workload. Make sure that the latest Windows
    SDK and the Active Template Library (ATL) are installed.
@@ -134,7 +136,7 @@ corresponding to the version you wish to use or run ``vcvarsall.bat`` or
 Test Requirements
 ^^^^^^^^^^^^^^^^^
 
-If you plan to debug test failures or write new tests:
+Please follow the steps above and below if you want to **test** `lldb`.
 
 * Install `Python Tools for Visual Studio <https://github.com/Microsoft/PTVS/>`_,
   an indispensable debugging extension to Visual Studio which enables full
