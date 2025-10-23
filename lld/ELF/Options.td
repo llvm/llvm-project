@@ -725,6 +725,9 @@ defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
 def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
   HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
   "compilations">;
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
   "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
   "compilations">;
