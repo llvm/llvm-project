@@ -23,7 +23,7 @@ define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1
 ; CHECK-NEXT:    [[I4:%.*]] = load ptr, ptr [[ARG1:%.*]], align 8, !invariant.group [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[I5:%.*]] = getelementptr inbounds ptr, ptr [[I4]], i64 6
 ; CHECK-NEXT:    [[I6:%.*]] = load ptr, ptr [[I5]], align 8, !invariant.load [[META6]]
-; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[I7:%.*]] = tail call i64 [[I6]](ptr [[ARG1]])
 ; CHECK-NEXT:    [[I9:%.*]] = load ptr, ptr [[ARG2:%.*]], align 8
 ; CHECK-NEXT:    store i8 0, ptr [[I9]], align 1
 ; CHECK-NEXT:    br i1 [[ARG4:%.*]], label [[BB10:%.*]], label [[BB29:%.*]]
@@ -32,7 +32,7 @@ define void @fail(ptr noalias sret(i1) %arg, ptr %arg1, ptr %arg2, ptr %arg3, i1
 ; CHECK-NEXT:    [[I15_PRE:%.*]] = load ptr, ptr [[I14_PHI_TRANS_INSERT]], align 8, !invariant.load [[META6]]
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0) #[[ATTR1]]
+; CHECK-NEXT:    [[I16:%.*]] = call i64 [[I15_PRE]](ptr nonnull [[ARG1]], ptr null, i64 0)
 ; CHECK-NEXT:    br i1 true, label [[BB28:%.*]], label [[BB17:%.*]]
 ; CHECK:       bb17:
 ; CHECK-NEXT:    br i1 true, label [[BB18:%.*]], label [[BB21:%.*]]
