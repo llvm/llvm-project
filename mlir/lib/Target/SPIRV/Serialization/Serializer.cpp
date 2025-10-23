@@ -260,9 +260,9 @@ static std::string getDecorationName(StringRef attrName) {
 }
 
 template <typename AttrTy, typename EmitF>
-LogicalResult processDecorationList(Location loc, Decoration decoration,
-                                    Attribute attrList, StringRef attrName,
-                                    EmitF emitter) {
+static LogicalResult processDecorationList(Location loc, Decoration decoration,
+                                           Attribute attrList,
+                                           StringRef attrName, EmitF emitter) {
   auto arrayAttr = dyn_cast<ArrayAttr>(attrList);
   if (!arrayAttr) {
     return emitError(loc, "expecting array attribute of ")

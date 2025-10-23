@@ -3106,7 +3106,9 @@ IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  return mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  mlir::Value boolResult =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
+  return builder.createConvert(loc, resultType, boolResult);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
