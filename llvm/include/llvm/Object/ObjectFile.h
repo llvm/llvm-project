@@ -198,7 +198,6 @@ public:
   /// Get the alignment of this symbol as the actual value (not log 2).
   uint32_t getAlignment() const;
   uint64_t getCommonSize() const;
-  uint64_t getSize() const;
   Expected<SymbolRef::Type> getType() const;
 
   /// Get section this symbol is defined in reference to. Result is
@@ -256,7 +255,6 @@ protected:
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
   virtual uint32_t getSymbolAlignment(DataRefImpl Symb) const;
   virtual uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const = 0;
-  virtual uint64_t getSymbolSizeImpl(DataRefImpl Symb) const { return 0; }
   virtual Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const = 0;
   virtual Expected<section_iterator>
   getSymbolSection(DataRefImpl Symb) const = 0;
@@ -482,10 +480,6 @@ inline uint32_t SymbolRef::getAlignment() const {
 
 inline uint64_t SymbolRef::getCommonSize() const {
   return getObject()->getCommonSymbolSize(getRawDataRefImpl());
-}
-
-inline uint64_t SymbolRef::getSize() const {
-  return getObject()->getSymbolSizeImpl(getRawDataRefImpl());
 }
 
 inline Expected<section_iterator> SymbolRef::getSection() const {

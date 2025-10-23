@@ -839,7 +839,11 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
     const SymbolRef::Type Type = unwrapOrError(Symbol.getType(), FileName);
     const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
     const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
-    const uint64_t Size = Symbol.getSize();
+    uint64_t Size = 0;
+    if (isa<ELFObjectFileBase>(Symbol.getObject())) {
+      ELFSymbolRef ElfSymbol(Symbol);
+      Size = ElfSymbol.getSize();
+    }
 
     if (Size == 0 || Type != SymbolRef::ST_Function)
       continue;

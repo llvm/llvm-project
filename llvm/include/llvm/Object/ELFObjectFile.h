@@ -310,7 +310,6 @@ protected:
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
-  uint64_t getSymbolSizeImpl(DataRefImpl Symb) const override;
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   uint8_t getSymbolBinding(DataRefImpl Symb) const override;
   uint8_t getSymbolOther(DataRefImpl Symb) const override;
@@ -701,11 +700,6 @@ uint64_t ELFObjectFile<ELFT>::getSymbolSize(DataRefImpl Sym) const {
 
 template <class ELFT>
 uint64_t ELFObjectFile<ELFT>::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
-  return getSymbolSize(Symb);
-}
-
-template <class ELFT>
-uint64_t ELFObjectFile<ELFT>::getSymbolSizeImpl(DataRefImpl Symb) const {
   return getSymbolSize(Symb);
 }
 
