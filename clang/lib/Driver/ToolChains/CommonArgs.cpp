@@ -1716,6 +1716,10 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(S));
   }
 
+  // Add shared runtimes before adding fuzzer and its dependencies.
+  for (auto RT : SharedRuntimes)
+    addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
+
   // Inject libfuzzer dependencies.
   bool FuzzerNeedsSanitizerDeps = false;
   if (SanArgs.needsFuzzer() && SanArgs.linkRuntimes() &&
@@ -1737,8 +1741,6 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     }
   }
 
-  for (auto RT : SharedRuntimes)
-    addSanitizerRuntime(TC, Args, CmdArgs, RT, true, false);
   for (auto RT : HelperStaticRuntimes)
     addSanitizerRuntime(TC, Args, CmdArgs, RT, false, true);
   bool AddExportDynamic = false;
