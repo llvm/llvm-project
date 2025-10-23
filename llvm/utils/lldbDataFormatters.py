@@ -199,9 +199,7 @@ def StringRefSummaryProvider(valobj, internal_dict):
     data = data_pointer.deref
     # StringRef may be uninitialized with length exceeding available memory,
     # potentially causing bad_alloc exceptions. Limit the length to max string summary setting.
-    limit_obj = (
-        valobj.target.debugger.GetSetting("target.max-string-summary-length")
-    )
+    limit_obj = valobj.target.debugger.GetSetting("target.max-string-summary-length")
     if limit_obj:
         length = min(length, limit_obj.GetUnsignedIntegerValue())
     # Get a char[N] type, from the underlying char type.
