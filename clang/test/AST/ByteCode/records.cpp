@@ -1162,6 +1162,19 @@ namespace IndirectFieldInit {
   static_assert(s2.x == 1 && s2.y == 2 && s2.a == 3 && s2.b == 4);
 
 #endif
+
+
+  struct B {
+    struct {
+      union {
+        int x = 3;
+      };
+      int y = this->x;
+    };
+
+    constexpr B() {}
+  };
+  static_assert(B().y == 3, "");
 }
 
 namespace InheritedConstructor {
