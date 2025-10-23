@@ -100,6 +100,10 @@ auto f() -> typename T::R
   void (*PointerToFunction)(typename T::R);
   void anotherLocalFunctionDeclaration(typename T::R);
 
+  auto Lambda = [](typename T::R = typename T::R()) {};
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:20: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-FIXES-20: auto Lambda = [](T::R = typename T::R()) {};
+
   typename T::R DependentVar;
   typename NotDependent::R NotDependentVar;
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant 'typename' [readability-redundant-typename]
@@ -133,6 +137,10 @@ concept c = requires(typename T::R) {
 template <typename T>
 requires c<typename T::R>
 void b();
+
+auto GenericLambda = []<typename T>(typename T::R = typename T::R()) {};
+// CHECK-MESSAGES-20: :[[@LINE-1]]:37: warning: redundant 'typename' [readability-redundant-typename]
+// CHECK-FIXES-20: auto GenericLambda = []<typename T>(T::R = typename T::R()) {};
 
 #endif // __cplusplus >= 202002L
 
