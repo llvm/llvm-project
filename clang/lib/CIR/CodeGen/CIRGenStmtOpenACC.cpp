@@ -346,7 +346,7 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
   }
   case OpenACCAtomicKind::Write: {
     mlir::Value x = emitLValue(inf.X).getPointer();
-    mlir::Value expr = emitAnyExpr(inf.Expr).getValue();
+    mlir::Value expr = emitAnyExpr(inf.RefExpr).getValue();
     auto op = mlir::acc::AtomicWriteOp::create(builder, start, x, expr,
                                                /*ifCond=*/{});
     emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
