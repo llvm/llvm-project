@@ -4906,7 +4906,7 @@ bool isSelectWithIdenticalPHI(PHINode &PN, PHINode &IdenticalPN) {
   BasicBlock *DiffValBB = nullptr;
   for (unsigned i = 0; i < 2; i++) {
     BasicBlock *PredBB = PN.getIncomingBlock(i);
-    if (PN.getIncomingValueForBlock(PredBB) !=
+    if (PN.getIncomingValue(i) !=
         IdenticalPN.getIncomingValueForBlock(PredBB)) {
       DiffVals++;
       DiffValBB = PredBB;
