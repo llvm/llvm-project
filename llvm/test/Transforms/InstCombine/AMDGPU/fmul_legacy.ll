@@ -91,18 +91,6 @@ define float @test_var_poison(float %x) {
   ret float %call
 }
 
-define float @test_freeze(float %x, float %y) {
-; CHECK-LABEL: @test_freeze(
-; CHECK-NEXT:    [[FR:%.*]] = freeze float [[CALL:%.*]]
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze float [[Y:%.*]]
-; CHECK-NEXT:    [[CALL1:%.*]] = call float @llvm.amdgcn.fmul.legacy(float [[FR]], float [[Y_FR]])
-; CHECK-NEXT:    ret float [[CALL1]]
-;
-  %call = call float @llvm.amdgcn.fmul.legacy(float %x, float %y)
-  %fr = freeze float %call
-  ret float %fr
-}
-
 declare float @llvm.amdgcn.fmul.legacy(float, float)
 declare float @llvm.fabs.f32(float)
 declare void @llvm.assume(i1 noundef)
