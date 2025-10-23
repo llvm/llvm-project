@@ -23,6 +23,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -2554,11 +2555,24 @@ computeCollapsedLayoutMap(MemRefType srcType,
     if (ShapedType::isStatic(srcShape[ref.back()]) || ref.size() == 1) {
       resultStrides.push_back(srcStrides[ref.back()]);
     } else {
-      // Dynamically-sized dims may turn out to be dims of size 1 at runtime, so
-      // the corresponding stride may have to be skipped. (See above comment.)
-      // Therefore, the result stride cannot be statically determined and must
-      // be dynamic.
-      resultStrides.push_back(ShapedType::kDynamic);
+      // We reach here if the last dimension in the reassociation group is
+      // dynamic, and the reassociation group has more than one dimension.
+      // If the dynamic dim is preserved (all other dimensions in the group are
+      // of size 1), and the dynamic dim is originally contiguous, the result
+      // stride will be 1.
+      bool contiguousSrcDim = srcStrides[ref.back()] == 1;
+      bool dynamicSizeIsPreserved =
+          std::all_of(ref.begin(), ref.end() - 1,
+                      [srcShape](int64_t dim) { return srcShape[dim] == 1; });
+      if (contiguousSrcDim && dynamicSizeIsPreserved)
+        resultStrides.push_back(1);
+      else {
+        // Dynamically-sized dims may turn out to be dims of size 1 at runtime,
+        // so the corresponding stride may have to be skipped. (See above
+        // comment.) Therefore, the result stride cannot be statically
+        // determined and must be dynamic.
+        resultStrides.push_back(ShapedType::kDynamic);
+      }
     }
   }
 
