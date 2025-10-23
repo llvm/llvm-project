@@ -8974,10 +8974,12 @@ IntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                     llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.and";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_COUNT
@@ -8986,10 +8988,12 @@ IntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.popc";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCTHREADS_OR
@@ -8998,10 +9002,12 @@ IntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                    llvm::ArrayRef<mlir::Value> args) {
   constexpr llvm::StringLiteral funcName = "llvm.nvvm.barrier0.or";
   mlir::MLIRContext *context = builder.getContext();
+  mlir::Type i32 = builder.getI32Type();
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+      mlir::FunctionType::get(context, {resultType}, {i32});
   auto funcOp = builder.createFunction(loc, funcName, ftype);
-  return fir::CallOp::create(builder, loc, funcOp, args).getResult(0);
+  mlir::Value arg = builder.createConvert(loc, i32, args[0]);
+  return fir::CallOp::create(builder, loc, funcOp, {arg}).getResult(0);
 }
 
 // SYNCWARP
