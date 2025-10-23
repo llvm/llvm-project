@@ -873,20 +873,28 @@ well as verifying inline callstacks.
 
   llvm-debuginfo-analyzer --report=debugger
                           test-dwarf-clang.o test-dwarf-gcc.o
-  {Function}: foo
-    {Line}:  [0x0000000000] test.cpp:2 [foo]
-    {Line}:  [0x0000000012] test.cpp:3 [foo]
-    {Line}:  [0x000000001c] test.cpp:5 [foo]
-    {Line}:  [0x0000000023] test.cpp:6 [foo]
-    {Line}:  [0x000000002f] test.cpp:8 [foo]
-    {Line}:  [0x0000000035] test.cpp:9 [foo]
-  {Function}: foo
-    {Line}:  [0x0000000000] test.cpp:2 [foo]
-    {Line}:  [0x0000000014] test.cpp:3 [foo]
-    {Line}:  [0x000000001a] test.cpp:5 [foo]
-    {Line}:  [0x0000000021] test.cpp:6 [foo]
-    {Line}:  [0x0000000028] test.cpp:8 [foo]
-    {Line}:  [0x000000002b] test.cpp:9 [foo]
+
+  Logical View:
+  {File} test-dwarf-clang.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+    {Line}  test.cpp:3 [foo]
+    {Line}  test.cpp:5 [foo]
+    {Line}  test.cpp:6 [foo]
+    {Line}  test.cpp:8 [foo]
+    {Line}  test.cpp:9 [foo]
+
+  Logical View:
+  {File} test-dwarf-gcc.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+    {Line}  test.cpp:3 [foo]
+    {Line}  test.cpp:5 [foo]
+    {Line}  test.cpp:6 [foo]
+    {Line}  test.cpp:8 [foo]
+    {Line}  test.cpp:9 [foo]
 
 Optionally, by adding `--print=symbols`, live variables for each line is
 printed out.
@@ -896,37 +904,43 @@ printed out.
   llvm-debuginfo-analyzer --report=debugger
                           test-dwarf-clang.o
 
-  {Function}: foo
-    {Line}:  [0x0000000000] test.cpp:2 [foo]
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
-    {Line}:  [0x0000000012] test.cpp:3 [foo]
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
-    {Line}:  [0x000000001c] test.cpp:5 [foo]
-      {Variable}: CONSTANT: const INTEGER : fbreg -28 (line 5)
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
-    {Line}:  [0x0000000023] test.cpp:6 [foo]
-      {Variable}: CONSTANT: const INTEGER : fbreg -28 (line 5)
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
-    {Line}:  [0x000000002f] test.cpp:8 [foo]
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
-    {Line}:  [0x0000000035] test.cpp:9 [foo]
-      {Variable}: ParamBool: bool : fbreg -21 (line 2)
-      {Variable}: ParamPtr: INTPTR : fbreg -16 (line 2)
-      {Variable}: ParamUnsigned: unsigned int : fbreg -20 (line 2)
+  Logical View:
+  {File} test-dwarf-clang.o
+  {CompileUnit} test.cpp
+  {Function} foo
+    {Line}  test.cpp:2 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:3 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:5 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+      {Variable} CONSTANT: const INTEGER : fbreg -28 (line 5)
+    {Line}  test.cpp:6 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+      {Variable} CONSTANT: const INTEGER : fbreg -28 (line 5)
+    {Line}  test.cpp:8 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
+    {Line}  test.cpp:9 [foo]
+      {Parameter} ParamBool: bool : fbreg -21 (line 2)
+      {Parameter} ParamPtr: INTPTR : fbreg -16 (line 2)
+      {Parameter} ParamUnsigned: unsigned int : fbreg -20 (line 2)
 
 Optionally, `--print=instructions`, the lines are interleaved with the
 instructions. Combined with the output of `--print=symbols`, tests can
 verify specific expressions for live variables.
+
+Additionally, `--attribute` can be used to include things such as
+offsets and scope levels for {Line} and {Instruction}.
 
 COMPARISON MODE
 ^^^^^^^^^^^^^^^

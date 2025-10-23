@@ -1,5 +1,5 @@
 ; RUN: llc %s -o %t.o -mcpu=gfx1030 -filetype=obj -O0
-; RUN: llvm-debuginfo-analyzer --report=debugger --print=symbols %t.o | FileCheck %s
+; RUN: llvm-debuginfo-analyzer --report=debugger --print=symbols --attribute=level,offset %t.o | FileCheck %s
 
 ; The test compiles this module using the AMDGPU backend under `-O0`,
 ; and makes sure `llvm-debuginfo-analyzer --report=debugger` works for it.
@@ -7,20 +7,20 @@
 ; CHECK: {File}
 ; CHECK: {CompileUnit} basic_var.hlsl
 ; CHECK: {Function} main
-; CHECK: {Line} {{.+}}basic_var.hlsl:7
-; CHECK: {Line} {{.+}}basic_var.hlsl:11
-; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line} {{.+}}basic_var.hlsl:17
-; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line} {{.+}}basic_var.hlsl:11
-; CHECK: {Variable} dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line} {{.+}}basic_var.hlsl:14
-; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
-; CHECK: {Line} {{.+}}basic_var.hlsl:17
-; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:7 [main]
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:11 [main]
+; CHECK: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:17 [main]
+; CHECK: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:11 [main]
+; CHECK: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:14 [main]
+; CHECK-DAG: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:17 [main]
+; CHECK-DAG: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
 ; CHECK-DAG: {Variable} my_var2: float : reg{{.+}}
-; CHECK: {Line} {{.+}}basic_var.hlsl:19
-; CHECK-DAG: {Variable} dtid: uint3 : reg{{.+}}, piece 4
+; CHECK: {Line} [0x{{[0-9a-f]+}}][003] basic_var.hlsl:19 [main]
+; CHECK-DAG: {Parameter} dtid: uint3 : reg{{.+}}, piece 4
 ; CHECK-DAG: {Variable} my_var2: float : reg{{.+}}
 
 source_filename = "module"

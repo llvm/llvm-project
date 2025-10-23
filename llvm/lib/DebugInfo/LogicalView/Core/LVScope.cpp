@@ -1710,7 +1710,7 @@ void LVScopeCompileUnit::printMatchedElements(raw_ostream &OS,
 }
 
 void LVScopeCompileUnit::printDebugger(raw_ostream &OS) const {
-  outs() << "{CompileUnit} " << getName() << "\n";
+  outs() << formattedKind(kind()) << " " << getName() << "\n";
   for (const LVScope *ChildScope : *getScopes()) {
     ChildScope->printDebugger(OS);
   }
@@ -1932,22 +1932,23 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
   std::vector<const LVLine *> AllLines;
   std::unordered_map<LVAddress, std::vector<const LVLocation *>> LifetimeBegins;
   std::unordered_map<LVAddress, std::vector<const LVLocation *>>
-    LifetimeEndsExclusive;
+      LifetimeEndsExclusive;
 
   // Collect all child scope lines and symbols
-  std::vector<const LVScope *> Worklist = { this };
+  std::vector<const LVScope *> Worklist = {this};
   for (unsigned i = 0; i < Worklist.size(); i++) {
-    if (scopeCount()) {
-      for (const LVScope *ChildScope : *getScopes())
+    const LVScope *Scope = Worklist[i];
+    if (Scope->scopeCount()) {
+      for (const LVScope *ChildScope : *Scope->getScopes())
         Worklist.push_back(ChildScope);
     }
-    if (lineCount()) {
-      for (const LVLine *Line : *getLines()) {
+    if (Scope->lineCount()) {
+      for (const LVLine *Line : *Scope->getLines()) {
         AllLines.push_back(Line);
       }
     }
-    if (symbolCount()) {
-      for (const LVSymbol *Symbol : *getSymbols()) {
+    if (Scope->symbolCount()) {
+      for (const LVSymbol *Symbol : *Scope->getSymbols()) {
         LVLocations SymbolLocations;
         Symbol->getLocations(SymbolLocations);
         if (SymbolLocations.empty())
@@ -1968,19 +1969,19 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
 
   // Sort all lines by their address.
   std::sort(AllLines.begin(), AllLines.end(),
-    [](const LVLine *a, const LVLine *b) -> bool {
-      if (a->getAddress() != b->getAddress())
-        return a->getAddress() < b->getAddress();
-      if (a->getIsLineDebug() != b->getIsLineDebug())
-        return a->getIsLineDebug();
-      return a->getID() < b->getID();
-    });
+            [](const LVLine *a, const LVLine *b) -> bool {
+              if (a->getAddress() != b->getAddress())
+                return a->getAddress() < b->getAddress();
+              if (a->getIsLineDebug() != b->getIsLineDebug())
+                return a->getIsLineDebug();
+              return a->getID() < b->getID();
+            });
 
   // Print everything out
   const bool IncludeVars = options().getPrintSymbols();
   const bool IncludeCode = options().getPrintInstructions();
   SetVector<const LVLocation *>
-    LiveSymbols; // This needs to be ordered since we're iterating over it.
+      LiveSymbols; // This needs to be ordered since we're iterating over it.
   for (const LVLine *Line : AllLines) {
     const LVScope *Scope = Line->getParentScope();
     // Update live list: Add lives
@@ -1991,7 +1992,7 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
       LiveSymbols.remove(Loc);
 
     if (Line->getIsNewStatement() && Line->getIsLineDebug() &&
-      Line->getLineNumber() != 0) {
+        Line->getLineNumber() != 0) {
       Line->printDebugger(OS, 1);
       if (IncludeVars) {
         for (auto SymLoc : LiveSymbols) {
@@ -2003,8 +2004,7 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
           SymLoc->printDebugger(OS, 2);
         }
       }
-    }
-    else if (IncludeCode && Line->getIsLineAssembler()) {
+    } else if (IncludeCode && Line->getIsLineAssembler()) {
       Line->printDebugger(OS, 1);
     }
   }
@@ -2227,18 +2227,23 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
 }
 
 Error LVScopeRoot::doPrintDebugger(bool Split, raw_ostream &OS) const {
+  OS << "\nLogical View:\n";
   static raw_ostream *StreamSplit = &OS;
   for (LVScope *Scope : *Scopes) {
     if (Split) {
       std::string ScopeName(Scope->getName());
       if (std::error_code EC =
-        getReaderSplitContext().open(ScopeName, ".txt", OS))
+              getReaderSplitContext().open(ScopeName, ".txt", OS))
         return createStringError(EC, "Unable to create split output file %s",
-          ScopeName.c_str());
+                                 ScopeName.c_str());
       StreamSplit = static_cast<raw_ostream *>(&getReaderSplitContext().os());
     }
-    *StreamSplit << "{File} " << getName() << "\n";
+    *StreamSplit << formattedKind(kind()) << " " << getName() << "\n";
     Scope->printDebugger(*StreamSplit);
+    if (Split) {
+      getReaderSplitContext().close();
+      StreamSplit = &getReader().outputStream();
+    }
   }
   return Error::success();
 }
