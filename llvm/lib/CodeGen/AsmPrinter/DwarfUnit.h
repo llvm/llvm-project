@@ -337,7 +337,7 @@ public:
                                const DIE &TyDIE);
 
 protected:
-  ~DwarfUnit();
+  ~DwarfUnit() override;
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);

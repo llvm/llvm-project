@@ -9859,6 +9859,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
+  if (UserIC > 1 && !LVL.isSafeForAnyVectorWidth())
+    UserIC = 1;
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
@@ -9923,7 +9925,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
+  if (UserIC == 1 && Hints.getInterleave() > 1) {
+    assert(!LVL.isSafeForAnyVectorWidth() &&
+           "UserIC should only be ignored due to unsafe dependencies");
+    LLVM_DEBUG(dbgs() << "LV: Ignoring user-specified interleave count.\n");
+    IntDiagMsg = {"InterleavingUnsafe",
+                  "Ignoring user-specified interleave count due to possibly "
+                  "unsafe dependencies in the loop."};
+    InterleaveLoop = false;
+  } else if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "
