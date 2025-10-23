@@ -612,18 +612,17 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
   mlir::Value resultRealAndImagAreNaN =
       builder.createLogicalAnd(loc, resultRealIsNaN, resultImagIsNaN);
 
-  return builder
-      .create<cir::TernaryOp>(
-          loc, resultRealAndImagAreNaN,
-          [&](mlir::OpBuilder &, mlir::Location) {
-            mlir::Value libCallResult = buildComplexBinOpLibCall(
-                pass, builder, &getComplexMulLibCallName, loc, complexTy,
-                lhsReal, lhsImag, rhsReal, rhsImag);
-            builder.createYield(loc, libCallResult);
-          },
-          [&](mlir::OpBuilder &, mlir::Location) {
-            builder.createYield(loc, algebraicResult);
-          })
+  return cir::TernaryOp::create(
+             builder, loc, resultRealAndImagAreNaN,
+             [&](mlir::OpBuilder &, mlir::Location) {
+               mlir::Value libCallResult = buildComplexBinOpLibCall(
+                   pass, builder, &getComplexMulLibCallName, loc, complexTy,
+                   lhsReal, lhsImag, rhsReal, rhsImag);
+               builder.createYield(loc, libCallResult);
+             },
+             [&](mlir::OpBuilder &, mlir::Location) {
+               builder.createYield(loc, algebraicResult);
+             })
       .getResult();
 }
 
