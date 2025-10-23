@@ -66,8 +66,19 @@ exit:
 ; Check that %same.as.v1 can be folded.
 define void @select_with_identical_phi_2(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_2(
-; CHECK: select
-; CHECK-NOT: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -93,8 +104,19 @@ exit:
 ; Check that %same.as.v1 can be folded.
 define void @select_with_identical_phi_3(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_3(
-; CHECK: select
-; CHECK-NOT: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -120,8 +142,19 @@ exit:
 ; Check that %same.as.v1 can be folded.
 define void @select_with_identical_phi_4(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_4(
-; CHECK: select
-; CHECK-NOT: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -147,8 +180,19 @@ exit:
 ; Check that %same.as.v1 can be folded.
 define void @select_with_identical_phi_5(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_5(
-; CHECK: select
-; CHECK-NOT: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -174,8 +218,19 @@ exit:
 ; Check that %same.as.v1 can be folded.
 define void @select_with_identical_phi_6(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_6(
-; CHECK: select
-; CHECK-NOT: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -200,9 +255,22 @@ exit:
 ; Cannot fold %same.as.v1.
 define void @select_with_identical_phi_negative_1(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_negative_1(
-; CHECK: select
-; CHECK: select
-; CHECK: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0x4415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
+; CHECK-NEXT:    [[PHI_TO_REMOVE_NEXT]] = select i1 [[CMP2]], float [[X]], float [[SAME_AS_V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -227,9 +295,22 @@ exit:
 ; Cannot fold %same.as.v1.
 define void @select_with_identical_phi_negative_2(i1 %cmp1, i1 %cmp2, float %x) {
 ; CHECK-LABEL: @select_with_identical_phi_negative_2(
-; CHECK: select
-; CHECK: select
-; CHECK: select
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[V1]], float [[X:%.*]]
+; CHECK-NEXT:    [[PHI_TO_REMOVE_NEXT]] = select i1 [[CMP2]], float [[X]], float [[SAME_AS_V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
@@ -250,13 +331,69 @@ exit:
   ret void
 }
 
+; %v1 and %phi.to.remove do not act as the same phi since %v1.1 and %phi.to.remove.next do not
+; have the same condition.
+; Cannot fold %same.as.v1.
+define void @select_with_identical_phi_negative_3(i1 %cmp1, i1 %cmp2, i1 %cmp3, float %x) {
+; CHECK-LABEL: @select_with_identical_phi_negative_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY:%.*]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V1]], float [[PHI_TO_REMOVE]]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP3:%.*]], float [[V1]], float [[X:%.*]]
+; CHECK-NEXT:    [[PHI_TO_REMOVE_NEXT]] = select i1 [[CMP2:%.*]], float [[X]], float [[SAME_AS_V1]]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                    ; preds = %entry, %for.body
+  %v1 = phi float [ 0xC415AF1D80000000, %entry ], [ %v1.1, %for.body ]
+  %phi.to.remove = phi float [ 0xC415AF1D80000000, %entry ], [ %phi.to.remove.next, %for.body ]
+  %i = phi i32 [ 0, %entry ], [ %inc.i, %for.body ]
+  %same.as.v1 = select i1 %cmp1, float %v1, float %phi.to.remove
+  %v1.1 = select i1 %cmp3, float %v1, float %x
+  %phi.to.remove.next = select i1 %cmp2, float %x, float %same.as.v1
+  %inc.i = add nuw nsw i32 %i, 1
+  %exitcond = icmp eq i32 %inc.i, 100
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  %vl.1.lcssa = phi float [ %v1.1, %for.body ]
+  store float %vl.1.lcssa, ptr @A
+  ret void
+}
+
 ; The true and false values of %same.as.v1 are not really the same phi.
 ; Cannot fold %same.as.v1.
-define void @select_with_identical_phi_negative_3(i1 %cmp1, i1 %cmp2, float %x) {
-; CHECK-LABEL: @select_with_identical_phi_negative_3(
-; CHECK: select
-; CHECK: select
-; CHECK: select
+define void @select_with_identical_phi_negative_4(i1 %cmp1, i1 %cmp2, float %x) {
+; CHECK-LABEL: @select_with_identical_phi_negative_4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[V0:%.*]] = phi float [ 0x4415AF1D80000000, [[ENTRY:%.*]] ], [ [[V0_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[V1:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[V1_1:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_TO_REMOVE:%.*]] = phi float [ 0xC415AF1D80000000, [[ENTRY]] ], [ [[PHI_TO_REMOVE_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SAME_AS_V1:%.*]] = select i1 [[CMP1:%.*]], float [[V0]], float [[PHI_TO_REMOVE]]
+; CHECK-NEXT:    [[V1_1]] = select i1 [[CMP2:%.*]], float [[X:%.*]], float [[V1]]
+; CHECK-NEXT:    [[PHI_TO_REMOVE_NEXT]] = select i1 [[CMP2]], float [[X]], float [[SAME_AS_V1]]
+; CHECK-NEXT:    [[V0_1]] = fadd float [[V0]], 1.000000e+00
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC_I]], 100
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    store float [[V1_1]], ptr @A, align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   br label %for.body
 
