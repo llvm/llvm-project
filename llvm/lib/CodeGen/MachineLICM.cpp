@@ -58,9 +58,9 @@ using namespace llvm;
 #define DEBUG_TYPE "machinelicm"
 
 static cl::opt<bool>
-AvoidSpeculation("avoid-speculation",
-                 cl::desc("MachineLICM should avoid speculation"),
-                 cl::init(true), cl::Hidden);
+    AvoidSpeculation("avoid-speculation",
+                     cl::desc("MachineLICM should avoid speculation"),
+                     cl::init(false), cl::Hidden);
 
 static cl::opt<bool>
 HoistCheapInsts("hoist-cheap-insts",
