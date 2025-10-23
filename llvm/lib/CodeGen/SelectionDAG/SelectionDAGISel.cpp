@@ -1236,13 +1236,15 @@ public:
 // functions.
 void SelectionDAGISel::EnforceNodeIdInvariant(SDNode *Node) {
   SmallVector<SDNode *, 4> Nodes;
+  SmallPtrSet<SDNode *, 16> Visited;
   Nodes.push_back(Node);
+  Visited.insert(Node);
 
   while (!Nodes.empty()) {
     SDNode *N = Nodes.pop_back_val();
     for (auto *U : N->users()) {
       auto UId = U->getNodeId();
-      if (UId > 0) {
+      if (UId > 0 && Visited.insert(U).second) {
         InvalidateNodeId(U);
         Nodes.push_back(U);
       }
