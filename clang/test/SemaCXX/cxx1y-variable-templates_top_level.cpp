@@ -474,6 +474,18 @@ namespace VexingParse {
 
 namespace GH79750 {
 
+template <unsigned...values>
+constexpr unsigned array[]{ values... };
+
+// Test if the unevaluated operators trigger instantiation of the array initializer.
+static_assert(__is_same(__typeof(array<1, 2, 3, 4, 5>),  const unsigned[5]), "");
+
+static_assert(__is_same(decltype(array<1, 2, 3, 4>),  const unsigned[4]), "");
+
+}
+
+namespace GH79750_2 {
+
 enum class Values { A };
 
 template<typename E>
