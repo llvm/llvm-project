@@ -22,4 +22,4 @@ LOGFILE_MISSING: error: --log-file: missing argument
 RUN: %platformserver --log-channels 2>&1 | FileCheck --check-prefixes=LOGCHANNELS_MISSING,ALL %s
 LOGCHANNELS_MISSING: error: --log-channels: missing argument
 
-ALL: Use 'lldb-server {{p|platform}} --help' for a complete list of options.
+ALL: Use 'lldb-server{{(\.exe)?}} {{p|platform}} --help' for a complete list of options.

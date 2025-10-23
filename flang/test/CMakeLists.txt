@@ -72,6 +72,7 @@ if (NOT FLANG_STANDALONE_BUILD)
     FileCheck
     count
     not
+    llvm-bcanalyzer
     llvm-dis
     llvm-objcopy
     llvm-objdump
