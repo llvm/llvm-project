@@ -164,6 +164,22 @@ getNewFieldsOrder(const RecordDecl *Definition,
   return NewFieldsOrder;
 }
 
+static bool isOrderValid(const RecordDecl *RD, ArrayRef<unsigned> FieldOrder) {
+  if (FieldOrder.empty())
+    return false;
+
+  // If there is a flexible array member in the struct, it must remain the last
+  // field.
+  if (RD->hasFlexibleArrayMember() &&
+      FieldOrder.back() != FieldOrder.size() - 1) {
+    llvm::errs()
+        << "Flexible array member must remain the last field in the struct\n";
+    return false;
+  }
+
+  return true;
+}
+
 struct ReorderedStruct {
 public:
   ReorderedStruct(const RecordDecl *Decl, ArrayRef<unsigned> NewFieldsOrder)
@@ -662,7 +678,7 @@ public:
       return;
     SmallVector<unsigned, 4> NewFieldsOrder =
         getNewFieldsOrder(RD, DesiredFieldsOrder);
-    if (NewFieldsOrder.empty())
+    if (!isOrderValid(RD, NewFieldsOrder))
       return;
     ReorderedStruct RS{RD, NewFieldsOrder};
 
@@ -699,7 +715,7 @@ public:
 
 std::unique_ptr<ASTConsumer> ReorderFieldsAction::newASTConsumer() {
   return std::make_unique<ReorderingConsumer>(RecordName, DesiredFieldsOrder,
-                                               Replacements);
+                                              Replacements);
 }
 
 } // namespace reorder_fields

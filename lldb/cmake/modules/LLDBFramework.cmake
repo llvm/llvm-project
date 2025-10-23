@@ -68,8 +68,6 @@ if(NOT APPLE_EMBEDDED)
   )
 endif()
 
-find_program(unifdef_EXECUTABLE unifdef)
-
 # Wrap output in a target, so lldb-framework can depend on it.
 add_custom_target(liblldb-resource-headers DEPENDS lldb-sbapi-dwarf-enums ${lldb_staged_headers})
 set_target_properties(liblldb-resource-headers PROPERTIES FOLDER "LLDB/Resources")

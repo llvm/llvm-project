@@ -526,7 +526,8 @@ public:
         "Gets a uniqued Array attribute");
     c.def(
          "__getitem__",
-         [](PyArrayAttribute &arr, intptr_t i) {
+         [](PyArrayAttribute &arr,
+            intptr_t i) -> nb::typed<nb::object, PyAttribute> {
            if (i >= mlirArrayAttrGetNumElements(arr))
              throw nb::index_error("ArrayAttribute index out of range");
            return PyAttribute(arr.getContext(), arr.getItem(i)).maybeDownCast();
@@ -573,6 +574,18 @@ public:
           return PyFloatAttribute(type.getContext(), attr);
         },
         nb::arg("type"), nb::arg("value"), nb::arg("loc") = nb::none(),
+        "Gets an uniqued float point attribute associated to a type");
+    c.def_static(
+        "get_unchecked",
+        [](PyType &type, double value, DefaultingPyMlirContext context) {
+          PyMlirContext::ErrorCapture errors(context->getRef());
+          MlirAttribute attr =
+              mlirFloatAttrDoubleGet(context.get()->get(), type, value);
+          if (mlirAttributeIsNull(attr))
+            throw MLIRError("Invalid attribute", errors.take());
+          return PyFloatAttribute(type.getContext(), attr);
+        },
+        nb::arg("type"), nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets an uniqued float point attribute associated to a type");
     c.def_static(
         "get_f32",
@@ -1010,14 +1023,16 @@ public:
                      [](PyDenseElementsAttribute &self) -> bool {
                        return mlirDenseElementsAttrIsSplat(self);
                      })
-        .def("get_splat_value", [](PyDenseElementsAttribute &self) {
-          if (!mlirDenseElementsAttrIsSplat(self))
-            throw nb::value_error(
-                "get_splat_value called on a non-splat attribute");
-          return PyAttribute(self.getContext(),
-                             mlirDenseElementsAttrGetSplatValue(self))
-              .maybeDownCast();
-        });
+        .def("get_splat_value",
+             [](PyDenseElementsAttribute &self)
+                 -> nb::typed<nb::object, PyAttribute> {
+               if (!mlirDenseElementsAttrIsSplat(self))
+                 throw nb::value_error(
+                     "get_splat_value called on a non-splat attribute");
+               return PyAttribute(self.getContext(),
+                                  mlirDenseElementsAttrGetSplatValue(self))
+                   .maybeDownCast();
+             });
   }
 
   static PyType_Slot slots[];
@@ -1291,6 +1306,10 @@ PyType_Slot PyDenseElementsAttribute::slots[] = {
     e.restore();
     nb::chain_error(PyExc_BufferError, "Error converting attribute to buffer");
     return -1;
+  } catch (std::exception &e) {
+    nb::chain_error(PyExc_BufferError,
+                    "Error converting attribute to buffer: %s", e.what());
+    return -1;
   }
   view->obj = obj;
   view->ndim = 1;
@@ -1332,7 +1351,7 @@ public:
 
   /// Returns the element at the given linear position. Asserts if the index
   /// is out of range.
-  nb::object dunderGetItem(intptr_t pos) {
+  nb::int_ dunderGetItem(intptr_t pos) {
     if (pos < 0 || pos >= dunderLen()) {
       throw nb::index_error("attempt to access out of bounds element");
     }
@@ -1522,13 +1541,15 @@ public:
         },
         nb::arg("value") = nb::dict(), nb::arg("context") = nb::none(),
         "Gets an uniqued dict attribute");
-    c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
-      MlirAttribute attr =
-          mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
-      if (mlirAttributeIsNull(attr))
-        throw nb::key_error("attempt to access a non-existent attribute");
-      return PyAttribute(self.getContext(), attr).maybeDownCast();
-    });
+    c.def("__getitem__",
+          [](PyDictAttribute &self,
+             const std::string &name) -> nb::typed<nb::object, PyAttribute> {
+            MlirAttribute attr =
+                mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
+            if (mlirAttributeIsNull(attr))
+              throw nb::key_error("attempt to access a non-existent attribute");
+            return PyAttribute(self.getContext(), attr).maybeDownCast();
+          });
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
         throw nb::index_error("attempt to access out of bounds attribute");
@@ -1594,10 +1615,11 @@ public:
         },
         nb::arg("value"), nb::arg("context") = nb::none(),
         "Gets a uniqued Type attribute");
-    c.def_prop_ro("value", [](PyTypeAttribute &self) {
-      return PyType(self.getContext(), mlirTypeAttrGetValue(self.get()))
-          .maybeDownCast();
-    });
+    c.def_prop_ro(
+        "value", [](PyTypeAttribute &self) -> nb::typed<nb::object, PyType> {
+          return PyType(self.getContext(), mlirTypeAttrGetValue(self.get()))
+              .maybeDownCast();
+        });
   }
 };
 

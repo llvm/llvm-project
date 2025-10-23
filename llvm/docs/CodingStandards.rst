@@ -860,24 +860,37 @@ your private interface remains private and undisturbed by outsiders.
     It's okay to put extra implementation methods in a public class itself. Just
     make them private (or protected) and all is well.
 
-Use Namespace Qualifiers to Implement Previously Declared Functions
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Use Namespace Qualifiers to Define Previously Declared Symbols
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When providing an out-of-line implementation of a function in a source file, do
-not open namespace blocks in the source file. Instead, use namespace qualifiers
-to help ensure that your definition matches an existing declaration. Do this:
+When providing an out-of-line definition for various symbols (variables,
+functions, opaque classes) in a source file, do not open namespace blocks in the
+source file. Instead, use namespace qualifiers to help ensure that your
+definition matches an existing declaration. Do this:
 
 .. code-block:: c++
 
   // Foo.h
   namespace llvm {
+  extern int FooVal;
   int foo(const char *s);
-  }
+
+  namespace detail {
+  class FooImpl;
+  } // namespace detail
+  } // namespace llvm
 
   // Foo.cpp
   #include "Foo.h"
   using namespace llvm;
+
+  int llvm::FooVal;
+
   int llvm::foo(const char *s) {
+    // ...
+  }
+
+  class detail::FooImpl {
     // ...
   }
 
@@ -1679,29 +1692,29 @@ faraway places in the file to tell that the function is local:
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-When writing the body of an ``if``, ``else``, or for/while loop statement, we
-prefer to omit the braces to avoid unnecessary line noise. However, braces
-should be used in cases where the omission of braces harms the readability and
-maintainability of the code.
+When writing the body of an ``if``, ``else``, or ``for``/``while`` loop
+statement, we aim to reduce unnecessary line noise.
 
-We consider that readability is harmed when omitting the brace in the presence
-of a single statement that is accompanied by a comment (assuming the comment
-can't be hoisted above the ``if`` or loop statement, see below).
+**Omit braces when:**
 
-Similarly, braces should be used when a single-statement body is complex enough
-that it becomes difficult to see where the block containing the following
-statement began. An ``if``/``else`` chain or a loop is considered a single
-statement for this rule, and this rule applies recursively.
+*   The body consists of a single **simple** statement.
+*   The single statement is not preceded by a comment.
+    (Hoist comments above the control statement if you can.)
+*   An ``else`` clause, if present, also meets the above criteria (single
+    simple statement, no associated comments).
 
-This list is not exhaustive. For example, readability is also harmed if an
-``if``/``else`` chain does not use braced bodies for either all or none of its
-members, or has complex conditionals, deep nesting, etc. The examples below
-intend to provide some guidelines.
+**Use braces in all other cases, including:**
 
-Maintainability is harmed if the body of an ``if`` ends with a (directly or
-indirectly) nested ``if`` statement with no ``else``. Braces on the outer ``if``
-would help to avoid running into a "dangling else" situation.
+*   Multi-statement bodies
+*   Single-statement bodies with non-hoistable comments
+*   Complex single-statement bodies (e.g., deep nesting, complex nested
+    loops)
+*   Inconsistent bracing within ``if``/``else if``/``else`` chains (if one
+    block requires braces, all must)
+*   ``if`` statements ending with a nested ``if`` lacking an ``else`` (to
+    prevent "dangling else")
 
+The examples below provide guidelines for these cases:
 
 .. code-block:: c++
 
@@ -1790,6 +1803,12 @@ would help to avoid running into a "dangling else" situation.
       markAsIgnored(D);
   }
 
+Use Unix line endings for files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use Unix line endings for all files. CRLF line endings are allowed as an
+exception for test files that intend to test CRLF handling or when the file
+format requires it (like ``.bat`` or ``.rc`` files).
 
 See Also
 ========

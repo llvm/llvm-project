@@ -462,10 +462,9 @@ define <3 x i3> @test_compress_narrow_illegal_element_type(<3 x i3> %vec, <3 x i
 ; CHECK-NEXT:    orr x8, x9, x8, lsl #1
 ; CHECK-NEXT:    strh w1, [x10]
 ; CHECK-NEXT:    strh w2, [x8]
-; CHECK-NEXT:    ldr d0, [sp, #8]
-; CHECK-NEXT:    umov.h w0, v0[0]
-; CHECK-NEXT:    umov.h w1, v0[1]
-; CHECK-NEXT:    umov.h w2, v0[2]
+; CHECK-NEXT:    ldrh w0, [sp, #8]
+; CHECK-NEXT:    ldrh w1, [sp, #10]
+; CHECK-NEXT:    ldrh w2, [sp, #12]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
     %out = call <3 x i3> @llvm.experimental.vector.compress(<3 x i3> %vec, <3 x i1> %mask, <3 x i3> undef)
