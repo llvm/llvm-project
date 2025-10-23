@@ -503,25 +503,25 @@ func.func @shape_cast_1D_to_2D(%v: vector<8xf32>) -> vector<4x2xf32> {
 }
 
 // CHECK-LABEL: func @shape_cast_1D_to_2D
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<8xf32>) -> vector<4x2xf32>
+//  CHECK-SAME: (%[[V:.*]]: vector<8xf32>) -> vector<4x2xf32>
 //       CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x2xf32>
 //       CHECK:   %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf32>
-//       CHECK:   %[[E0:.*]] = vector.extract %[[ARG0]][0] : f32 from vector<8xf32>
+//       CHECK:   %[[E0:.*]] = vector.extract %[[V]][0] : f32 from vector<8xf32>
 //       CHECK:   %[[INS0:.*]] = vector.insert %[[E0]], %[[CST_0]] [0, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E1:.*]] = vector.extract %[[ARG0]][1] : f32 from vector<8xf32>
+//       CHECK:   %[[E1:.*]] = vector.extract %[[V]][1] : f32 from vector<8xf32>
 //       CHECK:   %[[INS1:.*]] = vector.insert %[[E1]], %[[INS0]] [0, 1] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E2:.*]] = vector.extract %[[ARG0]][2] : f32 from vector<8xf32>
+//       CHECK:   %[[E2:.*]] = vector.extract %[[V]][2] : f32 from vector<8xf32>
 //       CHECK:   %[[INS2:.*]] = vector.insert %[[E2]], %[[INS1]] [1, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E3:.*]] = vector.extract %[[ARG0]][3] : f32 from vector<8xf32>
+//       CHECK:   %[[E3:.*]] = vector.extract %[[V]][3] : f32 from vector<8xf32>
 //       CHECK:   %[[V0:.*]] = vector.insert %[[E3]], %[[INS2]] [1, 1] : f32 into vector<2x2xf32>
 //       CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[V0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
-//       CHECK:   %[[E4:.*]] = vector.extract %[[ARG0]][4] : f32 from vector<8xf32>
+//       CHECK:   %[[E4:.*]] = vector.extract %[[V]][4] : f32 from vector<8xf32>
 //       CHECK:   %[[INS3:.*]] = vector.insert %[[E4]], %[[CST_0]] [0, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E5:.*]] = vector.extract %[[ARG0]][5] : f32 from vector<8xf32>
+//       CHECK:   %[[E5:.*]] = vector.extract %[[V]][5] : f32 from vector<8xf32>
 //       CHECK:   %[[INS4:.*]] = vector.insert %[[E5]], %[[INS3]] [0, 1] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E6:.*]] = vector.extract %[[ARG0]][6] : f32 from vector<8xf32>
+//       CHECK:   %[[E6:.*]] = vector.extract %[[V]][6] : f32 from vector<8xf32>
 //       CHECK:   %[[INS5:.*]] = vector.insert %[[E6]], %[[INS4]] [1, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E7:.*]] = vector.extract %[[ARG0]][7] : f32 from vector<8xf32>
+//       CHECK:   %[[E7:.*]] = vector.extract %[[V]][7] : f32 from vector<8xf32>
 //       CHECK:   %[[V1:.*]] = vector.insert %[[E7]], %[[INS5]] [1, 1] : f32 into vector<2x2xf32>
 //       CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[V1]], %[[I0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 //       CHECK:   return %[[I1]] : vector<4x2xf32>
@@ -532,25 +532,25 @@ func.func @shape_cast_2D(%v: vector<2x4xf32>) -> vector<4x2xf32> {
 }
 
 // CHECK-LABEL: func @shape_cast_2D
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<2x4xf32>) -> vector<4x2xf32>
+//  CHECK-SAME: (%[[V:.*]]: vector<2x4xf32>) -> vector<4x2xf32>
 //       CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x2xf32>
 //       CHECK:   %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<2x2xf32>
-//       CHECK:   %[[E0:.*]] = vector.extract %[[ARG0]][0, 0] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E0:.*]] = vector.extract %[[V]][0, 0] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS0:.*]] = vector.insert %[[E0]], %[[CST_0]] [0, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E1:.*]] = vector.extract %[[ARG0]][0, 1] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E1:.*]] = vector.extract %[[V]][0, 1] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS1:.*]] = vector.insert %[[E1]], %[[INS0]] [0, 1] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E2:.*]] = vector.extract %[[ARG0]][0, 2] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E2:.*]] = vector.extract %[[V]][0, 2] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS2:.*]] = vector.insert %[[E2]], %[[INS1]] [1, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E3:.*]] = vector.extract %[[ARG0]][0, 3] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E3:.*]] = vector.extract %[[V]][0, 3] : f32 from vector<2x4xf32>
 //       CHECK:   %[[V0:.*]] = vector.insert %[[E3]], %[[INS2]] [1, 1] : f32 into vector<2x2xf32>
 //       CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[V0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
-//       CHECK:   %[[E4:.*]] = vector.extract %[[ARG0]][1, 0] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E4:.*]] = vector.extract %[[V]][1, 0] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS3:.*]] = vector.insert %[[E4]], %[[CST_0]] [0, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E5:.*]] = vector.extract %[[ARG0]][1, 1] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E5:.*]] = vector.extract %[[V]][1, 1] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS4:.*]] = vector.insert %[[E5]], %[[INS3]] [0, 1] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E6:.*]] = vector.extract %[[ARG0]][1, 2] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E6:.*]] = vector.extract %[[V]][1, 2] : f32 from vector<2x4xf32>
 //       CHECK:   %[[INS5:.*]] = vector.insert %[[E6]], %[[INS4]] [1, 0] : f32 into vector<2x2xf32>
-//       CHECK:   %[[E7:.*]] = vector.extract %[[ARG0]][1, 3] : f32 from vector<2x4xf32>
+//       CHECK:   %[[E7:.*]] = vector.extract %[[V]][1, 3] : f32 from vector<2x4xf32>
 //       CHECK:   %[[V1:.*]] = vector.insert %[[E7]], %[[INS5]] [1, 1] : f32 into vector<2x2xf32>
 //       CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[V1]], %[[I0]] {offsets = [2, 0], strides = [1, 1]} : vector<2x2xf32> into vector<4x2xf32>
 //       CHECK:   return %[[I1]] : vector<4x2xf32>
