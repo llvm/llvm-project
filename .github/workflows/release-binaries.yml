@@ -157,7 +157,8 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
-          libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows/"
+          #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows/"
+          libxml2_prefix="/s/libxml-install/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
           target_cmake_flags="$target_cmake_flags -DLLVM_ENABLE_LIBXML2=FORCE_ON"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LLVM_ENABLE_LIBXML2=FORCE_ON"
@@ -177,7 +178,7 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_LIBRARIES=$libxml_prefix/lib/libxml2s.lib"
           target_cmake_flags="$target_cmake_flags -DLIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
-          target_cmake_flags="$target_cmake_flags -DBOOTRTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -263,7 +264,7 @@ jobs:
         dotnet tool install --global wix
 
     - name: Install libxml2 for Windows
-      if: runner.os == 'Windows' && false
+      if: runner.os == 'Windows'
       run: |
         # Build libxml2 for windows
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
