@@ -1751,11 +1751,11 @@ OpFoldResult MemorySpaceCastOp::fold(FoldAdaptor adaptor) {
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getSourcePtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getSource());
+  return getSource();
 }
 
 TypedValue<PtrLikeTypeInterface> MemorySpaceCastOp::getTargetPtr() {
-  return cast<TypedValue<PtrLikeTypeInterface>>(getDest());
+  return getDest();
 }
 
 bool MemorySpaceCastOp::isValidMemorySpaceCast(PtrLikeTypeInterface tgt,

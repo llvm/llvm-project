@@ -3,7 +3,7 @@
 # ulimit does not work on non-POSIX platforms.
 # Solaris for some reason does not respect ulimit -n, so mark it unsupported
 # as well.
-# UNSUPPORTED: system-windows, system-solaris
+# UNSUPPORTED: system-windows, system-cygwin, system-solaris
 
 # RUN: %{python} %S/Inputs/shtest-ulimit/print_limits.py | grep RLIMIT_NOFILE \
 # RUN:   | sed -n -e 's/.*=//p' | tr -d '\n' > %t.nofile_limit
