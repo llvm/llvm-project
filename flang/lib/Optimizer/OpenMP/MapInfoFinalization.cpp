@@ -903,18 +903,17 @@ public:
     if (explicitMappingPresent(op, targetDataOp))
       return;
 
-    mlir::omp::MapInfoOp newDescParentMapOp =
-        builder.create<mlir::omp::MapInfoOp>(
-            op->getLoc(), op.getResult().getType(), op.getVarPtr(),
-            op.getVarTypeAttr(),
-            builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
-                mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::always |
-                mlir::omp::ClauseMapFlags::descriptor),
-            op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
-            mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
-            /*bounds=*/mlir::SmallVector<mlir::Value>{},
-            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-            /*partial_map=*/builder.getBoolAttr(false));
+    mlir::omp::MapInfoOp newDescParentMapOp = mlir::omp::MapInfoOp::create(
+        builder, op->getLoc(), op.getResult().getType(), op.getVarPtr(),
+        op.getVarTypeAttr(),
+        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
+            mlir::omp::ClauseMapFlags::to | mlir::omp::ClauseMapFlags::always |
+            mlir::omp::ClauseMapFlags::descriptor),
+        op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
+        mlir::SmallVector<mlir::Value>{}, mlir::ArrayAttr{},
+        /*bounds=*/mlir::SmallVector<mlir::Value>{},
+        /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
 
     targetDataOp.getMapVarsMutable().append({newDescParentMapOp});
   }
@@ -966,14 +965,13 @@ public:
     // need to see how well this alteration works.
     auto loadBaseAddr =
         builder.loadIfRef(op->getLoc(), baseAddr.getVarPtrPtr());
-    mlir::omp::MapInfoOp newBaseAddrMapOp =
-        builder.create<mlir::omp::MapInfoOp>(
-            op->getLoc(), loadBaseAddr.getType(), loadBaseAddr,
-            baseAddr.getVarTypeAttr(), baseAddr.getMapTypeAttr(),
-            baseAddr.getMapCaptureTypeAttr(), mlir::Value{}, members,
-            membersAttr, baseAddr.getBounds(),
-            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-            /*partial_map=*/builder.getBoolAttr(false));
+    mlir::omp::MapInfoOp newBaseAddrMapOp = mlir::omp::MapInfoOp::create(
+        builder, op->getLoc(), loadBaseAddr.getType(), loadBaseAddr,
+        baseAddr.getVarTypeAttr(), baseAddr.getMapTypeAttr(),
+        baseAddr.getMapCaptureTypeAttr(), mlir::Value{}, members, membersAttr,
+        baseAddr.getBounds(),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
+        /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newBaseAddrMapOp.getResult());
     op->erase();
     baseAddr.erase();
