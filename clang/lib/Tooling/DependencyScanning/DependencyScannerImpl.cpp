@@ -814,26 +814,24 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   FileID MainFileID = SM.getMainFileID();
   SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
   SourceLocation IDLocation = FileStart.getLocWithOffset(SrcLocOffset);
+  PPCallbacks *CB = nullptr;
   if (!SrcLocOffset) {
     // We need to call EnterSourceFile when SrcLocOffset is zero to initialize
     // the preprocessor.
     PP.EnterSourceFile(MainFileID, nullptr, SourceLocation());
+    CB = MDC->getPPCallbacks();
   } else {
     // When SrcLocOffset is non-zero, the preprocessor has already been
     // initialized through a previous call of computeDependencies. We want to
     // preserve the PP's state, hence we do not call EnterSourceFile again.
-    auto DCs = CI.getDependencyCollectors();
-    for (auto &DC : DCs) {
-      DC->attachToPreprocessor(PP);
-      auto *CB = DC->getPPCallbacks();
+    MDC->attachToPreprocessor(PP);
+    CB = MDC->getPPCallbacks();
 
-      FileID PrevFID;
-      SrcMgr::CharacteristicKind FileType =
-          SM.getFileCharacteristic(IDLocation);
-      CB->LexedFileChanged(MainFileID,
-                           PPChainedCallbacks::LexedFileChangeReason::EnterFile,
-                           FileType, PrevFID, IDLocation);
-    }
+    FileID PrevFID;
+    SrcMgr::CharacteristicKind FileType = SM.getFileCharacteristic(IDLocation);
+    CB->LexedFileChanged(MainFileID,
+                         PPChainedCallbacks::LexedFileChangeReason::EnterFile,
+                         FileType, PrevFID, IDLocation);
   }
 
   SrcLocOffset++;
@@ -842,18 +840,12 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   Path.emplace_back(IDLocation, ModuleID);
   auto ModResult = CI.loadModule(IDLocation, Path, Module::Hidden, false);
 
-  auto DCs = CI.getDependencyCollectors();
-  for (auto &DC : DCs) {
-    auto *CB = DC->getPPCallbacks();
-    if (CB) {
-      CB->moduleImport(SourceLocation(), Path, ModResult);
-
-      // Note that we are calling the CB's EndOfMainFile function, which
-      // forwards the results to the dependency consumer.
-      // It does not indicate the end of processing the fake file.
-      CB->EndOfMainFile();
-    }
-  }
+  assert(CB && "Must have PPCallbacks after module loading");
+  CB->moduleImport(SourceLocation(), Path, ModResult);
+  // Note that we are calling the CB's EndOfMainFile function, which
+  // forwards the results to the dependency consumer.
+  // It does not indicate the end of processing the fake file.
+  CB->EndOfMainFile();
 
   CompilerInvocation ModuleInvocation(*OriginalInvocation);
   MDC->applyDiscoveredDependencies(ModuleInvocation);

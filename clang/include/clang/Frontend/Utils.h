@@ -40,7 +40,6 @@ class DiagnosticsEngine;
 class ExternalSemaSource;
 class FrontendOptions;
 class PCHContainerReader;
-class PPCallbacks;
 class Preprocessor;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
@@ -87,9 +86,6 @@ public:
   virtual void maybeAddDependency(StringRef Filename, bool FromModule,
                                   bool IsSystem, bool IsModuleFile,
                                   bool IsMissing);
-
-  /// @return the PPCallback this collector added to the Preprocessor.
-  virtual PPCallbacks *getPPCallbacks() { return nullptr; };
 
 protected:
   /// Return true if the filename was added to the list of dependencies, false

@@ -288,7 +288,7 @@ public:
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
 
-  PPCallbacks *getPPCallbacks() override { return CollectorPPPtr; }
+  PPCallbacks *getPPCallbacks() { return CollectorPPPtr; }
 
   /// Apply any changes implied by the discovered dependencies to the given
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
