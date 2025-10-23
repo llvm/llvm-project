@@ -28,12 +28,11 @@ struct Vec3 {
 // CHECK-NEXT:    [[EXTRACTVEC2:%.*]] = shufflevector <4 x float> [[LOADVECN1]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 // CHECK-NEXT:    [[ADD:%.*]] = fadd <3 x float> [[EXTRACTVEC]], [[EXTRACTVEC2]]
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [[STRUCT_VEC3]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <3 x float> [[ADD]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-// CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x float> [[EXTRACTVEC3]]
-// CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP2]], align 16
+// CHECK-NEXT:    [[EXTRACTVEC3:%.*]] = shufflevector <3 x float> [[ADD]], <3 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    store <4 x float> [[EXTRACTVEC3]], ptr [[TMP2]], align 16
 // CHECK-NEXT:    [[COERCE_DIVE4:%.*]] = getelementptr inbounds nuw [[STRUCT_VEC3]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[COERCE_DIVE4]], align 16
-// CHECK-NEXT:    ret i128 [[TMP4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i128, ptr [[COERCE_DIVE4]], align 16
+// CHECK-NEXT:    ret i128 [[TMP3]]
 //
 struct Vec3 add(struct Vec3 a) {
   struct Vec3 res;
