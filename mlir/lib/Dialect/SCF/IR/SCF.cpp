@@ -2490,8 +2490,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantTrue)
-          constantTrue = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
+          constantTrue = arith::ConstantOp::create(
+              rewriter, op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
 
         rewriter.modifyOpInPlace(use.getOwner(),
                                  [&]() { use.set(constantTrue); });
@@ -2500,8 +2500,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantFalse)
-          constantFalse = rewriter.create<arith::ConstantOp>(
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+          constantFalse = arith::ConstantOp::create(
+              rewriter, op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
 
         rewriter.modifyOpInPlace(use.getOwner(),
                                  [&]() { use.set(constantFalse); });

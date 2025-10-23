@@ -349,6 +349,15 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/ShardOps.td
+  SOURCES
+    dialects/shard.py
+  DIALECT_NAME shard
+  GEN_ENUM_BINDINGS)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/MLProgramOps.td
   SOURCES
     dialects/ml_program.py

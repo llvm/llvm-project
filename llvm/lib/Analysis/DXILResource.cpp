@@ -255,6 +255,12 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   if (!ContainedType)
     return;
 
+  SmallVector<uint64_t> ArrayDimensions;
+  while (ArrayType *AT = dyn_cast<ArrayType>(ContainedType)) {
+    ArrayDimensions.push_back(AT->getNumElements());
+    ContainedType = AT->getElementType();
+  }
+
   StringRef ElementName;
   ElementType ET = toDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
@@ -271,6 +277,8 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   DestStream << "<" << ElementName;
   if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
     DestStream << VTy->getNumElements();
+  for (uint64_t Dim : ArrayDimensions)
+    DestStream << "[" << Dim << "]";
   DestStream << ">";
 }
 
