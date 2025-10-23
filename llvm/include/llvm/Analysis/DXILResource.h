@@ -293,6 +293,8 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    // Some 64 byte types are treated as 32 byte types in DXIL.
+    dxil::ElementType DXILTargetTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {

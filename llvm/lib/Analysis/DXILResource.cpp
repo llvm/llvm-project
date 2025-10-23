@@ -206,6 +206,14 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   return ElementType::Invalid;
 }
 
+static dxil::ElementType toDXILTargetType(Type *Ty, bool IsSigned) {
+  // TODO: Handle unorm, snorm, and packed.
+  Type *ScalarTy = Ty->getScalarType();
+  if (ScalarTy->isIntegerTy(64) || ScalarTy->isDoubleTy())
+    return ElementType::U32;
+  return toDXILElementType(Ty, IsSigned);
+}
+
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
                                    const dxil::ResourceClass RC_,
                                    const dxil::ResourceKind Kind_)
@@ -569,10 +577,11 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
   dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
+  dxil::ElementType DXILTargetTy = toDXILTargetType(ElTy, IsSigned);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
     Count = VTy->getNumElements();
-  return {ET, Count};
+  return {ET, DXILTargetTy, Count};
 }
 
 dxil::SamplerFeedbackType ResourceTypeInfo::getFeedbackType() const {
@@ -714,7 +723,8 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
       Tags.push_back(getIntMD(RTI.getStruct(DL).Stride));
     } else if (RTI.isTyped()) {
       Tags.push_back(getIntMD(llvm::to_underlying(ExtPropTags::ElementType)));
-      Tags.push_back(getIntMD(llvm::to_underlying(RTI.getTyped().ElementTy)));
+      Tags.push_back(
+          getIntMD(llvm::to_underlying(RTI.getTyped().DXILTargetTy)));
     } else if (RTI.isFeedback()) {
       Tags.push_back(
           getIntMD(llvm::to_underlying(ExtPropTags::SamplerFeedbackKind)));
