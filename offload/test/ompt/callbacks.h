@@ -5,6 +5,37 @@
 // Tool related code below
 #include <omp-tools.h>
 
+static const char *ompt_target_data_op_t_values[] = {
+    "",
+    "ompt_target_data_alloc",
+    "ompt_target_data_transfer_to_device",
+    "ompt_target_data_transfer_from_device",
+    "ompt_target_data_delete",
+    "ompt_target_data_associate",
+    "ompt_target_data_disassociate",
+    "ompt_target_data_alloc_async",
+    "ompt_target_data_transfer_to_device_async",
+    "ompt_target_data_transfer_from_device_async",
+    "ompt_target_data_delete_async"};
+
+static const char *ompt_scope_endpoint_t_values[] = {
+    "", "ompt_scope_begin", "ompt_scope_end", "ompt_scope_beginend"};
+
+static const char *ompt_target_t_values[] = {"",
+                                             "ompt_target",
+                                             "ompt_target_enter_data",
+                                             "ompt_target_exit_data",
+                                             "ompt_target_update",
+                                             "",
+                                             "",
+                                             "",
+                                             "",
+                                             "",
+                                             "ompt_target_nowait",
+                                             "ompt_target_enter_data_nowait",
+                                             "ompt_target_exit_data_nowait",
+                                             "ompt_target_update_nowait"};
+
 // For EMI callbacks
 ompt_id_t next_op_id = 0x8000000000000001;
 
@@ -38,11 +69,11 @@ static void on_ompt_callback_target_data_op(
     void *src_addr, int src_device_num, void *dest_addr, int dest_device_num,
     size_t bytes, const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
-  printf("  Callback DataOp: target_id=%lu host_op_id=%lu optype=%d src=%p "
+  printf("  Callback DataOp: target_id=%lu host_op_id=%lu optype=%s src=%p "
          "src_device_num=%d "
          "dest=%p dest_device_num=%d bytes=%lu code=%p\n",
-         target_id, host_op_id, optype, src_addr, src_device_num, dest_addr,
-         dest_device_num, bytes, codeptr_ra);
+         target_id, host_op_id, ompt_target_data_op_t_values[optype], src_addr,
+         src_device_num, dest_addr, dest_device_num, bytes, codeptr_ra);
 }
 
 static void on_ompt_callback_target(ompt_target_t kind,
@@ -51,9 +82,10 @@ static void on_ompt_callback_target(ompt_target_t kind,
                                     ompt_id_t target_id,
                                     const void *codeptr_ra) {
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
-  printf("Callback Target: target_id=%lu kind=%d endpoint=%d device_num=%d "
+  printf("Callback Target: target_id=%lu kind=%s endpoint=%s device_num=%d "
          "code=%p\n",
-         target_id, kind, endpoint, device_num, codeptr_ra);
+         target_id, ompt_target_t_values[kind],
+         ompt_scope_endpoint_t_values[endpoint], device_num, codeptr_ra);
 }
 
 static void on_ompt_callback_target_submit(ompt_id_t target_id,
@@ -84,13 +116,15 @@ static void on_ompt_callback_target_data_op_emi(
   // target_task_data may be null, avoid dereferencing it
   uint64_t target_task_data_value =
       (target_task_data) ? target_task_data->value : 0;
-  printf("  Callback DataOp EMI: endpoint=%d optype=%d target_task_data=%p "
+  printf("  Callback DataOp EMI: endpoint=%s optype=%s target_task_data=%p "
          "(0x%lx) target_data=%p (0x%lx) host_op_id=%p (0x%lx) src=%p "
          "src_device_num=%d "
          "dest=%p dest_device_num=%d bytes=%lu code=%p\n",
-         endpoint, optype, target_task_data, target_task_data_value,
-         target_data, target_data->value, host_op_id, *host_op_id, src_addr,
-         src_device_num, dest_addr, dest_device_num, bytes, codeptr_ra);
+         ompt_scope_endpoint_t_values[endpoint],
+         ompt_target_data_op_t_values[optype], target_task_data,
+         target_task_data_value, target_data, target_data->value, host_op_id,
+         *host_op_id, src_addr, src_device_num, dest_addr, dest_device_num,
+         bytes, codeptr_ra);
 }
 
 static void on_ompt_callback_target_emi(ompt_target_t kind,
@@ -102,20 +136,21 @@ static void on_ompt_callback_target_emi(ompt_target_t kind,
   assert(codeptr_ra != 0 && "Unexpected null codeptr");
   if (endpoint == ompt_scope_begin)
     target_data->value = next_op_id++;
-  printf("Callback Target EMI: kind=%d endpoint=%d device_num=%d task_data=%p "
+  printf("Callback Target EMI: kind=%s endpoint=%s device_num=%d task_data=%p "
          "(0x%lx) target_task_data=%p (0x%lx) target_data=%p (0x%lx) code=%p\n",
-         kind, endpoint, device_num, task_data, task_data->value,
-         target_task_data, target_task_data->value, target_data,
-         target_data->value, codeptr_ra);
+         ompt_target_t_values[kind], ompt_scope_endpoint_t_values[endpoint],
+         device_num, task_data, task_data ? task_data->value : 0,
+         target_task_data, target_task_data ? target_task_data->value : 0,
+         target_data, target_data->value, codeptr_ra);
 }
 
 static void on_ompt_callback_target_submit_emi(
     ompt_scope_endpoint_t endpoint, ompt_data_t *target_data,
     ompt_id_t *host_op_id, unsigned int requested_num_teams) {
-  printf("  Callback Submit EMI: endpoint=%d  req_num_teams=%d target_data=%p "
+  printf("  Callback Submit EMI: endpoint=%s  req_num_teams=%d target_data=%p "
          "(0x%lx) host_op_id=%p (0x%lx)\n",
-         endpoint, requested_num_teams, target_data, target_data->value,
-         host_op_id, *host_op_id);
+         ompt_scope_endpoint_t_values[endpoint], requested_num_teams,
+         target_data, target_data->value, host_op_id, *host_op_id);
 }
 
 static void on_ompt_callback_target_map_emi(ompt_data_t *target_data,
