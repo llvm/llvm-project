@@ -7551,6 +7551,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
 /// log2(C)-indexed value table (instead of traditionally emitting a load of the
 /// address of the jump target, and indirectly jump to it).
 static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
+                                        DomTreeUpdater *DTU,
                                         const DataLayout &DL,
                                         const TargetTransformInfo &TTI) {
   Value *Condition = SI->getCondition();
@@ -7573,12 +7574,6 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
   if (SI->getNumCases() < 4)
     return false;
 
-  // We perform this optimization only for switches with
-  // unreachable default case.
-  // This assumtion will save us from checking if `Condition` is a power of two.
-  if (!SI->defaultDestUnreachable())
-    return false;
-
   // Check that switch cases are powers of two.
   SmallVector<uint64_t, 4> Values;
   for (const auto &Case : SI->cases()) {
@@ -7597,6 +7592,24 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     return false;
 
   Builder.SetInsertPoint(SI);
+
+  if (!SI->defaultDestUnreachable()) {
+    // Let non-power-of-two inputs jump to the default case, when the latter is
+    // reachable.
+    auto *PopC = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, Condition);
+    auto *IsPow2 = Builder.CreateICmpEQ(PopC, ConstantInt::get(CondTy, 1));
+
+    auto *OrigBB = SI->getParent();
+    auto *DefaultCaseBB = SI->getDefaultDest();
+    BasicBlock *SplitBB = SplitBlock(OrigBB, SI, DTU);
+    auto It = OrigBB->getTerminator()->getIterator();
+    BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
+    It->eraseFromParent();
+
+    addPredecessorToBlock(DefaultCaseBB, OrigBB, SplitBB);
+    if (DTU)
+      DTU->applyUpdates({{DominatorTree::Insert, OrigBB, DefaultCaseBB}});
+  }
 
   // Replace each case with its trailing zeros number.
   for (auto &Case : SI->cases()) {
@@ -7953,7 +7966,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
                              Options.ConvertSwitchToLookupTable))
       return requestResimplify();
 
-  if (simplifySwitchOfPowersOfTwo(SI, Builder, DL, TTI))
+  if (simplifySwitchOfPowersOfTwo(SI, Builder, DTU, DL, TTI))
     return requestResimplify();
 
   if (reduceSwitchRange(SI, Builder, DL, TTI))
