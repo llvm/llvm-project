@@ -294,7 +294,9 @@ static void translateBranchMetadata(Module &M, Instruction *BBTerminatorInst) {
   BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
 }
 
-static std::array<unsigned, 7> getCompatibleInstructionMDs(llvm::Module &M) {
+using InstructionMDList = std::array<unsigned, 7>;
+
+static InstructionMDList getCompatibleInstructionMDs(llvm::Module &M) {
   return {
       M.getMDKindID("dx.nonuniform"),    M.getMDKindID("dx.controlflow.hints"),
       M.getMDKindID("dx.precise"),       llvm::LLVMContext::MD_range,
@@ -304,7 +306,7 @@ static std::array<unsigned, 7> getCompatibleInstructionMDs(llvm::Module &M) {
 
 static void translateInstructionMetadata(Module &M) {
   // construct allowlist of valid metadata node kinds
-  std::array<unsigned, 7> DXILCompatibleMDs = getCompatibleInstructionMDs(M);
+  InstructionMDList DXILCompatibleMDs = getCompatibleInstructionMDs(M);
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
