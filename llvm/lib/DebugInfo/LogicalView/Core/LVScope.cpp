@@ -1983,7 +1983,6 @@ void LVScopeFunction::printDebugger(raw_ostream &OS) const {
   SetVector<const LVLocation *>
       LiveSymbols; // This needs to be ordered since we're iterating over it.
   for (const LVLine *Line : AllLines) {
-    const LVScope *Scope = Line->getParentScope();
     // Update live list: Add lives
     for (auto Loc : LifetimeBegins[Line->getAddress()])
       LiveSymbols.insert(Loc);
