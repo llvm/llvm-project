@@ -276,14 +276,13 @@ jobs:
       shell: bash
       run: |
         ls -l /c/vcpkg/packages/libxml2_x64-windows/
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
             ${{ needs.prepare.outputs.target-cmake-flags }} \
             -C clang/cmake/caches/Release.cmake \
             -DCMAKE_PREFIX_PATH=/c/vcpkg/packages/libxml2_x64-windows/ \
-            -DCMAKE_CXX_FLAGS=-DLIBXML_STATIC \
-            -DCMAKE_C_FLAGS=-DLIBXML_STATIC \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build
