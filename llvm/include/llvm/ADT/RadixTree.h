@@ -1,4 +1,4 @@
-//===-- RadixTree.h - Radix Tree implementation -----------------*- C++ -*-===//
+//===-- llvm/ADT/RadixTree.h - Radix Tree implementation --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,8 +9,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_RADIXTREE_H
-#define LLVM_SUPPORT_RADIXTREE_H
+#ifndef LLVM_ADT_RADIXTREE_H
+#define LLVM_ADT_RADIXTREE_H
 
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/STLExtras.h"
@@ -342,4 +342,4 @@ public:
 
 } // namespace llvm
 
-#endif // LLVM_SUPPORT_RADIXTREE_H
+#endif // LLVM_ADT_RADIXTREE_H
