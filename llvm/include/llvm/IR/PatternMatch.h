@@ -212,8 +212,9 @@ template <typename SubPattern_t> struct Splat_match {
   }
 };
 
-/// Match a splat. This is currently limited to constant splats.
-template <typename T> inline Splat_match<T> m_Splat(const T &SubPattern) {
+/// Match a constant splat. TODO: Extend this to non-constant splats.
+template <typename T>
+inline Splat_match<T> m_ConstantSplat(const T &SubPattern) {
   return SubPattern;
 }
 

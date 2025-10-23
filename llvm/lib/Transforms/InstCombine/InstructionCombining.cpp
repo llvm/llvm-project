@@ -2351,7 +2351,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
           bool SplatLHS) -> Instruction * {
     Value *Idx;
     Constant *Splat, *SubVector, *Dest;
-    if (!match(MaybeSplat, m_Splat(m_Constant(Splat))) ||
+    if (!match(MaybeSplat, m_ConstantSplat(m_Constant(Splat))) ||
         !match(MaybeSubVector,
                m_VectorInsert(m_Constant(Dest), m_Constant(SubVector),
                               m_Value(Idx))))
