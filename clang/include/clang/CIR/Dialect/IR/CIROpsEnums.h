@@ -54,10 +54,10 @@ static bool isLocalLinkage(GlobalLinkageKind linkage) {
 static bool isExternalWeakLinkage(GlobalLinkageKind linkage) {
   return linkage == GlobalLinkageKind::ExternalWeakLinkage;
 }
-LLVM_ATTRIBUTE_UNUSED static bool isCommonLinkage(GlobalLinkageKind linkage) {
+[[maybe_unused]] static bool isCommonLinkage(GlobalLinkageKind linkage) {
   return linkage == GlobalLinkageKind::CommonLinkage;
 }
-LLVM_ATTRIBUTE_UNUSED static bool
+[[maybe_unused]] static bool
 isValidDeclarationLinkage(GlobalLinkageKind linkage) {
   return isExternalWeakLinkage(linkage) || isExternalLinkage(linkage);
 }
@@ -65,8 +65,7 @@ isValidDeclarationLinkage(GlobalLinkageKind linkage) {
 /// Whether the definition of this global may be replaced by something
 /// non-equivalent at link time. For example, if a function has weak linkage
 /// then the code defining it may be replaced by different code.
-LLVM_ATTRIBUTE_UNUSED static bool
-isInterposableLinkage(GlobalLinkageKind linkage) {
+[[maybe_unused]] static bool isInterposableLinkage(GlobalLinkageKind linkage) {
   switch (linkage) {
   case GlobalLinkageKind::WeakAnyLinkage:
   case GlobalLinkageKind::LinkOnceAnyLinkage:
@@ -89,8 +88,7 @@ isInterposableLinkage(GlobalLinkageKind linkage) {
 
 /// Whether the definition of this global may be discarded if it is not used
 /// in its compilation unit.
-LLVM_ATTRIBUTE_UNUSED static bool
-isDiscardableIfUnused(GlobalLinkageKind linkage) {
+[[maybe_unused]] static bool isDiscardableIfUnused(GlobalLinkageKind linkage) {
   return isLinkOnceLinkage(linkage) || isLocalLinkage(linkage) ||
          isAvailableExternallyLinkage(linkage);
 }
@@ -99,7 +97,7 @@ isDiscardableIfUnused(GlobalLinkageKind linkage) {
 /// Using this method outside of the code generators is almost always a
 /// mistake: when working at the IR level use isInterposable instead as it
 /// knows about ODR semantics.
-LLVM_ATTRIBUTE_UNUSED static bool isWeakForLinker(GlobalLinkageKind linkage) {
+[[maybe_unused]] static bool isWeakForLinker(GlobalLinkageKind linkage) {
   return linkage == GlobalLinkageKind::WeakAnyLinkage ||
          linkage == GlobalLinkageKind::WeakODRLinkage ||
          linkage == GlobalLinkageKind::LinkOnceAnyLinkage ||
@@ -108,7 +106,7 @@ LLVM_ATTRIBUTE_UNUSED static bool isWeakForLinker(GlobalLinkageKind linkage) {
          linkage == GlobalLinkageKind::ExternalWeakLinkage;
 }
 
-LLVM_ATTRIBUTE_UNUSED static bool isValidLinkage(GlobalLinkageKind gl) {
+[[maybe_unused]] static bool isValidLinkage(GlobalLinkageKind gl) {
   return isExternalLinkage(gl) || isLocalLinkage(gl) || isWeakLinkage(gl) ||
          isLinkOnceLinkage(gl);
 }

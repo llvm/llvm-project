@@ -569,40 +569,30 @@ void CodeViewDebug::emitCodeViewMagicVersion() {
   OS.emitInt32(COFF::DEBUG_SECTION_MAGIC);
 }
 
-static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
-  switch (DWLang) {
-  case dwarf::DW_LANG_C:
-  case dwarf::DW_LANG_C89:
-  case dwarf::DW_LANG_C99:
-  case dwarf::DW_LANG_C11:
+static SourceLanguage
+MapDWARFLanguageToCVLang(dwarf::SourceLanguageName DWLName) {
+  switch (DWLName) {
+  case dwarf::DW_LNAME_C:
     return SourceLanguage::C;
-  case dwarf::DW_LANG_C_plus_plus:
-  case dwarf::DW_LANG_C_plus_plus_03:
-  case dwarf::DW_LANG_C_plus_plus_11:
-  case dwarf::DW_LANG_C_plus_plus_14:
+  case dwarf::DW_LNAME_C_plus_plus:
     return SourceLanguage::Cpp;
-  case dwarf::DW_LANG_Fortran77:
-  case dwarf::DW_LANG_Fortran90:
-  case dwarf::DW_LANG_Fortran95:
-  case dwarf::DW_LANG_Fortran03:
-  case dwarf::DW_LANG_Fortran08:
+  case dwarf::DW_LNAME_Fortran:
     return SourceLanguage::Fortran;
-  case dwarf::DW_LANG_Pascal83:
+  case dwarf::DW_LNAME_Pascal:
     return SourceLanguage::Pascal;
-  case dwarf::DW_LANG_Cobol74:
-  case dwarf::DW_LANG_Cobol85:
+  case dwarf::DW_LNAME_Cobol:
     return SourceLanguage::Cobol;
-  case dwarf::DW_LANG_Java:
+  case dwarf::DW_LNAME_Java:
     return SourceLanguage::Java;
-  case dwarf::DW_LANG_D:
+  case dwarf::DW_LNAME_D:
     return SourceLanguage::D;
-  case dwarf::DW_LANG_Swift:
+  case dwarf::DW_LNAME_Swift:
     return SourceLanguage::Swift;
-  case dwarf::DW_LANG_Rust:
+  case dwarf::DW_LNAME_Rust:
     return SourceLanguage::Rust;
-  case dwarf::DW_LANG_ObjC:
+  case dwarf::DW_LNAME_ObjC:
     return SourceLanguage::ObjC;
-  case dwarf::DW_LANG_ObjC_plus_plus:
+  case dwarf::DW_LNAME_ObjC_plus_plus:
     return SourceLanguage::ObjCpp;
   default:
     // There's no CodeView representation for this language, and CV doesn't
@@ -610,6 +600,14 @@ static SourceLanguage MapDWLangToCVLang(unsigned DWLang) {
     // as it's very low level.
     return SourceLanguage::Masm;
   }
+}
+
+static SourceLanguage MapDWARFLanguageToCVLang(dwarf::SourceLanguage DWLang) {
+  auto MaybeLName = dwarf::toDW_LNAME(DWLang);
+  if (!MaybeLName)
+    return MapDWARFLanguageToCVLang(static_cast<dwarf::SourceLanguageName>(0));
+
+  return MapDWARFLanguageToCVLang(MaybeLName->first);
 }
 
 void CodeViewDebug::beginModule(Module *M) {
@@ -633,8 +631,13 @@ void CodeViewDebug::beginModule(Module *M) {
     Node = *CUs->operands().begin();
   }
   const auto *CU = cast<DICompileUnit>(Node);
+  DISourceLanguageName Lang = CU->getSourceLanguage();
   CurrentSourceLanguage =
-      MapDWLangToCVLang(CU->getSourceLanguage().getUnversionedName());
+      Lang.hasVersionedName()
+          ? MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguageName>(Lang.getName()))
+          : MapDWARFLanguageToCVLang(
+                static_cast<dwarf::SourceLanguage>(Lang.getName()));
   if (!M->getCodeViewFlag() ||
       CU->getEmissionKind() == DICompileUnit::NoDebug) {
     Asm = nullptr;

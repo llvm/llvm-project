@@ -900,7 +900,7 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
   while (Cur && Cur.tell() < Content.size()) {
     if (Shdr->sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
       Version = Data.getU8(Cur);
-      if (Cur && Version > 3)
+      if (Cur && Version > 4)
         return createStringError(
             errc::invalid_argument,
             "invalid SHT_LLVM_BB_ADDR_MAP section version: " +
@@ -946,8 +946,11 @@ ELFDumper<ELFT>::dumpBBAddrMapSection(const Elf_Shdr *Shdr) {
         }
         uint64_t Size = Data.getULEB128(Cur);
         uint64_t Metadata = Data.getULEB128(Cur);
+        std::optional<llvm::yaml::Hex64> Hash;
+        if (FeatureOrErr->BBHash)
+          Hash = Data.getU64(Cur);
         BBEntries.push_back(
-            {ID, Offset, Size, Metadata, std::move(CallsiteEndOffsets)});
+            {ID, Offset, Size, Metadata, std::move(CallsiteEndOffsets), Hash});
       }
       TotalNumBlocks += BBEntries.size();
       BBRanges.push_back({BaseAddress, /*NumBlocks=*/{}, BBEntries});

@@ -164,10 +164,45 @@ struct alignas(8) GlobalValueSummaryInfo {
 
   inline GlobalValueSummaryInfo(bool HaveGVs);
 
+  /// Access a read-only list of global value summary structures for a
+  /// particular value held in the GlobalValueMap.
+  ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
+    return SummaryList;
+  }
+
+  /// Add a summary corresponding to a global value definition in a module with
+  /// the corresponding GUID.
+  inline void addSummary(std::unique_ptr<GlobalValueSummary> Summary);
+
+  /// Verify that the HasLocal flag is consistent with the SummaryList. Should
+  /// only be called prior to index-based internalization and promotion.
+  inline void verifyLocal() const;
+
+  bool hasLocal() const { return HasLocal; }
+
+private:
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
-  /// COMDAT values of the same name.
+  /// COMDAT values of the same name, weak symbols, locals of the same name when
+  /// compiling without sufficient distinguishing path, or (theoretically) hash
+  /// collisions. Each summary is from a different module.
   GlobalValueSummaryList SummaryList;
+
+  /// True if the SummaryList contains at least one summary with local linkage.
+  /// In most cases there should be only one, unless translation units with
+  /// same-named locals were compiled without distinguishing path. And generally
+  /// there should not be a mix of local and non-local summaries, because the
+  /// GUID for a local is computed with the path prepended and a ';' delimiter.
+  /// In extremely rare cases there could be a GUID hash collision. Having the
+  /// flag saves having to walk through all summaries to prove the existence or
+  /// not of any locals.
+  /// NOTE: this flag is set when the index is built. It does not reflect
+  /// index-based internalization and promotion decisions. Generally most
+  /// index-based analysis occurs before then, but any users should assert that
+  /// the withInternalizeAndPromote() flag is not set on the index.
+  /// TODO: Replace checks in various ThinLTO analyses that loop through all
+  /// summaries to handle the local case with a check of the flag.
+  bool HasLocal : 1;
 };
 
 /// Map from global value GUID to corresponding summary structures. Use a
@@ -201,8 +236,12 @@ struct ValueInfo {
   }
 
   ArrayRef<std::unique_ptr<GlobalValueSummary>> getSummaryList() const {
-    return getRef()->second.SummaryList;
+    return getRef()->second.getSummaryList();
   }
+
+  void verifyLocal() const { getRef()->second.verifyLocal(); }
+
+  bool hasLocal() const { return getRef()->second.hasLocal(); }
 
   // Even if the index is built with GVs available, we may not have one for
   // summary entries synthesized for profiled indirect call targets.
@@ -634,7 +673,23 @@ public:
   friend class ModuleSummaryIndex;
 };
 
-GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
+GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs)
+    : U(HaveGVs), HasLocal(false) {}
+
+void GlobalValueSummaryInfo::addSummary(
+    std::unique_ptr<GlobalValueSummary> Summary) {
+  if (GlobalValue::isLocalLinkage(Summary->linkage()))
+    HasLocal = true;
+  return SummaryList.push_back(std::move(Summary));
+}
+
+void GlobalValueSummaryInfo::verifyLocal() const {
+  assert(HasLocal ==
+         llvm::any_of(SummaryList,
+                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
+                        return GlobalValue::isLocalLinkage(Summary->linkage());
+                      }));
+}
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
@@ -1434,6 +1489,9 @@ private:
   /// every summary of a GV is synchronized.
   bool WithDSOLocalPropagation = false;
 
+  /// Indicates that summary-based internalization and promotion has run.
+  bool WithInternalizeAndPromote = false;
+
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
 
@@ -1607,8 +1665,8 @@ public:
 
     for (auto &S : *this) {
       // Skip external functions
-      if (!S.second.SummaryList.size() ||
-          !isa<FunctionSummary>(S.second.SummaryList.front().get()))
+      if (!S.second.getSummaryList().size() ||
+          !isa<FunctionSummary>(S.second.getSummaryList().front().get()))
         continue;
       discoverNodes(ValueInfo(HaveGVs, &S), FunctionHasParent);
     }
@@ -1637,6 +1695,9 @@ public:
 
   bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
   void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
+
+  bool withInternalizeAndPromote() const { return WithInternalizeAndPromote; }
+  void setWithInternalizeAndPromote() { WithInternalizeAndPromote = true; }
 
   bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
   void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }
@@ -1748,7 +1809,7 @@ public:
     // Here we have a notionally const VI, but the value it points to is owned
     // by the non-const *this.
     const_cast<GlobalValueSummaryMapTy::value_type *>(VI.getRef())
-        ->second.SummaryList.push_back(std::move(Summary));
+        ->second.addSummary(std::move(Summary));
   }
 
   /// Add an original name for the value of the given GUID.
@@ -1937,7 +1998,7 @@ public:
   collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
     for (const auto &GlobalList : *this) {
       auto GUID = GlobalList.first;
-      for (const auto &Summary : GlobalList.second.SummaryList) {
+      for (const auto &Summary : GlobalList.second.getSummaryList()) {
         ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
       }
     }
@@ -2035,7 +2096,7 @@ struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
     std::unique_ptr<GlobalValueSummary> Root =
         std::make_unique<FunctionSummary>(I->calculateCallGraphRoot());
     GlobalValueSummaryInfo G(I->haveGVs());
-    G.SummaryList.push_back(std::move(Root));
+    G.addSummary(std::move(Root));
     static auto P =
         GlobalValueSummaryMapTy::value_type(GlobalValue::GUID(0), std::move(G));
     return ValueInfo(I->haveGVs(), &P);

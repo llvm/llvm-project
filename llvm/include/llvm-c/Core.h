@@ -4757,7 +4757,7 @@ LLVM_C_ABI LLVMValueRef LLVMBuildGlobalString(LLVMBuilderRef B, const char *Str,
 LLVM_C_ABI LLVMValueRef LLVMBuildGlobalStringPtr(LLVMBuilderRef B,
                                                  const char *Str,
                                                  const char *Name);
-LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef MemoryAccessInst);
+LLVM_C_ABI LLVMBool LLVMGetVolatile(LLVMValueRef Inst);
 LLVM_C_ABI void LLVMSetVolatile(LLVMValueRef MemoryAccessInst,
                                 LLVMBool IsVolatile);
 LLVM_C_ABI LLVMBool LLVMGetWeak(LLVMValueRef CmpXchgInst);
