@@ -1970,11 +1970,8 @@ checkAssumptionForLoop(Operation *loopOp, Operation *consumerOp,
     return !dominanceInfo.properlyDominates(op, *firstUserOfLoop);
   };
   llvm::SetVector<Operation *> slice;
-  for (auto operand : consumerOp->getOperands()) {
-    LogicalResult result = getBackwardSlice(operand, &slice, options);
-    assert(result.succeeded() && "expected a backward slice");
-    (void)result;
-  }
+  for (auto operand : consumerOp->getOperands())
+    getBackwardSlice(operand, &slice, options);
 
   if (!slice.empty()) {
     // If consumerOp has one producer, which is also the user of loopOp.
