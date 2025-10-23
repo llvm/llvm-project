@@ -322,7 +322,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
 
       setOperationAction(ISD::SETCC, VT, Legal);
-      setOperationAction(ISD::VSELECT, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
     }
@@ -403,7 +403,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
-      setOperationAction(ISD::VSELECT, VT, Legal);
+      setOperationAction(ISD::VSELECT, VT, Custom);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     }
     for (MVT VT : {MVT::v4i64, MVT::v8i32, MVT::v16i16, MVT::v32i8}) {
@@ -592,8 +592,55 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::VSELECT:
+    return lowerVSELECT(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerVSELECT(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Cond = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  MVT VT = Op.getSimpleValueType();
+  SDLoc DL(Op);
+
+  // Try to lower vselect to vector_shuffle. All cases with constant
+  // build_vector condition will be handled. NOTE: On 32-bit platform, vselect
+  // with v2i64/v4i64 type condition will never enter this because of the extra
+  // bitcast. It can be considered separatly later.
+  if (ISD::isBuildVectorOfConstantSDNodes(Cond.getNode())) {
+    BuildVectorSDNode *BVN = cast<BuildVectorSDNode>(Cond.getNode());
+    APInt SplatValue, SplatUndef;
+    unsigned SplatBitSize;
+    bool HasAnyUndefs;
+
+    // If the Cond is a BUILD_VECTOR with splat constants, using a vldi or
+    // constant broadcast instruction and a vbitsel is better.
+    if (BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize, HasAnyUndefs,
+                             /*MinSplatBits=*/8) &&
+        (SplatBitSize == 8 || SplatBitSize == 16 || SplatBitSize == 32 ||
+         SplatBitSize == 64))
+      return Op;
+
+    SmallVector<int, 32> Mask;
+    EVT CondVT = Cond.getValueType();
+    int NumElts = CondVT.getVectorNumElements();
+    Mask.resize(NumElts, -1);
+    for (int i = 0; i < NumElts; ++i) {
+      auto *CondElt = dyn_cast<ConstantSDNode>(Cond.getOperand(i));
+      if (CondElt->getZExtValue() == 0)
+        Mask[i] = i + NumElts;
+      else
+        Mask[i] = i;
+    }
+
+    return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
+  }
+
+  // Fallback to match patterns in tablegen.
+  return Op;
 }
 
 SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
