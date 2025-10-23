@@ -95,7 +95,7 @@ static cl::opt<bool> DisableFDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
-// Disable processing of fdiv so we can better test the backend implementations.
+// Disable bitsin(typeof(x)) - popcnt(x) to s_bcnt0(x) transformation.
 static cl::opt<bool>
     DisableBcnt0("amdgpu-codegenprepare-disable-bcnt0",
                  cl::desc("Prevent transforming bitsin(typeof(x)) - "
@@ -2005,8 +2005,8 @@ bool AMDGPUCodeGenPrepareImpl::visitCtpop(IntrinsicInst &I) {
 
   IRBuilder<> Builder(MustBeSub);
   Instruction *TransformedIns =
-      Builder.CreateIntrinsic(BitWidth > 32 ? Intrinsic::amdgcn_bcnt064_lo
-                                            : Intrinsic::amdgcn_bcnt032_lo,
+      Builder.CreateIntrinsic(BitWidth > 32 ? Intrinsic::amdgcn_bcnt64_lo
+                                            : Intrinsic::amdgcn_bcnt32_lo,
                               {}, {I.getArgOperand(0)});
 
   if ((DestinationWidth = MustBeSub->getType()->getIntegerBitWidth()) !=
