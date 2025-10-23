@@ -3053,9 +3053,8 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
 
   QualType DstElemQT = Dst.getFieldDesc()->getElemQualType();
   PrimType DstElemT = *S.getContext().classify(DstElemQT);
-  bool DstIsUnsigned = DstElemQT->isUnsignedIntegerOrEnumerationType();
 
-  for (unsigned I = 0; I < SrcNumElems; ++I) {
+  for (unsigned I = 0; I != SrcNumElems; ++I) {
     Floating SrcVal = Src.elem<Floating>(I);
     APFloat DstVal = SrcVal.getAPFloat();
 
@@ -3069,7 +3068,8 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
     }
 
     INT_TYPE_SWITCH_NO_BOOL(DstElemT, {
-      // FIX: Extract the integer value before calling 'from'.
+      // Convert the destination value's bit pattern to an unsigned integer,
+      // then reconstruct the element using the target type's 'from' method.
       uint64_t RawBits = DstVal.bitcastToAPInt().getZExtValue();
       Dst.elem<T>(I) = T::from(RawBits);
     });
@@ -3078,7 +3078,7 @@ static bool interp__builtin_ia32_vcvtps2ph(InterpState &S, CodePtr OpPC,
   // Zero out remaining elements if the destination has more elements
   // (e.g., vcvtps2ph converting 4 floats to 8 shorts).
   if (DstNumElems > SrcNumElems) {
-    for (unsigned I = SrcNumElems; I < DstNumElems; ++I) {
+    for (unsigned I = SrcNumElems; I != DstNumElems; ++I) {
       INT_TYPE_SWITCH_NO_BOOL(DstElemT, { Dst.elem<T>(I) = T::from(0); });
     }
   }

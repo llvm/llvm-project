@@ -12453,8 +12453,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateInteger(E->getArg(1), Imm, Info))
       return false;
 
-    assert(SrcVec.isVector());
-
     const auto *SrcVTy = E->getArg(0)->getType()->castAs<VectorType>();
     unsigned SrcNumElems = SrcVTy->getNumElements();
     const auto *DstVTy = E->getType()->castAs<VectorType>();
