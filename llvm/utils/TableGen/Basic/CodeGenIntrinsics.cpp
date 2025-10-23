@@ -90,15 +90,44 @@ void CodeGenIntrinsicTable::CheckDuplicateIntrinsics() const {
       [](const CodeGenIntrinsic &Int1, const CodeGenIntrinsic &Int2) {
         return Int1.Name == Int2.Name;
       });
-  if (I == Intrinsics.end())
-    return;
+  if (I != Intrinsics.end()) {
+    // Found 2 intrinsics with same name.
+    const CodeGenIntrinsic &First = *I;
+    const CodeGenIntrinsic &Second = *(I + 1);
+    PrintError(Second.TheDef,
+               Twine("Intrinsic `") + First.Name + "` is already defined");
+    PrintFatalNote(First.TheDef, "Previous definition here");
+  }
 
-  // Found a duplicate intrinsics.
-  const CodeGenIntrinsic &First = *I;
-  const CodeGenIntrinsic &Second = *(I + 1);
-  PrintError(Second.TheDef,
-             Twine("Intrinsic `") + First.Name + "` is already defined");
-  PrintFatalNote(First.TheDef, "Previous definition here");
+  // Now detect intrinsics that may have the same enum name. For that, we first
+  // sort the intrinsics by their enum name.
+  std::vector<const CodeGenIntrinsic *> SortedByEnumName;
+  SortedByEnumName.reserve(size());
+  for (const CodeGenIntrinsic &Int : Intrinsics)
+    SortedByEnumName.push_back(&Int);
+
+  llvm::sort(SortedByEnumName, [](const CodeGenIntrinsic *LHS,
+                                  const CodeGenIntrinsic *RHS) {
+    // To ensure deterministic sorted order when duplicates are
+    // present, use record ID as a tie-breaker
+    unsigned LhsID = LHS->TheDef->getID();
+    unsigned RhsID = RHS->TheDef->getID();
+    return std::tie(LHS->EnumName, LhsID) < std::tie(RHS->EnumName, RhsID);
+  });
+  auto J = std::adjacent_find(
+      SortedByEnumName.begin(), SortedByEnumName.end(),
+      [](const CodeGenIntrinsic *Int1, const CodeGenIntrinsic *Int2) {
+        return Int1->EnumName == Int2->EnumName;
+      });
+
+  if (J != SortedByEnumName.end()) {
+    // Found 2 intrinsics with same enum name.
+    const CodeGenIntrinsic *First = *J;
+    const CodeGenIntrinsic *Second = *(J + 1);
+    PrintError(Second->TheDef, Twine("`Intrinsic::") + First->EnumName +
+                                   "` is already defined");
+    PrintFatalNote(First->TheDef, "Previous definition here");
+  }
 }
 
 // For target independent intrinsics, check that their second dotted component
@@ -257,6 +286,24 @@ const CodeGenIntrinsic &CodeGenIntrinsicMap::operator[](const Record *Record) {
   return *Iter->second;
 }
 
+// Sanitize the intrinsic name by replacing each _ pair with a single _ and
+// optionally each single _ (in the original input string) with .
+static void sanitizeName(std::string &Name, bool ReplaceSingleUnderscore) {
+  size_t Next = 0;
+  for (size_t I = 0, E = Name.size(); I < E; ++I) {
+    if (Name[I] == '_' && I + 1 < E && Name[I + 1] == '_') {
+      Name[Next++] = '_';
+      // Skip over both the _s.
+      ++I;
+    } else if (ReplaceSingleUnderscore && Name[I] == '_') {
+      Name[Next++] = '.';
+    } else {
+      Name[Next++] = Name[I];
+    }
+  }
+  Name = Name.substr(0, Next);
+}
+
 CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
                                    const CodeGenIntrinsicContext &Ctx)
     : TheDef(R) {
@@ -267,7 +314,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     PrintFatalError(DefLoc,
                     "Intrinsic '" + DefName + "' does not start with 'int_'!");
 
-  EnumName = DefName.substr(4);
+  EnumName = DefName.substr(4).str();
 
   // Ignore a missing ClangBuiltinName field.
   ClangBuiltinName =
@@ -278,16 +325,43 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   TargetPrefix = R->getValueAsString("TargetPrefix");
   Name = R->getValueAsString("LLVMName").str();
 
+  // Note, we only sanitize __ in intrinsic names and not their C++ enum names.
+  // The rationale is that if we sanitize enum names as well (by just replacing
+  // _ pairs with _) we may get conflicting enum names for different record
+  // names which is not desirable. For example:
+  //
+  //                 Enum Name      Enum Name     Intrinsic Name
+  //                 (Sanitized)    (Original)
+  //
+  //  int_x__y_z     x_y_z          x__y_z        llvm.x_y.z
+  //  int_x_y_z      x_y_z          x_y_z         llvm.x.y.z
+  //
+  // So with no enum name sanitization, two different record names will not
+  // conflicts in both enum names and intrinsic names. The side-effect is that
+  // intrinsics like int_clear_cache will need to be named int_clear__cache to
+  // have their default name be "llvm.clear_cache" but then their intrisnic name
+  // will change to "Intrinsic::clear__cache".
+
+  // Alternatively, we do sanitize the enum name (which preserved a lot of
+  // existing names), but then detect the cases where 2 different records may
+  // end up generating the same enum name. This/ can be done by extending
+  // CheckDuplicateIntrinsics() to detect duplicated enum names as well and
+  // fail if that happens.
+  // Note: (Implementing this option).
+
   if (Name == "") {
     // If an explicit name isn't specified, derive one from the DefName.
-    Name = "llvm." + EnumName.str();
-    llvm::replace(Name, '_', '.');
+    Name = "llvm." + EnumName;
+    sanitizeName(Name, /*ReplaceSingleUnderscore*/ true);
   } else {
     // Verify it starts with "llvm.".
     if (!StringRef(Name).starts_with("llvm."))
       PrintFatalError(DefLoc, "Intrinsic '" + DefName +
                                   "'s name does not start with 'llvm.'!");
   }
+  // Sanitize the enum name by just replacing each pair of _ with a single _.
+  // That way, most existing intrinsic names stay the same.
+  sanitizeName(EnumName, /*ReplaceSingleUnderscore*/ false);
 
   // If TargetPrefix is specified, make sure that Name starts with
   // "llvm.<targetprefix>.".

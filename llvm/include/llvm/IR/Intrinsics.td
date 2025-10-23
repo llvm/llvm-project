@@ -1876,8 +1876,7 @@ def int_fptosi_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>
 
 // Clear cache intrinsic, default to ignore (ie. emit nothing)
 // maps to void __clear_cache() on supporting platforms
-def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
-                                [], "llvm.clear_cache">;
+def int_clear__cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty]>;
 
 // Intrinsic to detect whether its argument is a constant.
 def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],

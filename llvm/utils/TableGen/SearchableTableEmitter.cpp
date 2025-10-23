@@ -137,7 +137,7 @@ private:
     if (const auto *BI = dyn_cast<BitInit>(I))
       return BI->getValue() ? "true" : "false";
     if (Field.IsIntrinsic)
-      return "Intrinsic::" + getIntrinsic(I).EnumName.str();
+      return "Intrinsic::" + getIntrinsic(I).EnumName;
     if (Field.IsInstruction)
       return I->getAsString();
     if (Field.Enum) {
