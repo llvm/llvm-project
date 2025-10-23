@@ -4183,6 +4183,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift:
     // These SLLDQ intrinsics always operate on byte elements (8 bits).
     // The lane width is hardcoded to 16 to match the SIMD register size,
     // but the algorithm processes one byte per iteration,
@@ -4198,6 +4199,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
   case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift:
     // These SRLDQ intrinsics always operate on byte elements (8 bits).
     // The lane width is hardcoded to 16 to match the SIMD register size,
     // but the algorithm processes one byte per iteration,

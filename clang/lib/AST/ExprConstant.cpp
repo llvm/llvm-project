@@ -12792,7 +12792,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
 
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
-  case X86::BI__builtin_ia32_pslldqi256_byteshift: {
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift: {
     assert(E->getNumArgs() == 2);
 
     APValue Src;
@@ -12821,7 +12822,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
 
   case X86::BI__builtin_ia32_psrldqi128_byteshift:
-  case X86::BI__builtin_ia32_psrldqi256_byteshift: {
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
     assert(E->getNumArgs() == 2);
 
     APValue Src;

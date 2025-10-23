@@ -2088,6 +2088,9 @@ let Features = "avx512bw", Attributes = [NoThrow, Const, RequiredVectorWidth<512
       : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<8, short>)">;
   def psrlw512
       : X86Builtin<"_Vector<32, short>(_Vector<32, short>, _Vector<8, short>)">;
+}
+
+let Features = "avx512bw", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<512>] in {
   def pslldqi512_byteshift : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Constant int)">;
   def psrldqi512_byteshift : X86Builtin<"_Vector<64, char>(_Vector<64, char>, _Constant int)">;
 }
