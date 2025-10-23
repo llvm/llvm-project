@@ -11,6 +11,15 @@
 #
 # Project-wide settings
 
+set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
+
+if (GTEST_USE_LLVM)
+  set(GTEST_LLVM_COMPONENTS "Support") # For llvm::raw_ostream
+else ()
+  # Override locally; never install a non-LLVM GTest
+  set(LLVM_INSTALL_GTEST OFF)
+endif ()
+
 if(WIN32)
   add_definitions(-DGTEST_OS_WINDOWS=1)
 endif()
@@ -48,7 +57,7 @@ if (LLVM_INSTALL_GTEST)
   set(BUILDTREE_ONLY "")
 endif ()
 
-add_llvm_library(llvm_gtest
+add_llvm_library("${gtest_name}"
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
 
@@ -56,7 +65,7 @@ add_llvm_library(llvm_gtest
   ${LIBS}
 
   LINK_COMPONENTS
-  Support # Depends on llvm::raw_ostream
+  ${GTEST_LLVM_COMPONENTS}
 
   # This is a library meant only for the build tree.
   ${BUILDTREE_ONLY}
@@ -67,15 +76,15 @@ add_llvm_library(llvm_gtest
 # that warning here for any targets that link to gtest.
 if(CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_definitions("-Wno-suggest-override")
-  set_target_properties(llvm_gtest PROPERTIES INTERFACE_COMPILE_OPTIONS "-Wno-suggest-override")
+  set_target_properties("${gtest_name}" PROPERTIES INTERFACE_COMPILE_OPTIONS "-Wno-suggest-override")
 endif()
 
 if (NOT LLVM_ENABLE_THREADS)
-  target_compile_definitions(llvm_gtest PUBLIC GTEST_HAS_PTHREAD=0)
+  target_compile_definitions("${gtest_name}" PUBLIC GTEST_HAS_PTHREAD=0)
 endif ()
 
 # Top-level include directory required for "llvm/Support/raw_os_ostream.h"
-target_include_directories(llvm_gtest
+target_include_directories("${gtest_name}"
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googletest/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/googlemock/include>
          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/>
@@ -89,16 +98,32 @@ target_include_directories(llvm_gtest
 # FIXME: Shouldn't this be done for all LLVM libraries? Currently, LLVM uses a
 # big giant `include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})`
 # which CMake does not add to the import library.
-target_include_directories(llvm_gtest BEFORE
-  PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
-         $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
-  )
+if (GTEST_USE_LLVM)
+  target_include_directories("${gtest_name}" BEFORE
+    PUBLIC $<BUILD_INTERFACE:${LLVM_SOURCE_DIR}/include>
+           $<BUILD_INTERFACE:${LLVM_BINARY_DIR}/include>
+    )
+else ()
+  target_compile_definitions("${gtest_name}" PUBLIC GTEST_NO_LLVM_SUPPORT=1)
+endif ()
 
-add_subdirectory(UnitTestMain)
+# Library that contains main()
+if (GTEST_USE_LLVM)
+  add_subdirectory(UnitTestMain)
+else ()
+  add_llvm_library("${gtest_name}_main"
+    googletest/src/gtest_main.cc
+
+    LINK_LIBS
+    "${gtest_name}"
+
+    ${BUILDTREE_ONLY}
+  )
+endif ()
 
 if (LLVM_INSTALL_GTEST)
-  install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT llvm_gtest)
-  install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT llvm_gtest)
+  install(DIRECTORY googletest/include/gtest/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gtest/gtest/" COMPONENT "${gtest_name}")
+  install(DIRECTORY googlemock/include/gmock/ DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-gmock/gmock/" COMPONENT "${gtest_name}")
 endif()
 
 # When LLVM_LINK_LLVM_DYLIB is enabled, libLLVM.so is added to the interface
@@ -118,5 +143,5 @@ function (gtest_remove_dylib_from_link_interface target)
   endif()
 endfunction()
 
-gtest_remove_dylib_from_link_interface(llvm_gtest)
-gtest_remove_dylib_from_link_interface(llvm_gtest_main)
+gtest_remove_dylib_from_link_interface("${gtest_name}")
+gtest_remove_dylib_from_link_interface("${gtest_name}_main")

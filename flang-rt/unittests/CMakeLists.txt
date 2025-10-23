@@ -22,7 +22,7 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
+if (NOT TARGET default_gtest)
   message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
                   "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
   return ()

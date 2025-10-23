@@ -3,11 +3,11 @@ if (LLVM_INSTALL_GTEST)
   set(BUILDTREE_ONLY "")
 endif ()
 
-add_llvm_library(llvm_gtest_main
+add_llvm_library("${gtest_name}_main"
   TestMain.cpp
 
   LINK_LIBS
-  llvm_gtest
+  "${gtest_name}"
 
   LINK_COMPONENTS
   Support # Depends on llvm::cl

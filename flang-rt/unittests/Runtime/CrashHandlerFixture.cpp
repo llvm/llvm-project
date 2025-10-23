@@ -17,7 +17,7 @@
   char buffer[1000];
   std::vsnprintf(buffer, sizeof buffer, message, ap);
   va_end(ap);
-  llvm::errs()
+  std::cerr
       << "Test "
       << ::testing::UnitTest::GetInstance()->current_test_info()->name()
       << " crashed in file "
