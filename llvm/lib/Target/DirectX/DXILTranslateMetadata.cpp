@@ -318,12 +318,9 @@ static void translateBranchMetadata(Module &M, Instruction *BBTerminatorInst) {
 
 static std::array<unsigned, 6> getCompatibleInstructionMDs(llvm::Module &M) {
   return {
-    M.getMDKindID("dx.nonuniform"),
-    M.getMDKindID("dx.controlflow.hints"),
-    M.getMDKindID("dx.precise"),
-    llvm::LLVMContext::MD_range,
-    llvm::LLVMContext::MD_alias_scope,
-    llvm::LLVMContext::MD_noalias};
+      M.getMDKindID("dx.nonuniform"),    M.getMDKindID("dx.controlflow.hints"),
+      M.getMDKindID("dx.precise"),       llvm::LLVMContext::MD_range,
+      llvm::LLVMContext::MD_alias_scope, llvm::LLVMContext::MD_noalias};
 }
 
 static void translateInstructionMetadata(Module &M) {
