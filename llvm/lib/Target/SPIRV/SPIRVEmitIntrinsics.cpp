@@ -3020,6 +3020,36 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
 
+  // If there are no functions but there is at least one global variable,
+  // create a shadow function to "anchor" global handling in codegen.
+  bool HasAnyFunction = false;
+  for (auto &F : M)
+    if (!F.isDeclaration() && !F.isIntrinsic())
+      HasAnyFunction = true;
+
+  Function *ShadowFunc = nullptr;
+  if (!HasAnyFunction) {
+      for (auto GI = M.global_begin(), GE = M.global_end(); GI != GE; ) {
+          GlobalVariable *GV = &*GI++;
+          if (GV->hasInternalLinkage()) {
+              GV->eraseFromParent();
+              Changed = true;
+          } else if (ShadowFunc == nullptr) {
+              LLVMContext &Ctx = M.getContext();
+              auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+              ShadowFunc = Function::Create(
+                  FTy, GlobalValue::InternalLinkage, "__spirv_globals_entry", &M);
+
+              // Create a basic block and insert a ret void
+              BasicBlock *BB = BasicBlock::Create(Ctx, "entry", ShadowFunc);
+              IRBuilder<> B(BB);
+              B.CreateRetVoid();
+
+              Changed = true;
+          }
+      }
+  }
+
   TodoType.clear();
   for (auto &F : M)
     Changed |= runOnFunction(F);
