@@ -16,9 +16,11 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UUID.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/Support/Chrono.h"
 
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -126,6 +128,12 @@ public:
 
   lldb::DataBufferSP GetData() const { return m_data; }
 
+  lldb::TargetSP GetTargetSP() { return m_target_wp.lock(); }
+
+  lldb::TargetSP GetTargetSP() const { return m_target_wp.lock(); }
+
+  void SetTarget(std::shared_ptr<Target> target) { m_target_wp = target; }
+
   void Clear() {
     m_file.Clear();
     m_platform_file.Clear();
@@ -137,6 +145,7 @@ public:
     m_object_size = 0;
     m_source_mappings.Clear(false);
     m_object_mod_time = llvm::sys::TimePoint<>();
+    m_target_wp.reset();
   }
 
   explicit operator bool() const {
@@ -265,6 +274,9 @@ protected:
   ArchSpec m_arch;
   UUID m_uuid;
   ConstString m_object_name;
+  /// This is set to take advantage of the target's search path and platform's
+  /// locate module callback
+  std::weak_ptr<Target> m_target_wp;
   uint64_t m_object_offset = 0;
   uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
