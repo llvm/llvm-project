@@ -4053,6 +4053,43 @@ def CIR_ExpectOp : CIR_Op<"expect", [
 }
 
 //===----------------------------------------------------------------------===//
+// PrefetchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_PrefetchOp : CIR_Op<"prefetch"> {
+  let summary = "Prefetch operation";
+  let description = [{
+    The `cir.prefetch` operation is a hint to the code generator to insert a
+    prefetch instruction if supported; otherwise, it is a noop. Prefetches
+    have no effect on the behavior of the program but can change its
+    performance characteristics.
+
+    ```mlir
+    cir.prefetch(%0 : !cir.ptr<!void>) locality(1) write
+    ```
+
+    $locality is a temporal locality specifier ranging from (0) - no locality,
+    to (3) - extremely local, keep in cache. If $locality is not present, the
+    default value is 3.
+    
+    $isWrite specifies whether the prefetch is for a 'read' or 'write'. If
+    $isWrite is not specified, it means that prefetch is prepared for 'read'.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$addr,
+      DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<3>]>,
+                        "3">:$locality,
+      UnitAttr:$isWrite);
+
+  let assemblyFormat = [{
+        (`write` $isWrite^) : (`read`)?
+        `locality` `(` $locality `)`
+        $addr `:` qualified(type($addr))
+        attr-dict
+    }];
+}
+
+//===----------------------------------------------------------------------===//
 // PtrDiffOp
 //===----------------------------------------------------------------------===//
 
