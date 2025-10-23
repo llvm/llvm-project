@@ -37,8 +37,6 @@ entry:
 ; CHECK:             .byte   103                     # string offset=60
 ; CHECK:             .ascii  ".bss"                  # string offset=62
 
-attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9}
 !llvm.ident = !{!10}
