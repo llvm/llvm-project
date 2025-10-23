@@ -886,10 +886,12 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
   return NULL;
 }
 
-static ompt_data_t *ompt_get_task_data() { return __ompt_get_task_data(); }
+static ompt_data_t *ompt_get_task_data() {
+  return __ompt_get_generating_task();
+}
 
-static ompt_data_t *ompt_get_target_task_data() {
-  return __ompt_get_target_task_data();
+static ompt_task_info_t *ompt_get_task_info_target() {
+  return __ompt_get_task_info_target();
 }
 
 /// Lookup function to query libomp callbacks registered by the tool
@@ -900,7 +902,7 @@ static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
 
   provide_fn(ompt_get_callback);
   provide_fn(ompt_get_task_data);
-  provide_fn(ompt_get_target_task_data);
+  provide_fn(ompt_get_task_info_target);
 #undef provide_fn
 
 #define ompt_interface_fn(fn, type, code)                                      \
