@@ -5,10 +5,8 @@
 define i8 @ctlz_to_sub_bw_cttz(i8 %a0) {
 ; CHECK-LABEL: define i8 @ctlz_to_sub_bw_cttz(
 ; CHECK-SAME: i8 [[A0:%.*]]) {
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[A0]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A0]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[AND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw i8 8, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[CLZ]]
 ;
   %dec = add i8 %a0, -1
@@ -21,10 +19,8 @@ define i8 @ctlz_to_sub_bw_cttz(i8 %a0) {
 define i8 @ctlz_to_sub_bw_cttz_poison(i8 %a0) {
 ; CHECK-LABEL: define i8 @ctlz_to_sub_bw_cttz_poison(
 ; CHECK-SAME: i8 [[A0:%.*]]) {
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[A0]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A0]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[AND]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw i8 8, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[CLZ]]
 ;
   %dec = add i8 %a0, -1
@@ -73,9 +69,8 @@ define i8 @ctlz_to_sub_bw_cttz_multi_use_dec(i8 %a0) {
 ; CHECK-SAME: i8 [[A0:%.*]]) {
 ; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[A0]], -1
 ; CHECK-NEXT:    call void @use(i8 [[DEC]])
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A0]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[AND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw i8 8, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[CLZ]]
 ;
   %dec = add i8 %a0, -1
@@ -89,11 +84,10 @@ define i8 @ctlz_to_sub_bw_cttz_multi_use_dec(i8 %a0) {
 define i8 @ctlz_to_sub_bw_cttz_multi_use_not(i8 %a0) {
 ; CHECK-LABEL: define i8 @ctlz_to_sub_bw_cttz_multi_use_not(
 ; CHECK-SAME: i8 [[A0:%.*]]) {
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[A0]], -1
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A0]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOT]])
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[AND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw i8 8, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[CLZ]]
 ;
   %dec = add i8 %a0, -1
@@ -125,10 +119,8 @@ define i8 @ctlz_to_sub_bw_cttz_multi_use_and(i8 %a0) {
 define i8 @ctlz_to_sub_bw_cttz_commute_and(i8 %a0) {
 ; CHECK-LABEL: define i8 @ctlz_to_sub_bw_cttz_commute_and(
 ; CHECK-SAME: i8 [[A0:%.*]]) {
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[A0]], -1
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[A0]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[AND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw i8 8, [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[CLZ]]
 ;
   %dec = add i8 %a0, -1
@@ -141,10 +133,8 @@ define i8 @ctlz_to_sub_bw_cttz_commute_and(i8 %a0) {
 define <2 x i8> @ctlz_to_sub_bw_cttz_vec_splat(<2 x i8> %a0) {
 ; CHECK-LABEL: define <2 x i8> @ctlz_to_sub_bw_cttz_vec_splat(
 ; CHECK-SAME: <2 x i8> [[A0:%.*]]) {
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[A0]], splat (i8 -1)
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i8> [[A0]], splat (i8 -1)
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[DEC]], [[NOT]]
-; CHECK-NEXT:    [[CLZ:%.*]] = tail call range(i8 0, 9) <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[AND]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i8 0, 9) <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[A0]], i1 false)
+; CHECK-NEXT:    [[CLZ:%.*]] = sub nuw nsw <2 x i8> splat (i8 8), [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i8> [[CLZ]]
 ;
   %dec = add <2 x i8> %a0, <i8 -1, i8 -1>
