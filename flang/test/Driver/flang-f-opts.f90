@@ -14,8 +14,8 @@
 ! RUN: %flang -### -S -fprofile-use=%S %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE-DIR %s
 ! CHECK-PROFILE-USE-DIR: "-fprofile-use={{.*}}"
 
-! When issuing a warning with a suggestion, ensure that the suggestion uses
-! "-Xflang" in the diagnostic message. This is typically issued when an option
+! When emitting an error with a suggestion, ensure that the diagnostic message
+! uses '-Xflang' instead of '-Xclang'. This is typically emitted when an option
 ! that is available for `flang -fc1` is passed to `flang`. We use -complex-range
 ! since it is only available for fc1. If this option is ever exposed to `flang`,
 ! a different option will have to be used in the test below.
