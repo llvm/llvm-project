@@ -111,6 +111,11 @@ class MIRVocabulary {
     size_t TotalEntries = 0;
   } Layout;
 
+  // TODO: See if we can have only one reg classes section instead of physical
+  // and virtual separate sections in the vocabulary. This would reduce the
+  // number of vocabulary entities significantly.
+  // We can potentially distinguish physical and virtual registers by
+  // considering them as a separate feature.
   enum class Section : unsigned {
     Opcodes = 0,
     CommonOperands = 1,
@@ -185,6 +190,25 @@ class MIRVocabulary {
     return Storage[static_cast<unsigned>(SectionID)][LocalIndex];
   }
 
+  /// Get entity ID (flat index) for a common operand type
+  /// This is used for triplet generation
+  unsigned getEntityIDForCommonOperand(
+      MachineOperand::MachineOperandType OperandType) const {
+    return Layout.CommonOperandBase + getCommonOperandIndex(OperandType);
+  }
+
+  /// Get entity ID (flat index) for a register
+  /// This is used for triplet generation
+  unsigned getEntityIDForRegister(Register Reg) const {
+    if (!Reg.isValid() || Reg.isStack())
+      return Layout
+          .VirtRegBase; // Return VirtRegBase for invalid/stack registers
+    unsigned LocalIndex = getRegisterOperandIndex(Reg);
+    size_t BaseOffset =
+        Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
+    return BaseOffset + LocalIndex;
+  }
+
 public:
   /// Static method for extracting base opcode names (public for testing)
   static std::string extractBaseOpcodeName(StringRef InstrName);
@@ -200,6 +224,20 @@ public:
   std::string getStringKey(unsigned Pos) const;
 
   unsigned getDimension() const { return Storage.getDimension(); }
+
+  /// Get entity ID (flat index) for an opcode
+  /// This is used for triplet generation
+  unsigned getEntityIDForOpcode(unsigned Opcode) const {
+    return Layout.OpcodeBase + getCanonicalOpcodeIndex(Opcode);
+  }
+
+  /// Get entity ID (flat index) for a machine operand
+  /// This is used for triplet generation
+  unsigned getEntityIDForMachineOperand(const MachineOperand &MO) const {
+    if (MO.getType() == MachineOperand::MO_Register)
+      return getEntityIDForRegister(MO.getReg());
+    return getEntityIDForCommonOperand(MO.getType());
+  }
 
   // Accessor methods
   const Embedding &operator[](unsigned Opcode) const {

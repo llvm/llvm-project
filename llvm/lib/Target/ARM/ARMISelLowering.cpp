@@ -2849,6 +2849,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
@@ -2856,6 +2858,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -12006,6 +12010,71 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
   BuildMI(TpLoopBody, Dl, TII->get(ARM::t2B))
       .addMBB(TpExit)
       .add(predOps(ARMCC::AL));
+}
+
+bool ARMTargetLowering::supportKCFIBundles() const {
+  // KCFI is supported in all ARM/Thumb modes
+  return true;
+}
+
+MachineInstr *
+ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::instr_iterator &MBBI,
+                                 const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  MachineOperand *TargetOp = nullptr;
+  switch (MBBI->getOpcode()) {
+  // ARM mode opcodes
+  case ARM::BLX:
+  case ARM::BLX_pred:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  // Thumb mode opcodes (Thumb1 and Thumb2)
+  // Note: Most Thumb call instructions have predicate operands before the
+  // target register Format: tBLXr pred, predreg, target_register, ...
+  case ARM::tBLXr:      // Thumb1/Thumb2: BLX register (requires V5T)
+  case ARM::tBLXr_noip: // Thumb1/Thumb2: BLX register, no IP clobber
+  case ARM::tBX_CALL:   // Thumb1 only: BX call (push LR, BX)
+    TargetOp = &MBBI->getOperand(2);
+    break;
+  // Tail call instructions don't have predicates, target is operand 0
+  case ARM::tTAILJMPr: // Thumb1/Thumb2: Tail call via register
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
+  TargetOp->setIsRenamable(false);
+
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
+      .addReg(TargetOp->getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 MachineBasicBlock *

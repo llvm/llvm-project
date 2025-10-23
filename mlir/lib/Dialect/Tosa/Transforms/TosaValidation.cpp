@@ -657,6 +657,7 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_SIZES(TransposeConv2D);
   CHECK_SIZES(FFT2d);
   CHECK_SIZES(MatMul);
+  CHECK_SIZES(MatmulTBlockScaled);
   CHECK_SIZES(MaxPool2d);
   CHECK_SIZES(RFFT2d);
   // Scatter/Gather Operators
@@ -1192,9 +1193,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
-               Float8E5M2Type>(type);
-  }
-  if (auto intTy = dyn_cast<IntegerType>(type)) {
+               Float8E5M2Type, Float4E2M1FNType, Float6E2M3FNType,
+               Float6E3M2FNType, Float8E8M0FNUType>(type);
+  } else if (auto intTy = dyn_cast<IntegerType>(type)) {
     if (intTy.isSignless()) {
       switch (intTy.getWidth()) {
       case 1:
@@ -1220,13 +1221,19 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
 }
 
 void TosaValidation::runOnOperation() {
+  ModuleOp modOp = getOperation();
+  const TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(modOp);
+  const auto maybeTargetEnv =
+      tosa::TargetEnv::createTargetEnvFromAttr(targetEnvAttr, modOp.getLoc());
+  if (failed(maybeTargetEnv))
+    return signalPassFailure();
+  targetEnv = *maybeTargetEnv;
+
   TosaDialect *tosaDialect = getContext().getLoadedDialect<TosaDialect>();
   if (!tosaDialect)
     return;
 
-  targetEnv = tosa::TargetEnv(lookupTargetEnvOrDefault(getOperation()));
-
-  getOperation().walk([&](Operation *op) {
+  modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
       return;
 

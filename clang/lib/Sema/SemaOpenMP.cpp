@@ -7689,7 +7689,9 @@ void SemaOpenMP::ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
     FunctionDecl *UDecl = nullptr;
     if (IsTemplated && isa<FunctionTemplateDecl>(CandidateDecl)) {
       auto *FTD = cast<FunctionTemplateDecl>(CandidateDecl);
-      if (FTD->getTemplateParameters()->size() == TemplateParamLists.size())
+      // FIXME: Should this compare the template parameter lists on all levels?
+      if (SemaRef.Context.isSameTemplateParameterList(
+              FTD->getTemplateParameters(), TemplateParamLists.back()))
         UDecl = FTD->getTemplatedDecl();
     } else if (!IsTemplated)
       UDecl = dyn_cast<FunctionDecl>(CandidateDecl);

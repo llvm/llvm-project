@@ -974,6 +974,24 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   return EnableTLSDESC;
 }
 
+void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    const Driver &D = ToolChain.getDriver();
+    CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
+                                         Twine(D.getClangProgramPath())));
+    if (auto *PA = D.getPrependArg())
+      CmdArgs.push_back(Args.MakeArgString(
+          "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
+
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
+}
+
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                           ArgStringList &CmdArgs, const InputInfo &Output,
                           const InputInfoList &Inputs, bool IsThinLTO) {
@@ -1376,16 +1394,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
-  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-remote-compiler=" +
-                           Twine(ToolChain.getDriver().getClangProgramPath())));
-
-    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
-      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
-  }
+  addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
 void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,

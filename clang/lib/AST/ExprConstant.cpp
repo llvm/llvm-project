@@ -44,6 +44,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/CurrentSourceLocExprScope.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/InferAlloc.h"
 #include "clang/AST/OSLog.h"
 #include "clang/AST/OptionalDiagnostic.h"
 #include "clang/AST/RecordLayout.h"
@@ -12312,6 +12313,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256:
+    return EvaluateBinOpExpr([](const APInt &AElem, const APInt &BElem) {
+      if (BElem.isZero())
+        return APInt::getZero(AElem.getBitWidth());
+      if (BElem.isNegative())
+        return -AElem;
+      return AElem;
+    });
+
   case X86::BI__builtin_ia32_blendvpd:
   case X86::BI__builtin_ia32_blendvpd256:
   case X86::BI__builtin_ia32_blendvps:
@@ -14647,6 +14662,27 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         cast<StringLiteral>(E->getArg(0)->IgnoreParenImpCasts());
     uint64_t Result = getPointerAuthStableSipHash(Literal->getString());
     return Success(Result, E);
+  }
+
+  case Builtin::BI__builtin_infer_alloc_token: {
+    // If we fail to infer a type, this fails to be a constant expression; this
+    // can be checked with __builtin_constant_p(...).
+    QualType AllocType = infer_alloc::inferPossibleType(E, Info.Ctx, nullptr);
+    if (AllocType.isNull())
+      return Error(
+          E, diag::note_constexpr_infer_alloc_token_type_inference_failed);
+    auto ATMD = infer_alloc::getAllocTokenMetadata(AllocType, Info.Ctx);
+    if (!ATMD)
+      return Error(E, diag::note_constexpr_infer_alloc_token_no_metadata);
+    auto Mode =
+        Info.getLangOpts().AllocTokenMode.value_or(llvm::DefaultAllocTokenMode);
+    uint64_t BitWidth = Info.Ctx.getTypeSize(Info.Ctx.getSizeType());
+    uint64_t MaxTokens =
+        Info.getLangOpts().AllocTokenMax.value_or(~0ULL >> (64 - BitWidth));
+    auto MaybeToken = llvm::getAllocToken(Mode, *ATMD, MaxTokens);
+    if (!MaybeToken)
+      return Error(E, diag::note_constexpr_infer_alloc_token_stateful_mode);
+    return Success(llvm::APInt(BitWidth, *MaybeToken), E);
   }
 
   case Builtin::BI__builtin_ffs:
