@@ -433,7 +433,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   return error;
 }
 
-#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
+#ifdef _WIN32
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
 /// Returns the full path to the lldb.exe executable.
 inline std::wstring GetPathToExecutableW() {
   // Iterate until we reach the Windows API maximum path length (32,767).
@@ -447,31 +448,50 @@ inline std::wstring GetPathToExecutableW() {
   return L"";
 }
 
-/// Resolve the full path of the directory defined by
+/// \brief Resolve the full path of the directory defined by
 /// LLDB_PYTHON_DLL_RELATIVE_PATH. If it exists, add it to the list of DLL
 /// search directories.
-void AddPythonDLLToSearchPath() {
+/// \return `true` if the library was added to the search path.
+/// `false` otherwise.
+bool AddPythonDLLToSearchPath() {
   std::wstring modulePath = GetPathToExecutableW();
   if (modulePath.empty()) {
-    llvm::errs() << "error: unable to find python.dll." << '\n';
-    return;
+    return false;
   }
 
   SmallVector<char, MAX_PATH> utf8Path;
   if (sys::windows::UTF16ToUTF8(modulePath.c_str(), modulePath.length(),
                                 utf8Path))
-    return;
+    return false;
   sys::path::remove_filename(utf8Path);
   sys::path::append(utf8Path, LLDB_PYTHON_DLL_RELATIVE_PATH);
   sys::fs::make_absolute(utf8Path);
 
   SmallVector<wchar_t, 1> widePath;
   if (sys::windows::widenPath(utf8Path.data(), widePath))
-    return;
+    return false;
 
   if (sys::fs::exists(utf8Path))
-    SetDllDirectoryW(widePath.data());
+    return SetDllDirectoryW(widePath.data());
+  return false;
 }
+#endif
+
+#ifdef LLDB_PYTHON_SHARED_LIBRARY_FILENAME
+/// Returns whether `python3x.dll` is in the DLL search path.
+bool IsPythonDLLInPath() {
+#define WIDEN2(x) L##x
+#define WIDEN(x) WIDEN2(x)
+  WCHAR foundPath[MAX_PATH];
+  DWORD result =
+      SearchPathW(nullptr, WIDEN(LLDB_PYTHON_SHARED_LIBRARY_FILENAME), nullptr,
+                  MAX_PATH, foundPath, nullptr);
+#undef WIDEN2
+#undef WIDEN
+
+  return result > 0;
+}
+#endif
 #endif
 
 std::string EscapeString(std::string arg) {
@@ -776,8 +796,13 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#if defined(_WIN32) && defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
-  AddPythonDLLToSearchPath();
+#if defined(_WIN32) && defined(LLDB_PYTHON_SHARED_LIBRARY_FILENAME)
+  if (!IsPythonDLLInPath())
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+    if (!AddPythonDLLToSearchPath())
+#endif
+      llvm::errs() << "error: unable to find "
+                   << LLDB_PYTHON_SHARED_LIBRARY_FILENAME << ".\n";
 #endif
 
   // Parse arguments.
