@@ -87,8 +87,8 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    clzw a0, a0
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB6_2:
@@ -104,8 +104,8 @@ define signext i32 @cttz_zero_undef_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    clzw a0, a0
+; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 true)
@@ -118,9 +118,9 @@ define signext i32 @findFirstSet_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a2, a0
 ; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    li a2, 64
+; CHECK-NEXT:    li a2, 32
 ; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    clz a1, a1
+; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    or a0, a0, a2
@@ -137,9 +137,9 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; CHECK-NEXT:    addi a1, a0, -1
 ; CHECK-NEXT:    not a2, a0
 ; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    li a2, 65
+; CHECK-NEXT:    li a2, 33
 ; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    clz a1, a1
+; CHECK-NEXT:    clzw a1, a1
 ; CHECK-NEXT:    sub a2, a2, a1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    and a0, a0, a2
