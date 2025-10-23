@@ -9,6 +9,15 @@ func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<1xi32> {
 
 // -----
 
+// CHECK-LABEL: @test_argmax_fold_i64_index
+func.func @test_argmax_fold_i64_index(%arg0: tensor<1xi8>) -> tensor<i64> {
+  // CHECK: "tosa.const"() <{values = dense<0> : tensor<i64>}> : () -> tensor<i64>
+  %0 = tosa.argmax %arg0 {axis = 0 : i32} : (tensor<1xi8>) -> tensor<i64>
+  return %0 : tensor<i64>
+}
+
+// -----
+
 // CHECK-LABEL: @pad_wh_avg_pool2d_fold
 func.func @pad_wh_avg_pool2d_fold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
   // CHECK-NOT: tosa.pad
