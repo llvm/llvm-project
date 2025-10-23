@@ -26,6 +26,13 @@ struct test_struct {
   a<int> e;
 };
 
+struct test_struct2 {
+  test_struct member;
+  void test() {
+    test_struct2 t{.member = {0}};
+  }
+};
+
 struct test_subclass : test_struct {
    test_subclass() : test_struct(0) {
    }

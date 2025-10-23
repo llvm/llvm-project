@@ -1618,26 +1618,8 @@ void ASTContext::setRelocationInfoForCXXRecord(
   RelocatableClasses.insert({D, Info});
 }
 
-// In future we may want to distinguish the presence or absence of address
-// discrimination, from the inability to determine the presence. For now we rely
-// on all source facing interfaces (type trait queries, etc) diagnosing and
-// reporting an error before reaching these paths.
-static bool canDeterminePointerAuthContent(QualType Type) {
-  if (Type->isIncompleteType() || Type->isDependentType())
-    return false;
-  const TagDecl *Decl = Type->getAsTagDecl();
-  return !Decl || !Decl->getDefinition()->isInvalidDecl();
-}
-static bool canDeterminePointerAuthContent(const ASTContext &Ctx,
-                                           const TagDecl *Decl) {
-  CanQualType DeclType = Ctx.getCanonicalTagType(Decl);
-  return canDeterminePointerAuthContent(DeclType);
-}
-
 static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
     const ASTContext &Context, const CXXRecordDecl *Class) {
-  if (!canDeterminePointerAuthContent(Context, Class))
-    return false;
   if (!Class->isPolymorphic())
     return false;
   const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
@@ -1657,13 +1639,16 @@ ASTContext::findPointerAuthContent(QualType T) const {
   assert(isPointerAuthenticationAvailable());
 
   T = T.getCanonicalType();
-  if (!canDeterminePointerAuthContent(T))
+  if (T->isDependentType())
     return PointerAuthContent::None;
 
   if (T.hasAddressDiscriminatedPointerAuth())
     return PointerAuthContent::AddressDiscriminatedData;
   const RecordDecl *RD = T->getAsRecordDecl();
   if (!RD)
+    return PointerAuthContent::None;
+
+  if (RD->isInvalidDecl())
     return PointerAuthContent::None;
 
   if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
@@ -3248,7 +3233,6 @@ QualType ASTContext::removeAddrSpaceQualType(QualType T) const {
 
 uint16_t
 ASTContext::getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD) {
-  assert(canDeterminePointerAuthContent(*this, RD));
   assert(RD->isPolymorphic() &&
          "Attempted to get vtable pointer discriminator on a monomorphic type");
   std::unique_ptr<MangleContext> MC(createMangleContext());
@@ -3536,9 +3520,6 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
   assert(!T->isDependentType() &&
          "cannot compute type discriminator of a dependent type");
-  assert(canDeterminePointerAuthContent(T) &&
-         "cannot compute type discriminator of an incomplete or otherwise "
-         "invalid type");
   SmallString<256> Str;
   llvm::raw_svector_ostream Out(Str);
 
