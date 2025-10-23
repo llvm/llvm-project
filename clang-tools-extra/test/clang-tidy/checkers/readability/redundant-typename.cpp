@@ -1,11 +1,15 @@
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s readability-redundant-typename %t \
+// RUN: %check_clang_tidy -std=c++11,c++14 %s readability-redundant-typename %t \
 // RUN:   -- -- -fno-delayed-template-parsing
-// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,20 %s readability-redundant-typename %t \
+// RUN: %check_clang_tidy -std=c++17 -check-suffixes=,17 %s readability-redundant-typename %t \
+// RUN:   -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,17,20 %s readability-redundant-typename %t \
 // RUN:   -- -- -fno-delayed-template-parsing
 
 struct NotDependent {
   using R = int;
   struct S {};
+  template <typename = int>
+  struct T {};
 };
 
 auto f(typename NotDependent::S)
@@ -15,6 +19,16 @@ auto f(typename NotDependent::S)
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: redundant 'typename' [readability-redundant-typename]
   // CHECK-FIXES: -> NotDependent::R
 {
+  typename NotDependent::T<int> V1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-FIXES: NotDependent::T<int> V1;
+
+#if __cplusplus >= 201703L
+  typename NotDependent::T V2;
+  // CHECK-MESSAGES-17: :[[@LINE-1]]:3: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-FIXES-17: NotDependent::T V2;
+#endif
+
   return typename NotDependent::R();
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: redundant 'typename' [readability-redundant-typename]
   // return NotDependent::R();
@@ -211,4 +225,17 @@ public:
   enum class E2 : typename T::R {};
   operator typename T::R();
   void m() { this->operator typename T::R(); }
+#if __cplusplus >= 202002L
+  T::R n;
+  T::R q(T::R) {}
+#endif
 };
+
+#define TYPENAME_KEYWORD_IN_MACRO typename
+TYPENAME_KEYWORD_IN_MACRO NotDependent::R Macro1;
+
+#define WHOLE_TYPE_IN_MACRO typename NotDependent::R
+WHOLE_TYPE_IN_MACRO Macro2;
+
+#define WHOLE_DECLARATION_IN_MACRO typename NotDependent::R Macro3
+WHOLE_DECLARATION_IN_MACRO;

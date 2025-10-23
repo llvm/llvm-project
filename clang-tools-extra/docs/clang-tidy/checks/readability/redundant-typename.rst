@@ -20,7 +20,12 @@ where only a type is allowed (the following example shows just a few of them):
   using trait = /* typename */ T::type;
 
   template <typename T>
+  /*typename*/ T::underlying_type as_underlying(T n) {
+    return static_cast</*typename*/ T::underlying_type>(n);
+  }
+
+  template <typename T>
   struct S {
-    /* typename */ T::type variable;
-    /* typename */ T::type function(/* typename */ T::type);
+    /*typename*/ T::type variable;
+    /*typename*/ T::type function(/*typename*/ T::type);
   };
