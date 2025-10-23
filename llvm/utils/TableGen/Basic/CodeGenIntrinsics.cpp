@@ -292,7 +292,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
 
     if (Name == DerivedName)
       PrintNote(DefLoc, "Explicitly specified name matches default name, "
-                        "consider dropping it.");
+                        "consider dropping it");
   }
 
   // If TargetPrefix is specified, make sure that Name starts with
