@@ -148,22 +148,6 @@ template <typename T> constexpr T ldexp_impl(T X, T Exp) {
   return exp2(Exp) * X;
 }
 
-template <typename T> constexpr T ddx_coarse_impl(T value) {
-#if (__has_builtin(__builtin_spirv_ddx_coarse))
-  return __builtin_spirv_ddx_coarse(value);
-#else
-  return __builtin_hlsl_elementwise_ddx_coarse(value);
-#endif
-}
-
-template <typename T> constexpr T ddy_coarse_impl(T value) {
-#if (__has_builtin(__builtin_spirv_ddy_coarse))
-  return __builtin_spirv_ddy_coarse(value);
-#else
-  return __builtin_hlsl_elementwise_ddy_coarse(value);
-#endif
-}
-
 } // namespace __detail
 } // namespace hlsl
 
