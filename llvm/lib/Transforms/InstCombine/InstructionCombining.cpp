@@ -4981,9 +4981,32 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
   //   Op1.fr = Freeze(Op1)
   //   ... = Inst(Op1.fr, NonPoisonOps...)
 
-  auto CanPushFreeze = [](Value *V) {
-    if (!isa<Instruction>(V) || isa<PHINode>(V))
+  auto CanPushFreeze = [this](Value *V) {
+    if (!isa<Instruction>(V))
       return false;
+
+    if (auto *PN = dyn_cast<PHINode>(V)) {
+      BasicBlock *BB = PN->getParent();
+      SmallPtrSet<BasicBlock *, 8> VisitedBBs;
+      for (Use &U : PN->incoming_values()) {
+        BasicBlock *InBB = PN->getIncomingBlock(U);
+        // We can't move freeze if the start value is the result of a
+        // terminator (e.g. an invoke).
+        if (auto *OpI = dyn_cast<Instruction>(U)) {
+          if (OpI->isTerminator())
+            return false;
+        }
+
+        // If there's multiple incoming edges from the same predecessor we must
+        // ensure the freeze isn't pushed to a single one of the uses,
+        // invalidating the iterator. We simply don't support this case, but it
+        // could be handled if there's a use case.
+        if (isBackEdge(InBB, BB) || !VisitedBBs.insert(InBB).second ||
+            match(U.get(), m_Undef()))
+          return false;
+        VisitedBBs.insert(InBB);
+      }
+    }
 
     // We can't push the freeze through an instruction which can itself create
     // poison.  If the only source of new poison is flags, we can simply
@@ -5008,8 +5031,14 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       if (U == OrigUse)
         return nullptr;
 
+      if (isa<PoisonValue>(V))
+        continue;
+
       auto *UserI = cast<Instruction>(U->getUser());
-      Builder.SetInsertPoint(UserI);
+      if (auto *PN = dyn_cast<PHINode>(UserI))
+        Builder.SetInsertPoint(PN->getIncomingBlock(*U)->getTerminator());
+      else
+        Builder.SetInsertPoint(UserI);
       Value *Frozen = Builder.CreateFreeze(V, V->getName() + ".fr");
       U->set(Frozen);
       continue;
