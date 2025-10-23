@@ -1,18 +1,17 @@
-//===-- clang-offload-packager/ClangOffloadPackager.cpp - file bundler ---===//
+//===-- llvm-offload-binary.cpp - offload binary management utility -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This tool takes several device object files and bundles them into a single
 // binary image using a custom binary format. This is intended to be used to
-// embed many device files into an application to create a fat binary.
+// embed many device files into an application to create a fat binary. It also
+// supports extracting these files from a known location.
 //
-//===---------------------------------------------------------------------===//
-
-#include "clang/Basic/Version.h"
+//===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -32,36 +31,31 @@ using namespace llvm::object;
 
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
-static cl::OptionCategory
-    ClangOffloadPackagerCategory("clang-offload-packager options");
+static cl::OptionCategory OffloadBinaryCategory("llvm-offload-binary options");
 
 static cl::opt<std::string> OutputFile("o", cl::desc("Write output to <file>."),
                                        cl::value_desc("file"),
-                                       cl::cat(ClangOffloadPackagerCategory));
+                                       cl::cat(OffloadBinaryCategory));
 
 static cl::opt<std::string> InputFile(cl::Positional,
                                       cl::desc("Extract from <file>."),
                                       cl::value_desc("file"),
-                                      cl::cat(ClangOffloadPackagerCategory));
+                                      cl::cat(OffloadBinaryCategory));
 
 static cl::list<std::string>
     DeviceImages("image",
                  cl::desc("List of key and value arguments. Required keywords "
                           "are 'file' and 'triple'."),
                  cl::value_desc("<key>=<value>,..."),
-                 cl::cat(ClangOffloadPackagerCategory));
+                 cl::cat(OffloadBinaryCategory));
 
 static cl::opt<bool>
     CreateArchive("archive",
                   cl::desc("Write extracted files to a static archive"),
-                  cl::cat(ClangOffloadPackagerCategory));
+                  cl::cat(OffloadBinaryCategory));
 
 /// Path of the current binary.
 static const char *PackagerExecutable;
-
-static void PrintVersion(raw_ostream &OS) {
-  OS << clang::getClangToolFullVersion("clang-offload-packager") << '\n';
-}
 
 // Get a map containing all the arguments for the image. Repeated arguments will
 // be placed in a comma separated list.
@@ -115,9 +109,11 @@ static Error bundleImages() {
       // Clang uses the '.o' suffix for LTO bitcode.
       if (identify_magic((*ObjectOrErr)->getBuffer()) == file_magic::bitcode)
         ImageBinary.TheImageKind = object::IMG_Bitcode;
-      else
+      else if (sys::path::has_extension(File))
         ImageBinary.TheImageKind =
             getImageKind(sys::path::extension(File).drop_front());
+      else
+        ImageBinary.TheImageKind = IMG_None;
       ImageBinary.Image = std::move(*ObjectOrErr);
       for (const auto &[Key, Value] : Args) {
         if (Key == "kind") {
@@ -222,15 +218,19 @@ static Error unbundleImages() {
 
 int main(int argc, const char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
-  cl::HideUnrelatedOptions(ClangOffloadPackagerCategory);
-  cl::SetVersionPrinter(PrintVersion);
+  cl::HideUnrelatedOptions(OffloadBinaryCategory);
   cl::ParseCommandLineOptions(
       argc, argv,
       "A utility for bundling several object files into a single binary.\n"
       "The output binary can then be embedded into the host section table\n"
       "to create a fatbinary containing offloading code.\n");
 
-  if (Help) {
+  if (sys::path::stem(argv[0]).ends_with("clang-offload-packager"))
+    WithColor::warning(errs(), PackagerExecutable)
+        << "'clang-offload-packager' is deprecated. Use 'llvm-offload-binary' "
+           "instead.\n";
+
+  if (Help || (OutputFile.empty() && InputFile.empty())) {
     cl::PrintHelpMessage();
     return EXIT_SUCCESS;
   }
