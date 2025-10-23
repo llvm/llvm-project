@@ -3837,31 +3837,72 @@ OMPClause *Parser::ParseOpenMPSingleExprWithArgClause(OpenMPDirectiveKind DKind,
       KLoc.emplace_back();
     }
   } else if (Kind == OMPC_dyn_groupprivate) {
-    enum { Modifier1, Modifier2, NumberOfElements };
-    Arg.resize(NumberOfElements);
-    KLoc.resize(NumberOfElements);
-    Arg[Modifier1] = OMPC_DYN_GROUPPRIVATE_unknown;
-    Arg[Modifier2] = OMPC_DYN_GROUPPRIVATE_unknown;
-    unsigned Modifier = getOpenMPSimpleClauseType(
-        Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+    enum { SimpleModifier, ComplexModifier, NumberOfModifiers };
+    Arg.resize(NumberOfModifiers);
+    KLoc.resize(NumberOfModifiers);
+    Arg[SimpleModifier] = OMPC_DYN_GROUPPRIVATE_unknown;
+    Arg[ComplexModifier] = OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown;
 
-    if (Modifier < OMPC_DYN_GROUPPRIVATE_unknown) {
-      // Parse 'modifier'
-      Arg[Modifier1] = Modifier;
-      KLoc[Modifier1] = Tok.getLocation();
-      if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
-          Tok.isNot(tok::annot_pragma_openmp_end))
-        ConsumeAnyToken();
-      if (Tok.is(tok::comma)) {
-        // Parse ',' 'modifier'
-        ConsumeAnyToken();
+    auto consumeModifier = [&]() {
+      unsigned Type = NumberOfModifiers;
+      unsigned Modifier;
+      SourceLocation Loc;
+      if (PP.getSpelling(Tok) == "fallback" && NextToken().is(tok::l_paren)) {
+        ConsumeToken();
+        BalancedDelimiterTracker ParenT(*this, tok::l_paren, tok::r_paren);
+        ParenT.consumeOpen();
+
         Modifier = getOpenMPSimpleClauseType(
             Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
-        Arg[Modifier2] = Modifier;
-        KLoc[Modifier2] = Tok.getLocation();
+        if (Modifier <= OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown ||
+            Modifier >= OMPC_DYN_GROUPPRIVATE_FALLBACK_last) {
+          Diag(Tok.getLocation(), diag::err_expected)
+              << "'abort', 'null' or 'default_mem' in fallback modifier";
+          SkipUntil(tok::r_paren);
+          return std::make_tuple(Type, Modifier, Loc);
+        }
+        Type = ComplexModifier;
+        Loc = Tok.getLocation();
         if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
             Tok.isNot(tok::annot_pragma_openmp_end))
           ConsumeAnyToken();
+        ParenT.consumeClose();
+      } else {
+        Modifier = getOpenMPSimpleClauseType(
+            Kind, Tok.isAnnotation() ? "" : PP.getSpelling(Tok), getLangOpts());
+        if (Modifier < OMPC_DYN_GROUPPRIVATE_unknown) {
+          Type = SimpleModifier;
+          Loc = Tok.getLocation();
+          if (Tok.isNot(tok::r_paren) && Tok.isNot(tok::comma) &&
+              Tok.isNot(tok::annot_pragma_openmp_end))
+            ConsumeAnyToken();
+        }
+      }
+      return std::make_tuple(Type, Modifier, Loc);
+    };
+
+    auto saveModifier = [&](unsigned Type, unsigned Modifier,
+                            SourceLocation Loc) {
+      assert(Type < NumberOfModifiers);
+      if (!KLoc[Type].isValid()) {
+        Arg[Type] = Modifier;
+        KLoc[Type] = Loc;
+      } else
+        Diag(Loc, diag::err_omp_incompatible_dyn_groupprivate_modifier)
+            << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, Modifier)
+            << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, Arg[Type]);
+    };
+
+    // Parse 'modifier'
+    auto [Type1, Mod1, Loc1] = consumeModifier();
+    if (Type1 < NumberOfModifiers) {
+      saveModifier(Type1, Mod1, Loc1);
+      if (Tok.is(tok::comma)) {
+        // Parse ',' 'modifier'
+        ConsumeAnyToken();
+        auto [Type2, Mod2, Loc2] = consumeModifier();
+        if (Type2 < NumberOfModifiers)
+          saveModifier(Type2, Mod2, Loc2);
       }
       // Parse ':'
       if (Tok.is(tok::colon))

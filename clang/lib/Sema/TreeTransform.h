@@ -2465,7 +2465,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPDynGroupprivateClause(
       OpenMPDynGroupprivateClauseModifier M1,
-      OpenMPDynGroupprivateClauseModifier M2, Expr *Size,
+      OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
       SourceLocation M2Loc, SourceLocation EndLoc) {
     return getSema().OpenMP().ActOnOpenMPDynGroupprivateClause(
@@ -11727,10 +11727,10 @@ OMPClause *TreeTransform<Derived>::TransformOMPDynGroupprivateClause(
   if (Size.isInvalid())
     return nullptr;
   return getDerived().RebuildOMPDynGroupprivateClause(
-      C->getFirstDynGroupprivateModifier(),
-      C->getSecondDynGroupprivateModifier(), Size.get(), C->getBeginLoc(),
-      C->getLParenLoc(), C->getFirstDynGroupprivateModifierLoc(),
-      C->getSecondDynGroupprivateModifierLoc(), C->getEndLoc());
+      C->getDynGroupprivateModifier(), C->getDynGroupprivateFallbackModifier(),
+      Size.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getDynGroupprivateModifierLoc(),
+      C->getDynGroupprivateFallbackModifierLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

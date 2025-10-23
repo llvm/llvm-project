@@ -16731,7 +16731,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
            ArgumentLoc.size() == NumberOfElements);
     Res = ActOnOpenMPDynGroupprivateClause(
         static_cast<OpenMPDynGroupprivateClauseModifier>(Argument[Modifier1]),
-        static_cast<OpenMPDynGroupprivateClauseModifier>(Argument[Modifier2]),
+        static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
+            Argument[Modifier2]),
         Expr, StartLoc, LParenLoc, ArgumentLoc[Modifier1],
         ArgumentLoc[Modifier2], EndLoc);
   } break;
@@ -24179,30 +24180,18 @@ OMPClause *SemaOpenMP::ActOnOpenMPXDynCGroupMemClause(Expr *Size,
 
 OMPClause *SemaOpenMP::ActOnOpenMPDynGroupprivateClause(
     OpenMPDynGroupprivateClauseModifier M1,
-    OpenMPDynGroupprivateClauseModifier M2, Expr *Size, SourceLocation StartLoc,
-    SourceLocation LParenLoc, SourceLocation M1Loc, SourceLocation M2Loc,
-    SourceLocation EndLoc) {
+    OpenMPDynGroupprivateClauseFallbackModifier M2, Expr *Size,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation M1Loc,
+    SourceLocation M2Loc, SourceLocation EndLoc) {
 
   if ((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ||
-      (M2Loc.isValid() && M2 == OMPC_DYN_GROUPPRIVATE_unknown)) {
+      (M2Loc.isValid() && M2 == OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown)) {
     std::string Values = getListOfPossibleValues(
         OMPC_dyn_groupprivate, /*First=*/0, OMPC_DYN_GROUPPRIVATE_unknown);
     Diag((M1Loc.isValid() && M1 == OMPC_DYN_GROUPPRIVATE_unknown) ? M1Loc
                                                                   : M2Loc,
          diag::err_omp_unexpected_clause_value)
         << Values << getOpenMPClauseName(OMPC_dyn_groupprivate);
-    return nullptr;
-  }
-
-  if ((M1Loc.isValid() && M2Loc.isValid() && M1 == M2) ||
-      (M1 == OMPC_DYN_GROUPPRIVATE_strict &&
-       M2 == OMPC_DYN_GROUPPRIVATE_fallback) ||
-      (M1 == OMPC_DYN_GROUPPRIVATE_fallback &&
-       M2 == OMPC_DYN_GROUPPRIVATE_strict)) {
-
-    Diag(M2Loc, diag::err_omp_unexpected_dyn_groupprivate_modifier)
-        << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, M2)
-        << getOpenMPSimpleClauseTypeName(OMPC_dyn_groupprivate, M1);
     return nullptr;
   }
 

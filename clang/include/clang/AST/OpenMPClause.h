@@ -9781,8 +9781,8 @@ class OMPDynGroupprivateClause : public OMPClause, public OMPClauseWithPreInit {
   SourceLocation LParenLoc;
 
   /// Modifiers for 'dyn_groupprivate' clause.
-  enum { FIRST, SECOND, NUM_MODIFIERS };
-  OpenMPDynGroupprivateClauseModifier Modifiers[NUM_MODIFIERS];
+  enum { SIMPLE, FALLBACK, NUM_MODIFIERS };
+  unsigned Modifiers[NUM_MODIFIERS];
 
   /// Locations of modifiers.
   SourceLocation ModifiersLoc[NUM_MODIFIERS];
@@ -9793,37 +9793,26 @@ class OMPDynGroupprivateClause : public OMPClause, public OMPClauseWithPreInit {
   /// Set the first dyn_groupprivate modifier.
   ///
   /// \param M The modifier.
-  void setFirstDynGroupprivateModifier(OpenMPDynGroupprivateClauseModifier M) {
-    Modifiers[FIRST] = M;
+  void setDynGroupprivateModifier(OpenMPDynGroupprivateClauseModifier M) {
+    Modifiers[SIMPLE] = M;
   }
 
   /// Set the second dyn_groupprivate modifier.
   ///
   /// \param M The modifier.
-  void setSecondDynGroupprivateModifier(OpenMPDynGroupprivateClauseModifier M) {
-    Modifiers[SECOND] = M;
+  void setDynGroupprivateFallbackModifier(
+      OpenMPDynGroupprivateClauseFallbackModifier M) {
+    Modifiers[FALLBACK] = M;
   }
 
   /// Set location of the first dyn_groupprivate modifier.
-  void setFirstDynGroupprivateModifierLoc(SourceLocation Loc) {
-    ModifiersLoc[FIRST] = Loc;
+  void setDynGroupprivateModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[SIMPLE] = Loc;
   }
 
   /// Set location of the second dyn_groupprivate modifier.
-  void setSecondDynGroupprivateModifierLoc(SourceLocation Loc) {
-    ModifiersLoc[SECOND] = Loc;
-  }
-
-  /// Set dyn_groupprivate modifier location.
-  ///
-  /// \param M The modifier location.
-  void setDynGroupprivateModifer(OpenMPDynGroupprivateClauseModifier M) {
-    if (Modifiers[FIRST] == OMPC_DYN_GROUPPRIVATE_unknown)
-      Modifiers[FIRST] = M;
-    else {
-      assert(Modifiers[SECOND] == OMPC_DYN_GROUPPRIVATE_unknown);
-      Modifiers[SECOND] = M;
-    }
+  void setDynGroupprivateFallbackModifierLoc(SourceLocation Loc) {
+    ModifiersLoc[FALLBACK] = Loc;
   }
 
   /// Sets the location of '('.
@@ -9852,15 +9841,15 @@ public:
                            OpenMPDirectiveKind CaptureRegion,
                            OpenMPDynGroupprivateClauseModifier M1,
                            SourceLocation M1Loc,
-                           OpenMPDynGroupprivateClauseModifier M2,
+                           OpenMPDynGroupprivateClauseFallbackModifier M2,
                            SourceLocation M2Loc)
       : OMPClause(llvm::omp::OMPC_dyn_groupprivate, StartLoc, EndLoc),
         OMPClauseWithPreInit(this), LParenLoc(LParenLoc), Size(Size) {
     setPreInitStmt(HelperSize, CaptureRegion);
-    Modifiers[FIRST] = M1;
-    Modifiers[SECOND] = M2;
-    ModifiersLoc[FIRST] = M1Loc;
-    ModifiersLoc[SECOND] = M2Loc;
+    Modifiers[SIMPLE] = M1;
+    Modifiers[FALLBACK] = M2;
+    ModifiersLoc[SIMPLE] = M1Loc;
+    ModifiersLoc[FALLBACK] = M2Loc;
   }
 
   /// Build an empty clause.
@@ -9868,31 +9857,33 @@ public:
       : OMPClause(llvm::omp::OMPC_dyn_groupprivate, SourceLocation(),
                   SourceLocation()),
         OMPClauseWithPreInit(this) {
-    Modifiers[FIRST] = OMPC_DYN_GROUPPRIVATE_unknown;
-    Modifiers[SECOND] = OMPC_DYN_GROUPPRIVATE_unknown;
+    Modifiers[SIMPLE] = OMPC_DYN_GROUPPRIVATE_unknown;
+    Modifiers[FALLBACK] = OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown;
   }
 
   /// Get the first modifier of the clause.
-  OpenMPDynGroupprivateClauseModifier getFirstDynGroupprivateModifier() const {
-    return Modifiers[FIRST];
+  OpenMPDynGroupprivateClauseModifier getDynGroupprivateModifier() const {
+    return static_cast<OpenMPDynGroupprivateClauseModifier>(Modifiers[SIMPLE]);
   }
 
   /// Get the second modifier of the clause.
-  OpenMPDynGroupprivateClauseModifier getSecondDynGroupprivateModifier() const {
-    return Modifiers[SECOND];
+  OpenMPDynGroupprivateClauseFallbackModifier
+  getDynGroupprivateFallbackModifier() const {
+    return static_cast<OpenMPDynGroupprivateClauseFallbackModifier>(
+        Modifiers[FALLBACK]);
   }
 
   /// Get location of '('.
   SourceLocation getLParenLoc() { return LParenLoc; }
 
   /// Get the first modifier location.
-  SourceLocation getFirstDynGroupprivateModifierLoc() const {
-    return ModifiersLoc[FIRST];
+  SourceLocation getDynGroupprivateModifierLoc() const {
+    return ModifiersLoc[SIMPLE];
   }
 
   /// Get the second modifier location.
-  SourceLocation getSecondDynGroupprivateModifierLoc() const {
-    return ModifiersLoc[SECOND];
+  SourceLocation getDynGroupprivateFallbackModifierLoc() const {
+    return ModifiersLoc[FALLBACK];
   }
 
   /// Get size.

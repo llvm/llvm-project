@@ -175,6 +175,9 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
     return llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
   .Case(#Name, OMPC_DYN_GROUPPRIVATE_##Name)
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  .Case(#Name, OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)                          \
+      .Case("fallback(" #Name ")", OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DYN_GROUPPRIVATE_unknown);
   }
@@ -518,10 +521,14 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_dyn_groupprivate:
     switch (Type) {
     case OMPC_DYN_GROUPPRIVATE_unknown:
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_last:
       return "unknown";
 #define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
   case OMPC_DYN_GROUPPRIVATE_##Name:                                           \
     return #Name;
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  case OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name:                                  \
+    return "fallback(" #Name ")";
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'dyn_groupprivate' clause modifier");

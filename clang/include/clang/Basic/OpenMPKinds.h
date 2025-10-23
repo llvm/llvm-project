@@ -223,9 +223,13 @@ enum OpenMPDynGroupprivateClauseModifier {
   OMPC_DYN_GROUPPRIVATE_unknown
 };
 
-/// Number of allowed dyn_groupprivate-modifiers.
-static constexpr unsigned NumberOfOMPDynGroupprivateClauseModifiers =
-    OMPC_DYN_GROUPPRIVATE_unknown;
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
+};
 
 enum OpenMPNumTasksClauseModifier {
 #define OPENMP_NUMTASKS_MODIFIER(Name) OMPC_NUMTASKS_##Name,
