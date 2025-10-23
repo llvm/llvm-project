@@ -348,6 +348,40 @@ def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: matmul_t_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_MatmulTBlockScaledOp : Tosa_InferShapedTypeOp<"matmul_t_block_scaled"> {
+  let summary = "Performs two dimensional matrix multiplications using block scaled tensors.";
+
+  let description = [{
+    Performs two dimensional matrix multiplications using block scaled tensors. The block
+    dimension is always the the last dimension of the tensor, so the result is effectively
+    a matrix multiply of A by the transposed B matrix. If the N dimension of input B is of
+    size 1, the B matrix will be broadcast.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensor3D:$a_data,
+    Tosa_MXFPScaleTensor3D:$a_scale,
+    Tosa_MXFPDataTensor3D:$b_data,
+    Tosa_MXFPScaleTensor3D:$b_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_Tensor3D:$output_data
+  );
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_MXFP]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: max_pool2d
 //===----------------------------------------------------------------------===//
 def Tosa_MaxPool2dOp : Tosa_InferShapedTypeOp<"max_pool2d"> {

@@ -270,13 +270,14 @@ def Tosa_EXT_CONTROLFLOW  : I32EnumAttrCase<"controlflow", 8>;
 def Tosa_EXT_DOUBLEROUND  : I32EnumAttrCase<"doubleround", 9>;
 def Tosa_EXT_INEXACTROUND : I32EnumAttrCase<"inexactround", 10>;
 def Tosa_EXT_DYNAMIC      : I32EnumAttrCase<"dynamic", 11>;
+def Tosa_EXT_MXFP         : I32EnumAttrCase<"mxfp", 12>;
 
 def Tosa_ExtensionAttr
     : Tosa_I32EnumAttr<"Extension", "supported TOSA extensions", "ext", [
       Tosa_EXT_NONE, Tosa_EXT_INT16, Tosa_EXT_INT4, Tosa_EXT_BF16,
       Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_FFT, Tosa_EXT_VARIABLE,
       Tosa_EXT_CONTROLFLOW, Tosa_EXT_DOUBLEROUND, Tosa_EXT_INEXACTROUND,
-      Tosa_EXT_DYNAMIC
+      Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP
     ]> {
   let extraClassDeclaration = [{
     static llvm::SmallVector<Extension, 11> getAllValues() {
@@ -284,7 +285,7 @@ def Tosa_ExtensionAttr
         Extension::int16, Extension::int4, Extension::bf16,
         Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
         Extension::variable, Extension::controlflow, Extension::doubleround,
-        Extension::inexactround, Extension::dynamic
+        Extension::inexactround, Extension::dynamic, Extension::mxfp
       };
     }
   }];
@@ -437,7 +438,7 @@ def Tosa_TargetEnv : Tosa_Attr<"TargetEnv", "target_env"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Iterable attributes.
+// Enum attributes.
 //===----------------------------------------------------------------------===//
 // Defined in `section 3. Enumerations` of the TOSA specification.
 
@@ -462,6 +463,18 @@ def Tosa_ROUNDING_DOUBLE_ROUND    : I32EnumAttrCase<"DOUBLE_ROUND", 3>;
 def Tosa_RoundingModeAttr
     : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
                     [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
+
+def Tosa_BLOCK_SIZE_32 : I32EnumAttrCase<"BLOCK_SIZE_32", 32>;
+
+def Tosa_BlockSizeAttr
+    : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats", "block_size",
+                    [Tosa_BLOCK_SIZE_32]> {
+  let extraClassDeclaration = [{
+    static uint32_t getBlockSizeValue(BlockSize blockSize) {
+      return static_cast<uint32_t>(blockSize);
+    }
+  }];
+}
 
 
 //===----------------------------------------------------------------------===//

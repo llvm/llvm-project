@@ -37,7 +37,7 @@ namespace rt_bootstrap {
 /// Simple page-based allocator.
 class LLVM_ABI SimpleExecutorDylibManager : public ExecutorBootstrapService {
 public:
-  virtual ~SimpleExecutorDylibManager();
+  ~SimpleExecutorDylibManager() override;
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
 
