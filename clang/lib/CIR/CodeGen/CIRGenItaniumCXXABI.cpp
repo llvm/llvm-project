@@ -120,6 +120,8 @@ public:
     return true;
   }
 
+  void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override;
+
   mlir::Value
   getVirtualBaseClassOffset(mlir::Location loc, CIRGenFunction &cgf,
                             Address thisAddr, const CXXRecordDecl *classDecl,
@@ -1881,6 +1883,11 @@ static void emitCallToBadCast(CIRGenFunction &cgf, mlir::Location loc) {
   cgf.emitRuntimeCall(loc, getBadCastFn(cgf));
   cir::UnreachableOp::create(cgf.getBuilder(), loc);
   cgf.getBuilder().clearInsertionPoint();
+}
+
+void CIRGenItaniumCXXABI::emitBadCastCall(CIRGenFunction &cgf,
+                                          mlir::Location loc) {
+  emitCallToBadCast(cgf, loc);
 }
 
 // TODO(cir): This could be shared with classic codegen.
