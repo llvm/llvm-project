@@ -61,8 +61,8 @@ if (LLDB_ENABLE_PYTHON)
     "Path to python interpreter exectuable, relative to python's install prefix")
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
-  set(cachestring_LLDB_PYTHON_SHARED_LIBRARY_NAME
-    "Filename of Python's shared library")
+  set(cachestring_LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+    "Filename of Python's runtime library")
 
   foreach(var LLDB_PYTHON_RELATIVE_PATH LLDB_PYTHON_EXE_RELATIVE_PATH LLDB_PYTHON_EXT_SUFFIX)
     if(NOT DEFINED ${var} AND NOT CMAKE_CROSSCOMPILING)
@@ -89,8 +89,7 @@ if (LLDB_ENABLE_PYTHON)
       set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
     endif()
   endif()
-  set(LLDB_PYTHON_SHARED_LIBRARY_FILENAME
-    "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  get_filename_component(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME Python3_RUNTIME_LIBRARY NAME)
 endif ()
 
 if (LLDB_ENABLE_LUA)

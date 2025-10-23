@@ -477,14 +477,14 @@ bool AddPythonDLLToSearchPath() {
 }
 #endif
 
-#ifdef LLDB_PYTHON_SHARED_LIBRARY_FILENAME
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
 /// Returns whether `python3x.dll` is in the DLL search path.
 bool IsPythonDLLInPath() {
 #define WIDEN2(x) L##x
 #define WIDEN(x) WIDEN2(x)
   WCHAR foundPath[MAX_PATH];
   DWORD result =
-      SearchPathW(nullptr, WIDEN(LLDB_PYTHON_SHARED_LIBRARY_FILENAME), nullptr,
+      SearchPathW(nullptr, WIDEN(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME), nullptr,
                   MAX_PATH, foundPath, nullptr);
 #undef WIDEN2
 #undef WIDEN
@@ -492,6 +492,18 @@ bool IsPythonDLLInPath() {
   return result > 0;
 }
 #endif
+
+void SetupPythonRuntimeLibrary() {
+#ifdef LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+  if (!IsPythonDLLInPath())
+#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
+    if (AddPythonDLLToSearchPath())
+      return
+#endif
+          llvm::errs() << "error: unable to find "
+                       << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << ".\n";
+#endif
+}
 #endif
 
 std::string EscapeString(std::string arg) {
@@ -796,13 +808,8 @@ int main(int argc, char const *argv[]) {
                         "~/Library/Logs/DiagnosticReports/.\n");
 #endif
 
-#if defined(_WIN32) && defined(LLDB_PYTHON_SHARED_LIBRARY_FILENAME)
-  if (!IsPythonDLLInPath())
-#ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-    if (!AddPythonDLLToSearchPath())
-#endif
-      llvm::errs() << "error: unable to find "
-                   << LLDB_PYTHON_SHARED_LIBRARY_FILENAME << ".\n";
+#ifdef _WIN32
+  SetupPythonRuntimeLibrary();
 #endif
 
   // Parse arguments.
