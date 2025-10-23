@@ -82,6 +82,13 @@ void MacroUsageCheck::registerPPCallbacks(const SourceManager &SM,
 void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {
   const MacroInfo *Info = MD->getMacroInfo();
   StringRef Message;
+  bool PossiblyNotFunctionLike;
+  if (Info->getNumTokens() > 0) {
+    const Token &Tok = Info->getReplacementToken(0);
+    PossiblyNotFunctionLike = Tok.is(tok::kw___attribute);
+  } else {
+    PossiblyNotFunctionLike = false;
+  }
 
   if (llvm::all_of(Info->tokens(), std::mem_fn(&Token::isLiteral)))
     Message = "macro '%0' used to declare a constant; consider using a "
@@ -89,10 +96,10 @@ void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {
   // A variadic macro is function-like at the same time. Therefore variadic
   // macros are checked first and will be excluded for the function-like
   // diagnostic.
-  else if (Info->isVariadic())
+  else if (Info->isVariadic() && !PossiblyNotFunctionLike)
     Message = "variadic macro '%0' used; consider using a 'constexpr' "
               "variadic template function";
-  else if (Info->isFunctionLike())
+  else if (Info->isFunctionLike() && !PossiblyNotFunctionLike)
     Message = "function-like macro '%0' used; consider a 'constexpr' template "
               "function";
 
