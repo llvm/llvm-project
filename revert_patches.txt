@@ -2,3 +2,6 @@
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
+revert: breaks comgr build
+66879f80342 - [clang] Don't silently inherit the VFS from `FileManager` (#164323) 
+---

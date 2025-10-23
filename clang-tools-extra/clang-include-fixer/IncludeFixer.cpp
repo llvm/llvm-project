@@ -90,7 +90,6 @@ bool IncludeFixerActionFactory::runInvocation(
 
   // Set up Clang.
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
-  Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
 
   // Create the compiler's actual diagnostics engine. We want to drop all
