@@ -66,6 +66,7 @@ Changes to the LLVM IR
   `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
   Instead, the `align` attribute should be placed on the pointer (or vector of
   pointers) argument.
+* A `load atomic` may now be used with vector types on x86.
 
 Changes to LLVM infrastructure
 ------------------------------
