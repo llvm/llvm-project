@@ -2165,8 +2165,7 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
 }
 
 void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
-  VisitExpr(E);
-  // TODO:
+  // TODO(Reflection): Implement this.
 }
 
 void
