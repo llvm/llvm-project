@@ -1640,10 +1640,7 @@ void ARMAsmPrinter::EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
     bool isLast = (i == 3);
 
     // Verify the immediate can be encoded as Thumb2 modified immediate.
-#ifndef NDEBUG
-    int T2SOImmVal = ARM_AM::getT2SOImmVal(imm);
-#endif // NDEBUG
-    assert(T2SOImmVal != -1 &&
+    assert(ARM_AM::getT2SOImmVal(imm) != -1 &&
            "Cannot encode immediate as Thumb2 modified immediate");
 
     // eor[s] scratch, scratch, #imm (last one sets flags with CPSR)
