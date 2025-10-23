@@ -291,6 +291,7 @@ jobs:
         ninja -v -C libxml-build install
 
     - name: Install libxml2
+      if: false
       run: |
         vcpkg install libxml2
 
