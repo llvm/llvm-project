@@ -435,7 +435,7 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
   // llvm.errno.tbaa was recently added but is not supported in LLVM 3.7 and
   // causes all tests using the DXIL Validator to fail.
   //
-  // This is a temporary fix and should be replaced with a whitelist once
+  // This is a temporary fix and should be replaced with a allowlist once
   // we have determined all metadata that the DXIL Validator allows
   if (NamedMDNode *ErrNo = M.getNamedMetadata("llvm.errno.tbaa"))
     ErrNo->eraseFromParent();
