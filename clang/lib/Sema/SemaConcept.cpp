@@ -417,8 +417,8 @@ class ConstraintSatisfactionChecker {
   const NamedDecl *Template;
   SourceLocation TemplateNameLoc;
   UnsignedOrNone PackSubstitutionIndex;
-
   ConstraintSatisfaction &Satisfaction;
+  bool BuildExpression;
 
 private:
   ExprResult
@@ -461,10 +461,11 @@ public:
   ConstraintSatisfactionChecker(Sema &SemaRef, const NamedDecl *Template,
                                 SourceLocation TemplateNameLoc,
                                 UnsignedOrNone PackSubstitutionIndex,
-                                ConstraintSatisfaction &Satisfaction)
+                                ConstraintSatisfaction &Satisfaction,
+                                bool BuildExpression)
       : S(SemaRef), Template(Template), TemplateNameLoc(TemplateNameLoc),
         PackSubstitutionIndex(PackSubstitutionIndex),
-        Satisfaction(Satisfaction) {}
+        Satisfaction(Satisfaction), BuildExpression(BuildExpression) {}
 
   ExprResult Evaluate(const NormalizedConstraint &Constraint,
                       const MultiLevelTemplateArgumentList &MLTAL);
@@ -821,9 +822,10 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     Satisfaction.ContainsErrors = false;
     ExprResult Expr =
         ConstraintSatisfactionChecker(S, Template, TemplateNameLoc,
-                                      UnsignedOrNone(I), Satisfaction)
+                                      UnsignedOrNone(I), Satisfaction,
+                                      /*BuildExpression=*/false)
             .Evaluate(Constraint.getNormalizedPattern(), *SubstitutedArgs);
-    if (Expr.isUsable()) {
+    if (BuildExpression && Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
       else
@@ -834,7 +836,7 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
                                      Constraint.getBeginLoc(),
                                      FPOptionsOverride{});
     } else {
-      assert(!Satisfaction.IsSatisfied);
+      assert(!BuildExpression || !Satisfaction.IsSatisfied);
     }
     if (!Conjunction && Satisfaction.IsSatisfied) {
       Satisfaction.Details.erase(Satisfaction.Details.begin() +
@@ -985,7 +987,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult E = Evaluate(Constraint.getNormalizedConstraint(), MLTAL);
 
-  if (!E.isUsable()) {
+  if (E.isInvalid()) {
     Satisfaction.Details.insert(Satisfaction.Details.begin() + Size, ConceptId);
     return E;
   }
@@ -1041,7 +1043,7 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
   if (Conjunction && (!Satisfaction.IsSatisfied || Satisfaction.ContainsErrors))
     return LHS;
 
-  if (!Conjunction && LHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !LHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     return LHS;
 
@@ -1050,11 +1052,14 @@ ExprResult ConstraintSatisfactionChecker::Evaluate(
 
   ExprResult RHS = Evaluate(Constraint.getRHS(), MLTAL);
 
-  if (RHS.isUsable() && Satisfaction.IsSatisfied &&
+  if (!Conjunction && !RHS.isInvalid() && Satisfaction.IsSatisfied &&
       !Satisfaction.ContainsErrors)
     Satisfaction.Details.erase(Satisfaction.Details.begin() +
                                    EffectiveDetailEndIndex,
                                Satisfaction.Details.end());
+
+  if (!BuildExpression)
+    return Satisfaction.ContainsErrors ? ExprError() : ExprEmpty();
 
   if (!LHS.isUsable())
     return RHS;
@@ -1136,10 +1141,11 @@ static bool CheckConstraintSatisfaction(
                                     Template, /*CSE=*/nullptr,
                                     S.ArgPackSubstIndex);
 
-  ExprResult Res =
-      ConstraintSatisfactionChecker(S, Template, TemplateIDRange.getBegin(),
-                                    S.ArgPackSubstIndex, Satisfaction)
-          .Evaluate(*C, TemplateArgsLists);
+  ExprResult Res = ConstraintSatisfactionChecker(
+                       S, Template, TemplateIDRange.getBegin(),
+                       S.ArgPackSubstIndex, Satisfaction,
+                       /*BuildExpression=*/ConvertedExpr != nullptr)
+                       .Evaluate(*C, TemplateArgsLists);
 
   if (Res.isInvalid())
     return true;
