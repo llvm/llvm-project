@@ -449,7 +449,7 @@ def int_amdgcn_log_clamp : DefaultAttrsIntrinsic<
 
 def int_amdgcn_fmul_legacy : ClangBuiltin<"__builtin_amdgcn_fmul_legacy">,
   DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable, Commutative]
+  [IntrNoMem, IntrSpeculatable, Commutative, IntrNoCreateUndefOrPoison]
 >;
 
 // Fused single-precision multiply-add with legacy behaviour for the multiply,

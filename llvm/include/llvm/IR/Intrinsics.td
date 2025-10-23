@@ -186,6 +186,10 @@ def IntrSpeculatable : IntrinsicProperty;
 // defined by the hasSideEffects property of the TableGen Instruction class.
 def IntrHasSideEffects : IntrinsicProperty;
 
+// Result will not be undef or poison if all arguments are not undef and not
+// poison.
+def IntrNoCreateUndefOrPoison : IntrinsicProperty;
+
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
 //===----------------------------------------------------------------------===//

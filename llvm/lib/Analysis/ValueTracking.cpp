@@ -7446,8 +7446,10 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
         return false;
       case Intrinsic::sshl_sat:
       case Intrinsic::ushl_sat:
-        return includesPoison(Kind) &&
-               !shiftAmountKnownInRange(II->getArgOperand(1));
+        if (!includesPoison(Kind) ||
+            shiftAmountKnownInRange(II->getArgOperand(1)))
+          return false;
+        break;
       case Intrinsic::fma:
       case Intrinsic::fmuladd:
       case Intrinsic::sqrt:
@@ -7496,7 +7498,8 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
   case Instruction::CallBr:
   case Instruction::Invoke: {
     const auto *CB = cast<CallBase>(Op);
-    return !CB->hasRetAttr(Attribute::NoUndef);
+    return !CB->hasRetAttr(Attribute::NoUndef) &&
+           !CB->hasFnAttr(Attribute::NoCreateUndefOrPoison);
   }
   case Instruction::InsertElement:
   case Instruction::ExtractElement: {
