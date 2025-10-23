@@ -319,11 +319,9 @@ static void detectX86FamilyModel(unsigned EAX, unsigned *Family,
 
 #define testFeature(F) (Features[F / 32] & (1 << (F % 32))) != 0
 
-static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
-                                                   unsigned Model,
-                                                   const unsigned *Features,
-                                                   enum ProcessorTypes *Type,
-                                                   enum ProcessorSubtypes *Subtype) {
+static const char *getIntelProcessorTypeAndSubtype(
+    unsigned Family, unsigned Model, const unsigned *Features,
+    enum ProcessorTypes *Type, enum ProcessorSubtypes *Subtype) {
   // We select CPU strings to match the code in Host.cpp, but we don't use them
   // in compiler-rt.
   const char *CPU = 0;
@@ -666,11 +664,9 @@ static const char *getIntelProcessorTypeAndSubtype(unsigned Family,
   return CPU;
 }
 
-static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
-                                                 unsigned Model,
-                                                 const unsigned *Features,
-                                                 enum ProcessorTypes *Type,
-                                                 enum ProcessorSubtypes *Subtype) {
+static const char *getAMDProcessorTypeAndSubtype(
+    unsigned Family, unsigned Model, const unsigned *Features,
+    enum ProcessorTypes *Type, enum ProcessorSubtypes *Subtype) {
   const char *CPU = 0;
 
   switch (Family) {
@@ -1161,12 +1157,13 @@ __attribute__((visibility("hidden")))
 #endif
 struct __processor_model {
   unsigned int __cpu_vendor;
-  enum ProcessorTypes  __cpu_type;
-  enum ProcessorSubtypes  __cpu_subtype;
+  enum ProcessorTypes __cpu_type;
+  enum ProcessorSubtypes __cpu_subtype;
   unsigned int __cpu_features[1];
 } __cpu_model = {0, 0, 0, {0}};
 
-static_assert(sizeof(__cpu_model) == 16, "Wrong size of __cpu_model will result in ABI break");
+static_assert(sizeof(__cpu_model) == 16,
+              "Wrong size of __cpu_model will result in ABI break");
 
 #ifndef _WIN32
 __attribute__((visibility("hidden")))
