@@ -1087,8 +1087,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   def int_arithmetic_fence : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                                    [IntrNoMem]>;
 
-  // If the value doesn't fit an unspecified value is returned (but this
-  // is not poison).
+  // If the value doesn't fit an unspecified value is returned, but this
+  // is not poison so we can still mark these as IntrNoCreateUndefOrPoison.
   def int_lround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_llround : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
   def int_lrint : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
@@ -1102,6 +1102,7 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   def int_frexp : DefaultAttrsIntrinsic<[llvm_anyfloat_ty, llvm_anyint_ty], [LLVMMatchType<0>]>;
 }
 
+// TODO: Move all of these into the IntrNoCreateUndefOrPoison case above.
 let IntrProperties = [IntrNoMem, IntrSpeculatable] in {
   // These functions do not read memory, but are sensitive to the
   // rounding mode. LLVM purposely does not model changes to the FP
