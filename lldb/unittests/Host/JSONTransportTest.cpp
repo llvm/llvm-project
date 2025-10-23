@@ -368,8 +368,8 @@ protected:
   }
 
   void Run() {
-    bool addition_succeeded = loop.AddPendingCallback([](auto &loop) 
-        { loop.RequestTermination(); });
+    bool addition_succeeded =
+        loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
     EXPECT_TRUE(addition_succeeded);
     EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
   }

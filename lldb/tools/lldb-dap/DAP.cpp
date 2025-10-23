@@ -1107,7 +1107,7 @@ llvm::Error DAP::Loop() {
   // Don't wait to join the mainloop thread if our callback wasn't added
   // successfully, or we'll wait forever.
   if (m_loop.AddPendingCallback(
-      [](MainLoopBase &loop) { loop.RequestTermination(); }))
+          [](MainLoopBase &loop) { loop.RequestTermination(); }))
     thread.join();
 
   if (m_error_occurred)

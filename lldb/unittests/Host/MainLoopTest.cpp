@@ -179,12 +179,12 @@ TEST_F(MainLoopTest, PipeDelayBetweenRegisterAndRun) {
     ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
   };
   // Add a write that triggers a read events.
-  bool addition_succeeded = loop.AddCallback(cb, 
-      std::chrono::milliseconds(500));
+  bool addition_succeeded =
+      loop.AddCallback(cb, std::chrono::milliseconds(500));
   ASSERT_TRUE(addition_succeeded);
-  addition_succeeded = loop.AddCallback([](MainLoopBase &loop) 
-      { loop.RequestTermination(); },
-                   std::chrono::milliseconds(1000));
+  addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::milliseconds(1000));
   ASSERT_TRUE(addition_succeeded);
   ASSERT_TRUE(error.Success());
   ASSERT_TRUE(handle);
@@ -314,9 +314,9 @@ TEST_F(MainLoopTest, NoSpuriousSocketReads) {
       error);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   // Terminate the loop after one second.
-  bool addition_succeeded = loop.AddCallback([](MainLoopBase &loop) 
-      { loop.RequestTermination(); },
-                   std::chrono::seconds(1));
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       std::chrono::seconds(1));
   ASSERT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
 
@@ -453,9 +453,9 @@ TEST_F(MainLoopTest, TimedCallbacksRunInOrder) {
   add_cb(2);
   add_cb(4);
   add_cb(1);
-  bool addition_succeeded = loop.AddCallback([](MainLoopBase &loop) 
-      { loop.RequestTermination(); },
-                   start + 5 * epsilon);
+  bool addition_succeeded =
+      loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                       start + 5 * epsilon);
   EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
   EXPECT_GE(std::chrono::steady_clock::now() - start, 5 * epsilon);

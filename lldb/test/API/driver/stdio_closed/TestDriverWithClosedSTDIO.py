@@ -22,7 +22,7 @@ class RenameThisSampleTestTestCase(TestBase):
 
     def test_run_lldb_and_wait(self):
         """This test forks, closes the stdio channels and exec's lldb.
-           Then it waits for it to exit and asserts it did that successfully"""
+        Then it waits for it to exit and asserts it did that successfully"""
         pid = os.fork()
         if pid == 0:
             fcntl.fcntl(sys.stdin, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
@@ -30,7 +30,15 @@ class RenameThisSampleTestTestCase(TestBase):
             fcntl.fcntl(sys.stderr, fcntl.F_SETFD, fcntl.FD_CLOEXEC)
             lldb = lldbtest_config.lldbExec
             print(f"About to run: {lldb}")
-            os.execlp(lldb, lldb, "-x", "-b", "-o", "script print(lldb.debugger.GetNumTargets())", "--batch")
+            os.execlp(
+                lldb,
+                lldb,
+                "-x",
+                "-b",
+                "-o",
+                "script print(lldb.debugger.GetNumTargets())",
+                "--batch",
+            )
         else:
             if pid == -1:
                 print("Couldn't fork a process.")
@@ -42,5 +50,3 @@ class RenameThisSampleTestTestCase(TestBase):
             # of those cases.  The failure will just be that the
             # waitpid doesn't return, and the test times out.
             self.assertFalse(os.WIFSTOPPED(status), "We either exited or crashed.")
-
-
