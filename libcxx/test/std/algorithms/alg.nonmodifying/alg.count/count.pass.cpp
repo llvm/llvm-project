@@ -15,7 +15,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <algorithm>
 #include <cassert>
