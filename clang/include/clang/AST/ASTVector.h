@@ -182,8 +182,6 @@ public:
   /// append - Add the specified range to the end of the SmallVector.
   template <typename in_iter>
   void append(const ASTContext &C, in_iter in_start, in_iter in_end) {
-    using size_type =
-        typename std::remove_reference_t<decltype(*this)>::size_type;
     using iterator_category =
         typename std::iterator_traits<in_iter>::iterator_category;
 
