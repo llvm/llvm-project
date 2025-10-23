@@ -9,7 +9,6 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
 #include "flang/Testing/testing.h"
-#include "llvm/Support/raw_ostream.h"
 #include <type_traits>
 
 using namespace Fortran::runtime;
@@ -77,13 +76,12 @@ static void AddNoiseToCdesc(CFI_cdesc_t *dv, CFI_rank_t rank) {
 static void DumpTestWorld(const void *bAddr, CFI_attribute_t attr,
     CFI_type_t ty, std::size_t eLen, CFI_rank_t rank,
     const CFI_index_t *eAddr) {
-  llvm::outs() << " base_addr: ";
-  llvm::outs().write_hex(reinterpret_cast<std::intptr_t>(bAddr))
-      << " attribute: " << static_cast<int>(attr)
-      << " type: " << static_cast<int>(ty) << " elem_len: " << eLen
-      << " rank: " << static_cast<int>(rank) << " extent: ";
-  llvm::outs().write_hex(reinterpret_cast<std::intptr_t>(eAddr)) << '\n';
-  llvm::outs().flush();
+  std::cout << " base_addr: " << std::hex  << reinterpret_cast<std::intptr_t>(bAddr)
+   " attribute: " <<   std::dec  <<  static_cast<int>(attr)
+   " type: " <<    std::dec   << static_cast<int>(ty) << " elem_len: " <<     std::dec   << eLen
+  " rank: " <<   std::dec    <<  static_cast<int>(rank) << " extent: "
+   <<  std::hex  << reinterpret_cast<std::intptr_t>(eAddr)) << std::endl;
+  std::cout << std::dec;
 }
 #endif
 
