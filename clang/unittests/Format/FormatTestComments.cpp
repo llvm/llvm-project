@@ -24,8 +24,6 @@ class FormatTestComments : public FormatTestBase {};
 //===----------------------------------------------------------------------===//
 
 TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
-  const auto Style20 = getLLVMStyleWithColumns(20);
-
   verifyFormat("//* */");
   verifyFormat("// line 1\n"
                "// line 2\n"
@@ -97,6 +95,8 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                "  VAL_A, // comment\n"
                "  VAL_B\n"
                "};");
+
+  const auto Style20 = getLLVMStyleWithColumns(20);
 
   verifyFormat("enum A {\n"
                "  // line a\n"
@@ -587,7 +587,9 @@ TEST_F(FormatTestComments, DontBreakNonTrailingBlockComments) {
 TEST_F(FormatTestComments, SplitsLongCxxComments) {
   const auto Style10 = getLLVMStyleWithColumns(10);
   const auto Style20 = getLLVMStyleWithColumns(20);
+  const auto Style22 = getLLVMStyleWithColumns(22);
   const auto Style30 = getLLVMStyleWithColumns(30);
+
   verifyFormat("// A comment that\n"
                "// doesn't fit on\n"
                "// one line",
@@ -674,10 +676,10 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
   verifyFormat("//\t aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Style20);
   verifyFormat("#define XXX // a b c d\n"
                "            // e f g h",
-               "#define XXX // a b c d e f g h", getLLVMStyleWithColumns(22));
+               "#define XXX // a b c d e f g h", Style22);
   verifyFormat("#define XXX // q w e r\n"
                "            // t y u i",
-               "#define XXX //q w e r t y u i", getLLVMStyleWithColumns(22));
+               "#define XXX //q w e r t y u i", Style22);
   verifyFormat("{\n"
                "  //\n"
                "  //\\\n"
@@ -753,17 +755,18 @@ TEST_F(FormatTestComments, DontSplitLineCommentsWithEscapedNewlines) {
 
 TEST_F(FormatTestComments, DontIntroduceMultilineComments) {
   // Avoid introducing a multiline comment by breaking after `\`.
+  auto Style = getLLVMStyle();
   for (int ColumnLimit = 15; ColumnLimit <= 17; ++ColumnLimit) {
+    Style.ColumnLimit = ColumnLimit;
     verifyFormat("// aaaaaaaaaa\n"
                  "// \\ bb",
-                 "// aaaaaaaaaa \\ bb", getLLVMStyleWithColumns(ColumnLimit));
+                 "// aaaaaaaaaa \\ bb", Style);
     verifyFormat("// aaaaaaaaa\n"
                  "// \\  bb",
-                 "// aaaaaaaaa \\  bb", getLLVMStyleWithColumns(ColumnLimit));
+                 "// aaaaaaaaa \\  bb", Style);
     verifyFormat("// aaaaaaaaa\n"
                  "// \\  \\ bb",
-                 "// aaaaaaaaa \\  \\ bb",
-                 getLLVMStyleWithColumns(ColumnLimit));
+                 "// aaaaaaaaa \\  \\ bb", Style);
   }
 }
 
@@ -1165,6 +1168,7 @@ TEST_F(FormatTestComments, SplitsLongLinesInComments) {
   const auto Style10 = getLLVMStyleWithColumns(10);
   const auto Style15 = getLLVMStyleWithColumns(15);
   const auto Style20 = getLLVMStyleWithColumns(20);
+
   // FIXME: Do we need to fix up the "  */" at the end?
   // It doesn't look like any of our current logic triggers this.
   verifyFormat("/* This is a long\n"
@@ -1382,16 +1386,13 @@ TEST_F(FormatTestComments, SplitsLongLinesInCommentsInPreprocessor) {
 }
 
 TEST_F(FormatTestComments, KeepsTrailingPPCommentsAndSectionCommentsSeparate) {
-  const auto Style80 = getLLVMStyleWithColumns(80);
   verifyFormat("#ifdef A // line about A\n"
                "// section comment\n"
-               "#endif",
-               Style80);
+               "#endif");
   verifyFormat("#ifdef A // line 1 about A\n"
                "         // line 2 about A\n"
                "// section comment\n"
-               "#endif",
-               Style80);
+               "#endif");
   verifyFormat("#ifdef A // line 1 about A\n"
                "         // line 2 about A\n"
                "// section comment\n"
@@ -1399,8 +1400,7 @@ TEST_F(FormatTestComments, KeepsTrailingPPCommentsAndSectionCommentsSeparate) {
                "#ifdef A // line 1 about A\n"
                "          // line 2 about A\n"
                "// section comment\n"
-               "#endif",
-               Style80);
+               "#endif");
   verifyFormat("int f() {\n"
                "  int i;\n"
                "#ifdef A // comment about A\n"
@@ -1411,8 +1411,7 @@ TEST_F(FormatTestComments, KeepsTrailingPPCommentsAndSectionCommentsSeparate) {
                "  // section comment 3\n"
                "  i = 4;\n"
                "#endif\n"
-               "}",
-               Style80);
+               "}");
 }
 
 TEST_F(FormatTestComments, AlignsPPElseEndifComments) {
@@ -1507,7 +1506,6 @@ TEST_F(FormatTestComments, CommentsInStaticInitializers) {
 }
 
 TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
-  const auto Style80 = getLLVMStyleWithColumns(80);
   verifyFormat("if (true) { // comment about branch\n"
                "  // comment about f\n"
                "  f();\n"
@@ -1515,8 +1513,7 @@ TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
                "if (true) { // comment about branch\n"
                "  // comment about f\n"
                "  f();\n"
-               "}",
-               Style80);
+               "}");
   verifyFormat("if (1) { // if line 1\n"
                "         // if line 2\n"
                "         // if line 3\n"
@@ -1550,8 +1547,7 @@ TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
                "     // line 2\n"
                "   // line 3\n"
                "  f();\n"
-               "} while (true);",
-               Style80);
+               "} while (true);");
   verifyFormat("while (a < b) { // line 1\n"
                "  // line 2\n"
                "  // line 3\n"
@@ -1561,8 +1557,7 @@ TEST_F(FormatTestComments, LineCommentsAfterRightBrace) {
                "  // line 2\n"
                "  // line 3\n"
                "  f();\n"
-               "}",
-               Style80);
+               "}");
 }
 
 TEST_F(FormatTestComments, ReflowsComments) {
@@ -2183,6 +2178,7 @@ TEST_F(FormatTestComments, ReflowsComments) {
 
 TEST_F(FormatTestComments, ReflowsCommentsPrecise) {
   auto Style = getLLVMStyleWithColumns(20);
+
   // FIXME: This assumes we do not continue compressing whitespace once we are
   // in reflow mode. Consider compressing whitespace.
 
@@ -2448,6 +2444,9 @@ TEST_F(FormatTestComments, BlockCommentsInControlLoops) {
 }
 
 TEST_F(FormatTestComments, BlockComments) {
+  const auto Style10 = getLLVMStyleWithColumns(10);
+  const auto Style15 = getLLVMStyleWithColumns(15);
+
   verifyFormat("/* */ /* */ /* */\n/* */ /* */ /* */",
                "/* *//* */  /* */\n/* *//* */  /* */");
   verifyFormat("/* */ a /* */ b;", "  /* */  a/* */  b;");
@@ -2459,14 +2458,14 @@ TEST_F(FormatTestComments, BlockComments) {
                "#define A /*123*/ b\n"
                "/* */\n"
                "someCall(parameter);",
-               getLLVMStyleWithColumns(15));
+               Style15);
 
   verifyFormat("#define A\n"
                "/* */ someCall(\n"
                "    parameter);",
                "#define A\n"
                "/* */someCall(parameter);",
-               getLLVMStyleWithColumns(15));
+               Style15);
   verifyNoChange("/*\n**\n*/");
   verifyFormat("/*\n"
                " *\n"
@@ -2477,7 +2476,7 @@ TEST_F(FormatTestComments, BlockComments) {
                "*\n"
                " * aaaaaa aaaaaa\n"
                "*/",
-               getLLVMStyleWithColumns(10));
+               Style10);
   verifyFormat("/*\n"
                "**\n"
                "* aaaaaa\n"
@@ -2487,7 +2486,7 @@ TEST_F(FormatTestComments, BlockComments) {
                "**\n"
                "* aaaaaa aaaaaa\n"
                "*/",
-               getLLVMStyleWithColumns(10));
+               Style10);
   verifyFormat("int aaaaaaaaaaaaaaaaaaaaaaaaaaaa =\n"
                "    /* line 1\n"
                "       bbbbbbbbbbbb */\n"
@@ -2559,6 +2558,7 @@ TEST_F(FormatTestComments, BlockComments) {
 
 TEST_F(FormatTestComments, BlockCommentsInMacros) {
   const auto Style20 = getLLVMStyleWithColumns(20);
+
   verifyFormat("#define A          \\\n"
                "  {                \\\n"
                "    /* one line */ \\\n"
@@ -2581,6 +2581,7 @@ TEST_F(FormatTestComments, BlockCommentsInMacros) {
 
 TEST_F(FormatTestComments, BlockCommentsAtEndOfLine) {
   const auto Style15 = getLLVMStyleWithColumns(15);
+
   verifyFormat("a = {\n"
                "    1111 /*    */\n"
                "};",
@@ -2605,6 +2606,7 @@ TEST_F(FormatTestComments, BlockCommentsAtEndOfLine) {
 TEST_F(FormatTestComments, BreaksAfterMultilineBlockCommentsInParamLists) {
   const auto Style15 = getLLVMStyleWithColumns(15);
   const auto Style16 = getLLVMStyleWithColumns(16);
+
   verifyFormat("a = f(/* long\n"
                "         long */\n"
                "      a);",
@@ -2676,9 +2678,8 @@ TEST_F(FormatTestComments, IndentLineCommentsInStartOfBlockAtEndOfFile) {
 
 TEST_F(FormatTestComments, AlignTrailingComments) {
   const auto Style15 = getLLVMStyleWithColumns(15);
-  const auto Style20 = getLLVMStyleWithColumns(20);
   const auto Style40 = getLLVMStyleWithColumns(40);
-  const auto Style80 = getLLVMStyleWithColumns(80);
+
   verifyFormat("#define MACRO(V)                       \\\n"
                "  V(Rt2) /* one more char */           \\\n"
                "  V(Rs)  /* than here  */              \\\n"
@@ -2739,7 +2740,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "       // long",
                "int i, j; // line 1\n"
                "int k; // line longg long",
-               Style20);
+               getLLVMStyleWithColumns(20));
 
   // Always align if ColumnLimit = 0
   verifyFormat("int i, j; // line 1\n"
@@ -2836,8 +2837,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "    // comment line 1 after return\n"
                "     // comment line 2 after return\n"
                "  }\n"
-               "}",
-               Style80);
+               "}");
 
   // If all the lines in a sequence of line comments are aligned with the next
   // token, the first line belongs to the previous token and the other lines
@@ -2845,15 +2845,13 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
   verifyFormat("int a; // line about a\n"
                "long b;",
                "int a; // line about a\n"
-               "       long b;",
-               Style80);
+               "       long b;");
   verifyFormat("int a; // line about a\n"
                "// line about b\n"
                "long b;",
                "int a; // line about a\n"
                "       // line about b\n"
-               "       long b;",
-               Style80);
+               "       long b;");
   verifyFormat("int a; // line about a\n"
                "// line 1 about b\n"
                "// line 2 about b\n"
@@ -2861,8 +2859,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "int a; // line about a\n"
                "       // line 1 about b\n"
                "       // line 2 about b\n"
-               "       long b;",
-               Style80);
+               "       long b;");
 
   // Checks an edge case in preprocessor handling.
   // These comments should *not* be aligned
@@ -2881,8 +2878,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "#if BAR\n"
                "#else\n"
                "long b_long_name; // Line about b\n"
-               "#endif",
-               Style80);
+               "#endif");
 
   // bug 47589
   verifyFormat("namespace m {\n\n"
@@ -2898,8 +2894,7 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "#define FOO_SITELOCAL 2  // Site-local scope (deprecated).\n"
                "#define FOO_UNIQUELOCAL 3 // Unique local\n"
                "#define FOO_NODELOCAL 4  // Loopback\n\n"
-               "} // namespace m",
-               Style80);
+               "} // namespace m");
 
   // https://llvm.org/PR53441
   verifyFormat("/* */  //\n"
@@ -3660,13 +3655,13 @@ TEST_F(FormatTestComments, NoCrash_Bug34236) {
 
 "/*                                                                */ /*\n"
 " *       a b\n"
-" *       c     d*/",
-          getLLVMStyleWithColumns(80));
+" *       c     d*/");
   // clang-format on
 }
 
 TEST_F(FormatTestComments, NonTrailingBlockComments) {
   const auto Style40 = getLLVMStyleWithColumns(40);
+
   verifyFormat("const /** comment comment */ A = B;", Style40);
 
   verifyFormat("const /** comment comment comment */ A =\n"
@@ -3682,24 +3677,25 @@ TEST_F(FormatTestComments, NonTrailingBlockComments) {
 }
 
 TEST_F(FormatTestComments, PythonStyleComments) {
+  const auto ProtoStyle20 = getTextProtoStyleWithColumns(20);
   // Keeps a space after '#'.
   verifyFormat("# comment\n"
                "key: value",
                "#comment\n"
                "key:value",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   verifyFormat("# comment\n"
                "key: value",
                "# comment\n"
                "key:value",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   // Breaks long comment.
   verifyFormat("# comment comment\n"
                "# comment\n"
                "key: value",
                "# comment comment comment\n"
                "key:value",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   // Indents comments.
   verifyFormat("data {\n"
                "  # comment comment\n"
@@ -3709,7 +3705,7 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                "data {\n"
                "# comment comment comment\n"
                "key: value}",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   verifyFormat("data {\n"
                "  # comment comment\n"
                "  # comment\n"
@@ -3717,7 +3713,7 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                "}",
                "data {# comment comment comment\n"
                "key: value}",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   // Reflows long comments.
   verifyFormat("# comment comment\n"
                "# comment comment\n"
@@ -3725,14 +3721,14 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                "# comment comment comment\n"
                "# comment\n"
                "key:value",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   // Breaks trailing comments.
   verifyFormat("k: val  # comment\n"
                "        # comment\n"
                "a: 1",
                "k:val#comment comment\n"
                "a:1",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   verifyFormat("id {\n"
                "  k: val  # comment\n"
                "          # comment\n"
@@ -3742,7 +3738,7 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                "id {k:val#comment comment\n"
                "# line line\n"
                "a:1}",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
   // Aligns trailing comments.
   verifyFormat("k: val  # commen1\n"
                "        # commen2\n"
@@ -3756,7 +3752,7 @@ TEST_F(FormatTestComments, PythonStyleComments) {
                "# commen4\n"
                "a:1#commen5 commen6\n"
                " #commen7",
-               getTextProtoStyleWithColumns(20));
+               ProtoStyle20);
 }
 
 TEST_F(FormatTestComments, BreaksBeforeTrailingUnbreakableSequence) {
@@ -3884,11 +3880,11 @@ TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
 
 TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
   FormatStyle Style = getLLVMStyle();
-  StringRef NoTextInComment = " //       \n"
-                              "\n"
-                              "void foo() {// \n"
-                              "// \n"
-                              "}";
+  constexpr StringRef NoTextInComment = " //       \n"
+                                        "\n"
+                                        "void foo() {// \n"
+                                        "// \n"
+                                        "}";
 
   verifyFormat("//\n"
                "\n"
@@ -3916,7 +3912,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                NoTextInComment, Style);
 
   Style = getLLVMStyle();
-  StringRef Code =
+  constexpr StringRef Code =
       "//Free comment without space\n"
       "\n"
       "//   Free comment with 3 spaces\n"
@@ -3988,224 +3984,230 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//vv will only move\n"
       "//} if the line above does";
 
-  verifyFormat("// Free comment without space\n"
-               "\n"
-               "//   Free comment with 3 spaces\n"
-               "\n"
-               "/// Free Doxygen without space\n"
-               "\n"
-               "///   Free Doxygen with 3 spaces\n"
-               "\n"
-               "// 🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//   🐉 Another nice dragon\n"
-               "\n"
-               "//   \t Three leading spaces following tab\n"
-               "\n"
-               "//   \\t Three leading spaces following backslash\n"
-               "\n"
-               "/// A Doxygen Comment with a nested list:\n"
-               "/// - Foo\n"
-               "/// - Bar\n"
-               "///   - Baz\n"
-               "///   - End\n"
-               "///     of the inner list\n"
-               "///   .\n"
-               "/// .\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///< Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    // Foo\n"
-               "\n"
-               "    //   In function comment\n"
-               "    ret2 = false;\n"
-               "  } // End of if\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  // if (ret1) {\n"
-               "  //   return ret2;\n"
-               "  // }\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} // namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //  namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//  Comment to move to the left\n"
-               "// But not this?\n"
-               "//  @but this\n"
-               "\n"
-               "// Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "// vv will only move\n"
-               "// } if the line above does",
-               Code, Style);
+  constexpr StringRef Code2 =
+      "// Free comment without space\n"
+      "\n"
+      "//   Free comment with 3 spaces\n"
+      "\n"
+      "/// Free Doxygen without space\n"
+      "\n"
+      "///   Free Doxygen with 3 spaces\n"
+      "\n"
+      "// 🐉 A nice dragon\n"
+      "\n"
+      "//\t abccba\n"
+      "\n"
+      "//\\t deffed\n"
+      "\n"
+      "//   🐉 Another nice dragon\n"
+      "\n"
+      "//   \t Three leading spaces following tab\n"
+      "\n"
+      "//   \\t Three leading spaces following backslash\n"
+      "\n"
+      "/// A Doxygen Comment with a nested list:\n"
+      "/// - Foo\n"
+      "/// - Bar\n"
+      "///   - Baz\n"
+      "///   - End\n"
+      "///     of the inner list\n"
+      "///   .\n"
+      "/// .\n"
+      "\n"
+      "namespace Foo {\n"
+      "bool bar(bool b) {\n"
+      "  bool ret1 = true; ///< Doxygenstyle without space\n"
+      "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
+      "  if (b) {\n"
+      "    // Foo\n"
+      "\n"
+      "    //   In function comment\n"
+      "    ret2 = false;\n"
+      "  } // End of if\n"
+      "\n"
+      "  //  if (ret1) {\n"
+      "  //    return ret2;\n"
+      "  //  }\n"
+      "\n"
+      "  // if (ret1) {\n"
+      "  //   return ret2;\n"
+      "  // }\n"
+      "\n"
+      "  return ret1 && ret2;\n"
+      "}\n"
+      "} // namespace Foo\n"
+      "\n"
+      "namespace Bar {\n"
+      "int foo();\n"
+      "} //  namespace Bar\n"
+      "//@Nothing added because of the non ascii char\n"
+      "\n"
+      "//@      Nothing removed because of the non ascii char\n"
+      "\n"
+      "//  Comment to move to the left\n"
+      "// But not this?\n"
+      "//  @but this\n"
+      "\n"
+      "// Comment to move to the right\n"
+      "//@ this stays\n"
+      "\n"
+      "//} will not move\n"
+      "\n"
+      "// vv will only move\n"
+      "// } if the line above does";
+
+  constexpr StringRef Code3 =
+      "//Free comment without space\n"
+      "\n"
+      "//Free comment with 3 spaces\n"
+      "\n"
+      "///Free Doxygen without space\n"
+      "\n"
+      "///Free Doxygen with 3 spaces\n"
+      "\n"
+      "//🐉 A nice dragon\n"
+      "\n"
+      "//\t abccba\n"
+      "\n"
+      "//\\t deffed\n"
+      "\n"
+      "//🐉 Another nice dragon\n"
+      "\n"
+      "//\t Three leading spaces following tab\n"
+      "\n"
+      "//\\t Three leading spaces following backslash\n"
+      "\n"
+      "///A Doxygen Comment with a nested list:\n"
+      "///- Foo\n"
+      "///- Bar\n"
+      "///  - Baz\n" // Here we keep the relative indentation
+      "///  - End\n"
+      "///    of the inner list\n"
+      "///  .\n"
+      "///.\n"
+      "\n"
+      "namespace Foo {\n"
+      "bool bar(bool b) {\n"
+      "  bool ret1 = true; ///<Doxygenstyle without space\n"
+      "  bool ret2 = true; ///<Doxygenstyle with 3 spaces\n"
+      "  if (b) {\n"
+      "    //Foo\n"
+      "\n"
+      "    //In function comment\n"
+      "    ret2 = false;\n"
+      "  } //End of if\n"
+      "\n"
+      "  //if (ret1) {\n"
+      "  //  return ret2;\n"
+      "  //}\n"
+      "\n"
+      "  //if (ret1) {\n"
+      "  //  return ret2;\n"
+      "  //}\n"
+      "\n"
+      "  return ret1 && ret2;\n"
+      "}\n"
+      "} //namespace Foo\n"
+      "\n"
+      "namespace Bar {\n"
+      "int foo();\n"
+      "} //namespace Bar\n"
+      "//@Nothing added because of the non ascii char\n"
+      "\n"
+      "//@      Nothing removed because of the non ascii char\n"
+      "\n"
+      "//Comment to move to the left\n"
+      "//But not this?\n"
+      "//@but this\n"
+      "\n"
+      "//Comment to move to the right\n"
+      "//@ this stays\n"
+      "\n"
+      "//} will not move\n"
+      "\n"
+      "//vv will only move\n"
+      "//} if the line above does";
+
+  constexpr StringRef Code4 =
+      "//  Free comment without space\n"
+      "\n"
+      "//   Free comment with 3 spaces\n"
+      "\n"
+      "///  Free Doxygen without space\n"
+      "\n"
+      "///   Free Doxygen with 3 spaces\n"
+      "\n"
+      "//  🐉 A nice dragon\n"
+      "\n"
+      "//\t abccba\n"
+      "\n"
+      "//\\t deffed\n"
+      "\n"
+      "//   🐉 Another nice dragon\n"
+      "\n"
+      "//   \t Three leading spaces following tab\n"
+      "\n"
+      "//   \\t Three leading spaces following backslash\n"
+      "\n"
+      "///  A Doxygen Comment with a nested list:\n"
+      "///  - Foo\n"
+      "///  - Bar\n"
+      "///    - Baz\n"
+      "///    - End\n"
+      "///      of the inner list\n"
+      "///    .\n"
+      "///  .\n"
+      "\n"
+      "namespace Foo {\n"
+      "bool bar(bool b) {\n"
+      "  bool ret1 = true; ///<  Doxygenstyle without space\n"
+      "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
+      "  if (b) {\n"
+      "    //  Foo\n"
+      "\n"
+      "    //   In function comment\n"
+      "    ret2 = false;\n"
+      "  } //  End of if\n"
+      "\n"
+      "  //  if (ret1) {\n"
+      "  //    return ret2;\n"
+      "  //  }\n"
+      "\n"
+      "  //  if (ret1) {\n"
+      "  //    return ret2;\n"
+      "  //  }\n"
+      "\n"
+      "  return ret1 && ret2;\n"
+      "}\n"
+      "} //  namespace Foo\n"
+      "\n"
+      "namespace Bar {\n"
+      "int foo();\n"
+      "} //  namespace Bar\n"
+      "//@Nothing added because of the non ascii char\n"
+      "\n"
+      "//@      Nothing removed because of the non ascii char\n"
+      "\n"
+      "//  Comment to move to the left\n"
+      "//  But not this?\n"
+      "//  @but this\n"
+      "\n"
+      "//  Comment to move to the right\n"
+      "//@ this stays\n"
+      "\n"
+      "//} will not move\n"
+      "\n"
+      "//  vv will only move\n"
+      "//  } if the line above does";
+
+  verifyFormat(Code2, Code, Style);
 
   Style.SpacesInLineCommentPrefix = {0, 0};
   verifyFormat("//#comment", "//   #comment", Style);
-  verifyFormat("//Free comment without space\n"
-               "\n"
-               "//Free comment with 3 spaces\n"
-               "\n"
-               "///Free Doxygen without space\n"
-               "\n"
-               "///Free Doxygen with 3 spaces\n"
-               "\n"
-               "//🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//🐉 Another nice dragon\n"
-               "\n"
-               "//\t Three leading spaces following tab\n"
-               "\n"
-               "//\\t Three leading spaces following backslash\n"
-               "\n"
-               "///A Doxygen Comment with a nested list:\n"
-               "///- Foo\n"
-               "///- Bar\n"
-               "///  - Baz\n" // Here we keep the relative indentation
-               "///  - End\n"
-               "///    of the inner list\n"
-               "///  .\n"
-               "///.\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///<Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    //Foo\n"
-               "\n"
-               "    //In function comment\n"
-               "    ret2 = false;\n"
-               "  } //End of if\n"
-               "\n"
-               "  //if (ret1) {\n"
-               "  //  return ret2;\n"
-               "  //}\n"
-               "\n"
-               "  //if (ret1) {\n"
-               "  //  return ret2;\n"
-               "  //}\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} //namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//Comment to move to the left\n"
-               "//But not this?\n"
-               "//@but this\n"
-               "\n"
-               "//Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "//vv will only move\n"
-               "//} if the line above does",
-               Code, Style);
+  verifyFormat(Code3, Code, Style);
 
   Style.SpacesInLineCommentPrefix = {2, -1u};
-  verifyFormat("//  Free comment without space\n"
-               "\n"
-               "//   Free comment with 3 spaces\n"
-               "\n"
-               "///  Free Doxygen without space\n"
-               "\n"
-               "///   Free Doxygen with 3 spaces\n"
-               "\n"
-               "//  🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//   🐉 Another nice dragon\n"
-               "\n"
-               "//   \t Three leading spaces following tab\n"
-               "\n"
-               "//   \\t Three leading spaces following backslash\n"
-               "\n"
-               "///  A Doxygen Comment with a nested list:\n"
-               "///  - Foo\n"
-               "///  - Bar\n"
-               "///    - Baz\n"
-               "///    - End\n"
-               "///      of the inner list\n"
-               "///    .\n"
-               "///  .\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///<  Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    //  Foo\n"
-               "\n"
-               "    //   In function comment\n"
-               "    ret2 = false;\n"
-               "  } //  End of if\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} //  namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //  namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//  Comment to move to the left\n"
-               "//  But not this?\n"
-               "//  @but this\n"
-               "\n"
-               "//  Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "//  vv will only move\n"
-               "//  } if the line above does",
-               Code, Style);
+  verifyFormat(Code4, Code, Style);
 
   Style = getLLVMStyleWithColumns(20);
   StringRef WrapCode = "//Lorem ipsum dolor sit amet\n"
@@ -4276,17 +4278,18 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                WrapCode, Style);
 
   Style = getLLVMStyleWithColumns(20);
-  StringRef LotsOfSpaces = "//                      This are more spaces "
-                           "than the ColumnLimit, what now?\n"
-                           "\n"
-                           "//   Comment\n"
-                           "\n"
-                           "// This is a text to split in multiple "
-                           "lines, please. Thank you very much!\n"
-                           "\n"
-                           "// A comment with\n"
-                           "//   some indentation that has to be split.\n"
-                           "// And now without";
+  constexpr StringRef LotsOfSpaces =
+      "//                      This are more spaces "
+      "than the ColumnLimit, what now?\n"
+      "\n"
+      "//   Comment\n"
+      "\n"
+      "// This is a text to split in multiple "
+      "lines, please. Thank you very much!\n"
+      "\n"
+      "// A comment with\n"
+      "//   some indentation that has to be split.\n"
+      "// And now without";
   verifyFormat("//                      This are more spaces "
                "than the ColumnLimit, what now?\n"
                "\n"
@@ -4466,223 +4469,13 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                Style);
 
   Style = getLLVMStyleWithColumns(0);
-  verifyFormat("// Free comment without space\n"
-               "\n"
-               "//   Free comment with 3 spaces\n"
-               "\n"
-               "/// Free Doxygen without space\n"
-               "\n"
-               "///   Free Doxygen with 3 spaces\n"
-               "\n"
-               "// 🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//   🐉 Another nice dragon\n"
-               "\n"
-               "//   \t Three leading spaces following tab\n"
-               "\n"
-               "//   \\t Three leading spaces following backslash\n"
-               "\n"
-               "/// A Doxygen Comment with a nested list:\n"
-               "/// - Foo\n"
-               "/// - Bar\n"
-               "///   - Baz\n"
-               "///   - End\n"
-               "///     of the inner list\n"
-               "///   .\n"
-               "/// .\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///< Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    // Foo\n"
-               "\n"
-               "    //   In function comment\n"
-               "    ret2 = false;\n"
-               "  } // End of if\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  // if (ret1) {\n"
-               "  //   return ret2;\n"
-               "  // }\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} // namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //  namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//  Comment to move to the left\n"
-               "// But not this?\n"
-               "//  @but this\n"
-               "\n"
-               "// Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "// vv will only move\n"
-               "// } if the line above does",
-               Code, Style);
+  verifyFormat(Code2, Code, Style);
 
   Style.SpacesInLineCommentPrefix = {0, 0};
-  verifyFormat("//Free comment without space\n"
-               "\n"
-               "//Free comment with 3 spaces\n"
-               "\n"
-               "///Free Doxygen without space\n"
-               "\n"
-               "///Free Doxygen with 3 spaces\n"
-               "\n"
-               "//🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//🐉 Another nice dragon\n"
-               "\n"
-               "//\t Three leading spaces following tab\n"
-               "\n"
-               "//\\t Three leading spaces following backslash\n"
-               "\n"
-               "///A Doxygen Comment with a nested list:\n"
-               "///- Foo\n"
-               "///- Bar\n"
-               "///  - Baz\n" // Here we keep the relative indentation
-               "///  - End\n"
-               "///    of the inner list\n"
-               "///  .\n"
-               "///.\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///<Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    //Foo\n"
-               "\n"
-               "    //In function comment\n"
-               "    ret2 = false;\n"
-               "  } //End of if\n"
-               "\n"
-               "  //if (ret1) {\n"
-               "  //  return ret2;\n"
-               "  //}\n"
-               "\n"
-               "  //if (ret1) {\n"
-               "  //  return ret2;\n"
-               "  //}\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} //namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//Comment to move to the left\n"
-               "//But not this?\n"
-               "//@but this\n"
-               "\n"
-               "//Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "//vv will only move\n"
-               "//} if the line above does",
-               Code, Style);
+  verifyFormat(Code3, Code, Style);
 
   Style.SpacesInLineCommentPrefix = {2, -1u};
-  verifyFormat("//  Free comment without space\n"
-               "\n"
-               "//   Free comment with 3 spaces\n"
-               "\n"
-               "///  Free Doxygen without space\n"
-               "\n"
-               "///   Free Doxygen with 3 spaces\n"
-               "\n"
-               "//  🐉 A nice dragon\n"
-               "\n"
-               "//\t abccba\n"
-               "\n"
-               "//\\t deffed\n"
-               "\n"
-               "//   🐉 Another nice dragon\n"
-               "\n"
-               "//   \t Three leading spaces following tab\n"
-               "\n"
-               "//   \\t Three leading spaces following backslash\n"
-               "\n"
-               "///  A Doxygen Comment with a nested list:\n"
-               "///  - Foo\n"
-               "///  - Bar\n"
-               "///    - Baz\n"
-               "///    - End\n"
-               "///      of the inner list\n"
-               "///    .\n"
-               "///  .\n"
-               "\n"
-               "namespace Foo {\n"
-               "bool bar(bool b) {\n"
-               "  bool ret1 = true; ///<  Doxygenstyle without space\n"
-               "  bool ret2 = true; ///<   Doxygenstyle with 3 spaces\n"
-               "  if (b) {\n"
-               "    //  Foo\n"
-               "\n"
-               "    //   In function comment\n"
-               "    ret2 = false;\n"
-               "  } //  End of if\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  //  if (ret1) {\n"
-               "  //    return ret2;\n"
-               "  //  }\n"
-               "\n"
-               "  return ret1 && ret2;\n"
-               "}\n"
-               "} //  namespace Foo\n"
-               "\n"
-               "namespace Bar {\n"
-               "int foo();\n"
-               "} //  namespace Bar\n"
-               "//@Nothing added because of the non ascii char\n"
-               "\n"
-               "//@      Nothing removed because of the non ascii char\n"
-               "\n"
-               "//  Comment to move to the left\n"
-               "//  But not this?\n"
-               "//  @but this\n"
-               "\n"
-               "//  Comment to move to the right\n"
-               "//@ this stays\n"
-               "\n"
-               "//} will not move\n"
-               "\n"
-               "//  vv will only move\n"
-               "//  } if the line above does",
-               Code, Style);
+  verifyFormat(Code4, Code, Style);
 }
 
 TEST_F(FormatTestComments, SplitCommentIntroducers) {
