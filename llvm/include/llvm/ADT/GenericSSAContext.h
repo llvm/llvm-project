@@ -96,6 +96,10 @@ public:
   static bool isConstantOrUndefValuePhi(const InstructionT &Instr);
   const BlockT *getDefBlock(ConstValueRefT value) const;
 
+  void getPhiInputs(const InstructionT &Instr,
+                    SmallVectorImpl<ConstValueRefT> &Values,
+                    SmallVectorImpl<const BlockT *> &Blocks) const;
+
   Printable print(const BlockT *block) const;
   Printable printAsOperand(const BlockT *BB) const;
   Printable print(const InstructionT *inst) const;
