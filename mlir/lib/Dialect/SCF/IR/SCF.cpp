@@ -344,7 +344,7 @@ struct ExecuteRegionForwardingEliminator
     for (Value value : internalValues)
       resultTypes.push_back(value.getType());
     auto newOp =
-        rewriter.create<ExecuteRegionOp>(op.getLoc(), TypeRange(resultTypes));
+        ExecuteRegionOp::create(rewriter, op.getLoc(), TypeRange(resultTypes));
     newOp->setAttrs(op->getAttrs());
 
     // Move old op's region to the new operation.
