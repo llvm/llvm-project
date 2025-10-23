@@ -1163,14 +1163,11 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op) {
   return getLosslessPtrToIntOrAddrExpr(scPtrToInt, Op);
 }
 
-const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op, Type *Ty) {
-  assert(Ty->isIntegerTy() && "Target type must be an integer type!");
-
+const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
   const SCEV *IntOp = getLosslessPtrToAddrExpr(Op);
-  if (isa<SCEVCouldNotCompute>(IntOp))
-    return IntOp;
-
-  return getTruncateOrZeroExtend(IntOp, Ty);
+  assert(!isa<SCEVCouldNotCompute>(IntOp) &&
+         "Must be able to losslessly convert PtrToAddr");
+  return IntOp;
 }
 
 const SCEV *ScalarEvolution::getPtrToIntExpr(const SCEV *Op, Type *Ty) {
@@ -8205,7 +8202,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
     // all possible pointer values.
     const SCEV *IntOp = U->getOpcode() == Instruction::PtrToInt
                             ? getPtrToIntExpr(Op, DstIntTy)
-                            : getPtrToAddrExpr(Op, DstIntTy);
+                            : getPtrToAddrExpr(Op);
     if (isa<SCEVCouldNotCompute>(IntOp))
       return getUnknown(V);
     return IntOp;
