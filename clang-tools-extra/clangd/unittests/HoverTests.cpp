@@ -2020,6 +2020,22 @@ TEST(Hover, All) {
             HI.Documentation = "Forward class declaration";
           }},
       {
+          R"cpp(// Function declaration ignore static annotation
+            void foo();
+            /*static*/ void foo() {}
+            void g() { [[f^oo]](); }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Function;
+            HI.NamespaceScope = "";
+            HI.Type = "void ()";
+            HI.Definition = "void foo()";
+            HI.Documentation = "Function declaration ignore static annotation";
+            HI.ReturnType = "void";
+            HI.Parameters = std::vector<HoverInfo::Param>{};
+          }},
+      {
           R"cpp(// Function declaration
             void foo();
             void g() { [[f^oo]](); }

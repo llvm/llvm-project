@@ -330,6 +330,11 @@ void ASTContext::addComment(const RawComment &RC) {
   Comments.addComment(RC, LangOpts.CommentOpts, BumpAlloc);
 }
 
+bool skipCommentContent(StringRef Text) {
+  return Text == "/*static*/" || Text == "/*virtual*/" \
+  || Text == "/* static */" || Text == "/* virtual */";
+}
+
 const RawComment *ASTContext::getRawCommentForAnyRedecl(
                                                 const Decl *D,
                                                 const Decl **OriginalDecl) const {
@@ -398,7 +403,7 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
       continue;
     }
     const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
-    if (RedeclComment) {
+    if (RedeclComment && !skipCommentContent(RedeclComment->getRawText(SourceMgr))) {
       cacheRawCommentForDecl(*Redecl, *RedeclComment);
       if (OriginalDecl)
         *OriginalDecl = Redecl;
