@@ -749,6 +749,44 @@ struct VolatileCastOpConversion
   }
 };
 
+/// Lower `fir.assumed_size_extent` to constant -1 of index type.
+struct AssumedSizeExtentOpConversion
+    : public fir::FIROpConversion<fir::AssumedSizeExtentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::AssumedSizeExtentOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    mlir::Type ity = lowerTy().indexType();
+    auto cst = fir::genConstantIndex(loc, ity, rewriter, -1);
+    rewriter.replaceOp(op, cst.getResult());
+    return mlir::success();
+  }
+};
+
+/// Lower `fir.is_assumed_size_extent` to integer equality with -1.
+struct IsAssumedSizeExtentOpConversion
+    : public fir::FIROpConversion<fir::IsAssumedSizeExtentOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::IsAssumedSizeExtentOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    mlir::Value val = adaptor.getVal();
+    mlir::Type valTy = val.getType();
+    // Create constant -1 of the operand type.
+    auto negOneAttr = rewriter.getIntegerAttr(valTy, -1);
+    auto negOne =
+        mlir::LLVM::ConstantOp::create(rewriter, loc, valTy, negOneAttr);
+    auto cmp = mlir::LLVM::ICmpOp::create(
+        rewriter, loc, mlir::LLVM::ICmpPredicate::eq, val, negOne);
+    rewriter.replaceOp(op, cmp.getResult());
+    return mlir::success();
+  }
+};
+
 /// convert value of from-type to value of to-type
 struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
   using FIROpConversion::FIROpConversion;
@@ -1113,7 +1151,7 @@ struct AllocMemOpConversion : public fir::FIROpConversion<fir::AllocMemOp> {
     mlir::Value size = genTypeSizeInBytes(loc, ity, rewriter, llvmObjectTy);
     if (auto scaleSize =
             fir::genAllocationScaleSize(loc, heap.getInType(), ity, rewriter))
-      size = rewriter.create<mlir::LLVM::MulOp>(loc, ity, size, scaleSize);
+      size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
     for (mlir::Value opnd : adaptor.getOperands())
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size,
                                        integerCast(loc, rewriter, ity, opnd));
@@ -4360,6 +4398,7 @@ void fir::populateFIRToLLVMConversionPatterns(
       AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
       BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
       BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
+      AssumedSizeExtentOpConversion, IsAssumedSizeExtentOpConversion,
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, VolatileCastOpConversion, ConvertOpConversion,
