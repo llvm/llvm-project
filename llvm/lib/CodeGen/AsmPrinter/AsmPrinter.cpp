@@ -119,6 +119,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VCSRevision.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -476,6 +477,7 @@ void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool AsmPrinter::doInitialization(Module &M) {
+  VFS = vfs::getRealFileSystem();
   auto *MMIWP = getAnalysisIfAvailable<MachineModuleInfoWrapperPass>();
   MMI = MMIWP ? &MMIWP->getMMI() : nullptr;
   HasSplitStack = false;
@@ -1484,7 +1486,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          HasCalls};
+          HasCalls,
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1729,7 +1732,7 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
   return nullptr;
 }
 
-/// Emits .callgraph section.
+/// Emits .llvm.callgraph section.
 void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
                                       FunctionCallGraphInfo &FuncCGInfo) {
   if (!MF.getTarget().Options.EmitCallGraphSection)

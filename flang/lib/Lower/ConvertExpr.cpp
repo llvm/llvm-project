@@ -5603,7 +5603,7 @@ private:
                     return newIters;
                   };
                   if (useTripsForSlice) {
-                    LLVM_ATTRIBUTE_UNUSED auto vectorSubscriptShape =
+                    [[maybe_unused]] auto vectorSubscriptShape =
                         getShape(arrayOperands.back());
                     auto undef = fir::UndefOp::create(builder, loc, idxTy);
                     trips.push_back(undef);

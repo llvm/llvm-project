@@ -32,6 +32,8 @@ public:
 
   bool checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore);
 
+  bool checkScopedMemAccessFunctionCall(CallExpr *TheCall);
+
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
 

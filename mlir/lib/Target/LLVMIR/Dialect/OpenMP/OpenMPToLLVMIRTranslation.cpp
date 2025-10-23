@@ -250,7 +250,7 @@ public:
 
   // Rewrite all uses of the original variable in `BBName`
   //  with the linear variable in-place
-  void rewriteInPlace(llvm::IRBuilderBase &builder, std::string BBName,
+  void rewriteInPlace(llvm::IRBuilderBase &builder, const std::string &BBName,
                       size_t varIndex) {
     llvm::SmallVector<llvm::User *> users;
     for (llvm::User *user : linearOrigVal[varIndex]->users())
@@ -3880,6 +3880,61 @@ static llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
   return builder.getInt64(dl.getTypeSizeInBits(type) / 8);
 }
 
+// Convert the MLIR map flag set to the runtime map flag set for embedding
+// in LLVM-IR. This is important as the two bit-flag lists do not correspond
+// 1-to-1 as there's flags the runtime doesn't care about and vice versa.
+// Certain flags are discarded here such as RefPtee and co.
+static llvm::omp::OpenMPOffloadMappingFlags
+convertClauseMapFlags(omp::ClauseMapFlags mlirFlags) {
+  auto mapTypeToBool = [&mlirFlags](omp::ClauseMapFlags flag) {
+    return (mlirFlags & flag) == flag;
+  };
+
+  llvm::omp::OpenMPOffloadMappingFlags mapType =
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::to))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::from))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::always))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::del))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::return_param))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::priv))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRIVATE;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::literal))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::implicit))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::close))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::present))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::ompx_hold))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::attach))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH;
+
+  if (mapTypeToBool(omp::ClauseMapFlags::descriptor))
+    mapType |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
+
+  return mapType;
+}
+
 static void collectMapDataFromMapOperands(
     MapInfoData &mapData, SmallVectorImpl<Value> &mapVars,
     LLVM::ModuleTranslation &moduleTranslation, DataLayout &dl,
@@ -3930,8 +3985,7 @@ static void collectMapDataFromMapOperands(
         getSizeInBytes(dl, mapOp.getVarType(), mapOp, mapData.Pointers.back(),
                        mapData.BaseType.back(), builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
-    mapData.Types.push_back(
-        llvm::omp::OpenMPOffloadMappingFlags(mapOp.getMapType()));
+    mapData.Types.push_back(convertClauseMapFlags(mapOp.getMapType()));
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
@@ -4007,8 +4061,7 @@ static void collectMapDataFromMapOperands(
     Value offloadPtr =
         mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr() : mapOp.getVarPtr();
     llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
-    auto mapType =
-        static_cast<llvm::omp::OpenMPOffloadMappingFlags>(mapOp.getMapType());
+    auto mapType = convertClauseMapFlags(mapOp.getMapType());
     auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
     mapData.OriginalValue.push_back(origValue);
@@ -4537,7 +4590,7 @@ static void processMapMembersWithParent(
     // being mapped at this stage.
     if (checkIfPointerMap(memberClause)) {
       auto mapFlag =
-          llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
+          llvm::omp::OpenMPOffloadMappingFlags(mapData.Types[memberDataIdx]);
       // We wish to remove user specified always, as the pointer is a
       // seperate implementation detail/entity. And tagging it with
       // always can cause the data to be overwritten. It is likely
@@ -4563,7 +4616,7 @@ static void processMapMembersWithParent(
     // Same MemberOfFlag to indicate its link with parent and other members
     // of.
     auto mapFlag =
-        llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType());
+        llvm::omp::OpenMPOffloadMappingFlags(mapData.Types[memberDataIdx]);
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
@@ -5360,41 +5413,44 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
     // function to link the two variables in the runtime and then both the
     // reference pointer and the pointer are assigned in the kernel argument
     // structure for the host.
-    if (mapData.IsDeclareTarget[i]) {
-      // If the original map value is a constant, then we have to make sure all
-      // of it's uses within the current kernel/function that we are going to
-      // rewrite are converted to instructions, as we will be altering the old
-      // use (OriginalValue) from a constant to an instruction, which will be
-      // illegal and ICE the compiler if the user is a constant expression of
-      // some kind e.g. a constant GEP.
-      if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
-        convertUsersOfConstantsToInstructions(constant, func, false);
+    if (!mapData.IsDeclareTarget[i])
+      continue;
+    // If the original map value is a constant, then we have to make sure all
+    // of it's uses within the current kernel/function that we are going to
+    // rewrite are converted to instructions, as we will be altering the old
+    // use (OriginalValue) from a constant to an instruction, which will be
+    // illegal and ICE the compiler if the user is a constant expression of
+    // some kind e.g. a constant GEP.
+    if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
+      convertUsersOfConstantsToInstructions(constant, func, false);
 
-      // The users iterator will get invalidated if we modify an element,
-      // so we populate this vector of uses to alter each user on an
-      // individual basis to emit its own load (rather than one load for
-      // all).
-      llvm::SmallVector<llvm::User *> userVec;
-      for (llvm::User *user : mapData.OriginalValue[i]->users())
-        userVec.push_back(user);
+    // The users iterator will get invalidated if we modify an element,
+    // so we populate this vector of uses to alter each user on an
+    // individual basis to emit its own load (rather than one load for
+    // all).
+    llvm::SmallVector<llvm::User *> userVec;
+    for (llvm::User *user : mapData.OriginalValue[i]->users())
+      userVec.push_back(user);
 
-      for (llvm::User *user : userVec) {
-        if (auto *insn = dyn_cast<llvm::Instruction>(user)) {
-          if (insn->getFunction() == func) {
-            auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
-            llvm::Value *substitute = mapData.BasePointers[i];
-            if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
-                                                         : mapOp.getVarPtr())) {
-              builder.SetCurrentDebugLocation(insn->getDebugLoc());
-              auto *load = builder.CreateLoad(
-                  mapData.BasePointers[i]->getType(), mapData.BasePointers[i]);
-              load->moveBefore(insn);
-              substitute = load;
-            }
-            user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
-          }
-        }
+    for (llvm::User *user : userVec) {
+      auto *insn = dyn_cast<llvm::Instruction>(user);
+      if (!insn || insn->getFunction() != func)
+        continue;
+      auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
+      llvm::Value *substitute = mapData.BasePointers[i];
+      if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
+                                                   : mapOp.getVarPtr()) ||
+          (isDeclareTargetTo(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
+                                                  : mapOp.getVarPtr()) &&
+           moduleTranslation.getOpenMPBuilder()
+               ->Config.hasRequiresUnifiedSharedMemory())) {
+        builder.SetCurrentDebugLocation(insn->getDebugLoc());
+        auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
+                                        mapData.BasePointers[i]);
+        load->moveBefore(insn);
+        substitute = load;
       }
+      user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
     }
   }
 }
@@ -6314,15 +6370,19 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
           gVal->getType(), gVal);
 
       if (ompBuilder->Config.isTargetDevice() &&
-          (attribute.getCaptureClause().getValue() !=
-               mlir::omp::DeclareTargetCaptureClause::to ||
+          ((attribute.getCaptureClause().getValue() !=
+                mlir::omp::DeclareTargetCaptureClause::to &&
+            attribute.getCaptureClause().getValue() !=
+                mlir::omp::DeclareTargetCaptureClause::enter) ||
            ompBuilder->Config.hasRequiresUnifiedSharedMemory())) {
+        llvm::Type *ptrTy = gVal->getType();
+        if (ompBuilder->Config.hasRequiresUnifiedSharedMemory())
+          ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
         ompBuilder->getAddrOfDeclareTargetVar(
             captureClause, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, *vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
-            gVal->getType(), /*GlobalInitializer*/ nullptr,
-            /*VariableLinkage*/ nullptr);
+            ptrTy, /*GlobalInitializer*/ nullptr, /*VariableLinkage*/ nullptr);
       }
     }
   }

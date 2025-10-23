@@ -39,7 +39,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Value.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <list>
 #include <type_traits>
 

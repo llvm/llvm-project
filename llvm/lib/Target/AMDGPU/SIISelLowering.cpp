@@ -1644,6 +1644,26 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
+  case Intrinsic::amdgcn_global_load_b128:
+  case Intrinsic::amdgcn_global_store_b128: {
+    bool IsStore = IntrID == Intrinsic::amdgcn_global_store_b128;
+    Info.opc = IsStore ? ISD::INTRINSIC_VOID : ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = EVT::getIntegerVT(CI.getContext(), 128);
+    Info.ptrVal = CI.getArgOperand(0);
+    Info.flags |=
+        IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
+    // flags appropriately.
+    Info.order = AtomicOrdering::Monotonic;
+
+    LLVMContext &Ctx = CI.getContext();
+    unsigned ScopeIdx = CI.arg_size() - 1;
+    MDNode *ScopeMD = cast<MDNode>(
+        cast<MetadataAsValue>(CI.getArgOperand(ScopeIdx))->getMetadata());
+    StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
+    Info.ssid = Ctx.getOrInsertSyncScopeID(Scope);
+    return true;
+  }
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_global_load_lds: {
     Info.opc = ISD::INTRINSIC_VOID;
@@ -1651,6 +1671,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
     Info.ptrVal = CI.getArgOperand(1);
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+    if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
+      Info.flags |= MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
@@ -1747,6 +1770,8 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  case Intrinsic::amdgcn_global_load_b128:
+  case Intrinsic::amdgcn_global_store_b128:
     Ptr = II->getArgOperand(0);
     break;
   case Intrinsic::amdgcn_load_to_lds:
@@ -11219,8 +11244,8 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     MachinePointerInfo StorePtrI = LoadPtrI;
     LoadPtrI.V = PoisonValue::get(
-        PointerType::get(*DAG.getContext(), AMDGPUAS::GLOBAL_ADDRESS));
-    LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
+        PointerType::get(*DAG.getContext(), AMDGPUAS::BUFFER_RESOURCE));
+    LoadPtrI.AddrSpace = AMDGPUAS::BUFFER_RESOURCE;
     StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
     auto F = LoadMMO->getFlags() &
@@ -11307,7 +11332,11 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     Ops.push_back(Op.getOperand(5));  // Offset
-    Ops.push_back(Op.getOperand(6));  // CPol
+
+    unsigned Aux = Op.getConstantOperandVal(6);
+    Ops.push_back(DAG.getTargetConstant(Aux & ~AMDGPU::CPol::VIRTUAL_BITS, DL,
+                                        MVT::i32)); // CPol
+
     Ops.push_back(M0Val.getValue(0)); // Chain
     Ops.push_back(M0Val.getValue(1)); // Glue
 
@@ -18168,7 +18197,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   return CacheLineAlign;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static bool isCopyFromRegOfInlineAsm(const SDNode *N) {
   assert(N->getOpcode() == ISD::CopyFromReg);
   do {

@@ -3587,7 +3587,7 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       }
 
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(
-          CurrentType->castAsCanonical<RecordType>()->getOriginalDecl());
+          CurrentType->castAsCanonical<RecordType>()->getDecl());
 
       // Save the element type.
       CurrentType = ON.getBase()->getType();

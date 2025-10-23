@@ -2478,29 +2478,27 @@ def int_vp_is_fpclass:
 //
 def int_masked_load:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [llvm_anyptr_ty, llvm_i32_ty,
+            [llvm_anyptr_ty,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-            [IntrReadMem, IntrArgMemOnly, ImmArg<ArgIndex<1>>,
-             NoCapture<ArgIndex<0>>]>;
+            [IntrReadMem, IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
 
 def int_masked_store:
   DefaultAttrsIntrinsic<[],
             [llvm_anyvector_ty, llvm_anyptr_ty,
-             llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-            [IntrWriteMem, IntrArgMemOnly,
-             ImmArg<ArgIndex<2>>, NoCapture<ArgIndex<1>>]>;
+             LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
+            [IntrWriteMem, IntrArgMemOnly, NoCapture<ArgIndex<1>>]>;
 
 def int_masked_gather:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+            [LLVMVectorOfAnyPointersToElt<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
-            [IntrReadMem, ImmArg<ArgIndex<1>>]>;
+            [IntrReadMem]>;
 
 def int_masked_scatter:
   DefaultAttrsIntrinsic<[],
-            [llvm_anyvector_ty, LLVMVectorOfAnyPointersToElt<0>, llvm_i32_ty,
+            [llvm_anyvector_ty, LLVMVectorOfAnyPointersToElt<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
-            [IntrWriteMem, ImmArg<ArgIndex<2>>]>;
+            [IntrWriteMem]>;
 
 def int_masked_expandload:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -2859,7 +2857,15 @@ def int_ptrauth_blend :
 def int_ptrauth_sign_generic :
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
+//===----------------- AllocToken Intrinsics ------------------------------===//
+
+// Return the token ID for the given !alloc_token metadata.
+def int_alloc_token_id :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
+                        [IntrNoMem, NoUndef<RetIndex>]>;
+
 //===----------------------------------------------------------------------===//
+
 //===------- Convergence Intrinsics ---------------------------------------===//
 
 def int_experimental_convergence_entry

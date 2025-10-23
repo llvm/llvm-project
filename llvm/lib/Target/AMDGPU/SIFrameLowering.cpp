@@ -1265,16 +1265,13 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
-    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose, so we can remove
-    // it now. If we have already saved some WWM CSR registers, then the EXEC is
-    // already -1 and we don't need to do anything else. Otherwise, set EXEC to
-    // -1 here.
+    // If we have already saved some WWM CSR registers, then the EXEC is already
+    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
                            /*EnableInactiveLanes*/ true);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     BuildMI(MBB, MBBI, DL, TII->get(LMC.MovOpc), LMC.ExecReg)
@@ -1588,6 +1585,11 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
          "Needed to save BP but didn't save it anywhere");
 
   assert((HasBP || !BPSaved) && "Saved BP but didn't need it");
+
+  if (FuncInfo->isWholeWaveFunction()) {
+    // SI_WHOLE_WAVE_FUNC_SETUP has outlived its purpose.
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
+  }
 }
 
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
