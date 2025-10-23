@@ -72,25 +72,9 @@ static void AddNoiseToCdesc(CFI_cdesc_t *dv, CFI_rank_t rank) {
   }
 }
 
-#ifdef VERBOSE
-static void DumpTestWorld(const void *bAddr, CFI_attribute_t attr,
-    CFI_type_t ty, std::size_t eLen, CFI_rank_t rank,
-    const CFI_index_t *eAddr) {
-  std::cout << " base_addr: " << std::hex  << reinterpret_cast<std::intptr_t>(bAddr)
-   " attribute: " <<   std::dec  <<  static_cast<int>(attr)
-   " type: " <<    std::dec   << static_cast<int>(ty) << " elem_len: " <<     std::dec   << eLen
-  " rank: " <<   std::dec    <<  static_cast<int>(rank) << " extent: "
-   <<  std::hex  << reinterpret_cast<std::intptr_t>(eAddr)) << std::endl;
-  std::cout << std::dec;
-}
-#endif
-
 static void check_CFI_establish(CFI_cdesc_t *dv, void *base_addr,
     CFI_attribute_t attribute, CFI_type_t type, std::size_t elem_len,
     CFI_rank_t rank, const CFI_index_t extents[]) {
-#ifdef VERBOSE
-  DumpTestWorld(base_addr, attribute, type, elem_len, rank, extent);
-#endif
   // CFI_establish reqs from F2018 section 18.5.5
   int retCode{
       CFI_establish(dv, base_addr, attribute, type, elem_len, rank, extents)};
@@ -303,9 +287,6 @@ static void check_CFI_allocate(CFI_cdesc_t *dv,
   const CFI_type_t type{dv->type};
   const void *base_addr{dv->base_addr};
   const int version{dv->version};
-#ifdef VERBOSE
-  DumpTestWorld(base_addr, attribute, type, elem_len, rank, nullptr);
-#endif
   int retCode{CFI_allocate(dv, lower_bounds, upper_bounds, elem_len)};
   Descriptor *desc = reinterpret_cast<Descriptor *>(dv);
   if (retCode == CFI_SUCCESS) {
