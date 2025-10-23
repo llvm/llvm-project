@@ -1862,14 +1862,18 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
 
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
+  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
+  if (!Global) {
+    LLVMContext &Ctx = MIRBuilder.getContext();
+    Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+    MIRBuilder.buildUndef(DstReg);
+    return;
+  }
+
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
   MRI->setRegClass(DstReg, TRI->getPointerRegClass());
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
-
-  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
-  if (!Global)
-    return;
 
   unsigned AddrSpace = Global->getType()->getPointerAddressSpace();
   LLT PtrTy = LLT::pointer(AddrSpace, DL->getPointerSizeInBits(AddrSpace));

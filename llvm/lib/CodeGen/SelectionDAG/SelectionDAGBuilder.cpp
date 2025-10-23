@@ -3131,12 +3131,16 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   if (TLI.useLoadStackGuardNode(M)) {
     Guard = getLoadStackGuard(DAG, dl, Chain);
   } else {
-    const Value *IRGuard = TLI.getSDagStackGuard(M);
-    SDValue GuardPtr = getValue(IRGuard);
-
-    Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
-                        MachinePointerInfo(IRGuard, 0), Align,
-                        MachineMemOperand::MOVolatile);
+    if (const Value *IRGuard = TLI.getSDagStackGuard(M)) {
+      SDValue GuardPtr = getValue(IRGuard);
+      Guard = DAG.getLoad(PtrMemTy, dl, Chain, GuardPtr,
+                          MachinePointerInfo(IRGuard, 0), Align,
+                          MachineMemOperand::MOVolatile);
+    } else {
+      LLVMContext &Ctx = *DAG.getContext();
+      Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+      Guard = DAG.getPOISON(PtrMemTy);
+    }
   }
 
   // Perform the comparison via a getsetcc.
@@ -7324,6 +7328,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Res = DAG.getPtrExtOrTrunc(Res, sdl, PtrTy);
     } else {
       const Value *Global = TLI.getSDagStackGuard(M);
+      if (!Global) {
+        LLVMContext &Ctx = *DAG.getContext();
+        Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+        setValue(&I, DAG.getPOISON(PtrTy));
+        return;
+      }
+
       Align Align = DAG.getDataLayout().getPrefTypeAlign(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),
                         MachinePointerInfo(Global, 0), Align,
