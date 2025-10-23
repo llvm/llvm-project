@@ -419,10 +419,9 @@ def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
               "Set the no-infs-fp-math attribute on functions in the module.">,
        Option<"noNaNsFPMath", "no-nans-fp-math", "bool", /*default=*/"false",
               "Set the no-nans-fp-math attribute on functions in the module.">,
-       Option<
-           "approxFuncFPMath", "approx-func-fp-math", "bool",
-           /*default=*/"false",
-           "Set the approx-func-fp-math attribute on functions in the module.">,
+       Option<"approxFuncFPMath", "approx-func-fp-math", "bool",
+              /*default=*/"false",
+              "Set the afn flag on instructions in the module.">,
        Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math", "bool",
               /*default=*/"false",
               "Set the no-signed-zeros-fp-math attribute on functions in the "

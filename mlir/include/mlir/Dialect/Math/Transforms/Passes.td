@@ -44,4 +44,24 @@ def MathExtendToSupportedTypes : Pass<"math-extend-to-supported-types"> {
   let dependentDialects = ["math::MathDialect", "arith::ArithDialect"];
 }
 
+def MathExpandOpsPass : Pass<"math-expand-ops"> {
+  let summary = "Expand math operations.";
+  let description = [{
+    Expands some math operations into more fundamental operations, allowing them
+    to be subsequently lowered through these. For example, hyperbolic functions
+    are transformed into their expanded form containing only `exp` functions.
+
+    The `ops` parameter can be used to apply only a subset of all the
+    available expansions, these must correspond to the operation mnemonic.
+    For example, `ops=sinh,acosh` will expand only `math.sinh` and
+    `math.acosh` operations. If the list is empty, then all expansions are
+    applied.
+  }];
+  let dependentDialects = ["arith::ArithDialect"];
+  let options = [
+    ListOption<"opMnemonics", "ops", "std::string",
+               "Operations to expand.">
+  ];
+}
+
 #endif // MLIR_DIALECT_MATH_TRANSFORMS_PASSES

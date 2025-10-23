@@ -736,7 +736,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return true;
   }
 
-  if (const RecordType *RT = Ty->getAs<RecordType>()) {
+  if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     // If the record cannot be passed in registers, then it's not a PST.
     if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
         RAA != CGCXXABI::RAA_Default)

@@ -307,7 +307,7 @@ CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
                                                     ///< that are subject for use-after-return checking.
 CODEGENOPT(SanitizeStats     , 1, 0, Benign) ///< Collect statistics for sanitizers.
-CODEGENOPT(SanitizeDebugTrapReasons, 1, 1 , Benign) ///< Enable UBSan trapping messages
+ENUM_CODEGENOPT(SanitizeDebugTrapReasons, SanitizeDebugTrapReasonKind, 2, SanitizeDebugTrapReasonKind::Detailed, Benign) ///< Control how "trap reasons" are emitted in debug info
 CODEGENOPT(SimplifyLibCalls  , 1, 1, Benign) ///< Set when -fbuiltin is enabled.
 CODEGENOPT(SoftFloat         , 1, 0, Benign) ///< -soft-float.
 CODEGENOPT(SpeculativeLoadHardening, 1, 0, Benign) ///< Enable speculative load hardening.

@@ -1234,9 +1234,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // If we have a struct whose every field is value-initialized, we can
   // usually use memset.
   if (auto *ILE = dyn_cast<InitListExpr>(Init)) {
-    if (const RecordType *RType = ILE->getType()->getAs<RecordType>()) {
-      const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
-      if (RD->isStruct()) {
+    if (const RecordType *RType =
+            ILE->getType()->getAsCanonical<RecordType>()) {
+      if (RType->getOriginalDecl()->isStruct()) {
+        const RecordDecl *RD = RType->getOriginalDecl()->getDefinitionOrSelf();
         unsigned NumElements = 0;
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
           NumElements = CXXRD->getNumBases();

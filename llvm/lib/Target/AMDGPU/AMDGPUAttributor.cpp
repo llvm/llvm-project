@@ -1296,74 +1296,6 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
-/// Performs the final check and updates the 'amdgpu-waves-per-eu' attribute
-/// based on the finalized 'amdgpu-flat-work-group-size' attribute.
-/// Both attributes start with narrow ranges that expand during iteration.
-/// However, a narrower flat-workgroup-size leads to a wider waves-per-eu range,
-/// preventing optimal updates later. Therefore, waves-per-eu can't be updated
-/// with intermediate values during the attributor run. We defer the
-/// finalization of waves-per-eu until after the flat-workgroup-size is
-/// finalized.
-/// TODO: Remove this and move similar logic back into the attributor run once
-/// we have a better representation for waves-per-eu.
-static bool updateWavesPerEU(Module &M, TargetMachine &TM) {
-  bool Changed = false;
-
-  LLVMContext &Ctx = M.getContext();
-
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-
-    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-
-    std::optional<std::pair<unsigned, std::optional<unsigned>>>
-        FlatWgrpSizeAttr =
-            AMDGPU::getIntegerPairAttribute(F, "amdgpu-flat-work-group-size");
-
-    unsigned MinWavesPerEU = ST.getMinWavesPerEU();
-    unsigned MaxWavesPerEU = ST.getMaxWavesPerEU();
-
-    unsigned MinFlatWgrpSize = ST.getMinFlatWorkGroupSize();
-    unsigned MaxFlatWgrpSize = ST.getMaxFlatWorkGroupSize();
-    if (FlatWgrpSizeAttr.has_value()) {
-      MinFlatWgrpSize = FlatWgrpSizeAttr->first;
-      MaxFlatWgrpSize = *(FlatWgrpSizeAttr->second);
-    }
-
-    // Start with the "best" range.
-    unsigned Min = MinWavesPerEU;
-    unsigned Max = MinWavesPerEU;
-
-    // Compute the range from flat workgroup size. `getWavesPerEU` will also
-    // account for the 'amdgpu-waves-er-eu' attribute.
-    auto [MinFromFlatWgrpSize, MaxFromFlatWgrpSize] =
-        ST.getWavesPerEU(F, {MinFlatWgrpSize, MaxFlatWgrpSize});
-
-    // For the lower bound, we have to "tighten" it.
-    Min = std::max(Min, MinFromFlatWgrpSize);
-    // For the upper bound, we have to "extend" it.
-    Max = std::max(Max, MaxFromFlatWgrpSize);
-
-    // Clamp the range to the max range.
-    Min = std::max(Min, MinWavesPerEU);
-    Max = std::min(Max, MaxWavesPerEU);
-
-    // Update the attribute if it is not the max.
-    if (Min != MinWavesPerEU || Max != MaxWavesPerEU) {
-      SmallString<10> Buffer;
-      raw_svector_ostream OS(Buffer);
-      OS << Min << ',' << Max;
-      Attribute OldAttr = F.getFnAttribute("amdgpu-waves-per-eu");
-      Attribute NewAttr = Attribute::get(Ctx, "amdgpu-waves-per-eu", OS.str());
-      F.addFnAttr(NewAttr);
-      Changed |= OldAttr == NewAttr;
-    }
-  }
-
-  return Changed;
-}
-
 static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
@@ -1438,11 +1370,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     }
   }
 
-  bool Changed = A.run() == ChangeStatus::CHANGED;
-
-  Changed |= updateWavesPerEU(M, TM);
-
-  return Changed;
+  return A.run() == ChangeStatus::CHANGED;
 }
 } // namespace
 

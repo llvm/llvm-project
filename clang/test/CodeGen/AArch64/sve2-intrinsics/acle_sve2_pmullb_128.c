@@ -6,6 +6,11 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -target-feature +sve2 -target-feature +sve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
 
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme -target-feature +ssve-aes -O1 -Werror -Wall -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+
 #include <arm_sve.h>
 
 #ifdef SVE_OVERLOADED_FORMS
@@ -15,6 +20,15 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
+#ifdef __ARM_FEATURE_SME
+#define STREAMING __arm_streaming
+#else
+#define STREAMING
+#endif
+
+
+//
+//
 // CHECK-LABEL: @test_svpmullb_pair_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.pmullb.pair.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
@@ -25,11 +39,14 @@
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.pmullb.pair.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svpmullb_pair_u64(svuint64_t op1, svuint64_t op2)
+svuint64_t test_svpmullb_pair_u64(svuint64_t op1, svuint64_t op2) STREAMING
 {
   return SVE_ACLE_FUNC(svpmullb_pair,_u64,,)(op1, op2);
 }
 
+
+//
+//
 // CHECK-LABEL: @test_svpmullb_pair_n_u64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
@@ -44,7 +61,7 @@ svuint64_t test_svpmullb_pair_u64(svuint64_t op1, svuint64_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i64> @llvm.aarch64.sve.pmullb.pair.nxv2i64(<vscale x 2 x i64> [[OP1:%.*]], <vscale x 2 x i64> [[DOTSPLAT]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-svuint64_t test_svpmullb_pair_n_u64(svuint64_t op1, uint64_t op2)
+svuint64_t test_svpmullb_pair_n_u64(svuint64_t op1, uint64_t op2) STREAMING
 {
   return SVE_ACLE_FUNC(svpmullb_pair,_n_u64,,)(op1, op2);
 }

@@ -195,12 +195,6 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   OS << ")";
 }
 
-Frame *InterpFrame::getCaller() const {
-  if (Caller->Caller)
-    return Caller;
-  return S.getSplitFrame();
-}
-
 SourceRange InterpFrame::getCallRange() const {
   if (!Caller->Func) {
     if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())

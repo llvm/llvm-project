@@ -103,11 +103,6 @@ public:
     unsigned MIOperandNo;
     unsigned MINumOperands; // The number of operands.
 
-    /// DoNotEncode - Bools are set to true in this vector for each operand in
-    /// the DisableEncoding list.  These should not be emitted by the code
-    /// emitter.
-    BitVector DoNotEncode;
-
     /// MIOperandInfo - Default MI operand type. Note an operand may be made
     /// up of multiple MI operands.
     const DagInit *MIOperandInfo;
@@ -122,7 +117,7 @@ public:
         : Rec(R), Name(Name), SubOpNames(MINO),
           PrinterMethodName(PrinterMethodName), EncoderMethodNames(MINO),
           OperandType(OT), MIOperandNo(MION), MINumOperands(MINO),
-          DoNotEncode(MINO), MIOperandInfo(MIOI), Constraints(MINO) {}
+          MIOperandInfo(MIOI), Constraints(MINO) {}
 
     /// getTiedOperand - If this operand is tied to another one, return the
     /// other operand number.  Otherwise, return -1.
@@ -205,17 +200,6 @@ public:
         return {i, Op - OperandList[i].MIOperandNo};
     }
   }
-
-  /// isFlatOperandNotEmitted - Return true if the specified flat operand #
-  /// should not be emitted with the code emitter.
-  bool isFlatOperandNotEmitted(unsigned FlatOpNo) const {
-    std::pair<unsigned, unsigned> Op = getSubOperandNumber(FlatOpNo);
-    if (OperandList[Op.first].DoNotEncode.size() > Op.second)
-      return OperandList[Op.first].DoNotEncode[Op.second];
-    return false;
-  }
-
-  void ProcessDisableEncoding(StringRef Value);
 };
 
 class CodeGenInstruction {

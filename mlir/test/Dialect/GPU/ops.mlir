@@ -126,7 +126,7 @@ module attributes {gpu.container_module} {
       // CHECK-NEXT: %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
       // CHECK-NEXT: gpu.yield %{{.*}} : f32
       // CHECK-NEXT: } : (f32) -> f32
-      %sum2 = gpu.all_reduce %one { 
+      %sum2 = gpu.all_reduce %one {
       ^bb(%lhs : f32, %rhs : f32):
         %tmp = arith.addf %lhs, %rhs : f32
         gpu.yield %tmp : f32
@@ -259,7 +259,7 @@ module attributes {gpu.container_module} {
       %1 = arith.cmpi slt, %arg0, %arg0 : i32
       scf.if %1 {
         gpu.printf ", "
-      } 
+      }
       gpu.return
     }
 
@@ -541,4 +541,16 @@ func.func @warp_operand_result(%laneid: index, %v0 : vector<4xi32>) -> (vector<4
 //  CHECK-NEXT:     }
   }
   return %2 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @subgroup_broadcast
+//  CHECK-SAME: (%[[ARG:.*]]: f32, %[[IDX:.*]]: i32)
+func.func @subgroup_broadcast(%arg0 : f32, %arg1 : i32) -> (f32, f32, f32) {
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], first_active_lane : f32
+  %0 = gpu.subgroup_broadcast %arg0, first_active_lane : f32
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], any_lane : f32
+  %1 = gpu.subgroup_broadcast %arg0, any_lane : f32
+  // CHECK: gpu.subgroup_broadcast %[[ARG]], specific_lane %[[IDX]] : f32
+  %2 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : f32
+  func.return %0, %1, %2 : f32, f32, f32
 }

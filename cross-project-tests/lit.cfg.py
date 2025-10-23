@@ -102,9 +102,8 @@ if "compiler-rt" in config.llvm_enabled_projects:
     config.available_features.add("compiler-rt")
 
 # Check which debuggers are available:
-lldb_path = llvm_config.use_llvm_tool("lldb", search_env="LLDB")
-
-if lldb_path is not None:
+lldb_dap_path = llvm_config.use_llvm_tool("lldb-dap")
+if lldb_dap_path is not None:
     config.available_features.add("lldb")
 
 if llvm_config.use_llvm_tool("llvm-ar"):
@@ -117,10 +116,14 @@ def configure_dexter_substitutions():
     dexter_path = os.path.join(
         config.cross_project_tests_src_root, "debuginfo-tests", "dexter", "dexter.py"
     )
-    dexter_test_cmd = '"{}" "{}" test'.format(sys.executable, dexter_path)
-    if lldb_path is not None:
-        dexter_test_cmd += ' --lldb-executable "{}"'.format(lldb_path)
-    tools.append(ToolSubst("%dexter", dexter_test_cmd))
+    tools.append(ToolSubst("%dexter", f'"{sys.executable}" "{dexter_path}" test'))
+    if lldb_dap_path is not None:
+        tools.append(
+            ToolSubst(
+                "%dexter_lldb_args",
+                f'--lldb-executable "{lldb_dap_path}" --debugger lldb-dap',
+            )
+        )
 
     # For testing other bits of dexter that aren't under the "test" subcommand,
     # have a %dexter_base substitution.
@@ -144,32 +147,16 @@ def configure_dexter_substitutions():
         dependencies = ["clang", "lldb"]
         dexter_regression_test_c_builder = "clang"
         dexter_regression_test_cxx_builder = "clang++"
-        dexter_regression_test_debugger = "lldb"
+        dexter_regression_test_debugger = "lldb-dap"
+        dexter_regression_test_additional_flags = f'--lldb-executable "{lldb_dap_path}"'
         dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
         dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
-        dexter_regression_test_additional_flags = '--lldb-executable "{}"'.format(
-            lldb_path
-        )
 
     tools.append(
-        ToolSubst("%dexter_regression_test_c_builder", dexter_regression_test_c_builder)
-    )
-    tools.append(
         ToolSubst(
-            "%dexter_regression_test_cxx_builder", dexter_regression_test_cxx_builder
+            "%dexter_regression_test_debugger_args",
+            f"--debugger {dexter_regression_test_debugger} {dexter_regression_test_additional_flags}",
         )
-    )
-    tools.append(
-        ToolSubst("%dexter_regression_test_debugger", dexter_regression_test_debugger)
-    )
-    # We don't need to distinguish cflags and ldflags because for Dexter
-    # regression tests we use clang to drive the linker, and so all flags will be
-    # passed in a single command.
-    tools.append(
-        ToolSubst("%dexter_regression_test_c_flags", dexter_regression_test_c_flags)
-    )
-    tools.append(
-        ToolSubst("%dexter_regression_test_cxx_flags", dexter_regression_test_cxx_flags)
     )
 
     # Typical command would take the form:

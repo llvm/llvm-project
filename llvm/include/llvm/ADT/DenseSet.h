@@ -97,9 +97,6 @@ public:
 
   void clear() { TheMap.clear(); }
 
-  /// Return 1 if the specified key is in the set, 0 otherwise.
-  size_type count(const_arg_type_t<ValueT> V) const { return TheMap.count(V); }
-
   bool erase(const ValueT &V) { return TheMap.erase(V); }
 
   void swap(DenseSetImpl &RHS) { TheMap.swap(RHS.TheMap); }
@@ -169,8 +166,13 @@ public:
   }
 
   /// Check if the set contains the given element.
-  bool contains(const_arg_type_t<ValueT> V) const {
-    return TheMap.find(V) != TheMap.end();
+  [[nodiscard]] bool contains(const_arg_type_t<ValueT> V) const {
+    return TheMap.contains(V);
+  }
+
+  /// Return 1 if the specified key is in the set, 0 otherwise.
+  [[nodiscard]] size_type count(const_arg_type_t<ValueT> V) const {
+    return TheMap.count(V);
   }
 
   /// Alternative version of find() which allows a different, and possibly less

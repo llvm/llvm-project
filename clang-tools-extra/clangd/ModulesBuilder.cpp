@@ -333,7 +333,10 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
 
     return llvm::createStringError(
         llvm::formatv("Failed to compile {0}. Use '--log=verbose' to view "
-                      "detailed failure reasons.",
+                      "detailed failure reasons. It is helpful to use "
+                      "'--debug-modules-builder' flag to keep the clangd's "
+                      "built module files to reproduce the failure for "
+                      "debugging. Remember to remove them after debugging.",
                       ModuleUnitFileName));
   }
 

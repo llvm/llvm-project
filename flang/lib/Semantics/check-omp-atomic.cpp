@@ -67,6 +67,22 @@ struct IsIntegral<evaluate::Type<C, K>> {
 
 template <typename T> constexpr bool is_integral_v{IsIntegral<T>::value};
 
+template <typename...> struct IsFloatingPoint {
+  static constexpr bool value{false};
+};
+
+template <common::TypeCategory C, int K>
+struct IsFloatingPoint<evaluate::Type<C, K>> {
+  static constexpr bool value{//
+      C == common::TypeCategory::Real || C == common::TypeCategory::Complex};
+};
+
+template <typename T>
+constexpr bool is_floating_point_v{IsFloatingPoint<T>::value};
+
+template <typename T>
+constexpr bool is_numeric_v{is_integral_v<T> || is_floating_point_v<T>};
+
 template <typename T, typename Op0, typename Op1>
 using ReassocOpBase = evaluate::match::AnyOfPattern< //
     evaluate::match::Add<T, Op0, Op1>, //
@@ -88,7 +104,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   using Id = evaluate::rewrite::Identity;
   struct NonIntegralTag {};
 
-  ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
+  ReassocRewriter(const SomeExpr &atom, const SemanticsContext &context)
+      : atom_(atom), context_(context) {}
 
   // Try to find cases where the input expression is of the form
   // (1) (a . b) . c, or
@@ -102,8 +119,13 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   // For example, assuming x is the atomic variable:
   //   (a + x) + b  ->  (a + b) + x,  i.e. (conceptually) swap x and b.
   template <typename T, typename U,
-      typename = std::enable_if_t<is_integral_v<T>>>
+      typename = std::enable_if_t<is_numeric_v<T>>>
   evaluate::Expr<T> operator()(evaluate::Expr<T> &&x, const U &u) {
+    if constexpr (is_floating_point_v<T>) {
+      if (!context_.langOptions().AssociativeMath) {
+        return Id::operator()(std::move(x), u);
+      }
+    }
     // As per the above comment, there are 3 subexpressions involved in this
     // transformation. A match::Expr<T> will match evaluate::Expr<U> when T is
     // same as U, plus it will store a pointer (ref) to the matched expression.
@@ -169,7 +191,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   }
 
   template <typename T, typename U,
-      typename = std::enable_if_t<!is_integral_v<T>>>
+      typename = std::enable_if_t<!is_numeric_v<T>>>
   evaluate::Expr<T> operator()(
       evaluate::Expr<T> &&x, const U &u, NonIntegralTag = {}) {
     return Id::operator()(std::move(x), u);
@@ -181,6 +203,7 @@ private:
   }
 
   const SomeExpr &atom_;
+  const SemanticsContext &context_;
 };
 
 struct AnalyzedCondStmt {
@@ -809,7 +832,7 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
     CheckStorageOverlap(atom, GetNonAtomArguments(atom, update.rhs), source);
     return std::nullopt;
   } else if (tryReassoc) {
-    ReassocRewriter ra(atom);
+    ReassocRewriter ra(atom, context_);
     SomeExpr raRhs{evaluate::rewrite::Mutator(ra)(update.rhs)};
 
     std::tie(hasErrors, tryReassoc) = CheckAtomicUpdateAssignmentRhs(

@@ -456,49 +456,7 @@ namespace {
     void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
                                    const APSInt &N);
     /// Add N to the address of this subobject.
-    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N) {
-      if (Invalid || !N) return;
-      uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
-      if (isMostDerivedAnUnsizedArray()) {
-        diagnoseUnsizedArrayPointerArithmetic(Info, E);
-        // Can't verify -- trust that the user is doing the right thing (or if
-        // not, trust that the caller will catch the bad behavior).
-        // FIXME: Should we reject if this overflows, at least?
-        Entries.back() = PathEntry::ArrayIndex(
-            Entries.back().getAsArrayIndex() + TruncatedN);
-        return;
-      }
-
-      // [expr.add]p4: For the purposes of these operators, a pointer to a
-      // nonarray object behaves the same as a pointer to the first element of
-      // an array of length one with the type of the object as its element type.
-      bool IsArray = MostDerivedPathLength == Entries.size() &&
-                     MostDerivedIsArrayElement;
-      uint64_t ArrayIndex = IsArray ? Entries.back().getAsArrayIndex()
-                                    : (uint64_t)IsOnePastTheEnd;
-      uint64_t ArraySize =
-          IsArray ? getMostDerivedArraySize() : (uint64_t)1;
-
-      if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
-        // Calculate the actual index in a wide enough type, so we can include
-        // it in the note.
-        N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
-        (llvm::APInt&)N += ArrayIndex;
-        assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
-        diagnosePointerArithmetic(Info, E, N);
-        setInvalid();
-        return;
-      }
-
-      ArrayIndex += TruncatedN;
-      assert(ArrayIndex <= ArraySize &&
-             "bounds check succeeded for out-of-bounds index");
-
-      if (IsArray)
-        Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
-      else
-        IsOnePastTheEnd = (ArrayIndex != 0);
-    }
+    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N, const LValue &LV);
   };
 
   /// A scope at the end of which an object can need to be destroyed.
@@ -884,6 +842,11 @@ namespace {
     /// EvaluatingDeclValue - This is the value being constructed for the
     /// declaration whose initializer is being evaluated, if any.
     APValue *EvaluatingDeclValue;
+
+    /// Stack of loops and 'switch' statements which we're currently
+    /// breaking/continuing; null entries are used to mark unlabeled
+    /// break/continue.
+    SmallVector<const Stmt *> BreakContinueStack;
 
     /// Set of objects that are currently being constructed.
     llvm::DenseMap<ObjectUnderConstruction, ConstructionPhase>
@@ -1790,7 +1753,7 @@ namespace {
       Offset = CharUnits::fromQuantity(Offset64 + ElemSize64 * Index64);
 
       if (checkNullPointer(Info, E, CSK_ArrayIndex))
-        Designator.adjustIndex(Info, E, Index);
+        Designator.adjustIndex(Info, E, Index, *this);
       clearIsNullPointer();
     }
     void adjustOffset(CharUnits N) {
@@ -1896,6 +1859,54 @@ namespace {
       return false;
     return LHS.Path == RHS.Path;
   }
+}
+
+void SubobjectDesignator::adjustIndex(EvalInfo &Info, const Expr *E, APSInt N,
+                                      const LValue &LV) {
+  if (Invalid || !N)
+    return;
+  uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();
+  if (isMostDerivedAnUnsizedArray()) {
+    diagnoseUnsizedArrayPointerArithmetic(Info, E);
+    // Can't verify -- trust that the user is doing the right thing (or if
+    // not, trust that the caller will catch the bad behavior).
+    // FIXME: Should we reject if this overflows, at least?
+    Entries.back() =
+        PathEntry::ArrayIndex(Entries.back().getAsArrayIndex() + TruncatedN);
+    return;
+  }
+
+  // [expr.add]p4: For the purposes of these operators, a pointer to a
+  // nonarray object behaves the same as a pointer to the first element of
+  // an array of length one with the type of the object as its element type.
+  bool IsArray =
+      MostDerivedPathLength == Entries.size() && MostDerivedIsArrayElement;
+  uint64_t ArrayIndex =
+      IsArray ? Entries.back().getAsArrayIndex() : (uint64_t)IsOnePastTheEnd;
+  uint64_t ArraySize = IsArray ? getMostDerivedArraySize() : (uint64_t)1;
+
+  if (N < -(int64_t)ArrayIndex || N > ArraySize - ArrayIndex) {
+    if (!Info.checkingPotentialConstantExpression() ||
+        !LV.AllowConstexprUnknown) {
+      // Calculate the actual index in a wide enough type, so we can include
+      // it in the note.
+      N = N.extend(std::max<unsigned>(N.getBitWidth() + 1, 65));
+      (llvm::APInt &)N += ArrayIndex;
+      assert(N.ugt(ArraySize) && "bounds check failed for in-bounds index");
+      diagnosePointerArithmetic(Info, E, N);
+    }
+    setInvalid();
+    return;
+  }
+
+  ArrayIndex += TruncatedN;
+  assert(ArrayIndex <= ArraySize &&
+         "bounds check succeeded for out-of-bounds index");
+
+  if (IsArray)
+    Entries.back() = PathEntry::ArrayIndex(ArrayIndex);
+  else
+    IsOnePastTheEnd = (ArrayIndex != 0);
 }
 
 static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E);
@@ -4100,7 +4111,8 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       }
 
       // Next subobject is a class, struct or union field.
-      RecordDecl *RD = ObjType->castAs<RecordType>()->getOriginalDecl();
+      RecordDecl *RD =
+          ObjType->castAsCanonical<RecordType>()->getOriginalDecl();
       if (RD->isUnion()) {
         const FieldDecl *UnionField = O->getUnionField();
         if (!UnionField ||
@@ -5138,12 +5150,18 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
   if (const PointerType *PT = TargetQT->getAs<PointerType>())
     TargetQT = PT->getPointeeType();
 
-  // Check this cast lands within the final derived-to-base subobject path.
-  if (D.MostDerivedPathLength + E->path_size() > D.Entries.size()) {
-    Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << D.MostDerivedType << TargetQT;
+  auto InvalidCast = [&]() {
+    if (!Info.checkingPotentialConstantExpression() ||
+        !Result.AllowConstexprUnknown) {
+      Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
+          << D.MostDerivedType << TargetQT;
+    }
     return false;
-  }
+  };
+
+  // Check this cast lands within the final derived-to-base subobject path.
+  if (D.MostDerivedPathLength + E->path_size() > D.Entries.size())
+    return InvalidCast();
 
   // Check the type of the final cast. We don't need to check the path,
   // since a cast can only be formed if the path is unique.
@@ -5154,11 +5172,8 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
     FinalType = D.MostDerivedType->getAsCXXRecordDecl();
   else
     FinalType = getAsBaseClass(D.Entries[NewEntriesSize - 1]);
-  if (FinalType->getCanonicalDecl() != TargetType->getCanonicalDecl()) {
-    Info.CCEDiag(E, diag::note_constexpr_invalid_downcast)
-      << D.MostDerivedType << TargetQT;
-    return false;
-  }
+  if (FinalType->getCanonicalDecl() != TargetType->getCanonicalDecl())
+    return InvalidCast();
 
   // Truncate the lvalue to the appropriate derived class.
   return CastToDerivedClass(Info, E, Result, TargetType, NewEntriesSize);
@@ -5376,6 +5391,44 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S,
                                    const SwitchCase *SC = nullptr);
 
+/// Helper to implement named break/continue. Returns 'true' if the evaluation
+/// result should be propagated up. Otherwise, it sets the evaluation result
+/// to either Continue to continue the current loop, or Succeeded to break it.
+static bool ShouldPropagateBreakContinue(EvalInfo &Info,
+                                         const Stmt *LoopOrSwitch,
+                                         ArrayRef<BlockScopeRAII *> Scopes,
+                                         EvalStmtResult &ESR) {
+  bool IsSwitch = isa<SwitchStmt>(LoopOrSwitch);
+
+  // For loops, map Succeeded to Continue so we don't have to check for both.
+  if (!IsSwitch && ESR == ESR_Succeeded) {
+    ESR = ESR_Continue;
+    return false;
+  }
+
+  if (ESR != ESR_Break && ESR != ESR_Continue)
+    return false;
+
+  // Are we breaking out of or continuing this statement?
+  bool CanBreakOrContinue = !IsSwitch || ESR == ESR_Break;
+  const Stmt *StackTop = Info.BreakContinueStack.back();
+  if (CanBreakOrContinue && (StackTop == nullptr || StackTop == LoopOrSwitch)) {
+    Info.BreakContinueStack.pop_back();
+    if (ESR == ESR_Break)
+      ESR = ESR_Succeeded;
+    return false;
+  }
+
+  // We're not. Propagate the result up.
+  for (BlockScopeRAII *S : Scopes) {
+    if (!S->destroy()) {
+      ESR = ESR_Failed;
+      break;
+    }
+  }
+  return true;
+}
+
 /// Evaluate the body of a loop, and translate the result as appropriate.
 static EvalStmtResult EvaluateLoopBody(StmtResult &Result, EvalInfo &Info,
                                        const Stmt *Body,
@@ -5386,18 +5439,7 @@ static EvalStmtResult EvaluateLoopBody(StmtResult &Result, EvalInfo &Info,
   if (ESR != ESR_Failed && ESR != ESR_CaseNotFound && !Scope.destroy())
     ESR = ESR_Failed;
 
-  switch (ESR) {
-  case ESR_Break:
-    return ESR_Succeeded;
-  case ESR_Succeeded:
-  case ESR_Continue:
-    return ESR_Continue;
-  case ESR_Failed:
-  case ESR_Returned:
-  case ESR_CaseNotFound:
-    return ESR;
-  }
-  llvm_unreachable("Invalid EvalStmtResult!");
+  return ESR;
 }
 
 /// Evaluate a switch statement.
@@ -5463,10 +5505,12 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
   EvalStmtResult ESR = EvaluateStmt(Result, Info, SS->getBody(), Found);
   if (ESR != ESR_Failed && ESR != ESR_CaseNotFound && !Scope.destroy())
     return ESR_Failed;
+  if (ShouldPropagateBreakContinue(Info, SS, /*Scopes=*/{}, ESR))
+    return ESR;
 
   switch (ESR) {
   case ESR_Break:
-    return ESR_Succeeded;
+    llvm_unreachable("Should have been converted to Succeeded");
   case ESR_Succeeded:
   case ESR_Continue:
   case ESR_Failed:
@@ -5564,6 +5608,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     case Stmt::WhileStmtClass: {
       EvalStmtResult ESR =
           EvaluateLoopBody(Result, Info, cast<WhileStmt>(S)->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, S, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       break;
@@ -5585,6 +5631,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
       EvalStmtResult ESR =
           EvaluateLoopBody(Result, Info, FS->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, FS, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       if (const auto *Inc = FS->getInc()) {
@@ -5747,6 +5795,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         break;
 
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, WS->getBody());
+      if (ShouldPropagateBreakContinue(Info, WS, &Scope, ESR))
+        return ESR;
+
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && !Scope.destroy())
           return ESR_Failed;
@@ -5763,6 +5814,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     bool Continue;
     do {
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, DS->getBody(), Case);
+      if (ShouldPropagateBreakContinue(Info, DS, /*Scopes=*/{}, ESR))
+        return ESR;
       if (ESR != ESR_Continue)
         return ESR;
       Case = nullptr;
@@ -5805,6 +5858,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       }
 
       EvalStmtResult ESR = EvaluateLoopBody(Result, Info, FS->getBody());
+      if (ShouldPropagateBreakContinue(Info, FS, {&IterScope, &ForScope}, ESR))
+        return ESR;
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && (!IterScope.destroy() || !ForScope.destroy()))
           return ESR_Failed;
@@ -5896,6 +5951,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
       // Loop body.
       ESR = EvaluateLoopBody(Result, Info, FS->getBody());
+      if (ShouldPropagateBreakContinue(Info, FS, {&InnerScope, &Scope}, ESR))
+        return ESR;
       if (ESR != ESR_Continue) {
         if (ESR != ESR_Failed && (!InnerScope.destroy() || !Scope.destroy()))
           return ESR_Failed;
@@ -5921,10 +5978,11 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
     return EvaluateSwitch(Result, Info, cast<SwitchStmt>(S));
 
   case Stmt::ContinueStmtClass:
-    return ESR_Continue;
-
-  case Stmt::BreakStmtClass:
-    return ESR_Break;
+  case Stmt::BreakStmtClass: {
+    auto *B = cast<LoopControlStmt>(S);
+    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
+  }
 
   case Stmt::LabelStmtClass:
     return EvaluateStmt(Result, Info, cast<LabelStmt>(S)->getSubStmt(), Case);
@@ -6116,12 +6174,15 @@ static bool checkDynamicType(EvalInfo &Info, const Expr *E, const LValue &This,
     } else if (Polymorphic) {
       // Conservatively refuse to perform a polymorphic operation if we would
       // not be able to read a notional 'vptr' value.
-      APValue Val;
-      This.moveInto(Val);
-      QualType StarThisType =
-          Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
-      Info.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-          << AK << Val.getAsString(Info.Ctx, StarThisType);
+      if (!Info.checkingPotentialConstantExpression() ||
+          !This.AllowConstexprUnknown) {
+        APValue Val;
+        This.moveInto(Val);
+        QualType StarThisType =
+            Info.Ctx.getLValueReferenceType(This.Designator.getType(Info.Ctx));
+        Info.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+            << AK << Val.getAsString(Info.Ctx, StarThisType);
+      }
       return false;
     }
     return true;
@@ -7974,8 +8035,9 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
       // so its layout is unspecified. For now, we'll simply treat these cases
       // as unsupported (this should only be possible with OpenCL bool vectors
       // whose element count isn't a multiple of the byte size).
-      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_invalid_vector)
-          << QualType(VTy, 0) << EltSize << NElts << Ctx.getCharWidth();
+      if (Info)
+        Info->FFDiag(Loc, diag::note_constexpr_bit_cast_invalid_vector)
+            << QualType(VTy, 0) << EltSize << NElts << Ctx.getCharWidth();
       return false;
     }
 
@@ -7984,8 +8046,9 @@ static bool checkBitCastConstexprEligibilityType(SourceLocation Loc,
       // The layout for x86_fp80 vectors seems to be handled very inconsistently
       // by both clang and LLVM, so for now we won't allow bit_casts involving
       // it in a constexpr context.
-      Info->FFDiag(Loc, diag::note_constexpr_bit_cast_unsupported_type)
-          << EltTy;
+      if (Info)
+        Info->FFDiag(Loc, diag::note_constexpr_bit_cast_unsupported_type)
+            << EltTy;
       return false;
     }
   }
@@ -8581,10 +8644,9 @@ public:
     const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     if (!FD) return Error(E);
     assert(!FD->getType()->isReferenceType() && "prvalue reference?");
-    assert(
-        BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
-            FD->getParent()->getCanonicalDecl() &&
-        "record / field mismatch");
+    assert(BaseTy->castAsCanonical<RecordType>()->getOriginalDecl() ==
+               FD->getParent()->getCanonicalDecl() &&
+           "record / field mismatch");
 
     // Note: there is no lvalue base here. But this case should only ever
     // happen in C or in C++98, where we cannot be evaluating a constexpr
@@ -8811,10 +8873,9 @@ public:
 
     const ValueDecl *MD = E->getMemberDecl();
     if (const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl())) {
-      assert(
-          BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
-              FD->getParent()->getCanonicalDecl() &&
-          "record / field mismatch");
+      assert(BaseTy->castAsCanonical<RecordType>()->getOriginalDecl() ==
+                 FD->getParent()->getCanonicalDecl() &&
+             "record / field mismatch");
       (void)BaseTy;
       if (!HandleLValueMember(this->Info, E, Result, FD))
         return false;
@@ -9465,7 +9526,8 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
          "Can't get the size of a non alloc_size function");
   const auto *Base = LVal.getLValueBase().get<const Expr *>();
   const CallExpr *CE = tryUnwrapAllocSizeCall(Base);
-  std::optional<llvm::APInt> Size = CE->getBytesReturnedByAllocSizeCall(Ctx);
+  std::optional<llvm::APInt> Size =
+      CE->evaluateBytesReturnedByAllocSizeCall(Ctx);
   if (!Size)
     return false;
 
@@ -11630,7 +11692,38 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_psrlv2di:
   case clang::X86::BI__builtin_ia32_psrlv4di:
   case clang::X86::BI__builtin_ia32_psrlv4si:
-  case clang::X86::BI__builtin_ia32_psrlv8si:{
+  case clang::X86::BI__builtin_ia32_psrlv8si:
+
+  case clang::X86::BI__builtin_ia32_psllwi128:
+  case clang::X86::BI__builtin_ia32_pslldi128:
+  case clang::X86::BI__builtin_ia32_psllqi128:
+  case clang::X86::BI__builtin_ia32_psllwi256:
+  case clang::X86::BI__builtin_ia32_pslldi256:
+  case clang::X86::BI__builtin_ia32_psllqi256:
+  case clang::X86::BI__builtin_ia32_psllwi512:
+  case clang::X86::BI__builtin_ia32_pslldi512:
+  case clang::X86::BI__builtin_ia32_psllqi512:
+
+  case clang::X86::BI__builtin_ia32_psrlwi128:
+  case clang::X86::BI__builtin_ia32_psrldi128:
+  case clang::X86::BI__builtin_ia32_psrlqi128:
+  case clang::X86::BI__builtin_ia32_psrlwi256:
+  case clang::X86::BI__builtin_ia32_psrldi256:
+  case clang::X86::BI__builtin_ia32_psrlqi256:
+  case clang::X86::BI__builtin_ia32_psrlwi512:
+  case clang::X86::BI__builtin_ia32_psrldi512:
+  case clang::X86::BI__builtin_ia32_psrlqi512:
+
+  case clang::X86::BI__builtin_ia32_psrawi128:
+  case clang::X86::BI__builtin_ia32_psradi128:
+  case clang::X86::BI__builtin_ia32_psraqi128:
+  case clang::X86::BI__builtin_ia32_psrawi256:
+  case clang::X86::BI__builtin_ia32_psradi256:
+  case clang::X86::BI__builtin_ia32_psraqi256:
+  case clang::X86::BI__builtin_ia32_psrawi512:
+  case clang::X86::BI__builtin_ia32_psradi512:
+  case clang::X86::BI__builtin_ia32_psraqi512: {
+
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -11644,6 +11737,64 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
       APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+
+      if (SourceRHS.isInt()) {
+        const unsigned LaneBitWidth = LHS.getBitWidth();
+        const unsigned ShiftAmount = SourceRHS.getInt().getZExtValue();
+
+        switch (E->getBuiltinCallee()) {
+        case clang::X86::BI__builtin_ia32_psllwi128:
+        case clang::X86::BI__builtin_ia32_psllwi256:
+        case clang::X86::BI__builtin_ia32_psllwi512:
+        case clang::X86::BI__builtin_ia32_pslldi128:
+        case clang::X86::BI__builtin_ia32_pslldi256:
+        case clang::X86::BI__builtin_ia32_pslldi512:
+        case clang::X86::BI__builtin_ia32_psllqi128:
+        case clang::X86::BI__builtin_ia32_psllqi256:
+        case clang::X86::BI__builtin_ia32_psllqi512:
+          if (ShiftAmount >= LaneBitWidth) {
+            ResultElements.push_back(
+                APValue(APSInt(APInt::getZero(LaneBitWidth), DestUnsigned)));
+          } else {
+            ResultElements.push_back(
+                APValue(APSInt(LHS.shl(ShiftAmount), DestUnsigned)));
+          }
+          break;
+        case clang::X86::BI__builtin_ia32_psrlwi128:
+        case clang::X86::BI__builtin_ia32_psrlwi256:
+        case clang::X86::BI__builtin_ia32_psrlwi512:
+        case clang::X86::BI__builtin_ia32_psrldi128:
+        case clang::X86::BI__builtin_ia32_psrldi256:
+        case clang::X86::BI__builtin_ia32_psrldi512:
+        case clang::X86::BI__builtin_ia32_psrlqi128:
+        case clang::X86::BI__builtin_ia32_psrlqi256:
+        case clang::X86::BI__builtin_ia32_psrlqi512:
+          if (ShiftAmount >= LaneBitWidth) {
+            ResultElements.push_back(
+                APValue(APSInt(APInt::getZero(LaneBitWidth), DestUnsigned)));
+          } else {
+            ResultElements.push_back(
+                APValue(APSInt(LHS.lshr(ShiftAmount), DestUnsigned)));
+          }
+          break;
+        case clang::X86::BI__builtin_ia32_psrawi128:
+        case clang::X86::BI__builtin_ia32_psrawi256:
+        case clang::X86::BI__builtin_ia32_psrawi512:
+        case clang::X86::BI__builtin_ia32_psradi128:
+        case clang::X86::BI__builtin_ia32_psradi256:
+        case clang::X86::BI__builtin_ia32_psradi512:
+        case clang::X86::BI__builtin_ia32_psraqi128:
+        case clang::X86::BI__builtin_ia32_psraqi256:
+        case clang::X86::BI__builtin_ia32_psraqi512:
+          ResultElements.push_back(
+              APValue(APSInt(LHS.ashr(std::min(ShiftAmount, LaneBitWidth - 1)),
+                             DestUnsigned)));
+          break;
+        default:
+          llvm_unreachable("Unexpected builtin callee");
+        }
+        continue;
+      }
       APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
       switch (E->getBuiltinCallee()) {
       case Builtin::BI__builtin_elementwise_add_sat:
@@ -11740,6 +11891,62 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APValue(APSInt(llvm::APIntOps::mulsExtended(LHS, RHS), false)));
         break;
       }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_vprotbi:
+  case clang::X86::BI__builtin_ia32_vprotdi:
+  case clang::X86::BI__builtin_ia32_vprotqi:
+  case clang::X86::BI__builtin_ia32_vprotwi:
+  case clang::X86::BI__builtin_ia32_prold128:
+  case clang::X86::BI__builtin_ia32_prold256:
+  case clang::X86::BI__builtin_ia32_prold512:
+  case clang::X86::BI__builtin_ia32_prolq128:
+  case clang::X86::BI__builtin_ia32_prolq256:
+  case clang::X86::BI__builtin_ia32_prolq512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    APSInt RHS = SourceRHS.getInt();
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APSInt &LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      ResultElements.push_back(APValue(APSInt(LHS.rotl(RHS), DestUnsigned)));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+  case clang::X86::BI__builtin_ia32_prord128:
+  case clang::X86::BI__builtin_ia32_prord256:
+  case clang::X86::BI__builtin_ia32_prord512:
+  case clang::X86::BI__builtin_ia32_prorq128:
+  case clang::X86::BI__builtin_ia32_prorq256:
+  case clang::X86::BI__builtin_ia32_prorq512: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    APSInt RHS = SourceRHS.getInt();
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      const APSInt &LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      ResultElements.push_back(APValue(APSInt(LHS.rotr(RHS), DestUnsigned)));
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
@@ -14880,6 +15087,11 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
+      // Bail out early if we're checking potential constant expression.
+      // Otherwise, prefer to diagnose other issues.
+      if (Info.checkingPotentialConstantExpression() &&
+          (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+        return false;
       auto DiagComparison = [&] (unsigned DiagID, bool Reversed = false) {
         std::string LHS = LHSValue.toString(Info.Ctx, E->getLHS()->getType());
         std::string RHS = RHSValue.toString(Info.Ctx, E->getRHS()->getType());
@@ -15200,6 +15412,10 @@ bool IntExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
     // Reject differing bases from the normal codepath; we special-case
     // comparisons to null.
     if (!HasSameBase(LHSValue, RHSValue)) {
+      if (Info.checkingPotentialConstantExpression() &&
+          (LHSValue.AllowConstexprUnknown || RHSValue.AllowConstexprUnknown))
+        return false;
+
       const Expr *LHSExpr = LHSValue.Base.dyn_cast<const Expr *>();
       const Expr *RHSExpr = RHSValue.Base.dyn_cast<const Expr *>();
 

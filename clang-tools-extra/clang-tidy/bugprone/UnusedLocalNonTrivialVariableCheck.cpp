@@ -33,7 +33,7 @@ AST_MATCHER(VarDecl, isReferenced) { return Node.isReferenced(); }
 AST_MATCHER(VarDecl, explicitMarkUnused) {
   // Implementations should not emit a warning that a name-independent
   // declaration is used or unused.
-  LangOptions const &LangOpts = Finder->getASTContext().getLangOpts();
+  const LangOptions &LangOpts = Finder->getASTContext().getLangOpts();
   return Node.hasAttr<UnusedAttr>() ||
          (LangOpts.CPlusPlus26 && Node.isPlaceholderVar(LangOpts));
 }

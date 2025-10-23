@@ -1,7 +1,6 @@
 ! This test checks lowering of OpenMP DO Directive(Worksharing) for different
 ! types of loop iteration variable, lower bound, upper bound, and step.
 
-!REQUIRES: shell
 !RUN: bbc -fopenmp -emit-hlfir %s -o - 2>&1 | FileCheck %s
 
 !CHECK:  OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed into 64 bits.

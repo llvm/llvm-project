@@ -934,7 +934,7 @@ typedef __char32_t char32_t;
 #    endif
 #  endif
 
-#  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
+#  if __has_attribute(__no_thread_safety_analysis__)
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
 #  else
 #    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS

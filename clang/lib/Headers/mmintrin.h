@@ -778,11 +778,9 @@ _mm_sll_pi16(__m64 __m, __m64 __count)
 /// \returns A 64-bit integer vector of [4 x i16] containing the left-shifted
 ///    values. If \a __count is greater or equal to 16, the result is set to all
 ///    0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psllwi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psllwi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Left-shifts each 32-bit signed integer element of the first
@@ -825,11 +823,9 @@ _mm_sll_pi32(__m64 __m, __m64 __count)
 /// \returns A 64-bit integer vector of [2 x i32] containing the left-shifted
 ///    values. If \a __count is greater or equal to 32, the result is set to all
 ///    0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_pslldi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_pslldi128((__v4si)__zext128(__m), __count));
 }
 
 /// Left-shifts the first 64-bit integer parameter by the number of bits
@@ -867,11 +863,9 @@ _mm_sll_si64(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the left-shifted value. If
 ///     \a __count is greater or equal to 64, the result is set to 0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_slli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psllqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_slli_si64(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psllqi128((__v2di)__zext128(__m), __count));
 }
 
 /// Right-shifts each 16-bit integer element of the first parameter,
@@ -916,11 +910,9 @@ _mm_sra_pi16(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [4 x i16] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srai_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrawi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srai_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrawi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Right-shifts each 32-bit integer element of the first parameter,
@@ -965,11 +957,9 @@ _mm_sra_pi32(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [2 x i32] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srai_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psradi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srai_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psradi128((__v4si)__zext128(__m), __count));
 }
 
 /// Right-shifts each 16-bit integer element of the first parameter,
@@ -1012,11 +1002,9 @@ _mm_srl_pi16(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [4 x i16] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_pi16(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrlwi128((__v8hi)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_pi16(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrlwi128((__v8hi)__zext128(__m), __count));
 }
 
 /// Right-shifts each 32-bit integer element of the first parameter,
@@ -1059,11 +1047,9 @@ _mm_srl_pi32(__m64 __m, __m64 __count)
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector of [2 x i32] containing the right-shifted
 ///    values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_pi32(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrldi128((__v4si)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_pi32(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrldi128((__v4si)__zext128(__m), __count));
 }
 
 /// Right-shifts the first 64-bit integer parameter by the number of bits
@@ -1102,11 +1088,9 @@ _mm_srl_si64(__m64 __m, __m64 __count)
 /// \param __count
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector containing the right-shifted value.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_srli_si64(__m64 __m, int __count)
-{
-    return __trunc64(__builtin_ia32_psrlqi128((__v2di)__anyext128(__m),
-                                              __count));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_srli_si64(__m64 __m, int __count) {
+  return __trunc64(__builtin_ia32_psrlqi128((__v2di)__zext128(__m), __count));
 }
 
 /// Performs a bitwise AND of two 64-bit integer vectors.

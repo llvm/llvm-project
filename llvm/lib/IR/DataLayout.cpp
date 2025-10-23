@@ -926,12 +926,13 @@ static APInt getElementIndex(TypeSize ElemSize, APInt &Offset) {
     return APInt::getZero(BitWidth);
   }
 
-  APInt Index = Offset.sdiv(ElemSize);
-  Offset -= Index * ElemSize;
+  uint64_t FixedElemSize = ElemSize.getFixedValue();
+  APInt Index = Offset.sdiv(FixedElemSize);
+  Offset -= Index * FixedElemSize;
   if (Offset.isNegative()) {
     // Prefer a positive remaining offset to allow struct indexing.
     --Index;
-    Offset += ElemSize;
+    Offset += FixedElemSize;
     assert(Offset.isNonNegative() && "Remaining offset shouldn't be negative");
   }
   return Index;

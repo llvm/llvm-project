@@ -18,6 +18,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.toupper
 
     # dlfcn.h entrypoints
+    libc.src.dlfcn.dladdr
     libc.src.dlfcn.dlclose
     libc.src.dlfcn.dlerror
     libc.src.dlfcn.dlopen
@@ -707,6 +708,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinpif16
     libc.src.math.atanf16
     libc.src.math.atanhf16
+    libc.src.math.atanpif16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -911,8 +913,11 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.bf16sub
   libc.src.math.bf16subf
   libc.src.math.bf16subl
+  libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
+  libc.src.math.copysignbf16
   libc.src.math.fabsbf16
+  libc.src.math.fdimbf16
   libc.src.math.floorbf16
   libc.src.math.fmaxbf16
   libc.src.math.fmaximumbf16
@@ -929,6 +934,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
   libc.src.math.ilogbbf16
+  libc.src.math.iscanonicalbf16
+  libc.src.math.issignalingbf16
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
@@ -948,9 +955,13 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.rintbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
+  libc.src.math.scalblnbf16
+  libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.truncbf16
+  libc.src.math.totalorderbf16
+  libc.src.math.totalordermagbf16
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )

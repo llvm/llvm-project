@@ -312,7 +312,7 @@ define i1 @test10_struct_arr_i16(i16 %x) {
 
 define i1 @test10_struct_arr_i64(i64 %x) {
 ; CHECK-LABEL: @test10_struct_arr_i64(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[TMP1:%.*]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[X:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr inbounds [4 x %Foo], ptr @GStructArr, i64 0, i64 %x, i32 2
@@ -361,7 +361,7 @@ define i1 @test10_struct_arr_noarrayty(i32 %x) {
 define i1 @pr93017(i64 %idx) {
 ; CHECK-LABEL: @pr93017(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[IDX:%.*]] to i32
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @table, i32 0, i32 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds ptr, ptr @table, i32 [[TMP1]]
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[V]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]

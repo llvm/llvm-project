@@ -1361,3 +1361,19 @@ define <32 x half> @test_mm512_castph256_ph512_freeze(<16 x half> %a0) nounwind 
   %res = shufflevector <16 x half> %a0, <16 x half> %a1, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <32 x half> %res
 }
+
+define <8 x half> @PR153570(ptr %p) {
+; CHECK-LABEL: PR153570:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0,2.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; CHECK-NEXT:    vmulsh {rn-sae}, %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vmovsh %xmm2, %xmm1, %xmm1
+; CHECK-NEXT:    vmovaps %xmm1, (%rdi)
+; CHECK-NEXT:    retq
+  %r = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <8 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, i8 0, i32 8)
+  store <8 x half> %r, ptr %p, align 16
+  %r1 = tail call <8 x half> @llvm.x86.avx512fp16.mask.mul.sh.round(<8 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <8 x half> <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4000>, <8 x half> <half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000, half 0xH8000>, i8 1, i32 8)
+  ret <8 x half> %r1
+}

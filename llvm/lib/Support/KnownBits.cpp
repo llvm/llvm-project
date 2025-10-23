@@ -372,8 +372,7 @@ KnownBits KnownBits::lshr(const KnownBits &LHS, const KnownBits &RHS,
   unsigned BitWidth = LHS.getBitWidth();
   auto ShiftByConst = [&](const KnownBits &LHS, unsigned ShiftAmt) {
     KnownBits Known = LHS;
-    Known.Zero.lshrInPlace(ShiftAmt);
-    Known.One.lshrInPlace(ShiftAmt);
+    Known >>= ShiftAmt;
     // High bits are known zero.
     Known.Zero.setHighBits(ShiftAmt);
     return Known;

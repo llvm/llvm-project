@@ -131,7 +131,7 @@ end subroutine
 
 ! CHECK-LABEL: Name = 'test_target_data'
 subroutine test_target_data()
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target data
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp target data map(to: A) map(tofrom: B)
@@ -174,7 +174,7 @@ subroutine test_do_ordered()
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
   !$omp do ordered
   do i = 1, 100
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = ordered
   !$omp ordered
   x = x + 1
@@ -224,7 +224,7 @@ end subroutine
 subroutine test_target_map()
   integer :: array(10)
 
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpLoopDirective -> llvm::omp::Directive = target
   !$omp target map(tofrom: array(2:10))
     array(2) = array(2) * 2
@@ -288,15 +288,15 @@ end subroutine
 ! CHECK-LABEL: Name = 'test_task_single_taskwait'
 subroutine test_task_single_taskwait()
   integer :: x
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel
   !$omp parallel
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = single
   !$omp single
     ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct
     do i = 1, 5
-      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = task
       ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'x=i'
       !$omp task
@@ -313,16 +313,16 @@ end subroutine
 ! CHECK-LABEL: Name = 'test_task_taskyield_flush_barrier'
 subroutine test_task_taskyield_flush_barrier()
   integer :: x, i
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel
   !$omp parallel
     ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
     ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = barrier
     !$omp barrier
-    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
     ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = single
     !$omp single
-      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = task
       !$omp task
         ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
@@ -333,7 +333,7 @@ subroutine test_task_taskyield_flush_barrier()
         ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPFlushConstruct -> OmpDirectiveSpecification
         !$omp flush
       !$omp end task
-      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+      ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
       ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = task
       !$omp task
         ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPFlushConstruct -> OmpDirectiveSpecification
@@ -348,16 +348,16 @@ end subroutine
 
 ! CHECK-LABEL: Name = 'test_master_masked'
 subroutine test_master_masked()
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel
   !$omp parallel private(tid)
-    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
     ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = masked
     !$omp masked
     ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'x=y'
     x = y
     !$omp end masked
-    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+    ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
     ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = master
     !$omp master
     ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AssignmentStmt = 'y=x'
@@ -368,7 +368,7 @@ end subroutine
 
 ! CHECK-LABEL: Name = 'test_critical'
 subroutine test_critical()
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = parallel
   !$omp parallel do private(i)
   do i = 1, 4
@@ -385,7 +385,7 @@ subroutine test_target_enter_exit_update_data()
   ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPStandaloneConstruct -> OpenMPSimpleStandaloneConstruct -> OmpDirectiveSpecification
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target enter data
   !$omp target enter data map(to: A)
-  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+  ! CHECK-NOT: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
   ! CHECK-NOT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do
   !$omp target teams distribute parallel do
   ! CHECK: ExecutionPartConstruct -> ExecutableConstruct -> DoConstruct

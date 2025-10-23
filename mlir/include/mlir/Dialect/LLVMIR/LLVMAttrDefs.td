@@ -11,6 +11,7 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
@@ -21,6 +22,41 @@ class LLVM_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AddressSpaceAttr :
+    LLVM_Attr<"AddressSpace", "address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let summary = "LLVM address space";
+  let description = [{
+    The `address_space` attribute represents an LLVM address space. It takes an
+    unsigned integer parameter that specifies the address space number.
+
+    Different address spaces in LLVM can have different properties:
+    - Address space 0 is the default/generic address space
+    - Other address spaces may have specific semantics (e.g., shared memory,
+      constant memory, etc.) depending on the target architecture
+
+    Example:
+
+    ```mlir
+    // Address space 0 (default)
+    #llvm.address_space<0>
+
+    // Address space 1 (e.g., global memory on some targets)
+    #llvm.address_space<1>
+
+    // Address space 3 (e.g., shared memory on some GPU targets)
+    #llvm.address_space<3>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -554,7 +590,7 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -580,7 +616,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -638,7 +674,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
-                                      "DIScopeAttr"> {
+                                      "DILocalScopeAttr"> {
   let parameters = (ins
     // DIRecursiveTypeAttrInterface specific parameters.
     OptionalParameter<"DistinctAttr">:$recId,

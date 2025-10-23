@@ -233,7 +233,7 @@ static const RecordDecl *getRecordDecl(QualType QT) {
     return RD;
 
   // Now check if we point to a record.
-  if (const auto *PT = QT->getAs<PointerType>())
+  if (const auto *PT = QT->getAsCanonical<PointerType>())
     return PT->getPointeeType()->getAsRecordDecl();
 
   return nullptr;

@@ -94,7 +94,9 @@ public:
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 
   /// Emit pseudo_probe_desc metadata.
-  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M) const;
+  void emitPseudoProbeDescMetadata(MCStreamer &Streamer, Module &M,
+                                   std::function<void(MCStreamer &Streamer)>
+                                       COMDATSymEmitter = nullptr) const;
 
   /// Process linker options metadata and emit platform-specific bits.
   virtual void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const {}

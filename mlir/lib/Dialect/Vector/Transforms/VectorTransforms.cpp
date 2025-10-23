@@ -600,7 +600,7 @@ struct BubbleDownVectorBitCastForExtract
 
     // Get the first element of the mixed position as integer.
     auto mixedPos = extractOp.getMixedPosition();
-    if (mixedPos.size() > 0 && !isa<Attribute>(mixedPos[0]))
+    if (!mixedPos.empty() && !isa<Attribute>(mixedPos[0]))
       return failure();
     uint64_t index = cast<IntegerAttr>(cast<Attribute>(mixedPos[0])).getInt();
 

@@ -735,6 +735,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMThrowOpLowering
+    : public mlir::OpConversionPattern<cir::ThrowOp> {
+public:
+  using mlir::OpConversionPattern<cir::ThrowOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ThrowOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMVAStartOpLowering
     : public mlir::OpConversionPattern<cir::VAStartOp> {
 public:

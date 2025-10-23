@@ -39,7 +39,7 @@ public:
     LenParameter = 3
   };
   RT_API_ATTRS Genre genre() const { return genre_; }
-  RT_API_ATTRS Fortran::common::optional<TypeParameterValue> GetValue(
+  RT_API_ATTRS common::optional<TypeParameterValue> GetValue(
       const Descriptor *) const;
 
 private:

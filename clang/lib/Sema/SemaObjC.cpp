@@ -1380,7 +1380,7 @@ SemaObjC::ObjCSubscriptKind SemaObjC::CheckSubscriptingKind(Expr *FromE) {
 
   // If we don't have a class type in C++, there's no way we can get an
   // expression of integral or enumeration type.
-  const RecordType *RecordTy = T->getAs<RecordType>();
+  const RecordType *RecordTy = T->getAsCanonical<RecordType>();
   if (!RecordTy && (T->isObjCObjectPointerType() || T->isVoidPointerType()))
     // All other scalar cases are assumed to be dictionary indexing which
     // caller handles, with diagnostics if needed.
@@ -1507,7 +1507,7 @@ bool SemaObjC::isCFStringType(QualType T) {
   if (!PT)
     return false;
 
-  const auto *RT = PT->getPointeeType()->getAs<RecordType>();
+  const auto *RT = PT->getPointeeType()->getAsCanonical<RecordType>();
   if (!RT)
     return false;
 

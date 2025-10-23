@@ -12,7 +12,7 @@ declare void @f16_user(half)
 ; CHECK-SAME: Type mismatch between intrinsic and DXIL op
 define void @four64() "hlsl.export" {
   %buffer = call target("dx.CBuffer", target("dx.Layout", {double}, 8, 0))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   %load = call {double, double, double, double} @llvm.dx.resource.load.cbufferrow.4(
       target("dx.CBuffer", target("dx.Layout", {double}, 8, 0)) %buffer,
@@ -29,7 +29,7 @@ define void @four64() "hlsl.export" {
 ; CHECK-SAME: Type mismatch between intrinsic and DXIL op
 define void @two32() "hlsl.export" {
   %buffer = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   %load = call {float, float} @llvm.dx.resource.load.cbufferrow.2(
       target("dx.CBuffer", target("dx.Layout", {float}, 4, 0)) %buffer,

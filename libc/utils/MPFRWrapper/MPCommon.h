@@ -193,6 +193,7 @@ public:
   MPFRNumber atan() const;
   MPFRNumber atan2(const MPFRNumber &b);
   MPFRNumber atanh() const;
+  MPFRNumber atanpi() const;
   MPFRNumber cbrt() const;
   MPFRNumber ceil() const;
   MPFRNumber cos() const;

@@ -98,6 +98,11 @@ TEST(MoveOnlyFunctionTest, Captures) {
   EXPECT_EQ(C5(), 15);
   Tmp = std::move(C5);
   EXPECT_EQ(Tmp(), 15);
+
+  // Test capture via lvalue.
+  auto Inc = [](int N) { return N + 1; };
+  move_only_function<int(int)> C6(Inc);
+  EXPECT_EQ(C6(1), 2);
 }
 
 TEST(MoveOnlyFunctionTest, MoveOnly) {

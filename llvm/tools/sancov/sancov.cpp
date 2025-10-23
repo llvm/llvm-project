@@ -730,7 +730,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   failIfEmpty(MII, "no instruction info for target " + TripleName);
 
-  std::unique_ptr<const MCInstrAnalysis> MIA(
+  std::unique_ptr<MCInstrAnalysis> MIA(
       TheTarget->createMCInstrAnalysis(MII.get()));
   failIfEmpty(MIA, "no instruction analysis info for target " + TripleName);
 
@@ -750,6 +750,9 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
     failIfError(BytesStr);
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(*BytesStr);
 
+    if (MIA)
+      MIA->resetState();
+
     for (uint64_t Index = 0, Size = 0; Index < Section.getSize();
          Index += Size) {
       MCInst Inst;
@@ -760,6 +763,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           Size = std::min<uint64_t>(
               ThisBytes.size(),
               DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
+        MIA->resetState();
         continue;
       }
       uint64_t Addr = Index + SectionAddr;
@@ -770,6 +774,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
           MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target) &&
           SanCovAddrs.find(Target) != SanCovAddrs.end())
         Addrs->insert(CovPoint);
+      MIA->updateState(Inst, Addr);
     }
   }
 }

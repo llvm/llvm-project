@@ -326,7 +326,7 @@ static int initCnt = 0;
 // A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
-TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(CallbackInGlobalCtor)) {
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   ASSERT_TRUE(!!tmBuilderOrError);
   if (tmBuilderOrError->getTargetTriple().isAArch64()) {

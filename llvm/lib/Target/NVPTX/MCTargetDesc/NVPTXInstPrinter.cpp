@@ -290,7 +290,8 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
       O << ".acq_rel";
       return;
     case NVPTX::Ordering::SequentiallyConsistent:
-      O << ".seq_cst";
+      report_fatal_error(
+          "NVPTX AtomicCode Printer does not support \"seq_cst\" ordering.");
       return;
     case NVPTX::Ordering::Volatile:
       O << ".volatile";

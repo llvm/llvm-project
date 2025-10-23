@@ -121,7 +121,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   bool parseVTypeToken(const AsmToken &Tok, VTypeState &State, unsigned &Sew,
                        unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
-                       bool &MaskAgnostic);
+                       bool &MaskAgnostic, bool &AltFmt);
   bool generateVTypeError(SMLoc ErrorLoc);
 
   bool generateXSfmmVTypeError(SMLoc ErrorLoc);
@@ -2261,14 +2261,23 @@ ParseStatus RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
 bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
                                      unsigned &Sew, unsigned &Lmul,
                                      bool &Fractional, bool &TailAgnostic,
-                                     bool &MaskAgnostic) {
+                                     bool &MaskAgnostic, bool &AltFmt) {
   if (Tok.isNot(AsmToken::Identifier))
     return true;
 
   StringRef Identifier = Tok.getIdentifier();
   if (State < VTypeState::SeenSew && Identifier.consume_front("e")) {
-    if (Identifier.getAsInteger(10, Sew))
-      return true;
+    if (Identifier.getAsInteger(10, Sew)) {
+      if (Identifier == "16alt") {
+        AltFmt = true;
+        Sew = 16;
+      } else if (Identifier == "8alt") {
+        AltFmt = true;
+        Sew = 8;
+      } else {
+        return true;
+      }
+    }
     if (!RISCVVType::isValidSEW(Sew))
       return true;
 
@@ -2340,11 +2349,12 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   bool Fractional = false;
   bool TailAgnostic = false;
   bool MaskAgnostic = false;
+  bool AltFmt = false;
 
   VTypeState State = VTypeState::SeenNothingYet;
   do {
     if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
-                        MaskAgnostic)) {
+                        MaskAgnostic, AltFmt)) {
       // The first time, errors return NoMatch rather than Failure
       if (State == VTypeState::SeenNothingYet)
         return ParseStatus::NoMatch;
@@ -2370,12 +2380,17 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   }
 
   unsigned VTypeI =
-      RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic);
+      RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic, AltFmt);
   Operands.push_back(RISCVOperand::createVType(VTypeI, S));
   return ParseStatus::Success;
 }
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
+  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa))
+    return Error(
+        ErrorLoc,
+        "operand must be "
+        "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
   return Error(
       ErrorLoc,
       "operand must be "

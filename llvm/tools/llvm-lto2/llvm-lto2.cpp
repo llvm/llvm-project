@@ -394,8 +394,7 @@ static int run(int argc, char **argv) {
   // behavior. Instead, we don't exit in the multi-threaded case, but we make
   // sure to report the error and then at the end (after joining cleanly)
   // exit(1).
-  std::atomic<bool> HasErrors;
-  std::atomic_init(&HasErrors, false);
+  std::atomic<bool> HasErrors{false};
   Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);
@@ -614,6 +613,10 @@ int main(int argc, char **argv) {
     // Note the name of the function we're calling: this won't return the right
     // answer for internal linkage symbols.
     outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
+    return 0;
+  }
+  if (Subcommand == "--version") {
+    cl::PrintVersionMessage();
     return 0;
   }
   return usage();

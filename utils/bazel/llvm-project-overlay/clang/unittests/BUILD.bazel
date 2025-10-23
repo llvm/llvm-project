@@ -336,6 +336,7 @@ cc_test(
         ":ast_matchers_tests_hdrs",
         "//clang:ast",
         "//clang:ast_matchers",
+        "//clang:basic",
         "//clang:frontend",
         "//clang:lex",
         "//clang:parse",

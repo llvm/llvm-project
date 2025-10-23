@@ -2027,9 +2027,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   }
 
   if (OneUse) {
-    replaceAllDbgUsesWith(const_cast<PHINode &>(*PN),
-                          const_cast<PHINode &>(*NewPN),
-                          const_cast<PHINode &>(*PN), DT);
+    replaceAllDbgUsesWith(*PN, *NewPN, *PN, DT);
   }
   return replaceInstUsesWith(I, NewPN);
 }
@@ -3236,6 +3234,19 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return replaceInstUsesWith(
         GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
                                drop_end(Indices), "", GEP.getNoWrapFlags()));
+  }
+
+  // Strip leading zero indices.
+  auto *FirstIdx = dyn_cast<Constant>(Indices.front());
+  if (FirstIdx && FirstIdx->isNullValue() &&
+      !FirstIdx->getType()->isVectorTy()) {
+    gep_type_iterator GTI = gep_type_begin(GEP);
+    ++GTI;
+    if (!GTI.isStruct())
+      return replaceInstUsesWith(GEP, Builder.CreateGEP(GTI.getIndexedType(),
+                                                        GEP.getPointerOperand(),
+                                                        drop_begin(Indices), "",
+                                                        GEP.getNoWrapFlags()));
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.

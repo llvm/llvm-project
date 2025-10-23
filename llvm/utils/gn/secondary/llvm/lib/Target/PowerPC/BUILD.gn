@@ -92,7 +92,7 @@ static_library("LLVMPowerPCCodeGen") {
     "PPCTargetMachine.cpp",
     "PPCTargetObjectFile.cpp",
     "PPCTargetTransformInfo.cpp",
-    "PPCVSXCopy.cpp",
+    "PPCVSXWACCCopy.cpp",
     "PPCVSXFMAMutate.cpp",
     "PPCVSXSwapRemoval.cpp",
   ]

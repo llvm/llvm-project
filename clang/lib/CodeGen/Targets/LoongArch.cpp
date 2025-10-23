@@ -149,7 +149,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
-    if (const auto *RTy = EltTy->getAs<RecordType>()) {
+    if (const auto *RTy = EltTy->getAsCanonical<RecordType>()) {
       if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getOriginalDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
@@ -164,7 +164,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     return true;
   }
 
-  if (const auto *RTy = Ty->getAs<RecordType>()) {
+  if (const auto *RTy = Ty->getAsCanonical<RecordType>()) {
     // Structures with either a non-trivial destructor or a non-trivial
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))

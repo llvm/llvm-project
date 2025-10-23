@@ -4276,9 +4276,11 @@ bool SPIRVInstructionSelector::loadHandleBeforePosition(
   uint32_t Binding = foldImm(HandleDef.getOperand(3), MRI);
   uint32_t ArraySize = foldImm(HandleDef.getOperand(4), MRI);
   Register IndexReg = HandleDef.getOperand(5).getReg();
-  bool IsNonUniform = ArraySize > 1 && foldImm(HandleDef.getOperand(6), MRI);
+  // FIXME: The IsNonUniform flag needs to be set based on resource analysis.
+  // https://github.com/llvm/llvm-project/issues/155701
+  bool IsNonUniform = false;
   std::string Name =
-      getStringValueFromReg(HandleDef.getOperand(7).getReg(), *MRI);
+      getStringValueFromReg(HandleDef.getOperand(6).getReg(), *MRI);
 
   bool IsStructuredBuffer = ResType->getOpcode() == SPIRV::OpTypePointer;
   MachineIRBuilder MIRBuilder(HandleDef);

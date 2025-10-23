@@ -24,10 +24,10 @@ define i32 @main() #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [40000 x i8], ptr addrspace(1) @Y, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) @Y, i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr addrspace(1) [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [40000 x i8], ptr @X, i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr @X, i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 40000

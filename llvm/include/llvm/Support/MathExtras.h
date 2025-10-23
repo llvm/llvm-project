@@ -196,16 +196,8 @@ constexpr bool isShiftedInt(int64_t x) {
 
 /// Checks if an unsigned integer fits into the given bit width.
 template <unsigned N> constexpr bool isUInt(uint64_t x) {
-  if constexpr (N == 0)
-    return 0 == x;
-  if constexpr (N == 8)
-    return static_cast<uint8_t>(x) == x;
-  if constexpr (N == 16)
-    return static_cast<uint16_t>(x) == x;
-  if constexpr (N == 32)
-    return static_cast<uint32_t>(x) == x;
   if constexpr (N < 64)
-    return x < (UINT64_C(1) << (N));
+    return (x >> N) == 0;
   (void)x; // MSVC v19.25 warns that x is unused.
   return true;
 }

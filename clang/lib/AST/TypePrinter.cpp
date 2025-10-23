@@ -2382,7 +2382,7 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     return true;
 
   // A type parameter matches its argument.
-  if (auto *TTPT = Pattern->getAs<TemplateTypeParmType>()) {
+  if (auto *TTPT = Pattern->getAsCanonical<TemplateTypeParmType>()) {
     if (TTPT->getDepth() == Depth && TTPT->getIndex() < Args.size() &&
         Args[TTPT->getIndex()].getKind() == TemplateArgument::Type) {
       QualType SubstArg = Ctx.getQualifiedType(

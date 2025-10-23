@@ -1845,11 +1845,11 @@ void CGOpenMPRuntime::emitIfClause(CodeGenFunction &CGF, const Expr *Cond,
   CGF.EmitBlock(ContBlock, /*IsFinished=*/true);
 }
 
-void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                                       llvm::Function *OutlinedFn,
-                                       ArrayRef<llvm::Value *> CapturedVars,
-                                       const Expr *IfCond,
-                                       llvm::Value *NumThreads) {
+void CGOpenMPRuntime::emitParallelCall(
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
+    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+    llvm::Value *NumThreads, OpenMPNumThreadsClauseModifier NumThreadsModifier,
+    OpenMPSeverityClauseKind Severity, const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -2372,9 +2372,8 @@ void CGOpenMPRuntime::emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
 
 void CGOpenMPRuntime::emitErrorCall(CodeGenFunction &CGF, SourceLocation Loc,
                                     Expr *ME, bool IsFatal) {
-  llvm::Value *MVL =
-      ME ? CGF.EmitStringLiteralLValue(cast<StringLiteral>(ME)).getPointer(CGF)
-         : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  llvm::Value *MVL = ME ? CGF.EmitScalarExpr(ME)
+                        : llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
   // Build call void __kmpc_error(ident_t *loc, int severity, const char
   // *message)
   llvm::Value *Args[] = {
@@ -2699,18 +2698,54 @@ llvm::Value *CGOpenMPRuntime::emitForNext(CodeGenFunction &CGF,
       CGF.getContext().BoolTy, Loc);
 }
 
-void CGOpenMPRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
-                                           llvm::Value *NumThreads,
-                                           SourceLocation Loc) {
+llvm::Value *CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
+                                                const Expr *Message) {
+  if (!Message)
+    return llvm::ConstantPointerNull::get(CGF.VoidPtrTy);
+  return CGF.EmitScalarExpr(Message);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitMessageClause(CodeGenFunction &CGF,
+                                   const OMPMessageClause *MessageClause) {
+  return emitMessageClause(
+      CGF, MessageClause ? MessageClause->getMessageString() : nullptr);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitSeverityClause(OpenMPSeverityClauseKind Severity) {
+  // OpenMP 6.0, 10.4: "If no severity clause is specified then the effect is
+  // as if sev-level is fatal."
+  return llvm::ConstantInt::get(CGM.Int32Ty,
+                                Severity == OMPC_SEVERITY_warning ? 1 : 2);
+}
+
+llvm::Value *
+CGOpenMPRuntime::emitSeverityClause(const OMPSeverityClause *SeverityClause) {
+  return emitSeverityClause(SeverityClause ? SeverityClause->getSeverityKind()
+                                           : OMPC_SEVERITY_unknown);
+}
+
+void CGOpenMPRuntime::emitNumThreadsClause(
+    CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+    OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
+    const Expr *Message) {
   if (!CGF.HaveInsertPoint())
     return;
+  llvm::SmallVector<llvm::Value *, 4> Args(
+      {emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
+       CGF.Builder.CreateIntCast(NumThreads, CGF.Int32Ty, /*isSigned*/ true)});
   // Build call __kmpc_push_num_threads(&loc, global_tid, num_threads)
-  llvm::Value *Args[] = {
-      emitUpdateLocation(CGF, Loc), getThreadID(CGF, Loc),
-      CGF.Builder.CreateIntCast(NumThreads, CGF.Int32Ty, /*isSigned*/ true)};
-  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                          CGM.getModule(), OMPRTL___kmpc_push_num_threads),
-                      Args);
+  // or __kmpc_push_num_threads_strict(&loc, global_tid, num_threads, severity,
+  // messsage) if strict modifier is used.
+  RuntimeFunction FnID = OMPRTL___kmpc_push_num_threads;
+  if (Modifier == OMPC_NUMTHREADS_strict) {
+    FnID = OMPRTL___kmpc_push_num_threads_strict;
+    Args.push_back(emitSeverityClause(Severity));
+    Args.push_back(emitMessageClause(CGF, Message));
+  }
+  CGF.EmitRuntimeCall(
+      OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(), FnID), Args);
 }
 
 void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
@@ -12114,12 +12149,11 @@ llvm::Function *CGOpenMPSIMDRuntime::emitTaskOutlinedFunction(
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
-void CGOpenMPSIMDRuntime::emitParallelCall(CodeGenFunction &CGF,
-                                           SourceLocation Loc,
-                                           llvm::Function *OutlinedFn,
-                                           ArrayRef<llvm::Value *> CapturedVars,
-                                           const Expr *IfCond,
-                                           llvm::Value *NumThreads) {
+void CGOpenMPSIMDRuntime::emitParallelCall(
+    CodeGenFunction &CGF, SourceLocation Loc, llvm::Function *OutlinedFn,
+    ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+    llvm::Value *NumThreads, OpenMPNumThreadsClauseModifier NumThreadsModifier,
+    OpenMPSeverityClauseKind Severity, const Expr *Message) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
@@ -12222,9 +12256,10 @@ llvm::Value *CGOpenMPSIMDRuntime::emitForNext(CodeGenFunction &CGF,
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 
-void CGOpenMPSIMDRuntime::emitNumThreadsClause(CodeGenFunction &CGF,
-                                               llvm::Value *NumThreads,
-                                               SourceLocation Loc) {
+void CGOpenMPSIMDRuntime::emitNumThreadsClause(
+    CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+    OpenMPNumThreadsClauseModifier Modifier, OpenMPSeverityClauseKind Severity,
+    const Expr *Message) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

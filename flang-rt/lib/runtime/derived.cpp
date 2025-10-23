@@ -71,7 +71,7 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
       // Explicit initialization of data pointers and
       // non-allocatable non-automatic components
       std::size_t bytes{component_->SizeInBytes(instance_)};
-      std::memcpy(rawComponent, init, bytes);
+      runtime::memcpy(rawComponent, init, bytes);
     } else if (component_->genre() == typeInfo::Component::Genre::Pointer) {
       // Data pointers without explicit initialization are established
       // so that they are valid right-hand side targets of pointer
@@ -108,20 +108,20 @@ RT_API_ATTRS int InitializeTicket::Continue(WorkQueue &workQueue) {
             chunk = done;
           }
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, chunk * *stride);
+          runtime::memcpy(uninitialized, rawInstance, chunk * *stride);
           done += chunk;
         }
       } else {
         for (std::size_t done{1}; done < elements_; ++done) {
           char *uninitialized{rawInstance + done * *stride};
-          std::memcpy(uninitialized, rawInstance, elementBytes);
+          runtime::memcpy(uninitialized, rawInstance, elementBytes);
         }
       }
     } else { // one at a time with subscription
       for (Elementwise::Advance(); !Elementwise::IsComplete();
           Elementwise::Advance()) {
         char *element{instance_.Element<char>(subscripts_)};
-        std::memcpy(element, rawInstance, elementBytes);
+        runtime::memcpy(element, rawInstance, elementBytes);
       }
     }
   }

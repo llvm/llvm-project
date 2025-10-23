@@ -171,6 +171,38 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
+static bool isSupportedReadLaneType(Type type) {
+  // read(first)lane also supports some vector types, but limit it for scalars
+  // for now.
+  return type.isInteger(16) || type.isInteger(32) || type.isInteger(64) ||
+         isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
+             LLVM::LLVMPointerType>(type);
+}
+
+struct GPUSubgroupBroadcastOpToROCDL
+    : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value src = adaptor.getSrc();
+    if (!isSupportedReadLaneType(src.getType()))
+      return rewriter.notifyMatchFailure(op, "unsupported readlane type");
+
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
+      rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
+                                                     adaptor.getLane());
+    } else { // first_active_lane or any_lane
+      // any_lane is lowered to readfirstlane too, to force value into scalar
+      // register.
+      rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(),
+                                                          src);
+    }
+    return success();
+  }
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -463,7 +495,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
+  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
+               GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);

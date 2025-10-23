@@ -84,7 +84,6 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   def NAME : VOP3P_Pseudo<OpName, P> {
     let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-    let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
   }
   let SubtargetPredicate = isGFX11Plus in {
     if P.HasExtVOP3DPP then
@@ -92,7 +91,6 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
         let VOP3P = 1;
         let PseudoInstr = OpName#"_dpp";
         let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
-        let DisableEncoding = !if(P.UseTiedOutput, "$vdst_in", "");
       }
   } // end SubtargetPredicate = isGFX11Plus
 }
@@ -1166,7 +1164,7 @@ let SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1 in {
 } // End SubtargetPredicate = HasFP8Insts, is_gfx940_xdl = 1
 
 multiclass SMFMACInst<string OpName, string P, SDPatternOperator node> {
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2",
+  let Constraints = "$vdst = $src2",
       isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1, is_gfx940_xdl = 1 in {
     def _e64 : MAIInst<OpName, !cast<VOPProfileSMFMAC>("VOPProfileSMFMAC_" # P), node>;
   }

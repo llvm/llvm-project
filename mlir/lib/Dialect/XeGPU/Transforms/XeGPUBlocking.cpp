@@ -84,9 +84,10 @@ struct ConvertLayoutOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
                                 PatternRewriter &rewriter) const override {
-    xegpu::LayoutAttr input_layout = op.getInputLayoutAttr();
-    xegpu::LayoutAttr target_layout = op.getTargetLayoutAttr();
-    if (!input_layout.getInstData() || !target_layout.getInstData())
+    xegpu::DistributeLayoutAttr input_layout = op.getInputLayoutAttr();
+    xegpu::DistributeLayoutAttr target_layout = op.getTargetLayoutAttr();
+    if (input_layout.getInstDataAsInt().empty() ||
+        target_layout.getInstDataAsInt().empty())
       return rewriter.notifyMatchFailure(op, "Not a target ConvertLayoutOp.");
 
     input_layout = input_layout.dropInstData();
@@ -140,10 +141,11 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
   else
     value = (Value)operandOrResult;
 
-  xegpu::LayoutAttr layout = xegpu::getLayoutAttr(operandOrResult);
+  xegpu::DistributeLayoutAttr layout =
+      xegpu::getDistributeLayoutAttr(operandOrResult);
   if (layout && layout.isForSubgroup()) {
-    if (auto inst_data = layout.getInstData())
-      return llvm::to_vector_of<int64_t>(inst_data.asArrayRef());
+    if (!layout.getInstDataAsInt().empty())
+      return layout.getInstDataAsInt();
 
     if (auto type = dyn_cast<ShapedType>(value.getType()))
       return llvm::to_vector(type.getShape());
@@ -204,12 +206,14 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   // skip the op if any of its operands or results has workgroup level layouts
   bool hasWgLayoutOperands =
       llvm::any_of(op->getOpOperands(), [](OpOperand &opr) {
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(opr);
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(opr);
         return layout && layout.isForWorkgroup();
       });
   bool hasWgLayoutResults =
       llvm::any_of(op->getOpResults(), [](OpResult result) {
-        xegpu::LayoutAttr layout = xegpu::getLayoutAttr(result);
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(result);
         return layout && layout.isForWorkgroup();
       });
   if (hasWgLayoutOperands || hasWgLayoutResults) {
@@ -220,8 +224,8 @@ bool XeGPUBlockingPass::needsUnroll(Operation *op) const {
   auto isUnrollable = [](Value value, ArrayRef<int64_t> tileShape) {
     Type valTy = value.getType();
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(valTy)) {
-      xegpu::LayoutAttr layout = tdescTy.getLayoutAttr();
-      return layout && layout.getInstData();
+      xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
+      return layout && !layout.getInstDataAsInt().empty();
     }
     auto shapedType = dyn_cast<ShapedType>(valTy);
     return shapedType && !llvm::equal(tileShape, shapedType.getShape());
@@ -247,7 +251,8 @@ void XeGPUBlockingPass::runOnOperation() {
   // Preserve the LayoutAttr for each operand to the owner's DictionaryAttr.
   // This ensures that the LayoutAttr remains accessible even if the defining
   // operation is replaced.
-  xegpu::setLayoutAttrs(op, [](Value v) { return xegpu::getLayoutAttr(v); });
+  xegpu::setDistributeLayoutAttrs(
+      op, [](Value v) { return xegpu::getDistributeLayoutAttr(v); });
 
   auto getTileShapeAndCount = [](llvm::ArrayRef<int64_t> shape,
                                  xegpu::LayoutAttr layout) {
@@ -377,7 +382,7 @@ void XeGPUBlockingPass::runOnOperation() {
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
         if (!isa<LoopLikeOpInterface>(op))
-          xegpu::setLayoutAttr(result, layout.dropInstData());
+          xegpu::setDistributeLayoutAttr(result, layout.dropInstData());
       }
     }
 

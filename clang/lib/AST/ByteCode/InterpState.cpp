@@ -59,14 +59,11 @@ InterpState::~InterpState() {
 void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
-  Alloc.cleanup();
+  if (Alloc)
+    Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() {
-  if (Current && Current->Caller)
-    return Current;
-  return Parent.getCurrentFrame();
-}
+Frame *InterpState::getCurrentFrame() { return Current; }
 
 bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
   QualType Type = E->getType();
@@ -103,10 +100,13 @@ void InterpState::deallocate(Block *B) {
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {
-  bool NoAllocationsLeft = !Alloc.hasAllocations();
+  if (!Alloc)
+    return true;
+
+  bool NoAllocationsLeft = !Alloc->hasAllocations();
 
   if (!checkingPotentialConstantExpression()) {
-    for (const auto &[Source, Site] : Alloc.allocation_sites()) {
+    for (const auto &[Source, Site] : Alloc->allocation_sites()) {
       assert(!Site.empty());
 
       CCEDiag(Source->getExprLoc(), diag::note_constexpr_memory_leak)

@@ -275,7 +275,6 @@ void ReachingDefAnalysis::printAllReachingDefs(MachineFunction &MF) {
 
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-  TRI = MF->getSubtarget().getRegisterInfo();
   const TargetSubtargetInfo &STI = MF->getSubtarget();
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();

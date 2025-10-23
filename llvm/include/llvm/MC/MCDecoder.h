@@ -12,6 +12,7 @@
 
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/Support/MathExtras.h"
+#include <bitset>
 #include <cassert>
 
 namespace llvm::MCD {
@@ -46,6 +47,15 @@ inline std::enable_if_t<!std::is_integral_v<InsnType>, uint64_t>
 fieldFromInstruction(const InsnType &Insn, unsigned StartBit,
                      unsigned NumBits) {
   return Insn.extractBitsAsZExtValue(NumBits, StartBit);
+}
+
+template <size_t N>
+uint64_t fieldFromInstruction(const std::bitset<N> &Insn, unsigned StartBit,
+                              unsigned NumBits) {
+  assert(StartBit + NumBits <= N && "Instruction field out of bounds!");
+  assert(NumBits <= 64 && "Cannot support >64-bit extractions!");
+  const std::bitset<N> Mask(maskTrailingOnes<uint64_t>(NumBits));
+  return ((Insn >> StartBit) & Mask).to_ullong();
 }
 
 // Helper function for inserting bits extracted from an encoded instruction into

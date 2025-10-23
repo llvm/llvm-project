@@ -230,17 +230,19 @@ TEST(ParseYAML, CodePatterns) {
   EXPECT_THAT(Results[0].Completion.CodePatterns, llvm::ValueIs(val("None")));
 }
 
-TEST(ParseYAML, ShowAKA) {
+TEST(ParseYAML, Hover) {
   CapturedDiags Diags;
   Annotations YAML(R"yaml(
 Hover:
   ShowAKA: True
+  MacroContentsLimit: 4096
   )yaml");
   auto Results =
       Fragment::parseYAML(YAML.code(), "config.yaml", Diags.callback());
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Results.size(), 1u);
   EXPECT_THAT(Results[0].Hover.ShowAKA, llvm::ValueIs(val(true)));
+  EXPECT_THAT(Results[0].Hover.MacroContentsLimit, llvm::ValueIs(val(4096U)));
 }
 
 TEST(ParseYAML, InlayHints) {

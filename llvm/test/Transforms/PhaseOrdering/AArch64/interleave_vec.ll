@@ -1013,6 +1013,133 @@ for.inc9:                                         ; preds = %for.end
 for.end11:                                        ; preds = %for.cond
   ret void
 }
+
+; This test contains an example of a SAXPY loop manually unrolled by five:
+;
+;   void saxpy(long n, float a, float *x, float *y) {
+;     for (int i = 0; i < n; i += 5) {
+;       y[i] += a * x[i];
+;       y[i + 1] += a * x[i + 1];
+;       y[i + 2] += a * x[i + 2];
+;       y[i + 3] += a * x[i + 3];
+;       y[i + 4] += a * x[i + 4];
+;     }
+;   }
+;
+define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
+; CHECK-LABEL: define void @saxpy_5(
+; CHECK-SAME: i64 [[N:%.*]], float [[A:%.*]], ptr readonly captures(none) [[X:%.*]], ptr noalias captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[TMP1]], 5
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 6
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_PREHEADER11:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP3]], 9223372036854775806
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 5
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <10 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <10 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_VEC5:%.*]] = load <10 x float>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <10 x float> [[WIDE_VEC]], [[TMP5]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <10 x float> [[WIDE_VEC5]], [[TMP8]]
+; CHECK-NEXT:    store <10 x float> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT]], label %[[LOOP_PREHEADER11]]
+; CHECK:       [[LOOP_PREHEADER11]]:
+; CHECK-NEXT:    [[I1_PH:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[I1_PH]], %[[LOOP_PREHEADER11]] ]
+; CHECK-NEXT:    [[XGEP1:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[I1]]
+; CHECK-NEXT:    [[YGEP1:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[I1]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[XGEP1]], align 4
+; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x float>, ptr [[YGEP1]], align 4
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP13]]
+; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[YGEP1]], align 4
+; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i64 [[I1]], 4
+; CHECK-NEXT:    [[XGEP5:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[I5]]
+; CHECK-NEXT:    [[X5:%.*]] = load float, ptr [[XGEP5]], align 4
+; CHECK-NEXT:    [[AX5:%.*]] = fmul fast float [[X5]], [[A]]
+; CHECK-NEXT:    [[YGEP5:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[I5]]
+; CHECK-NEXT:    [[Y5:%.*]] = load float, ptr [[YGEP5]], align 4
+; CHECK-NEXT:    [[AXPY5:%.*]] = fadd fast float [[Y5]], [[AX5]]
+; CHECK-NEXT:    store float [[AXPY5]], ptr [[YGEP5]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I1]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N]], [[I_NEXT]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = icmp sgt i64 %n, 0
+  br i1 %0, label %loop, label %exit
+
+loop:
+  %i1 = phi i64 [ %i.next, %loop ], [ 0, %entry ]
+  %xgep1 = getelementptr inbounds nuw float, ptr %x, i64 %i1
+  %x1 = load float, ptr %xgep1, align 4
+  %ax1 = fmul fast float %x1, %a
+  %ygep1 = getelementptr inbounds nuw float, ptr %y, i64 %i1
+  %y1 = load float, ptr %ygep1, align 4
+  %axpy1 = fadd fast float %y1, %ax1
+  store float %axpy1, ptr %ygep1, align 4
+  %i2 = add nuw nsw i64 %i1, 1
+  %xgep2 = getelementptr inbounds nuw float, ptr %x, i64 %i2
+  %x2 = load float, ptr %xgep2, align 4
+  %ax2 = fmul fast float %x2, %a
+  %ygep2 = getelementptr inbounds nuw float, ptr %y, i64 %i2
+  %y2 = load float, ptr %ygep2, align 4
+  %axpy2 = fadd fast float %y2, %ax2
+  store float %axpy2, ptr %ygep2, align 4
+  %i3 = add nuw nsw i64 %i1, 2
+  %xgep3 = getelementptr inbounds nuw float, ptr %x, i64 %i3
+  %x3 = load float, ptr %xgep3, align 4
+  %ax3 = fmul fast float %x3, %a
+  %ygep3 = getelementptr inbounds nuw float, ptr %y, i64 %i3
+  %y3 = load float, ptr %ygep3, align 4
+  %axpy3 = fadd fast float %y3, %ax3
+  store float %axpy3, ptr %ygep3, align 4
+  %i4 = add nuw nsw i64 %i1, 3
+  %xgep4 = getelementptr inbounds nuw float, ptr %x, i64 %i4
+  %x4 = load float, ptr %xgep4, align 4
+  %ax4 = fmul fast float %x4, %a
+  %ygep4 = getelementptr inbounds nuw float, ptr %y, i64 %i4
+  %y4 = load float, ptr %ygep4, align 4
+  %axpy4 = fadd fast float %y4, %ax4
+  store float %axpy4, ptr %ygep4, align 4
+  %i5 = add nuw nsw i64 %i1, 4
+  %xgep5 = getelementptr inbounds nuw float, ptr %x, i64 %i5
+  %x5 = load float, ptr %xgep5, align 4
+  %ax5 = fmul fast float %x5, %a
+  %ygep5 = getelementptr inbounds nuw float, ptr %y, i64 %i5
+  %y5 = load float, ptr %ygep5, align 4
+  %axpy5 = fadd fast float %y5, %ax5
+  store float %axpy5, ptr %ygep5, align 4
+  %i.next = add nuw nsw i64 %i1, 5
+  %cmp = icmp sgt i64 %n, %i.next
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -1023,4 +1150,6 @@ for.end11:                                        ; preds = %for.cond
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META1]]}
 ;.

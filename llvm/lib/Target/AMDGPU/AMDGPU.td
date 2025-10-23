@@ -1210,6 +1210,12 @@ def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Can use 64-bit literals with single DWORD instructions"
 >;
 
+def Feature1024AddressableVGPRs : SubtargetFeature<"1024-addressable-vgprs",
+  "Has1024AddressableVGPRs",
+  "true",
+  "Has 1024 addressable VGPRs"
+>;
+
 def FeatureWaitXcnt : SubtargetFeature<"wait-xcnt",
   "HasWaitXcnt",
   "true",
@@ -1902,6 +1908,7 @@ def FeatureISAVersion10_3_Generic: FeatureSet<
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
+   FeatureBackOffBarrier,
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureDot5Insts,
@@ -1985,6 +1992,7 @@ def FeatureISAVersion11_5_3 : FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2031,6 +2039,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCUStores,
    FeatureAddressableLocalMemorySize327680,
    FeatureCuMode,
+   Feature1024AddressableVGPRs,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
    FeatureDLInsts,
@@ -2838,6 +2847,9 @@ def HasBVHDualAndBVH8Insts : Predicate<"Subtarget->hasBVHDualAndBVH8Insts()">,
 
 def Has64BitLiterals : Predicate<"Subtarget->has64BitLiterals()">,
   AssemblerPredicate<(all_of Feature64BitLiterals)>;
+
+def Has1024AddressableVGPRs : Predicate<"Subtarget->has1024AddressableVGPRs()">,
+  AssemblerPredicate<(all_of Feature1024AddressableVGPRs)>;
 
 def HasWaitXcnt : Predicate<"Subtarget->hasWaitXcnt()">,
   AssemblerPredicate<(all_of FeatureWaitXcnt)>;

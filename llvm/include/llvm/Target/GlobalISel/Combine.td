@@ -1040,6 +1040,34 @@ def funnel_shift_overshift: GICombineRule<
   (apply [{ Helper.applyFunnelShiftConstantModulo(*${root}); }])
 >;
 
+// Transform: fshl x, z, y | shl x, y -> fshl x, z, y
+// Transform: shl x, y | fshl x, z, y  -> fshl x, z, y
+// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+//        necessitating the use of !foreach to handle it manually.
+def funnel_shift_or_shift_to_funnel_shift_left_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHL $out1, $x, $z, $y), (G_SHL $out2, $x, $y), inst))>;
+def funnel_shift_or_shift_to_funnel_shift_left: GICombineRule<
+  (defs root:$root), 
+  (match (funnel_shift_or_shift_to_funnel_shift_left_frags $root, $out1, $out2)),
+  (apply (GIReplaceReg $root, $out1))
+>;
+
+// Transform: fshr z, x, y | srl x, y -> fshr z, x, y
+// Transform: srl x, y | fshr z, x, y -> fshr z, x, y
+// FIXME: TableGen didn't handle G_OR commutativity on its own, 
+//        necessitating the use of !foreach to handle it manually.
+def funnel_shift_or_shift_to_funnel_shift_right_frags : GICombinePatFrag<
+  (outs root: $dst, $out1, $out2), (ins),
+  !foreach(inst, [(G_OR $dst, $out1, $out2), (G_OR $dst, $out2, $out1)], 
+           (pattern (G_FSHR $out1, $z, $x, $y), (G_LSHR $out2, $x, $y), inst))>;
+def funnel_shift_or_shift_to_funnel_shift_right: GICombineRule<
+  (defs root:$root), 
+  (match (funnel_shift_or_shift_to_funnel_shift_right_frags $root, $out1, $out2)), 
+  (apply (GIReplaceReg $root, $out1))
+>;
+
 def rotate_out_of_range : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_ROTR, G_ROTL):$root,
@@ -1112,7 +1140,9 @@ def funnel_shift_combines : GICombineGroup<[funnel_shift_from_or_shift,
                                             funnel_shift_to_rotate,
                                             funnel_shift_right_zero,
                                             funnel_shift_left_zero,
-                                            funnel_shift_overshift]>;
+                                            funnel_shift_overshift,
+                                            funnel_shift_or_shift_to_funnel_shift_left,
+                                            funnel_shift_or_shift_to_funnel_shift_right]>;
 
 def bitfield_extract_from_sext_inreg : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),

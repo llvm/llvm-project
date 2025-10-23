@@ -2183,15 +2183,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateBitCast(Res, Ops[0]->getType());
   }
 
-  case X86::BI__builtin_ia32_vplzcntd_128:
-  case X86::BI__builtin_ia32_vplzcntd_256:
-  case X86::BI__builtin_ia32_vplzcntd_512:
-  case X86::BI__builtin_ia32_vplzcntq_128:
-  case X86::BI__builtin_ia32_vplzcntq_256:
-  case X86::BI__builtin_ia32_vplzcntq_512: {
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Ops[0]->getType());
-    return Builder.CreateCall(F, {Ops[0],Builder.getInt1(false)});
-  }
   case X86::BI__builtin_ia32_sqrtss:
   case X86::BI__builtin_ia32_sqrtsd: {
     Value *A = Builder.CreateExtractElement(Ops[0], (uint64_t)0);

@@ -246,9 +246,9 @@ public:
     return false;
   }
 
-  template<MVT::SimpleValueType VT>
+  template <MVT::SimpleValueType VT, bool Negate>
   bool SelectSVEAddSubImm(SDValue N, SDValue &Imm, SDValue &Shift) {
-    return SelectSVEAddSubImm(N, VT, Imm, Shift);
+    return SelectSVEAddSubImm(N, VT, Imm, Shift, Negate);
   }
 
   template <MVT::SimpleValueType VT, bool Negate>
@@ -489,7 +489,8 @@ private:
 
   bool SelectCMP_SWAP(SDNode *N);
 
-  bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
+  bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
+                          bool Negate);
   bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
                               bool Negate);
   bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
@@ -4227,35 +4228,36 @@ bool AArch64DAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
 }
 
 bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
-                                             SDValue &Shift) {
+                                             SDValue &Shift, bool Negate) {
   if (!isa<ConstantSDNode>(N))
     return false;
 
   SDLoc DL(N);
-  uint64_t Val = cast<ConstantSDNode>(N)
-                     ->getAPIntValue()
-                     .trunc(VT.getFixedSizeInBits())
-                     .getZExtValue();
+  APInt Val =
+      cast<ConstantSDNode>(N)->getAPIntValue().trunc(VT.getFixedSizeInBits());
+
+  if (Negate)
+    Val = -Val;
 
   switch (VT.SimpleTy) {
   case MVT::i8:
     // All immediates are supported.
     Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
+    Imm = CurDAG->getTargetConstant(Val.getZExtValue(), DL, MVT::i32);
     return true;
   case MVT::i16:
   case MVT::i32:
   case MVT::i64:
     // Support 8bit unsigned immediates.
-    if (Val <= 255) {
+    if ((Val & ~0xff) == 0) {
       Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val.getZExtValue(), DL, MVT::i32);
       return true;
     }
     // Support 16bit unsigned immediates that are a multiple of 256.
-    if (Val <= 65280 && Val % 256 == 0) {
+    if ((Val & ~0xff00) == 0) {
       Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
-      Imm = CurDAG->getTargetConstant(Val >> 8, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val.lshr(8).getZExtValue(), DL, MVT::i32);
       return true;
     }
     break;

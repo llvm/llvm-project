@@ -1444,9 +1444,10 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
-  MD->setHwStage(CC, ".lds_size",
-                 (unsigned)(CurrentProgramInfo.LdsSize *
-                            getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  MD->updateHwStageMaximum(
+      CC, ".lds_size",
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
+                 sizeof(uint32_t)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type

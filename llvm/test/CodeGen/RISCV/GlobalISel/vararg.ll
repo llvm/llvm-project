@@ -1155,8 +1155,8 @@ define void @va3_caller() nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    lui a0, 5
-; RV32-NEXT:    addi a3, a0, -480
+; RV32-NEXT:    lui a3, 5
+; RV32-NEXT:    addi a3, a3, -480
 ; RV32-NEXT:    li a0, 2
 ; RV32-NEXT:    li a1, 1111
 ; RV32-NEXT:    li a2, 0
@@ -1184,8 +1184,8 @@ define void @va3_caller() nounwind {
 ; RV32-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32-WITHFP-NEXT:    addi s0, sp, 16
-; RV32-WITHFP-NEXT:    lui a0, 5
-; RV32-WITHFP-NEXT:    addi a3, a0, -480
+; RV32-WITHFP-NEXT:    lui a3, 5
+; RV32-WITHFP-NEXT:    addi a3, a3, -480
 ; RV32-WITHFP-NEXT:    li a0, 2
 ; RV32-WITHFP-NEXT:    li a1, 1111
 ; RV32-WITHFP-NEXT:    li a2, 0

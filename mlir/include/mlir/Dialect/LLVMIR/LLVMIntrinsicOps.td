@@ -673,22 +673,6 @@ def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
 
 class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     : LLVM_IntrOp<name, [], [], traits, 0> {
-  let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
-    if(!builder.getCurrentDebugLocation())
-      return success();
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::}]
-       # !subst(".", "_", name) # [{);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx,
-            llvm::ValueAsMetadata::get(moduleTranslation.lookupValue(opInst.getOperand(0)))),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($varInfo)),
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateExpression($locationExpr)),
-      });
-  }];
   let mlirBuilder = [{
     // Add debug intrindic to the list of intrinsics that need to be converted once the
     // full function was converted.
@@ -711,6 +695,22 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
+                     llvm::cast<llvm::DILocalVariable>(
+                         moduleTranslation.translateDebugInfo($varInfo)),
+                     moduleTranslation.translateExpression($locationExpr),
+                     moduleTranslation.translateLoc(opInst.getLoc(), scope),
+                     builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
@@ -721,22 +721,41 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     LLVM_DILocalVariableAttr:$varInfo,
     DefaultValuedAttr<LLVM_DIExpressionAttr, "{}">:$locationExpr
   );
+  let llvmBuilder = [{
+    // Debug records without debug locations are invalid.
+    if(!builder.getCurrentDebugLocation())
+      return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertDbgValueIntrinsic(
+        moduleTranslation.lookupValue(opInst.getOperand(0)),
+        llvm::cast<llvm::DILocalVariable>(
+            moduleTranslation.translateDebugInfo($varInfo)),
+        moduleTranslation.translateExpression($locationExpr),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
+  }];
 }
 
 def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
   let summary = "Relates the program to a debug information label.";
   let arguments = (ins LLVM_DILabelAttr:$label);
   let llvmBuilder = [{
-    // Debug intrinsics without debug locations are invalid.
+    // Debug records without debug locations are invalid.
     if(!builder.getCurrentDebugLocation())
       return success();
+    llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
+                                                     moduleTranslation);
+
     llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::LLVMContext &ctx = module->getContext();
-    llvm::Function *fn =
-      llvm::Intrinsic::getOrInsertDeclaration(module, llvm::Intrinsic::dbg_label);
-    builder.CreateCall(fn, {
-        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
-      });
+    llvm::DIBuilder debugInfoBuilder(*module);
+    debugInfoBuilder.insertLabel(
+        llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
+        moduleTranslation.translateLoc(opInst.getLoc(), scope),
+        builder.GetInsertPoint());
   }];
   let mlirBuilder = [{
     DILabelAttr labelAttr = $_label_attr($label);

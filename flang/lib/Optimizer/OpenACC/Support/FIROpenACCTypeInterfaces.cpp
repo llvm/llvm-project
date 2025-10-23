@@ -271,8 +271,6 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             mlir::Value extent = val;
             mlir::Value upperbound =
                 mlir::arith::SubIOp::create(builder, loc, extent, one);
-            upperbound = mlir::arith::AddIOp::create(builder, loc, lowerbound,
-                                                     upperbound);
             mlir::Value stride = one;
             if (strideIncludeLowerExtent) {
               stride = cummulativeExtent;

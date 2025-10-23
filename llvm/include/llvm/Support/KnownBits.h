@@ -487,6 +487,20 @@ public:
   /// Update known bits based on XORing with RHS.
   LLVM_ABI KnownBits &operator^=(const KnownBits &RHS);
 
+  /// Shift known bits left by ShAmt. Shift in bits are unknown.
+  KnownBits &operator<<=(unsigned ShAmt) {
+    Zero <<= ShAmt;
+    One <<= ShAmt;
+    return *this;
+  }
+
+  /// Shift known bits right by ShAmt. Shifted in bits are unknown.
+  KnownBits &operator>>=(unsigned ShAmt) {
+    Zero.lshrInPlace(ShAmt);
+    One.lshrInPlace(ShAmt);
+    return *this;
+  }
+
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 

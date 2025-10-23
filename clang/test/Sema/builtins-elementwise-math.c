@@ -5,6 +5,7 @@ typedef double double4 __attribute__((ext_vector_type(4)));
 typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float3 __attribute__((ext_vector_type(3)));
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef const float cfloat4 __attribute__((ext_vector_type(4)));
 
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int3 __attribute__((ext_vector_type(3)));
@@ -1330,14 +1331,30 @@ void test_builtin_elementwise_fsh(int i32, int2 v2i32, short i16, int3 v3i32,
     // expected-error@-1 {{arguments are of different types ('int3' (vector of 3 'int' values) vs 'int2' (vector of 2 'int' values))}}
 }
 
+// Tests corresponding to GitHub issues #141397 and #155405.
+// Type mismatch error when 'builtin-elementwise-math' arguments have
+// different qualifiers, this should be well-formed.
 typedef struct {
   float3 b;
 } struct_float3;
-// This example uncovered a bug #141397 :
-// Type mismatch error when 'builtin-elementwise-math' arguments have different qualifiers, this should be well-formed
+
 float3 foo(float3 a,const struct_float3* hi) {
   float3 b = __builtin_elementwise_max((float3)(0.0f), a);
   return __builtin_elementwise_pow(b, hi->b.yyy);
+}
+
+float3 baz(float3 a, const struct_float3* hi) {
+  return __builtin_elementwise_fma(a, a, hi->b);
+}
+
+cfloat4 qux(cfloat4 x, float4 y, float4 z) {
+  float a = __builtin_elementwise_fma(x[0],y[0],z[0]);
+  return __builtin_elementwise_fma(x,y,z);
+}
+
+cfloat4 quux(cfloat4 x, float4 y) {
+  float a = __builtin_elementwise_pow(x[0],y[0]);
+  return __builtin_elementwise_pow(x,y);
 }
 
 void test_builtin_elementwise_ctlz(int i32, int2 v2i32, short i16,

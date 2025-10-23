@@ -1056,7 +1056,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
       RType->getAs<TemplateSpecializationType>();
-  if (const auto *ICNT = RType->getAs<InjectedClassNameType>())
+  if (const auto *ICNT = RType->getAsCanonical<InjectedClassNameType>())
     // implicitly-generated deduction guide.
     FReturnType = cast<TemplateSpecializationType>(
         ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
