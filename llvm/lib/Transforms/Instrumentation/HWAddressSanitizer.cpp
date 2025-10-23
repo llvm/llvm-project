@@ -1763,9 +1763,7 @@ void HWAddressSanitizer::instrumentGlobal(GlobalVariable *GV, uint8_t Tag) {
   }
 
   Constant *Aliasee = ConstantExpr::getIntToPtr(
-      ConstantExpr::getAdd(
-          ConstantExpr::getPtrToInt(NewGV, Int64Ty),
-          ConstantInt::get(Int64Ty, uint64_t(Tag) << PointerTagShift)),
+      ConstantExpr::getPtrToInt(NewGV, Int64Ty),
       GV->getType());
   auto *Alias = GlobalAlias::create(GV->getValueType(), GV->getAddressSpace(),
                                     GV->getLinkage(), "", Aliasee, &M);
