@@ -1918,23 +1918,22 @@ static bool CheckConstexprMissingReturn(Sema &SemaRef, const FunctionDecl *Dcl);
 
 bool Sema::CheckConstexprFunctionDefinition(const FunctionDecl *NewFD,
                                             CheckConstexprKind Kind) {
-  const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(NewFD);
-  if (MD && MD->isInstance()) {
+  if ((!getLangOpts().CPlusPlus26 && isa<CXXConstructorDecl>(NewFD)) ||
+      ((getLangOpts().CPlusPlus20 && !getLangOpts().CPlusPlus26) &&
+       isa<CXXDestructorDecl>(NewFD))) {
+    const CXXMethodDecl *MD = cast<CXXMethodDecl>(NewFD);
     // C++11 [dcl.constexpr]p4:
     //  The definition of a constexpr constructor shall satisfy the following
     //  constraints:
     //  - the class shall not have any virtual base classes;
-    //
-    // FIXME: This only applies to constructors and destructors, not arbitrary
-    // member functions.
     const CXXRecordDecl *RD = MD->getParent();
     if (RD->getNumVBases()) {
       if (Kind == CheckConstexprKind::CheckValid)
         return false;
 
       Diag(NewFD->getLocation(), diag::err_constexpr_virtual_base)
-        << isa<CXXConstructorDecl>(NewFD)
-        << getRecordDiagFromTagKind(RD->getTagKind()) << RD->getNumVBases();
+          << isa<CXXConstructorDecl>(NewFD)
+          << getRecordDiagFromTagKind(RD->getTagKind()) << RD->getNumVBases();
       for (const auto &I : RD->vbases())
         Diag(I.getBeginLoc(), diag::note_constexpr_virtual_base_here)
             << I.getSourceRange();
