@@ -273,6 +273,5 @@ Status MainLoopWindows::Run() {
 }
 
 bool MainLoopWindows::Interrupt() {
-  WSASetEvent(m_interrupt_event);
-  return true;
+  return WSASetEvent(m_interrupt_event);
 }

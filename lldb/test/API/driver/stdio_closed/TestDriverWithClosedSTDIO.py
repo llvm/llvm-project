@@ -14,7 +14,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
-class RenameThisSampleTestTestCase(TestBase):
+class TestDriverWithClosedSTDIO(TestBase):
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -34,7 +34,6 @@ class RenameThisSampleTestTestCase(TestBase):
                 lldb,
                 lldb,
                 "-x",
-                "-b",
                 "-o",
                 "script print(lldb.debugger.GetNumTargets())",
                 "--batch",
