@@ -26,9 +26,6 @@
 #define __zext128(x)                                                           \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, 2, 3)
-#define __anyext128(x)                                                         \
-  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
-                                    1, -1, -1)
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -544,8 +541,8 @@ _mm_maddubs_pi16(__m64 __a, __m64 __b) {
 ///    A 128-bit vector of [8 x i16] containing one of the source operands.
 /// \returns A 128-bit vector of [8 x i16] containing the rounded and scaled
 ///    products of both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhrs_epi16(__m128i __a,
-                                                              __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhrs_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmulhrsw128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -563,11 +560,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhrs_epi16(__m128i __a,
 ///    A 64-bit vector of [4 x i16] containing one of the source operands.
 /// \returns A 64-bit vector of [4 x i16] containing the rounded and scaled
 ///    products of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_mulhrs_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_pmulhrsw128((__v8hi)__anyext128(__a),
-                                                (__v8hi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhrs_pi16(__m64 __a, __m64 __b) {
+  return __trunc64(__builtin_ia32_pmulhrsw128((__v8hi)__zext128(__a),
+                                              (__v8hi)__zext128(__b)));
 }
 
 /// Copies the 8-bit integers from a 128-bit integer vector to the
@@ -642,10 +638,9 @@ _mm_shuffle_pi8(__m64 __a, __m64 __b) {
 ///    A 128-bit integer vector containing control bytes corresponding to
 ///    positions in the destination.
 /// \returns A 128-bit integer vector containing the resultant values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_sign_epi8(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_psignb128((__v16qi)__a, (__v16qi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sign_epi8(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_psignb128((__v16qi)__a, (__v16qi)__b);
 }
 
 /// For each 16-bit integer in the first source operand, perform one of
@@ -668,10 +663,9 @@ _mm_sign_epi8(__m128i __a, __m128i __b)
 ///    A 128-bit integer vector containing control words corresponding to
 ///    positions in the destination.
 /// \returns A 128-bit integer vector containing the resultant values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_sign_epi16(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_psignw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sign_epi16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_psignw128((__v8hi)__a, (__v8hi)__b);
 }
 
 /// For each 32-bit integer in the first source operand, perform one of
@@ -694,10 +688,9 @@ _mm_sign_epi16(__m128i __a, __m128i __b)
 ///    A 128-bit integer vector containing control doublewords corresponding to
 ///    positions in the destination.
 /// \returns A 128-bit integer vector containing the resultant values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS
-_mm_sign_epi32(__m128i __a, __m128i __b)
-{
-    return (__m128i)__builtin_ia32_psignd128((__v4si)__a, (__v4si)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_sign_epi32(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_psignd128((__v4si)__a, (__v4si)__b);
 }
 
 /// For each 8-bit integer in the first source operand, perform one of
@@ -720,11 +713,10 @@ _mm_sign_epi32(__m128i __a, __m128i __b)
 ///    A 64-bit integer vector containing control bytes corresponding to
 ///    positions in the destination.
 /// \returns A 64-bit integer vector containing the resultant values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_sign_pi8(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_psignb128((__v16qi)__anyext128(__a),
-                                              (__v16qi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sign_pi8(__m64 __a,
+                                                                  __m64 __b) {
+  return __trunc64(__builtin_ia32_psignb128((__v16qi)__zext128(__a),
+                                            (__v16qi)__zext128(__b)));
 }
 
 /// For each 16-bit integer in the first source operand, perform one of
@@ -747,11 +739,10 @@ _mm_sign_pi8(__m64 __a, __m64 __b)
 ///    A 64-bit integer vector containing control words corresponding to
 ///    positions in the destination.
 /// \returns A 64-bit integer vector containing the resultant values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_sign_pi16(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_psignw128((__v8hi)__anyext128(__a),
-                                              (__v8hi)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sign_pi16(__m64 __a,
+                                                                   __m64 __b) {
+  return __trunc64(
+      __builtin_ia32_psignw128((__v8hi)__zext128(__a), (__v8hi)__zext128(__b)));
 }
 
 /// For each 32-bit integer in the first source operand, perform one of
@@ -774,14 +765,12 @@ _mm_sign_pi16(__m64 __a, __m64 __b)
 ///    A 64-bit integer vector containing two control doublewords corresponding
 ///    to positions in the destination.
 /// \returns A 64-bit integer vector containing the resultant values.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_sign_pi32(__m64 __a, __m64 __b)
-{
-    return __trunc64(__builtin_ia32_psignd128((__v4si)__anyext128(__a),
-                                              (__v4si)__anyext128(__b)));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sign_pi32(__m64 __a,
+                                                                   __m64 __b) {
+  return __trunc64(
+      __builtin_ia32_psignd128((__v4si)__zext128(__a), (__v4si)__zext128(__b)));
 }
 
-#undef __anyext128
 #undef __zext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS

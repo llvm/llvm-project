@@ -12,7 +12,9 @@
 
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtCXX.h"
+
 using namespace clang;
 
 OpenACCComputeConstruct *
@@ -320,6 +322,58 @@ OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
   auto *Inst = new (Mem) OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind,
                                                 End, Clauses, AssociatedStmt);
   return Inst;
+}
+
+static std::pair<const Expr *, const Expr *> getBinaryOpArgs(const Expr *Op) {
+  if (const auto *BO = dyn_cast<BinaryOperator>(Op)) {
+    assert(BO->getOpcode() == BO_Assign);
+    return {BO->getLHS(), BO->getRHS()};
+  }
+
+  const auto *OO = cast<CXXOperatorCallExpr>(Op);
+  assert(OO->getOperator() == OO_Equal);
+
+  return {OO->getArg(0), OO->getArg(1)};
+}
+
+const OpenACCAtomicConstruct::StmtInfo
+OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
+  // This ends up being a vastly simplified version of SemaOpenACCAtomic, since
+  // it doesn't have to worry about erroring out, but we should do a lot of
+  // asserts to ensure we don't get off into the weeds.
+  assert(getAssociatedStmt() && "invalid associated stmt?");
+
+  switch (AtomicKind) {
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update:
+  case OpenACCAtomicKind::Capture:
+    assert(false && "Only 'read'/'write' have been implemented here");
+    return {};
+  case OpenACCAtomicKind::Read: {
+    // Read only supports the format 'v = x'; where both sides are a scalar
+    // expression. This can come in 2 forms; BinaryOperator or
+    // CXXOperatorCallExpr (rarely).
+    std::pair<const Expr *, const Expr *> BinaryArgs =
+        getBinaryOpArgs(cast<const Expr>(getAssociatedStmt()));
+    // We want the L-value for each side, so we ignore implicit casts.
+    return {BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second->IgnoreImpCasts(), /*expr=*/nullptr};
+  }
+  case OpenACCAtomicKind::Write: {
+    // Write supports only the format 'x = expr', where the expression is scalar
+    // type, and 'x' is a scalar l value. As above, this can come in 2 forms;
+    // Binary Operator or CXXOperatorCallExpr.
+    std::pair<const Expr *, const Expr *> BinaryArgs =
+        getBinaryOpArgs(cast<const Expr>(getAssociatedStmt()));
+    // We want the L-value for ONLY the X side, so we ignore implicit casts. For
+    // the right side (the expr), we emit it as an r-value so we need to
+    // maintain implicit casts.
+    return {/*v=*/nullptr, BinaryArgs.first->IgnoreImpCasts(),
+            BinaryArgs.second};
+  }
+  }
+
+  llvm_unreachable("unknown OpenACC atomic kind");
 }
 
 OpenACCCacheConstruct *OpenACCCacheConstruct::CreateEmpty(const ASTContext &C,

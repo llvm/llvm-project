@@ -22,12 +22,21 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/identity.h"
 #include <cassert>
 
 namespace llvm {
 
-template <typename T, typename ToIndexT = identity<unsigned>> class IndexedMap {
+namespace detail {
+template <class Ty> struct IdentityIndex {
+  using argument_type = Ty;
+
+  Ty &operator()(Ty &self) const { return self; }
+  const Ty &operator()(const Ty &self) const { return self; }
+};
+} // namespace detail
+
+template <typename T, typename ToIndexT = detail::IdentityIndex<unsigned>>
+class IndexedMap {
   using IndexT = typename ToIndexT::argument_type;
   // Prefer SmallVector with zero inline storage over std::vector. IndexedMaps
   // can grow very large and SmallVector grows more efficiently as long as T
@@ -35,11 +44,11 @@ template <typename T, typename ToIndexT = identity<unsigned>> class IndexedMap {
   using StorageT = SmallVector<T, 0>;
 
   StorageT storage_;
-  T nullVal_;
+  T nullVal_ = T();
   ToIndexT toIndex_;
 
 public:
-  IndexedMap() : nullVal_(T()) {}
+  IndexedMap() = default;
 
   explicit IndexedMap(const T &val) : nullVal_(val) {}
 
