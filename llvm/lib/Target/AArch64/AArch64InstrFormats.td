@@ -6538,14 +6538,30 @@ multiclass SIMDThreeSameVectorFML<bit U, bit b13, bits<3> size, string asm,
 }
 
 multiclass SIMDThreeSameVectorMLA<bit Q, string asm, SDPatternOperator op> {
-
-  def v8f16 : BaseSIMDThreeSameVectorDot<Q, 0b0, 0b11, 0b1111, asm, ".8h", ".16b",
+  def v16i8_v8f16 : BaseSIMDThreeSameVectorDot<Q, 0b0, 0b11, 0b1111, asm, ".8h", ".16b",
                                          V128, v8f16, v16i8, op>;
 }
 
 multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm, SDPatternOperator op> {
   def v4f32 : BaseSIMDThreeSameVectorDot<Q, 0b0, sz, 0b1000, asm, ".4s", ".16b",
                                          V128, v4f32, v16i8, op>;
+}
+
+multiclass SIMDThreeSameVectorFMLA<string asm> {
+  def v8f16_v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b11, 0b1101, asm, ".8h", ".8h",
+                                          V128, v8f16, v8f16, null_frag>;
+}
+
+multiclass SIMDThreeSameVectorFMLAWiden<string asm> {
+  def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1101, asm, ".4s", ".8h",
+                                          V128, v4f32, v8f16, null_frag>;
+}
+
+multiclass SIMDThreeSameVectorFDot<string asm, SDPatternOperator OpNode = null_frag> {
+  def v4f16_v2f32 : BaseSIMDThreeSameVectorDot<0, 0, 0b10, 0b1111, asm, ".2s", ".4h", V64,
+                                         v2f32, v4f16, OpNode>;
+  def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<1, 0, 0b10, 0b1111, asm, ".4s", ".8h", V128,
+                                         v4f32, v8f16, OpNode>;
 }
 
 // FP8 assembly/disassembly classes
@@ -9167,6 +9183,13 @@ multiclass SIMDThreeSameVectorFMLIndex<bit U, bits<4> opc, string asm,
                                               V64, V128_lo, v2f32, v4f16, VectorIndexH, OpNode>;
   def v8f16 : BaseSIMDThreeSameVectorIndexH<1, U, 0b10, opc, asm, ".4s", ".4h", ".h",
                                               V128, V128_lo, v4f32, v8f16, VectorIndexH, OpNode>;
+}
+
+multiclass SIMDThreeSameVectorFDOTIndex<string asm> {
+  def v4f16_v2f32 : BaseSIMDThreeSameVectorIndexS<0b0, 0b0, 0b01, 0b1001, asm, ".2s", ".4h", ".2h",
+                                           V64, v2f32, v4f16, VectorIndexS, null_frag>;
+  def v8f16_v4f32 : BaseSIMDThreeSameVectorIndexS<0b1, 0b0, 0b01, 0b1001, asm, ".4s", ".8h",".2h",
+                                            V128, v4f32, v8f16, VectorIndexS, null_frag>;
 }
 
 //----------------------------------------------------------------------------
