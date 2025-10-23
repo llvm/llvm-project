@@ -29,12 +29,11 @@ int main(int, char**)
     {
 #if TEST_STD_VER >= 26
       // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with an rvalue reference type is ill-formed}}
-      optional<int&&> opt2;
 #else
       // expected-error-re@optional:* 2 {{static assertion failed{{.*}}instantiation of optional with a reference type is ill-formed}}
+#endif
       optional<int&> opt1;
       optional<int&&> opt2;
-#endif
     }
     {
         // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with a non-destructible type is ill-formed}}

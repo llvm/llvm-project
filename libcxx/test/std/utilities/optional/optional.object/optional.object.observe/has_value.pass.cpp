@@ -37,7 +37,7 @@ int main(int, char**)
     {
       static constexpr int i = 0;
       constexpr optional<const int&> opt{i};
-      static_assert(opt.has_value(), "");
+      static_assert(opt.has_value());
     }
 #endif
 

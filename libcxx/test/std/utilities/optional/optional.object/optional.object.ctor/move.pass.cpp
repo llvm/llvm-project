@@ -136,8 +136,8 @@ void test_reference_extension() {
   assert(T::alive == 0);
   assert(T::destroyed == 1);
   {
-    static_assert(!std::is_copy_constructible<std::optional<T&&>>::value, "");
-    static_assert(!std::is_copy_constructible<std::optional<T const&&>>::value, "");
+    static_assert(!std::is_copy_constructible_v<std::optional<T&&>>);
+    static_assert(!std::is_copy_constructible_v<std::optional<T const&&>>);
   }
 #  endif
 #endif

@@ -32,9 +32,44 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, char**) {
-  static_assert((test<int&, 1>()));
-  static_assert((test<double&, 1.0>()));
+template <typename T>
+constexpr T foo(T val) {
+  return val;
+}
+
+template <typename T, T _Val>
+constexpr bool fn_ref_test() {
+  std::optional<T (&)(T)> opt{foo<T>};
+  assert(opt.has_value());
+  assert((*opt)(_Val) == _Val);
+
+  return true;
+}
+
+template <typename T, T _Val>
+constexpr bool array_ref_test() {
+  T arr[5]{};
+  std::optional<T(&)[5]> opt{arr};
+
+  assert(opt.has_value());
+  (*opt)[0] = _Val;
+  assert((*opt)[0] == _Val);
+  assert(arr[0] == _Val);
+
+  return true;
+}
+
+constexpr bool tests() {
   assert((test<int&, 1>()));
   assert((test<double&, 1.0>()));
+  assert((fn_ref_test<int, 1>()));
+  assert((array_ref_test<int, 1>()));
+  assert((fn_ref_test<double, 1.0>()));
+  assert((array_ref_test<double, 1.0>()));
+  return true;
+}
+
+int main(int, char**) {
+  static_assert(tests());
+  tests();
 }
