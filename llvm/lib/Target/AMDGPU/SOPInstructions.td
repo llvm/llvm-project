@@ -265,10 +265,10 @@ def S_BREV_B64 : SOP1_64 <"s_brev_b64",
 
 let Defs = [SCC] in {
 def S_BCNT0_I32_B32 : SOP1_32 <"s_bcnt0_i32_b32",
-  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_bcnt032_lo> i32:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_bcnt32_lo> i32:$src0))]
 >;
 def S_BCNT0_I32_B64 : SOP1_32_64 <"s_bcnt0_i32_b64",
-  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_bcnt064_lo> i64:$src0))]
+  [(set i32:$sdst, (UniformUnaryFrag<int_amdgcn_bcnt64_lo> i64:$src0))]
 >;
 def S_BCNT1_I32_B32 : SOP1_32 <"s_bcnt1_i32_b32",
   [(set i32:$sdst, (UniformUnaryFrag<ctpop> i32:$src0))]
