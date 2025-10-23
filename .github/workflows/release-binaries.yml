@@ -175,6 +175,9 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_CMAKE_CXX_FLAGS='-DLIBXML_STATIC'"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_DEFINITIONS='-DLIBXML_STATIC'"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_LIBRARIES=$libxml_prefix/lib/libxml2s.lib"
+          target_cmake_flags="$target_cmake_flags -DLIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
+          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
+          target_cmake_flags="$target_cmake_flags -DBOOTRTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml_prefix/include/libxml2"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
