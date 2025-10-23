@@ -2300,6 +2300,9 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
         SmallVector<int, 16> Mask(NewVecTy->getNumElements(), -1);
         std::iota(Mask.begin(), Mask.begin() + VecTy->getNumElements(), 0);
         Value = Builder.CreateShuffleVector(Value, Mask, "extractVec");
+        // The extra lanes will be poison. Freeze the whole vector to make sure
+        // the padding memory is not poisoned, which may break coercion.
+        Value = Builder.CreateFreeze(Value);
         SrcTy = NewVecTy;
       }
       if (Addr.getElementType() != SrcTy)
