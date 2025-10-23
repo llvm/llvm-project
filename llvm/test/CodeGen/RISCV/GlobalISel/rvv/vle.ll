@@ -1036,6 +1036,264 @@ entry:
   ret <vscale x 32 x i16> %a
 }
 
+declare <vscale x 1 x half> @llvm.riscv.vle.nxv1f16(
+  <vscale x 1 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 1 x half> @intrinsic_vle_v_nxv1f16_nxv1f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv1f16_nxv1f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x half> @llvm.riscv.vle.nxv1f16(
+    <vscale x 1 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 1 x half> %a
+}
+
+declare <vscale x 1 x half> @llvm.riscv.vle.mask.nxv1f16(
+  <vscale x 1 x half>,
+  ptr,
+  <vscale x 1 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 1 x half> @intrinsic_vle_mask_v_nxv1f16_nxv1f16(<vscale x 1 x half> %0, ptr %1, <vscale x 1 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv1f16_nxv1f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x half> @llvm.riscv.vle.mask.nxv1f16(
+    <vscale x 1 x half> %0,
+    ptr %1,
+    <vscale x 1 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 1 x half> %a
+}
+
+declare <vscale x 2 x half> @llvm.riscv.vle.nxv2f16(
+  <vscale x 2 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 2 x half> @intrinsic_vle_v_nxv2f16_nxv2f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv2f16_nxv2f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x half> @llvm.riscv.vle.nxv2f16(
+    <vscale x 2 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 2 x half> %a
+}
+
+declare <vscale x 2 x half> @llvm.riscv.vle.mask.nxv2f16(
+  <vscale x 2 x half>,
+  ptr,
+  <vscale x 2 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 2 x half> @intrinsic_vle_mask_v_nxv2f16_nxv2f16(<vscale x 2 x half> %0, ptr %1, <vscale x 2 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv2f16_nxv2f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x half> @llvm.riscv.vle.mask.nxv2f16(
+    <vscale x 2 x half> %0,
+    ptr %1,
+    <vscale x 2 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 2 x half> %a
+}
+
+declare <vscale x 4 x half> @llvm.riscv.vle.nxv4f16(
+  <vscale x 4 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 4 x half> @intrinsic_vle_v_nxv4f16_nxv4f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv4f16_nxv4f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x half> @llvm.riscv.vle.nxv4f16(
+    <vscale x 4 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 4 x half> %a
+}
+
+declare <vscale x 4 x half> @llvm.riscv.vle.mask.nxv4f16(
+  <vscale x 4 x half>,
+  ptr,
+  <vscale x 4 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 4 x half> @intrinsic_vle_mask_v_nxv4f16_nxv4f16(<vscale x 4 x half> %0, ptr %1, <vscale x 4 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv4f16_nxv4f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 4 x half> @llvm.riscv.vle.mask.nxv4f16(
+    <vscale x 4 x half> %0,
+    ptr %1,
+    <vscale x 4 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 4 x half> %a
+}
+
+declare <vscale x 8 x half> @llvm.riscv.vle.nxv8f16(
+  <vscale x 8 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 8 x half> @intrinsic_vle_v_nxv8f16_nxv8f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv8f16_nxv8f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x half> @llvm.riscv.vle.nxv8f16(
+    <vscale x 8 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 8 x half> %a
+}
+
+declare <vscale x 8 x half> @llvm.riscv.vle.mask.nxv8f16(
+  <vscale x 8 x half>,
+  ptr,
+  <vscale x 8 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 8 x half> @intrinsic_vle_mask_v_nxv8f16_nxv8f16(<vscale x 8 x half> %0, ptr %1, <vscale x 8 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv8f16_nxv8f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 8 x half> @llvm.riscv.vle.mask.nxv8f16(
+    <vscale x 8 x half> %0,
+    ptr %1,
+    <vscale x 8 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 8 x half> %a
+}
+
+declare <vscale x 16 x half> @llvm.riscv.vle.nxv16f16(
+  <vscale x 16 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 16 x half> @intrinsic_vle_v_nxv16f16_nxv16f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv16f16_nxv16f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 16 x half> @llvm.riscv.vle.nxv16f16(
+    <vscale x 16 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 16 x half> %a
+}
+
+declare <vscale x 16 x half> @llvm.riscv.vle.mask.nxv16f16(
+  <vscale x 16 x half>,
+  ptr,
+  <vscale x 16 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 16 x half> @intrinsic_vle_mask_v_nxv16f16_nxv16f16(<vscale x 16 x half> %0, ptr %1, <vscale x 16 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv16f16_nxv16f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 16 x half> @llvm.riscv.vle.mask.nxv16f16(
+    <vscale x 16 x half> %0,
+    ptr %1,
+    <vscale x 16 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 16 x half> %a
+}
+
+declare <vscale x 32 x half> @llvm.riscv.vle.nxv32f16(
+  <vscale x 32 x half>,
+  ptr,
+  iXLen);
+
+define <vscale x 32 x half> @intrinsic_vle_v_nxv32f16_nxv32f16(ptr %0, iXLen %1) nounwind {
+; CHECK-LABEL: intrinsic_vle_v_nxv32f16_nxv32f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 32 x half> @llvm.riscv.vle.nxv32f16(
+    <vscale x 32 x half> poison,
+    ptr %0,
+    iXLen %1)
+
+  ret <vscale x 32 x half> %a
+}
+
+declare <vscale x 32 x half> @llvm.riscv.vle.mask.nxv32f16(
+  <vscale x 32 x half>,
+  ptr,
+  <vscale x 32 x i1>,
+  iXLen,
+  iXLen);
+
+define <vscale x 32 x half> @intrinsic_vle_mask_v_nxv32f16_nxv32f16(<vscale x 32 x half> %0, ptr %1, <vscale x 32 x i1> %2, iXLen %3) nounwind {
+; CHECK-LABEL: intrinsic_vle_mask_v_nxv32f16_nxv32f16:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v8, (a0), v0.t
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 32 x half> @llvm.riscv.vle.mask.nxv32f16(
+    <vscale x 32 x half> %0,
+    ptr %1,
+    <vscale x 32 x i1> %2,
+    iXLen %3, iXLen 1)
+
+  ret <vscale x 32 x half> %a
+}
+
 declare <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8(
   <vscale x 1 x i8>,
   ptr,
