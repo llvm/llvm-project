@@ -1347,17 +1347,9 @@ public:
                                uint32_t byte_size);
 
   /// Sends a breakpoint notification event if any listener is registered.
-  /// \param[in] bp
-  ///     The breakpoint to send a nofication for.
-  /// \param[in] eventKind
-  ///     The kind of event that occurred.
   void NotifyBreakpointChanged(Breakpoint &bp,
-                               lldb::BreakpointEventType eventKind);
+                               lldb::BreakpointEventType event_kind);
   /// Sends a breakpoint notification event if any listener is registered.
-  /// \param[in] bp
-  ///     The breakpoint that has changed.
-  /// \param[in] data
-  ///     The data associated with the event.
   void NotifyBreakpointChanged(Breakpoint &bp,
                                const lldb::EventDataSP &breakpoint_data_sp);
 
@@ -1371,7 +1363,7 @@ public:
     StopHook(const StopHook &rhs);
     virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookKind : uint32_t { CommandBased = 0, ScriptBased };
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,

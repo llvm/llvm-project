@@ -1098,10 +1098,9 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
 }
 
 void Breakpoint::SendBreakpointChangedEvent(
-    lldb::BreakpointEventType eventKind) {
-  if (!IsInternal()) {
-    GetTarget().NotifyBreakpointChanged(*this, eventKind);
-  }
+    lldb::BreakpointEventType event_kind) {
+  if (!IsInternal())
+    GetTarget().NotifyBreakpointChanged(*this, event_kind);
 }
 
 void Breakpoint::SendBreakpointChangedEvent(
