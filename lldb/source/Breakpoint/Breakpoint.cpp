@@ -1099,12 +1099,11 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
 
 void Breakpoint::SendBreakpointChangedEvent(
     lldb::BreakpointEventType eventKind) {
-  if (!IsInternal() && GetTarget().EventTypeHasListeners(
-                           Target::eBroadcastBitBreakpointChanged)) {
+  if (!IsInternal()) {
     std::shared_ptr<BreakpointEventData> data =
         std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
 
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
+    GetTarget().NotifyBreakpointChanged(*this, eventKind);
   }
 }
 
@@ -1113,10 +1112,8 @@ void Breakpoint::SendBreakpointChangedEvent(
   if (!breakpoint_data_sp)
     return;
 
-  if (!IsInternal() &&
-      GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                               breakpoint_data_sp);
+  if (!IsInternal())
+    GetTarget().NotifyBreakpointChanged(*this, breakpoint_data_sp);
 }
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
