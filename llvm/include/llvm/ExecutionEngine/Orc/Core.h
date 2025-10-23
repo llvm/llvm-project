@@ -448,7 +448,7 @@ public:
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
-  ~FailedToMaterialize();
+  ~FailedToMaterialize() override;
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }

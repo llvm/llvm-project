@@ -1695,6 +1695,15 @@ static uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) {
   return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
 }
 
+mlir::LogicalResult CIRToLLVMPrefetchOpLowering::matchAndRewrite(
+    cir::PrefetchOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::Prefetch>(
+      op, adaptor.getAddr(), adaptor.getIsWrite(), adaptor.getLocality(),
+      /*DataCache=*/1);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMPtrDiffOpLowering::matchAndRewrite(
     cir::PtrDiffOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -2406,6 +2415,15 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     mlir::LLVM::ICmpPredicate kind =
         convertCmpKindToICmpPredicate(cmpOp.getKind(),
                                       /* isSigned=*/false);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
+        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
+    return mlir::success();
+  }
+
+  if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(type)) {
+    // !cir.vptr is a special case, but it's just a pointer to LLVM.
+    auto kind = convertCmpKindToICmpPredicate(cmpOp.getKind(),
+                                              /* isSigned=*/false);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
     return mlir::success();

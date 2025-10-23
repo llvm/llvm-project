@@ -26,7 +26,7 @@ using namespace llvm::jitlink;
 
 class ReOptimizeLayerTest : public testing::Test {
 public:
-  ~ReOptimizeLayerTest() {
+  ~ReOptimizeLayerTest() override {
     if (ES)
       if (auto Err = ES->endSession())
         ES->reportError(std::move(Err));
