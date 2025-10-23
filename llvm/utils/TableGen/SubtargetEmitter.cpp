@@ -150,7 +150,7 @@ public:
 /// Emit some information about the SubtargetFeature as calls to a macro so
 /// that they can be used from C++.
 void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
-  // Undef the GET_SUBTARGETINFO_MACRO macro and the end of the scope since its
+  // Undef the GET_SUBTARGETINFO_MACRO macro at the end of the scope since its
   // used within the scope.
   IfDefEmitter IfDefMacro(OS, "GET_SUBTARGETINFO_MACRO", /*LateUndef=*/true);
 
