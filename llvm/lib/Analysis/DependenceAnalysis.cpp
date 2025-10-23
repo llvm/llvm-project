@@ -3857,8 +3857,8 @@ bool DependenceInfo::tryDelinearizeFixedSize(
            "expected src and dst scev unknowns to be equal");
   });
 
-  SmallVector<int, 4> SrcSizes;
-  SmallVector<int, 4> DstSizes;
+  SmallVector<const SCEV *, 4> SrcSizes;
+  SmallVector<const SCEV *, 4> DstSizes;
   if (!tryDelinearizeFixedSizeImpl(SE, Src, SrcAccessFn, SrcSubscripts,
                                    SrcSizes) ||
       !tryDelinearizeFixedSizeImpl(SE, Dst, DstAccessFn, DstSubscripts,
@@ -3866,7 +3866,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
     return false;
 
   // Check that the two size arrays are non-empty and equal in length and
-  // value.
+  // value.  SCEV expressions are uniqued, so we can compare pointers.
   if (SrcSizes.size() != DstSizes.size() ||
       !std::equal(SrcSizes.begin(), SrcSizes.end(), DstSizes.begin())) {
     SrcSubscripts.clear();
@@ -3888,7 +3888,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
   // iff the subscripts are positive and are less than the range of the
   // dimension.
   if (!DisableDelinearizationChecks) {
-    auto AllIndicesInRange = [&](SmallVector<int, 4> &DimensionSizes,
+    auto AllIndicesInRange = [&](SmallVector<const SCEV *, 4> &DimensionSizes,
                                  SmallVectorImpl<const SCEV *> &Subscripts,
                                  Value *Ptr) {
       size_t SSize = Subscripts.size();
@@ -3901,17 +3901,14 @@ bool DependenceInfo::tryDelinearizeFixedSize(
           });
           return false;
         }
-        if (auto *SType = dyn_cast<IntegerType>(S->getType())) {
-          const SCEV *Range = SE->getConstant(
-              ConstantInt::get(SType, DimensionSizes[I - 1], false));
-          if (!isKnownLessThan(S, Range)) {
-            LLVM_DEBUG({
-              dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
-              dbgs() << "  S: " << *S << "\n"
-                     << "  Range: " << *Range << "\n";
-            });
-            return false;
-          }
+        const SCEV *Range = DimensionSizes[I - 1];
+        if (!isKnownLessThan(S, Range)) {
+          LLVM_DEBUG({
+            dbgs() << "Check failed: !isKnownLessThan(S, Range)\n";
+            dbgs() << "  S: " << *S << "\n"
+                   << "  Range: " << *Range << "\n";
+          });
+          return false;
         }
       }
       return true;
