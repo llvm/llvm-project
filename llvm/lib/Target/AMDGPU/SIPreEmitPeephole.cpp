@@ -51,7 +51,8 @@ private:
   // for unpacking.
   void collectUnpackingCandidates(MachineInstr &BeginMI,
                                   SetVector<MachineInstr *> &InstrsToUnpack,
-                                  uint16_t NumMFMACycles);
+                                  uint16_t NumMFMACycles,
+                                  const GCNSubtarget &ST);
   // v_pk_fma_f32 v[0:1], v[0:1], v[2:3], v[2:3] op_sel:[1,1,1]
   // op_sel_hi:[0,0,0]
   // ==>
@@ -63,7 +64,7 @@ private:
   // Unpack and insert F32 packed instructions, such as V_PK_MUL, V_PK_ADD, and
   // V_PK_FMA. Currently, only V_PK_MUL, V_PK_ADD, V_PK_FMA are supported for
   // this transformation.
-  void performF32Unpacking(MachineInstr &I);
+  void performF32Unpacking(MachineInstr &I, const GCNSubtarget &ST);
   // Select corresponding unpacked instruction
   uint16_t mapToUnpackedOpcode(MachineInstr &I);
   // Creates the unpacked instruction to be inserted. Adds source modifiers to
@@ -583,20 +584,33 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
 
 void SIPreEmitPeephole::collectUnpackingCandidates(
     MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
-    uint16_t NumMFMACycles) {
+    uint16_t NumMFMACycles, const GCNSubtarget &ST) {
   auto *BB = BeginMI.getParent();
   auto E = BB->end();
   int TotalCyclesBetweenCandidates = 0;
   auto SchedModel = TII->getSchedModel();
+  const MCSchedModel *MCSchedMod = SchedModel.getMCSchedModel();
   Register MFMADef = BeginMI.getOperand(0).getReg();
 
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
-    uint16_t UnpackedOpCode = mapToUnpackedOpcode(Instr);
-    bool IsUnpackable =
-        !(UnpackedOpCode == std::numeric_limits<uint16_t>::max());
     if (Instr.isMetaInstruction())
       continue;
+
+    SmallVector<unsigned, 4> UnpackSequence;
+    bool IsUnpackable = TII->getDowncastSequence(Instr, UnpackSequence, ST);
+
+    // We only support unpacking where the unpack sequence is all the same
+    // opcode. To support more complex sequences we must teach
+    // performF32Unpacking how to handle them. The unpack sequence used in
+    // performF32Unpacking must agree with with TII->getDowncastSequence, as
+    // this method is used for some scheduling decisions, under the assumption
+    // that this will be sequence used for unpacking.
+    IsUnpackable &=
+        all_of(UnpackSequence, [&UnpackSequence](unsigned CurrentOpcode) {
+          return CurrentOpcode == UnpackSequence[0];
+        });
+
     if ((Instr.isTerminator()) ||
         (TII->isNeverCoissue(Instr) && !IsUnpackable) ||
         (SIInstrInfo::modifiesModeRegister(Instr) &&
@@ -631,18 +645,33 @@ void SIPreEmitPeephole::collectUnpackingCandidates(
     // latency, add latency of two unpacked instructions (currently estimated
     // as 2 cycles).
     TotalCyclesBetweenCandidates -= Latency;
-    // TODO: improve latency handling based on instruction modeling.
-    TotalCyclesBetweenCandidates += 2;
+
+    for (unsigned Opcode : UnpackSequence) {
+      unsigned SchedClass = TII->get(Opcode).getSchedClass();
+      const MCSchedClassDesc *SCDesc =
+          MCSchedMod->getSchedClassDesc(SchedClass);
+
+      // FIXME: We don't have an opcode based SchedClass resolution for variant
+      // SchedClass. This is a non-issue currently as none of the unpack
+      // instructions have variant SchedClasses.
+      assert(!SCDesc->isVariant());
+      uint16_t Latency =
+          SchedModel.getWriteProcResBegin(SCDesc)->ReleaseAtCycle;
+      TotalCyclesBetweenCandidates += Latency;
+    }
     // Subtract 1 to account for MFMA issue latency.
     if (TotalCyclesBetweenCandidates < NumMFMACycles - 1)
       InstrsToUnpack.insert(&Instr);
   }
 }
 
-void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I) {
+void SIPreEmitPeephole::performF32Unpacking(MachineInstr &I,
+                                            const GCNSubtarget &ST) {
   MachineOperand DstOp = I.getOperand(0);
 
-  uint16_t UnpackedOpcode = mapToUnpackedOpcode(I);
+  SmallVector<unsigned, 4> UnpackSequence;
+  TII->getDowncastSequence(I, UnpackSequence, ST);
+  uint16_t UnpackedOpcode = UnpackSequence[0];
   assert(UnpackedOpcode != std::numeric_limits<uint16_t>::max() &&
          "Unsupported Opcode");
 
@@ -786,10 +815,10 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
           SchedModel.resolveSchedClass(&MI);
       uint16_t NumMFMACycles =
           SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
-      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles);
+      collectUnpackingCandidates(MI, InstrsToUnpack, NumMFMACycles, ST);
     }
     for (MachineInstr *MI : InstrsToUnpack) {
-      performF32Unpacking(*MI);
+      performF32Unpacking(*MI, ST);
     }
   }
 
