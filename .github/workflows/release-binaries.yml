@@ -158,7 +158,7 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-#          target_cmake_flags="$target_cmake_flags -DLibXml2_DIR=/s/libxml-install/lib/cmake/libxml2-2.9.10/ -DLLVM_ENABLE_LIBXML2=FORCE_ON -DLIBXML2_LIBRARIES=/s/libxml-install/lib/libxml2s.lib -DLIBXML2_INCLUDE_DIR=/s/libxml-install/include/libxml2"
+          #target_cmake_flags="$target_cmake_flags -DLibXml2_DIR=/s/libxml-install/lib/cmake/libxml2-2.9.10/ -DLLVM_ENABLE_LIBXML2=FORCE_ON -DLIBXML2_LIBRARIES=/s/libxml-install/lib/libxml2s.lib -DLIBXML2_INCLUDE_DIR=/s/libxml-install/include/libxml2"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
