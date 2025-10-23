@@ -4,7 +4,7 @@ target triple = "x86_64-apple-macosx"
 
 ; CHECK-LABEL: @test1
 ; CHECK: %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-define i32 @test1(ptr %a) #0 {
+define i32 @test1(ptr %a) {
 entry:
   br label %for.cond
 
@@ -25,5 +25,3 @@ for.body:                                         ; preds = %for.cond
 for.end:                                          ; preds = %for.cond
   ret i32 %sum.0
 }
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
