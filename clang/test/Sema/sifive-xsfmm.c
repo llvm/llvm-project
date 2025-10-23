@@ -23,4 +23,8 @@ void test(vfloat32m8_t arg0, vuint8m8_t arg1) {
   __riscv_sf_vtzero_t_e16w2(3, 0, 0); /* expected-error {{argument should be a multiple of 4}} */
   __riscv_sf_vtzero_t_e32w1(5, 0, 0); /* expected-error {{argument should be a multiple of 4}} */
   __riscv_sf_vtzero_t_e32w2(5, 0, 0); /* expected-error {{argument should be a multiple of 2}} */
+  __riscv_sf_vtzero_t(5, 0, 0, 7, 1); /* expected-error {{argument value 7 is outside the valid range [3, 6]}} */
+  __riscv_sf_vtzero_t(5, 0, 0, 2, 1); /* expected-error {{argument value 2 is outside the valid range [3, 6]}} */
+  __riscv_sf_vtzero_t(5, 0, 0, 6, 3); /* expected-error {{RISC-V XSfmm twiden must be 1, 2 or 4}} */
+  __riscv_sf_vtzero_t(5, 0, 0, 6, 5); /* expected-error {{RISC-V XSfmm twiden must be 1, 2 or 4}} */
 }
