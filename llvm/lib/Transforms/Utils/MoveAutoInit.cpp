@@ -101,7 +101,9 @@ static BasicBlock *usersDominator(const MemoryLocation &ML, Instruction *I,
   return CurrentDominator;
 }
 
-static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
+static bool runMoveAutoInit(
+    Function &F, DominatorTree &DT, MemorySSA &MSSA,
+    function_ref<bool(const Instruction &)> ShouldProcess) {
   BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<std::pair<Instruction *, BasicBlock *>> JobList;
 
@@ -109,7 +111,7 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
   // Compute movable instructions.
   //
   for (Instruction &I : EntryBB) {
-    if (!hasAutoInitMetadata(I))
+    if (!ShouldProcess(I))
       continue;
 
     std::optional<MemoryLocation> ML = writeToAlloca(I);
@@ -221,7 +223,26 @@ PreservedAnalyses MoveAutoInitPass::run(Function &F,
 
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  if (!runMoveAutoInit(F, DT, MSSA))
+  auto ShouldProcess = [](const Instruction &I) -> bool {
+    return hasAutoInitMetadata(I);
+  };
+  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<MemorySSAAnalysis>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+PreservedAnalyses MoveEntryAllocaInitPass::run(Function &F,
+                                               FunctionAnalysisManager &AM) {
+
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  auto ShouldProcess = [](const Instruction &) { return true; };
+  if (!runMoveAutoInit(F, DT, MSSA, ShouldProcess))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
