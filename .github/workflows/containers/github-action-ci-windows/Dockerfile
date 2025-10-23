@@ -99,6 +99,9 @@ RUN powershell -Command \
     [System.IO.Compression.ZipFile]::ExtractToDirectory('actions-runner-win.zip', $PWD) ;\
     rm actions-runner-win.zip
 
+# Set the LLVM_VERSION environment variable
+RUN powershell -Command [Environment]::SetEnvironmentVariable('LLVM_VERSION', '21.1.2', 'Machine')
+
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer
 RUN powershell -Command \
@@ -109,26 +112,31 @@ RUN powershell -Command \
     New-Item -Path "C:\clang" -ItemType "Directory" -Force ; \
     # --- 1. Download and extract xz --- \
     Set-Location C:\temp-download ; \
-    Write-Host "Downloading xz-utils..."; \
     Invoke-WebRequest -Uri "http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip" -OutFile "xz.zip"; \
-    Write-Host "Extracting xz-utils..."; \
     Add-Type -AssemblyName "System.IO.Compression.FileSystem"; \
     [System.IO.Compression.ZipFile]::ExtractToDirectory('C:\temp-download\xz.zip', 'C:\xz-utils'); \ 
     # --- 2. Download and decompress Clang --- \
-    Write-Host "Downloading Clang..."; \
     Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" ; \
-    Write-Host "Decompressing clang.tar.xz using C:\xz-utils\bin_x86-64\xz.exe"; \
     C:\xz-utils\bin_x86-64\xz.exe -d -qq clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz ; \
     # --- 3. Extract clang --- \
-    Write-Host "Extracting clang.tar to C:\clang ..."; \
     C:\Windows\System32\tar.exe -xf clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar -C C:\clang ; \
     # --- 4. Clean up --- \
-    Write-Host "Cleaning up..." ; \
     Set-Location C:\ ; \
     Remove-Item C:\temp-download -Recurse -Force; \
     Remove-Item C:\xz-utils -Recurse -Force; \
-    Write-Host "Download and extraction complete." ;
 
+# Shorten path to clang files.
 RUN powershell -Command \
     Set-Location C:\clang ; \
-    Rename-Item -Path "C:\clang\clang+llvm-21.1.2-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ;
+    Rename-Item -Path "C:\clang\clang+llvm-21.1.2-x86_64-pc-windows-msvc" -NewName "C:\clang\clang-msvc" ; \
+    Set-Location C:\clang\clang-msvc ; \
+    Remove-Item -Path C:\clang\clang-msvc\libexec -Recurse -Force ; \
+    Remove-Item -Path C:\clang\clang-msvc\share -Recurse -Force ; \
+    Rename-Item -Path "C:\clang\clang-msvc\bin" -NewName "C:\clang\clang-msvc\bin-full" ; \
+    New-Item -Path "C:\clang\clang-msvc\bin" -ItemType Directory -Force ; \
+    Set-Location C:\clang\clang-msvc\bin ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\*.dll -Destination C:\clang\clang-msvc\bin\. ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\clang-cl.exe -Destination C:\clang\clang-msvc\bin\. ; \
+    Copy-Item -Path C:\clang\clang-msvc\bin-full\lld-link.exe -Destination C:\clang\clang-msvc\bin\. ; \
+    Set-Location C:\clang\clang-msvc ; \
+    Remove-Item -Path C:\clang\clang-msvc\bin-full -Recurse -Force ;
