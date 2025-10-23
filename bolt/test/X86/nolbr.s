@@ -10,7 +10,7 @@
 # RUN: FileCheck %s --input-file %t.fdata --check-prefix=CHECK-FDATA
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --dyno-stats -nl \
+# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --dyno-stats -ba \
 # RUN:    --print-only=_start 2>&1 | FileCheck %s --check-prefix=CHECK-BOLT
 
 # CHECK-FDATA:      no_lbr

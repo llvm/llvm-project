@@ -4003,18 +4003,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   // Try to fold intrinsic into select/phi operands. This is legal if:
   //  * The intrinsic is speculatable.
-  //  * The select condition is not a vector, or the intrinsic does not
-  //    perform cross-lane operations.
-  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI) &&
-      isNotCrossLaneOperation(II))
+  //  * The operand is one of the following:
+  //    - a phi.
+  //    - a select with a scalar condition.
+  //    - a select with a vector condition and II is not a cross lane operation.
+  if (isSafeToSpeculativelyExecuteWithVariableReplaced(&CI)) {
     for (Value *Op : II->args()) {
-      if (auto *Sel = dyn_cast<SelectInst>(Op))
-        if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+      if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+        bool IsVectorCond = Sel->getCondition()->getType()->isVectorTy();
+        if (IsVectorCond && !isNotCrossLaneOperation(II))
+          continue;
+        // Don't replace a scalar select with a more expensive vector select if
+        // we can't simplify both arms of the select.
+        bool SimplifyBothArms =
+            !Op->getType()->isVectorTy() && II->getType()->isVectorTy();
+        if (Instruction *R = FoldOpIntoSelect(
+                *II, Sel, /*FoldWithMultiUse=*/false, SimplifyBothArms))
           return R;
+      }
       if (auto *Phi = dyn_cast<PHINode>(Op))
         if (Instruction *R = foldOpIntoPhi(*II, Phi))
           return R;
     }
+  }
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
