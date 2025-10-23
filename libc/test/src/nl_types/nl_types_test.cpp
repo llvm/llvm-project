@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/nl-types-macros.h"
 #include "include/llvm-libc-types/nl_catd.h"
 #include "src/nl_types/catclose.h"
 #include "src/nl_types/catgets.h"
@@ -15,7 +16,7 @@
 using LlvmLibcNlTypesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcNlTypesTest, CatopenFails) {
-  ASSERT_EQ(LIBC_NAMESPACE::catopen("/somepath", 0),
+  ASSERT_EQ(LIBC_NAMESPACE::catopen("/somepath", NL_CAT_LOCALE),
             reinterpret_cast<nl_catd>(-1));
   ASSERT_ERRNO_EQ(EINVAL);
 }
@@ -28,6 +29,6 @@ TEST_F(LlvmLibcNlTypesTest, CatgetsFails) {
   const char *message = "message";
   // Note that we test for pointer equality here, since catgets
   // is expected to return the input argument as-is.
-  ASSERT_EQ(LIBC_NAMESPACE::catgets(nullptr, 0, 0, message),
+  ASSERT_EQ(LIBC_NAMESPACE::catgets(nullptr, NL_SETD, 1, message),
             const_cast<char *>(message));
 }

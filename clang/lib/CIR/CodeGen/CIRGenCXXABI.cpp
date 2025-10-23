@@ -70,8 +70,8 @@ cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
-  return cgf.getBuilder().create<cir::LoadOp>(
-      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+  return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
+                             addr.getElementType(), addr.getPointer());
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,

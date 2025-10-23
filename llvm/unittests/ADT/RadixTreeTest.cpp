@@ -1,4 +1,4 @@
-//===- llvm/unittest/Support/RadixTreeTypeTest.cpp ------------------------===//
+//===- llvm/unittest/ADT/RadixTreeTypeTest.cpp ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/RadixTree.h"
+#include "llvm/ADT/RadixTree.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
