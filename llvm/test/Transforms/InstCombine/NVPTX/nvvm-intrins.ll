@@ -185,52 +185,63 @@ define float @trunc_float_ftz(float %a) #0 {
 }
 
 ; Check NVVM intrinsics that correspond to LLVM cast operations.
+; fp -> integer casts should not be converted, as the semantics
+; for NaN/Inf/Overflow inputs are different.
+; Only integer -> fp casts should be converted.
 
 ; CHECK-LABEL: @test_d2i
 define i32 @test_d2i(double %a) #0 {
-; CHECK: fptosi double %a to i32
+; CHECK: call i32 @llvm.nvvm.d2i.rz(double %a)
+; CHECK-NOT: fptosi double %a to i32
   %ret = call i32 @llvm.nvvm.d2i.rz(double %a)
   ret i32 %ret
 }
 ; CHECK-LABEL: @test_f2i
 define i32 @test_f2i(float %a) #0 {
-; CHECK: fptosi float %a to i32
+; CHECK: call i32 @llvm.nvvm.f2i.rz(float %a)
+; CHECK-NOT: fptosi float %a to i32
   %ret = call i32 @llvm.nvvm.f2i.rz(float %a)
   ret i32 %ret
 }
 ; CHECK-LABEL: @test_d2ll
 define i64 @test_d2ll(double %a) #0 {
-; CHECK: fptosi double %a to i64
+; CHECK: call i64 @llvm.nvvm.d2ll.rz(double %a)
+; CHECK-NOT: fptosi double %a to i64
   %ret = call i64 @llvm.nvvm.d2ll.rz(double %a)
   ret i64 %ret
 }
 ; CHECK-LABEL: @test_f2ll
 define i64 @test_f2ll(float %a) #0 {
-; CHECK: fptosi float %a to i64
+; CHECK: call i64 @llvm.nvvm.f2ll.rz(float %a)
+; CHECK-NOT: fptosi float %a to i64
   %ret = call i64 @llvm.nvvm.f2ll.rz(float %a)
   ret i64 %ret
 }
 ; CHECK-LABEL: @test_d2ui
 define i32 @test_d2ui(double %a) #0 {
-; CHECK: fptoui double %a to i32
+; CHECK: call i32 @llvm.nvvm.d2ui.rz(double %a)
+; CHECK-NOT: fptoui double %a to i32
   %ret = call i32 @llvm.nvvm.d2ui.rz(double %a)
   ret i32 %ret
 }
 ; CHECK-LABEL: @test_f2ui
 define i32 @test_f2ui(float %a) #0 {
-; CHECK: fptoui float %a to i32
+; CHECK: call i32 @llvm.nvvm.f2ui.rz(float %a)
+; CHECK-NOT: fptoui float %a to i32
   %ret = call i32 @llvm.nvvm.f2ui.rz(float %a)
   ret i32 %ret
 }
 ; CHECK-LABEL: @test_d2ull
 define i64 @test_d2ull(double %a) #0 {
-; CHECK: fptoui double %a to i64
+; CHECK: call i64 @llvm.nvvm.d2ull.rz(double %a)
+; CHECK-NOT: fptoui double %a to i64
   %ret = call i64 @llvm.nvvm.d2ull.rz(double %a)
   ret i64 %ret
 }
 ; CHECK-LABEL: @test_f2ull
 define i64 @test_f2ull(float %a) #0 {
-; CHECK: fptoui float %a to i64
+; CHECK: call i64 @llvm.nvvm.f2ull.rz(float %a)
+; CHECK-NOT: fptoui float %a to i64
   %ret = call i64 @llvm.nvvm.f2ull.rz(float %a)
   ret i64 %ret
 }

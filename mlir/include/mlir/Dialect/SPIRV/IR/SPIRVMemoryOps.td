@@ -121,9 +121,9 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
     SPIRV_AnyPtr:$target,
     SPIRV_AnyPtr:$source,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment,
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$source_memory_access,
-    OptionalAttr<I32Attr>:$source_alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$source_alignment
   );
 
   let results = (outs);

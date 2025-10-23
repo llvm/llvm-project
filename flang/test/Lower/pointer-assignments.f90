@@ -113,11 +113,15 @@ subroutine test_array_remap(p, x)
   ! CHECK-DAG: %[[c2_idx:.*]] = fir.convert %c2{{.*}} : (i64) -> index
   ! CHECK-DAG: %[[c11_idx:.*]] = fir.convert %c11{{.*}} : (i64) -> index
   ! CHECK-DAG: %[[diff0:.*]] = arith.subi %[[c11_idx]], %[[c2_idx]] : index
-  ! CHECK-DAG: %[[ext0:.*]] = arith.addi %[[diff0:.*]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[raw_ext0:.*]] = arith.addi %[[diff0:.*]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[cmp0:.*]] = arith.cmpi sgt, %[[raw_ext0]], %c0{{.*}} : index
+  ! CHECK-DAG: %[[ext0:.*]] = arith.select %[[cmp0]], %[[raw_ext0]], %c0{{.*}} : index
   ! CHECK-DAG: %[[c3_idx:.*]] = fir.convert %c3{{.*}} : (i64) -> index
   ! CHECK-DAG: %[[c12_idx:.*]] = fir.convert %c12{{.*}} : (i64) -> index
   ! CHECK-DAG: %[[diff1:.*]] = arith.subi %[[c12_idx]], %[[c3_idx]] : index
-  ! CHECK-DAG: %[[ext1:.*]] = arith.addi %[[diff1]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[raw_ext1:.*]] = arith.addi %[[diff1]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[cmp1:.*]] = arith.cmpi sgt, %[[raw_ext1]], %c0{{.*}} : index
+  ! CHECK-DAG: %[[ext1:.*]] = arith.select %[[cmp1]], %[[raw_ext1]], %c0{{.*}} : index
   ! CHECK-DAG: %[[addrCast:.*]] = fir.convert %[[x]] : (!fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
   ! CHECK: %[[shape:.*]] = fir.shape_shift %c2{{.*}}, %[[ext0]], %c3{{.*}}, %[[ext1]]
   ! CHECK: %[[box:.*]] = fir.embox %[[addrCast]](%[[shape]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
@@ -132,9 +136,9 @@ subroutine test_array_char_remap(p, x)
   character(*), target :: x(100)
   character(:), pointer :: p(:, :)
   ! CHECK: subi
-  ! CHECK: %[[ext0:.*]] = arith.addi
+  ! CHECK: %[[ext0:.*]] = arith.select
   ! CHECK: subi
-  ! CHECK: %[[ext1:.*]] = arith.addi
+  ! CHECK: %[[ext1:.*]] = arith.select
   ! CHECK: %[[shape:.*]] = fir.shape_shift %c2{{.*}}, %[[ext0]], %c3{{.*}}, %[[ext1]]
   ! CHECK: %[[box:.*]] = fir.embox %{{.*}}(%[[shape]]) typeparams %[[unbox]]#1 : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shapeshift<2>, index) -> !fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>
   ! CHECK: fir.store %[[box]] to %[[p]]
@@ -218,9 +222,9 @@ subroutine test_array_non_contig_remap(p, x)
   real, target :: x(:)
   real, pointer :: p(:, :)
   ! CHECK: subi
-  ! CHECK: %[[ext0:.*]] = arith.addi
+  ! CHECK: %[[ext0:.*]] = arith.select
   ! CHECK: subi
-  ! CHECK: %[[ext1:.*]] = arith.addi
+  ! CHECK: %[[ext1:.*]] = arith.select
   ! CHECK: %[[shape:.*]] = fir.shape_shift %{{.*}}, %[[ext0]], %{{.*}}, %[[ext1]]
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[x]](%[[shape]]) : (!fir.box<!fir.array<?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
   ! CHECK: fir.store %[[rebox]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
@@ -250,13 +254,17 @@ end subroutine
 ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
 ! CHECK:         %[[VAL_19:.*]] = arith.subi %[[VAL_18]], %[[VAL_17]] : index
 ! CHECK:         %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_16]] : index
+! CHECK:         %[[cmp0:.*]] = arith.cmpi sgt, %[[VAL_20]], %c0{{.*}} : index
+! CHECK:         %[[ext0:.*]] = arith.select %[[cmp0]], %[[VAL_20]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_6]] : (i64) -> index
 ! CHECK:         %[[VAL_23:.*]] = arith.subi %[[VAL_22]], %[[VAL_21]] : index
 ! CHECK:         %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_16]] : index
+! CHECK:         %[[cmp1:.*]] = arith.cmpi sgt, %[[VAL_24]], %c0{{.*}} : index
+! CHECK:         %[[ext1:.*]] = arith.select %[[cmp1]], %[[VAL_24]], %c0{{.*}} : index
 ! CHECK:         %[[VAL_25:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
-! CHECK:         %[[VAL_27:.*]] = fir.shape_shift %[[VAL_25]], %[[VAL_20]], %[[VAL_26]], %[[VAL_24]] : (index, index, index, index) -> !fir.shapeshift<2>
+! CHECK:         %[[VAL_27:.*]] = fir.shape_shift %[[VAL_25]], %[[ext0]], %[[VAL_26]], %[[ext1]] : (index, index, index, index) -> !fir.shapeshift<2>
 ! CHECK:         %[[VAL_28:.*]] = fir.rebox %[[VAL_15]](%[[VAL_27]]) : (!fir.box<!fir.array<100xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK:         fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK:         return
@@ -333,7 +341,9 @@ subroutine issue857_array_remap(rhs)
   ! CHECK: %[[c101:.*]] = fir.convert %c101_i64 : (i64) -> index
   ! CHECK: %[[c200:.*]] = fir.convert %c200_i64 : (i64) -> index
   ! CHECK: %[[sub:.*]] = arith.subi %[[c200]], %[[c101]] : index
-  ! CHECK: %[[extent:.*]] = arith.addi %[[sub]], %c1{{.*}} : index
+  ! CHECK: %[[raw_extent:.*]] = arith.addi %[[sub]], %c1{{.*}} : index
+  ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
+  ! CHECK: %[[extent:.*]] = arith.select %[[cmp]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: %[[addr:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>) -> !fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>
   ! CHECK: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>
   ! CHECK: fir.store %[[addr_cast]] to %[[lhs_addr]] : !fir.ref<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>

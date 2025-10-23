@@ -237,7 +237,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::TemplateSpecialization:
     case Type::InjectedClassName:
     case Type::DependentName:
-    case Type::DependentTemplateSpecialization:
     case Type::ObjCObject:
     case Type::ObjCTypeParam:
     case Type::ObjCInterface:
@@ -847,16 +846,45 @@ void TypePrinter::printExtVectorAfter(const ExtVectorType *T, raw_ostream &OS) {
   }
 }
 
+static void printDims(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << T->getNumRows() << ", " << T->getNumColumns();
+}
+
+static void printHLSLMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                  raw_ostream &OS) {
+  OS << "matrix<";
+  TP.printBefore(T->getElementType(), OS);
+}
+
+static void printHLSLMatrixAfter(const ConstantMatrixType *T, raw_ostream &OS) {
+  OS << ", ";
+  printDims(T, OS);
+  OS << ">";
+}
+
+static void printClangMatrixBefore(TypePrinter &TP, const ConstantMatrixType *T,
+                                   raw_ostream &OS) {
+  TP.printBefore(T->getElementType(), OS);
+  OS << " __attribute__((matrix_type(";
+  printDims(T, OS);
+  OS << ")))";
+}
+
 void TypePrinter::printConstantMatrixBefore(const ConstantMatrixType *T,
                                             raw_ostream &OS) {
-  printBefore(T->getElementType(), OS);
-  OS << " __attribute__((matrix_type(";
-  OS << T->getNumRows() << ", " << T->getNumColumns();
-  OS << ")))";
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixBefore(*this, T, OS);
+    return;
+  }
+  printClangMatrixBefore(*this, T, OS);
 }
 
 void TypePrinter::printConstantMatrixAfter(const ConstantMatrixType *T,
                                            raw_ostream &OS) {
+  if (Policy.UseHLSLTypes) {
+    printHLSLMatrixAfter(T, OS);
+    return;
+  }
   printAfter(T->getElementType(), OS);
 }
 
@@ -1393,7 +1421,7 @@ void TypePrinter::printDeducedTemplateSpecializationBefore(
     } else {
       // Should only get here for canonical types.
       const auto *CD = cast<ClassTemplateSpecializationDecl>(
-          cast<RecordType>(T->getDeducedType())->getOriginalDecl());
+          cast<RecordType>(T->getDeducedType())->getDecl());
       DeducedTD = CD->getSpecializedTemplate();
       Args = CD->getTemplateArgs().asArray();
     }
@@ -1537,7 +1565,7 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS,
 }
 
 void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
-  TagDecl *D = T->getOriginalDecl();
+  TagDecl *D = T->getDecl();
 
   if (Policy.IncludeTagDefinition && T->isTagOwned()) {
     D->print(OS, Policy, Indentation);
@@ -1641,11 +1669,11 @@ void TypePrinter::printTagType(const TagType *T, raw_ostream &OS) {
 void TypePrinter::printRecordBefore(const RecordType *T, raw_ostream &OS) {
   // Print the preferred name if we have one for this type.
   if (Policy.UsePreferredNames) {
-    for (const auto *PNA : T->getOriginalDecl()
+    for (const auto *PNA : T->getDecl()
                                ->getMostRecentDecl()
                                ->specific_attrs<PreferredNameAttr>()) {
       if (!declaresSameEntity(PNA->getTypedefType()->getAsCXXRecordDecl(),
-                              T->getOriginalDecl()))
+                              T->getDecl()))
         continue;
       // Find the outermost typedef or alias template.
       QualType T = PNA->getTypedefType();
@@ -1672,11 +1700,11 @@ void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 
 void TypePrinter::printInjectedClassNameBefore(const InjectedClassNameType *T,
                                                raw_ostream &OS) {
-  const ASTContext &Ctx = T->getOriginalDecl()->getASTContext();
+  const ASTContext &Ctx = T->getDecl()->getASTContext();
   IncludeStrongLifetimeRAII Strong(Policy);
   T->getTemplateName(Ctx).print(OS, Policy);
   if (Policy.PrintInjectedClassNameWithArguments) {
-    auto *Decl = T->getOriginalDecl();
+    auto *Decl = T->getDecl();
     // FIXME: Use T->getTemplateArgs(Ctx) when that supports as-written
     // arguments.
     if (auto *RD = dyn_cast<ClassTemplateSpecializationDecl>(Decl)) {
@@ -1835,22 +1863,6 @@ void TypePrinter::printDependentNameBefore(const DependentNameType *T,
 
 void TypePrinter::printDependentNameAfter(const DependentNameType *T,
                                           raw_ostream &OS) {}
-
-void TypePrinter::printDependentTemplateSpecializationBefore(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {
-  IncludeStrongLifetimeRAII Strong(Policy);
-
-  OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ElaboratedTypeKeyword::None)
-    OS << " ";
-
-  T->getDependentTemplateName().print(OS, Policy);
-  printTemplateArgumentList(OS, T->template_arguments(), Policy);
-  spaceBeforePlaceHolder(OS);
-}
-
-void TypePrinter::printDependentTemplateSpecializationAfter(
-        const DependentTemplateSpecializationType *T, raw_ostream &OS) {}
 
 void TypePrinter::printPackExpansionBefore(const PackExpansionType *T,
                                            raw_ostream &OS) {
@@ -2050,6 +2062,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLROV:
   case attr::HLSLRawBuffer:
   case attr::HLSLContainedType:
+  case attr::HLSLIsCounter:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2134,9 +2147,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   case attr::AArch64VectorPcs: OS << "aarch64_vector_pcs"; break;
   case attr::AArch64SVEPcs: OS << "aarch64_sve_pcs"; break;
-  case attr::DeviceKernel:
-    OS << T->getAttr()->getSpelling();
-    break;
   case attr::IntelOclBicc:
     OS << "inteloclbicc";
     break;
@@ -2198,6 +2208,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_rov]]";
   if (Attrs.RawBuffer)
     OS << " [[hlsl::raw_buffer]]";
+  if (Attrs.IsCounter)
+    OS << " [[hlsl::is_counter]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {

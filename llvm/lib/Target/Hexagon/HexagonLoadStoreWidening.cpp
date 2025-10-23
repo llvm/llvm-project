@@ -646,7 +646,7 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
     MachineInstr *CombI;
     if (Acc != 0) {
       const MCInstrDesc &TfrD = TII->get(Hexagon::A2_tfrsi);
-      const TargetRegisterClass *RC = TII->getRegClass(TfrD, 0, TRI, *MF);
+      const TargetRegisterClass *RC = TII->getRegClass(TfrD, 0, TRI);
       Register VReg = MF->getRegInfo().createVirtualRegister(RC);
       MachineInstr *TfrI = BuildMI(*MF, DL, TfrD, VReg).addImm(LowerAcc);
       NG.push_back(TfrI);
@@ -677,7 +677,7 @@ bool HexagonLoadStoreWidening::createWideStores(InstrGroup &OG, InstrGroup &NG,
   } else {
     // Create vreg = A2_tfrsi #Acc; mem[hw] = vreg
     const MCInstrDesc &TfrD = TII->get(Hexagon::A2_tfrsi);
-    const TargetRegisterClass *RC = TII->getRegClass(TfrD, 0, TRI, *MF);
+    const TargetRegisterClass *RC = TII->getRegClass(TfrD, 0, TRI);
     Register VReg = MF->getRegInfo().createVirtualRegister(RC);
     MachineInstr *TfrI = BuildMI(*MF, DL, TfrD, VReg).addImm(int(Acc));
     NG.push_back(TfrI);

@@ -499,6 +499,11 @@ public:
     return *PPOpts;
   }
 
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVirtualFileSystemPtr() {
+    // FIXME: Don't defer VFS ownership to the FileManager.
+    return FileMgr->getVirtualFileSystemPtr();
+  }
+
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
   IntrusiveRefCntPtr<FileManager> getFileManagerPtr() { return FileMgr; }
@@ -729,16 +734,15 @@ public:
   /// \returns - The initialized ASTUnit or null if the AST failed to load.
   static std::unique_ptr<ASTUnit> LoadFromASTFile(
       StringRef Filename, const PCHContainerReader &PCHContainerRdr,
-      WhatToLoad ToLoad, std::shared_ptr<DiagnosticOptions> DiagOpts,
+      WhatToLoad ToLoad, IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+      std::shared_ptr<DiagnosticOptions> DiagOpts,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
       const FileSystemOptions &FileSystemOpts,
       const HeaderSearchOptions &HSOpts, const LangOptions *LangOpts = nullptr,
       bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
       bool AllowASTWithCompilerErrors = false,
-      bool UserFilesAreVolatile = false,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
-          llvm::vfs::getRealFileSystem());
+      bool UserFilesAreVolatile = false);
 
 private:
   /// Helper function for \c LoadFromCompilerInvocation() and

@@ -10,6 +10,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 float test_cvtsh_ss(unsigned short a) {
   // CHECK-LABEL: test_cvtsh_ss
@@ -17,6 +18,10 @@ float test_cvtsh_ss(unsigned short a) {
   // CHECK: ret float [[CONV]]
   return _cvtsh_ss(a);
 }
+
+TEST_CONSTEXPR(_cvtsh_ss(0x0000) == 0.0f);
+TEST_CONSTEXPR(_cvtsh_ss(0x4500) == 5.0f);
+TEST_CONSTEXPR(_cvtsh_ss(0xC000) == -2.0f);
 
 unsigned short test_cvtss_sh(float a) {
   // CHECK-LABEL: test_cvtss_sh
@@ -28,6 +33,11 @@ unsigned short test_cvtss_sh(float a) {
   // CHECK: extractelement <8 x i16> %{{.*}}, i32 0
   return _cvtss_sh(a, 0);
 }
+
+TEST_CONSTEXPR(match_m128(
+    _mm_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0, 0, 0, 0)), 
+    1.0f, 2.0f, 3.0f, 4.0f
+));
 
 __m128 test_mm_cvtph_ps(__m128i a) {
   // CHECK-LABEL: test_mm_cvtph_ps
@@ -41,6 +51,10 @@ __m256 test_mm256_cvtph_ps(__m128i a) {
   // CHECK: fpext <8 x half> %{{.*}} to <8 x float>
   return _mm256_cvtph_ps(a);
 }
+TEST_CONSTEXPR(match_m256(
+    _mm256_cvtph_ps(_mm_setr_epi16(0x3C00, 0x4000, 0x4200, 0x4400, 0x4500, 0x3800, 0xC000, 0x0000)), 
+    1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 0.5f, -2.0f, 0.0f
+));
 
 __m128i test_mm_cvtps_ph(__m128 a) {
   // CHECK-LABEL: test_mm_cvtps_ph

@@ -133,28 +133,20 @@ static BasicType ParseBasicType(char c) {
   switch (c) {
   case 'c':
     return BasicType::Int8;
-    break;
   case 's':
     return BasicType::Int16;
-    break;
   case 'i':
     return BasicType::Int32;
-    break;
   case 'l':
     return BasicType::Int64;
-    break;
   case 'x':
     return BasicType::Float16;
-    break;
   case 'f':
     return BasicType::Float32;
-    break;
   case 'd':
     return BasicType::Float64;
-    break;
   case 'y':
     return BasicType::BFloat16;
-    break;
   default:
     return BasicType::Unknown;
   }

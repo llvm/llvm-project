@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
   if (lc_note_payload_bytes.size() > 0)
     payload_fileoff = (payload_fileoff + 4096 - 1) & ~(4096 - 1);
 
-  FILE *f = fopen(OutputFilename.c_str(), "w");
+  FILE *f = fopen(OutputFilename.c_str(), "wb");
   if (f == nullptr) {
     fprintf(stderr, "Unable to open file %s for writing\n",
             OutputFilename.c_str());

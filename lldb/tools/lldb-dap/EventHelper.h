@@ -10,6 +10,10 @@
 #define LLDB_TOOLS_LLDB_DAP_EVENTHELPER_H
 
 #include "DAPForward.h"
+#include "Protocol/ProtocolEvents.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_dap {
@@ -31,6 +35,12 @@ void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process);
 void SendContinuedEvent(DAP &dap);
 
 void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
+
+void SendInvalidatedEvent(
+    DAP &dap, llvm::ArrayRef<protocol::InvalidatedEventBody::Area> areas,
+    lldb::tid_t tid = LLDB_INVALID_THREAD_ID);
+
+void SendMemoryEvent(DAP &dap, lldb::SBValue variable);
 
 } // namespace lldb_dap
 

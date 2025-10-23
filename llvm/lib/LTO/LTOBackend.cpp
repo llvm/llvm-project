@@ -240,27 +240,26 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
+                        /*MemoryProfile=*/"", PGOOptions::SampleUse,
                         PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   else if (Conf.RunCSIRInstr) {
     PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        /*MemoryProfile=*/"", PGOOptions::IRUse,
                         PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default,
                         Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
-    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
-                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
-                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default,
-                        Conf.AddFSDiscriminator);
+    PGOOpt =
+        PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
+                   /*MemoryProfile=*/"", PGOOptions::IRUse, PGOOptions::CSIRUse,
+                   PGOOptions::ColdFuncOpt::Default, Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", PGOOptions::NoAction,
+                        PGOOptions::NoCSAction,
                         PGOOptions::ColdFuncOpt::Default, true);
   }
   TM->setPGOOption(PGOOpt);
@@ -540,12 +539,12 @@ static Expected<const Target *> initAndLookupTarget(const Config &C,
   return T;
 }
 
-Error lto::finalizeOptimizationRemarks(
-    std::unique_ptr<ToolOutputFile> DiagOutputFile) {
+Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
   // Make sure we flush the diagnostic remarks file in case the linker doesn't
   // call the global destructors before exiting.
   if (!DiagOutputFile)
     return Error::success();
+  DiagOutputFile.finalize();
   DiagOutputFile->keep();
   DiagOutputFile->os().flush();
   return Error::success();
@@ -640,7 +639,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
-          std::unique_ptr<ToolOutputFile> DiagnosticOutputFile) {
+          LLVMRemarkFileHandle DiagnosticOutputFile) {
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
@@ -727,7 +726,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
@@ -772,11 +770,11 @@ bool lto::initImportList(const Module &M,
   // via a WriteIndexesThinBackend.
   for (const auto &GlobalList : CombinedIndex) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    for (const auto &Summary : GlobalList.second.SummaryList) {
+    for (const auto &Summary : GlobalList.second.getSummaryList()) {
       // Skip the summaries for the importing module. These are included to
       // e.g. record required linkage changes.
       if (Summary->modulePath() == M.getModuleIdentifier())

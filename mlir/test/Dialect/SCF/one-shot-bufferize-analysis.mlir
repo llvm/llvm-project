@@ -908,3 +908,111 @@ func.func @parallel_region_no_read()
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @in_order_multiple_parallel_writes
+func.func @in_order_multiple_parallel_writes(%2: tensor<320xf32> {bufferization.writable = true},
+                                            %3: tensor<320xf32> {bufferization.writable = true})
+  -> (tensor<320xf32>, tensor<320xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant -0.000000e+00 : f32
+  %c320 = arith.constant 320 : index
+  %4:2 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2, %arg2 = %3) -> (tensor<320xf32>, tensor<320xf32>) {
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %6 = tensor.extract_slice %arg1[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %7 = tensor.extract_slice %arg2[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+    %8 = linalg.fill ins(%cst : f32) outs(%7 : tensor<1xf32>) -> tensor<1xf32>
+
+    // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+    // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %6 into %arg2[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+      tensor.parallel_insert_slice %8 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  return %4#0, %4#1 : tensor<320xf32>, tensor<320xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @out_of_order_parallel_write
+func.func @out_of_order_parallel_write(%2: tensor<320xf32> {bufferization.writable = true},
+                                       %3: tensor<320xf32> {bufferization.writable = true})
+  -> (tensor<320xf32>, tensor<320xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant -0.000000e+00 : f32
+  %c320 = arith.constant 320 : index
+  %4:2 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2, %arg2 = %3) -> (tensor<320xf32>, tensor<320xf32>) {
+    // The extract_slice cannot operate in place because it is used after the
+    // first write.
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %6 = tensor.extract_slice %arg1[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+
+    // Additionally the fill aliases the thread local slice.
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+    %7 = linalg.fill ins(%cst : f32) outs(%6 : tensor<1xf32>) -> tensor<1xf32>
+
+    scf.forall.in_parallel {
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %7 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %6 into %arg2[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  return %4#0, %4#1 : tensor<320xf32>, tensor<320xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @out_of_order_parallel_write
+func.func @out_of_order_parallel_write_multiple_reads(%2: tensor<320xf32> {bufferization.writable = true},
+                                                      %3: tensor<320xf32> {bufferization.writable = true})
+  -> (tensor<320xf32>, tensor<320xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant -0.000000e+00 : f32
+  %c320 = arith.constant 320 : index
+  %4:2 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2, %arg2 = %3) -> (tensor<320xf32>, tensor<320xf32>) {
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["false", "none"]}
+    %6 = tensor.extract_slice %arg1[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+    %7 = linalg.fill ins(%cst : f32) outs(%6 : tensor<1xf32>) -> tensor<1xf32>
+
+    %reverse = arith.subi %c320, %arg0 : index
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %8 = tensor.extract_slice %arg1[%reverse] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    scf.forall.in_parallel {
+      // Also cannot operate in place due to subsequent conflicting reads.
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %7 into %arg1[%arg0] [1] [1] : tensor<1xf32> into tensor<320xf32>
+      // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+      tensor.parallel_insert_slice %8 into %arg2[%reverse] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  return %4#0, %4#1 : tensor<320xf32>, tensor<320xf32>
+}
+// -----
+
+// CHECK-LABEL: func @in_order_multiple_parallel_writes
+func.func @in_order_multiple_parallel_writes(%2: tensor<320xf32> {bufferization.writable = true})
+  -> (tensor<320xf32>)
+{
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant -0.000000e+00 : f32
+  %c320 = arith.constant 320 : index
+  %4 = scf.forall (%arg0) in (%c320) shared_outs(%arg1 = %2) -> (tensor<320xf32>) {
+    // CHECK: tensor.extract_slice {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %6 = tensor.extract_slice %arg1[%arg0] [1] [1] : tensor<320xf32> to tensor<1xf32>
+    %reverse = arith.subi %c320, %arg0 : index
+    // CHECK: tensor.parallel_insert_slice {{.*}} {__inplace_operands_attr__ = ["true", "true", "none"]}
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %6 into %arg1[%reverse] [1] [1] : tensor<1xf32> into tensor<320xf32>
+    }
+  }
+  return %4 : tensor<320xf32>
+} 

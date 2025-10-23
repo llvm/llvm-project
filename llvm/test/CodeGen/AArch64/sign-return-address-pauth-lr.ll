@@ -521,7 +521,7 @@ define i32 @leaf_sign_all_a_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; COMPAT-LABEL: leaf_sign_all_b_key_bti:
 ; COMPAT:       // %bb.0:
-; COMPAT-NEXT:   .cfi_b_key_frame
+; COMPAT-NEXT:    .cfi_b_key_frame
 ; COMPAT-NEXT:    hint #34
 ; COMPAT-NEXT:    hint #39
 ; COMPAT-NEXT:    .cfi_negate_ra_state_with_pc
@@ -563,9 +563,9 @@ define i32 @leaf_sign_all_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-r
 define i32 @leaf_sign_all_v83_b_key_bti(i32 %x) "branch-protection-pauth-lr" "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 ; CHECK-LABEL: leaf_sign_all_v83_b_key_bti:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:   .cfi_b_key_frame
-; CHECK-NEXT:   hint #34
-; CHECK-NEXT:   hint #39
+; CHECK-NEXT:    .cfi_b_key_frame
+; CHECK-NEXT:    hint #34
+; CHECK-NEXT:    hint #39
 ; CHECK-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NEXT:  .Ltmp12:
 ; CHECK-NEXT:    pacibsp

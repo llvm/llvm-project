@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
@@ -125,6 +126,7 @@ public:
 
   bool match(T actualValue) {
     actual = actualValue;
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return matchComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -134,14 +136,18 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return matchComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return matchComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#else  // LIBC_COMPILER_IS_MSVC
+    return true;
+#endif // LIBC_COMPILER_IS_MSVC
   }
 
   void explainError() override {
+#ifndef LIBC_COMPILER_IS_MSVC
     if constexpr (cpp::is_complex_type_same<T, _Complex float>())
       return explainErrorComplex<float>();
     else if constexpr (cpp::is_complex_type_same<T, _Complex double>())
@@ -151,11 +157,12 @@ public:
 #ifdef LIBC_TYPES_HAS_CFLOAT16
     else if constexpr (cpp::is_complex_type_same<T, cfloat16>())
       return explainErrorComplex<float16>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT16
 #ifdef LIBC_TYPES_HAS_CFLOAT128
     else if constexpr (cpp::is_complex_type_same<T, cfloat128>())
       return explainErrorComplex<float128>();
-#endif
+#endif // LIBC_TYPES_HAS_CFLOAT128
+#endif // LIBC_COMPILER_IS_MSVC
   }
 };
 
@@ -177,7 +184,8 @@ template <typename T> struct FPTest : public ErrnoCheckingTest {
   static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
   static constexpr T aNaN = FPBits::quiet_nan(Sign::POS).get_val();
   static constexpr T neg_aNaN = FPBits::quiet_nan(Sign::NEG).get_val();
-  static constexpr T sNaN = FPBits::signaling_nan().get_val();
+  // TODO: make this static constexpr
+  const T sNaN = FPBits::signaling_nan().get_val();
   static constexpr T inf = FPBits::inf(Sign::POS).get_val();
   static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
   static constexpr T min_normal = FPBits::min_normal().get_val();
@@ -287,42 +295,46 @@ private:
 
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
-      EXPECT_EQ(actual, expected);                                             \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
+      if (math_errhandling & MATH_ERRNO) {                                     \
+        int actual = libc_errno;                                               \
+        libc_errno = 0;                                                        \
+        EXPECT_EQ(actual, expected);                                           \
+      }                                                                        \
   } while (0)
 
 #define ASSERT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
-    if (math_errhandling & MATH_ERRNO) {                                       \
-      int actual = libc_errno;                                                 \
-      libc_errno = 0;                                                          \
-      ASSERT_EQ(actual, expected);                                             \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_ERRNO) == 0)                                 \
+      if (math_errhandling & MATH_ERRNO) {                                     \
+        int actual = libc_errno;                                               \
+        libc_errno = 0;                                                        \
+        ASSERT_EQ(actual, expected);                                           \
+      }                                                                        \
   } while (0)
 
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      EXPECT_EQ(                                                               \
-          LIBC_NAMESPACE::fputil::test_except(                                 \
-              static_cast<int>(FE_ALL_EXCEPT)) &                               \
-              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
-          (expected));                                                         \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
+      if (math_errhandling & MATH_ERREXCEPT) {                                 \
+        EXPECT_EQ(                                                             \
+            LIBC_NAMESPACE::fputil::test_except(                               \
+                static_cast<int>(FE_ALL_EXCEPT)) &                             \
+                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
+            (expected));                                                       \
+      }                                                                        \
   } while (0)
 
 #define ASSERT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
-    if (math_errhandling & MATH_ERREXCEPT) {                                   \
-      ASSERT_EQ(                                                               \
-          LIBC_NAMESPACE::fputil::test_except(                                 \
-              static_cast<int>(FE_ALL_EXCEPT)) &                               \
-              ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),     \
-          (expected));                                                         \
-    }                                                                          \
+    if ((LIBC_MATH & LIBC_MATH_NO_EXCEPT) == 0)                                \
+      if (math_errhandling & MATH_ERREXCEPT) {                                 \
+        ASSERT_EQ(                                                             \
+            LIBC_NAMESPACE::fputil::test_except(                               \
+                static_cast<int>(FE_ALL_EXCEPT)) &                             \
+                ((expected) ? (expected) : static_cast<int>(FE_ALL_EXCEPT)),   \
+            (expected));                                                       \
+      }                                                                        \
   } while (0)
 
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \

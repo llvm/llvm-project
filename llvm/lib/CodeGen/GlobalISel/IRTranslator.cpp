@@ -139,7 +139,7 @@ class DILocationVerifier : public GISelChangeObserver {
 
 public:
   DILocationVerifier() = default;
-  ~DILocationVerifier() = default;
+  ~DILocationVerifier() override = default;
 
   const Instruction *getCurrentInst() const { return CurrInst; }
   void setCurrentInst(const Instruction *Inst) { CurrInst = Inst; }
@@ -1862,14 +1862,18 @@ bool IRTranslator::translateVectorDeinterleave2Intrinsic(
 
 void IRTranslator::getStackGuard(Register DstReg,
                                  MachineIRBuilder &MIRBuilder) {
+  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
+  if (!Global) {
+    LLVMContext &Ctx = MIRBuilder.getContext();
+    Ctx.diagnose(DiagnosticInfoGeneric("unable to lower stackguard"));
+    MIRBuilder.buildUndef(DstReg);
+    return;
+  }
+
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  MRI->setRegClass(DstReg, TRI->getPointerRegClass(*MF));
+  MRI->setRegClass(DstReg, TRI->getPointerRegClass());
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
-
-  Value *Global = TLI->getSDagStackGuard(*MF->getFunction().getParent());
-  if (!Global)
-    return;
 
   unsigned AddrSpace = Global->getType()->getPointerAddressSpace();
   LLT PtrTy = LLT::pointer(AddrSpace, DL->getPointerSizeInBits(AddrSpace));
@@ -2362,6 +2366,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                            MachineInstr::copyFlagsFromInstruction(CI));
     return true;
   }
+  case Intrinsic::modf: {
+    ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
+    MIRBuilder.buildModf(VRegs[0], VRegs[1],
+                         getOrCreateVReg(*CI.getArgOperand(0)),
+                         MachineInstr::copyFlagsFromInstruction(CI));
+    return true;
+  }
   case Intrinsic::sincos: {
     ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
     MIRBuilder.buildFSincos(VRegs[0], VRegs[1],
@@ -2607,6 +2618,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::get_rounding:
     MIRBuilder.buildGetRounding(getOrCreateVReg(CI));
     return true;
+  case Intrinsic::set_rounding:
+    MIRBuilder.buildSetRounding(getOrCreateVReg(*CI.getOperand(0)));
+    return true;
   case Intrinsic::vscale: {
     MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;
@@ -2765,7 +2779,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
 }
 
 bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
-  if (containsBF16Type(U))
+  if (!MF->getTarget().getTargetTriple().isSPIRV() && containsBF16Type(U))
     return false;
 
   const CallInst &CI = cast<CallInst>(U);

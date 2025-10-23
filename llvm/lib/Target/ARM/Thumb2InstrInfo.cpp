@@ -46,7 +46,7 @@ PreferNoCSEL("prefer-no-csel", cl::Hidden,
              cl::init(false));
 
 Thumb2InstrInfo::Thumb2InstrInfo(const ARMSubtarget &STI)
-    : ARMBaseInstrInfo(STI) {}
+    : ARMBaseInstrInfo(STI), RI(STI) {}
 
 /// Return the noop instruction to use for a noop.
 MCInst Thumb2InstrInfo::getNop() const {
@@ -564,8 +564,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
   bool isSub = false;
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  const TargetRegisterClass *RegClass =
-      TII.getRegClass(Desc, FrameRegIdx, TRI, MF);
+  const TargetRegisterClass *RegClass = TII.getRegClass(Desc, FrameRegIdx, TRI);
 
   // Memory operands in inline assembly always use AddrModeT2_i12.
   if (Opcode == ARM::INLINEASM || Opcode == ARM::INLINEASM_BR)
@@ -802,6 +801,16 @@ int llvm::findFirstVPTPredOperandIdx(const MachineInstr &MI) {
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
     if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
+
+  return -1;
+}
+
+int llvm::findVPTInactiveOperandIdx(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+
+  for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i)
+    if (MCID.operands()[i].OperandType == ARM::OPERAND_VPRED_R)
+      return i + ARM::SUBOP_vpred_r_inactive;
 
   return -1;
 }

@@ -94,7 +94,7 @@ private:
   /// where the C code specifies const char*.
   llvm::Constant *makeConstantString(const std::string &Str,
                                      const std::string &Name = "") {
-    return CGM.GetAddrOfConstantCString(Str, Name.c_str()).getPointer();
+    return CGM.GetAddrOfConstantCString(Str, Name).getPointer();
   }
 
   /// Helper function which generates an initialized constant array from Str,
@@ -230,7 +230,7 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   IntTy = CGM.IntTy;
   SizeTy = CGM.SizeTy;
   VoidTy = CGM.VoidTy;
-  PtrTy = CGM.UnqualPtrTy;
+  PtrTy = CGM.DefaultPtrTy;
 
   if (CGM.getLangOpts().OffloadViaLLVM)
     Prefix = "llvm";

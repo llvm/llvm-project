@@ -33,7 +33,7 @@ config.test_format = toolchain.ShTestLldb(not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
-config.suffixes = [".test", ".cpp", ".s", ".m", ".ll"]
+config.suffixes = [".test", ".cpp", ".s", ".m", ".ll", ".c"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -169,6 +169,9 @@ if config.objc_gnustep_dir:
                 config.environment.get("PATH", ""),
             )
         )
+
+if config.have_dia_sdk:
+    config.available_features.add("diasdk")
 
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled

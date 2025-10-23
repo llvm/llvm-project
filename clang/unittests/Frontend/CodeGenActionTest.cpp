@@ -52,7 +52,8 @@ TEST(CodeGenTest, TestNullCodeGen) {
   Invocation->getFrontendOpts().ProgramAction = EmitLLVM;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   std::unique_ptr<FrontendAction> Act(new NullCodeGenAction);
@@ -69,7 +70,8 @@ TEST(CodeGenTest, CodeGenFromIRMemBuffer) {
   Invocation->getFrontendOpts().ProgramAction = frontend::EmitLLVMOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler(std::move(Invocation));
-  Compiler.createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Compiler.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
+  Compiler.createDiagnostics();
   EXPECT_TRUE(Compiler.hasDiagnostics());
 
   EmitLLVMOnlyAction Action;

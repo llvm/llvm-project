@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=i686-linux-gnu | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=i686-linux-gnu -fast-isel | FileCheck %s --check-prefixes=X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X64
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X86
 
 define float @ceil_f32(float %a) nounwind readnone {
 ; DAG-X64-LABEL: ceil_f32:
@@ -29,7 +29,19 @@ define float @ceil_f32(float %a) nounwind readnone {
 ;
 ; GISEL-X64-LABEL: ceil_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp ceilf@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq ceilf
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: ceil_f32:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $12, %esp
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    calll ceilf
+; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    retl
   %c = call float @llvm.ceil.f32(float %a)
   ret float %c
 }
@@ -57,7 +69,24 @@ define double @ceil_f64(double %a) nounwind readnone {
 ;
 ; GISEL-X64-LABEL: ceil_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp ceil@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq ceil
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: ceil_f64:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $12, %esp
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
+; GISEL-X86-NEXT:    calll ceil
+; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    retl
   %c = call double @llvm.ceil.f64(double %a)
   ret double %c
 }
@@ -86,10 +115,18 @@ define x86_fp80 @ceil_f80(x86_fp80 %a) nounwind readnone {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq ceill@PLT
+; GISEL-X64-NEXT:    callq ceill
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: ceil_f80:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $12, %esp
+; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    fstpt (%esp)
+; GISEL-X86-NEXT:    calll ceill
+; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    retl
   %c = call x86_fp80 @llvm.ceil.f80(x86_fp80 %a)
   ret x86_fp80 %c
 }
-

@@ -358,44 +358,6 @@ def SingleOp : OpenMP_Op<"single", traits = [
 }
 
 //===---------------------------------------------------------------------===//
-// OpenMP Canonical Loop Info Type
-//===---------------------------------------------------------------------===//
-
-def CanonicalLoopInfoType : OpenMP_Type<"CanonicalLoopInfo", "cli"> {
-  let summary = "Type for representing a reference to a canonical loop";
-  let description = [{
-    A variable of type CanonicalLoopInfo refers to an OpenMP-compatible
-    canonical loop in the same function. Values of this type are not
-    available at runtime and therefore cannot be used by the program itself,
-    i.e. an opaque type. It is similar to the transform dialect's
-    `!transform.interface` type, but instead of implementing an interface
-    for each transformation, the OpenMP dialect itself defines possible
-    operations on this type.
-
-    A value of type CanonicalLoopInfoType (in the following: CLI) value can be
-
-    1. created by omp.new_cli.
-    2. passed to omp.canonical_loop to associate the loop to that CLI. A CLI
-       can only be associated once.
-    3. passed to an omp loop transformation operation that modifies the loop
-       associated with the CLI. The CLI is the "applyee" and the operation is
-       the consumer. A CLI can only be consumed once.
-    4. passed to an omp loop transformation operation to associate the cli with
-       a result of that transformation. The CLI is the "generatee" and the
-       operation is the generator.
-
-    A CLI cannot
-
-    1. be returned from a function.
-    2. be passed to operations that are not specifically designed to take a
-       CanonicalLoopInfoType, including AnyType.
-
-    A CLI directly corresponds to an object of
-    OpenMPIRBuilder's CanonicalLoopInfo struct when lowering to LLVM-IR.
-  }];
-}
-
-//===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Creation
 //===---------------------------------------------------------------------===//
 
@@ -564,6 +526,31 @@ def UnrollHeuristicOp : OpenMPTransform_Op<"unroll_heuristic", []> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP tile operation
+//===----------------------------------------------------------------------===//
+
+def TileOp : OpenMPTransformBase_Op<"tile",
+                                clauses = [OpenMP_SizesClause]> {
+  let summary = "OpenMP tile operation";
+  let description = [{
+    Represents the OpenMP tile directive introduced in OpenMP 5.1.
+
+    The construct partitions the logical iteration space of the affected loops
+    into equally-sized tiles, then creates two sets of nested loops. The outer
+    loops, called the grid loops, iterate over all tiles. The inner loops,
+    called the intratile loops, iterate over the logical iterations of a tile.
+    The sizes clause determines the size of a tile.
+
+    Currently, the affected loops must be rectangular (the tripcount of the
+    inner loop must not depend on any iv of an surrounding affected loop) and
+    perfectly nested (except for the innermost affected loop, no operations
+    other than the nested loop and the terminator in the loop body).
+  }] # clausesDescription;
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.8.3 Workshare Construct
 //===----------------------------------------------------------------------===//
 
@@ -614,13 +601,18 @@ def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
 def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     RecursiveMemoryEffects, SameVariadicOperandSize
   ], clauses = [
-    OpenMP_LoopRelatedClause
+    OpenMP_CollapseClause,
+    OpenMP_LoopRelatedClause,
+    OpenMP_TileSizesClause
   ], singleRegion = true> {
   let summary = "rectangular loop nest";
   let description = [{
-    This operation represents a collapsed rectangular loop nest. For each
-    rectangular loop of the nest represented by an instance of this operation,
-    lower and upper bounds, as well as a step variable, must be defined.
+    This operation represents a rectangular loop nest which may be collapsed
+    and/or tiled. For each rectangular loop of the nest represented by an
+    instance of this operation, lower and upper bounds, as well as a step
+    variable, must be defined. The collapse clause specifies how many loops
+    that should be collapsed (1 if no collapse is done) after any tiling is
+    performed. The tiling sizes is represented by the tile sizes clause.
 
     The lower and upper bounds specify a half-open range: the range includes the
     lower bound but does not include the upper bound. If the `loop_inclusive`
@@ -633,7 +625,7 @@ def LoopNestOp : OpenMP_Op<"loop_nest", traits = [
     `loop_steps` arguments.
 
     ```mlir
-    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+    omp.loop_nest (%i1, %i2) : i32 = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) collapse(2) tiles(5,5) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
       %sum = arith.addf %a, %b : f32
@@ -1206,7 +1198,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
 def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
   let arguments = (ins OpenMP_PointerLikeType:$var_ptr,
                        TypeAttr:$var_type,
-                       UI64Attr:$map_type,
+                       ClauseMapFlagsAttr:$map_type,
                        VariableCaptureKindAttr:$map_capture_type,
                        Optional<OpenMP_PointerLikeType>:$var_ptr_ptr,
                        Variadic<OpenMP_PointerLikeType>:$members,
@@ -2095,7 +2087,7 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
 //===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
-def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
+def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [
     OpenMP_AlignClause, OpenMP_AllocatorClause
   ]> {
   let summary = "allocate directive";

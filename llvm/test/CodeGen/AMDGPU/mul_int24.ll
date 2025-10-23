@@ -815,9 +815,10 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_lshr_b32 s2, s2, 9
-; SI-NEXT:    v_mul_hi_u32 v0, s2, v0
-; SI-NEXT:    s_mul_i32 s2, s2, 0xff803fe1
-; SI-NEXT:    v_alignbit_b32 v0, v0, s2, 1
+; SI-NEXT:    s_mul_i32 s4, s2, 0xff803fe1
+; SI-NEXT:    v_mul_hi_u32 v1, s2, v0
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], 1
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -832,7 +833,7 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; VI-NEXT:    s_lshr_b32 s0, s0, 9
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], s0, v0, 0
 ; VI-NEXT:    s_mov_b64 s[0:1], 0
-; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 1
+; VI-NEXT:    v_lshrrev_b64 v[0:1], 1, v[0:1]
 ; VI-NEXT:    s_nop 2
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
@@ -844,11 +845,11 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshr_b32 s2, s2, 9
-; GFX9-NEXT:    s_mul_hi_u32 s4, s2, 0xff803fe1
-; GFX9-NEXT:    s_mul_i32 s2, s2, 0xff803fe1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s2
-; GFX9-NEXT:    v_alignbit_b32 v0, s4, v0, 1
+; GFX9-NEXT:    s_mul_hi_u32 s5, s2, 0xff803fe1
+; GFX9-NEXT:    s_mul_i32 s4, s2, 0xff803fe1
+; GFX9-NEXT:    s_lshr_b64 s[4:5], s[4:5], 1
 ; GFX9-NEXT:    s_mov_b32 s2, -1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;

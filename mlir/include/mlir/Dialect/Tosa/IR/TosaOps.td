@@ -1027,7 +1027,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
 def Tosa_MulOp : Tosa_Op<"mul", [
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>,
-    Commutative,
     Pure]> {
   let summary = "Multiplication operator.";
 
@@ -1331,8 +1330,6 @@ def Tosa_ExpOp : Tosa_ElementwiseUnaryOp<"exp"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let hasFolder = 1;
-
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
@@ -1384,8 +1381,6 @@ def Tosa_LogOp : Tosa_ElementwiseUnaryOp<"log"> {
     Profile<[Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
-
-  let hasFolder = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }

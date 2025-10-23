@@ -1,0 +1,11 @@
+# REQUIRES: riscv-registered-target
+
+# RUN: cp -f %S/Inputs/differing-set-of-functions.ll %t.ll
+# RUN: %update_llc_test_checks --include-generated-funcs %t.ll 2>&1 | FileCheck --allow-empty %s
+# RUN: diff -u %S/Inputs/differing-set-of-functions.ll.expected %t.ll
+
+# We shouldn't print the warning for clashing CHECK prefixes in the case that
+# we're trying to handle a function that is only present for some RUN lines.
+# Better warning behaviour than this might be possible.
+
+# CHECK-NOT: WARNING

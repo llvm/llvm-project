@@ -161,6 +161,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   Style.Language = FormatStyle::LK_Cpp;
   CHECK_PARSE_BOOL(AllowAllArgumentsOnNextLine);
   CHECK_PARSE_BOOL(AllowAllParametersOfDeclarationOnNextLine);
+  CHECK_PARSE_BOOL(AllowBreakBeforeQtProperty);
   CHECK_PARSE_BOOL(AllowShortCaseExpressionOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCaseLabelsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
@@ -175,7 +176,6 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
@@ -1138,6 +1138,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::SDS_Leave);
   CHECK_PARSE("SeparateDefinitionBlocks: Never", SeparateDefinitionBlocks,
               FormatStyle::SDS_Never);
+
+  CHECK_PARSE("Cpp11BracedListStyle: Block", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: FunctionCall", Cpp11BracedListStyle,
+              FormatStyle::BLS_FunctionCall);
+  CHECK_PARSE("Cpp11BracedListStyle: AlignFirstComment", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
+  // For backward compatibility:
+  CHECK_PARSE("Cpp11BracedListStyle: false", Cpp11BracedListStyle,
+              FormatStyle::BLS_Block);
+  CHECK_PARSE("Cpp11BracedListStyle: true", Cpp11BracedListStyle,
+              FormatStyle::BLS_AlignFirstComment);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
@@ -1263,6 +1275,13 @@ TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {
               IndentWidth, 56u);
 }
 
+TEST(ConfigParseTest, AllowCommentOnlyConfigFile) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+  EXPECT_EQ(parseConfiguration("#Language: C", &Style), ParseError::Success);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
+}
+
 TEST(ConfigParseTest, AllowCppForC) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_C;
@@ -1283,7 +1302,7 @@ TEST(ConfigParseTest, AllowCppForC) {
             ParseError::Success);
 }
 
-TEST(ConfigParseTest, HandleNonCppDotHFile) {
+TEST(ConfigParseTest, HandleDotHFile) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
   EXPECT_EQ(parseConfiguration("Language: C", &Style,
@@ -1294,11 +1313,14 @@ TEST(ConfigParseTest, HandleNonCppDotHFile) {
 
   Style = {};
   Style.Language = FormatStyle::LK_Cpp;
-  EXPECT_EQ(parseConfiguration("Language: ObjC", &Style,
+  EXPECT_EQ(parseConfiguration("Language: Cpp\n"
+                               "...\n"
+                               "Language: C",
+                               &Style,
                                /*AllowUnknownOptions=*/false,
                                /*IsDotHFile=*/true),
             ParseError::Success);
-  EXPECT_EQ(Style.Language, FormatStyle::LK_ObjC);
+  EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
 }
 
 TEST(ConfigParseTest, UsesLanguageForBasedOnStyle) {

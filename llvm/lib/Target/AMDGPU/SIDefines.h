@@ -423,6 +423,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -457,6 +460,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -1106,7 +1111,14 @@ enum Register_Flag : uint8_t {
 namespace AMDGPU {
 namespace Barrier {
 
-enum Type { TRAP = -2, WORKGROUP = -1 };
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
+};
 
 enum {
   BARRIER_SCOPE_WORKGROUP = 0,
