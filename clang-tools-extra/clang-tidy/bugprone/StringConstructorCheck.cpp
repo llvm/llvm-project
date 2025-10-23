@@ -20,8 +20,9 @@ namespace {
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
   return Node.getValue().getZExtValue() > N;
 }
+} // namespace
 
-const char DefaultStringNames[] =
+static const char DefaultStringNames[] =
     "::std::basic_string;::std::basic_string_view";
 
 static std::vector<StringRef>
@@ -35,8 +36,6 @@ removeNamespaces(const std::vector<StringRef> &Names) {
   }
   return Result;
 }
-
-} // namespace
 
 StringConstructorCheck::StringConstructorCheck(StringRef Name,
                                                ClangTidyContext *Context)

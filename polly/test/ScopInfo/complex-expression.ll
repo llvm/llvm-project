@@ -13,7 +13,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Function Attrs: norecurse nounwind
-define i32 @foo(ptr nocapture readonly %src1, ptr nocapture readonly %src2, ptr nocapture %score, ptr nocapture %max, i32 %n) #0 {
+define i32 @foo(ptr nocapture readonly %src1, ptr nocapture readonly %src2, ptr nocapture %score, ptr nocapture %max, i32 %n) {
 entry:
   %cmp33 = icmp sgt i32 %n, 0
   br i1 %cmp33, label %for.body.preheader, label %for.body7.preheader
@@ -128,8 +128,6 @@ cleanup:                                          ; preds = %for.body7.preheader
   %retval.0 = phi i32 [ 1, %if.end16 ], [ 0, %for.body7.preheader ]
   ret i32 %retval.0
 }
-
-attributes #0 = { norecurse nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="arm7tdmi" "target-features"="+strict-align" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

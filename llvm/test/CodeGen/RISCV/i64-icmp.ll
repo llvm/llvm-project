@@ -708,8 +708,7 @@ define i64 @icmp_sle_constant_neg_2050(i64 %a) nounwind {
 define i64 @icmp_eq_zext_inreg_small_constant(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_eq_zext_inreg_small_constant:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    addi a0, a0, -123
+; RV64I-NEXT:    addiw a0, a0, -123
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %1 = and i64 %a, 4294967295
@@ -748,8 +747,7 @@ define i64 @icmp_ne_zext_inreg_small_constant(i64 %a) nounwind {
 define i64 @icmp_ne_zext_inreg_large_constant(i64 %a) nounwind {
 ; RV64I-LABEL: icmp_ne_zext_inreg_large_constant:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
-; RV64I-NEXT:    addi a0, a0, 2
+; RV64I-NEXT:    addiw a0, a0, 2
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %1 = and i64 %a, 4294967295

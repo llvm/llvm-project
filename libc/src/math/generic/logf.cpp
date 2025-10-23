@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/logf.h"
-#include "common_constants.h" // Lookup table for (1/f) and log(f)
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -17,6 +16,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/common_constants.h" // Lookup table for (1/f) and log(f)
 
 // This is an algorithm for log(x) in single precision which is correctly
 // rounded for all rounding modes, based on the implementation of log(x) from
@@ -53,6 +53,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, logf, (float x)) {
+  using namespace common_constants_internal;
   constexpr double LOG_2 = 0x1.62e42fefa39efp-1;
   using FPBits = typename fputil::FPBits<float>;
 

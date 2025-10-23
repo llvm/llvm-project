@@ -9,7 +9,7 @@ define i32 @test(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
 ; ENABLED-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
 ; ENABLED-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 7
-; ENABLED-NEXT:    br i1 [[TMP2]], label [[FOR_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; ENABLED-NEXT:    br i1 [[TMP2]], label [[HEADER_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; ENABLED:       entry.new:
 ; ENABLED-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP0]], [[XTRAITER]]
 ; ENABLED-NEXT:    br label [[HEADER:%.*]]
@@ -71,23 +71,22 @@ define i32 @test(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[INDVARS_IV_NEXT_7]] = add i64 [[INDVARS_IV]], 8
 ; ENABLED-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; ENABLED-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; ENABLED-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA_LOOPEXIT:%.*]], label [[HEADER]]
-; ENABLED:       for.end.unr-lcssa.loopexit:
+; ENABLED-NEXT:    br i1 [[NITER_NCMP_7]], label [[FOR_END_UNR_LCSSA:%.*]], label [[HEADER]]
+; ENABLED:       for.end.unr-lcssa:
 ; ENABLED-NEXT:    [[SUM_0_LCSSA_PH_PH:%.*]] = phi i32 [ [[ADD_7]], [[FOR_BODY_7]] ]
 ; ENABLED-NEXT:    [[INDVARS_IV_UNR_PH:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_7]], [[FOR_BODY_7]] ]
 ; ENABLED-NEXT:    [[SUM_02_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[FOR_BODY_7]] ]
-; ENABLED-NEXT:    br label [[FOR_END_UNR_LCSSA]]
-; ENABLED:       for.end.unr-lcssa:
-; ENABLED-NEXT:    [[SUM_0_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[SUM_0_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
-; ENABLED-NEXT:    [[INDVARS_IV_UNR:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_UNR_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
-; ENABLED-NEXT:    [[SUM_02_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[FOR_END_UNR_LCSSA_LOOPEXIT]] ]
 ; ENABLED-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; ENABLED-NEXT:    br i1 [[LCMP_MOD]], label [[HEADER_EPIL_PREHEADER:%.*]], label [[FOR_END:%.*]]
+; ENABLED-NEXT:    br i1 [[LCMP_MOD]], label [[HEADER_EPIL_PREHEADER]], label [[FOR_END:%.*]]
 ; ENABLED:       header.epil.preheader:
+; ENABLED-NEXT:    [[INDVARS_IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_UNR_PH]], [[FOR_END_UNR_LCSSA]] ]
+; ENABLED-NEXT:    [[SUM_02_EPIL_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_02_UNR_PH]], [[FOR_END_UNR_LCSSA]] ]
+; ENABLED-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; ENABLED-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; ENABLED-NEXT:    br label [[HEADER_EPIL:%.*]]
 ; ENABLED:       header.epil:
-; ENABLED-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL:%.*]] ], [ [[INDVARS_IV_UNR]], [[HEADER_EPIL_PREHEADER]] ]
-; ENABLED-NEXT:    [[SUM_02_EPIL:%.*]] = phi i32 [ [[ADD_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[SUM_02_UNR]], [[HEADER_EPIL_PREHEADER]] ]
+; ENABLED-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[FOR_BODY_EPIL:%.*]] ], [ [[INDVARS_IV_EPIL_INIT]], [[HEADER_EPIL_PREHEADER]] ]
+; ENABLED-NEXT:    [[SUM_02_EPIL:%.*]] = phi i32 [ [[ADD_EPIL:%.*]], [[FOR_BODY_EPIL]] ], [ [[SUM_02_EPIL_INIT]], [[HEADER_EPIL_PREHEADER]] ]
 ; ENABLED-NEXT:    [[EPIL_ITER:%.*]] = phi i64 [ 0, [[HEADER_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[FOR_BODY_EPIL]] ]
 ; ENABLED-NEXT:    [[CMP_EPIL:%.*]] = icmp eq i64 [[N]], 42
 ; ENABLED-NEXT:    br i1 [[CMP_EPIL]], label [[FOR_EXIT2_LOOPEXIT2:%.*]], label [[FOR_BODY_EPIL]]
@@ -104,12 +103,12 @@ define i32 @test(ptr nocapture %a, i64 %n) {
 ; ENABLED-NEXT:    [[SUM_0_LCSSA_PH1:%.*]] = phi i32 [ [[ADD_EPIL]], [[FOR_BODY_EPIL]] ]
 ; ENABLED-NEXT:    br label [[FOR_END]]
 ; ENABLED:       for.end:
-; ENABLED-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA_PH]], [[FOR_END_UNR_LCSSA]] ], [ [[SUM_0_LCSSA_PH1]], [[FOR_END_EPILOG_LCSSA]] ]
+; ENABLED-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA_PH_PH]], [[FOR_END_UNR_LCSSA]] ], [ [[SUM_0_LCSSA_PH1]], [[FOR_END_EPILOG_LCSSA]] ]
 ; ENABLED-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ; ENABLED:       for.exit2.loopexit:
 ; ENABLED-NEXT:    [[RETVAL_PH:%.*]] = phi i32 [ [[SUM_02]], [[HEADER]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[ADD_1]], [[FOR_BODY_1]] ], [ [[ADD_2]], [[FOR_BODY_2]] ], [ [[ADD_3]], [[FOR_BODY_3]] ], [ [[ADD_4]], [[FOR_BODY_4]] ], [ [[ADD_5]], [[FOR_BODY_5]] ], [ [[ADD_6]], [[FOR_BODY_6]] ]
 ; ENABLED-NEXT:    br label [[FOR_EXIT2:%.*]]
-; ENABLED:       for.exit2.loopexit2:
+; ENABLED:       for.exit2.loopexit3:
 ; ENABLED-NEXT:    [[RETVAL_PH3:%.*]] = phi i32 [ [[SUM_02_EPIL]], [[HEADER_EPIL]] ]
 ; ENABLED-NEXT:    br label [[FOR_EXIT2]]
 ; ENABLED:       for.exit2:

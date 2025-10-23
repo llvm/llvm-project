@@ -632,7 +632,7 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   case MVT::f32: {
     SDValue NewVal = DAG.getConstant(INTVal, DL, MVT::i32);
     if (Subtarget.is64Bit())
-      NewVal = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, NewVal);
+      NewVal = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, NewVal);
     return DAG.getNode(Subtarget.is64Bit() ? LoongArchISD::MOVGR2FR_W_LA64
                                            : LoongArchISD::MOVGR2FR_W,
                        DL, VT, NewVal);
@@ -2614,6 +2614,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, Mask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
+    // Try to widen vectors to gain more optimization opportunities.
+    if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
+      return NewShuffle;
     if ((Result =
              lowerVECTOR_SHUFFLE_XVPERMI(DL, Mask, VT, V1, DAG, Subtarget)))
       return Result;
@@ -2860,8 +2863,7 @@ static SDValue fillSubVectorFromBuildVector(BuildVectorSDNode *Node,
                                             EVT ResTy, unsigned first) {
   unsigned NumElts = ResTy.getVectorNumElements();
 
-  assert(first >= 0 &&
-         first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
+  assert(first + NumElts <= Node->getSimpleValueType(0).getVectorNumElements());
 
   SmallVector<SDValue, 16> Ops(Node->op_begin() + first,
                                Node->op_begin() + first + NumElts);

@@ -263,6 +263,10 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   // units.
   CI.getFrontendOpts().Inputs.clear();
   CI.getFrontendOpts().OutputFile.clear();
+  CI.getFrontendOpts().GenReducedBMI = false;
+  CI.getFrontendOpts().ModuleOutputPath.clear();
+  CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = false;
+  CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = false;
   // LLVM options are not going to affect the AST
   CI.getFrontendOpts().LLVMArgs.clear();
 
