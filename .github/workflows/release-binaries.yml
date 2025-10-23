@@ -163,7 +163,7 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_ENABLE_LIBXML2=FORCE_ON"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LLVM_ENABLE_LIBXML2=FORCE_ON"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LIBXML2=FORCE_ON"
-          target_cmake_flags="$target_cmake_flags -DCMAKE_PREFIX_PATH=$libxml2_prefix"
+          #target_cmake_flags="$target_cmake_flags -DCMAKE_PREFIX_PATH=$libxml2_prefix"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_PREFIX_PATH=$libxml2_prefix"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_CMAKE_PREFIX_PATH=$libxml2_prefix"
           # This is required to enable static linking
@@ -301,6 +301,7 @@ jobs:
         ls -l /c/vcpkg/packages/libxml2_x64-windows/
         ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
         ls -l /c/vcpkg/packages/libxml2_x64-windows/include/
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
