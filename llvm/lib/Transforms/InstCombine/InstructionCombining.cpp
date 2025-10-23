@@ -2360,35 +2360,34 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   assert(cast<VectorType>(RHS->getType())->getElementCount() ==
          cast<VectorType>(Inst.getType())->getElementCount());
 
-  auto foldConstantsThroughSubVectorInsert =
-      [&](Constant *Dest, Value *DestIdx, Type *SubVecType, Constant *SubVector,
-          Constant *Splat, bool SplatLHS) -> Instruction * {
+  auto foldConstantsThroughSubVectorInsertSplat =
+      [&](Value *MaybeSubVector, Value *MaybeSplat,
+          bool SplatLHS) -> Instruction * {
+    Value *Idx;
+    Constant *SubVector, *Dest, *Splat;
+    Splat = matchConstantSplat(MaybeSplat);
+    if (!Splat || !matchConstantSubVector(MaybeSubVector, Dest, SubVector, Idx))
+      return nullptr;
     SubVector =
         constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL);
     Dest = constantFoldBinOpWithSplat(Opcode, Dest, Splat, SplatLHS, DL);
     if (!SubVector || !Dest)
       return nullptr;
     auto *InsertVector =
-        Builder.CreateInsertVector(Dest->getType(), Dest, SubVector, DestIdx);
-    InsertVector->removeFromParent();
-    return InsertVector;
+        Builder.CreateInsertVector(Dest->getType(), Dest, SubVector, Idx);
+    return replaceInstUsesWith(Inst, InsertVector);
   };
 
   // If one operand is a constant splat and the other operand is a
   // `vector.insert` where both the destination and subvector are constant,
   // apply the operation to both the destination and subvector, returning a new
   // constant `vector.insert`. This helps constant folding for scalable vectors.
-  for (bool SwapOperands : {false, true}) {
-    Value *Idx, *MaybeSubVector = LHS, *MaybeSplat = RHS;
-    if (SwapOperands)
-      std::swap(MaybeSplat, MaybeSubVector);
-    Constant *SubVector, *Dest, *Splat;
-    if (matchConstantSubVector(MaybeSubVector, Dest, SubVector, Idx) &&
-        (Splat = matchConstantSplat(MaybeSplat)))
-      return foldConstantsThroughSubVectorInsert(
-          Dest, Idx, SubVector->getType(), SubVector, Splat,
-          /*SplatLHS=*/SwapOperands);
-  }
+  if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
+          /*MaybeSubVector=*/LHS, /*MaybeSplat=*/RHS, /*SplatLHS=*/false))
+    return Folded;
+  if (Instruction *Folded = foldConstantsThroughSubVectorInsertSplat(
+          /*MaybeSubVector=*/RHS, /*MaybeSplat=*/LHS, /*SplatLHS=*/true))
+    return Folded;
 
   // If both operands of the binop are vector concatenations, then perform the
   // narrow binop on each pair of the source operands followed by concatenation
