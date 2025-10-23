@@ -234,9 +234,12 @@ public:
 };
 } // namespace
 
-static AllocTokenOptions getAllocTokenOptions(const CodeGenOptions &CGOpts) {
+static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
+                                              const CodeGenOptions &CGOpts) {
   AllocTokenOptions Opts;
-  Opts.MaxTokens = CGOpts.AllocTokenMax;
+  if (LangOpts.AllocTokenMode)
+    Opts.Mode = *LangOpts.AllocTokenMode;
+  Opts.MaxTokens = LangOpts.AllocTokenMax;
   Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
   Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
   return Opts;
@@ -430,12 +433,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-                         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-                         (LangOpts.getDefaultFPContractMode() ==
-                              LangOptions::FPModeKind::FPM_Fast ||
-                          LangOpts.getDefaultFPContractMode() ==
-                              LangOptions::FPModeKind::FPM_FastHonorPragmas);
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
   Options.BBSections =
@@ -687,7 +684,8 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
                         PassBuilder &PB) {
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
-      TargetTriple.isAArch64(64) || TargetTriple.isRISCV())
+      TargetTriple.isAArch64(64) || TargetTriple.isRISCV() ||
+      TargetTriple.isARM() || TargetTriple.isThumb())
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
@@ -808,7 +806,7 @@ static void addSanitizers(const Triple &TargetTriple,
         // memory allocation function detection.
         MPM.addPass(InferFunctionAttrsPass());
       }
-      MPM.addPass(AllocTokenPass(getAllocTokenOptions(CodeGenOpts)));
+      MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
     }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {

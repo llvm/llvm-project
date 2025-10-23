@@ -1498,6 +1498,24 @@ static void builtinAllocaAddrSpace(Sema &S, CallExpr *TheCall) {
   TheCall->setType(S.Context.getPointerType(RT));
 }
 
+static bool checkBuiltinInferAllocToken(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCountAtLeast(TheCall, 1))
+    return true;
+
+  for (Expr *Arg : TheCall->arguments()) {
+    // If argument is dependent on a template parameter, we can't resolve now.
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      continue;
+    // Reject void types.
+    QualType ArgTy = Arg->IgnoreParenImpCasts()->getType();
+    if (ArgTy->isVoidType())
+      return S.Diag(Arg->getBeginLoc(), diag::err_param_with_void_type);
+  }
+
+  TheCall->setType(S.Context.UnsignedLongLongTy);
+  return false;
+}
+
 namespace {
 enum PointerAuthOpKind {
   PAO_Strip,
@@ -2778,6 +2796,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (getLangOpts().OpenCL) {
       builtinAllocaAddrSpace(*this, TheCall);
     }
+    break;
+  case Builtin::BI__builtin_infer_alloc_token:
+    if (checkBuiltinInferAllocToken(*this, TheCall))
+      return ExprError();
     break;
   case Builtin::BI__arithmetic_fence:
     if (BuiltinArithmeticFence(TheCall))
@@ -6926,13 +6948,13 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Cases("gnu_scanf", "scanf", FormatStringType::Scanf)
-      .Cases("gnu_printf", "printf", "printf0", "syslog",
+      .Cases({"gnu_scanf", "scanf"}, FormatStringType::Scanf)
+      .Cases({"gnu_printf", "printf", "printf0", "syslog"},
              FormatStringType::Printf)
-      .Cases("NSString", "CFString", FormatStringType::NSString)
-      .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
-      .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
-      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
+      .Cases({"NSString", "CFString"}, FormatStringType::NSString)
+      .Cases({"gnu_strftime", "strftime"}, FormatStringType::Strftime)
+      .Cases({"gnu_strfmon", "strfmon"}, FormatStringType::Strfmon)
+      .Cases({"kprintf", "cmn_err", "vcmn_err", "zcmn_err"},
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
       .Case("os_trace", FormatStringType::OSLog)
@@ -12309,13 +12331,20 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
                                                    SourceLocation CC) {
   assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
          Source != Target);
+
+  // Lone surrogates have a distinct representation in UTF-32.
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
+  // so don't warn on such conversion.
+  if (Source->isChar16Type() && Target->isChar32Type())
+    return;
+
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
                        S.isConstantEvaluatedContext())) {
     llvm::APSInt Value(32);
     Value = Result.Val.getInt();
     bool IsASCII = Value <= 0x7F;
-    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool IsBMP = Value <= 0xDFFF || (Value >= 0xE000 && Value <= 0xFFFF);
     bool ConversionPreservesSemantics =
         IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
 

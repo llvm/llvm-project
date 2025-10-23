@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/asin.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 6
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAsinTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -47,7 +54,7 @@ TEST_F(LlvmLibcAsinTest, InDoubleRange) {
       ++count;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Asin, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Asin, x,
                                                   result, tol, rounding_mode)) {
@@ -72,6 +79,7 @@ TEST_F(LlvmLibcAsinTest, InDoubleRange) {
   tlog << " Test Rounding To Nearest...\n";
   test(mpfr::RoundingMode::Nearest);
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   tlog << " Test Rounding Downward...\n";
   test(mpfr::RoundingMode::Downward);
 
@@ -80,4 +88,5 @@ TEST_F(LlvmLibcAsinTest, InDoubleRange) {
 
   tlog << " Test Rounding Toward Zero...\n";
   test(mpfr::RoundingMode::TowardZero);
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 }

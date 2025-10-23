@@ -19,6 +19,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -114,8 +115,24 @@ struct detector<std::void_t<Op<Args...>>, Op, Args...> {
 ///   using has_copy_assign_t = decltype(std::declval<T&>()
 ///                                                 = std::declval<const T&>());
 ///   bool fooHasCopyAssign = is_detected<has_copy_assign_t, FooClass>::value;
+///
+/// NOTE: The C++20 standard has adopted concepts and requires clauses as a
+/// superior alternative to std::is_detected.
+///
+/// This utility is placed in STLForwardCompat.h as a reminder
+/// to migrate usages of llvm::is_detected to concepts and 'requires'
+/// clauses when the codebase adopts C++20.
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
+
+struct identity_cxx20 // NOLINT(readability-identifier-naming)
+{
+  using is_transparent = void;
+
+  template <typename T> constexpr T &&operator()(T &&self) const noexcept {
+    return std::forward<T>(self);
+  }
+};
 
 //===----------------------------------------------------------------------===//
 //     Features from C++23

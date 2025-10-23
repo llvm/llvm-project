@@ -76,6 +76,9 @@ void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,
                     const InputInfo &Output, const char *OutFile);
 
+void addDTLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs);
+
 void addLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs, const InputInfo &Output,
                    const InputInfoList &Inputs, bool IsThinLTO);
