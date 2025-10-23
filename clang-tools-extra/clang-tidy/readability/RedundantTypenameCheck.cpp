@@ -15,7 +15,6 @@
 #include "clang/Sema/DeclSpec.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::ast_matchers::internal;
 
 namespace clang::tidy::readability {
 
