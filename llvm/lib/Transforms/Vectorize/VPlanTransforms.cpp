@@ -372,7 +372,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   auto *Exiting =
       Plan.createVPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
   VPRegionBlock *Region =
-      Plan.createVPRegionBlock(Entry, Exiting, RegionName, true);
+      Plan.createReplicateRegion(Entry, Exiting, RegionName);
 
   // Note: first set Entry as region entry and then connect successors starting
   // from it in order, to propagate the "parent" of each VPBasicBlock.
@@ -1478,11 +1478,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   if (!Plan.getVectorLoopRegion())
     return false;
 
-  if (!Plan.getTripCount()->isLiveIn())
-    return false;
-  auto *TC = dyn_cast_if_present<ConstantInt>(
-      Plan.getTripCount()->getUnderlyingValue());
-  if (!TC || !BestVF.isFixed())
+  const APInt *TC;
+  if (!BestVF.isFixed() || !match(Plan.getTripCount(), m_APInt(TC)))
     return false;
 
   // Calculate the minimum power-of-2 bit width that can fit the known TC, VF
@@ -1495,7 +1492,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     return std::max<unsigned>(PowerOf2Ceil(MaxVal.getActiveBits()), 8);
   };
   unsigned NewBitWidth =
-      ComputeBitWidth(TC->getValue(), BestVF.getKnownMinValue() * BestUF);
+      ComputeBitWidth(*TC, BestVF.getKnownMinValue() * BestUF);
 
   LLVMContext &Ctx = Plan.getContext();
   auto *NewIVTy = IntegerType::get(Ctx, NewBitWidth);
@@ -2012,7 +2009,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         .Case<VPWidenIntrinsicRecipe>([](auto *I) {
           return std::make_pair(true, I->getVectorIntrinsicID());
         })
-        .Case<VPVectorPointerRecipe>([](auto *I) {
+        .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
           // For recipes that do not directly map to LLVM IR instructions,
           // assign opcodes after the last VPInstruction opcode (which is also
           // after the last IR Instruction opcode), based on the VPDefID.
@@ -2089,6 +2086,15 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
           LFlags->getPredicate() !=
               cast<VPRecipeWithIRFlags>(R)->getPredicate())
         return false;
+    // Recipes in replicate regions implicitly depend on predicate. If either
+    // recipe is in a replicate region, only consider them equal if both have
+    // the same parent.
+    const VPRegionBlock *RegionL = L->getRegion();
+    const VPRegionBlock *RegionR = R->getRegion();
+    if (((RegionL && RegionL->isReplicator()) ||
+         (RegionR && RegionR->isReplicator())) &&
+        L->getParent() != R->getParent())
+      return false;
     const VPlan *Plan = L->getParent()->getPlan();
     VPTypeAnalysis TypeInfo(*Plan);
     return TypeInfo.inferScalarType(L) == TypeInfo.inferScalarType(R);
@@ -3858,8 +3864,7 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
         // required lanes implicitly.
         // TODO: Remove once replicate regions are unrolled completely.
         auto IsCandidateUnpackUser = [Def](VPUser *U) {
-          VPRegionBlock *ParentRegion =
-              cast<VPRecipeBase>(U)->getParent()->getParent();
+          VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
           return U->usesScalars(Def) &&
                  (!ParentRegion || !ParentRegion->isReplicator());
         };
@@ -4044,7 +4049,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
                                          unsigned VF, VPTypeAnalysis &TypeInfo,
                                          unsigned VectorRegWidth) {
-  if (!InterleaveR)
+  if (!InterleaveR || InterleaveR->getMask())
     return false;
 
   Type *GroupElementTy = nullptr;

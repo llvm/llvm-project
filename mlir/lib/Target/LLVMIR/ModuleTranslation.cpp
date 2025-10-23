@@ -1560,9 +1560,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
 
-  if (auto unsafeFpMath = func.getUnsafeFpMath())
-    llvmFunc->addFnAttr("unsafe-fp-math", llvm::toStringRef(*unsafeFpMath));
-
   if (auto noInfsFpMath = func.getNoInfsFpMath())
     llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
 

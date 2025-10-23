@@ -457,7 +457,7 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+    for (auto &S : I.second.getSummaryList())
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
@@ -476,6 +476,10 @@ static void thinLTOInternalizeAndPromoteGUID(
                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
                        return !GlobalValue::isLocalLinkage(Summary->linkage());
                      });
+
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
 
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
@@ -551,9 +555,11 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  assert(!Index.withInternalizeAndPromote());
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
                                      isPrevailing);
+  Index.setWithInternalizeAndPromote();
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -1182,7 +1188,7 @@ Error LTO::checkPartiallySplit() {
   // Otherwise check if there are any recorded in the combined summary from the
   // ThinLTO modules.
   for (auto &P : ThinLTO.CombinedIndex) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;

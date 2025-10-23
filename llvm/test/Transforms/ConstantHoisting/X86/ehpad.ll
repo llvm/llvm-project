@@ -20,7 +20,7 @@ target triple = "x86_64-pc-windows-msvc"
 ; BFIHOIST: br label %endif
 
 ; Function Attrs: norecurse
-define i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 personality ptr @__CxxFrameHandler3 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr personality ptr @__CxxFrameHandler3 {
   %call = tail call i64 @fn(i64 0)
   %call1 = tail call i64 @fn(i64 1)
   %tobool = icmp eq i32 %argc, 0
@@ -62,9 +62,6 @@ endif:
   ret i32 0
 }
 
-declare i64 @fn(i64) local_unnamed_addr #1
+declare i64 @fn(i64) local_unnamed_addr
 
 declare i32 @__CxxFrameHandler3(...)
-
-attributes #0 = { norecurse "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

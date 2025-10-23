@@ -5577,62 +5577,79 @@ private:
           }
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
-          auto DecrUnschedForInst = [&](Instruction *I, TreeEntry *UserTE,
-                                        unsigned OpIdx) {
-            if (!ScheduleCopyableDataMap.empty()) {
-              const EdgeInfo EI = {UserTE, OpIdx};
-              if (ScheduleCopyableData *CD = getScheduleCopyableData(EI, I)) {
-                DecrUnsched(CD, /*IsControl=*/false);
-                return;
-              }
-            }
-            auto It = OperandsUses.find(I);
-            assert(It != OperandsUses.end() && "Operand not found");
-            if (It->second > 0) {
-              --It->getSecond();
-              assert(TotalOpCount > 0 && "No more operands to decrement");
-              --TotalOpCount;
-              if (ScheduleData *OpSD = getScheduleData(I))
-                DecrUnsched(OpSD, /*IsControl=*/false);
-            }
-          };
+          auto DecrUnschedForInst =
+              [&](Instruction *I, TreeEntry *UserTE, unsigned OpIdx,
+                  SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>>
+                      &Checked) {
+                if (!ScheduleCopyableDataMap.empty()) {
+                  const EdgeInfo EI = {UserTE, OpIdx};
+                  if (ScheduleCopyableData *CD =
+                          getScheduleCopyableData(EI, I)) {
+                    if (!Checked.insert(std::make_pair(CD, OpIdx)).second)
+                      return;
+                    DecrUnsched(CD, /*IsControl=*/false);
+                    return;
+                  }
+                }
+                auto It = OperandsUses.find(I);
+                assert(It != OperandsUses.end() && "Operand not found");
+                if (It->second > 0) {
+                  --It->getSecond();
+                  assert(TotalOpCount > 0 && "No more operands to decrement");
+                  --TotalOpCount;
+                  if (ScheduleData *OpSD = getScheduleData(I)) {
+                    if (!Checked.insert(std::make_pair(OpSD, OpIdx)).second)
+                      return;
+                    DecrUnsched(OpSD, /*IsControl=*/false);
+                  }
+                }
+              };
 
           for (ScheduleBundle *Bundle : Bundles) {
             if (ScheduleCopyableDataMap.empty() && TotalOpCount == 0)
               break;
             // Need to search for the lane since the tree entry can be
             // reordered.
-            int Lane = std::distance(Bundle->getTreeEntry()->Scalars.begin(),
-                                     find(Bundle->getTreeEntry()->Scalars, In));
-            assert(Lane >= 0 && "Lane not set");
-            if (isa<StoreInst>(In) &&
-                !Bundle->getTreeEntry()->ReorderIndices.empty())
-              Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
-            assert(Lane < static_cast<int>(
-                              Bundle->getTreeEntry()->Scalars.size()) &&
-                   "Couldn't find extract lane");
+            auto *It = find(Bundle->getTreeEntry()->Scalars, In);
+            SmallDenseSet<std::pair<const ScheduleEntity *, unsigned>> Checked;
+            do {
+              int Lane =
+                  std::distance(Bundle->getTreeEntry()->Scalars.begin(), It);
+              assert(Lane >= 0 && "Lane not set");
+              if (isa<StoreInst>(In) &&
+                  !Bundle->getTreeEntry()->ReorderIndices.empty())
+                Lane = Bundle->getTreeEntry()->ReorderIndices[Lane];
+              assert(Lane < static_cast<int>(
+                                Bundle->getTreeEntry()->Scalars.size()) &&
+                     "Couldn't find extract lane");
 
-            // Since vectorization tree is being built recursively this
-            // assertion ensures that the tree entry has all operands set before
-            // reaching this code. Couple of exceptions known at the moment are
-            // extracts where their second (immediate) operand is not added.
-            // Since immediates do not affect scheduler behavior this is
-            // considered okay.
-            assert(In &&
-                   (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
-                    In->getNumOperands() ==
-                        Bundle->getTreeEntry()->getNumOperands() ||
-                    Bundle->getTreeEntry()->isCopyableElement(In)) &&
-                   "Missed TreeEntry operands?");
+              // Since vectorization tree is being built recursively this
+              // assertion ensures that the tree entry has all operands set
+              // before reaching this code. Couple of exceptions known at the
+              // moment are extracts where their second (immediate) operand is
+              // not added. Since immediates do not affect scheduler behavior
+              // this is considered okay.
+              assert(In &&
+                     (isa<ExtractValueInst, ExtractElementInst, CallBase>(In) ||
+                      In->getNumOperands() ==
+                          Bundle->getTreeEntry()->getNumOperands() ||
+                      Bundle->getTreeEntry()->isCopyableElement(In)) &&
+                     "Missed TreeEntry operands?");
 
-            for (unsigned OpIdx :
-                 seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
-              if (auto *I = dyn_cast<Instruction>(
-                      Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
-                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
-                                  << "\n");
-                DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx);
-              }
+              for (unsigned OpIdx :
+                   seq<unsigned>(Bundle->getTreeEntry()->getNumOperands()))
+                if (auto *I = dyn_cast<Instruction>(
+                        Bundle->getTreeEntry()->getOperand(OpIdx)[Lane])) {
+                  LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
+                                    << *I << "\n");
+                  DecrUnschedForInst(I, Bundle->getTreeEntry(), OpIdx, Checked);
+                }
+              // If parent node is schedulable, it will be handle correctly.
+              if (!Bundle->getTreeEntry()->doesNotNeedToSchedule())
+                break;
+              It = std::find(std::next(It),
+                             Bundle->getTreeEntry()->Scalars.end(), In);
+            } while (It != Bundle->getTreeEntry()->Scalars.end());
           }
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
@@ -10546,8 +10563,11 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons/copyable operations are still valid
         // for vectorization (div/rem are not allowed).
-        if (!S.areInstructionsWithCopyableElements() &&
-            !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
+        if ((!S.areInstructionsWithCopyableElements() &&
+             !getSameOpcode(PaddedUniqueValues, TLI).valid()) ||
+            (S.areInstructionsWithCopyableElements() && S.isMulDivLikeOp() &&
+             (S.getMainOp()->isIntDivRem() || S.getMainOp()->isFPDivRem() ||
+              isa<CallInst>(S.getMainOp())))) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
           return false;
