@@ -57644,8 +57644,8 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       MatchGeneric(ISD::SUB, NegC, LHS, true);
     }
   } else if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(LHS)) {
-    SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
     if (X86ISD::SUB == N->getOpcode()) {
+      SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
       // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
       MatchGeneric(ISD::ADD, RHS, NegC, true);
     }
