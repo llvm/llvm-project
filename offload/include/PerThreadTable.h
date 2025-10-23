@@ -34,7 +34,11 @@ template <typename ObjectType> struct PerThread {
   PerThread(PerThread &&) = delete;
   PerThread &operator=(const PerThread &) = delete;
   PerThread &operator=(PerThread &&) = delete;
-  ~PerThread() { ThreadDataList.clear(); }
+  ~PerThread() {
+    assert(Mutex.try_lock() &&
+           "Cannot be deleted while other threads are adding entries");
+    ThreadDataList.clear();
+  }
 
 private:
   PerThreadData &getThreadData() {
@@ -60,6 +64,8 @@ public:
   ObjectType &get() { return getThreadEntry(); }
 
   template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
+    assert(Mutex.try_lock() &&
+           "Clear cannot be called while other threads are adding entries");
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry)
         continue;
@@ -115,7 +121,11 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   PerThreadTable(PerThreadTable &&) = delete;
   PerThreadTable &operator=(const PerThreadTable &) = delete;
   PerThreadTable &operator=(PerThreadTable &&) = delete;
-  ~PerThreadTable() { ThreadDataList.clear(); }
+  ~PerThreadTable() {
+    assert(Mutex.try_lock() &&
+           "Cannot be deleted while other threads are adding entries");
+    ThreadDataList.clear();
+  }
 
 private:
   PerThreadData &getThreadData() {
@@ -176,6 +186,8 @@ public:
   }
 
   template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
+    assert(Mutex.try_lock() &&
+           "Clear cannot be called while other threads are adding entries");
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
@@ -200,6 +212,8 @@ public:
   }
 
   template <class DeinitFuncTy> llvm::Error deinit(DeinitFuncTy DeinitFunc) {
+    assert(Mutex.try_lock() &&
+           "Deinit cannot be called while other threads are adding entries");
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
