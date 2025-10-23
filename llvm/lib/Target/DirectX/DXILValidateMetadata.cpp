@@ -28,8 +28,8 @@ using namespace llvm;
 
 namespace {
 
-/// A simple Wrapper DiagnosticInfo that generates Module-level diagnostic
-/// for the ValidateMetadata pass
+/// A simple wrapper of DiagnosticInfo that generates module-level diagnostic
+/// for the DXILValidateMetadata pass
 class DiagnosticInfoValidateMD : public DiagnosticInfo {
 private:
   const Twine &Msg;
@@ -70,7 +70,7 @@ static void validateLoopMetadata(Module &M, MDNode *LoopMD) {
                                                  "llvm.loop.unroll.disable",
                                                  "llvm.loop.unroll.full"};
 
-  // llvm.loop metadata must have it's first operand be a self-reference, so we
+  // llvm.loop metadata must have its first operand be a self-reference, so we
   // require at least 1 operand.
   //
   // It only makes sense to specify up to 1 of the hints on a branch, so we can

@@ -1,4 +1,4 @@
-//===- DXILValidateMetadata.h - Pass to emit DXIL metadata -----*- C++ -*-===//
+//===- DXILValidateMetadata.h - Pass to validate DXIL metadata --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 
 namespace llvm {
 
-/// A pass that transforms DXIL Intrinsics that don't have DXIL opCodes
+/// A pass that validates metadata to be DXIL compatible
 class DXILValidateMetadata : public PassInfoMixin<DXILValidateMetadata> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
