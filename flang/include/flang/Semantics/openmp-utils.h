@@ -28,6 +28,7 @@
 #include <utility>
 
 namespace Fortran::semantics {
+class Scope;
 class SemanticsContext;
 class Symbol;
 
