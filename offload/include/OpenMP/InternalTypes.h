@@ -75,10 +75,6 @@ int32_t __kmpc_global_thread_num(void *);
 bool __kmpc_omp_has_task_team(int32_t gtid);
 void **__kmpc_omp_get_target_async_handle_ptr(int32_t gtid);
 int __kmpc_get_target_offload(void);
-kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
-                                  size_t sizeof_kmp_task_t,
-                                  size_t sizeof_shareds,
-                                  kmp_routine_entry_t task_entry);
 kmp_task_t *
 __kmpc_omp_target_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
                              size_t sizeof_kmp_task_t, size_t sizeof_shareds,
