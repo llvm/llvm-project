@@ -679,3 +679,13 @@ void LVLocationSymbol::printExtra(raw_ostream &OS, bool Full) const {
                     /*PrintRef=*/false);
   }
 }
+
+void LVLocationSymbol::printDebugger(raw_ostream &OS, LVLevel Indent) const {
+  LVSymbol *Sym = getParentSymbol();
+  OS << indentAsString(Indent) << formattedKind(Sym->kind());
+  OS << " " << Sym->getName() << ": "
+    << Sym->getType()->getName() << " : ";
+  printLocations(OS);
+  OS << " (line " << Sym->getLineNumber() << ")";
+  OS << "\n";
+}
