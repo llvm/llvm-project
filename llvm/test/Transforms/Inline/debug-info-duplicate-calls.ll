@@ -89,11 +89,10 @@ entry:
   ret void, !dbg !20
 }
 
-declare void @_Z2f1v() #2
+attributes #0 = { uwtable }
+attributes #1 = { alwaysinline inlinehint uwtable }
 
-attributes #0 = { uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { alwaysinline inlinehint uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+declare void @_Z2f1v()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11}
