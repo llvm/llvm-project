@@ -103,8 +103,7 @@ constexpr int mutate1() {
   int m = __builtin_constant_p(++n);
   return n * 10 + m;
 }
-static_assert(mutate1() == 21); // ref-error {{static assertion failed}} \
-                                // ref-note {{evaluates to '10 == 21'}}
+static_assert(mutate1() == 21);
 
 /// Similar for this. GCC agrees with the bytecode interpreter.
 constexpr int mutate_param(bool mutate, int &param) {
@@ -119,8 +118,7 @@ constexpr int mutate6(bool mutate) {
   return n * 10 + m;
 }
 static_assert(mutate6(false) == 11);
-static_assert(mutate6(true) == 21); // ref-error {{static assertion failed}} \
-                                    // ref-note {{evaluates to '10 == 21'}}
+static_assert(mutate6(true) == 21);
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))
 void g() {
