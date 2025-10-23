@@ -75,7 +75,7 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
                      SDPatternOperator node = null_frag, bit IsDOT = 0> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           !if (P.HasModifiers,
-                               getVOP3PModPat<P, node, IsDOT, IsDOT>.ret,
+                               getVOP3PModPat<P, node, !or(P.EnableClamp, IsDOT), IsDOT>.ret,
                                getVOP3Pat<P, node>.ret)>;
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
@@ -434,15 +434,16 @@ defm : MadFmaMixFP16Pats_t16<fma, V_FMA_MIX_BF16_t16>;
 } // End SubtargetPredicate = HasFmaMixBF16Insts
 
 def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
-  let HasModifiers = 0;
+  let HasNeg = 0;
+  let EnableClamp = 1;
 }
 
 let isCommutable = 1, isReMaterializable = 1 in {
 let SubtargetPredicate = HasPkAddMinMaxInsts in {
-defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile>;
-defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_max_i16>;
+defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_max_u16>;
+defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_min_i16>;
+defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile, int_amdgcn_pk_add_min_u16>;
 }
 let SubtargetPredicate = HasPkMinMax3Insts in {
 defm V_PK_MAX3_I16 : VOP3PInst<"v_pk_max3_i16", PK_ADD_MINMAX_Profile>;

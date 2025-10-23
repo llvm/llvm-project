@@ -3789,6 +3789,20 @@ def int_amdgcn_perm_pk16_b8_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u4"
   DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i64_ty, llvm_v2i32_ty],
                         [IntrNoMem, IntrSpeculatable]>;
 
+class AMDGPUAddMinMax<LLVMType Ty, string Name> : ClangBuiltin<"__builtin_amdgcn_"#Name>,
+  DefaultAttrsIntrinsic<[Ty], [Ty, Ty, Ty, llvm_i1_ty /* clamp */],
+                        [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>>]>;
+
+def int_amdgcn_add_max_i32 : AMDGPUAddMinMax<llvm_i32_ty, "add_max_i32">;
+def int_amdgcn_add_max_u32 : AMDGPUAddMinMax<llvm_i32_ty, "add_max_u32">;
+def int_amdgcn_add_min_i32 : AMDGPUAddMinMax<llvm_i32_ty, "add_min_i32">;
+def int_amdgcn_add_min_u32 : AMDGPUAddMinMax<llvm_i32_ty, "add_min_u32">;
+
+def int_amdgcn_pk_add_max_i16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_max_i16">;
+def int_amdgcn_pk_add_max_u16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_max_u16">;
+def int_amdgcn_pk_add_min_i16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_min_i16">;
+def int_amdgcn_pk_add_min_u16 : AMDGPUAddMinMax<llvm_v2i16_ty, "pk_add_min_u16">;
+
 class AMDGPUCooperativeAtomicStore<LLVMType Ty> : Intrinsic <
   [],
   [llvm_anyptr_ty,         // pointer to store to

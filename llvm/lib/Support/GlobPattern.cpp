@@ -135,21 +135,24 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
 Expected<GlobPattern>
 GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   GlobPattern Pat;
+  Pat.Pattern = S;
 
   // Store the prefix that does not contain any metacharacter.
-  size_t PrefixSize = S.find_first_of("?*[{\\");
-  Pat.Prefix = S.substr(0, PrefixSize);
-  if (PrefixSize == std::string::npos)
+  Pat.PrefixSize = S.find_first_of("?*[{\\");
+  if (Pat.PrefixSize == std::string::npos) {
+    Pat.PrefixSize = S.size();
     return Pat;
-  S = S.substr(PrefixSize);
+  }
+  S = S.substr(Pat.PrefixSize);
 
   // Just in case we stop on unmatched opening brackets.
   size_t SuffixStart = S.find_last_of("?*[]{}\\");
   assert(SuffixStart != std::string::npos);
   if (S[SuffixStart] == '\\')
     ++SuffixStart;
-  ++SuffixStart;
-  Pat.Suffix = S.substr(SuffixStart);
+  if (SuffixStart < S.size())
+    ++SuffixStart;
+  Pat.SuffixSize = S.size() - SuffixStart;
   S = S.substr(0, SuffixStart);
 
   SmallVector<std::string, 1> SubPats;
@@ -200,9 +203,9 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
 }
 
 bool GlobPattern::match(StringRef S) const {
-  if (!S.consume_front(Prefix))
+  if (!S.consume_front(prefix()))
     return false;
-  if (!S.consume_back(Suffix))
+  if (!S.consume_back(suffix()))
     return false;
   if (SubGlobs.empty() && S.empty())
     return true;
