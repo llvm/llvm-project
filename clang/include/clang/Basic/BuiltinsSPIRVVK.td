@@ -12,3 +12,5 @@ include "clang/Basic/BuiltinsSPIRVBase.td"
 def reflect : SPIRVBuiltin<"void(...)", [NoThrow, Const]>;
 def faceforward : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
 def refract : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
+def ddx_coarse : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;
+def ddy_coarse : SPIRVBuiltin<"void(...)", [NoThrow, Const, CustomTypeChecking]>;

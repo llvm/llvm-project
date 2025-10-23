@@ -3472,6 +3472,20 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_nonuniformindex: {
     return selectResourceNonUniformIndex(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_ddx_coarse: {
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpDPdxCoarse))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg());
+  }
+  case Intrinsic::spv_ddy_coarse: {
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(SPIRV::OpDPdyCoarse))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(I.getOperand(2).getReg());
+  }
   default: {
     std::string DiagMsg;
     raw_string_ostream OS(DiagMsg);

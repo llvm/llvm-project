@@ -48,6 +48,19 @@ static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
 
 static bool CheckAllArgTypesAreCorrect(
     Sema *S, CallExpr *TheCall,
+    llvm::function_ref<bool(Sema *S, SourceLocation Loc, int ArgOrdinal,
+                            clang::QualType PassedType)>
+        Check) {
+  for (unsigned I = 0; I < TheCall->getNumArgs(); ++I) {
+    Expr *Arg = TheCall->getArg(I);
+    if (Check(S, Arg->getBeginLoc(), I + 1, Arg->getType()))
+      return true;
+  }
+  return false;
+}
+
+static bool CheckAllArgTypesAreCorrect(
+    Sema *S, CallExpr *TheCall,
     llvm::ArrayRef<
         llvm::function_ref<bool(Sema *, SourceLocation, int, QualType)>>
         Checks) {
@@ -359,6 +372,19 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
   }
   case SPIRV::BI__builtin_spirv_generic_cast_to_ptr_explicit: {
     return checkGenericCastToPtr(SemaRef, TheCall);
+  }
+  case SPIRV::BI__builtin_spirv_ddx_coarse:
+  case SPIRV::BI__builtin_spirv_ddy_coarse: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
+                                   CheckFloatOrHalfRepresentation))
+      return true;
+
+    QualType RetTy = TheCall->getArg(0)->getType();
+    TheCall->setType(RetTy);
+    break;
   }
   }
   return false;
