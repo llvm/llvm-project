@@ -3304,6 +3304,7 @@ template <> struct DwarfRangeListTraits<DebugLocSpanList> {
   static constexpr unsigned BaseAddressx = dwarf::DW_LLE_base_addressx;
   static constexpr unsigned OffsetPair = dwarf::DW_LLE_offset_pair;
   static constexpr unsigned StartxLength = dwarf::DW_LLE_startx_length;
+  static constexpr unsigned StartxEndx = dwarf::DW_LLE_startx_endx;
   static constexpr unsigned EndOfList = dwarf::DW_LLE_end_of_list;
 
   static StringRef StringifyRangeKind(unsigned Encoding) {
@@ -3320,6 +3321,7 @@ template <> struct DwarfRangeListTraits<RangeSpanList> {
   static constexpr unsigned BaseAddressx = dwarf::DW_RLE_base_addressx;
   static constexpr unsigned OffsetPair = dwarf::DW_RLE_offset_pair;
   static constexpr unsigned StartxLength = dwarf::DW_RLE_startx_length;
+  static constexpr unsigned StartxEndx = dwarf::DW_RLE_startx_endx;
   static constexpr unsigned EndOfList = dwarf::DW_RLE_end_of_list;
 
   static StringRef StringifyRangeKind(unsigned Encoding) {
@@ -3355,7 +3357,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, const Ranges &R,
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB()) ||
+        (DD.useSplitDwarf() && UseDwarf5 && P.first->isLinkerRelaxable())) {
       // PTX does not support subtracting labels from the code section in the
       // debug_loc section.  To work around this, the NVPTX backend needs the
       // compile unit to have no low_pc in order to have a zero base_address
@@ -3394,7 +3397,46 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, const Ranges &R,
       Asm->OutStreamer->emitIntValue(0, Size);
     }
 
-    for (const auto *RS : P.second) {
+    if (DD.useSplitDwarf() && UseDwarf5) {
+      // In .dwo files, we must ensure no relocations are present. For
+      // .debug_ranges.dwo. this means that if there is at least one
+      // relocation between the start and end of a range, we must
+      // represent the range boundaries using indirect addresses from
+      // the .debug_addr section.
+      //
+      // The DWARFv5 specification (section 2.17.3) does not require
+      // range entries to be ordered. Therefore, we emit such range
+      // entries here to allow using more optimal formats (e.g.
+      // StartxLength) for other ranges.
+
+      auto RelaxableRanges = llvm::make_filter_range(P.second, [](auto &&RS) {
+        return llvm::isRangeRelaxable(RS->Begin, RS->End);
+      });
+
+      for (auto &&RS : RelaxableRanges) {
+        const auto *Begin = RS->Begin;
+        const auto *End = RS->End;
+        Asm->OutStreamer->AddComment(
+            DwarfRangeListTraits<Ranges>::StringifyRangeKind(
+                DwarfRangeListTraits<Ranges>::StartxEndx));
+        Asm->emitInt8(DwarfRangeListTraits<Ranges>::StartxEndx);
+        Asm->OutStreamer->AddComment("  start index");
+        Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+        Asm->OutStreamer->AddComment("  end index");
+        Asm->emitULEB128(DD.getAddressPool().getIndex(End));
+        DwarfRangeListTraits<Ranges>::EmitPayload(DD, R.CU, *RS);
+      }
+    }
+
+    auto NonRelaxableRanges = llvm::make_filter_range(
+        P.second,
+        [HasRelaxableRanges = DD.useSplitDwarf() && UseDwarf5](auto &&RS) {
+          if (!HasRelaxableRanges)
+            return true;
+          return !llvm::isRangeRelaxable(RS->Begin, RS->End);
+        });
+
+    for (const auto *RS : NonRelaxableRanges) {
       const MCSymbol *Begin = RS->Begin;
       const MCSymbol *End = RS->End;
       assert(Begin && "Range without a begin symbol?");
