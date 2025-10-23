@@ -113,10 +113,12 @@ RUN powershell -Command \
     # --- 1. Download and extract xz --- \
     Set-Location C:\temp-download ; \
     Invoke-WebRequest -Uri "http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip" -OutFile "xz.zip"; \
+    (Get-FileHash -Path "C:\temp-download\xz.zip" -Algorithm MD5).Hash -eq 'c3c69fdce3e825cc0b76123b36b0bcc2' ; \
     Add-Type -AssemblyName "System.IO.Compression.FileSystem"; \
     [System.IO.Compression.ZipFile]::ExtractToDirectory('C:\temp-download\xz.zip', 'C:\xz-utils'); \ 
     # --- 2. Download and decompress Clang --- \
     Invoke-WebRequest -Uri "http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" ; \
+    (Get-FileHash -Path "C:\temp-download\clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" -Algorithm MD5).Hash -eq '0ae1d3effd9ab9d323f7fa595777f0a2' ; \
     C:\xz-utils\bin_x86-64\xz.exe -d -qq clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz ; \
     # --- 3. Extract clang --- \
     C:\Windows\System32\tar.exe -xf clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar -C C:\clang ; \
