@@ -4744,8 +4744,8 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
       SDNode *InnerN = Op->getOperand(0).getNode();
 
       unsigned InnerOpc = InnerN->getOpcode();
-      if (InnerOpc != ISD::AND && InnerOpc != ISD::OR &&
-          InnerOpc != ISD::XOR && InnerOpc != X86ISD::ANDNP) {
+      if (InnerOpc != ISD::AND && InnerOpc != ISD::OR && InnerOpc != ISD::XOR &&
+          InnerOpc != X86ISD::ANDNP) {
         return Op;
       }
 
@@ -4763,7 +4763,6 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   N = tryPeelOuterNotWrappingLogic(N);
   if (N != OriN)
     PeeledOuterNot = true;
-    
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
