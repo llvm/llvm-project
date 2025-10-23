@@ -1654,24 +1654,14 @@ define %struct.__neon_float64x2x4_t @ld1_x4_v2f64(ptr %addr) {
 }
 
 define <8 x i8> @dup_ld1_from_stack(ptr %__ret) {
-; CHECK-SD-LABEL: dup_ld1_from_stack:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sub sp, sp, #16
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    add x8, sp, #15
-; CHECK-SD-NEXT:    ld1r.8b { v0 }, [x8]
-; CHECK-SD-NEXT:    add sp, sp, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: dup_ld1_from_stack:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    .cfi_offset w29, -16
-; CHECK-GI-NEXT:    add x8, sp, #15
-; CHECK-GI-NEXT:    ld1r.8b { v0 }, [x8]
-; CHECK-GI-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: dup_ld1_from_stack:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    add x8, sp, #15
+; CHECK-NEXT:    ld1r.8b { v0 }, [x8]
+; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    ret
 entry:
   %item = alloca i8, align 1
   %0 = load i8, ptr %item, align 1

@@ -2712,7 +2712,8 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPReductionSC ||
-           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC;
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
+           R->getVPDefID() == VPRecipeBase::VPPartialReductionSC;
   }
 
   static inline bool classof(const VPUser *U) {
@@ -2783,7 +2784,10 @@ public:
         Opcode(Opcode), VFScaleFactor(ScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getChainOp()->getDefiningRecipe();
-    assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
+    // When cloning as part of a VPExpressionRecipe the chain op could have
+    // replaced by a temporary VPValue, so it doesn't have a defining recipe.
+    assert((!AccumulatorRecipe ||
+            isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
             isa<VPPartialReductionRecipe>(AccumulatorRecipe)) &&
            "Unexpected operand order for partial reduction recipe");
   }
@@ -3092,6 +3096,11 @@ public:
   /// the current recipe. Leaves the expression recipe empty, which must be
   /// removed before codegen.
   void decompose();
+
+  unsigned getVFScaleFactor() const {
+    auto *PR = dyn_cast<VPPartialReductionRecipe>(ExpressionRecipes.back());
+    return PR ? PR->getVFScaleFactor() : 1;
+  }
 
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
@@ -4152,9 +4161,6 @@ class VPlan {
   /// Represents the vectorization factor of the loop.
   VPValue VF;
 
-  /// Represents the symbolic unroll factor of the loop.
-  VPValue UF;
-
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
 
@@ -4308,9 +4314,6 @@ public:
   VPValue &getVF() { return VF; };
   const VPValue &getVF() const { return VF; };
 
-  /// Returns the symbolic UF of the vector loop region.
-  VPValue &getSymbolicUF() { return UF; };
-
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
@@ -4319,12 +4322,6 @@ public:
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
-
-  /// Remove \p VF from the plan.
-  void removeVF(ElementCount VF) {
-    assert(hasVF(VF) && "tried to remove VF not present in plan");
-    VFs.remove(VF);
-  }
 
   void setVF(ElementCount VF) {
     assert(hasVF(VF) && "Cannot set VF not already in plan");

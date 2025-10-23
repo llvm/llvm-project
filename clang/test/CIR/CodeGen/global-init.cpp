@@ -103,19 +103,60 @@ NeedsCtorDtor needsCtorDtor;
 // OGCG:   call void @_ZN13NeedsCtorDtorC1Ev(ptr noundef nonnull align 1 dereferenceable(1) @needsCtorDtor)
 // OGCG:   %{{.*}} = call i32 @__cxa_atexit(ptr @_ZN13NeedsCtorDtorD1Ev, ptr @needsCtorDtor, ptr @__dso_handle)
 
+float num;
+float _Complex a = {num, num};
+
+// CIR-BEFORE-LPP: cir.global external @num = #cir.fp<0.000000e+00> : !cir.float
+// CIR-BEFORE-LPP: cir.global external @a = ctor : !cir.complex<!cir.float> {
+// CIR-BEFORE-LPP:  %[[THIS:.*]] = cir.get_global @a : !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE-LPP:  %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
+// CIR-BEFORE-LPP:  %[[REAL:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
+// CIR-BEFORE-LPP:  %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
+// CIR-BEFORE-LPP:  %[[IMAG:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
+// CIR-BEFORE-LPP:  %[[COMPLEX_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR-BEFORE-LPP:  cir.store{{.*}} %[[COMPLEX_VAL:.*]], %[[THIS]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR-BEFORE-LPP: }
+
+// CIR:  cir.global external @num = #cir.fp<0.000000e+00> : !cir.float
+// CIR:  cir.global external @a = #cir.zero : !cir.complex<!cir.float>
+// CIR:  cir.func internal private @__cxx_global_var_init.3()
+// CIR:   %[[A_ADDR:.*]] = cir.get_global @a : !cir.ptr<!cir.complex<!cir.float>>
+// CIR:   %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
+// CIR:   %[[REAL:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
+// CIR:   %[[NUM:.*]] = cir.get_global @num : !cir.ptr<!cir.float>
+// CIR:   %[[IMAG:.*]] = cir.load{{.*}} %[[NUM]] : !cir.ptr<!cir.float>, !cir.float
+// CIR:   %[[COMPLEX_VAL:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CIR:   cir.store{{.*}} %[[COMPLEX_VAL]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+
+// LLVM: define internal void @__cxx_global_var_init.3()
+// LLVM:   %[[REAL:.*]] = load float, ptr @num, align 4
+// LLVM:   %[[IMAG:.*]] = load float, ptr @num, align 4
+// LLVM:   %[[TMP_COMPLEX_VAL:.*]] = insertvalue { float, float } {{.*}}, float %[[REAL]], 0
+// LLVM:   %[[COMPLEX_VAL:.*]] = insertvalue { float, float } %[[TMP_COMPLEX_VAL]], float %[[IMAG]], 1
+// LLVM:   store { float, float } %[[COMPLEX_VAL]], ptr @a, align 4
+
+// OGCG: define internal void @__cxx_global_var_init.3() {{.*}} section ".text.startup"
+// OGCG:   %[[REAL:.*]] = load float, ptr @num, align 4
+// OGCG:   %[[IMAG:.*]] = load float, ptr @num, align 4
+// OGCG:   store float %[[REAL]], ptr @a, align 4
+// OGCG:   store float %[[IMAG]], ptr getelementptr inbounds nuw ({ float, float }, ptr @a, i32 0, i32 1), align 4
+
 // Common init function for all globals with default priority
 
 // CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
 // CIR:   cir.call @__cxx_global_var_init() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.1() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()
+// CIR:   cir.call @__cxx_global_var_init.3() : () -> ()
 
 // LLVM: define void @_GLOBAL__sub_I_[[FILENAME]]()
 // LLVM:   call void @__cxx_global_var_init()
 // LLVM:   call void @__cxx_global_var_init.1()
 // LLVM:   call void @__cxx_global_var_init.2()
+// LLVM:   call void @__cxx_global_var_init.3()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME]]() {{.*}} section ".text.startup" {
 // OGCG:   call void @__cxx_global_var_init()
 // OGCG:   call void @__cxx_global_var_init.1()
 // OGCG:   call void @__cxx_global_var_init.2()
+// OGCG:   call void @__cxx_global_var_init.3()
