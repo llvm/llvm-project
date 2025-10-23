@@ -1766,7 +1766,7 @@ private:
       // to a crash due to a block with no terminator. See issue #126452.
       mlir::FunctionType funcType = builder->getFunction().getFunctionType();
       mlir::Type resultType = funcType.getResult(0);
-      mlir::Value undefResult = builder->create<fir::UndefOp>(loc, resultType);
+      mlir::Value undefResult = fir::UndefOp::create(*builder, loc, resultType);
       genExitRoutine(false, undefResult);
       return;
     }
@@ -4733,11 +4733,21 @@ private:
       return fir::factory::createUnallocatedBox(*builder, loc, lhsBoxType, {});
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
+    auto rhsBoxType = rhs.getBoxType();
     // Create pointer descriptor value from the RHS.
     if (rhs.isMutableBox())
       rhs = hlfir::Entity{fir::LoadOp::create(*builder, loc, rhs)};
-    mlir::Value rhsBox = hlfir::genVariableBox(
-        loc, *builder, rhs, lhsBoxType.getBoxTypeWithNewShape(rhs.getRank()));
+
+    // Use LHS type if LHS is not polymorphic.
+    fir::BaseBoxType targetBoxType;
+    if (assign.lhs.GetType()->IsPolymorphic())
+      targetBoxType = rhsBoxType.getBoxTypeWithNewAttr(
+          fir::BaseBoxType::Attribute::Pointer);
+    else
+      targetBoxType = lhsBoxType.getBoxTypeWithNewShape(rhs.getRank());
+    mlir::Value rhsBox =
+        hlfir::genVariableBox(loc, *builder, rhs, targetBoxType);
+
     // Apply lower bounds or reshaping if any.
     if (const auto *lbExprs =
             std::get_if<Fortran::evaluate::Assignment::BoundsSpec>(&assign.u);

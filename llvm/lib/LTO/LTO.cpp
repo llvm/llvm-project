@@ -477,6 +477,10 @@ static void thinLTOInternalizeAndPromoteGUID(
                        return !GlobalValue::isLocalLinkage(Summary->linkage());
                      });
 
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
+
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
     // exported.
@@ -551,9 +555,11 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  assert(!Index.withInternalizeAndPromote());
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
                                      isPrevailing);
+  Index.setWithInternalizeAndPromote();
 }
 
 // Requires a destructor for std::vector<InputModule>.
