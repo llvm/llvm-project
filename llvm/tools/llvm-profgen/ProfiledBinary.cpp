@@ -66,7 +66,7 @@ static cl::list<std::string> DisassembleFunctions(
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
-    LoadFunctionFromSymbol("load-function-from-symbol",
+    LoadFunctionFromSymbol("load-function-from-symbol", cl::init(true),
                            cl::desc("Gather additional binary function info "
                                     "from symbols (e.g. .symtab) in case "
                                     "dwarf info is incomplete."),
@@ -264,7 +264,7 @@ void ProfiledBinary::load() {
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
 
-  if (LoadFunctionFromSymbol || UsePseudoProbes)
+  if (LoadFunctionFromSymbol && UsePseudoProbes)
     populateSymbolsFromBinary(Obj);
 
   // Disassemble the text sections.
@@ -853,8 +853,10 @@ void ProfiledBinary::populateSymbolsFromBinary(const ObjectFile *Obj) {
 
     auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
     auto &Func = Ret.first->second;
-    if (Ret.second)
+    if (Ret.second) {
       Func.FuncName = Ret.first->first;
+      HashBinaryFunctions[MD5Hash(StringRef(SymName))] = &Func;
+    }
 
     if (auto Range = findFuncRange(Addr)) {
       if (Ret.second && ShowDetailedWarning)
