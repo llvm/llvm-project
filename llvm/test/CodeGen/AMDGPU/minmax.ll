@@ -1296,4 +1296,4 @@ declare half @llvm.minnum.f16(half, half)
 declare half @llvm.maxnum.f16(half, half)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
-attributes #0 = { nounwind "unsafe-fp-math"="false" "no-nans-fp-math"="true" }
+attributes #0 = { nounwind "no-nans-fp-math"="true" }

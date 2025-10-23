@@ -12,13 +12,13 @@ declare void @dummy()
 
 ; CHECK-LABEL: @main()
 ; Function Attrs: nounwind
-define dso_local void @main() #0 {
+define dso_local void @main() {
   call void @func_1()
   unreachable
 }
 
 ; Function Attrs: nounwind
-define dso_local void @func_1() #0 {
+define dso_local void @func_1() {
   %1 = alloca ptr, align 8
   %2 = call signext i32 @func_2()
   %3 = icmp ne i32 %2, 0
@@ -64,45 +64,45 @@ define dso_local void @func_1() #0 {
 }
 
 ; Function Attrs: nounwind
-declare dso_local signext i32 @func_2() #0
+declare dso_local signext i32 @func_2()
 
 ; Function Attrs: nounwind
-define dso_local void @safe_sub_func_uint8_t_u_u() #0 {
+define dso_local void @safe_sub_func_uint8_t_u_u() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_add_func_int64_t_s_s() #0 {
+define dso_local void @safe_add_func_int64_t_s_s() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_rshift_func_int16_t_s_u() #0 {
+define dso_local void @safe_rshift_func_int16_t_s_u() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_div_func_uint8_t_u_u() #0 {
+define dso_local void @safe_div_func_uint8_t_u_u() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_mul_func_uint16_t_u_u() #0 {
+define dso_local void @safe_mul_func_uint16_t_u_u() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_mul_func_int16_t_s_s() #0 {
+define dso_local void @safe_mul_func_int16_t_s_s() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_div_func_int32_t_s_s() #0 {
+define dso_local void @safe_div_func_int32_t_s_s() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local signext i16 @safe_sub_func_int16_t_s_s(i16 signext) #0 {
+define dso_local signext i16 @safe_sub_func_int16_t_s_s(i16 signext) {
   %2 = alloca i16, align 2
   store i16 %0, ptr %2, align 2, !tbaa !1
   %3 = load i16, ptr %2, align 2, !tbaa !1
@@ -113,28 +113,24 @@ define dso_local signext i16 @safe_sub_func_int16_t_s_s(i16 signext) #0 {
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_add_func_uint16_t_u_u() #0 {
+define dso_local void @safe_add_func_uint16_t_u_u() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_div_func_int8_t_s_s() #0 {
+define dso_local void @safe_div_func_int8_t_s_s() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_add_func_int16_t_s_s() #0 {
+define dso_local void @safe_add_func_int16_t_s_s() {
   ret void
 }
 
 ; Function Attrs: nounwind
-define dso_local void @safe_add_func_uint8_t_u_u() #0 {
+define dso_local void @safe_add_func_uint8_t_u_u() {
   ret void
 }
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="z13" "target-features"="+transactional-execution,+vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind }
-attributes #2 = { nounwind }
 
 !llvm.ident = !{!0}
 
