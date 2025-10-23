@@ -1291,12 +1291,16 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (!Subtarget->hasFPARMv8Base() || !Subtarget->hasFP64()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
     }
 
     // fp16 is a special v7 extension that adds f16 <-> f32 conversions.
     if (!Subtarget->hasFP16()) {
       setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
       setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+      setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
+      setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
     }
 
     // Strict floating-point comparisons need custom lowering.
