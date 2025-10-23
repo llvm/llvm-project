@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"

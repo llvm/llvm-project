@@ -11,6 +11,7 @@
 #include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/error_converter.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 

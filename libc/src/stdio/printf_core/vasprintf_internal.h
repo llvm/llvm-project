@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/errno_macros.h"
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/vprintf.h"
-#include "hdr/errno_macros.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"

@@ -128,7 +128,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.core_structs
     libc.src.stdio.printf_core.error_converter
     libc.src.__support.libc_errno
-    libc.hdr.errno_macros
 )
 
 add_entrypoint_object(
@@ -143,7 +142,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.core_structs
     libc.src.stdio.printf_core.error_converter
     libc.src.__support.libc_errno
-    libc.hdr.errno_macros
 )
 
 add_entrypoint_object(
@@ -157,7 +155,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.core_structs
     libc.src.stdio.printf_core.error_converter
     libc.src.__support.libc_errno
-    libc.hdr.errno_macros
 )
 
 add_entrypoint_object(
@@ -185,7 +182,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.core_structs
     libc.src.stdio.printf_core.error_converter
     libc.src.__support.libc_errno
-    libc.hdr.errno_macros
 )
 
 add_entrypoint_object(
@@ -199,7 +195,6 @@ add_entrypoint_object(
     libc.src.stdio.printf_core.core_structs
     libc.src.stdio.printf_core.error_converter
     libc.src.__support.libc_errno
-    libc.hdr.errno_macros
 )
 
 add_subdirectory(printf_core)

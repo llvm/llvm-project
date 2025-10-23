@@ -8,6 +8,7 @@
 
 #include "src/stdlib/strfromd.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/error_converter.h"
 #include "src/stdlib/str_from_util.h"
 

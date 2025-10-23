@@ -8,7 +8,6 @@
 
 #include "src/stdio/vsnprintf.h"
 
-#include "hdr/errno_macros.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"

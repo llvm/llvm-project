@@ -11,7 +11,6 @@
 
 #include "src/__support/macros/config.h"
 
-#include "hdr/errno_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"

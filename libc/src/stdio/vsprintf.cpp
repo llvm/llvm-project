@@ -8,7 +8,6 @@
 
 #include "src/stdio/vsprintf.h"
 
-#include "hdr/errno_macros.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
