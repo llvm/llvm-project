@@ -25,7 +25,7 @@ class EntryPointStat {
 public:
   llvm::StringLiteral name() const { return Name; }
 
-  static void lockRegistry();
+  static void lockRegistry(llvm::StringRef CPPFileName);
 
   static void takeSnapshot(const Decl *EntryPoint);
   static void dumpStatsAsCSV(llvm::raw_ostream &OS);

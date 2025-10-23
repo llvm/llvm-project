@@ -64,11 +64,11 @@ void ppp() { B b; }
 // CIR:   %[[VPTR:.+]] = cir.load {{.*}} %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR:   %[[VPTR_I8:.+]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!u8i>
 // CIR:   %[[NEG32:.+]] = cir.const #cir.int<-32> : !s64i
-// CIR:   %[[ADJ_VPTR_I8:.+]] = cir.ptr_stride(%[[VPTR_I8]] : !cir.ptr<!u8i>, %[[NEG32]] : !s64i), !cir.ptr<!u8i>
+// CIR:   %[[ADJ_VPTR_I8:.+]] = cir.ptr_stride %[[VPTR_I8]], %[[NEG32]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[OFFSET_PTR:.+]] = cir.cast bitcast %[[ADJ_VPTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
 // CIR:   %[[OFFSET:.+]] = cir.load {{.*}} %[[OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
 // CIR:   %[[D_I8:.+]] = cir.cast bitcast %[[D]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!u8i>
-// CIR:   %[[ADJ_THIS_I8:.+]] = cir.ptr_stride(%[[D_I8]] : !cir.ptr<!u8i>, %[[OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR:   %[[ADJ_THIS_I8:.+]] = cir.ptr_stride %[[D_I8]], %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[ADJ_THIS_D:.+]] = cir.cast bitcast %[[ADJ_THIS_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Derived>
 // CIR:   %[[BASE_THIS:.+]] = cir.cast bitcast %[[ADJ_THIS_D]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[BASE_VPTR_PTR:.+]] = cir.vtable.get_vptr %[[BASE_THIS]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>

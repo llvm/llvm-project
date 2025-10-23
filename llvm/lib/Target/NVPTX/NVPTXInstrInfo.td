@@ -34,7 +34,8 @@ def CvtRN   : PatLeaf<(i32 0x5)>;
 def CvtRZ   : PatLeaf<(i32 0x6)>;
 def CvtRM   : PatLeaf<(i32 0x7)>;
 def CvtRP   : PatLeaf<(i32 0x8)>;
-def CvtRNA   : PatLeaf<(i32 0x9)>;
+def CvtRNA  : PatLeaf<(i32 0x9)>;
+def CvtRS   : PatLeaf<(i32 0xA)>;
 
 def CvtNONE_FTZ : PatLeaf<(i32 0x10)>;
 def CvtRNI_FTZ  : PatLeaf<(i32 0x11)>;
@@ -50,8 +51,9 @@ def CvtSAT      : PatLeaf<(i32 0x20)>;
 def CvtSAT_FTZ  : PatLeaf<(i32 0x30)>;
 
 def CvtNONE_RELU   : PatLeaf<(i32 0x40)>;
-def CvtRN_RELU   : PatLeaf<(i32 0x45)>;
-def CvtRZ_RELU   : PatLeaf<(i32 0x46)>;
+def CvtRN_RELU     : PatLeaf<(i32 0x45)>;
+def CvtRZ_RELU     : PatLeaf<(i32 0x46)>;
+def CvtRS_RELU     : PatLeaf<(i32 0x4A)>;
 
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
@@ -132,6 +134,11 @@ def hasSM90a : Predicate<"Subtarget->getSmVersion() == 90 && Subtarget->hasArchA
 def hasSM100a : Predicate<"Subtarget->getSmVersion() == 100 && Subtarget->hasArchAccelFeatures()">;
 def hasSM101a : Predicate<"Subtarget->getSmVersion() == 101 && Subtarget->hasArchAccelFeatures()">;
 def hasSM120a : Predicate<"Subtarget->getSmVersion() == 120 && Subtarget->hasArchAccelFeatures()">;
+
+def hasSM100aOrSM103a :
+  Predicate<"(Subtarget->getSmVersion() == 100 || " # 
+              "Subtarget->getSmVersion() == 103) " #
+            "&& Subtarget->hasArchAccelFeatures()">;
 
 // non-sync shfl instructions are not available on sm_70+ in PTX6.4+
 def hasSHFL : Predicate<"!(Subtarget->getSmVersion() >= 70"
@@ -593,6 +600,23 @@ let hasSideEffects = false in {
 
   defm CVT_f16x2 : CVT_FROM_FLOAT_V2_SM80<"f16x2", B32>;
   defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_SM80<"bf16x2", B32>;
+  
+  multiclass CVT_FROM_FLOAT_V2_RS<string FromName, RegisterClass RC> {
+    def _f32_rs :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src1, B32:$src2, B32:$src3),
+                (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}." # FromName # ".f32">;
+
+    def _f32_rs_sf :
+      BasicFlagsNVPTXInst<(outs RC:$dst),
+                (ins B32:$src1, B32:$src2, B32:$src3),
+                (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.satfinite." # FromName # ".f32">;
+  }
+
+  defm CVT_f16x2 : CVT_FROM_FLOAT_V2_RS<"f16x2", B32>;
+  defm CVT_bf16x2 : CVT_FROM_FLOAT_V2_RS<"bf16x2", B32>;
 
   // FP8 conversions.
   multiclass CVT_TO_F8X2<string F8Name> {
@@ -619,6 +643,15 @@ let hasSideEffects = false in {
 
   def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
   def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
+  
+  class CVT_TO_FP8X4<string F8Name> :
+    NVPTXInst<(outs B32:$dst),
+              (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5, CvtMode:$mode),
+              "cvt${mode:base}${mode:relu}.satfinite." # F8Name # 
+                "x4.f32 \t$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
+  
+  def CVT_e4m3x4_f32x4_rs_sf : CVT_TO_FP8X4<"e4m3">;
+  def CVT_e5m2x4_f32x4_rs_sf : CVT_TO_FP8X4<"e5m2">;
 
   // Float to TF32 conversions
   multiclass CVT_TO_TF32<string Modifier, list<Predicate> Preds = [hasPTX<78>, hasSM<90>]> {
@@ -652,6 +685,15 @@ let hasSideEffects = false in {
                                       "cvt${mode:base}${mode:relu}.f16x2." # type>;
   }
   
+  class CVT_TO_FP6X4<string F6Name> :
+    NVPTXInst<(outs B32:$dst),
+              (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5, CvtMode:$mode),
+              "cvt${mode:base}${mode:relu}.satfinite." # F6Name #
+                "x4.f32 \t$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
+
+  def CVT_e2m3x4_f32x4_rs_sf : CVT_TO_FP6X4<"e2m3">;
+  def CVT_e3m2x4_f32x4_rs_sf : CVT_TO_FP6X4<"e3m2">;
+  
   // FP4 conversions.
   def CVT_e2m1x2_f32_sf : NVPTXInst<(outs B16:$dst),
       (ins B32:$src1, B32:$src2, CvtMode:$mode),
@@ -668,6 +710,12 @@ let hasSideEffects = false in {
                  "cvt.u8.u16 \t%e2m1x2_in, $src; \n\t",
                  "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
                  "}}"), []>;
+                 
+  def CVT_e2m1x4_f32x4_rs_sf :
+    NVPTXInst<(outs B16:$dst),
+              (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5, CvtMode:$mode),
+              "cvt${mode:base}${mode:relu}.satfinite.e2m1x4.f32 \t" # 
+                "$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :

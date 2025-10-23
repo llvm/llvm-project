@@ -1109,19 +1109,19 @@ __m256i test_mm256_shuffle_epi32(__m256i a) {
   // CHECK: shufflevector <8 x i32> %{{.*}}, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 0, i32 0, i32 7, i32 7, i32 4, i32 4>
   return _mm256_shuffle_epi32(a, 15);
 }
-
+TEST_CONSTEXPR(match_v8si(_mm256_shuffle_epi32((((__m256i)(__v8si){0,1,2,3,4,5,6,7})), 15), 3,3,0,0, 7,7,4,4));
 __m256i test_mm256_shufflehi_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_shufflehi_epi16
   // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 7, i32 6, i32 6, i32 5, i32 8, i32 9, i32 10, i32 11, i32 15, i32 14, i32 14, i32 13>
   return _mm256_shufflehi_epi16(a, 107);
 }
-
+TEST_CONSTEXPR(match_v16hi(_mm256_shufflehi_epi16((((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15})), 107), 0,1,2,3, 7,6,6,5, 8,9,10,11, 15,14,14,13));
 __m256i test_mm256_shufflelo_epi16(__m256i a) {
   // CHECK-LABEL: test_mm256_shufflelo_epi16
   // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> poison, <16 x i32> <i32 3, i32 0, i32 1, i32 1, i32 4, i32 5, i32 6, i32 7, i32 11, i32 8, i32 9, i32 9, i32 12, i32 13, i32 14, i32 15>
   return _mm256_shufflelo_epi16(a, 83);
 }
-
+TEST_CONSTEXPR(match_v16hi(_mm256_shufflelo_epi16(((__m256i)(__v16hi){ 0,1,2,3, 4,5,6,7, 8,9,10,11, 12,13,14,15}), 83), 3,0,1,1, 4,5,6,7, 11,8,9,9, 12,13,14,15) );
 __m256i test_mm256_sign_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_sign_epi8
   // CHECK: call <32 x i8> @llvm.x86.avx2.psign.b(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})

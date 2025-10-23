@@ -59,21 +59,20 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX1250-SDAG-LABEL: is_private_vgpr:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-NEXT:    s_mov_b32 s0, src_flat_scratch_base_hi
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_xor_b32_e32 v0, s0, v1
-; GFX1250-SDAG-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x4000000, v0
-; GFX1250-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v0, off
-; GFX1250-SDAG-NEXT:    s_endpgm
+; GFX1250-LABEL: is_private_vgpr:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v1
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x4000000, v0
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; CI-GISEL-LABEL: is_private_vgpr:
 ; CI-GISEL:       ; %bb.0:
@@ -122,22 +121,6 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: is_private_vgpr:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, src_flat_scratch_base_hi
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
-; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, v1, v2
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x4000000, v0
-; GFX1250-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
-; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v0, off
-; GFX1250-GISEL-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds ptr, ptr addrspace(1) %ptr.ptr, i32 %id
   %ptr = load volatile ptr, ptr addrspace(1) %gep
@@ -206,9 +189,8 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1250-SDAG-LABEL: is_private_sgpr:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4
-; GFX1250-SDAG-NEXT:    s_mov_b32 s1, src_flat_scratch_base_hi
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    s_xor_b32 s0, s0, s1
+; GFX1250-SDAG-NEXT:    s_xor_b32 s0, s0, src_flat_scratch_base_hi
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    s_cmp_lt_u32 s0, 0x4000000
 ; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
@@ -285,9 +267,8 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    s_mov_b32 s0, src_flat_scratch_base_hi
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s1, s0
+; GFX1250-GISEL-NEXT:    s_xor_b32 s0, s1, src_flat_scratch_base_hi
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_cmp_ge_u32 s0, 0x4000000
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %bb0
@@ -311,5 +292,4 @@ bb1:
 ; CI: {{.*}}
 ; GFX10-GISEL: {{.*}}
 ; GFX11-GISEL: {{.*}}
-; GFX1250: {{.*}}
 ; SI-SDAG: {{.*}}

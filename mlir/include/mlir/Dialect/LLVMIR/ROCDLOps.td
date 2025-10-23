@@ -1029,6 +1029,24 @@ foreach smallT = [
         attr-dict $src `,` $scale `:` type($res)
       }];
     }
+
+
+    def ROCDL_CvtScaleF32SrPk8 # smallT.nameForOp # largeT.nameForOp # Op :
+        ROCDL_ConcreteNonMemIntrOp<"cvt.scalef32.sr.pk8." # smallT.name # "." # largeT.name,
+          [Pure], 1>,
+        Arguments<(ins largeT.type:$src, I32:$seed, F32:$scale)> {
+      let results = (outs smallT.type:$res);
+      let summary = "Scale and convert packed "
+        # largeT.name # " to packed " # smallT.name # " with stochastic rounding";
+     let description = [{
+        Convert 8 packed }] # largeT.name # [{ values to packed }]
+        # smallT.name # [{, multiplying by the exponent part of `scale`
+        before doing so and apply stochastic rounding. This op is for gfx1250+ arch.
+      }];
+      let assemblyFormat = [{
+        attr-dict $src `,` $seed `,` $scale `:` type($res)
+      }];
+    }
   } // foreach largeT
 } // foreach smallTOp
 

@@ -158,13 +158,13 @@ void test_new_with_complex_type() {
 }
 
 // CHECK: cir.func{{.*}} @_Z26test_new_with_complex_typev
-// CHECK:   %0 = cir.alloca !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>, ["a", init]
-// CHECK:   %1 = cir.const #cir.int<8> : !u64i
-// CHECK:   %2 = cir.call @_Znwm(%1) : (!u64i) -> !cir.ptr<!void>
-// CHECK:   %3 = cir.cast bitcast %2 : !cir.ptr<!void> -> !cir.ptr<!cir.complex<!cir.float>>
-// CHECK:   %4 = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
-// CHECK:   cir.store align(8) %4, %3 : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
-// CHECK:   cir.store align(8) %3, %0 : !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>
+// CHECK:   %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>, ["a", init]
+// CHECK:   %[[COMPLEX_SIZE:.*]] = cir.const #cir.int<8> : !u64i
+// CHECK:   %[[NEW_COMPLEX:.*]] = cir.call @_Znwm(%[[COMPLEX_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:   %[[COMPLEX_PTR:.*]] = cir.cast bitcast %[[NEW_COMPLEX]] : !cir.ptr<!void> -> !cir.ptr<!cir.complex<!cir.float>>
+// CHECK:   %[[COMPLEX_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
+// CHECK:   cir.store{{.*}} %[[COMPLEX_VAL]], %[[COMPLEX_PTR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CHECK:   cir.store{{.*}} %[[COMPLEX_PTR]], %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.ptr<!cir.ptr<!cir.complex<!cir.float>>>
 
 // LLVM: define{{.*}} void @_Z26test_new_with_complex_typev
 // LLVM:   %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8

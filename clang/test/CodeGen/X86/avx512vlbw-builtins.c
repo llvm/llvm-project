@@ -3393,12 +3393,26 @@ __m128i test_mm_mask_shufflehi_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   return _mm_mask_shufflehi_epi16(__W, __U, __A, 5); 
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0xF0u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,101,102,103,5,5,4,4));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x00u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,101,102,103,104,105,106,107));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0xFFu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,2,3,5,5,4,4));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x0Fu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,2,3,104,105,106,107));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x55u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,101,2,103,5,105,4,107));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflehi_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0xAAu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,1,102,3,104,5,106,4));
+
 __m128i test_mm_maskz_shufflehi_epi16(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_shufflehi_epi16
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_shufflehi_epi16(__U, __A, 5); 
 }
+
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0xF0u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,0,0,0,5,5,4,4));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0x00u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0xFFu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,2,3,5,5,4,4));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0x0Fu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,2,3,0,0,0,0));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0x55u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,0,2,0,5,0,4,0));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflehi_epi16(0xAAu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,0,3,0,5,0,4));
 
 __m128i test_mm_mask_shufflelo_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_mask_shufflelo_epi16
@@ -3407,12 +3421,25 @@ __m128i test_mm_mask_shufflelo_epi16(__m128i __W, __mmask8 __U, __m128i __A) {
   return _mm_mask_shufflelo_epi16(__W, __U, __A, 5); 
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),0xFF,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,1,0,0,4,5,6,7));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x00u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,101,102,103,104,105,106,107));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x0Fu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,1,0,0,104,105,106,107));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0xF0u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,101,102,103,4,5,6,7));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0xAAu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),100,1,102,0,104,5,106,7));
+TEST_CONSTEXPR(match_v8hi(_mm_mask_shufflelo_epi16(((__m128i)(__v8hi){100,101,102,103,104,105,106,107}),0x55u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,101,0,103,4,105,6,107));
+
 __m128i test_mm_maskz_shufflelo_epi16(__mmask8 __U, __m128i __A) {
   // CHECK-LABEL: test_mm_maskz_shufflelo_epi16
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> poison, <8 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7>
   // CHECK: select <8 x i1> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}}
   return _mm_maskz_shufflelo_epi16(__U, __A, 5); 
 }
+
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflelo_epi16(0xFF,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,1,0,0,4,5,6,7));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflelo_epi16(0x0Fu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,1,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflelo_epi16(0xF0u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,0,0,0,4,5,6,7));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflelo_epi16(0xAAu,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),0,1,0,0,0,5,0,7));
+TEST_CONSTEXPR(match_v8hi(_mm_maskz_shufflelo_epi16(0x55u,((__m128i)(__v8hi){0,1,2,3,4,5,6,7}),5),1,0,0,0,4,0,6,0));
 
 __m256i test_mm256_mask_shufflehi_epi16(__m256i __W, __mmask16 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_shufflehi_epi16
@@ -3421,12 +3448,25 @@ __m256i test_mm256_mask_shufflehi_epi16(__m256i __W, __mmask16 __U, __m256i __A)
   return _mm256_mask_shufflehi_epi16(__W, __U, __A, 5); 
 }
 
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflehi_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115}),0xFF00u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),100,101,102,103,104,105,106,107,8,9,10,11,13,13,12,12));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflehi_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115}),0x0000u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflehi_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115}),0xFFFFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,1,2,3,5,5,4,4,8,9,10,11,13,13,12,12));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflehi_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115}),0x00FFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,1,2,3,5,5,4,4,108,109,110,111,112,113,114,115));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflehi_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115}),0x5555u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,101,2,103,5,105,4,107,8,109,10,111,13,113,12,115));
+
 __m256i test_mm256_maskz_shufflehi_epi16(__mmask16 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_shufflehi_epi16
   // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 5, i32 5, i32 4, i32 4, i32 8, i32 9, i32 10, i32 11, i32 13, i32 13, i32 12, i32 12>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_shufflehi_epi16(__U, __A, 5); 
 }
+
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0x0000u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0xFFFFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,1,2,3,5,5,4,4,8,9,10,11,13,13,12,12));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0x00FFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,1,2,3,5,5,4,4,0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0xFF00u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,0,0,0,0,0,0,0,8,9,10,11,13,13,12,12));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0x5555u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,0,2,0,5,0,4,0,8,0,10,0,13,0,12,0));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflehi_epi16(0xAAAAu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,1,0,3,0,5,0,4,0,9,0,11,0,13,0,12));
 
 __m256i test_mm256_mask_shufflelo_epi16(__m256i __W, __mmask16 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_mask_shufflelo_epi16
@@ -3435,12 +3475,22 @@ __m256i test_mm256_mask_shufflelo_epi16(__m256i __W, __mmask16 __U, __m256i __A)
   return _mm256_mask_shufflelo_epi16(__W, __U, __A, 5); 
 }
 
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflelo_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}),0xFFFF,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,4,5,6,7,9,9,8,8,12,13,14,15));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflelo_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}),0x000Fu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,104,105,106,107,200,201,202,203,204,205,206,207));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflelo_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}),0x00FFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,4,5,6,7,200,201,202,203,204,205,206,207));
+TEST_CONSTEXPR(match_v16hi(_mm256_mask_shufflelo_epi16(((__m256i)(__v16hi){100,101,102,103,104,105,106,107,200,201,202,203,204,205,206,207}),0xF00Fu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,104,105,106,107,200,201,202,203,12,13,14,15));
+
 __m256i test_mm256_maskz_shufflelo_epi16(__mmask16 __U, __m256i __A) {
   // CHECK-LABEL: test_mm256_maskz_shufflelo_epi16
   // CHECK: shufflevector <16 x i16> %{{.*}}, <16 x i16> poison, <16 x i32> <i32 1, i32 1, i32 0, i32 0, i32 4, i32 5, i32 6, i32 7, i32 9, i32 9, i32 8, i32 8, i32 12, i32 13, i32 14, i32 15>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_shufflelo_epi16(__U, __A, 5); 
 }
+
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflelo_epi16(0xFFFF,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,4,5,6,7,9,9,8,8,12,13,14,15));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflelo_epi16(0x000Fu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflelo_epi16(0x00FFu,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),1,1,0,0,4,5,6,7,0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v16hi(_mm256_maskz_shufflelo_epi16(0xF0F0u,((__m256i)(__v16hi){0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15}),5),0,0,0,0,4,5,6,7,0,0,0,0,12,13,14,15));
 
 void test_mm_mask_cvtepi16_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
 {

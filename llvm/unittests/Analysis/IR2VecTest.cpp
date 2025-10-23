@@ -295,7 +295,7 @@ TEST(IR2VecTest, ZeroDimensionEmbedding) {
 // Fixture for IR2Vec tests requiring IR setup.
 class IR2VecTestFixture : public ::testing::Test {
 protected:
-  Vocabulary *V;
+  std::unique_ptr<Vocabulary> V;
   LLVMContext Ctx;
   std::unique_ptr<Module> M;
   Function *F = nullptr;
@@ -304,7 +304,7 @@ protected:
   Instruction *RetInst = nullptr;
 
   void SetUp() override {
-    V = new Vocabulary(Vocabulary::createDummyVocabForTest(2));
+    V = std::make_unique<Vocabulary>(Vocabulary::createDummyVocabForTest(2));
 
     // Setup IR
     M = std::make_unique<Module>("TestM", Ctx);

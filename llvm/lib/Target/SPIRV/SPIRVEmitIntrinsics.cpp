@@ -2811,9 +2811,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
     if (NewGEP) {
       Ref->replaceAllUsesWith(NewGEP);
-      if (isInstructionTriviallyDead(Ref))
-        DeadInsts.insert(Ref);
-
+      DeadInsts.insert(Ref);
       Ref = NewGEP;
     }
     if (Type *GepTy = getGEPType(Ref))

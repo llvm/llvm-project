@@ -57,10 +57,7 @@ static bool isPartOfZPRCalleeSaves(MachineBasicBlock::iterator I) {
   case AArch64::ST1B_2Z_IMM:
   case AArch64::STR_ZXI:
   case AArch64::LDR_ZXI:
-  case AArch64::CPY_ZPzI_B:
-  case AArch64::CMPNE_PPzZI_B:
   case AArch64::PTRUE_C_B:
-  case AArch64::PTRUE_B:
     return I->getFlag(MachineInstr::FrameSetup) ||
            I->getFlag(MachineInstr::FrameDestroy);
   case AArch64::SEH_SavePReg:

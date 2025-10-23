@@ -135,16 +135,22 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
     } else if (proc.IsPure()) {
       std::size_t j{0};
       for (const auto &arg : call.arguments()) {
-        if (const auto *dataDummy{j < proc.dummyArguments.size()
-                    ? std::get_if<characteristics::DummyDataObject>(
-                          &proc.dummyArguments[j].u)
-                    : nullptr};
-            dataDummy &&
+        const auto *dataDummy{j < proc.dummyArguments.size()
+                ? std::get_if<characteristics::DummyDataObject>(
+                      &proc.dummyArguments[j].u)
+                : nullptr};
+        if (dataDummy &&
             dataDummy->attrs.test(
                 characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry)) {
           // The value of the argument doesn't matter
         } else if (!arg) {
-          return false;
+          if (dataDummy &&
+              dataDummy->attrs.test(
+                  characteristics::DummyDataObject::Attr::Optional)) {
+            // Missing optional arguments are okay.
+          } else {
+            return false;
+          }
         } else if (const auto *expr{arg->UnwrapExpr()};
             !expr || !(*this)(*expr)) {
           return false;

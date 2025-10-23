@@ -22,13 +22,14 @@
 #include "src/sys/mman/munlockall.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/resource/getrlimit.h"
-#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <linux/capability.h>
 #include <sys/syscall.h>
+
+// TODO: Replace with sysconf call once the function is properly implemented.
+constexpr size_t PAGE_SIZE = 4096;
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -38,7 +39,7 @@ struct PageHolder {
   void *addr;
 
   PageHolder()
-      : size(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE)),
+      : size(PAGE_SIZE),
         addr(LIBC_NAMESPACE::mmap(nullptr, size, PROT_READ | PROT_WRITE,
                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) {}
   ~PageHolder() {
@@ -51,28 +52,10 @@ struct PageHolder {
   bool is_valid() { return addr != MAP_FAILED; }
 };
 
-static bool get_capacity(unsigned int cap) {
-  __user_cap_header_struct header;
-  header.pid = 0;
-  header.version = _LINUX_CAPABILITY_VERSION_3;
-  __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
-  // TODO: use capget wrapper once implemented.
-  // https://github.com/llvm/llvm-project/issues/80037
-  long res = LIBC_NAMESPACE::syscall_impl(
-      SYS_capget, LIBC_NAMESPACE::cpp::bit_cast<long>(&header),
-      LIBC_NAMESPACE::cpp::bit_cast<long>(&data));
-  if (res < 0)
-    return false;
-  unsigned idx = CAP_TO_INDEX(cap);
-  unsigned shift = CAP_TO_MASK(cap);
-  return (data[idx].effective & shift) != 0;
-}
-
 static bool is_permitted_size(size_t size) {
   rlimit rlimits;
   LIBC_NAMESPACE::getrlimit(RLIMIT_MEMLOCK, &rlimits);
-  return size <= static_cast<size_t>(rlimits.rlim_cur) ||
-         get_capacity(CAP_IPC_LOCK);
+  return size <= static_cast<size_t>(rlimits.rlim_cur);
 }
 
 TEST_F(LlvmLibcMlockTest, UnMappedMemory) {

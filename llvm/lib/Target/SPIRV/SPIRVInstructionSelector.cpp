@@ -307,6 +307,10 @@ private:
   bool selectHandleFromBinding(Register &ResVReg, const SPIRVType *ResType,
                                MachineInstr &I) const;
 
+  bool selectCounterHandleFromBinding(Register &ResVReg,
+                                      const SPIRVType *ResType,
+                                      MachineInstr &I) const;
+
   bool selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
@@ -314,6 +318,8 @@ private:
                                 MachineInstr &I) const;
   bool selectModf(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
+  bool selectUpdateCounter(Register &ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I) const;
   bool selectFrexp(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
   // Utilities
@@ -3443,6 +3449,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_handlefrombinding: {
     return selectHandleFromBinding(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_counterhandlefrombinding:
+    return selectCounterHandleFromBinding(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_updatecounter:
+    return selectUpdateCounter(ResVReg, ResType, I);
   case Intrinsic::spv_resource_store_typedbuffer: {
     return selectImageWriteIntrinsic(I);
   }
@@ -3478,6 +3488,130 @@ bool SPIRVInstructionSelector::selectHandleFromBinding(Register &ResVReg,
                                   *cast<GIntrinsic>(&I), I);
 }
 
+bool SPIRVInstructionSelector::selectCounterHandleFromBinding(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  auto &Intr = cast<GIntrinsic>(I);
+  assert(Intr.getIntrinsicID() ==
+         Intrinsic::spv_resource_counterhandlefrombinding);
+
+  // Extract information from the intrinsic call.
+  Register MainHandleReg = Intr.getOperand(2).getReg();
+  auto *MainHandleDef = cast<GIntrinsic>(getVRegDef(*MRI, MainHandleReg));
+  assert(MainHandleDef->getIntrinsicID() ==
+         Intrinsic::spv_resource_handlefrombinding);
+
+  uint32_t Set = getIConstVal(Intr.getOperand(4).getReg(), MRI);
+  uint32_t Binding = getIConstVal(Intr.getOperand(3).getReg(), MRI);
+  uint32_t ArraySize = getIConstVal(MainHandleDef->getOperand(4).getReg(), MRI);
+  Register IndexReg = MainHandleDef->getOperand(5).getReg();
+  const bool IsNonUniform = false;
+  std::string CounterName =
+      getStringValueFromReg(MainHandleDef->getOperand(6).getReg(), *MRI) +
+      ".counter";
+
+  // Create the counter variable.
+  MachineIRBuilder MIRBuilder(I);
+  Register CounterVarReg = buildPointerToResource(
+      GR.getPointeeType(ResType), GR.getPointerStorageClass(ResType), Set,
+      Binding, ArraySize, IndexReg, IsNonUniform, CounterName, MIRBuilder);
+
+  return BuildCOPY(ResVReg, CounterVarReg, I);
+}
+
+bool SPIRVInstructionSelector::selectUpdateCounter(Register &ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  auto &Intr = cast<GIntrinsic>(I);
+  assert(Intr.getIntrinsicID() == Intrinsic::spv_resource_updatecounter);
+
+  Register CounterHandleReg = Intr.getOperand(2).getReg();
+  Register IncrReg = Intr.getOperand(3).getReg();
+
+  // The counter handle is a pointer to the counter variable (which is a struct
+  // containing an i32). We need to get a pointer to that i32 member to do the
+  // atomic operation.
+#ifndef NDEBUG
+  SPIRVType *CounterVarType = GR.getSPIRVTypeForVReg(CounterHandleReg);
+  SPIRVType *CounterVarPointeeType = GR.getPointeeType(CounterVarType);
+  assert(CounterVarPointeeType &&
+         CounterVarPointeeType->getOpcode() == SPIRV::OpTypeStruct &&
+         "Counter variable must be a struct");
+  assert(GR.getPointerStorageClass(CounterVarType) ==
+             SPIRV::StorageClass::StorageBuffer &&
+         "Counter variable must be in the storage buffer storage class");
+  assert(CounterVarPointeeType->getNumOperands() == 2 &&
+         "Counter variable must have exactly 1 member in the struct");
+  const SPIRVType *MemberType =
+      GR.getSPIRVTypeForVReg(CounterVarPointeeType->getOperand(1).getReg());
+  assert(MemberType->getOpcode() == SPIRV::OpTypeInt &&
+         "Counter variable struct must have a single i32 member");
+#endif
+
+  // The struct has a single i32 member.
+  MachineIRBuilder MIRBuilder(I);
+  const Type *LLVMIntType =
+      Type::getInt32Ty(I.getMF()->getFunction().getContext());
+
+  SPIRVType *IntPtrType = GR.getOrCreateSPIRVPointerType(
+      LLVMIntType, MIRBuilder, SPIRV::StorageClass::StorageBuffer);
+
+  auto Zero = buildI32Constant(0, I);
+  if (!Zero.second)
+    return false;
+
+  Register PtrToCounter =
+      MRI->createVirtualRegister(GR.getRegClass(IntPtrType));
+  if (!BuildMI(*I.getParent(), I, I.getDebugLoc(),
+               TII.get(SPIRV::OpAccessChain))
+           .addDef(PtrToCounter)
+           .addUse(GR.getSPIRVTypeID(IntPtrType))
+           .addUse(CounterHandleReg)
+           .addUse(Zero.first)
+           .constrainAllUses(TII, TRI, RBI)) {
+    return false;
+  }
+
+  // For UAV/SSBO counters, the scope is Device. The counter variable is not
+  // used as a flag. So the memory semantics can be None.
+  auto Scope = buildI32Constant(SPIRV::Scope::Device, I);
+  if (!Scope.second)
+    return false;
+  auto Semantics = buildI32Constant(SPIRV::MemorySemantics::None, I);
+  if (!Semantics.second)
+    return false;
+
+  int64_t IncrVal = getIConstValSext(IncrReg, MRI);
+  auto Incr = buildI32Constant(static_cast<uint32_t>(IncrVal), I);
+  if (!Incr.second)
+    return false;
+
+  Register AtomicRes = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  if (!BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
+           .addDef(AtomicRes)
+           .addUse(GR.getSPIRVTypeID(ResType))
+           .addUse(PtrToCounter)
+           .addUse(Scope.first)
+           .addUse(Semantics.first)
+           .addUse(Incr.first)
+           .constrainAllUses(TII, TRI, RBI)) {
+    return false;
+  }
+  if (IncrVal >= 0) {
+    return BuildCOPY(ResVReg, AtomicRes, I);
+  }
+
+  // In HLSL, IncrementCounter returns the value *before* the increment, while
+  // DecrementCounter returns the value *after* the decrement. Both are lowered
+  // to the same atomic intrinsic which returns the value *before* the
+  // operation. So for decrements (negative IncrVal), we must subtract the
+  // increment value from the result to get the post-decrement value.
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(AtomicRes)
+      .addUse(Incr.first)
+      .constrainAllUses(TII, TRI, RBI);
+}
 bool SPIRVInstructionSelector::selectReadImageIntrinsic(
     Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
 

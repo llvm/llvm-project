@@ -439,18 +439,6 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
                  MF.getFunction().getContext());
 
-  const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-
-  std::optional<unsigned> FirstMaskArgument = std::nullopt;
-  // Preassign the first mask argument.
-  if (Subtarget.hasVInstructions()) {
-    for (const auto &ArgIdx : enumerate(Outs)) {
-      MVT ArgVT = MVT::getVT(ArgIdx.value().Ty);
-      if (ArgVT.isVector() && ArgVT.getVectorElementType() == MVT::i1)
-        FirstMaskArgument = ArgIdx.index();
-    }
-  }
-
   for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
     MVT VT = MVT::getVT(Outs[I].Ty);
     if (CC_RISCV(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], CCInfo,

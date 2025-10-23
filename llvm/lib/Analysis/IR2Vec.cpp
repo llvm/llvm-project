@@ -200,6 +200,8 @@ void Embedder::computeEmbeddings() const {
   if (F.isDeclaration())
     return;
 
+  FuncVector = Embedding(Dimension, 0.0);
+
   // Consider only the basic blocks that are reachable from entry
   for (const BasicBlock *BB : depth_first(&F)) {
     computeEmbeddings(*BB);

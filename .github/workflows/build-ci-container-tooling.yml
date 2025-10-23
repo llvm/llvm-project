@@ -1,0 +1,115 @@
+name: Build CI Container
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-ci-container-tooling.yml
+      - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/requirements_formatting.txt
+      - llvm/utils/git/requirements_linting.txt
+  pull_request:
+    paths:
+      - .github/workflows/build-ci-container-tooling.yml
+      - '.github/workflows/containers/github-action-ci-tooling/**'
+      - llvm/utils/git/requirements_formatting.txt
+      - llvm/utils/git/requirements_linting.txt
+
+jobs:
+  build-ci-container-tooling:
+    if: github.repository_owner == 'llvm'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          sparse-checkout: |
+            .github/workflows/containers/github-action-ci-tooling/
+            llvm/utils/git/requirements_formatting.txt
+            llvm/utils/git/requirements_linting.txt
+            clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
+
+      - name: Write Variables
+        id: vars
+        run: |
+          tag=$(git rev-parse --short=12 HEAD)
+          container_name="ghcr.io/$GITHUB_REPOSITORY_OWNER/amd64/ci-ubuntu-24.04"
+          echo "container-name-format=$container_name-code-format" >> $GITHUB_OUTPUT
+          echo "container-name-lint=$container_name-code-lint" >> $GITHUB_OUTPUT
+          echo "container-name-format-tag=$container_name-format:$tag" >> $GITHUB_OUTPUT
+          echo "container-name-lint-tag=$container_name-lint:$tag" >> $GITHUB_OUTPUT
+          echo "container-format-filename=$(echo $container_name-format:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+          echo "container-lint-filename=$(echo $container_name-lint:$tag  | sed -e 's/\//-/g' -e 's/:/-/g').tar" >> $GITHUB_OUTPUT
+
+      - name: Build container
+        run: |
+          podman build --target ci-container-code-format \
+          -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
+          -t ${{ steps.vars.outputs.container-name-format-tag }} .
+          podman build --target ci-container-code-lint \
+          -f .github/workflows/containers/github-action-ci-tooling/Dockerfile \
+          -t ${{ steps.vars.outputs.container-name-lint-tag }} .
+
+      # Save the container so we have it in case the push fails.  This also
+      # allows us to separate the push step into a different job so we can
+      # maintain minimal permissions while building the container.
+      - name: Save container image
+        run: |
+          podman save ${{ steps.vars.outputs.container-name-format-tag }}  >  ${{ steps.vars.outputs.container-format-filename }}
+          podman save ${{ steps.vars.outputs.container-name-lint-tag }}  >  ${{ steps.vars.outputs.container-lint-filename }}
+
+      - name: Upload container image
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: container-amd64
+          path: "*.tar"
+          retention-days: 14
+
+      - name: Test Container
+        run: |
+          # Use --pull=never to ensure we are testing the just built image.
+          podman run --pull=never --rm -it ${{ steps.vars.outputs.container-name-format-tag }} /usr/bin/bash -x -c 'cd $HOME && clang-format --version | grep version && black --version | grep black'
+          podman run --pull=never --rm -it ${{ steps.vars.outputs.container-name-lint-tag }} /usr/bin/bash -x -c 'cd $HOME && clang-tidy --version | grep version && clang-tidy-diff.py -h | grep usage'
+
+  push-ci-container:
+    if: github.event_name == 'push'
+    needs:
+      - build-ci-container-tooling
+    permissions:
+      packages: write
+    runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Download container
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+
+      - name: Push Container
+        run: |
+          function push_container {
+            image_name=$1
+            latest_name=$(echo $image_name | sed 's/:[a-f0-9]\+$/:latest/g')
+            podman tag $image_name $latest_name
+            echo "Pushing $image_name ..."
+            podman push $image_name
+            echo "Pushing $latest_name ..."
+            podman push $latest_name
+          }
+
+          podman login -u ${{ github.actor }} -p $GITHUB_TOKEN ghcr.io
+          for f in $(find . -iname *.tar); do
+            image_name=$(podman load -q -i $f | sed 's/Loaded image: //g')
+            push_container $image_name
+
+            if echo $image_name | grep '/amd64/'; then
+              # For amd64, create an alias with the arch component removed.
+              # This matches the convention used on dockerhub.
+              default_image_name=$(echo $(dirname $(dirname $image_name))/$(basename $image_name))
+              podman tag $image_name $default_image_name
+              push_container $default_image_name
+            fi
+          done

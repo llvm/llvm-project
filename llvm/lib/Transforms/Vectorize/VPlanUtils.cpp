@@ -71,8 +71,8 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
                                      m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
-  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
-         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
+  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
+         B == Plan.getOrCreateBackedgeTakenCount();
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
