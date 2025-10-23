@@ -58,8 +58,9 @@ to learn about the defaults for your platform and target.
 * **"setjmp" options**
     - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
 * **"string" options**
+    - ``LIBC_CONF_FIND_FIRST_CHARACTER_IMPL``: Selects the implementation for find-first-character-related functions: 'element', 'wide', 'generic' (vector), or 'arch'.
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
-    - ``LIBC_CONF_STRING_UNSAFE_WIDE_READ``: Read more than a byte at a time to perform byte-string operations like strlen.
+    - ``LIBC_CONF_STRING_LENGTH_IMPL``: Selects the implementation for string-length: 'element', 'wide', 'generic' (vector), or 'arch'.
 * **"threads" options**
     - ``LIBC_CONF_THREAD_MODE``: The implementation used for Mutex, acceptable values are LIBC_THREAD_MODE_PLATFORM, LIBC_THREAD_MODE_SINGLE, and LIBC_THREAD_MODE_EXTERNAL.
 * **"time" options**

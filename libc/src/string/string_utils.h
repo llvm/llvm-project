@@ -24,20 +24,55 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/string/memory_utils/inline_memcpy.h"
 
-#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if LIBC_HAS_VECTOR_TYPE
 #include "src/string/memory_utils/generic/inline_strlen.h"
-#elif defined(LIBC_TARGET_ARCH_IS_X86)
-#include "src/string/memory_utils/x86_64/inline_strlen.h"
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
-#include "src/string/memory_utils/aarch64/inline_strlen.h"
-#else
-namespace string_length_impl = LIBC_NAMESPACE::wide_read;
 #endif
-#endif // defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/inline_strlen.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/inline_strlen.h"
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
+
+#if !LIBC_HAS_VECTOR_TYPE
+// Foreword any generic vector impls to architecture specific ones
+namespace arch {}
+namespace generic = arch;
+#endif
+
+namespace element {
+// Element-by-element (usually a byte, but wider for wchar) implementations of
+// functions that search for data.  Slow, but easy to understand and analyze.
+
+// Returns the length of a string, denoted by the first occurrence
+// of a null terminator.
+LIBC_INLINE size_t string_length(const char *src) {
+  size_t length;
+  for (length = 0; *src; ++src, ++length)
+    ;
+  return length;
+}
+
+template <typename T> LIBC_INLINE size_t string_length_element(const T *src) {
+  size_t length;
+  for (length = 0; *src; ++src, ++length)
+    ;
+  return length;
+}
+
+LIBC_INLINE void *find_first_character(const unsigned char *src,
+                                       unsigned char ch, size_t n) {
+  for (; n && *src != ch; --n, ++src)
+    ;
+  return n ? const_cast<unsigned char *>(src) : nullptr;
+}
+} // namespace element
+
+namespace wide {
+// Generic, non-vector, implementations of functions that search for data
+// by reading from memory block-by-block.
 
 template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
   static_assert(CHAR_BIT == 8, "repeat_byte assumes a byte is 8 bits.");
@@ -74,8 +109,13 @@ template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
   return (subtracted & inverted & HIGH_BITS) != 0;
 }
 
-template <typename Word>
-LIBC_INLINE size_t string_length_wide_read(const char *src) {
+// Unsigned int is the default size for most processors, and on x86-64 it
+// performs better than larger sizes when the src pointer can't be assumed to
+// be aligned to a word boundary, so it's the size we use for reading the
+// string a block at a time.
+
+LIBC_INLINE size_t string_length(const char *src) {
+  using Word = unsigned int;
   const char *char_ptr = src;
   // Step 1: read 1 byte at a time to align to block size
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0;
@@ -95,37 +135,23 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   return static_cast<size_t>(char_ptr - src);
 }
 
-namespace wide_read {
-LIBC_INLINE size_t string_length(const char *src) {
-  // Unsigned int is the default size for most processors, and on x86-64 it
-  // performs better than larger sizes when the src pointer can't be assumed to
-  // be aligned to a word boundary, so it's the size we use for reading the
-  // string a block at a time.
-  return string_length_wide_read<unsigned int>(src);
-}
-
-} // namespace wide_read
-
-// Returns the length of a string, denoted by the first occurrence
-// of a null terminator.
-template <typename T> LIBC_INLINE size_t string_length(const T *src) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
-  if constexpr (cpp::is_same_v<T, char>)
-    return string_length_impl::string_length(src);
-#endif
-  size_t length;
-  for (length = 0; *src; ++src, ++length)
-    ;
-  return length;
-}
-
-template <typename Word>
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE void *
-find_first_character_wide_read(const unsigned char *src, unsigned char ch,
-                               size_t n) {
+find_first_character(const unsigned char *src, unsigned char ch,
+                     size_t max_strlen = cpp::numeric_limits<size_t>::max()) {
+  using Word = unsigned int;
   const unsigned char *char_ptr = src;
   size_t cur = 0;
 
+  // If the maximum size of the string is small, the overhead of aligning to a
+  // word boundary and generating a bitmask of the appropriate size may be
+  // greater than the gains from reading larger chunks. Based on some testing,
+  // the crossover point between when it's faster to just read bytewise and read
+  // blocks is somewhere between 16 and 32, so 4 times the size of the block
+  // should be in that range.
+  if (max_strlen < (sizeof(Word) * 4)) {
+    return element::find_first_character(src, ch, max_strlen);
+  }
+  size_t n = max_strlen;
   // Step 1: read 1 byte at a time to align to block size
   for (; reinterpret_cast<uintptr_t>(char_ptr) % sizeof(Word) != 0 && cur < n;
        ++char_ptr, ++cur) {
@@ -153,31 +179,35 @@ find_first_character_wide_read(const unsigned char *src, unsigned char ch,
   return const_cast<unsigned char *>(char_ptr);
 }
 
-LIBC_INLINE void *find_first_character_byte_read(const unsigned char *src,
-                                                 unsigned char ch, size_t n) {
-  for (; n && *src != ch; --n, ++src)
-    ;
-  return n ? const_cast<unsigned char *>(src) : nullptr;
+} // namespace wide
+
+// Dispatch mechanism for implementations of performance-sensitive
+// functions. Always measure, but generally from lower- to higher-performance
+// order:
+//
+// 1. element - read char-by-char or wchar-by-wchar
+// 3. wide - read word-by-word
+// 3. generic - read using clang's internal vector types
+// 4. arch - hand-coded per architecture. Possibly in asm, or with intrinsics.
+//
+//The called implemenation is chosen at build-time by setting
+// LIBC_CONF_{FUNC}_IMPL in config.json
+static constexpr auto &string_length_impl =
+    LIBC_COPT_STRING_LENGTH_IMPL::string_length;
+static constexpr auto &find_first_character_impl =
+    LIBC_COPT_FIND_FIRST_CHARACTER_IMPL::find_first_character;
+
+template <typename T> LIBC_INLINE size_t string_length(const T *src) {
+  if constexpr (cpp::is_same_v<T, char>)
+    return string_length_impl(src);
+  return element::string_length_element<T>(src);
 }
 
 // Returns the first occurrence of 'ch' within the first 'n' characters of
 // 'src'. If 'ch' is not found, returns nullptr.
 LIBC_INLINE void *find_first_character(const unsigned char *src,
                                        unsigned char ch, size_t max_strlen) {
-#ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
-  // If the maximum size of the string is small, the overhead of aligning to a
-  // word boundary and generating a bitmask of the appropriate size may be
-  // greater than the gains from reading larger chunks. Based on some testing,
-  // the crossover point between when it's faster to just read bytewise and read
-  // blocks is somewhere between 16 and 32, so 4 times the size of the block
-  // should be in that range.
-  // Unsigned int is used for the same reason as in strlen.
-  using BlockType = unsigned int;
-  if (max_strlen > (sizeof(BlockType) * 4)) {
-    return find_first_character_wide_read<BlockType>(src, ch, max_strlen);
-  }
-#endif
-  return find_first_character_byte_read(src, ch, max_strlen);
+  return find_first_character_impl(src, ch, max_strlen);
 }
 
 // Returns the maximum length span that contains only characters not found in
