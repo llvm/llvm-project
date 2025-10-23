@@ -1764,7 +1764,10 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
       // Objective-C lifetime, this is a non-trivial assignment.
       if (LhsT.getNonReferenceType().hasNonTrivialObjCLifetime())
         return false;
-
+      const ASTContext &Context = Self.getASTContext();
+      if (Context.containsAddressDiscriminatedPointerAuth(LhsT) ||
+          Context.containsAddressDiscriminatedPointerAuth(RhsT))
+        return false;
       return !Result.get()->hasNonTrivialCall(Self.Context);
     }
 

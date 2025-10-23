@@ -99,13 +99,12 @@ static bool isValidPreserveEnumValueArg(Expr *Arg) {
     return false;
 
   // The type must be EnumType.
-  const Type *Ty = ArgType->getUnqualifiedDesugaredType();
-  const auto *ET = Ty->getAs<EnumType>();
-  if (!ET)
+  const auto *ED = ArgType->getAsEnumDecl();
+  if (!ED)
     return false;
 
   // The enum value must be supported.
-  return llvm::is_contained(ET->getOriginalDecl()->enumerators(), Enumerator);
+  return llvm::is_contained(ED->enumerators(), Enumerator);
 }
 
 bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,

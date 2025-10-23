@@ -463,8 +463,7 @@ define amdgpu_kernel void @store_load_sindex_kernel(i32 %idx) {
 ; GFX942-LABEL: store_load_sindex_kernel:
 ; GFX942:       ; %bb.0: ; %bb
 ; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
-; GFX942-NEXT:    s_mov_b32 s1, 15
-; GFX942-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
@@ -611,9 +610,8 @@ define amdgpu_ps void @store_load_sindex_foo(i32 inreg %idx) {
 ;
 ; GFX942-LABEL: store_load_sindex_foo:
 ; GFX942:       ; %bb.0: ; %bb
-; GFX942-NEXT:    s_mov_b32 s2, 15
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
-; GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
 ; GFX942-NEXT:    scratch_store_dword off, v0, s1 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -1590,8 +1588,7 @@ define amdgpu_kernel void @store_load_sindex_small_offset_kernel(i32 %idx) {
 ; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GFX942-NEXT:    scratch_load_dword v0, off, off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s1, 15
-; GFX942-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
@@ -1808,10 +1805,9 @@ define amdgpu_ps void @store_load_sindex_small_offset_foo(i32 inreg %idx) {
 ; GFX942-NEXT:    scratch_load_dword v0, off, off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
-; GFX942-NEXT:    s_mov_b32 s2, 15
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
 ; GFX942-NEXT:    s_addk_i32 s1, 0x100
-; GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX942-NEXT:    scratch_store_dword off, v0, s1 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -2888,8 +2884,7 @@ define amdgpu_kernel void @store_load_sindex_large_offset_kernel(i32 %idx) {
 ; GFX942-NEXT:    s_load_dword s0, s[4:5], 0x24
 ; GFX942-NEXT:    scratch_load_dword v0, off, off offset:4 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    s_mov_b32 s1, 15
-; GFX942-NEXT:    v_mov_b32_e32 v0, s1
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
@@ -3106,10 +3101,9 @@ define amdgpu_ps void @store_load_sindex_large_offset_foo(i32 inreg %idx) {
 ; GFX942-NEXT:    scratch_load_dword v0, off, off offset:4 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s1, s0, 2
-; GFX942-NEXT:    s_mov_b32 s2, 15
 ; GFX942-NEXT:    s_and_b32 s0, s0, 15
 ; GFX942-NEXT:    s_addk_i32 s1, 0x4004
-; GFX942-NEXT:    v_mov_b32_e32 v0, s2
+; GFX942-NEXT:    v_mov_b32_e32 v0, 15
 ; GFX942-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX942-NEXT:    scratch_store_dword off, v0, s1 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)

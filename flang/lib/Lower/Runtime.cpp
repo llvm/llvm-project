@@ -39,8 +39,7 @@ static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   if (parentOp->getDialect()->getNamespace() ==
       mlir::omp::OpenMPDialect::getDialectNamespace())
     Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
-  else if (parentOp->getDialect()->getNamespace() ==
-           mlir::acc::OpenACCDialect::getDialectNamespace())
+  else if (Fortran::lower::isInsideOpenACCComputeConstruct(builder))
     Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
   else
     fir::UnreachableOp::create(builder, loc);

@@ -3177,7 +3177,7 @@ void OmpStructureChecker::CheckReductionObjectTypes(
     // r = 0; r = r + r2
     // But it might be valid to use these with DECLARE REDUCTION.
     // Assumed size is already caught elsewhere.
-    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
+    bool cannotBeBuiltinReduction{IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
       if (!IsReductionAllowedForType(

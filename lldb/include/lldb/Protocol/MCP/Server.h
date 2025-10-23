@@ -58,7 +58,7 @@ public:
   llvm::Error Run();
 
 protected:
-  Capabilities GetCapabilities();
+  ServerCapabilities GetCapabilities();
 
   using RequestHandler =
       std::function<llvm::Expected<Response>(const Request &)>;
