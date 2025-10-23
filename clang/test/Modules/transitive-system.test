@@ -2,9 +2,9 @@
 // RUN: split-file %s %t
 
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-name=direct > %t/result1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=direct > %t/result1.json
 // RUN: rm -rf %t/cache
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-name=transitive > %t/result2.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -module-names=transitive > %t/result2.json
 // RUN: %deps-to-rsp %t/result1.json --module-name transitive > %t/1.rsp
 // RUN: %deps-to-rsp %t/result2.json --module-name transitive > %t/2.rsp
 // RUN: diff %t/1.rsp %t/2.rsp

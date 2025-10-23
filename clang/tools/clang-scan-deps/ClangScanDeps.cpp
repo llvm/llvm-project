@@ -87,7 +87,7 @@ static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
-static std::optional<std::string> ModuleName;
+static std::optional<std::string> ModuleNames;
 static std::vector<std::string> ModuleDepTargets;
 static std::string TranslationUnitFile;
 static bool DeprecatedDriverCommand;
@@ -205,8 +205,8 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
-    ModuleName = A->getValue();
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_names_EQ))
+    ModuleNames = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
     ModuleDepTargets.emplace_back(A->getValue());
@@ -1018,7 +1018,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
   };
 
   if (Format == ScanningOutputFormat::Full)
-    FD.emplace(!ModuleName ? Inputs.size() : 0);
+    FD.emplace(!ModuleNames ? Inputs.size() : 0);
 
   std::atomic<size_t> NumStatusCalls = 0;
   std::atomic<size_t> NumOpenFileForReadCalls = 0;
@@ -1092,7 +1092,11 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
                                              MakeformatOS, Errs))
             HadErrors = true;
         }
-      } else if (ModuleName) {
+      } else if (ModuleNames) {
+        StringRef ModuleNameRef(*ModuleNames);
+        SmallVector<StringRef> Names;
+        ModuleNameRef.split(Names, ',');
+
         if (llvm::Error Err = WorkerTool.initializeCompilerInstanceWithContext(
                 CWD, Input->CommandLine)) {
           handleErrorWithInfoString(
@@ -1102,12 +1106,16 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
           continue;
         }
 
-        auto MaybeModuleDepsGraph =
-            WorkerTool.computeDependenciesByNameWithContext(
-                *ModuleName, AlreadySeenModules, LookupOutput);
-        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
-                               LocalIndex, DependencyOS, Errs))
-          HadErrors = true;
+        for (auto N : Names) {
+          auto MaybeModuleDepsGraph =
+              WorkerTool.computeDependenciesByNameWithContext(
+                  N, AlreadySeenModules, LookupOutput);
+          if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
+                                 DependencyOS, Errs)) {
+            HadErrors = true;
+            break;
+          }
+        }
 
         if (llvm::Error Err =
                 WorkerTool.finalizeCompilerInstanceWithContext()) {

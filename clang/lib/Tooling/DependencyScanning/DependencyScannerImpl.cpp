@@ -777,6 +777,11 @@ llvm::Error CompilerInstanceWithContext::initialize() {
   PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
   OutputOpts = takeDependencyOutputOptionsFrom(CI);
 
+  // We do not create the target in initializeScanCompilerInstance because
+  // setting it here is unique for by-name lookups. We create the target only
+  // once here, and the information is reused for all computeDependencies calls.
+  // We do not need to call createTarget explicitly if we go through
+  // CompilerInstance::ExecuteAction to perform scanning.
   CI.createTarget();
 
   return llvm::Error::success();
@@ -787,7 +792,6 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     DependencyActionController &Controller) {
   auto &CI = *CIPtr;
 
-  CI.clearDependencyCollectors();
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
       Worker.Service,
@@ -856,7 +860,9 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   Consumer.handleBuildCommand(
       {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
 
-  // Remove the PPCallbacks since they are going out of scope.
+  // Remove the DependencyCollecgtors and PPCallbacks since they are going out
+  // of scope.
+  CI.clearDependencyCollectors();
   CI.getPreprocessor().removePPCallbacks();
   return llvm::Error::success();
 }
