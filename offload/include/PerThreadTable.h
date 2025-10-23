@@ -34,9 +34,7 @@ template <typename ObjectType> struct PerThread {
   PerThread(PerThread &&) = delete;
   PerThread &operator=(const PerThread &) = delete;
   PerThread &operator=(PerThread &&) = delete;
-  ~PerThread() {
-    ThreadDataList.clear();
-  }
+  ~PerThread() { ThreadDataList.clear(); }
 
 private:
   PerThreadData &getThreadData() {
@@ -117,9 +115,7 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   PerThreadTable(PerThreadTable &&) = delete;
   PerThreadTable &operator=(const PerThreadTable &) = delete;
   PerThreadTable &operator=(PerThreadTable &&) = delete;
-  ~PerThreadTable() {
-    ThreadDataList.clear();
-  }
+  ~PerThreadTable() { ThreadDataList.clear(); }
 
 private:
   PerThreadData &getThreadData() {
