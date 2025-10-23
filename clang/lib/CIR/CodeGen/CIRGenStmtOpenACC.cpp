@@ -306,9 +306,10 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  // For now, we are only support 'read', so diagnose. We can switch on the kind
-  // later once we start implementing the other 3 forms.
-  if (s.getAtomicKind() != OpenACCAtomicKind::Read) {
+  // For now, we are only support 'read'/'write', so diagnose. We can switch on
+  // the kind later once we start implementing the other 2 forms. While we
+  if (s.getAtomicKind() != OpenACCAtomicKind::Read &&
+      s.getAtomicKind() != OpenACCAtomicKind::Write) {
     cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
     return mlir::failure();
   }
@@ -318,17 +319,41 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
   // it has custom emit logic.
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
   OpenACCAtomicConstruct::StmtInfo inf = s.getAssociatedStmtInfo();
-  // Atomic 'read' only permits 'v = x', where v and x are both scalar L values.
-  // The getAssociatedStmtInfo strips off implicit casts, which includes
-  // implicit conversions and L-to-R-Value conversions, so we can just emit it
-  // as an L value.  The Flang implementation has no problem with different
-  // types, so it appears that the dialect can handle the conversions.
-  mlir::Value v = emitLValue(inf.V).getPointer();
-  mlir::Value x = emitLValue(inf.X).getPointer();
-  mlir::Type resTy = convertType(inf.V->getType());
-  auto op = mlir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
-                                            /*ifCond=*/{});
-  emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
-                     s.clauses());
-  return mlir::success();
+
+  switch (s.getAtomicKind()) {
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update:
+  case OpenACCAtomicKind::Capture:
+    llvm_unreachable("Unimplemented atomic construct type, should have "
+                     "diagnosed/returned above");
+    return mlir::failure();
+  case OpenACCAtomicKind::Read: {
+
+    // Atomic 'read' only permits 'v = x', where v and x are both scalar L
+    // values. The getAssociatedStmtInfo strips off implicit casts, which
+    // includes implicit conversions and L-to-R-Value conversions, so we can
+    // just emit it as an L value.  The Flang implementation has no problem with
+    // different types, so it appears that the dialect can handle the
+    // conversions.
+    mlir::Value v = emitLValue(inf.V).getPointer();
+    mlir::Value x = emitLValue(inf.X).getPointer();
+    mlir::Type resTy = convertType(inf.V->getType());
+    auto op = mlir::acc::AtomicReadOp::create(builder, start, x, v, resTy,
+                                              /*ifCond=*/{});
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                       s.clauses());
+    return mlir::success();
+  }
+  case OpenACCAtomicKind::Write: {
+    mlir::Value x = emitLValue(inf.X).getPointer();
+    mlir::Value expr = emitAnyExpr(inf.Expr).getValue();
+    auto op = mlir::acc::AtomicWriteOp::create(builder, start, x, expr,
+                                               /*ifCond=*/{});
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                       s.clauses());
+    return mlir::success();
+  }
+  }
+
+  llvm_unreachable("unknown OpenACC atomic kind");
 }

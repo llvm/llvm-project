@@ -821,6 +821,7 @@ public:
   struct StmtInfo {
     const Expr *V;
     const Expr *X;
+    const Expr *Expr;
     // TODO: OpenACC: We should expand this as we're implementing the other
     // atomic construct kinds.
   };
