@@ -4721,9 +4721,6 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   if (!(Subtarget->hasVLX() || NVT.is512BitVector()))
     return false;
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
   auto getFoldableLogicOp = [](SDValue Op) {
     // Peek through single use bitcast.
     if (Op.getOpcode() == ISD::BITCAST && Op.hasOneUse())
@@ -4739,6 +4736,37 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
 
     return SDValue();
   };
+
+  // Identify and (optionally) peel an outer NOT that wraps a pure logic tree
+  auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
+    if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
+        ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
+      SDNode *InnerN = Op->getOperand(0).getNode();
+
+      unsigned InnerOpc = InnerN->getOpcode();
+      if (InnerOpc != ISD::AND && InnerOpc != ISD::OR &&
+          InnerOpc != ISD::XOR && InnerOpc != X86ISD::ANDNP) {
+        return Op;
+      }
+
+      SDValue InnerN0 = InnerN->getOperand(0);
+      SDValue InnerN1 = InnerN->getOperand(1);
+      SDValue FoldableOp;
+      if (getFoldableLogicOp(InnerN1) || getFoldableLogicOp(InnerN0))
+        return InnerN;
+    }
+    return Op;
+  };
+
+  SDNode *OriN = N;
+  bool PeeledOuterNot = false;
+  N = tryPeelOuterNotWrappingLogic(N);
+  if (N != OriN)
+    PeeledOuterNot = true;
+    
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
 
   SDValue A, FoldableOp;
   if ((FoldableOp = getFoldableLogicOp(N1))) {
@@ -4798,7 +4826,10 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   case ISD::XOR: Imm ^= TernlogMagicA; break;
   }
 
-  return matchVPTERNLOG(N, ParentA, ParentB, ParentC, A, B, C, Imm);
+  if (PeeledOuterNot)
+    Imm = ~Imm;
+
+  return matchVPTERNLOG(OriN, ParentA, ParentB, ParentC, A, B, C, Imm);
 }
 
 /// If the high bits of an 'and' operand are known zero, try setting the
