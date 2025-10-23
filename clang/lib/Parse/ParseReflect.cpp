@@ -50,7 +50,7 @@ ExprResult Parser::ParseCXXReflectExpression(SourceLocation OpLoc) {
       TSI = Actions.getASTContext().getTrivialTypeSourceInfo(QT, OperandLoc);
 
     QualType Canon = QT.getCanonicalType();
-    if(Canon->isBuiltinType()) {
+    if (Canon->isBuiltinType()) {
       // Only supports builtin types for now
       return Actions.ActOnCXXReflectExpr(OpLoc, TSI);
     }
