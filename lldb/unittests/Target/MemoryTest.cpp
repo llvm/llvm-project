@@ -367,3 +367,97 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
     ASSERT_TRUE(result.empty());
 #endif
 }
+TEST_F(MemoryTest, TestReadPointersFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process);
+
+  // Read pointers at arbitrary addresses.
+  llvm::SmallVector<addr_t> ptr_locs = {0x0, 0x100, 0x2000, 0x123400};
+  // Because of how DummyReaderProcess works, each byte of a memory read result
+  // is its address modulo 256:
+  constexpr addr_t expected_result = 0x0706050403020100;
+
+  llvm::SmallVector<std::optional<addr_t>> read_results =
+      process->ReadPointersFromMemory(ptr_locs);
+
+  for (std::optional<addr_t> maybe_ptr : read_results) {
+    ASSERT_TRUE(maybe_ptr.has_value());
+    EXPECT_EQ(*maybe_ptr, expected_result);
+  }
+}
+
+TEST_F(MemoryTest, TestReadUnsignedIntegersFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process =
+      std::make_shared<DummyReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process);
+
+  { // Test reads of size 1
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/1);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      EXPECT_EQ(*maybe_int, static_cast<uint8_t>(loc));
+    }
+  }
+
+  { // Test reads of size 2
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/2);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result = ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+
+  { // Test reads of size 4
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/4);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result =
+          ((lsb + 3) << 24) | ((lsb + 2) << 16) | ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+
+  { // Test reads of size 8
+    llvm::SmallVector<addr_t> locs = {0x0, 0x101, 0x2002, 0x123403};
+    llvm::SmallVector<std::optional<addr_t>> read_results =
+        process->ReadUnsignedIntegersFromMemory(locs, /*byte_size=*/8);
+
+    for (auto [maybe_int, loc] : llvm::zip(read_results, locs)) {
+      ASSERT_TRUE(maybe_int.has_value());
+      uint64_t lsb = static_cast<uint8_t>(loc);
+      uint64_t expected_result = ((lsb + 7) << 56) | ((lsb + 6) << 48) |
+                                 ((lsb + 5) << 40) | ((lsb + 4) << 32) |
+                                 ((lsb + 3) << 24) | ((lsb + 2) << 16) |
+                                 ((lsb + 1) << 8) | lsb;
+      EXPECT_EQ(*maybe_int, expected_result);
+    }
+  }
+}
