@@ -179,8 +179,23 @@ bool ConstantAggregateBuilder::add(mlir::TypedAttr typedAttr, CharUnits offset,
   }
 
   // Uncommon case: constant overlaps what we've already created.
-  cgm.errorNYI("overlapping constants");
-  return false;
+  std::optional<size_t> firstElemToReplace = splitAt(offset);
+  if (!firstElemToReplace)
+    return false;
+
+  CharUnits cSize = getSize(typedAttr);
+  std::optional<size_t> lastElemToReplace = splitAt(offset + cSize);
+  if (!lastElemToReplace)
+    return false;
+
+  assert((firstElemToReplace == lastElemToReplace || allowOverwrite) &&
+         "unexpectedly overwriting field");
+
+  Element newElt(typedAttr, offset);
+  replace(elements, *firstElemToReplace, *lastElemToReplace, {newElt});
+  size = std::max(size, offset + cSize);
+  naturalLayout = false;
+  return true;
 }
 
 bool ConstantAggregateBuilder::addBits(llvm::APInt bits, uint64_t offsetInBits,

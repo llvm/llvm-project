@@ -5,6 +5,21 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+struct BitfieldStruct {
+  unsigned int a:4;
+  unsigned int b:14;
+  unsigned int c:14;
+};
+
+BitfieldStruct overlapping_init = { 3, 2, 1 };
+
+// This is unintuitive. The bitfields are initialized using a struct of constants
+// that maps to the bitfields but splits the value into bytes.
+
+// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<35> : !u8i, #cir.int<0> : !u8i, #cir.int<4> : !u8i, #cir.int<0> : !u8i}> : !rec_anon_struct
+// LLVM: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+// OGCG: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+
 struct S {
   int a, b, c;
 };
