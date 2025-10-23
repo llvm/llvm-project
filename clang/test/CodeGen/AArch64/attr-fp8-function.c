@@ -40,7 +40,7 @@ void test_svdot_lane_za32_f8_vg1x2(uint32_t slice, svmfloat8x2_t zn, svmfloat8_t
 
 // CHECK: attributes [[ATTR0:#.*]] = {{{.*}}}
 // CHECK: attributes [[ATTR1:#.*]] = {{{.*}}}
-// CHECK: attributes [[ATTR2]] = { nocallback nofree nosync nounwind willreturn memory(aarch64_fpmr: write) }
-// CHECK: attributes [[ATTR3]] = { nocallback nofree nosync nounwind willreturn memory(aarch64_fpmr: read) }
+// CHECK: attributes [[ATTR2]] = { nocallback nofree nosync nounwind willreturn memory(target_mem0: write) }
+// CHECK: attributes [[ATTR3]] = { nocallback nofree nosync nounwind willreturn memory(target_mem0: read) }
 // CHECK: attributes [[ATTR4:#.*]] = {{{.*}}}
-// CHECK: attributes [[ATTR5:#.*]] = { nocallback nofree nosync nounwind willreturn memory(aarch64_fpmr: read, aarch64_za: readwrite) }
+// CHECK: attributes [[ATTR5:#.*]] = { nocallback nofree nosync nounwind willreturn memory(target_mem0: read, target_mem1: readwrite) }
