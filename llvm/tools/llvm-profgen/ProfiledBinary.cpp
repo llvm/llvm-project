@@ -66,6 +66,13 @@ static cl::list<std::string> DisassembleFunctions(
     cl::cat(ProfGenCategory));
 
 static cl::opt<bool>
+    LoadFunctionFromSymbol("load-function-from-symbol",
+                           cl::desc("Gather additional binary function info "
+                                    "from symbols (e.g. .symtab) in case "
+                                    "dwarf info is incomplete."),
+                           cl::cat(ProfGenCategory));
+
+static cl::opt<bool>
     KernelBinary("kernel",
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
@@ -257,7 +264,8 @@ void ProfiledBinary::load() {
   if (ShowDisassemblyOnly)
     decodePseudoProbe(Obj);
 
-  populateSymbolsFromBinary(Obj);
+  if (LoadFunctionFromSymbol || UsePseudoProbes)
+    populateSymbolsFromBinary(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
