@@ -167,6 +167,9 @@ enum NodeType : unsigned {
   FRECIPE,
   FRSQRTE,
 
+  VFCVTL,
+  VFCVTH,
+
   // Vector logicial left / right shift by immediate
   VSLLI,
   VSRLI,
@@ -415,6 +418,7 @@ private:
   SDValue lowerVECREDUCE_ADD(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

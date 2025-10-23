@@ -2403,6 +2403,11 @@ def : Pat<(int_loongarch_lasx_xvpickve_w_f v8f32:$xj, timm:$imm),
 def : Pat<(int_loongarch_lasx_xvpickve_d_f v4f64:$xj, timm:$imm),
           (XVPICKVE_D v4f64:$xj, (to_valid_timm timm:$imm))>;
 
+def : Pat<(v4f64 (loongarch_vfcvtl_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTL_D_S LASX256:$xj)>;
+def : Pat<(v4f64 (loongarch_vfcvth_d_s (v8f32 LASX256:$xj))),
+          (XVFCVTH_D_S LASX256:$xj)>;
+
 // load
 def : Pat<(int_loongarch_lasx_xvld GPR:$rj, timm:$imm),
           (XVLD GPR:$rj, (to_valid_timm timm:$imm))>;
