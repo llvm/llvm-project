@@ -176,7 +176,6 @@ public:
   }
 
   template <class F> void clear(F f) {
-    std::lock_guard<std::mutex> Lock(Mutex);
     for (auto ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
