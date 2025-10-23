@@ -8188,6 +8188,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
               } else {
                 W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
               }
+              if (PAM.FeatEnable.PropellerCfg)
+                W.printNumber("Propeller Frequency", PBBE.PropellerBlockFreq);
             }
 
             if (PAM.FeatEnable.BrProb) {
@@ -8200,6 +8202,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
                 } else {
                   W.printHex("Probability", Succ.Prob.getNumerator());
                 }
+                if (PAM.FeatEnable.PropellerCfg)
+                  W.printNumber("Propeller Probability", Succ.PropellerFreq);
               }
             }
           }
