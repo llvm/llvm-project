@@ -16,12 +16,12 @@ entry:
 define <vscale x 4 x i32> @insert_div_splat_lhs() {
 ; CHECK-LABEL: @insert_div_splat_lhs(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[DIV:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat (i32 5), <4 x i32> splat (i32 2), i64 0)
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[DIV]]
 ;
 entry:
-  %0 = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> splat (i32 9), i64 0)
-  %div = udiv <vscale x 4 x i32> splat (i32 3), %0
+  %0 = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> splat(i32 2), <4 x i32> splat (i32 5), i64 0)
+  %div = udiv <vscale x 4 x i32> splat (i32 10), %0
   ret <vscale x 4 x i32> %div
 }
 
