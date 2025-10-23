@@ -5249,10 +5249,10 @@ void Target::DumpSectionLoadList(Stream &s) {
 void Target::NotifyBreakpointChanged(Breakpoint &bp,
                                      lldb::BreakpointEventType eventKind) {
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
-    std::shared_ptr<Breakpoint::BreakpointEventData> data =
+    std::shared_ptr<Breakpoint::BreakpointEventData> data_sp =
         std::make_shared<Breakpoint::BreakpointEventData>(
             eventKind, bp.shared_from_this());
-    BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
+    BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data_sp);
   }
 }
 

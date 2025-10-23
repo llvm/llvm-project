@@ -16,8 +16,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
-  Target &target = bp->GetTarget();
-  target.NotifyBreakpointChanged(*bp, event);
+  bp->GetTarget().NotifyBreakpointChanged(*bp, event);
 }
 
 BreakpointList::BreakpointList(bool is_internal)

@@ -1100,9 +1100,6 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
 void Breakpoint::SendBreakpointChangedEvent(
     lldb::BreakpointEventType eventKind) {
   if (!IsInternal()) {
-    std::shared_ptr<BreakpointEventData> data =
-        std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
-
     GetTarget().NotifyBreakpointChanged(*this, eventKind);
   }
 }

@@ -1348,14 +1348,14 @@ public:
 
   /// Sends a breakpoint notification event if any listener is registered.
   /// \param[in] bp
-  ///     The breakpoint that was hit.
+  ///     The breakpoint to send a nofication for.
   /// \param[in] eventKind
   ///     The kind of event that occurred.
   void NotifyBreakpointChanged(Breakpoint &bp,
                                lldb::BreakpointEventType eventKind);
   /// Sends a breakpoint notification event if any listener is registered.
   /// \param[in] bp
-  ///     The breakpoint that was hit.
+  ///     The breakpoint that has changed.
   /// \param[in] data
   ///     The data associated with the event.
   void NotifyBreakpointChanged(Breakpoint &bp,
