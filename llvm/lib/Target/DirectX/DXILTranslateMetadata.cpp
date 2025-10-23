@@ -457,16 +457,17 @@ public:
   StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
-    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
-    AU.addPreserved<RootSignatureAnalysisWrapper>();
-    AU.addPreserved<DXILResourceWrapperPass>();
+
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
-    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILResourceBindingWrapperPass>();
+    AU.addPreserved<DXILResourceWrapperPass>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
 
   bool runOnModule(Module &M) override {
