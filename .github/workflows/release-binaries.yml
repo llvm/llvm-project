@@ -244,7 +244,7 @@ jobs:
         dotnet tool install --global wix
 
     - name: Install libxml2 for Windows
-      if: runner.os == 'Windows'
+      if: runner.os == 'Windows' && false
       run: |
         # Build libxml2 for windows
         curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.12/libxml2-v2.9.12.tar.gz
@@ -267,6 +267,10 @@ jobs:
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded 
         ninja -v -C libxml-build install
 
+    - name: Install libxml2
+      run: |
+        vcpkg libxml2
+
     - name: Configure
       id: build
       shell: bash
@@ -278,7 +282,6 @@ jobs:
             -C clang/cmake/caches/Release.cmake \
             -DCMAKE_CXX_FLAGS=-DLIBXML_STATIC \
             -DCMAKE_C_FLAGS=-DLIBXML_STATIC \
-            -DCMAKE_PREFIX_PATH=/s/libxml-install \
             -DBOOTSTRAP_BOOTSTRAP_CPACK_PACKAGE_FILE_NAME="${{ needs.prepare.outputs.release-binary-basename }}"
 
     - name: Build
