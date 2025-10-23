@@ -14,9 +14,10 @@
 // Maps internal errors to the available errnos on the platform.
 #if defined(__linux__)
 #include "linux/error_converter.h"
-#elif defined(__ELF__)
-// TODO: Ideally we would have LIBC_TARGET_OS_IS_BAREMETAL.
-#include "baremetal/error_converter.h"
+#elif defined(__APPLE__)
+#include "darwin/error_converter.h"
+#else
+#include "generic/error_converter.h"
 #endif
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_ERROR_CONVERTER_H

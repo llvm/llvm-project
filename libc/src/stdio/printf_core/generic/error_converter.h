@@ -1,4 +1,4 @@
-//===-- Baremetal implementation of error converter -------------*- C++ -*-===//
+//===-- Generic implementation of error converter ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_BAREMETAL_ERROR_CONVERTER_H
-#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_BAREMETAL_ERROR_CONVERTER_H
+#ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_CONVERTER_H
+#define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_CONVERTER_H
 
 #include "hdr/errno_macros.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -46,4 +46,4 @@ LIBC_INLINE static int internal_error_to_errno(int internal_error) {
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_BAREMETAL_ERROR_CONVERTER_H
+#endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_GENERIC_ERROR_CONVERTER_H

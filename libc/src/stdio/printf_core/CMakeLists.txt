@@ -32,14 +32,15 @@ if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
 endif()
 
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
-  return()
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+else()
+  add_subdirectory(generic)
 endif()
-add_subdirectory(${LIBC_TARGET_OS})
 
 set(target_error_converter libc.src.stdio.printf_core.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_error_converter)
 if(NOT TARGET ${target_error_converter})
-  return()
+    set(target_error_converter libc.src.stdio.printf_core.generic.generic_error_converter)
 endif()
 
 add_header_library(

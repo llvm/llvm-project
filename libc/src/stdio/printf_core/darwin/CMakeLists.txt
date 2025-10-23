@@ -1,5 +1,5 @@
 add_header_library(
-  baremetal_error_converter
+  darwin_error_converter
   HDRS
     error_converter.h
   DEPENDS
