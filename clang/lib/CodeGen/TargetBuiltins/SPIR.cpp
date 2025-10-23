@@ -151,18 +151,6 @@ Value *CodeGenFunction::EmitSPIRVBuiltinExpr(unsigned BuiltinID,
         Intrinsic::spv_global_offset,
         ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr,
         "spv.global.offset");
-  case SPIRV::BI__builtin_spirv_ddx_coarse:
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/getTypes().ConvertType(E->getType()),
-        Intrinsic::spv_ddx_coarse,
-        ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr,
-        "spv.ddx.coarse");
-  case SPIRV::BI__builtin_spirv_ddy_coarse:
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/getTypes().ConvertType(E->getType()),
-        Intrinsic::spv_ddy_coarse,
-        ArrayRef<Value *>{EmitScalarExpr(E->getArg(0))}, nullptr,
-        "spv.ddy.coarse");
   }
   return nullptr;
 }
