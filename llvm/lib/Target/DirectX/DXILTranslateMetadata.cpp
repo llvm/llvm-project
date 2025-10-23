@@ -455,10 +455,10 @@ public:
   StringRef getPassName() const override { return "DXIL Translate Metadata"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<RootSignatureAnalysisWrapper>();
 
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
