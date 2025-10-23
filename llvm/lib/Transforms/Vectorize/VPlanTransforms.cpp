@@ -3659,28 +3659,23 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                            VPValue *&ValB, VPWidenRecipe *Mul) {
     if (ExtA && !ExtB && ValB->isLiveIn()) {
       Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
-      Type *WideTy = Ctx.Types.inferScalarType(ExtA);
       Instruction::CastOps ExtOpc = ExtA->getOpcode();
-      auto *Const = dyn_cast<ConstantInt>(ValB->getLiveInIRValue());
-      if (Const &&
-          llvm::canConstantBeExtended(
-              Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc))) {
-        // The truncate ensures that the type of each extended operand is the
-        // same, and it's been proven that the constant can be extended from
-        // NarrowTy safely. Necessary since ExtA's extended operand would be
-        // e.g. an i8, while the const will likely be an i32. This will be
-        // elided by later optimisations.
-        auto *Trunc =
-            new VPWidenCastRecipe(Instruction::CastOps::Trunc, ValB, NarrowTy);
-        Trunc->insertBefore(*ExtA->getParent(), std::next(ExtA->getIterator()));
-
-        VPWidenCastRecipe *NewCast =
-            new VPWidenCastRecipe(ExtOpc, Trunc, WideTy);
-        NewCast->insertAfter(Trunc);
-        ExtB = NewCast;
-        ValB = NewCast;
-        Mul->setOperand(1, NewCast);
-      }
+      const APInt *Const;
+      if (!match(ValB, m_APInt(Const)) ||
+          !llvm::canConstantBeExtended(
+              Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
+        return;
+      // The truncate ensures that the type of each extended operand is the
+      // same, and it's been proven that the constant can be extended from
+      // NarrowTy safely. Necessary since ExtA's extended operand would be
+      // e.g. an i8, while the const will likely be an i32. This will be
+      // elided by later optimisations.
+      VPBuilder Builder(Mul);
+      auto *Trunc =
+          Builder.createWidenCast(Instruction::CastOps::Trunc, ValB, NarrowTy);
+      Type *WideTy = Ctx.Types.inferScalarType(ExtA);
+      ValB = ExtB = Builder.createWidenCast(ExtOpc, Trunc, WideTy);
+      Mul->setOperand(1, ExtB);
     }
   };
 
