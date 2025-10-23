@@ -28,3 +28,10 @@ std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForMemcmp(
     SDValue Op3, const CallInst *CI) const {
   return DAG.getMemcmp(Chain, dl, Op1, Op2, Op3, CI);
 }
+
+std::pair<SDValue, SDValue>
+PPCSelectionDAGInfo::EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL,
+                                             SDValue Chain, SDValue Src,
+                                             const CallInst *CI) const {
+  return DAG.getStrlen(Chain, DL, Src, CI);
+}

@@ -59,12 +59,11 @@ public:
   };
 
   /// Return true if the specified value is loop invariant.
-  bool isLoopInvariant(const Value *V, bool HasCoroSuspendInst = false) const;
+  bool isLoopInvariant(const Value *V) const;
 
   /// Return true if all the operands of the specified instruction are loop
   /// invariant.
-  bool hasLoopInvariantOperands(const Instruction *I,
-                                bool HasCoroSuspendInst = false) const;
+  bool hasLoopInvariantOperands(const Instruction *I) const;
 
   /// If the given value is an instruction inside of the loop and it can be
   /// hoisted, do so to make it trivially loop-invariant.
@@ -618,7 +617,7 @@ public:
 };
 
 /// Function to print a loop's contents as LLVM's text IR assembly.
-LLVM_ABI void printLoop(Loop &L, raw_ostream &OS,
+LLVM_ABI void printLoop(const Loop &L, raw_ostream &OS,
                         const std::string &Banner = "");
 
 /// Find and return the loop attribute node for the attribute @p Name in

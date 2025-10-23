@@ -151,11 +151,11 @@ namespace {
       else StmtVisitor<StmtPrinter>::Visit(S);
     }
 
-    void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
       Indent() << "<<unknown stmt type>>" << NL;
     }
 
-    void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
       OS << "<<unknown expr type>>";
     }
 
@@ -473,12 +473,21 @@ void StmtPrinter::VisitIndirectGotoStmt(IndirectGotoStmt *Node) {
 }
 
 void StmtPrinter::VisitContinueStmt(ContinueStmt *Node) {
-  Indent() << "continue;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "continue " << Node->getLabelDecl()->getIdentifier()->getName()
+       << ';';
+  else
+    OS << "continue;";
   if (Policy.IncludeNewlines) OS << NL;
 }
 
 void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
-  Indent() << "break;";
+  Indent();
+  if (Node->hasLabelTarget())
+    OS << "break " << Node->getLabelDecl()->getIdentifier()->getName() << ';';
+  else
+    OS << "break;";
   if (Policy.IncludeNewlines) OS << NL;
 }
 
@@ -783,6 +792,11 @@ void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
 
 void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
+  Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -2015,11 +2029,7 @@ void StmtPrinter::VisitAtomicExpr(AtomicExpr *Node) {
 
   // AtomicExpr stores its subexpressions in a permuted order.
   PrintExpr(Node->getPtr());
-  if (Node->getOp() != AtomicExpr::AO__c11_atomic_load &&
-      Node->getOp() != AtomicExpr::AO__atomic_load_n &&
-      Node->getOp() != AtomicExpr::AO__scoped_atomic_load_n &&
-      Node->getOp() != AtomicExpr::AO__opencl_atomic_load &&
-      Node->getOp() != AtomicExpr::AO__hip_atomic_load) {
+  if (Node->hasVal1Operand()) {
     OS << ", ";
     PrintExpr(Node->getVal1());
   }

@@ -43,6 +43,7 @@ VERS1.0 {
     omp_get_initial_device;
     omp_target_alloc;
     omp_target_free;
+    omp_target_is_accessible;
     omp_target_is_present;
     omp_target_memcpy;
     omp_target_memcpy_rect;
@@ -68,8 +69,11 @@ VERS1.0 {
     omp_get_interop_int;
     omp_get_interop_name;
     omp_get_interop_type_desc;
-    __tgt_interop_get;
+    __tgt_interop_init;
     __tgt_interop_use;
+    __tgt_interop_destroy;
+    __tgt_interop_get;
+    __tgt_interop_use60;
     __tgt_interop_release;
     __tgt_target_sync;
     __llvmPushCallConfiguration;

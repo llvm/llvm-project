@@ -20,7 +20,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -261,9 +260,16 @@ bool PredicateInfoBuilder::stackIsInScope(const ValueDFSStack &Stack,
   // next to the defs they must go with so that we can know it's time to pop
   // the stack when we hit the end of the phi uses for a given def.
   const ValueDFS &Top = *Stack.back().V;
-  if (Top.LocalNum == LN_Last && Top.PInfo) {
-    if (!VDUse.U)
-      return false;
+  assert(Top.PInfo && "RenameStack should only contain predicate infos (defs)");
+  if (Top.LocalNum == LN_Last) {
+    if (!VDUse.U) {
+      assert(VDUse.PInfo && "A non-use VDUse should have a predicate info");
+      // We should reserve adjacent LN_Last defs for the same phi use.
+      return VDUse.LocalNum == LN_Last &&
+             // If the two phi defs have the same edge, they must be designated
+             // for the same succ BB.
+             getBlockEdge(Top.PInfo) == getBlockEdge(VDUse.PInfo);
+    }
     auto *PHI = dyn_cast<PHINode>(VDUse.U->getUser());
     if (!PHI)
       return false;
@@ -291,6 +297,11 @@ void PredicateInfoBuilder::convertUsesToDFSOrdered(
     Value *Op, SmallVectorImpl<ValueDFS> &DFSOrderedSet) {
   for (auto &U : Op->uses()) {
     if (auto *I = dyn_cast<Instruction>(U.getUser())) {
+      // Lifetime intrinsics must work directly on alloca, do not replace them
+      // with a predicated copy.
+      if (I->isLifetimeStartOrEnd())
+        continue;
+
       ValueDFS VD;
       // Put the phi node uses in the incoming block.
       BasicBlock *IBlock;

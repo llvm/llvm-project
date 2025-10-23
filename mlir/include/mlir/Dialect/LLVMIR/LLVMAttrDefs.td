@@ -11,8 +11,10 @@
 
 include "mlir/Dialect/LLVMIR/LLVMDialect.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 // All of the attributes will extend this class.
 class LLVM_Attr<string name, string attrMnemonic,
@@ -20,6 +22,42 @@ class LLVM_Attr<string name, string attrMnemonic,
                 string baseCppClass = "::mlir::Attribute">
     : AttrDef<LLVM_Dialect, name, traits, baseCppClass> {
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AddressSpaceAttr :
+    LLVM_Attr<"AddressSpace", "address_space", [
+    LLVM_LLVMAddrSpaceAttrInterface,
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
+  let summary = "LLVM address space";
+  let description = [{
+    The `address_space` attribute represents an LLVM address space. It takes an
+    unsigned integer parameter that specifies the address space number.
+
+    Different address spaces in LLVM can have different properties:
+    - Address space 0 is the default/generic address space
+    - Other address spaces may have specific semantics (e.g., shared memory,
+      constant memory, etc.) depending on the target architecture
+
+    Example:
+
+    ```mlir
+    // Address space 0 (default)
+    #llvm.address_space<0>
+
+    // Address space 1 (e.g., global memory on some targets)
+    #llvm.address_space<1>
+
+    // Address space 3 (e.g., shared memory on some GPU targets)
+    #llvm.address_space<3>
+    ```
+  }];
+  let parameters = (ins "unsigned":$addressSpace);
+  let assemblyFormat = "`<` $addressSpace `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -387,17 +425,19 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit",
     OptionalParameter<"StringAttr">:$producer,
     "bool":$isOptimized,
     "DIEmissionKind":$emissionKind,
-    OptionalParameter<"DINameTableKind">:$nameTableKind
+    OptionalParameter<"DINameTableKind">:$nameTableKind,
+    OptionalParameter<"StringAttr">:$splitDebugFilename
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins
       "DistinctAttr":$id, "unsigned":$sourceLanguage, "DIFileAttr":$file,
       "StringAttr":$producer, "bool":$isOptimized,
       "DIEmissionKind":$emissionKind,
-      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind
+      CArg<"DINameTableKind", "DINameTableKind::Default">:$nameTableKind,
+      CArg<"StringAttr", "{}">:$splitDebugFilename
     ), [{
       return $_get(id.getContext(), id, sourceLanguage, file, producer,
-                   isOptimized, emissionKind, nameTableKind);
+                   isOptimized, emissionKind, nameTableKind, splitDebugFilename);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -427,25 +467,25 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFlags">:$flags,
     OptionalParameter<"uint64_t">:$sizeInBits,
     OptionalParameter<"uint64_t">:$alignInBits,
-    OptionalArrayRefParameter<"DINodeAttr">:$elements,
     OptionalParameter<"DIExpressionAttr">:$dataLocation,
     OptionalParameter<"DIExpressionAttr">:$rank,
     OptionalParameter<"DIExpressionAttr">:$allocated,
-    OptionalParameter<"DIExpressionAttr">:$associated
+    OptionalParameter<"DIExpressionAttr">:$associated,
+    OptionalArrayRefParameter<"DINodeAttr">:$elements
   );
   let builders = [
     AttrBuilder<(ins
       "unsigned":$tag, "StringAttr":$name, "DIFileAttr":$file,
       "uint32_t":$line, "DIScopeAttr":$scope, "DITypeAttr":$baseType,
       "DIFlags":$flags, "uint64_t":$sizeInBits, "uint64_t":$alignInBits,
-      "ArrayRef<DINodeAttr>":$elements, "DIExpressionAttr":$dataLocation,
-      "DIExpressionAttr":$rank, "DIExpressionAttr":$allocated,
-      "DIExpressionAttr":$associated
+      "DIExpressionAttr":$dataLocation, "DIExpressionAttr":$rank,
+      "DIExpressionAttr":$allocated, "DIExpressionAttr":$associated,
+      "ArrayRef<DINodeAttr>":$elements
     ), [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/nullptr,
                    tag, name, file, line, scope, baseType, flags, sizeInBits,
-                   alignInBits, elements, dataLocation, rank, allocated,
-                   associated);
+                   alignInBits, dataLocation, rank, allocated,
+                   associated, elements);
     }]>
   ];
   let assemblyFormat = "`<` struct(params) `>`";
@@ -553,7 +593,7 @@ def LLVM_DIGlobalVariable : LLVM_Attr<"DIGlobalVariable", "di_global_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -579,7 +619,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file",
-                                        /*traits=*/[], "DIScopeAttr"> {
+                                        /*traits=*/[], "DILocalScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
     OptionalParameter<"DIFileAttr">:$file,
@@ -637,7 +677,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
-                                      "DIScopeAttr"> {
+                                      "DILocalScopeAttr"> {
   let parameters = (ins
     // DIRecursiveTypeAttrInterface specific parameters.
     OptionalParameter<"DistinctAttr">:$recId,
@@ -1196,6 +1236,47 @@ def LLVM_TBAATagArrayAttr
 }
 
 //===----------------------------------------------------------------------===//
+// MMRATagAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_MMRATagAttr : LLVM_Attr<"MMRATag", "mmra_tag"> {
+  let parameters = (ins
+    StringRefParameter<>:$prefix,
+    StringRefParameter<>:$suffix
+  );
+
+  let summary = "MLIR wrapper around a prefix:suffix MMRA tag";
+
+  let description = [{
+    Defines a single memory model relaxation annotation (MMRA) entry
+    with prefix `$prefix` and suffix `$suffix`. This corresponds directly
+    to a LLVM `!{prefix, suffix}` metadata tuple, which is often written
+    `prefix:shuffix` as shorthand.
+
+    Example:
+    ```mlir
+    #mmra_tag = #llvm.mmmra_tag<"amdgpu-synchronize-as":"local">
+    #mmra_tag1 = #llvm.mmra_tag<"foo":"bar">
+    ```
+
+    Either one MMRA tag or an array of them may be added to any LLVM
+    operation that operates on memory.
+
+    ```mlir
+    %v = llvm.load %ptr {llvm.mmra = #mmra_tag} : !llvm.ptr -> i8
+    llvm.store %v, %ptr2 {llvm.mmra [#mmra_tag, #mmra_tag1]} : i8, !llvm.ptr
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/MemoryModelRelaxationAnnotations.html
+  }];
+
+  let assemblyFormat = "`<` $prefix `` `:` `` $suffix `>`";
+
+  let genMnemonicAlias = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantRangeAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
@@ -1245,7 +1326,8 @@ def LLVM_VScaleRangeAttr : LLVM_Attr<"VScaleRange", "vscale_range"> {
 // TargetFeaturesAttr
 //===----------------------------------------------------------------------===//
 
-def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
+def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features",
+                                        [DLTIQueryInterface]>
 {
   let summary = "LLVM target features attribute";
 
@@ -1298,10 +1380,41 @@ def LLVM_TargetFeaturesAttr : LLVM_Attr<"TargetFeatures", "target_features">
     static constexpr StringLiteral getAttributeName() {
       return StringLiteral("target_features");
     }
+
+    /// Returns the attribute associated with the key.
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
   }];
 
   let assemblyFormat = "`<` `[` (`]`) : ($features^ `]`)? `>`";
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TargetAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TargetAttr : LLVM_Attr<"Target", "target",
+                                [LLVM_TargetAttrInterface]> {
+  let summary = "LLVM target info: triple, chip, features";
+  let description = [{
+    An attribute to hold LLVM target information, specifying LLVM's target
+    `triple` string, the target `chip` string (i.e. the `cpu` string), and
+    target `features` string as an attribute. The latter is optional.
+
+    Responds to DLTI-queries on the keys:
+      * A query for `"triple"` returns the `StringAttr` for the `triple`.
+      * A query for `"chip"` returns the `StringAttr` for the `chip`/`cpu`.
+      * A query for `"features"` returns the `StringAttr`, if provided.
+  }];
+  let parameters = (ins "StringAttr":$triple,
+                        "StringAttr":$chip,
+                        OptionalParameter<"TargetFeaturesAttr", "">:$features);
+
+  let assemblyFormat = [{`<` struct($triple, $chip, $features) `>`}];
+
+  let extraClassDeclaration = [{
+    FailureOr<Attribute> query(DataLayoutEntryKey key);
+  }];
 }
 
 //===----------------------------------------------------------------------===//

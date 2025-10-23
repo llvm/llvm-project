@@ -43,6 +43,9 @@ constexpr static uint32_t MAX_TRIES = 1024;
 // The number of previously allocated slabs we will keep in memory.
 constexpr static uint32_t CACHED_SLABS = 8;
 
+// Configuration for whether or not we will return unused slabs to memory.
+constexpr static bool RECLAIM = true;
+
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
 namespace impl {
@@ -166,7 +169,11 @@ static inline uint32_t get_leader_id(uint64_t ballot, uint32_t id) {
 
 // We use a sentinal value to indicate a failed or in-progress allocation.
 template <typename T> bool is_sentinel(const T &x) {
-  return x == cpp::numeric_limits<T>::max();
+  if constexpr (cpp::is_pointer_v<T>)
+    return reinterpret_cast<uintptr_t>(x) ==
+           cpp::numeric_limits<uintptr_t>::max();
+  else
+    return x == cpp::numeric_limits<T>::max();
 }
 
 } // namespace impl
@@ -395,7 +402,7 @@ private:
       // and obtain exclusive rights to deconstruct it. If the CAS failed either
       // another thread resurrected the counter and we quit, or a parallel read
       // helped us invalidating it. For the latter, claim that flag and return.
-      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n) {
+      if (counter.fetch_sub(n, cpp::MemoryOrder::RELAXED) == n && RECLAIM) {
         uint32_t expected = 0;
         if (counter.compare_exchange_strong(expected, INVALID,
                                             cpp::MemoryOrder::RELAXED,
@@ -413,8 +420,9 @@ private:
     // thread.
     uint64_t read() {
       auto val = counter.load(cpp::MemoryOrder::RELAXED);
-      if (val == 0 && counter.compare_exchange_strong(
-                          val, INVALID | HELPED, cpp::MemoryOrder::RELAXED))
+      if (val == 0 && RECLAIM &&
+          counter.compare_exchange_strong(val, INVALID | HELPED,
+                                          cpp::MemoryOrder::RELAXED))
         return 0;
       return (val & INVALID) ? 0 : val;
     }
@@ -446,14 +454,20 @@ private:
       return new (raw) Slab(cpp::forward<Args>(args)...);
     }
 
-    if (!expected || impl::is_sentinel(reinterpret_cast<uintptr_t>(expected)))
+    // If there is a slab allocation in progress we retry a few times.
+    for (uint32_t t = 0; impl::is_sentinel(expected) && t < MAX_TRIES; ++t) {
+      sleep_briefly();
+      expected = ptr.load(cpp::MemoryOrder::RELAXED);
+    }
+
+    if (!expected || impl::is_sentinel(expected))
       return nullptr;
 
     if (!ref.acquire(n, count))
       return nullptr;
 
     cpp::atomic_thread_fence(cpp::MemoryOrder::ACQUIRE);
-    return ptr.load(cpp::MemoryOrder::RELAXED);
+    return RECLAIM ? ptr.load(cpp::MemoryOrder::RELAXED) : expected;
   }
 
   // Finalize the associated memory and signal that it is ready to use by
@@ -556,16 +570,6 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t &uniform,
 
       Slab *slab = slots[index].try_lock(lane_mask, uniform & lane_mask,
                                          reserved, chunk_size, index);
-
-      // If there is a slab allocation in progress we retry a few times.
-      for (uint32_t retries = 0;
-           !slab && !impl::is_sentinel(reserved) && retries < MAX_TRIES;
-           retries++) {
-        uint64_t lane_mask = gpu::get_lane_mask();
-        slab = slots[index].try_lock(lane_mask, uniform & lane_mask, reserved,
-                                     chunk_size, index);
-        sleep_briefly();
-      }
 
       // If we find a slab with a matching chunk size then we store the result.
       // Otherwise, we need to free the claimed lock and continue. In the case

@@ -559,6 +559,11 @@ m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>
+inline auto m_SelectLike(const T0_P &Cond, const T1_P &T, const T2_P &F) {
+  return m_AnyOf(m_Select(Cond, T, F), m_VSelect(Cond, T, F));
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
 inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
 m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
   return m_Result<0>(
@@ -597,9 +602,9 @@ struct BinaryOpc_match {
   unsigned Opcode;
   LHS_P LHS;
   RHS_P RHS;
-  std::optional<SDNodeFlags> Flags;
+  SDNodeFlags Flags;
   BinaryOpc_match(unsigned Opc, const LHS_P &L, const RHS_P &R,
-                  std::optional<SDNodeFlags> Flgs = std::nullopt)
+                  SDNodeFlags Flgs = SDNodeFlags())
       : Opcode(Opc), LHS(L), RHS(R), Flags(Flgs) {}
 
   template <typename MatchContext>
@@ -613,10 +618,7 @@ struct BinaryOpc_match {
              RHS.match(Ctx, N->getOperand(EO.FirstIndex)))))
         return false;
 
-      if (!Flags.has_value())
-        return true;
-
-      return (*Flags & N->getFlags()) == *Flags;
+      return (Flags & N->getFlags()) == Flags;
     }
 
     return false;
@@ -1076,6 +1078,10 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Cttz(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::CTTZ, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_FNeg(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::FNEG, Op);
+}
+
 // === Constants ===
 struct ConstantInt_match {
   APInt *BindVal;
@@ -1098,9 +1104,9 @@ struct ConstantInt_match {
                                       BindVal ? *BindVal : Discard);
   }
 };
-/// Match any interger constants or splat of an integer constant.
+/// Match any integer constants or splat of an integer constant.
 inline ConstantInt_match m_ConstInt() { return ConstantInt_match(nullptr); }
-/// Match any interger constants or splat of an integer constant; return the
+/// Match any integer constants or splat of an integer constant; return the
 /// specific constant or constant splat value.
 inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
 

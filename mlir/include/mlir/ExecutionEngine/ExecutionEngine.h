@@ -227,6 +227,13 @@ public:
       llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
           symbolMap);
 
+  /// Initialize the ExecutionEngine. Global constructors specified by
+  /// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
+  /// binary compiled from `gpu.module` gets loaded during initialization. Make
+  /// sure all symbols are resolvable before initialization by calling
+  /// `registerSymbols` or including shared libraries.
+  void initialize();
+
 private:
   /// Ordering of llvmContext and jit is important for destruction purposes: the
   /// jit must be destroyed before the context.
@@ -250,6 +257,8 @@ private:
   /// Destroy functions in the libraries loaded by the ExecutionEngine that are
   /// called when this ExecutionEngine is destructed.
   SmallVector<LibraryDestroyFn> destroyFns;
+
+  bool isInitialized = false;
 };
 
 } // namespace mlir

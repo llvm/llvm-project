@@ -131,7 +131,7 @@ struct FragmentCompiler {
       return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
-    llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
+    llvm::sys::path::make_absolute(FragmentDirectory, AbsPath);
     llvm::sys::path::native(AbsPath, Style);
     return AbsPath.str().str();
   }
@@ -726,6 +726,12 @@ struct FragmentCompiler {
       Out.Apply.push_back([ShowAKA(**F.ShowAKA)](const Params &, Config &C) {
         C.Hover.ShowAKA = ShowAKA;
       });
+    }
+    if (F.MacroContentsLimit) {
+      Out.Apply.push_back(
+          [Limit(**F.MacroContentsLimit)](const Params &, Config &C) {
+            C.Hover.MacroContentsLimit = Limit;
+          });
     }
   }
 

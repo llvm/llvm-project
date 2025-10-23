@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s
+// RUN:   -fspv-use-unknown-image-format -o - | FileCheck %s
 
 template<class T, uint64_t Size>
 using Array = vk::SpirvOpaqueType</* OpTypeArray */ 28, T, vk::integral_constant<uint64_t, Size>>;

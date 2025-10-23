@@ -66,3 +66,15 @@ defm CXBCOND : F2_56<"cxb", 1>;
 def FPMADDX   : FourOp<"fpmaddx", 0b110111, 0b0000, DFPRegs>;
 def FPMADDXHI : FourOp<"fpmaddxhi", 0b110111, 0b0100, DFPRegs>;
 } // Predicates = [HasOSA2011]
+
+// UA2007 instruction patterns.
+let Predicates = [HasUA2007] in {
+def : Pat<(f32 (any_fma f32:$rs1, f32:$rs2, f32:$add)), (FMADDS $rs1, $rs2, $add)>;
+def : Pat<(f64 (any_fma f64:$rs1, f64:$rs2, f64:$add)), (FMADDD $rs1, $rs2, $add)>;
+def : Pat<(f32 (any_fma f32:$rs1, f32:$rs2, (fneg f32:$sub))), (FMSUBS $rs1, $rs2, $sub)>;
+def : Pat<(f64 (any_fma f64:$rs1, f64:$rs2, (fneg f64:$sub))), (FMSUBD $rs1, $rs2, $sub)>;
+def : Pat<(f32 (fneg (any_fma f32:$rs1, f32:$rs2, f32:$add))), (FNMADDS $rs1, $rs2, $add)>;
+def : Pat<(f64 (fneg (any_fma f64:$rs1, f64:$rs2, f64:$add))), (FNMADDD $rs1, $rs2, $add)>;
+def : Pat<(f32 (fneg (any_fma f32:$rs1, f32:$rs2, (fneg f32:$sub)))), (FNMSUBS $rs1, $rs2, $sub)>;
+def : Pat<(f64 (fneg (any_fma f64:$rs1, f64:$rs2, (fneg f64:$sub)))), (FNMSUBD $rs1, $rs2, $sub)>;
+} // Predicates = [HasUA2007]

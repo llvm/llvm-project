@@ -14,11 +14,13 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanCFG.h"
+#include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -166,7 +168,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 
@@ -238,17 +241,15 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // optimizations will clean it up.
 
     SmallVector<VPValue *, 2> OperandsWithMask;
-    unsigned NumIncoming = PhiR->getNumIncoming();
-    for (unsigned In = 0; In < NumIncoming; In++) {
-      const VPBasicBlock *Pred = PhiR->getIncomingBlock(In);
-      OperandsWithMask.push_back(PhiR->getIncomingValue(In));
-      VPValue *EdgeMask = getEdgeMask(Pred, VPBB);
+    for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
+      OperandsWithMask.push_back(InVPV);
+      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
       if (!EdgeMask) {
-        assert(In == 0 && "Both null and non-null edge masks found");
-        assert(all_equal(PhiR->operands()) &&
+        assert(all_equal(PhiR->incoming_values()) &&
                "Distinct incoming values with one having a full mask");
         break;
       }
+
       OperandsWithMask.push_back(EdgeMask);
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());

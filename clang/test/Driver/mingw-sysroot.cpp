@@ -1,4 +1,3 @@
-// REQUIRES: shell
 // UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t.dir/testroot-gcc

@@ -23,9 +23,9 @@ define amdgpu_kernel void @long_forward_branch_gfx11plus(ptr addrspace(1) %in, p
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_d16_b16 v0, v1, s[0:1]
 ; GFX11-NEXT:    global_load_d16_hi_b16 v0, v1, s[0:1] offset:2
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX11-NEXT:    global_store_d16_hi_b16 v1, v0, s[2:3] offset:2
 ; GFX11-NEXT:  .LBB0_2: ; %bb3
 ; GFX11-NEXT:    s_endpgm

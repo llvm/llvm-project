@@ -104,7 +104,7 @@ public:
     // -ffloat16-excess-precision=none is given, no conversions will be made
     // and instead the backend will promote each half operation to float
     // individually.
-    HasLegalHalfType = false;
+    HasFastHalfType = false;
 
     HasStrictFP = true;
   }
@@ -136,6 +136,12 @@ public:
 
   std::string convertConstraint(const char *&Constraint) const override {
     switch (Constraint[0]) {
+    case '@': // Flag output operand.
+      if (llvm::StringRef(Constraint) == "@cc") {
+        Constraint += 2;
+        return std::string("{@cc}");
+      }
+      break;
     case 'p': // Keep 'p' constraint.
       return std::string("p");
     case 'Z':

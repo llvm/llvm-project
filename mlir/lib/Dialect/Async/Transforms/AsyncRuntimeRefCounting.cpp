@@ -248,7 +248,7 @@ LogicalResult AsyncRuntimeRefCountingPass::addDropRefAfterLastUse(Value value) {
   Region *definingRegion = value.getParentRegion();
 
   // Last users of the `value` inside all blocks where the value dies.
-  llvm::SmallSet<Operation *, 4> lastUsers;
+  llvm::SmallPtrSet<Operation *, 4> lastUsers;
 
   // Find blocks in the `definingRegion` that have users of the `value` (if
   // there are multiple users in the block, which one will be selected is
