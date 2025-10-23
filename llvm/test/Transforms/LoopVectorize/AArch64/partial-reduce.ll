@@ -1164,12 +1164,12 @@ define i64 @sext_reduction_i32_to_i64(ptr %arr, i64 %n) #1 {
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x i32>, ptr [[TMP14]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
-; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD4]] to <4 x i64>
-; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sext <4 x i32> [[WIDE_LOAD5]] to <4 x i64>
-; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext <4 x i32> [[WIDE_LOAD6]] to <4 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[VEC_PHI]], <4 x i64> [[TMP15]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[WIDE_LOAD4]] to <4 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE7]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[VEC_PHI1]], <4 x i64> [[TMP5]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = sext <4 x i32> [[WIDE_LOAD5]] to <4 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE8]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[VEC_PHI2]], <4 x i64> [[TMP6]])
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sext <4 x i32> [[WIDE_LOAD6]] to <4 x i64>
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE9]] = call <2 x i64> @llvm.vector.partial.reduce.add.v2i64.v4i64(<2 x i64> [[VEC_PHI3]], <4 x i64> [[TMP7]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

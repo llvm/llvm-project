@@ -538,7 +538,7 @@ loop:
   %mul = mul i32 %conv, %conv
   %mul.ext = zext i32 %mul to i64
   %add = add i64 %res2, %mul.ext
-  %or = or i32 %mul, %c
+  %second_use = or i32 %mul, %c ; this value is otherwise unused, but that's sufficient for the test
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
   %exitcond740.not = icmp eq i64 %iv, %n

@@ -2869,15 +2869,16 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
         cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
-    if (isa<VPPartialReductionRecipe>(ExpressionRecipes.back())) {
-      return Ctx.TTI.getPartialReductionCost(
-          Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr, RedTy, VF,
-          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
-          TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
-    }
-    return Ctx.TTI.getExtendedReductionCost(
-        Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
-        std::nullopt, Ctx.CostKind);
+    return isa<VPPartialReductionRecipe>(ExpressionRecipes.back())
+               ? Ctx.TTI.getPartialReductionCost(
+                     Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr,
+                     RedTy, VF,
+                     TargetTransformInfo::getPartialReductionExtendKind(
+                         ExtR->getOpcode()),
+                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind)
+               : Ctx.TTI.getExtendedReductionCost(
+                     Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
+                     SrcVecTy, std::nullopt, Ctx.CostKind);
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
