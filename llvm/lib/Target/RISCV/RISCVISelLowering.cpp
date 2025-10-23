@@ -433,8 +433,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasStdExtP() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
-    if (Subtarget.is64Bit())
-      setOperationAction(ISD::ABS, MVT::i32, Custom);
   } else if (Subtarget.hasShortForwardBranchOpt()) {
     // We can use PseudoCCSUB to implement ABS.
     setOperationAction(ISD::ABS, XLenVT, Legal);
@@ -14817,14 +14815,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ABS: {
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
-
-    if (Subtarget.hasStdExtP()) {
-      SDValue Src =
-          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
-      SDValue Abs = DAG.getNode(RISCVISD::ABSW_P, DL, MVT::i64, Src);
-      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Abs));
-      return;
-    }
 
     if (Subtarget.hasStdExtZbb()) {
       // Emit a special ABSW node that will be expanded to NEGW+MAX at isel.

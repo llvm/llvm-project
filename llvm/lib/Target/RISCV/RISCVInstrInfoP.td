@@ -1456,16 +1456,10 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PMAXU_DB     : RVPPairBinaryExchanged_rr<0b1111, 0b10, "pmaxu.db">;
 } // Predicates = [HasStdExtP, IsRV32]
 
+
 //===----------------------------------------------------------------------===//
 // Codegen patterns
 //===----------------------------------------------------------------------===//
 
-// TODO: Rename RISCVISD::ABSW to RISCVISD::NEGW_MAX or something so this can
-// be RISCVISD::ABSW.
-def riscv_absw_p : RVSDNode<"ABSW_P", SDTIntUnaryOp>;
-
 let Predicates = [HasStdExtP] in
 def : PatGpr<abs, ABS>;
-
-let Predicates = [HasStdExtP, IsRV64] in
-def : PatGpr<riscv_absw_p, ABSW>;
