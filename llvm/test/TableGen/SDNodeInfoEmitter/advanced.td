@@ -47,7 +47,6 @@ def my_node_3 : SDNode<
 >;
 
 // CHECK:       namespace llvm::MyTargetISD {
-// CHECK-EMPTY:
 // CHECK-NEXT:  enum GenNodeType : unsigned {
 // CHECK-NEXT:    NODE_1 = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:    NODE_2,
@@ -55,7 +54,6 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE_3 + 1;
-// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
 // CHECK:       static constexpr char MyTargetSDNodeNamesStorage[] =
