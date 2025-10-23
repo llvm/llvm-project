@@ -431,6 +431,14 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
   // remove it as it is not recognized in DXIL
   if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
     RootSignature->eraseFromParent();
+
+  // llvm.errno.tbaa was recently added but is not supported in LLVM 3.7 and
+  // causes all tests using the DXIL Validator to fail.
+  //
+  // This is a temporary fix and should be replaced with a whitelist once
+  // we have determined all metadata that the DXIL Validator allows
+  if (NamedMDNode *ErrNo = M.getNamedMetadata("llvm.errno.tbaa"))
+    ErrNo->eraseFromParent();
 }
 
 PreservedAnalyses DXILTranslateMetadata::run(Module &M,
