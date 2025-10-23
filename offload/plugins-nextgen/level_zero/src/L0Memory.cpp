@@ -16,7 +16,7 @@
 
 namespace llvm::omp::target::plugin {
 
-#if LIBOMPTARGET_DEBUG
+#if OMPTARGET_DEBUG
 static const char *AllocKindToStr(int32_t Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
@@ -455,8 +455,9 @@ Error MemAllocatorTy::deinit() {
   }
   // Report memory usage if requested
   if (getDebugLevel() > 0) {
-    for (auto &Stat : Stats) {
-      DP("Memory usage for %s, device " DPxMOD "\n", AllocKindToStr(Stat.first),
+    for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
+      auto &Stat = Stats[Kind];
+      DP("Memory usage for %s, device " DPxMOD "\n", AllocKindToStr(Kind),
          DPxPTR(Device));
       if (Stat.NumAllocs[0] == 0 && Stat.NumAllocs[1] == 0) {
         DP("-- Not used\n");
