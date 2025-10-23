@@ -627,10 +627,7 @@ bool ConstRecordBuilder::applyZeroInitPadding(const ASTRecordLayout &layout,
 }
 
 bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
-  RecordDecl *rd = ile->getType()
-                       ->castAs<clang::RecordType>()
-                       ->getDecl()
-                       ->getDefinitionOrSelf();
+  RecordDecl *rd = ile->getType()->castAsRecordDecl();
   const ASTRecordLayout &layout = cgm.getASTContext().getASTRecordLayout(rd);
 
   // Bail out if we have base classes. We could support these, but they only
@@ -686,17 +683,14 @@ bool ConstRecordBuilder::build(InitListExpr *ile, bool allowOverwrite) {
       return false;
     }
 
-    mlir::TypedAttr eltInit;
-    if (init)
-      eltInit = mlir::cast<mlir::TypedAttr>(
-          emitter.tryEmitPrivateForMemory(init, field->getType()));
-    else
-      eltInit = mlir::cast<mlir::TypedAttr>(emitter.emitNullForMemory(
-          cgm.getLoc(ile->getSourceRange()), field->getType()));
-
-    if (!eltInit)
+    mlir::Attribute eltInitAttr =
+        init ? emitter.tryEmitPrivateForMemory(init, field->getType())
+             : emitter.emitNullForMemory(cgm.getLoc(ile->getSourceRange()),
+                                         field->getType());
+    if (!eltInitAttr)
       return false;
 
+    mlir::TypedAttr eltInit = mlir::cast<mlir::TypedAttr>(eltInitAttr);
     if (!field->isBitField()) {
       // Handle non-bitfield members.
       if (!appendField(field, layout.getFieldOffset(index), eltInit,

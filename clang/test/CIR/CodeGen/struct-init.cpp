@@ -40,6 +40,23 @@ StructWithDefaultInit swdi = {};
 // LLVM: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
 // OGCG: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
 
+struct StructWithFieldInitFromConst {
+  int a : 10;
+  int b = a;
+};
+
+StructWithFieldInitFromConst swfifc = {};
+
+// CIR: cir.global external @swfifc = #cir.zero : !rec_anon_struct
+// LLVM: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+// OGCG: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+
+StructWithFieldInitFromConst swfifc2 = { 2 };
+
+// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u8i, #cir.int<0> : !u8i, #cir.int<2> : !s32i}> : !rec_anon_struct
+// LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+// OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};

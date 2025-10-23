@@ -21,7 +21,7 @@ $ perf record -e cycles:u -j any,u [-p PID|-a] -- sleep <interval>
 ```
 
 Running with brstack (`-j any,u` or `-b`) is recommended. Heatmaps can be generated
-from basic events by using the llvm-bolt-heatmap option `-nl` (no brstack) but
+from basic events by using the llvm-bolt-heatmap option `-ba` (basic events) but
 such heatmaps do not have the coverage provided by brstack and may only be useful
 for finding event hotspots at larger code block granularities.
 
