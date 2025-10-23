@@ -4751,7 +4751,6 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
 
       SDValue InnerN0 = InnerN->getOperand(0);
       SDValue InnerN1 = InnerN->getOperand(1);
-      SDValue FoldableOp;
       if (getFoldableLogicOp(InnerN1) || getFoldableLogicOp(InnerN0))
         return InnerN;
     }
