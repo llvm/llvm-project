@@ -112,8 +112,7 @@ entry:
 define double @load_u64_from_u8_off1(ptr %n){
 ; CHECK-LABEL: load_u64_from_u8_off1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 1
@@ -140,8 +139,7 @@ entry:
 define float @load_u32_from_u8_off1(ptr %n){
 ; CHECK-LABEL: load_u32_from_u8_off1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 1
@@ -154,8 +152,7 @@ entry:
 define half @load_u16_from_u8_off1(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #1]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0, #1]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
@@ -185,8 +182,7 @@ entry:
 define double @load_u64_from_u16_off2(ptr %n){
 ; CHECK-LABEL: load_u64_from_u16_off2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0, #2]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr h0, [x0, #2]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 2
@@ -199,8 +195,7 @@ entry:
 define double @load_u64_from_u8_off2(ptr %n){
 ; CHECK-LABEL: load_u64_from_u8_off2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr b0, [x0, #2]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 2
@@ -226,7 +221,7 @@ entry:
 define float @load_u32_from_u8_off2(ptr %n){
 ; CHECK-LABEL: load_u32_from_u8_off2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #1]
+; CHECK-NEXT:    ldr b0, [x0, #2]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 2
@@ -239,7 +234,7 @@ entry:
 define half @load_u16_from_u8_off2(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #1]
+; CHECK-NEXT:    ldr b0, [x0, #2]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
@@ -283,8 +278,7 @@ entry:
 define double @load_u64_from_u8_off255(ptr %n){
 ; CHECK-LABEL: load_u64_from_u8_off255:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #255]
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ldr b0, [x0, #255]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 255
@@ -311,8 +305,7 @@ entry:
 define float @load_u32_from_u8_off255(ptr %n){
 ; CHECK-LABEL: load_u32_from_u8_off255:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #255]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0, #255]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 255
@@ -325,8 +318,7 @@ entry:
 define half @load_u16_from_u8_off255(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off255:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0, #255]
-; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    ldr b0, [x0, #255]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
@@ -354,7 +346,7 @@ entry:
 define double @load_u64_from_u16_off256(ptr %n){
 ; CHECK-LABEL: load_u64_from_u16_off256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0, #128]
+; CHECK-NEXT:    ldr h0, [x0, #256]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 256
@@ -367,7 +359,7 @@ entry:
 define double @load_u64_from_u8_off256(ptr %n){
 ; CHECK-LABEL: load_u64_from_u8_off256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #64]
+; CHECK-NEXT:    ldr b0, [x0, #256]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 256
@@ -393,7 +385,7 @@ entry:
 define float @load_u32_from_u8_off256(ptr %n){
 ; CHECK-LABEL: load_u32_from_u8_off256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #128]
+; CHECK-NEXT:    ldr b0, [x0, #256]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 256
@@ -406,7 +398,7 @@ entry:
 define half @load_u16_from_u8_off256(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_off256:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #128]
+; CHECK-NEXT:    ldr b0, [x0, #256]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:
@@ -435,8 +427,7 @@ entry:
 define double @load_u64_from_u16_offn(ptr %n){
 ; CHECK-LABEL: load_u64_from_u16_offn:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #8190 // =0x1ffe
-; CHECK-NEXT:    ldr h0, [x0, x8]
+; CHECK-NEXT:    ldr h0, [x0, #8190]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 8190
@@ -517,7 +508,8 @@ entry:
 define double @load_u64_from_u16_offnp1(ptr %n){
 ; CHECK-LABEL: load_u64_from_u16_offnp1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr h0, [x0, #4096]
+; CHECK-NEXT:    add x8, x0, #2, lsl #12 // =8192
+; CHECK-NEXT:    ldr h0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 8192
@@ -530,7 +522,8 @@ entry:
 define double @load_u64_from_u8_offnp1(ptr %n){
 ; CHECK-LABEL: load_u64_from_u8_offnp1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #1024]
+; CHECK-NEXT:    add x8, x0, #1, lsl #12 // =4096
+; CHECK-NEXT:    ldr b0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 4096
@@ -557,7 +550,8 @@ entry:
 define float @load_u32_from_u8_offnp1(ptr %n){
 ; CHECK-LABEL: load_u32_from_u8_offnp1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #2048]
+; CHECK-NEXT:    add x8, x0, #1, lsl #12 // =4096
+; CHECK-NEXT:    ldr b0, [x8]
 ; CHECK-NEXT:    ret
 entry:
   %p = getelementptr i8, ptr %n, i64 4096
@@ -570,7 +564,8 @@ entry:
 define half @load_u16_from_u8_offnp1(ptr %n){
 ; CHECK-LABEL: load_u16_from_u8_offnp1:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr b0, [x0, #2048]
+; CHECK-NEXT:    add x8, x0, #1, lsl #12 // =4096
+; CHECK-NEXT:    ldr b0, [x8]
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; CHECK-NEXT:    ret
 entry:

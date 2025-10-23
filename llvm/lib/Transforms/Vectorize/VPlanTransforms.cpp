@@ -3519,18 +3519,31 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   VPValue *VecOp = Red->getVecOp();
 
   // Clamp the range if using extended-reduction is profitable.
-  auto IsExtendedRedValidAndClampRange = [&](unsigned Opcode, bool isZExt,
-                                             Type *SrcTy) -> bool {
+  auto IsExtendedRedValidAndClampRange =
+      [&](unsigned Opcode, Instruction::CastOps ExtOpc, Type *SrcTy) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-          InstructionCost ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-              Opcode, isZExt, RedTy, SrcVecTy, Red->getFastMathFlags(),
-              CostKind);
+
+          InstructionCost ExtRedCost;
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
+
+          if (isa<VPPartialReductionRecipe>(Red)) {
+            TargetTransformInfo::PartialReductionExtendKind ExtKind =
+                TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
+            // FIXME: Move partial reduction creation, costing and clamping
+            // here from LoopVectorize.cpp.
+            ExtRedCost = Ctx.TTI.getPartialReductionCost(
+                Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
+                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
+          } else {
+            ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+                Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
+                Red->getFastMathFlags(), CostKind);
+          }
           return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
         },
         Range);
@@ -3541,8 +3554,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
   if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
-          cast<VPWidenCastRecipe>(VecOp)->getOpcode() ==
-              Instruction::CastOps::ZExt,
+          cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
           Ctx.Types.inferScalarType(A)))
     return new VPExpressionRecipe(cast<VPWidenCastRecipe>(VecOp), Red);
 
@@ -3560,6 +3572,8 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
+  bool IsPartialReduction = isa<VPPartialReductionRecipe>(Red);
+
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
   if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
     return nullptr;
@@ -3568,16 +3582,41 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
-      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
-          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
+      [&](VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+          VPWidenCastRecipe *OuterExt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
           Type *SrcTy =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-          InstructionCost MulAccCost = Ctx.TTI.getMulAccReductionCost(
-              isZExt, Opcode, RedTy, SrcVecTy, CostKind);
+          InstructionCost MulAccCost;
+
+          if (IsPartialReduction) {
+            Type *SrcTy2 =
+                Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
+            // FIXME: Move partial reduction creation, costing and clamping
+            // here from LoopVectorize.cpp.
+            MulAccCost = Ctx.TTI.getPartialReductionCost(
+                Opcode, SrcTy, SrcTy2, RedTy, VF,
+                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext0->getOpcode())
+                     : TargetTransformInfo::PR_None,
+                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext1->getOpcode())
+                     : TargetTransformInfo::PR_None,
+                Mul->getOpcode(), CostKind);
+          } else {
+            // Only partial reductions support mixed extends at the moment.
+            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+              return false;
+
+            bool IsZExt =
+                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
+            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
+                                                        SrcVecTy, CostKind);
+          }
+
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
@@ -3611,14 +3650,10 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
     auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
 
-    // Match reduce.add(mul(ext, ext)).
-    if (RecipeA && RecipeB &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
-        match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
+    // Match reduce.add/sub(mul(ext, ext)).
+    if (RecipeA && RecipeB && match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
-        IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
-                                       Instruction::CastOps::ZExt,
-                                   Mul, RecipeA, RecipeB, nullptr)) {
+        IsMulAccValidAndClampRange(Mul, RecipeA, RecipeB, nullptr)) {
       if (Sub)
         return new VPExpressionRecipe(RecipeA, RecipeB, Mul,
                                       cast<VPWidenRecipe>(Sub), Red);
@@ -3626,8 +3661,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     }
     // Match reduce.add(mul).
     // TODO: Add an expression type for this variant with a negated mul
-    if (!Sub &&
-        IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr))
+    if (!Sub && IsMulAccValidAndClampRange(Mul, nullptr, nullptr, nullptr))
       return new VPExpressionRecipe(Mul, Red);
   }
   // TODO: Add an expression type for negated versions of other expression
@@ -3647,9 +3681,7 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
         cast<VPWidenCastRecipe>(Mul->getOperand(1)->getDefiningRecipe());
     if ((Ext->getOpcode() == Ext0->getOpcode() || Ext0 == Ext1) &&
         Ext0->getOpcode() == Ext1->getOpcode() &&
-        IsMulAccValidAndClampRange(Ext0->getOpcode() ==
-                                       Instruction::CastOps::ZExt,
-                                   Mul, Ext0, Ext1, Ext)) {
+        IsMulAccValidAndClampRange(Mul, Ext0, Ext1, Ext) && Mul->hasOneUse()) {
       auto *NewExt0 = new VPWidenCastRecipe(
           Ext0->getOpcode(), Ext0->getOperand(0), Ext->getResultType(), *Ext0,
           *Ext0, Ext0->getDebugLoc());
@@ -3956,9 +3988,6 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   // used.
   // TODO: Assert that they aren't used.
 
-  VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
-  Plan.getSymbolicUF().replaceAllUsesWith(UF);
-
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
   if (VF.getNumUsers() == 0) {
@@ -3978,6 +4007,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   }
   VF.replaceAllUsesWith(RuntimeVF);
 
+  VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
   VPValue *MulByUF = Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
   VFxUF.replaceAllUsesWith(MulByUF);
 }
@@ -4045,14 +4075,14 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
   return false;
 }
 
-/// Returns VF from \p VFs if \p IR is a full interleave group with factor and
-/// number of members both equal to VF. The interleave group must also access
-/// the full vector width.
-static std::optional<ElementCount> isConsecutiveInterleaveGroup(
-    VPInterleaveRecipe *InterleaveR, ArrayRef<ElementCount> VFs,
-    VPTypeAnalysis &TypeInfo, const TargetTransformInfo &TTI) {
+/// Returns true if \p IR is a full interleave group with factor and number of
+/// members both equal to \p VF. The interleave group must also access the full
+/// vector width \p VectorRegWidth.
+static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
+                                         unsigned VF, VPTypeAnalysis &TypeInfo,
+                                         unsigned VectorRegWidth) {
   if (!InterleaveR || InterleaveR->getMask())
-    return std::nullopt;
+    return false;
 
   Type *GroupElementTy = nullptr;
   if (InterleaveR->getStoredValues().empty()) {
@@ -4061,7 +4091,7 @@ static std::optional<ElementCount> isConsecutiveInterleaveGroup(
                 [&TypeInfo, GroupElementTy](VPValue *Op) {
                   return TypeInfo.inferScalarType(Op) == GroupElementTy;
                 }))
-      return std::nullopt;
+      return false;
   } else {
     GroupElementTy =
         TypeInfo.inferScalarType(InterleaveR->getStoredValues()[0]);
@@ -4069,27 +4099,13 @@ static std::optional<ElementCount> isConsecutiveInterleaveGroup(
                 [&TypeInfo, GroupElementTy](VPValue *Op) {
                   return TypeInfo.inferScalarType(Op) == GroupElementTy;
                 }))
-      return std::nullopt;
+      return false;
   }
 
-  auto GetVectorWidthForVF = [&TTI](ElementCount VF) {
-    TypeSize Size = TTI.getRegisterBitWidth(
-        VF.isFixed() ? TargetTransformInfo::RGK_FixedWidthVector
-                     : TargetTransformInfo::RGK_ScalableVector);
-    assert(Size.isScalable() == VF.isScalable() &&
-           "if Size is scalable, VF must to and vice versa");
-    return Size.getKnownMinValue();
-  };
-
-  for (ElementCount VF : VFs) {
-    unsigned MinVal = VF.getKnownMinValue();
-    unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * MinVal;
-    auto IG = InterleaveR->getInterleaveGroup();
-    if (IG->getFactor() == MinVal && IG->getNumMembers() == MinVal &&
-        GroupSize == GetVectorWidthForVF(VF))
-      return {VF};
-  }
-  return std::nullopt;
+  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
+  auto IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+         GroupSize == VectorRegWidth;
 }
 
 /// Returns true if \p VPValue is a narrow VPValue.
@@ -4100,18 +4116,16 @@ static bool isAlreadyNarrow(VPValue *VPV) {
   return RepR && RepR->isSingleScalar();
 }
 
-std::unique_ptr<VPlan>
-VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
-                                        const TargetTransformInfo &TTI) {
-  using namespace llvm::VPlanPatternMatch;
+void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                             unsigned VectorRegWidth) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
-
   if (!VectorLoop)
-    return nullptr;
+    return;
 
   VPTypeAnalysis TypeInfo(Plan);
+
+  unsigned VFMinVal = VF.getKnownMinValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
-  std::optional<ElementCount> VFToOptimize;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) || match(&R, m_BranchOnCount()))
       continue;
@@ -4125,33 +4139,30 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     //  * recipes writing to memory except interleave groups
     // Only support plans with a canonical induction phi.
     if (R.isPhi())
-      return nullptr;
+      return;
 
     auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
     if (R.mayWriteToMemory() && !InterleaveR)
-      return nullptr;
+      return;
+
+    // Do not narrow interleave groups if there are VectorPointer recipes and
+    // the plan was unrolled. The recipe implicitly uses VF from
+    // VPTransformState.
+    // TODO: Remove restriction once the VF for the VectorPointer offset is
+    // modeled explicitly as operand.
+    if (isa<VPVectorPointerRecipe>(&R) && Plan.getUF() > 1)
+      return;
 
     // All other ops are allowed, but we reject uses that cannot be converted
     // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
       continue;
 
-    // Try to find a single VF, where all interleave groups are consecutive and
-    // saturate the full vector width. If we already have a candidate VF, check
-    // if it is applicable for the current InterleaveR, otherwise look for a
-    // suitable VF across the Plans VFs.
-    //
-    if (VFToOptimize) {
-      if (!isConsecutiveInterleaveGroup(InterleaveR, {*VFToOptimize}, TypeInfo,
-                                        TTI))
-        return nullptr;
-    } else {
-      if (auto VF = isConsecutiveInterleaveGroup(
-              InterleaveR, to_vector(Plan.vectorFactors()), TypeInfo, TTI))
-        VFToOptimize = *VF;
-      else
-        return nullptr;
-    }
+    // Bail out on non-consecutive interleave groups.
+    if (!isConsecutiveInterleaveGroup(InterleaveR, VFMinVal, TypeInfo,
+                                      VectorRegWidth))
+      return;
+
     // Skip read interleave groups.
     if (InterleaveR->getStoredValues().empty())
       continue;
@@ -4185,34 +4196,24 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     auto *WideMember0 = dyn_cast_or_null<VPWidenRecipe>(
         InterleaveR->getStoredValues()[0]->getDefiningRecipe());
     if (!WideMember0)
-      return nullptr;
+      return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
       auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
-        return nullptr;
+        return;
       if (any_of(enumerate(R->operands()),
                  [WideMember0, Idx = I](const auto &P) {
                    const auto &[OpIdx, OpV] = P;
                    return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
                  }))
-        return nullptr;
+        return;
     }
     StoreGroups.push_back(InterleaveR);
   }
 
   if (StoreGroups.empty())
-    return nullptr;
-
-  // All interleave groups in Plan can be narrowed for VFToOptimize. Split the
-  // original Plan into 2: a) a new clone which contains all VFs of Plan, except
-  // VFToOptimize, and b) the original Plan with VFToOptimize as single VF.
-  std::unique_ptr<VPlan> NewPlan;
-  if (size(Plan.vectorFactors()) != 1) {
-    NewPlan = std::unique_ptr<VPlan>(Plan.duplicate());
-    Plan.setVF(*VFToOptimize);
-    NewPlan->removeVF(*VFToOptimize);
-  }
+    return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
   SmallPtrSet<VPValue *, 4> NarrowedOps;
@@ -4283,8 +4284,9 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   auto *Inc = cast<VPInstruction>(CanIV->getBackedgeValue());
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
-  VPValue *UF = &Plan.getSymbolicUF();
-  if (VFToOptimize->isScalable()) {
+  VPValue *UF = Plan.getOrAddLiveIn(
+      ConstantInt::get(CanIV->getScalarType(), 1 * Plan.getUF()));
+  if (VF.isScalable()) {
     VPValue *VScale = PHBuilder.createElementCount(
         CanIV->getScalarType(), ElementCount::getScalable(1));
     VPValue *VScaleUF = PHBuilder.createNaryOp(Instruction::Mul, {VScale, UF});
@@ -4296,10 +4298,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
         Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   }
   removeDeadRecipes(Plan);
-  assert(none_of(*VectorLoop->getEntryBasicBlock(),
-                 IsaPred<VPVectorPointerRecipe>) &&
-         "All VPVectorPointerRecipes should have been removed");
-  return NewPlan;
 }
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a

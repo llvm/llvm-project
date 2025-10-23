@@ -599,6 +599,15 @@ TYPED_TEST(SmallVectorTest, AssignSmallVector) {
   assertValuesInOrder(V, 2u, 7, 7);
 }
 
+TYPED_TEST(SmallVectorTest, AssignArrayRef) {
+  SCOPED_TRACE("AssignArrayRef");
+  auto &V = this->theVector;
+  Constructable Other[] = {7, 8, 9};
+  V.push_back(Constructable(1));
+  V.assign(ArrayRef(Other));
+  assertValuesInOrder(V, 3u, 7, 8, 9);
+}
+
 // Move-assign test
 TYPED_TEST(SmallVectorTest, MoveAssignTest) {
   SCOPED_TRACE("MoveAssignTest");
