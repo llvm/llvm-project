@@ -482,7 +482,7 @@ let Predicates = [HasVendorXSfvfwmaccqqq] in {
   defm SF_VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf] in {
+let Predicates = [HasVendorXSfvfnrclipxfqf], AltFmtType = IS_NOT_ALTFMT in {
   defm SF_VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm SF_VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }
