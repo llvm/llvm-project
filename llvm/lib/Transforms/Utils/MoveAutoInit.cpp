@@ -101,9 +101,9 @@ static BasicBlock *usersDominator(const MemoryLocation &ML, Instruction *I,
   return CurrentDominator;
 }
 
-static bool runMoveAutoInit(
-    Function &F, DominatorTree &DT, MemorySSA &MSSA,
-    function_ref<bool(const Instruction &)> ShouldProcess) {
+static bool
+runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA,
+                function_ref<bool(const Instruction &)> ShouldProcess) {
   BasicBlock &EntryBB = F.getEntryBlock();
   SmallVector<std::pair<Instruction *, BasicBlock *>> JobList;
 
