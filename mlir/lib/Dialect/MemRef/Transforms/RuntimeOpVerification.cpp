@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
@@ -273,7 +274,9 @@ struct SubViewOpInterface
     Value one = arith::ConstantIndexOp::create(builder, loc, 1);
     auto metadataOp =
         ExtractStridedMetadataOp::create(builder, loc, subView.getSource());
-    for (int64_t i = 0, e = sourceType.getRank(); i < e; ++i) {
+    for (int64_t i : llvm::seq<int64_t>(0, sourceType.getRank())) {
+      // Reset insertion point to before the operation for each dimension
+      builder.setInsertionPoint(subView);
       Value offset = getValueOrCreateConstantIndexOp(
           builder, loc, subView.getMixedOffsets()[i]);
       Value size = getValueOrCreateConstantIndexOp(builder, loc,
@@ -290,6 +293,42 @@ struct SubViewOpInterface
                                                         std::to_string(i) +
                                                         " is out-of-bounds"));
 
+      // Only verify if size > 0
+      Value sizeIsNonZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::sgt, size, zero);
+
+      /*
+       * Split the current block to create the below control flow structure:
+       *
+       * ^preCondBlock:
+       *   ... // offset check already done above
+       *   %size_nonzero = arith.cmpi sgt, %size, %zero
+       *   cf.cond_br %size_nonzero, ^sizeBoundsCheckBlock, ^afterCheckBlock
+       *
+       * ^sizeBoundsCheckBlock:
+       *   %last_pos = ... // compute offset + (size-1) * stride
+       *   %last_pos_ok = ... // last position bounds check
+       *   cf.assert %last_pos_ok, "extract_slice runs out-of-bounds"
+       *   cf.br ^afterCheckBlock
+       *
+       * ^afterCheckBlock:
+       *   tensor.extract_slice ... // the original operation
+       */
+      Block *preCondBlock = builder.getBlock();
+      Block *afterCheckBlock = preCondBlock->splitBlock(subView);
+
+      // Create the block for conditional size bounds verification.
+      Block *sizeBoundsCheckBlock = builder.createBlock(
+          preCondBlock->getParent(), Region::iterator(afterCheckBlock));
+
+      // Terminate the pre-condition block with the conditional branch.
+      builder.setInsertionPointToEnd(preCondBlock);
+      cf::CondBranchOp::create(builder, loc, sizeIsNonZero,
+                               sizeBoundsCheckBlock, afterCheckBlock);
+
+      // Populate the size bounds check block with lastPos verification.
+      builder.setInsertionPointToStart(sizeBoundsCheckBlock);
+
       // Verify that slice does not run out-of-bounds.
       Value sizeMinusOne = arith::SubIOp::create(builder, loc, size, one);
       Value sizeMinusOneTimesStride =
@@ -303,6 +342,7 @@ struct SubViewOpInterface
           generateErrorMessage(op,
                                "subview runs out-of-bounds along dimension " +
                                    std::to_string(i)));
+      cf::BranchOp::create(builder, loc, afterCheckBlock);
     }
   }
 };
