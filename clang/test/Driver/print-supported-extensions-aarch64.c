@@ -81,6 +81,7 @@
 // CHECK-NEXT:     sme2                FEAT_SME2                                              Enable Scalable Matrix Extension 2 (SME2) instructions
 // CHECK-NEXT:     sme2p1              FEAT_SME2p1                                            Enable Scalable Matrix Extension 2.1 instructions
 // CHECK-NEXT:     sme2p2              FEAT_SME2p2                                            Enable Armv9.6-A Scalable Matrix Extension 2.2 instructions
+// CHECK-NEXT:     sme2p3              FEAT_SME2p3                                            Enable Armv9.7-A Scalable Matrix Extension 2.3 instructions
 // CHECK-NEXT:     profile             FEAT_SPE                                               Enable Statistical Profiling extension
 // CHECK-NEXT:     predres2            FEAT_SPECRES2                                          Enable Speculation Restriction Instruction
 // CHECK-NEXT:     ssbs                FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
@@ -106,6 +107,7 @@
 // CHECK-NEXT:     sve2-sm4                                                                   Shorthand for +sve2+sve-sm4
 // CHECK-NEXT:     sve2p1              FEAT_SVE2p1                                            Enable Scalable Vector Extension 2.1 instructions
 // CHECK-NEXT:     sve2p2              FEAT_SVE2p2                                            Enable Armv9.6-A Scalable Vector Extension 2.2 instructions
+// CHECK-NEXT:     sve2p3              FEAT_SVE2p3                                            Enable Armv9.7-A Scalable Vector Extension 2.3 instructions
 // CHECK-NEXT:     the                 FEAT_THE                                               Enable Armv8.9-A Translation Hardening Extension
 // CHECK-NEXT:     tlbid               FEAT_TLBID                                             Enable Armv9.7-A TLBI Domains extension
 // CHECK-NEXT:     tlbiw               FEAT_TLBIW                                             Enable Armv9.5-A TLBI VMALL for Dirty State
