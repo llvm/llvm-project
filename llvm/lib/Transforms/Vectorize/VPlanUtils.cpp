@@ -8,6 +8,7 @@
 
 #include "VPlanUtils.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -113,12 +114,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case<VPDerivedIVRecipe>([](const auto *R) { return true; })
       .Case<VPReplicateRecipe>([](const auto *R) {
-        // Loads and stores that are uniform across VF lanes are handled by
-        // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
-        // all their operands are invariant.
-        // TODO: Further relax the restrictions.
+        // Be conservative about side-effects, except for the
+        // known-side-effecting assumes and stores, which we know will be
+        // uniform.
         return R->isSingleScalar() &&
-               (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
+               (!R->mayHaveSideEffects() ||
+                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case<VPInstruction>([](const auto *VPI) {
@@ -252,4 +253,30 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   }
 
   return UncountableCondition;
+}
+
+bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
+                            const VPDominatorTree &VPDT) {
+  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+  if (!VPBB)
+    return false;
+
+  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
+  // VPBB as its entry, i.e., free of predecessors.
+  if (auto *R = VPBB->getParent())
+    return !R->isReplicator() && !VPBB->hasPredecessors();
+
+  // A header dominates its second predecessor (the latch), with the other
+  // predecessor being the preheader
+  return VPB->getPredecessors().size() == 2 &&
+         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
+}
+
+bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
+                           const VPDominatorTree &VPDT) {
+  // A latch has a header as its second successor, with its other successor
+  // leaving the loop. A preheader OTOH has a header as its first (and only)
+  // successor.
+  return VPB->getNumSuccessors() == 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
 }

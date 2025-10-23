@@ -120,10 +120,9 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
 }
 
 RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
-  Stencil message = cat("use 'OpType::create(builder, ...)' instead of "
+  Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
                         "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
-  auto BuilderType = cxxRecordDecl(isSameOrDerivedFrom("::mlir::OpBuilder"));
   ast_matchers::internal::Matcher<Stmt> Base =
       cxxMemberCallExpr(
           on(expr(anyOf(hasType(BuilderType), hasType(pointsTo(BuilderType))))
@@ -134,8 +133,9 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
   return applyFirst(
       //  Attempt rewrite given an lvalue builder, else just warn.
       {makeRule(cxxMemberCallExpr(unless(on(cxxTemporaryObjectExpr())), Base),
-                rewrite(node("call"), node("builder")), message),
-       makeRule(Base, noopEdit(node("call")), message)});
+                rewrite(node("call"), node("builder"), callArgs("call")),
+                Message),
+       makeRule(Base, noopEdit(node("call")), Message)});
 }
 } // namespace
 
