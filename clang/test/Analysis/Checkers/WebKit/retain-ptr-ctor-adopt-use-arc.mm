@@ -45,6 +45,10 @@ void basic_correct_arc() {
   SomeObj *_other;
 }
 
++ (SomeObj *)sharedInstance {
+  return nil;
+}
+
 - (instancetype)_init {
   self = [super init];
   _number = nil;
@@ -59,6 +63,10 @@ void basic_correct_arc() {
   [copy setNext:_next];
   [copy setOther:_other];
   return copy;
+}
+
+- (BOOL)isEqual:(SomeObj *)other {
+  return self.value == other.value && self.next == other.next && _other == other.other;
 }
 
 - (SomeObj *)copyWithValue:(int)value {
