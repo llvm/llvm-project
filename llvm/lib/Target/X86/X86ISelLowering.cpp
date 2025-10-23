@@ -57634,7 +57634,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   MatchGeneric(GenericOpc, LHS, RHS, false);
   MatchGeneric(GenericOpc, RHS, LHS, X86ISD::SUB == N->getOpcode());
 
-  if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(RHS)) {
+  if (auto *Const = dyn_cast<ConstantSDNode>(RHS)) {
     SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
     if (X86ISD::SUB == N->getOpcode()) {
       // Fold generic add(LHS, -C) to X86ISD::SUB(LHS, C).
@@ -57643,7 +57643,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       // Negate X86ISD::ADD(LHS, C) and replace generic sub(-C, LHS).
       MatchGeneric(ISD::SUB, NegC, LHS, true);
     }
-  } else if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(LHS)) {
+  } else if (auto *Const = dyn_cast<ConstantSDNode>(LHS)) {
     if (X86ISD::SUB == N->getOpcode()) {
       SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
       // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
