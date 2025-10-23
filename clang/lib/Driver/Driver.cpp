@@ -317,9 +317,9 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
           DiagID = diag::err_drv_unknown_argument;
           Diags.Report(DiagID) << ArgString;
         }
-      } else if (!IsCLMode() &&
-          getOpts().findExact(ArgString, Nearest,
-                              llvm::opt::Visibility(options::CC1Option))) {
+      } else if (!IsCLMode() && getOpts().findExact(ArgString, Nearest,
+                                                    llvm::opt::Visibility(
+                                                        options::CC1Option))) {
         DiagID = diag::err_drv_unknown_argument_with_suggestion;
         Diags.Report(DiagID) << ArgString << "-Xclang " + Nearest;
       } else {
