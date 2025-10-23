@@ -264,25 +264,26 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
   return namedOp;
 }
 
+// Converts linalg.generic to named linalg.*conv/pooling* where possible. To
+// improve the search speed, the convolution ops have been segregated based on
+// the rank of iterator types array.
 static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank4ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
+inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
   SmallVector<int64_t> dilations, strides;
+  // Depthwise Convolution ops.
   if (isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
           genericOp, &dilations, &strides))
     return specializeToConvOp<linalg::DepthwiseConv1DNwcWcOp>(
         rewriter, genericOp, dilations, strides);
-  return failure();
-}
-
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
-  SmallVector<int64_t> dilations, strides;
   if (isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
           genericOp, &dilations, &strides))
     return specializeToConvOp<linalg::DepthwiseConv2DNchwChwOp>(
         rewriter, genericOp, dilations, strides);
+  if (isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
+          genericOp, &dilations, &strides))
+    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
+        rewriter, genericOp, dilations, strides);
+  // Pooling ops.
   if (isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(genericOp, &dilations,
                                                        &strides))
     return specializeToConvOp<linalg::PoolingNhwcMaxOp>(rewriter, genericOp,
@@ -303,36 +304,6 @@ inferAndSpecializeBasedOnRank6ConvIteratorTypes(RewriterBase &rewriter,
           genericOp, &dilations, &strides))
     return specializeToConvOp<linalg::PoolingNhwcMinUnsignedOp>(
         rewriter, genericOp, dilations, strides);
-  return failure();
-}
-
-static FailureOr<LinalgOp>
-inferAndSpecializeBasedOnRank9ConvIteratorTypes(RewriterBase &rewriter,
-                                                GenericOp genericOp) {
-  SmallVector<int64_t> dilations, strides;
-  if (isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
-          genericOp, &dilations, &strides))
-    return specializeToConvOp<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
-        rewriter, genericOp, dilations, strides);
-  return failure();
-}
-
-// Converts linalg.generic to named linalg.*conv/pooling* where possible. To
-// improve the search speed, the convolution ops have been segregated based on
-// the rank of iterator types array.
-static FailureOr<LinalgOp>
-inferAndSpecializeToConvolutionOp(RewriterBase &rewriter, GenericOp genericOp) {
-  SmallVector<utils::IteratorType> iteratorTypes =
-      genericOp.getIteratorTypesArray();
-  unsigned totalIterators = iteratorTypes.size();
-  switch (totalIterators) {
-  case 4:
-    return inferAndSpecializeBasedOnRank4ConvIteratorTypes(rewriter, genericOp);
-  case 6:
-    return inferAndSpecializeBasedOnRank6ConvIteratorTypes(rewriter, genericOp);
-  case 9:
-    return inferAndSpecializeBasedOnRank9ConvIteratorTypes(rewriter, genericOp);
-  }
   return failure();
 }
 
@@ -417,10 +388,7 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
   }
 
   // Convolution - e.g. *conv/pooling*
-  if (isaConvolutionOpInterface(genericOp)) {
-    return inferAndSpecializeToConvolutionOp(rewriter, genericOp);
-  }
-  return failure();
+  return inferAndSpecializeToConvolutionOp(rewriter, genericOp);
 }
 
 namespace {

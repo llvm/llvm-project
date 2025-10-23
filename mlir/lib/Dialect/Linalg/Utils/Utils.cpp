@@ -263,6 +263,9 @@ static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
                                                                   body);
 }
 
+// max_unsigned ops should not allow float data type.
+// TODO: Retire OPDSL logic. Refer to :
+// https://github.com/llvm/llvm-project/pull/163724#discussion_r2438940337
 static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal,
                                                                   body);
@@ -273,6 +276,9 @@ static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
                                                                   body);
 }
 
+// min_unsigned ops should not allow float data type.
+// TODO: Retire OPDSL logic. Refer to :
+// https://github.com/llvm/llvm-project/pull/163724#discussion_r2438940337
 static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal,
                                                                   body);
