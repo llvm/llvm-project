@@ -3791,17 +3791,11 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (!Current.Tok.getIdentifierInfo())
+  if (Current.isNoneOf(tok::identifier, tok::kw_operator))
     return false;
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
-
-  if (Prev->is(tok::coloncolon))
-    Prev = Prev->Previous;
-
-  if (!Prev)
-    return false;
 
   const auto &Previous = *Prev;
 
@@ -3851,6 +3845,8 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
+    if (Line.startsWith(tok::kw_friend))
+      return true;
     if (Previous.Tok.getIdentifierInfo() &&
         Previous.isNoneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
@@ -4411,8 +4407,12 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   // breaking after it.
   if (Right.is(TT_SelectorName))
     return 0;
-  if (Left.is(tok::colon) && Left.is(TT_ObjCMethodExpr))
-    return Line.MightBeFunctionDecl ? 50 : 500;
+  if (Left.is(tok::colon)) {
+    if (Left.is(TT_ObjCMethodExpr))
+      return Line.MightBeFunctionDecl ? 50 : 500;
+    if (Left.is(TT_ObjCSelector))
+      return 500;
+  }
 
   // In Objective-C type declarations, avoid breaking after the category's
   // open paren (we'll prefer breaking after the protocol list's opening
@@ -6295,7 +6295,9 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
                      TT_BitFieldColon)) {
     return false;
   }
-  if (Left.is(tok::colon) && Left.isOneOf(TT_DictLiteral, TT_ObjCMethodExpr)) {
+  if (Left.is(tok::colon) && Left.isOneOf(TT_ObjCSelector, TT_ObjCMethodExpr))
+    return true;
+  if (Left.is(tok::colon) && Left.is(TT_DictLiteral)) {
     if (Style.isProto()) {
       if (!Style.AlwaysBreakBeforeMultilineStrings && Right.isStringLiteral())
         return false;
