@@ -536,10 +536,53 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
   return NewLoop;
 }
 
+// Calculates the edge probability from Src to Dst.
+// Dst has to be a successor to Src.
+// This uses branch_probability metadata directly. If data are missing or
+// probability cannot be computed, then std::nullopt is returned.
+// This does not use BranchProbabilityInfo and the values computed by this
+// will vary from BPI because BPI has its own more advanced heuristics to
+// determine probabilities without metadata.
+static std::optional<BranchProbability>
+computeBranchProbabilityUsingMetadata(BasicBlock *Src, BasicBlock *Dst) {
+  assert(Src != Dst && "Passed in same source as destination");
+
+  Instruction *TI = Src->getTerminator();
+  if (!TI || TI->getNumSuccessors() == 0)
+    return BranchProbability::getZero();
+
+  auto NumSucc = TI->getNumSuccessors();
+  SmallVector<uint32_t, 4> Weights;
+
+  if (!extractBranchWeights(*TI, Weights)) {
+    // No metadata
+    return std::nullopt;
+  }
+  assert(NumSucc == Weights.size() && "Missing weights in branch_probability");
+
+  uint64_t Total = 0;
+  uint32_t Numerator = 0;
+  for (auto [i, Weight] : llvm::enumerate(Weights)) {
+    if (TI->getSuccessor(i) == Dst)
+      Numerator += Weight;
+    Total += Weight;
+  }
+
+  // Total of edges might be 0 if the metadata is incorrect/set by hand
+  // or missing. In such case return here to avoid division by 0 later on.
+  // There might also be a case where the value of Total cannot fit into
+  // uint32_t, in such case, just bail out.
+  if (Total == 0 || Total > std::numeric_limits<uint32_t>::max())
+    return std::nullopt;
+
+  return BranchProbability(Numerator, Total);
+}
+
 /// Returns true if we can profitably unroll the multi-exit loop L. Currently,
 /// we return true only if UnrollRuntimeMultiExit is set to true.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
+    Loop *L, const TargetTransformInfo *TTI, 
+    SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
   // The main pain point with multi-exit loop unrolling is that once unrolled,
@@ -567,11 +610,28 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     return true;
 
   // The second heuristic is that L has one exit other than the latchexit and
-  // that exit is a deoptimize block. We know that deoptimize blocks are rarely
-  // taken, which also implies the branch leading to the deoptimize block is
-  // highly predictable. When UnrollRuntimeOtherExitPredictable is specified, we
-  // assume the other exit branch is predictable even if it has no deoptimize
-  // call.
+  // that exit is highly predictable.
+  if (TTI) {
+    if (OtherExits.size() != 1)
+      return false;
+    BasicBlock *LatchBB = L->getLoopLatch();
+    assert(LatchBB && "Expected loop to have a latch");
+    BasicBlock *NonLatchExitingBlock =
+        (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
+    auto BranchProb = computeBranchProbabilityUsingMetadata(
+        NonLatchExitingBlock, OtherExits[0]);
+    // If BranchProbability could not be extracted (returns nullopt), then
+    // don't return and do the check for deopt block.
+    if (BranchProb) {
+      auto Threshold = TTI->getPredictableBranchThreshold().getCompl();
+      return UnrollRuntimeOtherExitPredictable || *BranchProb < Threshold;
+    }
+  }
+  
+  // We know that deoptimize blocks are rarely taken, which also implies the 
+  // branch leading to the deoptimize block is highly predictable. When
+  // UnrollRuntimeOtherExitPredictable is specified, we assume the other exit
+  // branch is predictable even if it has no deoptimize call.
   return (OtherExits.size() == 1 &&
           (UnrollRuntimeOtherExitPredictable ||
            OtherExits[0]->getPostdominatingDeoptimizeCall()));
@@ -715,7 +775,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // Otherwise perform multi-exit unrolling, if either the target indicates
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
-          !canProfitablyRuntimeUnrollMultiExitLoop(L, OtherExits, LatchExit,
+          !canProfitablyRuntimeUnrollMultiExitLoop(L, TTI, OtherExits,
+                                                   LatchExit,
                                                    UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
