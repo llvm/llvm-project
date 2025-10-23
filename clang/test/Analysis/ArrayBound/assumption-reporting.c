@@ -69,8 +69,8 @@ int assumingUpper(int arg) {
   int a = TenElements[arg];
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[arg - 10];
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index}}
   return a + b;
 }
 
@@ -98,8 +98,8 @@ int assumingUpperUnsigned(unsigned arg) {
   int a = TenElements[arg];
   // expected-note@-1 {{Assuming index is less than 10, the number of 'int' elements in 'TenElements'}}
   int b = TenElements[(int)arg - 10];
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index}}
   return a + b;
 }
 
@@ -110,8 +110,8 @@ int assumingNothing(unsigned arg) {
     return 0;
   int a = TenElements[arg]; // no note here, we already know that 'arg' is in bounds
   int b = TenElements[(int)arg - 10];
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index}}
   return a + b;
 }
 
@@ -144,8 +144,8 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   int b = ((int*)(f.b))[arg];
   // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
-  // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
-  // expected-note@-2 {{Access of 'TenElements' at a negative index}}
+  // expected-warning@-1 {{Out of bound access to 'TenElements' at a negative index}}
+  // expected-note@-2 {{Access of 'TenElements' containing 10 elements at negative index}}
   return a + b + c;
 }
 
@@ -212,4 +212,78 @@ int triggeredByAnyReport(int arg) {
   return 1024 >> arg;
   // expected-warning@-1 {{Right operand is negative in right shift}}
   // expected-note@-2 {{The result of right shift is undefined because the right operand is negative}}
+}
+
+extern void clang_analyzer_dump(int);
+
+int* md_array_assumptions(int x, int y, int z) {
+  int *mem = (int*)malloc(y);
+
+  int array[80][90][100];
+  int value = array[x][y][z];
+  // expected-note@-1 {{Assuming index is non-negative and less than 90, the number of 'int[100]' elements in the subarray 'array[x]'}}
+
+  int* ptr = &mem[100];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at index 100}}
+  if (y) {}
+  return ptr;
+}
+
+int* md_array_assumptions_2(int x, int y, int z) {
+  int *mem = (int*)malloc(x);
+
+  int array[80][90][100];
+  int value = array[x][y][z];
+  // expected-note@-1 {{Assuming index is non-negative and less than 80, the number of 'int[90][100]' elements in 'array'}}
+
+  int* ptr = &mem[100];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at index 100}}
+  if (x) {}
+  return ptr;
+}
+
+int* md_array_assumptions_3(int x, int y, int z) {
+  int *mem = (int*)malloc(z);
+
+  int array[80][90][100];
+  int value = array[x][y][z];
+  // expected-note@-1 {{Assuming index is non-negative and less than 100, the number of 'int' elements in the subarray 'array[x][y]'}}
+
+  int* ptr = &mem[100];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at index 100}}
+  if (z) {}
+  return ptr;
+}
+
+
+struct Compound {
+  int arr[10][20];
+};
+
+void compound() {
+  struct Compound c;
+  c.arr[3][28] = 1;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the subarray 'c.arr[3]'}}
+  // expected-note@-2 {{Access of the subarray 'c.arr[3]' at index 28, while it holds only 20 'int' elements}}
+}
+
+void compound_arg(struct Compound *c) {
+  c->arr[3][28] = 1;
+  // expected-warning@-1 {{Out of bound access to memory after the end of the subarray 'c->arr[3]'}}
+  // expected-note@-2 {{Access of the subarray 'c->arr[3]' at index 28, while it holds only 20 'int' elements}}
+}
+
+int array_arg(int x[10][20]) {
+  return x[5][22];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the subarray 'x[5]'}}
+  // expected-note@-2 {{Access of the subarray 'x[5]' at index 22, while it holds only 20 'int' elements}}
+}
+
+int ptr_to_array_arg(int (*x)[10][20]) {
+  return (*x)[5][22];
+  // expected-warning@-1 {{Out of bound access to memory after the end of the subarray '(*x)[5]'}}
+  // expected-note@-2 {{Access of the subarray '(*x)[5]' at index 22, while it holds only 20 'int' elements}}
 }
