@@ -28,6 +28,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 
+#include "llvm/ADT/ScopeExit.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -715,50 +717,6 @@ private:
 
 class StopInfoWatchpoint : public StopInfo {
 public:
-  // Make sure watchpoint is properly disabled and subsequently enabled while
-  // performing watchpoint actions.
-  class WatchpointSentry {
-  public:
-    WatchpointSentry(ProcessSP p_sp, WatchpointSP w_sp) : process_sp(p_sp),
-                     watchpoint_sp(w_sp) {
-      if (process_sp && watchpoint_sp) {
-        const bool notify = false;
-        watchpoint_sp->TurnOnEphemeralMode();
-        process_sp->DisableWatchpoint(watchpoint_sp, notify);
-        process_sp->AddPreResumeAction(SentryPreResumeAction, this);
-      }
-    }
-
-    void DoReenable() {
-      if (process_sp && watchpoint_sp) {
-        bool was_disabled = watchpoint_sp->IsDisabledDuringEphemeralMode();
-        watchpoint_sp->TurnOffEphemeralMode();
-        const bool notify = false;
-        if (was_disabled) {
-          process_sp->DisableWatchpoint(watchpoint_sp, notify);
-        } else {
-          process_sp->EnableWatchpoint(watchpoint_sp, notify);
-        }
-      }
-    }
-
-    ~WatchpointSentry() {
-        DoReenable();
-        if (process_sp)
-            process_sp->ClearPreResumeAction(SentryPreResumeAction, this);
-    }
-
-    static bool SentryPreResumeAction(void *sentry_void) {
-        WatchpointSentry *sentry = (WatchpointSentry *) sentry_void;
-        sentry->DoReenable();
-        return true;
-    }
-
-  private:
-    ProcessSP process_sp;
-    WatchpointSP watchpoint_sp;
-  };
-
   StopInfoWatchpoint(Thread &thread, break_id_t watch_id, bool silently_skip_wp)
       : StopInfo(thread, watch_id), m_silently_skip_wp(silently_skip_wp) {}
 
@@ -968,151 +926,67 @@ protected:
   }
 
   void PerformAction(Event *event_ptr) override {
-    Log *log = GetLog(LLDBLog::Watchpoints);
-    // We're going to calculate if we should stop or not in some way during the
-    // course of this code.  Also by default we're going to stop, so set that
-    // here.
-    m_should_stop = true;
-
-
     ThreadSP thread_sp(m_thread_wp.lock());
-    if (thread_sp) {
+    if (!thread_sp)
+      return;
 
-      WatchpointSP wp_sp(
-          thread_sp->CalculateTarget()->GetWatchpointList().FindByID(
-              GetValue()));
-      if (wp_sp) {
-        // This sentry object makes sure the current watchpoint is disabled
-        // while performing watchpoint actions, and it is then enabled after we
-        // are finished.
-        ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
-        ProcessSP process_sp = exe_ctx.GetProcessSP();
-
-        WatchpointSentry sentry(process_sp, wp_sp);
-
-        if (m_silently_skip_wp) {
-          m_should_stop = false;
-          wp_sp->UndoHitCount();
-        }
-
-        if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount()) {
-          m_should_stop = false;
-          m_should_stop_is_valid = true;
-        }
-
-        Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
-
-        if (m_should_stop && wp_sp->GetConditionText() != nullptr) {
-          // We need to make sure the user sees any parse errors in their
-          // condition, so we'll hook the constructor errors up to the
-          // debugger's Async I/O.
-          ExpressionResults result_code;
-          EvaluateExpressionOptions expr_options;
-          expr_options.SetUnwindOnError(true);
-          expr_options.SetIgnoreBreakpoints(true);
-          ValueObjectSP result_value_sp;
-          result_code = UserExpression::Evaluate(
-              exe_ctx, expr_options, wp_sp->GetConditionText(),
-              llvm::StringRef(), result_value_sp);
-
-          if (result_code == eExpressionCompleted) {
-            if (result_value_sp) {
-              Scalar scalar_value;
-              if (result_value_sp->ResolveValue(scalar_value)) {
-                if (scalar_value.ULongLong(1) == 0) {
-                  // The condition failed, which we consider "not having hit
-                  // the watchpoint" so undo the hit count here.
-                  wp_sp->UndoHitCount();
-                  m_should_stop = false;
-                } else
-                  m_should_stop = true;
-                LLDB_LOGF(log,
-                          "Condition successfully evaluated, result is %s.\n",
-                          m_should_stop ? "true" : "false");
-              } else {
-                m_should_stop = true;
-                LLDB_LOGF(
-                    log,
-                    "Failed to get an integer result from the expression.");
-              }
-            }
-          } else {
-            const char *err_str = "<unknown error>";
-            if (result_value_sp)
-              err_str = result_value_sp->GetError().AsCString();
-
-            LLDB_LOGF(log, "Error evaluating condition: \"%s\"\n", err_str);
-
-            StreamString strm;
-            strm << "stopped due to an error evaluating condition of "
-                    "watchpoint ";
-            wp_sp->GetDescription(&strm, eDescriptionLevelBrief);
-            strm << ": \"" << wp_sp->GetConditionText() << "\"\n";
-            strm << err_str;
-
-            Debugger::ReportError(strm.GetString().str(),
-                                  exe_ctx.GetTargetRef().GetDebugger().GetID());
-          }
-        }
-
-        // If the condition says to stop, we run the callback to further decide
-        // whether to stop.
-        if (m_should_stop) {
-            // FIXME: For now the callbacks have to run in async mode - the
-            // first time we restart we need
-            // to get out of there.  So set it here.
-            // When we figure out how to nest watchpoint hits then this will
-            // change.
-
-          bool old_async = debugger.GetAsyncExecution();
-          debugger.SetAsyncExecution(true);
-
-          StoppointCallbackContext context(event_ptr, exe_ctx, false);
-          bool stop_requested = wp_sp->InvokeCallback(&context);
-
-          debugger.SetAsyncExecution(old_async);
-
-          // Also make sure that the callback hasn't continued the target. If
-          // it did, when we'll set m_should_stop to false and get out of here.
-          if (HasTargetRunSinceMe())
-            m_should_stop = false;
-
-          if (m_should_stop && !stop_requested) {
-            // We have been vetoed by the callback mechanism.
-            m_should_stop = false;
-          }
-        }
-
-        // Don't stop if the watched region value is unmodified, and
-        // this is a Modify-type watchpoint.
-        if (m_should_stop && !wp_sp->WatchedValueReportable(exe_ctx)) {
-          wp_sp->UndoHitCount();
-          m_should_stop = false;
-        }
-
-        // Finally, if we are going to stop, print out the new & old values:
-        if (m_should_stop) {
-          wp_sp->CaptureWatchedValue(exe_ctx);
-
-          Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
-          StreamUP output_up = debugger.GetAsyncOutputStream();
-          if (wp_sp->DumpSnapshots(output_up.get()))
-            output_up->EOL();
-        }
-
-      } else {
-        Log *log_process(GetLog(LLDBLog::Process));
-
-        LLDB_LOGF(log_process,
-                  "Process::%s could not find watchpoint id: %" PRId64 "...",
-                  __FUNCTION__, m_value);
-      }
+    auto Deferred = llvm::make_scope_exit([this]() {
+      Log *log = GetLog(LLDBLog::Watchpoints);
       LLDB_LOGF(log,
                 "Process::%s returning from action with m_should_stop: %d.",
                 __FUNCTION__, m_should_stop);
-
       m_should_stop_is_valid = true;
+    });
+
+    WatchpointSP wp_sp(
+        thread_sp->CalculateTarget()->GetWatchpointList().FindByID(GetValue()));
+    if (!wp_sp) {
+      Log *log_process(GetLog(LLDBLog::Process));
+
+      LLDB_LOGF(log_process,
+                "Process::%s could not find watchpoint id: %" PRId64 "...",
+                __FUNCTION__, m_value);
+      m_should_stop = true;
+      return;
     }
+
+    // We're going to calculate if we should stop or not in some way during the
+    // course of this code.  Also by default we're not going to stop, so set
+    // that here.
+    m_should_stop = false;
+
+    ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
+
+    // This sentry object makes sure the current watchpoint is disabled
+    // while performing watchpoint actions, and it is then enabled after we
+    // are finished.
+    ProcessSP process_sp = exe_ctx.GetProcessSP();
+    Watchpoint::WatchpointSentry sentry(process_sp, wp_sp);
+
+    if (wp_sp->IsHardware()) {
+      // Hardware watchpoint may want to be skipped, so check it here.
+      if (m_silently_skip_wp)
+        return;
+
+      // Watchpoint condition, ignore count and other watchpoint's staff of a
+      // hardware watchpoint haven't still been checked, so do checks here too.
+      if (!wp_sp->WatchedValueReportable(exe_ctx))
+        return;
+    }
+
+    // Watchpoint hit!
+    // Now run a watchpoint callback if it is preserved and report a hit.
+    if (!RunWatchpointCallback(exe_ctx, wp_sp, event_ptr))
+      return;
+
+    // Also make sure that the callback hasn't continued the target. If
+    // it did, when we'll set m_should_stop to false and get out of here.
+    if (HasTargetRunSinceMe())
+      return;
+
+    // Finally, if we are going to stop, print out the new & old values:
+    m_should_stop = true;
+    ReportWatchpointHit(exe_ctx, wp_sp);
   }
 
 private:
@@ -1120,7 +994,38 @@ private:
     assert(m_using_step_over_plan);
     m_step_over_plan_complete = true;
   }
-  
+
+  static void ReportWatchpointHit(const ExecutionContext &exe_ctx,
+                                  lldb::WatchpointSP wp_sp) {
+    Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
+    StreamSP output_sp = debugger.GetAsyncOutputStream();
+    if (wp_sp->DumpSnapshots(output_sp.get())) {
+      output_sp->EOL();
+      output_sp->Flush();
+    }
+  }
+
+  static bool RunWatchpointCallback(const ExecutionContext &exe_ctx,
+                                    WatchpointSP wp_sp, Event *event_ptr) {
+    // FIXME: For now the callbacks have to run in async mode - the
+    // first time we restart we need
+    // to get out of there.  So set it here.
+    // When we figure out how to nest watchpoint hits then this will
+    // change.
+
+    Debugger &debugger = exe_ctx.GetTargetRef().GetDebugger();
+
+    bool old_async = debugger.GetAsyncExecution();
+    debugger.SetAsyncExecution(true);
+
+    StoppointCallbackContext context(event_ptr, exe_ctx, false);
+    bool stop_requested = wp_sp->InvokeCallback(&context);
+
+    debugger.SetAsyncExecution(old_async);
+
+    return stop_requested;
+  }
+
   bool m_should_stop = false;
   bool m_should_stop_is_valid = false;
   // A false watchpoint hit has happened -

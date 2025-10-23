@@ -2279,6 +2279,8 @@ public:
     return m_watchpoint_resource_list;
   }
 
+  llvm::SmallVector<lldb::WatchpointSP> GetEnabledSoftwareWatchpoint();
+
   // When ExtendedBacktraces are requested, the HistoryThreads that are created
   // need an owner -- they're saved here in the Process.  The threads in this
   // list are not iterated over - driver programs need to request the extended
