@@ -167,7 +167,7 @@ bool DependencyScanningWorker::computeDependencies(
   }
 }
 
-llvm::Error DependencyScanningWorker::initializeCompierInstanceWithContext(
+llvm::Error DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, const std::vector<std::string> &CommandLine) {
   CIWithContext =
       std::make_unique<CompilerInstanceWithContext>(*this, CWD, CommandLine);

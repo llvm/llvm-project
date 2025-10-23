@@ -157,7 +157,7 @@ DependencyScanningTool::getTranslationUnitDependencies(
 
 llvm::Error DependencyScanningTool::initializeCompilerInstanceWithContext(
     StringRef CWD, const std::vector<std::string> &CommandLine) {
-  return Worker.initializeCompierInstanceWithContext(CWD, CommandLine);
+  return Worker.initializeCompilerInstanceWithContext(CWD, CommandLine);
 }
 
 llvm::Expected<TranslationUnitDeps>

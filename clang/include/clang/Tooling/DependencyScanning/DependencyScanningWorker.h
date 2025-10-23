@@ -125,7 +125,7 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error initializeCompierInstanceWithContext(
+  llvm::Error initializeCompilerInstanceWithContext(
       StringRef CWD, const std::vector<std::string> &CommandLine);
 
   /// @brief Performaces dependency scanning for the module whose name is
@@ -159,7 +159,7 @@ private:
   /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
 
-  friend class CompilerInstanceWithContext;
+  friend CompilerInstanceWithContext;
   std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
 
   /// Private helper functions.

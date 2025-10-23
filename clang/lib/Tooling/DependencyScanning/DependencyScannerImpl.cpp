@@ -589,7 +589,7 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 }
 
 std::unique_ptr<DependencyOutputOptions>
-takeDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
+takeAndUpdateDependencyOutputOptionsFrom(CompilerInstance &ScanInstance) {
   // This function moves the existing dependency output options from the
   // invocation to the collector. The options in the invocation are reset,
   // which ensures that the compiler won't create new dependency collectors,
@@ -676,7 +676,7 @@ bool DependencyScanningAction::runInvocation(
   if (!MaybePrebuiltModulesASTMap)
     return false;
 
-  auto DepOutputOpts = takeDependencyOutputOptionsFrom(ScanInstance);
+  auto DepOutputOpts = takeAndUpdateDependencyOutputOptionsFrom(ScanInstance);
 
   MDC = initializeScanInstanceDependencyCollector(
       ScanInstance, std::move(DepOutputOpts), WorkingDirectory, Consumer,
@@ -775,7 +775,7 @@ llvm::Error CompilerInstanceWithContext::initialize() {
         "Prebuilt module scanning failed", llvm::inconvertibleErrorCode());
 
   PrebuiltModuleASTMap = std::move(*MaybePrebuiltModulesASTMap);
-  OutputOpts = takeDependencyOutputOptionsFrom(CI);
+  OutputOpts = takeAndUpdateDependencyOutputOptionsFrom(CI);
 
   // We do not create the target in initializeScanCompilerInstance because
   // setting it here is unique for by-name lookups. We create the target only
