@@ -72,7 +72,12 @@ public:
     return SubGlobs[0].getPat() == "*";
   }
 
+  // The following functions are just shortcuts for faster matching. They are
+  // conservative to simplify implementations.
+
+  // Returns plain prefix of the pattern.
   StringRef prefix() const { return Pattern.take_front(PrefixSize); }
+  // Returns plain suffix of the pattern.
   StringRef suffix() const { return Pattern.take_back(SuffixSize); }
 
 private:
