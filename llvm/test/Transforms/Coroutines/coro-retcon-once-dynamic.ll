@@ -114,10 +114,10 @@ cleanup:
 
 declare void @continuation_prototype(ptr, ptr)
 
-declare swiftcorocc noalias ptr @allocate(ptr swiftcoro %cator, i32 %size)
-declare void @deallocate(ptr swiftcoro %cator, ptr %ptr)
-declare swiftcorocc noalias ptr @allocate_frame(ptr swiftcoro %cator, i32 %size)
-declare void @deallocate_frame(ptr swiftcoro %cator, ptr %ptr)
+declare swiftcorocc noalias ptr @allocate(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare void @deallocate(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
+declare swiftcorocc noalias ptr @allocate_frame(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare void @deallocate_frame(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
 
 declare void @use(ptr %ptr)
 
@@ -186,10 +186,12 @@ declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcor
 ; CHECK-SAME:  {
 ; CHECK:         %size = call i32 @getSize()
 ; CHECK:         call swiftcorocc ptr @allocate(
+; CHECK-SAME:      ptr %frame,
 ; CHECK-SAME:      ptr %allocator,
 ; CHECK-SAME:      i32 %size
 ; CHECK-SAME:    )
 ; CHECK:         call swiftcorocc ptr @allocate_frame(
+; CHECK-SAME:      ptr %frame,
 ; CHECK-SAME:      ptr %allocator,
 ; CHECK-SAME:      i32
 ; CHECK-SAME:    )
@@ -199,10 +201,12 @@ declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcor
 ; CHECK-SAME:  )
 ; CHECK-SAME:  {
 ; CHECK:         call void @deallocate_frame(
+; CHECK-SAME:      ptr %0,
 ; CHECK-SAME:      ptr %1,
 ; CHECK-SAME:      ptr
 ; CHECK-SAME:    )
 ; CHECK:         call void @deallocate(
+; CHECK-SAME:      ptr %0,
 ; CHECK-SAME:      ptr %1,
 ; CHECK-SAME:      ptr
 ; CHECK-SAME:    )

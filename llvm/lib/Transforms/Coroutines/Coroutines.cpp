@@ -534,15 +534,18 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
   case coro::ABI::RetconOnce:
   case coro::ABI::RetconOnceDynamic: {
     unsigned sizeParamIndex = 0;
-    SmallVector<Value *, 2> Args;
-    if (ABI == coro::ABI::RetconOnceDynamic) {
-      sizeParamIndex = 1;
-      Args.push_back(RetconLowering.Allocator);
-    }
     Function *Alloc = nullptr;
     if (isa_and_nonnull<CoroAllocaAllocFrameInst>(AI)) {
       assert(ABI == coro::ABI::RetconOnceDynamic);
       Alloc = RetconLowering.AllocFrame;
+    } else {
+      Alloc = RetconLowering.Alloc;
+    }
+    SmallVector<Value *, 2> Args;
+    if (ABI == coro::ABI::RetconOnceDynamic) {
+      Args.push_back(RetconLowering.Storage);
+      Args.push_back(RetconLowering.Allocator);
+      sizeParamIndex = 2;
     } else {
       Alloc = RetconLowering.Alloc;
     }
@@ -582,11 +585,14 @@ void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
     } else {
       Dealloc = RetconLowering.Dealloc;
     }
-    SmallVector<Value *, 2> Args;
     unsigned allocationParamIndex = 0;
+    SmallVector<Value *, 2> Args;
     if (ABI == coro::ABI::RetconOnceDynamic) {
-      allocationParamIndex = 1;
+      allocationParamIndex = 2;
+      Args.push_back(RetconLowering.Storage);
       Args.push_back(RetconLowering.Allocator);
+    } else {
+      Dealloc = RetconLowering.Dealloc;
     }
     Ptr = Builder.CreateBitCast(
         Ptr, Dealloc->getFunctionType()->getParamType(allocationParamIndex));
