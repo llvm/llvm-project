@@ -11,6 +11,7 @@
 #include "src/__support/arg_list.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/printf_core/error_converter.h"
 #include "src/stdio/printf_core/vasprintf_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -30,7 +31,8 @@ LLVM_LIBC_FUNCTION(int, asprintf,
     return -1;
   }
   if (ret_val.value() > cpp::numeric_limits<int>::max()) {
-    libc_errno = EOVERFLOW;
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;
   }
 

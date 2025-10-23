@@ -14,6 +14,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/printf_core/error_converter.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
@@ -44,7 +45,8 @@ LLVM_LIBC_FUNCTION(int, sprintf,
   wb.buff[wb.buff_cur] = '\0';
 
   if (ret_val.value() > cpp::numeric_limits<int>::max()) {
-    libc_errno = EOVERFLOW;
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::OVERFLOW_ERROR);
     return -1;
   }
 

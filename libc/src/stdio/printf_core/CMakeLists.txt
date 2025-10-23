@@ -32,6 +32,16 @@ if(printf_config_copts)
   list(PREPEND printf_config_copts "COMPILE_OPTIONS")
 endif()
 
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  return()
+endif()
+add_subdirectory(${LIBC_TARGET_OS})
+
+set(target_error_converter libc.src.stdio.printf_core.${LIBC_TARGET_OS}.${LIBC_TARGET_OS}_error_converter)
+if(NOT TARGET ${target_error_converter})
+  return()
+endif()
+
 add_header_library(
   printf_config
   HDRS
@@ -143,6 +153,15 @@ add_header_library(
     libc.src.stdio.printf_core.writer
 )
 
+add_header_library(
+  error_converter
+  HDRS
+    error_converter.h
+  DEPENDS
+    ${target_error_converter}
+    libc.src.__support.macros.properties.architectures
+)
+
 if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
   # Not all platforms have a file implementation. If file is unvailable, and a
   # full build is requested, then we must skip all file based printf sections.
@@ -161,3 +180,4 @@ add_header_library(
     libc.src.stdio.printf_core.writer
   ${use_system_file}
 )
+

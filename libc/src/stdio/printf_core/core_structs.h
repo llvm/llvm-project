@@ -142,36 +142,7 @@ constexpr int NULLPTR_WRITE_ERROR = -1003;
 constexpr int INT_CONVERSION_ERROR = -1004;
 constexpr int FIXED_POINT_CONVERSION_ERROR = -1005;
 constexpr int ALLOCATION_ERROR = -1006;
-
-LIBC_INLINE static int internal_error_to_errno(int internal_error) {
-  // System error occured, return error as is.
-  if (internal_error < 1001) {
-    return internal_error;
-  }
-
-  // Map internal error to errno.
-  switch (-internal_error) {
-  case WRITE_OK:
-    return 0;
-  case FILE_WRITE_ERROR:
-    return EIO;
-  case FILE_STATUS_ERROR:
-    return EIO;
-  case NULLPTR_WRITE_ERROR:
-    return EINVAL;
-  case INT_CONVERSION_ERROR:
-    return ERANGE;
-  case FIXED_POINT_CONVERSION_ERROR:
-    return EINVAL;
-  case ALLOCATION_ERROR:
-    return ENOMEM;
-  default:
-    LIBC_ASSERT(
-        false &&
-        "Invalid internal printf error code passed to internal_error_to_errno");
-    return EINVAL;
-  }
-}
+constexpr int OVERFLOW_ERROR = -1007;
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL

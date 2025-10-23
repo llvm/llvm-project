@@ -29,6 +29,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_converter
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno
@@ -88,6 +89,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.error_converter
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
     libc.src.__support.libc_errno

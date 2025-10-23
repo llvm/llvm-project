@@ -73,6 +73,7 @@ add_entrypoint_object(
     strfromf.h
   DEPENDS
     .str_from_util
+    libc.src.stdio.printf_core.error_converter
 )
 
 add_entrypoint_object(
@@ -83,6 +84,7 @@ add_entrypoint_object(
     strfromd.h
   DEPENDS
     .str_from_util
+    libc.src.stdio.printf_core.error_converter
 )
 
 add_entrypoint_object(
@@ -93,6 +95,7 @@ add_entrypoint_object(
     strfroml.h
   DEPENDS
     .str_from_util
+    libc.src.stdio.printf_core.error_converter
 )
 
 add_header_library(
