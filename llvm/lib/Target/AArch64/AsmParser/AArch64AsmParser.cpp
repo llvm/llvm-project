@@ -3890,6 +3890,8 @@ static const struct Extension {
     {"mpamv2", {AArch64::FeatureMPAMv2}},
     {"mtetc", {AArch64::FeatureMTETC}},
     {"gcie", {AArch64::FeatureGCIE}},
+    {"sme2p3", {AArch64::FeatureSME2p3}},
+    {"sve2p3", {AArch64::FeatureSVE2p3}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

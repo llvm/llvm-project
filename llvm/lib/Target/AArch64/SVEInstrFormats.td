@@ -4085,7 +4085,7 @@ class sve2_int_arith_pred<bits<2> sz, bits<6> opc, string asm,
   bits<5> Zdn;
   let Inst{31-24} = 0b01000100;
   let Inst{23-22} = sz;
-  let Inst{21-20} = 0b01;
+  let Inst{21}    = 0b0;
   let Inst{20-16} = opc{5-1};
   let Inst{15-14} = 0b10;
   let Inst{13}    = opc{0};
@@ -4590,15 +4590,15 @@ multiclass sve2_int_cadd<bit opc, string asm, SDPatternOperator op> {
   def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, complexrotateopodd, !cast<Instruction>(NAME # _D)>;
 }
 
-class sve2_int_absdiff_accum<bits<2> sz, bits<4> opc, string asm,
+class sve2_int_absdiff_accum<bits<3> sz, bits<4> opc, string asm,
                              ZPRRegOp zprty1, ZPRRegOp zprty2>
 : I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty2:$Zm),
   asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
   bits<5> Zm;
-  let Inst{31-24} = 0b01000101;
-  let Inst{23-22} = sz;
+  let Inst{31-25} = 0b0100010;
+  let Inst{24-22} = sz;
   let Inst{21}    = 0b0;
   let Inst{20-16} = Zm;
   let Inst{15-14} = 0b11;
@@ -4613,10 +4613,10 @@ class sve2_int_absdiff_accum<bits<2> sz, bits<4> opc, string asm,
 }
 
 multiclass sve2_int_absdiff_accum<bit opc, string asm, SDPatternOperator op> {
-  def _B : sve2_int_absdiff_accum<0b00, { 0b111, opc }, asm, ZPR8, ZPR8>;
-  def _H : sve2_int_absdiff_accum<0b01, { 0b111, opc }, asm, ZPR16, ZPR16>;
-  def _S : sve2_int_absdiff_accum<0b10, { 0b111, opc }, asm, ZPR32, ZPR32>;
-  def _D : sve2_int_absdiff_accum<0b11, { 0b111, opc }, asm, ZPR64, ZPR64>;
+  def _B : sve2_int_absdiff_accum<0b100, { 0b111, opc }, asm, ZPR8, ZPR8>;
+  def _H : sve2_int_absdiff_accum<0b101, { 0b111, opc }, asm, ZPR16, ZPR16>;
+  def _S : sve2_int_absdiff_accum<0b110, { 0b111, opc }, asm, ZPR32, ZPR32>;
+  def _D : sve2_int_absdiff_accum<0b111, { 0b111, opc }, asm, ZPR64, ZPR64>;
 
   def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
@@ -4626,20 +4626,26 @@ multiclass sve2_int_absdiff_accum<bit opc, string asm, SDPatternOperator op> {
 
 multiclass sve2_int_absdiff_accum_long<bits<2> opc, string asm,
                                        SDPatternOperator op> {
-  def _H : sve2_int_absdiff_accum<0b01, { 0b00, opc }, asm, ZPR16, ZPR8>;
-  def _S : sve2_int_absdiff_accum<0b10, { 0b00, opc }, asm, ZPR32, ZPR16>;
-  def _D : sve2_int_absdiff_accum<0b11, { 0b00, opc }, asm, ZPR64, ZPR32>;
+  def _H : sve2_int_absdiff_accum<0b101, { 0b00, opc }, asm, ZPR16, ZPR8>;
+  def _S : sve2_int_absdiff_accum<0b110, { 0b00, opc }, asm, ZPR32, ZPR16>;
+  def _D : sve2_int_absdiff_accum<0b111, { 0b00, opc }, asm, ZPR64, ZPR32>;
 
   def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _H)>;
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _S)>;
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
+multiclass sve2_int_two_way_absdiff_accum_long<bit U, string asm> {
+  def _BtoH : sve2_int_absdiff_accum<0b001, { 0b01, U, 0b1 }, asm, ZPR16, ZPR8>;
+  def _HtoS : sve2_int_absdiff_accum<0b010, { 0b01, U, 0b1 }, asm, ZPR32, ZPR16>;
+  def _StoD : sve2_int_absdiff_accum<0b011, { 0b01, U, 0b1 }, asm, ZPR64, ZPR32>;
+}
+
 multiclass sve2_int_addsub_long_carry<bits<2> opc, string asm,
                                       SDPatternOperator op> {
-  def _S : sve2_int_absdiff_accum<{ opc{1}, 0b0 }, { 0b010, opc{0} }, asm,
+  def _S : sve2_int_absdiff_accum<{ 0b1, opc{1}, 0b0 }, { 0b010, opc{0} }, asm,
                                   ZPR32, ZPR32>;
-  def _D : sve2_int_absdiff_accum<{ opc{1}, 0b1 }, { 0b010, opc{0} }, asm,
+  def _D : sve2_int_absdiff_accum<{ 0b1, opc{1}, 0b1 }, { 0b010, opc{0} }, asm,
                                   ZPR64, ZPR64>;
 
   def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
