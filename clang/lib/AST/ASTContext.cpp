@@ -331,8 +331,8 @@ void ASTContext::addComment(const RawComment &RC) {
 }
 
 bool skipCommentContent(StringRef Text) {
-  return Text == "/*static*/" || Text == "/*virtual*/" \
-  || Text == "/* static */" || Text == "/* virtual */";
+  return Text == "/*static*/" || Text == "/*virtual*/" ||
+         Text == "/* static */" || Text == "/* virtual */";
 }
 
 const RawComment *ASTContext::getRawCommentForAnyRedecl(
@@ -403,7 +403,8 @@ const RawComment *ASTContext::getRawCommentForAnyRedecl(
       continue;
     }
     const RawComment *RedeclComment = getRawCommentForDeclNoCache(Redecl);
-    if (RedeclComment && !skipCommentContent(RedeclComment->getRawText(SourceMgr))) {
+    if (RedeclComment &&
+        !skipCommentContent(RedeclComment->getRawText(SourceMgr))) {
       cacheRawCommentForDecl(*Redecl, *RedeclComment);
       if (OriginalDecl)
         *OriginalDecl = Redecl;
