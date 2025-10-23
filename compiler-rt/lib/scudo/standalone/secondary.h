@@ -577,7 +577,7 @@ private:
   void releaseOlderThan(u64 ReleaseTime) REQUIRES(Mutex) {
     SCUDO_SCOPED_TRACE(GetSecondaryReleaseOlderThanTraceName());
 
-    if (!Config::getQuarantineDisabled())
+    if (!Config::getQuarantineDisabled()) {
       for (uptr I = 0; I < Config::getQuarantineSize(); I++) {
         auto &Entry = Quarantine[I];
         if (!Entry.isValid() || Entry.Time == 0 || Entry.Time > ReleaseTime)
@@ -586,6 +586,7 @@ private:
                                              Entry.CommitSize);
         Entry.Time = 0;
       }
+    }
 
     for (CachedBlock *Entry = OldestPresentEntry; Entry != nullptr;
          Entry = LRUEntries.getPrev(Entry)) {
