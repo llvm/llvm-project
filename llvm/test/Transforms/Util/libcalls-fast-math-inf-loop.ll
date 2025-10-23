@@ -19,18 +19,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
 ; Function Attrs: nounwind
-define float @fn(float %f) #0 {
+define float @fn(float %f) {
 ; CHECK: define float @fn(
 ; CHECK: call fast float @expf(
   %f.addr = alloca float, align 4
   store float %f, ptr %f.addr, align 4, !tbaa !1
   %1 = load float, ptr %f.addr, align 4, !tbaa !1
-  %call = call fast float @expf(float %1) #3
+  %call = call fast float @expf(float %1)
   ret float %call
 }
 
 ; Function Attrs: inlinehint nounwind readnone
-define available_externally float @expf(float %x) #1 {
+define available_externally float @expf(float %x) {
 ; CHECK: define available_externally float @expf(
 ; CHECK: fpext float
 ; CHECK: call fast double @exp(
@@ -39,17 +39,13 @@ define available_externally float @expf(float %x) #1 {
   store float %x, ptr %x.addr, align 4, !tbaa !1
   %1 = load float, ptr %x.addr, align 4, !tbaa !1
   %conv = fpext float %1 to double
-  %call = call fast double @exp(double %conv) #3
+  %call = call fast double @exp(double %conv)
   %conv1 = fptrunc double %call to float
   ret float %conv1
 }
 
 ; Function Attrs: nounwind readnone
-declare double @exp(double) #2
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { inlinehint nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone }
+declare double @exp(double)
 
 !llvm.ident = !{!0}
 
