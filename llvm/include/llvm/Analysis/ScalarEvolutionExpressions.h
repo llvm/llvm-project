@@ -793,9 +793,7 @@ public:
 
   const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
     const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
-    return Operand == Expr->getOperand()
-               ? Expr
-               : SE.getPtrToAddrExpr(Operand, Expr->getType());
+    return Operand == Expr->getOperand() ? Expr : SE.getPtrToAddrExpr(Operand);
   }
 
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
