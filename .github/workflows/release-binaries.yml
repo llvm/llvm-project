@@ -273,7 +273,7 @@ jobs:
         -DLIBXML2_WITH_VALID=OFF -DLIBXML2_WITH_WRITER=OFF -DLIBXML2_WITH_XINCLUDE=OFF `
         -DLIBXML2_WITH_XPATH=OFF -DLIBXML2_WITH_XPTR=OFF -DLIBXML2_WITH_ZLIB=OFF `
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded 
-        ninja -C libxml-build install
+        ninja -v -C libxml-build install
 
     - name: Configure
       id: build
