@@ -52,7 +52,7 @@ TEST_F(VPlanTransformsTest, createAndOptimizeReplicateRegions) {
 
   auto *VPBB0 = Plan.getEntry();
   auto *VPBB1 = Plan.createVPBasicBlock("VPBB1");
-  VPRegionBlock *R1 = Plan.createVPRegionBlock(VPBB1, VPBB1, "R1");
+  VPRegionBlock *R1 = Plan.createLoopRegion("R1", VPBB1, VPBB1);
   VPBlockUtils::connectBlocks(VPBB0, R1);
   auto *Mask = new VPInstruction(0, {});
   // Not masked, but should still be sunk into Rep3's region.
