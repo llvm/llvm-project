@@ -3470,13 +3470,14 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
     break;
   case llvm::omp::Directive::OMPD_tile:
     genTileOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_fuse: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
     if (!semaCtx.langOptions().OpenMPSimd)
       TODO(loc, "Unhandled loop directive (" +
                     llvm::omp::getOpenMPDirectiveName(dir, version) + ")");
     break;
-                                        }
+  }
   case llvm::omp::Directive::OMPD_unroll:
     genUnrollOp(converter, symTable, stmtCtx, semaCtx, eval, loc, queue, item);
     break;

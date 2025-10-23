@@ -14,7 +14,7 @@ subroutine loop_transformation_construct
   do i = 1, I
     continue
   end do
-  !$omp tile
+  !$omp tile sizes(2)
     do j = 1, I
       continue
     end do
@@ -47,7 +47,8 @@ end subroutine
 !CHECK-PARSE-NEXT: | | | | OpenMPLoopConstruct
 !CHECK-PARSE-NEXT: | | | | | OmpBeginLoopDirective
 !CHECK-PARSE-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = tile
-!CHECK-PARSE-NEXT: | | | | | | OmpClauseList ->
+!CHECK-PARSE-NEXT: | | | | | | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
+!CHECK-PARSE-NEXT: | | | | | | | LiteralConstant -> IntLiteralConstant = '2'
 !CHECK-PARSE-NEXT: | | | | | | Flags = None
 !CHECK-PARSE-NEXT: | | | | | DoConstruct
 !CHECK-PARSE-NEXT: | | | | | | NonLabelDoStmt

@@ -2259,85 +2259,86 @@ void OmpAttributeVisitor::CheckPerfectNestAndRectangularLoop(
   // Find the associated region by skipping nested loop-associated constructs
   // such as loop transformations
   const parser::NestedConstruct *innermostAssocRegion{nullptr};
-  const parser::OpenMPLoopConstruct *innermostConstruct{&x};
-  while (const auto &innerAssocStmt{
-      std::get<std::optional<parser::NestedConstruct>>(
-          innermostConstruct->t)}) {
-    innermostAssocRegion = &(innerAssocStmt.value());
+  const parser::OpenMPLoopConstruct *innermostConstruct = &x;
+  auto &loopConsList =
+      std::get<std::list<parser::NestedConstruct>>(innermostConstruct->t);
+  for (auto &loopCons : loopConsList) {
+    innermostAssocRegion = &loopCons;
     if (const auto *innerConstruct{
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
                 innermostAssocRegion)}) {
-      innermostConstruct = &innerConstruct->value();
+      CheckPerfectNestAndRectangularLoop(innerConstruct->value());
+      return;
     } else {
-      break;
+
+      if (!innermostAssocRegion)
+        continue;
+      const auto &outer{std::get_if<parser::DoConstruct>(innermostAssocRegion)};
+      if (!outer)
+        continue;
+
+      llvm::SmallVector<Symbol *> ivs;
+      int curLevel{0};
+      const parser::DoConstruct *loop{outer};
+      while (true) {
+        auto [iv, lb, ub, step] = GetLoopBounds(*loop);
+
+        if (lb)
+          checkExprHasSymbols(ivs, lb);
+        if (ub)
+          checkExprHasSymbols(ivs, ub);
+        if (step)
+          checkExprHasSymbols(ivs, step);
+        if (iv) {
+          if (auto *symbol{currScope().FindSymbol(iv->source)})
+            ivs.push_back(symbol);
+        }
+
+        // Stop after processing all affected loops
+        if (curLevel + 1 >= dirDepth)
+          break;
+
+        // Recurse into nested loop
+        const auto &block{std::get<parser::Block>(loop->t)};
+        if (block.empty()) {
+          // Insufficient number of nested loops already reported by
+          // CheckAssocLoopLevel()
+          break;
+        }
+
+        loop = GetDoConstructIf(block.front());
+        if (!loop) {
+          // Insufficient number of nested loops already reported by
+          // CheckAssocLoopLevel()
+          break;
+        }
+
+        auto checkPerfectNest = [&, this]() {
+          if (block.empty())
+            return;
+          auto last = block.end();
+          --last;
+
+          // A trailing CONTINUE is not considered part of the loop body
+          if (parser::Unwrap<parser::ContinueStmt>(*last))
+            --last;
+
+          // In a perfectly nested loop, the nested loop must be the only
+          // statement
+          if (last == block.begin())
+            return;
+
+          // Non-perfectly nested loop
+          // TODO: Point to non-DO statement, directiveSource as a note
+          context_.Say(dirContext.directiveSource,
+              "Canonical loop nest must be perfectly nested."_err_en_US);
+        };
+
+        checkPerfectNest();
+
+        ++curLevel;
+      }
     }
-  }
-
-  if (!innermostAssocRegion)
-    return;
-  const auto &outer{std::get_if<parser::DoConstruct>(innermostAssocRegion)};
-  if (!outer)
-    return;
-
-  llvm::SmallVector<Symbol *> ivs;
-  int curLevel{0};
-  const parser::DoConstruct *loop{outer};
-  while (true) {
-    auto [iv, lb, ub, step] = GetLoopBounds(*loop);
-
-    if (lb)
-      checkExprHasSymbols(ivs, lb);
-    if (ub)
-      checkExprHasSymbols(ivs, ub);
-    if (step)
-      checkExprHasSymbols(ivs, step);
-    if (iv) {
-      if (auto *symbol{currScope().FindSymbol(iv->source)})
-        ivs.push_back(symbol);
-    }
-
-    // Stop after processing all affected loops
-    if (curLevel + 1 >= dirDepth)
-      break;
-
-    // Recurse into nested loop
-    const auto &block{std::get<parser::Block>(loop->t)};
-    if (block.empty()) {
-      // Insufficient number of nested loops already reported by
-      // CheckAssocLoopLevel()
-      break;
-    }
-
-    loop = GetDoConstructIf(block.front());
-    if (!loop) {
-      // Insufficient number of nested loops already reported by
-      // CheckAssocLoopLevel()
-      break;
-    }
-
-    auto checkPerfectNest = [&, this]() {
-      if (block.empty())
-        return;
-      auto last = block.end();
-      --last;
-
-      // A trailing CONTINUE is not considered part of the loop body
-      if (parser::Unwrap<parser::ContinueStmt>(*last))
-        --last;
-
-      // In a perfectly nested loop, the nested loop must be the only statement
-      if (last == block.begin())
-        return;
-
-      // Non-perfectly nested loop
-      // TODO: Point to non-DO statement, directiveSource as a note
-      context_.Say(dirContext.directiveSource,
-          "Canonical loop nest must be perfectly nested."_err_en_US);
-    };
-
-    checkPerfectNest();
-
-    ++curLevel;
   }
 }
 

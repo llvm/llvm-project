@@ -31,7 +31,7 @@ subroutine loop_transformation_construct4
   integer :: v(i)
 
   !ERROR: The loop sequence following the TILE construct must be fully fused first.
-  !$omp tile
+  !$omp tile sizes(2)
   !$omp fuse looprange(1,2)
   do x = 1, i
     v(x) = x * 2

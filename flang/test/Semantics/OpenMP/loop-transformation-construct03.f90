@@ -27,7 +27,7 @@ subroutine loop_transformation_construct2
   integer :: v(i)
 
   ! Only 1 do loop is associated with the OMP TILE directive so the END TILE directive is unmatched
-  !$omp tile
+  !$omp tile sizes(2)
   do x = 1, i
     v(x) = x(x) * 2
   end do
