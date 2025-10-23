@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"

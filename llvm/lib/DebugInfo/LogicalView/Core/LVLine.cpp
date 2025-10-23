@@ -216,7 +216,7 @@ void LVLineDebug::printInlineCallstack(raw_ostream &OS) const {
       OS << "[" << Scope->getName();
       if (PrevScope && PrevScope->getIsInlinedFunction()) {
         OS << ":"
-          << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
+           << cast<LVScopeFunctionInlined>(PrevScope)->getCallLineNumber();
       }
       OS << "]";
       PrevScope = Scope;
