@@ -6536,6 +6536,36 @@ def CMP_SWAP_64 : PseudoInst<(outs GPRPair:$Rd, GPRPair:$addr_temp_out),
 def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 
 //===----------------------------------------------------------------------===//
+// KCFI check pseudo-instruction.
+//===----------------------------------------------------------------------===//
+// KCFI_CHECK pseudo-instruction for Kernel Control-Flow Integrity.
+// Expands to a sequence that verifies the function pointer's type hash.
+// Different sizes for different architectures due to different expansions.
+
+def KCFI_CHECK_ARM
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsARM]> {
+  let Size = 28; // 7 instructions (bic, ldr, 4x eor, beq, udf)
+}
+
+def KCFI_CHECK_Thumb2
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb2]> {
+  let Size =
+      32; // worst-case 9 instructions (push, bic, ldr, 4x eor, pop, beq.w, udf)
+}
+
+def KCFI_CHECK_Thumb1
+    : PseudoInst<(outs), (ins GPR:$ptr, i32imm:$type), NoItinerary, []>,
+      Sched<[]>,
+      Requires<[IsThumb1Only]> {
+  let Size = 50; // worst-case 25 instructions (pushes, bic helper, type
+                 // building, cmp, pops)
+}
+
+//===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on Windows.
 //===----------------------------------------------------------------------===//
 let isPseudo = 1 in {
