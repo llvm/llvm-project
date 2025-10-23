@@ -14,6 +14,7 @@
 #define OFFLOAD_PERTHREADTABLE_H
 
 #include <list>
+#include <llvm/ADT/SmallVector.h>
 #include <memory>
 #include <mutex>
 #include <type_traits>
@@ -24,7 +25,7 @@ template <typename ObjectType> struct PerThread {
   };
 
   std::mutex Mutex;
-  std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
+  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
   PerThread() = default;
