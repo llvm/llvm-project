@@ -25,18 +25,6 @@ define void @f(i1 %var_0, i16 %var_1, i64 %var_2, i8 %var_3, i16 %var_4, i1 %var
 ; CHECK-NEXT:    stp x24, x23, [sp, #192] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #208] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #224] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 240
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w23, -40
-; CHECK-NEXT:    .cfi_offset w24, -48
-; CHECK-NEXT:    .cfi_offset w25, -56
-; CHECK-NEXT:    .cfi_offset w26, -64
-; CHECK-NEXT:    .cfi_offset w27, -72
-; CHECK-NEXT:    .cfi_offset w28, -80
-; CHECK-NEXT:    .cfi_offset w30, -96
 ; CHECK-NEXT:    str w6, [sp, #20] // 4-byte Folded Spill
 ; CHECK-NEXT:    str w4, [sp, #72] // 4-byte Folded Spill
 ; CHECK-NEXT:    str w3, [sp, #112] // 4-byte Folded Spill
@@ -647,6 +635,6 @@ for.body41:                                       ; preds = %for.body41.lr.ph
   br label %for.cond563.preheader
 }
 
-attributes #0 = { "frame-pointer"="non-leaf" "target-cpu"="grace" }
+attributes #0 = { nounwind "frame-pointer"="non-leaf" "target-cpu"="grace" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
