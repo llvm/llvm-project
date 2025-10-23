@@ -7176,6 +7176,7 @@ public:
   TypedefNameDecl *TND;
   ValueDecl *VD;
   VarDecl *Var;
+  ObjCMethodDecl *ObjCMethod;
   QualType DeclTy;
   QualType Ty;
   unsigned EffectiveLevel;
@@ -7187,7 +7188,13 @@ public:
     TND = dyn_cast<TypedefNameDecl>(D);
     VD = dyn_cast<ValueDecl>(D);
     Var = dyn_cast<VarDecl>(D);
-    DeclTy = TND ? TND->getUnderlyingType() : VD->getType();
+    ObjCMethod = dyn_cast<ObjCMethodDecl>(D);
+    if (TND)
+      DeclTy = TND->getUnderlyingType();
+    else if (ObjCMethod)
+      DeclTy = ObjCMethod->getReturnType();
+    else
+      DeclTy = VD->getType();
     IsFPtr = false;
     EffectiveLevel = Level;
     Ty = DeclTy;
@@ -7292,72 +7299,69 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     }
   }
 
-  if (Info.VD) {
-    const auto *FD = dyn_cast<FieldDecl>(Info.VD);
-    if (FD && FD->getParent()->isUnion()) {
-      Diag(Loc, diag::err_invalid_decl_kind_bounds_safety_union_count)
-          << DiagName;
-      return;
-    }
+  const auto *FD = dyn_cast<FieldDecl>(D);
+  if (FD && FD->getParent()->isUnion()) {
+    Diag(Loc, diag::err_invalid_decl_kind_bounds_safety_union_count)
+        << DiagName;
+    return;
+  }
 
-    if (Info.EffectiveLevel != 0 &&
-        (!isa<ParmVarDecl>(Info.VD) || Info.DeclTy->isBoundsAttributedType())) {
-      Diag(Loc, diag::err_bounds_safety_nested_dynamic_bound) << DiagName;
-      return;
-    }
+  if (Info.EffectiveLevel != 0 &&
+      (!isa<ParmVarDecl>(D) || Info.DeclTy->isBoundsAttributedType())) {
+    Diag(Loc, diag::err_bounds_safety_nested_dynamic_bound) << DiagName;
+    return;
+  }
 
-    // Clang causes array parameters to decay to pointers so quickly that
-    // attributes aren't even parsed yet. This causes arrays with both an
-    // explicit size and a count attribute to go to the CountAttributedType
-    // case of ConstructCountAttributedType, which complains that the type
-    // has two count attributes. See if we can produce a better diagnostic here
-    // instead.
-    if (const auto *PVD = dyn_cast_or_null<ParmVarDecl>(Info.Var)) {
-      QualType TSITy = PVD->getTypeSourceInfo()->getType();
-      if (IsEndedBy) {
-        if (Level == 0 && TSITy->isArrayType()) {
-          Diag(Loc, diag::err_attribute_pointers_only) << DiagName << 0;
-          return;
-        }
-      } else {
-        const auto *ATy = Context.getAsArrayType(TSITy);
-        if (Level == 0 && ATy && !ATy->isIncompleteArrayType() &&
-            !TSITy->hasAttr(attr::ArrayDecayDiscardsCountInParameters)) {
-          Diag(Loc, diag::err_bounds_safety_complete_array_with_count);
-          return;
-        }
+  // Clang causes array parameters to decay to pointers so quickly that
+  // attributes aren't even parsed yet. This causes arrays with both an
+  // explicit size and a count attribute to go to the CountAttributedType
+  // case of ConstructCountAttributedType, which complains that the type
+  // has two count attributes. See if we can produce a better diagnostic here
+  // instead.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    QualType TSITy = PVD->getTypeSourceInfo()->getType();
+    if (IsEndedBy) {
+      if (Level == 0 && TSITy->isArrayType()) {
+        Diag(Loc, diag::err_attribute_pointers_only) << DiagName << 0;
+        return;
+      }
+    } else {
+      const auto *ATy = Context.getAsArrayType(TSITy);
+      if (Level == 0 && ATy && !ATy->isIncompleteArrayType() &&
+          !TSITy->hasAttr(attr::ArrayDecayDiscardsCountInParameters)) {
+        Diag(Loc, diag::err_bounds_safety_complete_array_with_count);
+        return;
       }
     }
+  }
 
-    if (Info.Ty->isArrayType() && OrNull &&
-        (FD || Info.EffectiveLevel > 0 ||
-         (Info.Var && Info.Var->hasExternalStorage()))) {
-      auto ErrDiag = Diag(Loc, diag::err_bounds_safety_nullable_fam);
-      // Pointers to dynamic count types are only allowed for parameters, so any
-      // FieldDecl containing a dynamic count type is a FAM. I.e. a struct field
-      // with type 'int(*)[__counted_by(...)]' is not valid.
-      ErrDiag << CountInBytes << /*is FAM?*/ !!FD << DiagName;
-      assert(!FD || Info.EffectiveLevel == 0);
+  if (Info.Ty->isArrayType() && OrNull &&
+      (FD || Info.EffectiveLevel > 0 ||
+       (Info.Var && Info.Var->hasExternalStorage()))) {
+    auto ErrDiag = Diag(Loc, diag::err_bounds_safety_nullable_fam);
+    // Pointers to dynamic count types are only allowed for parameters, so any
+    // FieldDecl containing a dynamic count type is a FAM. I.e. a struct field
+    // with type 'int(*)[__counted_by(...)]' is not valid.
+    ErrDiag << CountInBytes << /*is FAM?*/ !!FD << DiagName;
+    assert(!FD || Info.EffectiveLevel == 0);
 
-      SourceLocation FixItLoc = getSourceManager().getExpansionLoc(Loc);
-      SourceLocation EndLoc =
-          Lexer::getLocForEndOfToken(FixItLoc, /* Don't include '(' */ -1,
-                                     getSourceManager(), getLangOpts());
-      std::string Attribute = CountInBytes ? "__sized_by" : "__counted_by";
-      ErrDiag << FixItHint::CreateReplacement({FixItLoc, EndLoc}, Attribute);
+    SourceLocation FixItLoc = getSourceManager().getExpansionLoc(Loc);
+    SourceLocation EndLoc =
+        Lexer::getLocForEndOfToken(FixItLoc, /* Don't include '(' */ -1,
+                                   getSourceManager(), getLangOpts());
+    std::string Attribute = CountInBytes ? "__sized_by" : "__counted_by";
+    ErrDiag << FixItHint::CreateReplacement({FixItLoc, EndLoc}, Attribute);
 
-      return;
-    }
+    return;
+  }
 
-    if (Info.Ty->isArrayType() && Info.EffectiveLevel > 0) {
-      auto ErrDiag =
-          Diag(
-              Loc,
-              diag::
-                  err_bounds_safety_unsupported_address_of_incomplete_array_type)
-          << Info.Ty;
-      // apply attribute anyways to avoid too misleading follow-up diagnostics
-    }
+  if (Info.Ty->isArrayType() && Info.EffectiveLevel > 0) {
+    auto ErrDiag =
+        Diag(Loc,
+             diag::
+                 err_bounds_safety_unsupported_address_of_incomplete_array_type)
+        << Info.Ty;
+    // apply attribute anyways to avoid too misleading follow-up diagnostics
   }
 
   QualType NewDeclTy{};
@@ -7379,8 +7383,9 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
     // Make started_by() pointers if VD is a field or variable. We don't want to
     // create started_by(X) pointers where X is a function etc.
     std::optional<TypeCoupledDeclRefInfo> StartPtrInfo;
-    if (Info.VD && (isa<FieldDecl>(Info.VD) || isa<VarDecl>(Info.VD))) {
+    if (isa<FieldDecl, VarDecl>(D)) {
       assert(Level <= 1);
+      assert(Info.VD);
       StartPtrInfo = TypeCoupledDeclRefInfo(Info.VD, /*Deref=*/Level != 0);
     }
 
@@ -7436,6 +7441,8 @@ void Sema::applyPtrCountedByEndedByAttr(Decl *D, unsigned Level,
         Info.TND->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
     TypeSourceInfo *TSI = Context.getTrivialTypeSourceInfo(NewDeclTy, Loc);
     Info.TND->setTypeSourceInfo(TSI);
+  } else if (Info.ObjCMethod) {
+    Info.ObjCMethod->setReturnType(NewDeclTy);
   } else {
     Info.VD->setType(NewDeclTy);
     // Reconstruct implicit cast for initializer after variable type change.
