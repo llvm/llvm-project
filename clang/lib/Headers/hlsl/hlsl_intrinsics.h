@@ -666,5 +666,81 @@ smoothstep(__detail::HLSL_FIXED_VECTOR<float, N> Min,
   return __detail::smoothstep_vec_impl(Min, Max, X);
 }
 
+//===----------------------------------------------------------------------===//
+// ddx_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddx_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space x-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<half, T>::value, T>
+ddx_coarse(T value) {
+  return __detail::ddx_coarse_impl(value);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddx_coarse(T value) {
+  return __detail::ddx_coarse_impl(value);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<half, L>
+ddx_coarse(__detail::HLSL_FIXED_VECTOR<half, L> value) {
+  return __detail::ddx_coarse_impl(value);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<float, L>
+ddx_coarse(__detail::HLSL_FIXED_VECTOR<float, L> value) {
+  return __detail::ddx_coarse_impl(value);
+}
+
+//===----------------------------------------------------------------------===//
+// ddy_coarse builtin
+//===----------------------------------------------------------------------===//
+
+/// \fn T ddy_coarse(T value)
+/// \brief Computes a low precision partial derivative with respect to the
+/// screen-space y-coordinate.
+/// \param value The input value.
+///
+/// The return value is a floating point scalar or vector containing the low
+/// prevision partial derivative of the input value.
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<half, T>::value, T>
+ddy_coarse(T value) {
+  return __detail::ddy_coarse_impl(value);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+ddy_coarse(T value) {
+  return __detail::ddy_coarse_impl(value);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<half, L>
+ddy_coarse(__detail::HLSL_FIXED_VECTOR<half, L> value) {
+  return __detail::ddy_coarse_impl(value);
+}
+
+template <int L>
+const inline __detail::HLSL_FIXED_VECTOR<float, L>
+ddy_coarse(__detail::HLSL_FIXED_VECTOR<float, L> value) {
+  return __detail::ddy_coarse_impl(value);
+}
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_
