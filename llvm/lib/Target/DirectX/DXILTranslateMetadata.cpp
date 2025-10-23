@@ -303,14 +303,12 @@ static void translateBranchMetadata(Module &M, Instruction *BBTerminatorInst) {
          "invalid operands for hlsl.controlflow.hint");
 
   MDBuilder MDHelper(M.getContext());
-  ConstantInt *Op1 =
-      mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1));
 
-  SmallVector<llvm::Metadata *, 2> Vals(
-      ArrayRef<Metadata *>{MDHelper.createString("dx.controlflow.hints"),
-                           MDHelper.createConstant(Op1)});
+  llvm::Metadata *HintsStr = MDHelper.createString("dx.controlflow.hints");
+  llvm::Metadata *HintsValue = MDHelper.createConstant(
+      mdconst::extract<ConstantInt>(HlslControlFlowMD->getOperand(1)));
 
-  MDNode *MDNode = llvm::MDNode::get(M.getContext(), Vals);
+  MDNode *MDNode = llvm::MDNode::get(M.getContext(), {HintsStr, HintsValue});
 
   BBTerminatorInst->setMetadata("dx.controlflow.hints", MDNode);
   BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
