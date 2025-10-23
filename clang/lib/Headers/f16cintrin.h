@@ -15,17 +15,20 @@
 #define __F16CINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS128 \
-  __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(128)))
-#define __DEFAULT_FN_ATTRS256 \
-  __attribute__((__always_inline__, __nodebug__, __target__("f16c"), __min_vector_width__(256)))
-
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
-#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("f16c"),           \
+                 __min_vector_width__(128))) constexpr
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("f16c"),           \
+                 __min_vector_width__(256))) constexpr
 #else
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
-#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("f16c"),           \
+                 __min_vector_width__(128)))
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("f16c"),           \
+                 __min_vector_width__(256)))
 #endif
 
 /* NOTE: Intel documents the 128-bit versions of these as being in emmintrin.h,
@@ -43,7 +46,7 @@
 /// \param __a
 ///    A 16-bit half-precision float value.
 /// \returns The converted 32-bit float value.
-static __inline float __DEFAULT_FN_ATTRS128_CONSTEXPR
+static __inline float __DEFAULT_FN_ATTRS128
 _cvtsh_ss(unsigned short __a)
 {
   return (float)__builtin_bit_cast(__fp16, __a);
@@ -112,7 +115,7 @@ _cvtsh_ss(unsigned short __a)
 ///    A 128-bit vector containing 16-bit half-precision float values. The lower
 ///    64 bits are used in the conversion.
 /// \returns A 128-bit vector of [4 x float] containing converted float values.
-static __inline __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
+static __inline __m128 __DEFAULT_FN_ATTRS128
 _mm_cvtph_ps(__m128i __a)
 {
   typedef __fp16 __v4fp16 __attribute__((__vector_size__(8)));
@@ -159,7 +162,7 @@ _mm_cvtph_ps(__m128i __a)
 ///    converted to 32-bit single-precision float values.
 /// \returns A vector of [8 x float] containing the converted 32-bit
 ///    single-precision float values.
-static __inline __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+static __inline __m256 __DEFAULT_FN_ATTRS256
 _mm256_cvtph_ps(__m128i __a)
 {
   typedef __fp16 __v8fp16 __attribute__((__vector_size__(16), __aligned__(16)));
@@ -169,7 +172,5 @@ _mm256_cvtph_ps(__m128i __a)
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
-#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
-#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 
 #endif /* __F16CINTRIN_H */

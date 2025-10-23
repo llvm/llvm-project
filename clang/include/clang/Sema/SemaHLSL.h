@@ -133,6 +133,8 @@ public:
   bool isSemanticValid(FunctionDecl *FD, DeclaratorDecl *D);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
+  bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
+                          SourceLocation Loc);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
@@ -213,7 +215,6 @@ public:
   bool diagnosePositionType(QualType T, const ParsedAttr &AL);
 
   bool CanPerformScalarCast(QualType SrcTy, QualType DestTy);
-  bool ContainsBitField(QualType BaseTy);
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
@@ -260,11 +261,6 @@ private:
 
   bool initGlobalResourceDecl(VarDecl *VD);
   bool initGlobalResourceArrayDecl(VarDecl *VD);
-  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
-                                    HLSLResourceBindingAttr *RBA,
-                                    HLSLVkBindingAttr *VkBinding,
-                                    uint32_t ArrayIndex,
-                                    llvm::SmallVectorImpl<Expr *> &Args);
 };
 
 } // namespace clang

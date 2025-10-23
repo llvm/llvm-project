@@ -23,7 +23,6 @@
 #include <__debug_utils/sanitizers.h>
 #include <__format/enable_insertable.h>
 #include <__fwd/vector.h>
-#include <__iterator/advance.h>
 #include <__iterator/bounded_iter.h>
 #include <__iterator/concepts.h>
 #include <__iterator/distance.h>
@@ -177,7 +176,7 @@ public:
     __guard.__complete();
   }
 
-  template <__enable_if_t<__is_allocator<_Allocator>::value, int> = 0>
+  template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
   vector(size_type __n, const value_type& __x, const allocator_type& __a)
       : __alloc_(__a) {
@@ -845,22 +844,22 @@ private:
 
 #if _LIBCPP_STD_VER >= 17
 template <class _InputIterator,
-          class _Alloc = allocator<__iter_value_type<_InputIterator>>,
+          class _Alloc = allocator<__iterator_value_type<_InputIterator>>,
           class        = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
-vector(_InputIterator, _InputIterator) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
+vector(_InputIterator, _InputIterator) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 
 template <class _InputIterator,
           class _Alloc,
           class = enable_if_t<__has_input_iterator_category<_InputIterator>::value>,
-          class = enable_if_t<__is_allocator<_Alloc>::value> >
-vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iter_value_type<_InputIterator>, _Alloc>;
+          class = enable_if_t<__is_allocator_v<_Alloc>>>
+vector(_InputIterator, _InputIterator, _Alloc) -> vector<__iterator_value_type<_InputIterator>, _Alloc>;
 #endif
 
 #if _LIBCPP_STD_VER >= 23
 template <ranges::input_range _Range,
           class _Alloc = allocator<ranges::range_value_t<_Range>>,
-          class        = enable_if_t<__is_allocator<_Alloc>::value> >
+          class        = enable_if_t<__is_allocator_v<_Alloc>>>
 vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
@@ -1161,6 +1160,24 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   return this->__end_;
 }
 
+// This makes the compiler inline `__else()` if `__cond` is known to be false. Currently LLVM doesn't do that without
+// the `__builtin_constant_p`, since it considers `__else` unlikely even through it's known to be run.
+// See https://llvm.org/PR154292
+template <class _If, class _Else>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool __cond, _If __if, _Else __else) {
+  if (__builtin_constant_p(__cond)) {
+    if (__cond)
+      __if();
+    else
+      __else();
+  } else {
+    if (__cond) [[__likely__]]
+      __if();
+    else
+      __else();
+  }
+}
+
 template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
@@ -1171,12 +1188,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline
 #endif
     vector<_Tp, _Allocator>::emplace_back(_Args&&... __args) {
   pointer __end = this->__end_;
-  if (__end < this->__cap_) {
-    __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
-    ++__end;
-  } else {
-    __end = __emplace_back_slow_path(std::forward<_Args>(__args)...);
-  }
+  std::__if_likely_else(
+      __end < this->__cap_,
+      [&] {
+        __emplace_back_assume_capacity(std::forward<_Args>(__args)...);
+        ++__end;
+      },
+      [&] { __end = __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+
   this->__end_ = __end;
 #if _LIBCPP_STD_VER >= 17
   return *(__end - 1);

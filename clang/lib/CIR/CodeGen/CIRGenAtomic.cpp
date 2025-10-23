@@ -255,7 +255,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
   mlir::Value expected = builder.createLoad(loc, val1);
   mlir::Value desired = builder.createLoad(loc, val2);
 
-  auto cmpxchg = cir::AtomicCmpXchg::create(
+  auto cmpxchg = cir::AtomicCmpXchgOp::create(
       builder, loc, expected.getType(), builder.getBoolTy(), ptr.getPointer(),
       expected, desired,
       cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
@@ -341,10 +341,13 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   }
 
   assert(!cir::MissingFeatures::atomicSyncScopeID());
+  llvm::StringRef opName;
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(expr->getSourceRange());
   auto orderAttr = cir::MemOrderAttr::get(builder.getContext(), order);
+  cir::AtomicFetchKindAttr fetchAttr;
+  bool fetchFirst = true;
 
   switch (expr->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
@@ -400,6 +403,109 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     return;
   }
 
+  case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__atomic_exchange_n:
+  case AtomicExpr::AO__atomic_exchange:
+    opName = cir::AtomicXchgOp::getOperationName();
+    break;
+
+  case AtomicExpr::AO__atomic_add_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_add:
+  case AtomicExpr::AO__atomic_fetch_add:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Add);
+    break;
+
+  case AtomicExpr::AO__atomic_sub_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_sub:
+  case AtomicExpr::AO__atomic_fetch_sub:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Sub);
+    break;
+
+  case AtomicExpr::AO__atomic_min_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_min:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Min);
+    break;
+
+  case AtomicExpr::AO__atomic_max_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_max:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Max);
+    break;
+
+  case AtomicExpr::AO__atomic_and_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_and:
+  case AtomicExpr::AO__atomic_fetch_and:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::And);
+    break;
+
+  case AtomicExpr::AO__atomic_or_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_or:
+  case AtomicExpr::AO__atomic_fetch_or:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Or);
+    break;
+
+  case AtomicExpr::AO__atomic_xor_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_fetch_xor:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Xor);
+    break;
+
+  case AtomicExpr::AO__atomic_nand_fetch:
+    fetchFirst = false;
+    [[fallthrough]];
+  case AtomicExpr::AO__c11_atomic_fetch_nand:
+  case AtomicExpr::AO__atomic_fetch_nand:
+    opName = cir::AtomicFetchOp::getOperationName();
+    fetchAttr = cir::AtomicFetchKindAttr::get(builder.getContext(),
+                                              cir::AtomicFetchKind::Nand);
+    break;
+
+  case AtomicExpr::AO__atomic_test_and_set: {
+    auto op = cir::AtomicTestAndSetOp::create(
+        builder, loc, ptr.getPointer(), order,
+        builder.getI64IntegerAttr(ptr.getAlignment().getQuantity()),
+        expr->isVolatile());
+    builder.createStore(loc, op, dest);
+    return;
+  }
+
+  case AtomicExpr::AO__atomic_clear: {
+    cir::AtomicClearOp::create(
+        builder, loc, ptr.getPointer(), order,
+        builder.getI64IntegerAttr(ptr.getAlignment().getQuantity()),
+        expr->isVolatile());
+    return;
+  }
+
   case AtomicExpr::AO__opencl_atomic_init:
 
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
@@ -421,90 +527,78 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
 
-  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
-  case AtomicExpr::AO__atomic_exchange_n:
-  case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange:
 
-  case AtomicExpr::AO__atomic_add_fetch:
   case AtomicExpr::AO__scoped_atomic_add_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_add:
   case AtomicExpr::AO__hip_atomic_fetch_add:
   case AtomicExpr::AO__opencl_atomic_fetch_add:
-  case AtomicExpr::AO__atomic_fetch_add:
   case AtomicExpr::AO__scoped_atomic_fetch_add:
 
-  case AtomicExpr::AO__atomic_sub_fetch:
   case AtomicExpr::AO__scoped_atomic_sub_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_sub:
   case AtomicExpr::AO__hip_atomic_fetch_sub:
   case AtomicExpr::AO__opencl_atomic_fetch_sub:
-  case AtomicExpr::AO__atomic_fetch_sub:
   case AtomicExpr::AO__scoped_atomic_fetch_sub:
 
-  case AtomicExpr::AO__atomic_min_fetch:
   case AtomicExpr::AO__scoped_atomic_min_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_min:
   case AtomicExpr::AO__opencl_atomic_fetch_min:
-  case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__scoped_atomic_fetch_min:
 
-  case AtomicExpr::AO__atomic_max_fetch:
   case AtomicExpr::AO__scoped_atomic_max_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__opencl_atomic_fetch_max:
-  case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__scoped_atomic_fetch_max:
 
-  case AtomicExpr::AO__atomic_and_fetch:
   case AtomicExpr::AO__scoped_atomic_and_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_and:
   case AtomicExpr::AO__hip_atomic_fetch_and:
   case AtomicExpr::AO__opencl_atomic_fetch_and:
-  case AtomicExpr::AO__atomic_fetch_and:
   case AtomicExpr::AO__scoped_atomic_fetch_and:
 
-  case AtomicExpr::AO__atomic_or_fetch:
   case AtomicExpr::AO__scoped_atomic_or_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_or:
   case AtomicExpr::AO__hip_atomic_fetch_or:
   case AtomicExpr::AO__opencl_atomic_fetch_or:
-  case AtomicExpr::AO__atomic_fetch_or:
   case AtomicExpr::AO__scoped_atomic_fetch_or:
 
-  case AtomicExpr::AO__atomic_xor_fetch:
   case AtomicExpr::AO__scoped_atomic_xor_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_xor:
   case AtomicExpr::AO__hip_atomic_fetch_xor:
   case AtomicExpr::AO__opencl_atomic_fetch_xor:
-  case AtomicExpr::AO__atomic_fetch_xor:
   case AtomicExpr::AO__scoped_atomic_fetch_xor:
 
-  case AtomicExpr::AO__atomic_nand_fetch:
   case AtomicExpr::AO__scoped_atomic_nand_fetch:
 
-  case AtomicExpr::AO__c11_atomic_fetch_nand:
-  case AtomicExpr::AO__atomic_fetch_nand:
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
-
-  case AtomicExpr::AO__atomic_test_and_set:
-
-  case AtomicExpr::AO__atomic_clear:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
-    break;
+    return;
   }
+
+  assert(!opName.empty() && "expected operation name to build");
+  mlir::Value loadVal1 = builder.createLoad(loc, val1);
+
+  SmallVector<mlir::Value> atomicOperands = {ptr.getPointer(), loadVal1};
+  SmallVector<mlir::Type> atomicResTys = {loadVal1.getType()};
+  mlir::Operation *rmwOp = builder.create(loc, builder.getStringAttr(opName),
+                                          atomicOperands, atomicResTys);
+
+  if (fetchAttr)
+    rmwOp->setAttr("binop", fetchAttr);
+  rmwOp->setAttr("mem_order", orderAttr);
+  if (expr->isVolatile())
+    rmwOp->setAttr("is_volatile", builder.getUnitAttr());
+  if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())
+    rmwOp->setAttr("fetch_first", builder.getUnitAttr());
+
+  mlir::Value result = rmwOp->getResult(0);
+  builder.createStore(loc, result, dest);
 }
 
 static bool isMemOrderValid(uint64_t order, bool isStore, bool isLoad) {
@@ -562,6 +656,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
 
   case AtomicExpr::AO__atomic_load_n:
   case AtomicExpr::AO__c11_atomic_load:
+  case AtomicExpr::AO__atomic_test_and_set:
+  case AtomicExpr::AO__atomic_clear:
     break;
 
   case AtomicExpr::AO__atomic_load:
@@ -570,6 +666,11 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
 
   case AtomicExpr::AO__atomic_store:
     val1 = emitPointerWithAlignment(e->getVal1());
+    break;
+
+  case AtomicExpr::AO__atomic_exchange:
+    val1 = emitPointerWithAlignment(e->getVal1());
+    dest = emitPointerWithAlignment(e->getVal2());
     break;
 
   case AtomicExpr::AO__atomic_compare_exchange:
@@ -590,7 +691,42 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       isWeakExpr = e->getWeak();
     break;
 
+  case AtomicExpr::AO__c11_atomic_fetch_add:
+  case AtomicExpr::AO__c11_atomic_fetch_sub:
+    if (memTy->isPointerType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "atomic fetch-and-add and fetch-and-sub for pointers");
+      return RValue::get(nullptr);
+    }
+    [[fallthrough]];
+  case AtomicExpr::AO__atomic_fetch_add:
+  case AtomicExpr::AO__atomic_fetch_max:
+  case AtomicExpr::AO__atomic_fetch_min:
+  case AtomicExpr::AO__atomic_fetch_sub:
+  case AtomicExpr::AO__atomic_add_fetch:
+  case AtomicExpr::AO__atomic_max_fetch:
+  case AtomicExpr::AO__atomic_min_fetch:
+  case AtomicExpr::AO__atomic_sub_fetch:
+  case AtomicExpr::AO__c11_atomic_fetch_max:
+  case AtomicExpr::AO__c11_atomic_fetch_min:
+    shouldCastToIntPtrTy = !memTy->isFloatingType();
+    [[fallthrough]];
+
+  case AtomicExpr::AO__atomic_fetch_and:
+  case AtomicExpr::AO__atomic_fetch_nand:
+  case AtomicExpr::AO__atomic_fetch_or:
+  case AtomicExpr::AO__atomic_fetch_xor:
+  case AtomicExpr::AO__atomic_and_fetch:
+  case AtomicExpr::AO__atomic_nand_fetch:
+  case AtomicExpr::AO__atomic_or_fetch:
+  case AtomicExpr::AO__atomic_xor_fetch:
+  case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_store_n:
+  case AtomicExpr::AO__c11_atomic_fetch_and:
+  case AtomicExpr::AO__c11_atomic_fetch_nand:
+  case AtomicExpr::AO__c11_atomic_fetch_or:
+  case AtomicExpr::AO__c11_atomic_fetch_xor:
+  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__c11_atomic_store:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
@@ -614,6 +750,9 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
       dest = atomics.castToAtomicIntPointer(dest);
   } else if (e->isCmpXChg()) {
     dest = createMemTemp(resultTy, getLoc(e->getSourceRange()), "cmpxchg.bool");
+  } else if (e->getOp() == AtomicExpr::AO__atomic_test_and_set) {
+    dest = createMemTemp(resultTy, getLoc(e->getSourceRange()),
+                         "test_and_set.bool");
   } else if (!resultTy->isVoidType()) {
     dest = atomics.createTempAlloca();
     if (shouldCastToIntPtrTy)
@@ -692,9 +831,25 @@ void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
     return;
   }
 
-  case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: aggregate type");
+  case cir::TEK_Aggregate: {
+    // Fix up the destination if the initializer isn't an expression
+    // of atomic type.
+    bool zeroed = false;
+    if (!init->getType()->isAtomicType()) {
+      zeroed = atomics.emitMemSetZeroIfNecessary();
+      dest = atomics.projectValue();
+    }
+
+    // Evaluate the expression directly into the destination.
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    AggValueSlot slot = AggValueSlot::forLValue(
+        dest, AggValueSlot::IsNotDestructed, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap,
+        zeroed ? AggValueSlot::IsZeroed : AggValueSlot::IsNotZeroed);
+
+    emitAggExpr(init, slot);
     return;
+  }
   }
 
   llvm_unreachable("bad evaluation kind");

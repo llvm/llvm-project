@@ -251,7 +251,8 @@ protected:
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
-  bool visitDeclAndReturn(const VarDecl *VD, bool ConstantContext) override;
+  bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                          bool ConstantContext) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -303,7 +304,8 @@ protected:
   /// intact.
   bool delegate(const Expr *E);
   /// Creates and initializes a variable from the given decl.
-  VarCreationState visitVarDecl(const VarDecl *VD, bool Toplevel = false,
+  VarCreationState visitVarDecl(const VarDecl *VD, const Expr *Init,
+                                bool Toplevel = false,
                                 bool IsConstexprUnknown = false);
   VarCreationState visitDecl(const VarDecl *VD,
                              bool IsConstexprUnknown = false);
@@ -325,6 +327,7 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
+                                  bool IsVolatile = false,
                                   const ValueDecl *ExtendingDecl = nullptr,
                                   ScopeKind SC = ScopeKind::Block,
                                   bool IsConstexprUnknown = false);
@@ -620,14 +623,6 @@ public:
 
   /// Index of the scope in the chain.
   UnsignedOrNone Idx = std::nullopt;
-};
-
-/// Scope for storage declared in a compound statement.
-// FIXME: Remove?
-template <class Emitter> class BlockScope final : public LocalScope<Emitter> {
-public:
-  BlockScope(Compiler<Emitter> *Ctx, ScopeKind Kind = ScopeKind::Block)
-      : LocalScope<Emitter>(Ctx, Kind) {}
 };
 
 template <class Emitter> class ArrayIndexScope final {

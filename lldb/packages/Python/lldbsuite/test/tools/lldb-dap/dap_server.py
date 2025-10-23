@@ -11,6 +11,7 @@ import subprocess
 import signal
 import sys
 import threading
+import warnings
 import time
 from typing import (
     Any,
@@ -26,6 +27,10 @@ from typing import (
     TypedDict,
     Literal,
 )
+
+# set timeout based on whether ASAN was enabled or not. Increase
+# timeout by a factor of 10 if ASAN is enabled.
+DEFAULT_TIMEOUT = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
 
 ## DAP type references
 
@@ -216,6 +221,7 @@ class DebugCommunication(object):
         self.events: List[Event] = []
         self.progress_events: List[Event] = []
         self.invalidated_event: Optional[Event] = None
+        self.memory_event: Optional[Event] = None
         self.reverse_requests: List[Request] = []
         self.module_events: List[Dict] = []
         self.sequence: int = 1
@@ -281,26 +287,24 @@ class DebugCommunication(object):
     def collect_output(
         self,
         category: str,
-        timeout: float,
         pattern: Optional[str] = None,
         clear=True,
     ) -> str:
         """Collect output from 'output' events.
         Args:
             category: The category to collect.
-            timeout: The max duration for collecting output.
             pattern:
                 Optional, if set, return once this pattern is detected in the
                 collected output.
         Returns:
             The collected output.
         """
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + DEFAULT_TIMEOUT
         output = self.get_output(category, clear)
         while deadline >= time.monotonic() and (
             pattern is None or pattern not in output
         ):
-            event = self.wait_for_event(["output"], timeout=deadline - time.monotonic())
+            event = self.wait_for_event(["output"])
             if not event:  # Timeout or EOF
                 break
             output += self.get_output(category, clear=clear)
@@ -338,7 +342,7 @@ class DebugCommunication(object):
         self,
         *,
         predicate: Optional[Callable[[ProtocolMessage], bool]] = None,
-        timeout: Optional[float] = None,
+        timeout: Optional[float] = DEFAULT_TIMEOUT,
     ) -> Optional[ProtocolMessage]:
         """Processes received packets from the adapter.
         Updates the DebugCommunication stateful properties based on the received
@@ -380,6 +384,10 @@ class DebugCommunication(object):
         """Process received packets, updating the session state."""
         with self._recv_condition:
             for packet in self._recv_packets:
+                if packet and ("seq" not in packet or packet["seq"] == 0):
+                    warnings.warn(
+                        f"received a malformed packet, expected 'seq != 0' for {packet!r}"
+                    )
                 # Handle events that may modify any stateful properties of
                 # the DAP session.
                 if packet and packet["type"] == "event":
@@ -443,6 +451,8 @@ class DebugCommunication(object):
             self.capabilities.update(body["capabilities"])
         elif event == "invalidated":
             self.invalidated_event = packet
+        elif event == "memory":
+            self.memory_event = packet
 
     def _handle_reverse_request(self, request: Request) -> None:
         if request in self.reverse_requests:
@@ -552,53 +562,51 @@ class DebugCommunication(object):
 
         return cast(Optional[Response], self._recv_packet(predicate=predicate))
 
-    def wait_for_event(
-        self, filter: List[str] = [], timeout: Optional[float] = None
-    ) -> Optional[Event]:
+    def wait_for_event(self, filter: List[str] = []) -> Optional[Event]:
         """Wait for the first event that matches the filter."""
 
         def predicate(p: ProtocolMessage):
             return p["type"] == "event" and p["event"] in filter
 
         return cast(
-            Optional[Event], self._recv_packet(predicate=predicate, timeout=timeout)
+            Optional[Event],
+            self._recv_packet(predicate=predicate),
         )
 
-    def wait_for_stopped(
-        self, timeout: Optional[float] = None
-    ) -> Optional[List[Event]]:
+    def wait_for_stopped(self) -> Optional[List[Event]]:
         stopped_events = []
-        stopped_event = self.wait_for_event(
-            filter=["stopped", "exited"], timeout=timeout
-        )
+        stopped_event = self.wait_for_event(filter=["stopped", "exited"])
         while stopped_event:
             stopped_events.append(stopped_event)
             # If we exited, then we are done
             if stopped_event["event"] == "exited":
                 break
+
             # Otherwise we stopped and there might be one or more 'stopped'
             # events for each thread that stopped with a reason, so keep
             # checking for more 'stopped' events and return all of them
-            stopped_event = self.wait_for_event(
-                filter=["stopped", "exited"], timeout=0.25
+            # Use a shorter timeout for additional stopped events
+            def predicate(p: ProtocolMessage):
+                return p["type"] == "event" and p["event"] in ["stopped", "exited"]
+
+            stopped_event = cast(
+                Optional[Event], self._recv_packet(predicate=predicate, timeout=0.25)
             )
         return stopped_events
 
-    def wait_for_breakpoint_events(self, timeout: Optional[float] = None):
+    def wait_for_breakpoint_events(self):
         breakpoint_events: list[Event] = []
         while True:
-            event = self.wait_for_event(["breakpoint"], timeout=timeout)
+            event = self.wait_for_event(["breakpoint"])
             if not event:
                 break
             breakpoint_events.append(event)
         return breakpoint_events
 
-    def wait_for_breakpoints_to_be_verified(
-        self, breakpoint_ids: list[str], timeout: Optional[float] = None
-    ):
+    def wait_for_breakpoints_to_be_verified(self, breakpoint_ids: list[str]):
         """Wait for all breakpoints to be verified. Return all unverified breakpoints."""
         while any(id not in self.resolved_breakpoints for id in breakpoint_ids):
-            breakpoint_event = self.wait_for_event(["breakpoint"], timeout=timeout)
+            breakpoint_event = self.wait_for_event(["breakpoint"])
             if breakpoint_event is None:
                 break
 
@@ -611,14 +619,14 @@ class DebugCommunication(object):
             )
         ]
 
-    def wait_for_exited(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event(["exited"], timeout=timeout)
+    def wait_for_exited(self):
+        event_dict = self.wait_for_event(["exited"])
         if event_dict is None:
             raise ValueError("didn't get exited event")
         return event_dict
 
-    def wait_for_terminated(self, timeout: Optional[float] = None):
-        event_dict = self.wait_for_event(["terminated"], timeout)
+    def wait_for_terminated(self):
+        event_dict = self.wait_for_event(["terminated"])
         if event_dict is None:
             raise ValueError("didn't get terminated event")
         return event_dict
@@ -1018,6 +1026,7 @@ class DebugCommunication(object):
                 "supportsStartDebuggingRequest": True,
                 "supportsProgressReporting": True,
                 "supportsInvalidatedEvent": True,
+                "supportsMemoryEvent": True,
                 "$__lldb_sourceInitFile": sourceInitFile,
             },
         }
@@ -1039,6 +1048,7 @@ class DebugCommunication(object):
         disableSTDIO=False,
         shellExpandArguments=False,
         console: Optional[str] = None,
+        stdio: Optional[list[str]] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -1090,6 +1100,8 @@ class DebugCommunication(object):
             args_dict["sourceMap"] = sourceMap
         if console:
             args_dict["console"] = console
+        if stdio:
+            args_dict["stdio"] = stdio
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -1603,7 +1615,7 @@ class DebugAdapterServer(DebugCommunication):
                     # new messages will arrive and it should shutdown on its
                     # own.
                     process.stdin.close()
-                    process.wait(timeout=20)
+                    process.wait(timeout=DEFAULT_TIMEOUT)
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait()

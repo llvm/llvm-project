@@ -33,26 +33,26 @@ int main() {
 
   s = 6;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a character code when assigning {{.*}} [bugprone-string-integer-assignment]
-// CHECK-FIXES: {{^}}  s = '6';{{$}}
+// CHECK-FIXES: s = '6';
   s = 66;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  s = "66";{{$}}
+// CHECK-FIXES: s = "66";
   s = x;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  s = std::to_string(x);{{$}}
+// CHECK-FIXES: s = std::to_string(x);
   s = 'c';
   s = static_cast<char>(6);
 
 // +=
   ws += 6;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  ws += L'6';{{$}}
+// CHECK-FIXES: ws += L'6';
   ws += 66;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  ws += L"66";{{$}}
+// CHECK-FIXES: ws += L"66";
   ws += x;
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  ws += std::to_wstring(x);{{$}}
+// CHECK-FIXES: ws += std::to_wstring(x);
   ws += L'c';
   ws += (wchar_t)6;
 
@@ -79,11 +79,11 @@ int main() {
   s += x % 26;
   s += 26 % x;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
-  // CHECK-FIXES: {{^}}  s += std::to_string(26 % x);{{$}}
+  // CHECK-FIXES: s += std::to_string(26 % x);
   s += c | 0x80;
   s += c | 0x8000;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
-  // CHECK-FIXES: {{^}}  s += std::to_string(c | 0x8000);{{$}}
+  // CHECK-FIXES: s += std::to_string(c | 0x8000);
   as += c | 0x8000;
 
   s += 'a' + (x % 26);
@@ -94,7 +94,7 @@ int main() {
   s += x > 255 ? c : x;
   s += x > 255 ? 12 : x;
   // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
-  // CHECK-FIXES: {{^}}  s += std::to_string(x > 255 ? 12 : x);{{$}}
+  // CHECK-FIXES: s += std::to_string(x > 255 ? 12 : x);
 }
 
 namespace instantiation_dependent_exprs {
@@ -104,7 +104,7 @@ struct S {
   std::string s;
   void f(char c) { s += c | static_cast<int>(t); }
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: an integer is interpreted as a chara
-  // CHECK-FIXES: {{^}}  void f(char c) { s += std::to_string(c | static_cast<int>(t)); } 
+  // CHECK-FIXES: void f(char c) { s += std::to_string(c | static_cast<int>(t)); } 
 };
 
 template struct S<int>;
