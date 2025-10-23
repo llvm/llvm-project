@@ -307,7 +307,7 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
   // For now, we are only support 'read'/'write', so diagnose. We can switch on
-  // the kind later once we start implementing the other 3 forms. While we
+  // the kind later once we start implementing the other 2 forms. While we
   if (s.getAtomicKind() != OpenACCAtomicKind::Read &&
       s.getAtomicKind() != OpenACCAtomicKind::Write) {
     cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");

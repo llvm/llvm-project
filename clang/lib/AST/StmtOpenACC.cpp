@@ -347,7 +347,7 @@ OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
   case OpenACCAtomicKind::None:
   case OpenACCAtomicKind::Update:
   case OpenACCAtomicKind::Capture:
-    assert(false && "Only 'read'/'write' has been implemented here");
+    assert(false && "Only 'read'/'write' have been implemented here");
     return {};
   case OpenACCAtomicKind::Read: {
     // Read only supports the format 'v = x'; where both sides are a scalar
