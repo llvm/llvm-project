@@ -2800,9 +2800,9 @@ exit:
   ret i64 %r.0.lcssa
 }
 
-define i32 @reduction_expression_ext_mulacc_livein(ptr %a, ptr %b, i16 %c) {
+define i32 @reduction_expression_ext_mulacc_livein(ptr %a, i16 %c) {
 ; CHECK-LABEL: define i32 @reduction_expression_ext_mulacc_livein(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i16 [[C:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i16 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -2828,7 +2828,7 @@ define i32 @reduction_expression_ext_mulacc_livein(ptr %a, ptr %b, i16 %c) {
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 ; CHECK-INTERLEAVED-LABEL: define i32 @reduction_expression_ext_mulacc_livein(
-; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i16 [[C:%.*]]) {
+; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], i16 [[C:%.*]]) {
 ; CHECK-INTERLEAVED-NEXT:  [[ENTRY:.*:]]
 ; CHECK-INTERLEAVED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK-INTERLEAVED:       [[VECTOR_PH]]:
@@ -2871,9 +2871,6 @@ for.body:                                         ; preds = %for.body, %entry
   %gep.a = getelementptr i8, ptr %a, i64 %iv
   %load.a = load i8, ptr %gep.a, align 1
   %ext.a = zext i8 %load.a to i16
-  %gep.b = getelementptr i8, ptr %b, i64 %iv
-  %load.b = load i8, ptr %gep.b, align 1
-  %ext.b = zext i8 %load.b to i16
   %mul = mul i16 %c, %ext.a
   %mul.ext = zext i16 %mul to i32
   %add = add i32 %mul.ext, %accum

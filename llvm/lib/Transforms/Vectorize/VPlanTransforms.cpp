@@ -3657,26 +3657,26 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
                                            VPWidenCastRecipe *&ExtB,
                                            VPValue *&ValB, VPWidenRecipe *Mul) {
-    if (ExtA && !ExtB && ValB->isLiveIn()) {
-      Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
-      Instruction::CastOps ExtOpc = ExtA->getOpcode();
-      const APInt *Const;
-      if (!match(ValB, m_APInt(Const)) ||
-          !llvm::canConstantBeExtended(
-              Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
-        return;
-      // The truncate ensures that the type of each extended operand is the
-      // same, and it's been proven that the constant can be extended from
-      // NarrowTy safely. Necessary since ExtA's extended operand would be
-      // e.g. an i8, while the const will likely be an i32. This will be
-      // elided by later optimisations.
-      VPBuilder Builder(Mul);
-      auto *Trunc =
-          Builder.createWidenCast(Instruction::CastOps::Trunc, ValB, NarrowTy);
-      Type *WideTy = Ctx.Types.inferScalarType(ExtA);
-      ValB = ExtB = Builder.createWidenCast(ExtOpc, Trunc, WideTy);
-      Mul->setOperand(1, ExtB);
-    }
+    if (!ExtA || ExtB || !ValB->isLiveIn())
+      return;
+    Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
+    Instruction::CastOps ExtOpc = ExtA->getOpcode();
+    const APInt *Const;
+    if (!match(ValB, m_APInt(Const)) ||
+        !llvm::canConstantBeExtended(
+            Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
+      return;
+    // The truncate ensures that the type of each extended operand is the
+    // same, and it's been proven that the constant can be extended from
+    // NarrowTy safely. Necessary since ExtA's extended operand would be
+    // e.g. an i8, while the const will likely be an i32. This will be
+    // elided by later optimisations.
+    VPBuilder Builder(Mul);
+    auto *Trunc =
+        Builder.createWidenCast(Instruction::CastOps::Trunc, ValB, NarrowTy);
+    Type *WideTy = Ctx.Types.inferScalarType(ExtA);
+    ValB = ExtB = Builder.createWidenCast(ExtOpc, Trunc, WideTy);
+    Mul->setOperand(1, ExtB);
   };
 
   // Try to match reduce.add(mul(...)).
@@ -3715,8 +3715,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *Ext1 = dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
 
-    // Convert reduce.add(ext(mul(ext, const))) to reduce.add(ext(mul(ext,
-    // ext(const))))
+    // reduce.add(ext(mul(ext, const)))
+    // -> reduce.add(ext(mul(ext, ext(const))))
     ExtendAndReplaceConstantOp(Ext0, Ext1, B, Mul);
 
     // Match reduce.add(ext(mul(ext(A), ext(B))))
