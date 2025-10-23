@@ -217,6 +217,11 @@
 ; CHECK-NEXT:   xsfmm64t                         - 'XSfmm64t' (TE=64 configuration). 
 ; CHECK-NEXT:   xsfmmbase                        - 'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero).
 ; CHECK-NEXT:   xsfvcp                           - 'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions).
+; CHECK-NEXT:   xsfvfbfexp16e                    - 'XSfvfbfexp16e' (SiFive Vector Floating-Point Exponential Function Instruction, BFloat16).
+; CHECK-NEXT:   xsfvfexp16e                      - 'XSfvfexp16e' (SiFive Vector Floating-Point Exponential Function Instruction, Half Precision).
+; CHECK-NEXT:   xsfvfexp32e                      - 'XSfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction, Single Precision).
+; CHECK-NEXT:   xsfvfexpa                        - 'XSfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction).
+; CHECK-NEXT:   xsfvfexpa64e                     - 'XSfvfexpa64e' (SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision).
 ; CHECK-NEXT:   xsfvfnrclipxfqf                  - 'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions).
 ; CHECK-NEXT:   xsfvfwmaccqqq                    - 'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4)).
 ; CHECK-NEXT:   xsfvqmaccdod                     - 'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2)).

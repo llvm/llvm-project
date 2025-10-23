@@ -160,8 +160,6 @@ bool CompilerInstance::createTarget() {
 }
 
 void CompilerInstance::setFileManager(IntrusiveRefCntPtr<FileManager> Value) {
-  if (!hasVirtualFileSystem())
-    setVirtualFileSystem(Value->getVirtualFileSystemPtr());
   assert(Value == nullptr ||
          getVirtualFileSystemPtr() == Value->getVirtualFileSystemPtr());
   FileMgr = std::move(Value);
@@ -548,14 +546,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 std::string CompilerInstance::getSpecificModuleCachePath(StringRef ModuleHash) {
   assert(FileMgr && "Specific module cache path requires a FileManager");
 
-  if (getHeaderSearchOpts().ModuleCachePath.empty())
-    return "";
-
   // Set up the module path, including the hash for the module-creation options.
   SmallString<256> SpecificModuleCache;
   normalizeModuleCachePath(*FileMgr, getHeaderSearchOpts().ModuleCachePath,
                            SpecificModuleCache);
-  if (!getHeaderSearchOpts().DisableModuleHash)
+  if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache, ModuleHash);
   return std::string(SpecificModuleCache);
 }

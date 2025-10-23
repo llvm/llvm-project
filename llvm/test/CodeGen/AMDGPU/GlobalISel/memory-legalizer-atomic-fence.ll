@@ -551,7 +551,9 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_one_as_release
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_release
@@ -562,6 +564,8 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_one_as_release
   ; GFX11CU: bb.0.entry:
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup-one-as") release
@@ -587,7 +591,9 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_one_as_acq_rel
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_acq_rel
@@ -599,6 +605,8 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_one_as_acq_rel
   ; GFX11CU: bb.0.entry:
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup-one-as") acq_rel
@@ -624,7 +632,9 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_one_as_seq_cst
   ; GFX10CU: bb.0.entry:
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 16240
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_seq_cst
@@ -636,6 +646,8 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_one_as_seq_cst
   ; GFX11CU: bb.0.entry:
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 1015
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup-one-as") seq_cst
@@ -1305,8 +1317,9 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_release
   ; GFX10CU: bb.0.entry:
-  ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_release
@@ -1317,7 +1330,8 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_release
   ; GFX11CU: bb.0.entry:
-  ; GFX11CU-NEXT:   S_WAITCNT_soft 64519
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 7
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup") release
@@ -1345,8 +1359,9 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_acq_rel
   ; GFX10CU: bb.0.entry:
-  ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_acq_rel
@@ -1358,7 +1373,8 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_acq_rel
   ; GFX11CU: bb.0.entry:
-  ; GFX11CU-NEXT:   S_WAITCNT_soft 64519
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 7
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup") acq_rel
@@ -1386,8 +1402,9 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ;
   ; GFX10CU-LABEL: name: workgroup_seq_cst
   ; GFX10CU: bb.0.entry:
-  ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_soft 112
   ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
+  ; GFX10CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_seq_cst
@@ -1399,7 +1416,8 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ;
   ; GFX11CU-LABEL: name: workgroup_seq_cst
   ; GFX11CU: bb.0.entry:
-  ; GFX11CU-NEXT:   S_WAITCNT_soft 64519
+  ; GFX11CU-NEXT:   S_WAITCNT_soft 7
+  ; GFX11CU-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX11CU-NEXT:   S_ENDPGM 0
 entry:
   fence syncscope("workgroup") seq_cst
