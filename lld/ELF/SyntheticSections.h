@@ -380,6 +380,53 @@ private:
   SmallVector<const Symbol *, 0> entries;
 };
 
+class TableJumpSection final : public SyntheticSection {
+public:
+  TableJumpSection(Ctx &);
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  void finalizeContents() override;
+
+  int32_t getSizeReduction();
+  void addCMJTEntryCandidate(const Symbol *symbol, int csReduction);
+  int getCMJTEntryIndex(const Symbol *symbol);
+  void addCMJALTEntryCandidate(const Symbol *symbol, int csReduction);
+  int getCMJALTEntryIndex(const Symbol *symbol);
+  void scanTableJumpEntries(const InputSection &sec) const;
+
+  bool isFinalized = false;
+
+private:
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+  finalizeEntry(llvm::DenseMap<const Symbol *, int> EntryMap, uint32_t maxSize);
+  void addEntry(const Symbol *symbol,
+                llvm::DenseMap<const Symbol *, int> &entriesList,
+                int csReduction);
+  uint32_t getIndex(const Symbol *symbol, uint32_t maxSize,
+                    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
+                                0> &entriesList);
+  void writeEntries(uint8_t *buf,
+                    SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>,
+                                0> &entriesList);
+  void padWords(uint8_t *buf, const uint8_t maxWordCount);
+
+  // used in finalizeContents function.
+  static constexpr size_t maxCMJTEntrySize = 32;
+  static constexpr size_t maxCMJALTEntrySize = 224;
+
+  static constexpr size_t startCMJTEntryIdx = 0;
+  static constexpr size_t startCMJALTEntryIdx = 32;
+
+  static constexpr size_t tableAlign = 64;
+
+  llvm::DenseMap<const Symbol *, int> CMJTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+      finalizedCMJTEntries;
+  llvm::DenseMap<const Symbol *, int> CMJALTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<const Symbol *, int>, 0>
+      finalizedCMJALTEntries;
+};
+
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc
 // Symbols that will be relocated by Target->IRelativeRel.
 // On most Targets the IgotPltSection will immediately follow the GotPltSection
