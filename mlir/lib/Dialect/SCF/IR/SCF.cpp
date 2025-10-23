@@ -294,7 +294,7 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
 // Pattern to eliminate ExecuteRegionOp results which forward external
 // values from the region. In case there are multiple yield operations,
-// all of them must have the same operands iin order for the pattern to be
+// all of them must have the same operands in order for the pattern to be
 // applicable.
 struct ExecuteRegionForwardingEliminator
     : public OpRewritePattern<ExecuteRegionOp> {
