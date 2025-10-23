@@ -49,7 +49,7 @@ private:
 
 protected:
   ObjectType &getThreadEntry() {
-    auto &ThreadData = getThreadData();
+    PerThreadData &ThreadData = getThreadData();
     if (ThreadData.ThreadEntry)
       return *ThreadData.ThreadEntry;
     ThreadData.ThreadEntry = std::make_unique<ObjectType>();
@@ -60,7 +60,7 @@ public:
   ObjectType &get() { return getThreadEntry(); }
 
   template <class F> void clear(F f) {
-    for (auto ThreadData : ThreadDataList) {
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry)
         continue;
       f(*ThreadData->ThreadEntry);
@@ -130,7 +130,7 @@ private:
 
 protected:
   ContainerType &getThreadEntry() {
-    auto &ThreadData = getThreadData();
+    PerThreadData &ThreadData = getThreadData();
     if (ThreadData.ThreadEntry)
       return *ThreadData.ThreadEntry;
     ThreadData.ThreadEntry = std::make_unique<ContainerType>();
@@ -138,26 +138,26 @@ protected:
   }
 
   size_t &getThreadNElements() {
-    auto &ThreadData = getThreadData();
+    PerThreadData &ThreadData = getThreadData();
     return ThreadData.NElements;
   }
 
   void setNElements(size_t Size) {
-    auto &NElements = getThreadNElements();
+    size_t &NElements = getThreadNElements();
     NElements = Size;
   }
 
 public:
   void add(ObjectType obj) {
-    auto &Entry = getThreadEntry();
-    auto &NElements = getThreadNElements();
+    ContainerType &Entry = getThreadEntry();
+    size_t &NElements = getThreadNElements();
     NElements++;
     Entry.add(obj);
   }
 
   iterator erase(iterator it) {
-    auto &Entry = getThreadEntry();
-    auto &NElements = getThreadNElements();
+    ContainerType &Entry = getThreadEntry();
+    size_t &NElements = getThreadNElements();
     NElements--;
     return Entry.erase(it);
   }
@@ -167,11 +167,11 @@ public:
   // Iterators to traverse objects owned by
   // the current thread
   iterator begin() {
-    auto &Entry = getThreadEntry();
+    ContainerType &Entry = getThreadEntry();
     return Entry.begin();
   }
   iterator end() {
-    auto &Entry = getThreadEntry();
+    ContainerType &Entry = getThreadEntry();
     return Entry.end();
   }
 
@@ -200,7 +200,7 @@ public:
   }
 
   template <class F> llvm::Error deinit(F f) {
-    for (auto ThreadData : ThreadDataList) {
+    for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       for (auto &Obj : *ThreadData->ThreadEntry) {
@@ -254,7 +254,7 @@ struct PerThreadContainer
 
   // Get the object for the given index in the current thread
   ObjectType &get(IndexType Index) {
-    auto &Entry = this->getThreadEntry();
+    ContainerType &Entry = this->getThreadEntry();
 
     // specialized code for vector-like containers
     if constexpr (has_resize<ContainerType>::value) {
