@@ -1162,8 +1162,10 @@ struct MyVector {
   std::vector<int> data;
 };
 
-std::vector<int>::const_iterator begin(MyVector &v) { return v.data.begin(); }
-std::vector<int>::const_iterator end(MyVector &v) { return v.data.end(); }
+std::vector<int>::const_iterator begin(const MyVector &V) {
+  return V.data.begin();
+}
+std::vector<int>::const_iterator end(const MyVector &V) { return V.data.end(); }
 } // namespace namespace_with_adl
 
 TEST(SmallVectorTest, ToVector) {
