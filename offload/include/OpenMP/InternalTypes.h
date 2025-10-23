@@ -151,7 +151,7 @@ struct TargetMemcpyArgsTy {
         IsRectMemcpy(true), Length(0), DstOffset(0), SrcOffset(0),
         ElementSize(ElementSize), NumDims(NumDims), Volume(Volume),
         DstOffsets(DstOffsets), SrcOffsets(SrcOffsets),
-        DstDimensions(DstDimensions), SrcDimensions(SrcDimensions) {};
+        DstDimensions(DstDimensions), SrcDimensions(SrcDimensions){};
 };
 
 struct TargetMemsetArgsTy {
