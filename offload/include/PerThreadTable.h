@@ -59,11 +59,11 @@ protected:
 public:
   ObjectType &get() { return getThreadEntry(); }
 
-  template <class F> void clear(F f) {
+  template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry)
         continue;
-      f(*ThreadData->ThreadEntry);
+      ClearFunc(*ThreadData->ThreadEntry);
     }
     ThreadDataList.clear();
   }
@@ -175,19 +175,19 @@ public:
     return Entry.end();
   }
 
-  template <class F> void clear(F f) {
+  template <class ClearFuncTy> void clear(ClearFuncTy ClearFunc) {
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       if constexpr (has_clearAll<ContainerType>::value) {
-        ThreadData->ThreadEntry->clearAll(f);
+        ThreadData->ThreadEntry->clearAll(ClearFunc);
       } else if constexpr (has_iterator<ContainerType>::value &&
                            has_clear<ContainerType>::value) {
         for (auto &Obj : *ThreadData->ThreadEntry) {
           if constexpr (is_associative<ContainerType>::value) {
-            f(Obj.second);
+            ClearFunc(Obj.second);
           } else {
-            f(Obj);
+            ClearFunc(Obj);
           }
         }
         ThreadData->ThreadEntry->clear();
@@ -199,16 +199,16 @@ public:
     ThreadDataList.clear();
   }
 
-  template <class F> llvm::Error deinit(F f) {
+  template <class DeinitFuncTy> llvm::Error deinit(DeinitFuncTy DeinitFunc) {
     for (std::shared_ptr<PerThreadData> ThreadData : ThreadDataList) {
       if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       for (auto &Obj : *ThreadData->ThreadEntry) {
         if constexpr (is_associative<ContainerType>::value) {
-          if (auto Err = f(Obj.second))
+          if (auto Err = DeinitFunc(Obj.second))
             return Err;
         } else {
-          if (auto Err = f(Obj))
+          if (auto Err = DeinitFunc(Obj))
             return Err;
         }
       }
