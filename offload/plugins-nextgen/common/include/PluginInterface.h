@@ -1312,8 +1312,8 @@ struct GenericPluginTy {
     return getDevice(DeviceId).getDeviceUid();
   }
 
-  /// Get the UID for the initial (= host) device.
-  static constexpr const char *getInitialDeviceUid() { return "HOST"; }
+  /// Get the UID for the host device.
+  static constexpr const char *getHostDeviceUid() { return "HOST"; }
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
