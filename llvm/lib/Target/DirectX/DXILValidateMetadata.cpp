@@ -17,6 +17,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -142,8 +143,9 @@ static void validateInstructionMetadata(Module &M) {
   for (Function &F : M)
     for (BasicBlock &BB : F)
       for (Instruction &I : BB) {
-        if (MDNode *LoopMD = I.getMetadata(MDLoopKind))
-          validateLoopMetadata(M, LoopMD);
+        if (isa<BranchInst>(I))
+          if (MDNode *LoopMD = I.getMetadata(MDLoopKind))
+            validateLoopMetadata(M, LoopMD);
       }
 }
 
