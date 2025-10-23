@@ -954,6 +954,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
 bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
                                                    BasicBlock *DestBB,
                                                    bool isPreheader) {
+  // Do not eliminate blocks which have their address taken.
+  // This could lead to updates across functions which is problematic in a
+  // function pass like codegenprepare. The update to a blockaddress in a
+  // function defined before the function with the eliminated block is lost.
+  if(BB->hasAddressTaken()) return false;
+
   // Do not delete loop preheaders if doing so would create a critical edge.
   // Loop preheaders can be good locations to spill registers. If the
   // preheader is deleted and we create a critical edge, registers may be
