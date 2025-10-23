@@ -774,6 +774,32 @@ public:
   virtual InstructionCost getCFInstrCost(unsigned Opcode,
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I = nullptr) const {
+    if (Opcode == Instruction::Switch && CostKind == TTI::TCK_CodeSize && I) {
+      const SwitchInst *SI = cast<SwitchInst>(I);
+      unsigned JumpTableSize, NumSuccs = I->getNumSuccessors();
+      if (SI->defaultDestUnreachable())
+        NumSuccs--;
+
+      // An unreachable switch
+      if (NumSuccs == 0)
+        return TTI::TCC_Free;
+
+      // A trivial unconditional branch.
+      if (NumSuccs == 1)
+        return TTI::TCC_Basic;
+
+      getEstimatedNumberOfCaseClusters(*SI, JumpTableSize, nullptr, nullptr);
+
+      // Assume that lowering the switch block is implemented by binary search
+      // if no jump table is generated.
+      if (JumpTableSize == 0)
+        return llvm::Log2_32_Ceil(NumSuccs) * 2 * TTI::TCC_Basic;
+
+      // Cost for jump table: load + jump + default compare + default jump
+      return 2 * TTI::TCC_Basic +
+             (SI->defaultDestUnreachable() ? 0 : 2 * TTI::TCC_Basic);
+    }
+
     // A phi would be free, unless we're costing the throughput because it
     // will require a register.
     if (Opcode == Instruction::PHI && CostKind != TTI::TCK_RecipThroughput)
