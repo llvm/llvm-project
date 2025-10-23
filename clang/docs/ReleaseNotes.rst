@@ -387,6 +387,10 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+ - Reworded the ``-Wimplicit-function-declaration`` diagnostic to make it more
+   clear that the type selected for the implicit declaration is based on the
+   signature of a standard (C, C++, POSIX) library function. (#GH146924)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
