@@ -108,7 +108,6 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     LogicalResult verifyOutputZeroPoint(int64_t zp);
   }];
 
-  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
   let assemblyFormat =
