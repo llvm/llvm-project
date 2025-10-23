@@ -189,7 +189,9 @@ class PrepareForOMPOffloadPrivatizationPass
 
         DominanceInfo dom;
         llvm::sort(chainOfOps, [&](Operation *l, Operation *r) {
-          return dom.dominates(l, r);
+          if (l == r)
+            return false;
+          return dom.properlyDominates(l, r);
         });
 
         rewriter.setInsertionPoint(chainOfOps.front());
