@@ -26,9 +26,6 @@
 #define __zext128(x)                                                           \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, 2, 3)
-#define __anyext128(x)                                                         \
-  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
-                                    1, -1, -1)
 
 #if defined(__cplusplus) && (__cplusplus >= 201103L)
 #define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
@@ -774,7 +771,6 @@ static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sign_pi32(__m64 __a,
       __builtin_ia32_psignd128((__v4si)__zext128(__a), (__v4si)__zext128(__b)));
 }
 
-#undef __anyext128
 #undef __zext128
 #undef __trunc64
 #undef __DEFAULT_FN_ATTRS
