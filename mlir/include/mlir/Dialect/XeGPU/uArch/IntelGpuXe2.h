@@ -23,8 +23,6 @@
 #include <map>
 #include <string>
 
-#define DEBUG_TYPE "xegpu-uarch"
-
 using namespace mlir;
 using namespace mlir::xegpu::uArch;
 
@@ -42,12 +40,61 @@ struct Xe2Plus : public uArch {
               &instrs = {})
       : uArch(archName, archDescription, regInfo, cacheInfo, instrs),
         xeCore(xeCore) {}
+  int getSubgroupSize() const override { return 16; }
+  unsigned getPackedFormatBitSizeGatherScatter() const override { return 32; }
+  unsigned getPackedFormatBitSize() const override { return 16; }
+  std::optional<unsigned> getPackedFormatBitSizeDpasB() const override {
+    return 32;
+  }
 };
 
-// struct to represent DPAS instruction
+//===----------------------------------------------------------------------===//
+// uArch instructions
+//===----------------------------------------------------------------------===//
+struct StoreNdInstruction : public Instruction {
+  StoreNdInstruction()
+      : Instruction(InstructionKind::STORE_ND, InstructionScope::Subgroup) {}
+
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
+  // Reads 1, 2, 4, or 8 uints of data for each work item in the sub-group from
+  // the specified pointer
+  llvm::SmallVector<int> getSortedLaneVectorLengths() { return {1, 2, 4, 8}; }
+};
+
+struct LoadNdInstruction : public Instruction {
+  LoadNdInstruction()
+      : Instruction(InstructionKind::LOAD_ND, InstructionScope::Subgroup) {}
+
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroups.html#_add_a_new_section_6_13_x_sub_group_read_and_write_functions
+  // Writes 1, 2, 4, or 8 uints of data for each work item in the sub-group to
+  // the specified pointer.
+  llvm::SmallVector<int> getSortedLaneVectorLengths() { return {1, 2, 4, 8}; }
+};
+
+struct PrefetchNdInstruction : public Instruction {
+  PrefetchNdInstruction()
+      : Instruction(InstructionKind::PREFETCH_ND, InstructionScope::Subgroup) {}
+
+  // Source :
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
+  llvm::SmallVector<int> getSortedLaneVectorLengths(int elementBitwidth) {
+    if (elementBitwidth == 8 || elementBitwidth == 16)
+      return {1, 2, 4, 8, 16};
+    else if (elementBitwidth == 32 || elementBitwidth == 64)
+      return {1, 2, 4, 8};
+    else
+      llvm_unreachable(
+          "Unsupported element bitwidth for PrefetchNdInstruction");
+  }
+};
+
 struct DPASInstruction : public Instruction, public MMAInstructionInterface {
   DPASInstruction()
       : Instruction(InstructionKind::DPAS, InstructionScope::Subgroup) {}
+  // Source:
+  // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html
 
   // Override all virtuals from MatrixOpInterface
   virtual llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
@@ -72,6 +119,9 @@ struct DPASInstruction : public Instruction, public MMAInstructionInterface {
   virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) override;
 };
 
+//===----------------------------------------------------------------------===//
+// uArch instructions
+//===----------------------------------------------------------------------===//
 struct PVCuArch : public Xe2Plus {
   // Maintaines ownership of the instructions owned by PVUarch
   llvm::SmallVector<std::shared_ptr<Instruction>, 8> owned_instructions;
@@ -101,9 +151,15 @@ struct PVCuArch : public Xe2Plus {
         CacheInfo(512 * 1024, 64, CacheHierarchyLevel::L2));
 
     // Add the instructions-
-    auto dpas = std::make_shared<DPASInstruction>();
-    instructions.emplace(dpas->getInstructionKind(), dpas);
-    owned_instructions.push_back(dpas);
+    llvm::SmallVector<std::shared_ptr<Instruction>> instructionsToAdd{
+        std::make_shared<DPASInstruction>(),
+        std::make_shared<StoreNdInstruction>(),
+        std::make_shared<LoadNdInstruction>(),
+        std::make_shared<PrefetchNdInstruction>()};
+    for (auto &inst : instructionsToAdd) {
+      instructions.emplace(inst->getInstructionKind(), inst);
+      owned_instructions.push_back(inst);
+    }
   }
 };
 
@@ -139,9 +195,23 @@ struct BMGuArch : public Xe2Plus {
     owned_instructions.push_back(dpas);
   }
 };
+
+inline std::shared_ptr<uArch> getUArch(const std::string &archName) {
+  if (archName == "pvc")
+    return std::make_shared<PVCuArch>();
+  else if (archName == "bmg")
+    return std::make_shared<BMGuArch>();
+  else
+    return nullptr;
+}
+
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// Instruction implementations
+//===----------------------------------------------------------------------===//
 
 inline llvm::SmallVector<std::pair<uint32_t, uint32_t>, 16>
 DPASInstruction::getSupportedShapes(Type dataType, MMAOpndKind matrixType) {
