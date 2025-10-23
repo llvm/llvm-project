@@ -456,7 +456,7 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType, bit IsSparse = fals
 }
 
 class WMMA_NAME_LDST<string Op, WMMA_REGS Frag, string Layout, int WithStride> {
-  string intr = "llvm.nvvm.wmma."
+  string intr_name = "llvm.nvvm.wmma."
                 # Frag.geom
                 # "." # Op
                 # "." # Frag.frag
@@ -467,7 +467,7 @@ class WMMA_NAME_LDST<string Op, WMMA_REGS Frag, string Layout, int WithStride> {
   // TODO(tra): record name should ideally use the same field order as the intrinsic.
   // E.g. string record = !subst("llvm", "int",
   //                      !subst(".", "_", llvm));
-  string record = "int_nvvm_wmma_"
+  string record_name = "int_nvvm_wmma_"
                 # Frag.geom
                 # "_" # Op
                 # "_" # Frag.frag
@@ -496,7 +496,7 @@ class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
 class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd, string b1op,
                 WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string record = "int_nvvm_wmma_"
+  string record_name = "int_nvvm_wmma_"
                   # A.geom
                   # "_mma"
                   # !subst(".", "_", b1op)
@@ -510,7 +510,7 @@ class WMMA_NAME<string ALayout, string BLayout, int Satfinite, string Rnd, strin
 class MMA_NAME<string ALayout, string BLayout, int Satfinite, string b1op, string Kind,
                WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string record = "int_nvvm_mma"
+  string record_name = "int_nvvm_mma"
                   # !subst(".", "_", b1op)
                   # "_" # A.geom
                   # "_" # ALayout
@@ -524,7 +524,7 @@ class MMA_SP_NAME<string Metadata, string Kind, int Satfinite,
                   WMMA_REGS A, WMMA_REGS B,
                   WMMA_REGS C, WMMA_REGS D> {
   string signature = MMA_SIGNATURE<A, B, C, D>.ret;
-  string record = "int_nvvm_mma"
+  string record_name = "int_nvvm_mma"
                   # "_" # !subst("::", "_", Metadata)
                   # "_" # A.geom
                   # "_row_col"
@@ -2288,7 +2288,7 @@ class NVVM_WMMA_LD<WMMA_REGS Frag, string Layout, int WithStride>
   : Intrinsic<Frag.regs,
               !if(WithStride, [llvm_anyptr_ty, llvm_i32_ty], [llvm_anyptr_ty]),
               [IntrWillReturn, IntrReadMem, IntrArgMemOnly, IntrNoCallback, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
-              WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr>;
+              WMMA_NAME_LDST<"load", Frag, Layout, WithStride>.intr_name>;
 
 // WMMA.STORE.D
 class NVVM_WMMA_ST<WMMA_REGS Frag, string Layout, int WithStride>
@@ -2298,18 +2298,18 @@ class NVVM_WMMA_ST<WMMA_REGS Frag, string Layout, int WithStride>
                 Frag.regs,
                 !if(WithStride, [llvm_i32_ty], [])),
               [IntrWriteMem, IntrArgMemOnly, IntrNoCallback, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
-              WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.intr>;
+              WMMA_NAME_LDST<"store", Frag, Layout, WithStride>.intr_name>;
 
 // Create all load/store variants
 foreach layout = ["row", "col"] in {
   foreach stride = [0, 1] in {
     foreach frag = NVVM_MMA_OPS.all_ld_ops in
       if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
-        def WMMA_NAME_LDST<"load", frag, layout, stride>.record
+        def WMMA_NAME_LDST<"load", frag, layout, stride>.record_name
              : NVVM_WMMA_LD<frag, layout, stride>;
     foreach frag = NVVM_MMA_OPS.all_st_ops in
       if NVVM_WMMA_LDST_SUPPORTED<frag, layout>.ret then
-        def WMMA_NAME_LDST<"store", frag, layout, stride>.record
+        def WMMA_NAME_LDST<"store", frag, layout, stride>.record_name
              : NVVM_WMMA_ST<frag, layout, stride>;
   }
 }
@@ -2328,7 +2328,7 @@ foreach layout_a = ["row", "col"] in {
           foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
             if NVVM_WMMA_SUPPORTED<op, layout_a, layout_b, satf, rnd>.ret then {
               def WMMA_NAME<layout_a, layout_b, satf, rnd, b1op,
-                                op[0], op[1], op[2], op[3]>.record
+                                op[0], op[1], op[2], op[3]>.record_name
                 : NVVM_MMA<op[0], op[1], op[2], op[3]>;
             }
           } // b1op
@@ -2345,7 +2345,7 @@ foreach layout_a = ["row", "col"] in {
         foreach b1op = NVVM_MMA_B1OPS<op>.ret in {
           foreach kind = ["", "kind::f8f6f4"] in {
             if NVVM_MMA_SUPPORTED<op, layout_a, layout_b, kind, satf>.ret then {
-                def MMA_NAME<layout_a, layout_b, satf, b1op, kind, op[0], op[1], op[2], op[3]>.record
+                def MMA_NAME<layout_a, layout_b, satf, b1op, kind, op[0], op[1], op[2], op[3]>.record_name
                 : NVVM_MMA<op[0], op[1], op[2], op[3]>;
             }
           } // kind
@@ -2394,7 +2394,7 @@ foreach metadata = ["sp", "sp::ordered_metadata"] in {
       foreach op = NVVM_MMA_OPS.all_mma_sp_ops in {
         if NVVM_MMA_SP_SUPPORTED<op, metadata, kind, satf>.ret then {
           def MMA_SP_NAME<metadata, kind, satf,
-                          op[0], op[1], op[2], op[3]>.record
+                          op[0], op[1], op[2], op[3]>.record_name
             : NVVM_MMA_SP<op[0], op[1], op[2], op[3]>;
         }
       } // op
