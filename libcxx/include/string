@@ -1210,13 +1210,7 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() {
-    // We do not use __reset_internal_buffer() here to avoid the overhead of
-    // resetting the object.
-    __annotate_delete();
-    if (__is_long())
-      __alloc_traits::deallocate(__alloc_, __get_long_pointer(), __get_long_cap());
-  }
+  inline _LIBCPP_CONSTEXPR_SINCE_CXX20 ~basic_string() { __deallocate_buffer_if_long(); }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 operator __self_view() const _NOEXCEPT {
     return __self_view(typename __self_view::__assume_valid(), data(), size());
