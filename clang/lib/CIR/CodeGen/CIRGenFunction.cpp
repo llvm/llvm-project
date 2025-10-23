@@ -264,11 +264,11 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // If we now have one after `applyCleanup`, hook it up properly.
     if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
       cleanupBlock = localScope->getCleanupBlock(builder);
-      builder.create<cir::BrOp>(insPt->back().getLoc(), cleanupBlock);
+      cir::BrOp::create(builder, insPt->back().getLoc(), cleanupBlock);
       if (!cleanupBlock->mightHaveTerminator()) {
         mlir::OpBuilder::InsertionGuard guard(builder);
         builder.setInsertionPointToEnd(cleanupBlock);
-        builder.create<cir::YieldOp>(localScope->endLoc);
+        cir::YieldOp::create(builder, localScope->endLoc);
       }
     }
 
@@ -286,7 +286,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
             }
           }
 
-          builder.create<cir::BrOp>(*returnLoc, returnBlock);
+          cir::BrOp::create(builder, *returnLoc, returnBlock);
           return;
         }
       }
@@ -298,8 +298,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Ternary ops have to deal with matching arms for yielding types
     // and do return a value, it must do its own cir.yield insertion.
     if (!localScope->isTernary() && !insPt->mightHaveTerminator()) {
-      !retVal ? builder.create<cir::YieldOp>(localScope->endLoc)
-              : builder.create<cir::YieldOp>(localScope->endLoc, retVal);
+      !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
+              : cir::YieldOp::create(builder, localScope->endLoc, retVal);
     }
   };
 
@@ -331,7 +331,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
 
   // If there's a cleanup block, branch to it, nothing else to do.
   if (cleanupBlock) {
-    builder.create<cir::BrOp>(curBlock->back().getLoc(), cleanupBlock);
+    cir::BrOp::create(builder, curBlock->back().getLoc(), cleanupBlock);
     return;
   }
 
@@ -349,12 +349,12 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
-    auto value = builder.create<cir::LoadOp>(
-        loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
-    return builder.create<cir::ReturnOp>(loc,
-                                         llvm::ArrayRef(value.getResult()));
+    auto value = cir::LoadOp::create(
+        builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
+    return cir::ReturnOp::create(builder, loc,
+                                 llvm::ArrayRef(value.getResult()));
   }
-  return builder.create<cir::ReturnOp>(loc);
+  return cir::ReturnOp::create(builder, loc);
 }
 
 // This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
@@ -389,9 +389,9 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
     if (shouldEmitUnreachable) {
       assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
-        builder.create<cir::TrapOp>(localScope->endLoc);
+        cir::TrapOp::create(builder, localScope->endLoc);
       else
-        builder.create<cir::UnreachableOp>(localScope->endLoc);
+        cir::UnreachableOp::create(builder, localScope->endLoc);
       builder.clearInsertionPoint();
       return;
     }
@@ -561,8 +561,8 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
     if (!clone) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       builder.setInsertionPoint(fn);
-      clone = builder.create<cir::FuncOp>(fn.getLoc(), fdInlineName,
-                                          fn.getFunctionType());
+      clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
+                                  fn.getFunctionType());
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
