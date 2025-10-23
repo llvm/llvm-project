@@ -45,17 +45,29 @@ using namespace bolt;
 namespace opts {
 
 static cl::opt<bool>
-    BasicAggregation("nl",
-                     cl::desc("aggregate basic samples (without LBR info)"),
+    BasicAggregation("basic-events",
+                     cl::desc("aggregate basic events (without brstack info)"),
                      cl::cat(AggregatorCategory));
+
+static cl::alias BasicAggregationAlias("ba",
+                                       cl::desc("Alias for --basic-events"),
+                                       cl::aliasopt(BasicAggregation));
+
+static cl::opt<bool> DeprecatedBasicAggregationNl(
+    "nl", cl::desc("Alias for --basic-events (deprecated. Use --ba)"),
+    cl::cat(AggregatorCategory), cl::ReallyHidden,
+    cl::callback([](const bool &Enabled) {
+      errs()
+          << "BOLT-WARNING: '-nl' is deprecated, please use '--ba' instead.\n";
+      BasicAggregation = Enabled;
+    }));
 
 cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
                      cl::cat(AggregatorCategory));
 
-static cl::opt<std::string>
-    ITraceAggregation("itrace",
-                      cl::desc("Generate LBR info with perf itrace argument"),
-                      cl::cat(AggregatorCategory));
+static cl::opt<std::string> ITraceAggregation(
+    "itrace", cl::desc("Generate brstack info with perf itrace argument"),
+    cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 FilterMemProfile("filter-mem-profile",
@@ -201,7 +213,7 @@ void DataAggregator::start() {
   }
 
   if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR", MainEventsPPI,
+    launchPerfProcess("events without brstack", MainEventsPPI,
                       "script -F pid,event,ip");
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
@@ -1069,7 +1081,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = Rest.getError())
     return EC;
   if (Rest.get().size() < 5) {
-    reportError("expected rest of LBR entry");
+    reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1433,8 +1445,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
       errs() << "HEATMAP-ERROR: no basic event samples detected in profile. "
                 "Cannot build heatmap.";
     } else {
-      errs() << "HEATMAP-ERROR: no LBR traces detected in profile. "
-                "Cannot build heatmap. Use -nl for building heatmap from "
+      errs() << "HEATMAP-ERROR: no brstack traces detected in profile. "
+                "Cannot build heatmap. Use -ba for building heatmap from "
                 "basic events.\n";
     }
     exit(1);
@@ -1572,7 +1584,7 @@ void DataAggregator::printBranchStacksDiagnostics(
 
 std::error_code DataAggregator::parseBranchEvents() {
   std::string BranchEventTypeStr =
-      opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
+      opts::ArmSPE ? "SPE branch events in brstack-format" : "branch events";
   outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
@@ -1620,7 +1632,7 @@ std::error_code DataAggregator::parseBranchEvents() {
   clear(TraceMap);
 
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
-         << " LBR entries\n";
+         << " brstack entries\n";
   if (NumTotalSamples) {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
@@ -1628,8 +1640,10 @@ std::error_code DataAggregator::parseBranchEvents() {
       if (!opts::ArmSPE)
         errs()
             << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-               "LBR. Record profile with perf record -j any or run perf2bolt "
-               "in no-LBR mode with -nl (the performance improvement in -nl "
+               "brstack. Record profile with perf record -j any or run "
+               "perf2bolt "
+               "in non-brstack mode with -ba (the performance improvement in "
+               "-ba "
                "mode may be limited)\n";
       else
         errs()
@@ -1664,7 +1678,7 @@ void DataAggregator::processBranchEvents() {
 }
 
 std::error_code DataAggregator::parseBasicEvents() {
-  outs() << "PERF2BOLT: parsing basic events (without LBR)...\n";
+  outs() << "PERF2BOLT: parsing basic events (without brstack)...\n";
   NamedRegionTimer T("parseBasic", "Parsing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   while (hasData()) {
@@ -1688,7 +1702,7 @@ std::error_code DataAggregator::parseBasicEvents() {
 }
 
 void DataAggregator::processBasicEvents() {
-  outs() << "PERF2BOLT: processing basic events (without LBR)...\n";
+  outs() << "PERF2BOLT: processing basic events (without brstack)...\n";
   NamedRegionTimer T("processBasic", "Processing basic events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
   uint64_t OutOfRangeSamples = 0;
@@ -1777,7 +1791,8 @@ std::error_code DataAggregator::parsePreAggregatedLBRSamples() {
     ++AggregatedLBRs;
   }
 
-  outs() << "PERF2BOLT: read " << AggregatedLBRs << " aggregated LBR entries\n";
+  outs() << "PERF2BOLT: read " << AggregatedLBRs
+         << " aggregated brstack entries\n";
 
   return std::error_code();
 }
@@ -2426,7 +2441,7 @@ std::error_code DataAggregator::writeBATYAML(BinaryContext &BC,
 void DataAggregator::dump() const { DataReader::dump(); }
 
 void DataAggregator::dump(const PerfBranchSample &Sample) const {
-  Diag << "Sample LBR entries: " << Sample.LBR.size() << "\n";
+  Diag << "Sample brstack entries: " << Sample.LBR.size() << "\n";
   for (const LBREntry &LBR : Sample.LBR)
     Diag << LBR << '\n';
 }

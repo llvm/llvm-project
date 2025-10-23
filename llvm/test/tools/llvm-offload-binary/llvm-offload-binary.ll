@@ -8,3 +8,7 @@
 ; CHECK-NEXT: arch            abc
 ; CHECK-NEXT: triple          x-y-z
 ; CHECK-NEXT: producer        none
+
+; RUN: llvm-offload-binary -o %t3 --image=file=%s
+; RUN: llvm-offload-binary %t3 --image=file=%t4
+; RUN: diff %s %t4

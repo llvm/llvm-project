@@ -86,7 +86,8 @@ define i64 @test_two_ivs(ptr %a, ptr %b, i64 %start) #0 {
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %i.iv = phi i64 [ 0, %entry ], [ %i.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %j.iv = phi i64 [ %start, %entry ], [ %j.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK: Cost for VF 16: 41
+; CHECK: Cost of 1 for VF 16: EXPRESSION vp<%11> = ir<%sum> + partial.reduce.add (mul nuw nsw (ir<%1> zext to i64), (ir<%0> zext to i64))
+; CHECK: Cost for VF 16: 3
 ; CHECK: LV: Selecting VF: 16
 entry:
   br label %for.body

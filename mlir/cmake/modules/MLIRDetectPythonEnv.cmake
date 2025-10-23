@@ -46,20 +46,81 @@ macro(mlir_configure_python_dev_packages)
     message(STATUS "Found python include dirs: ${Python3_INCLUDE_DIRS}")
     message(STATUS "Found python libraries: ${Python3_LIBRARIES}")
     message(STATUS "Found numpy v${Python3_NumPy_VERSION}: ${Python3_NumPy_INCLUDE_DIRS}")
-    message(STATUS "Python extension suffix for modules: '${Python3_SOABI}'")
-    if(nanobind_DIR)
-      message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR} (-Dnanobind_DIR to change)")
-      find_package(nanobind 2.9 CONFIG REQUIRED)
-    else()
-      include(FetchContent)
-      FetchContent_Declare(
-        nanobind
-        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
-        GIT_TAG        v2.9.0
-        GIT_SHALLOW    TRUE
-      )
-      FetchContent_MakeAvailable(nanobind)
-    endif()
-    message(STATUS "Found nanobind: ${NB_DIR}")
+    mlir_detect_pybind11_install()
+    find_package(pybind11 2.10 CONFIG REQUIRED)
+    message(STATUS "Found pybind11 v${pybind11_VERSION}: ${pybind11_INCLUDE_DIR}")
+    message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
+                  "suffix = '${PYTHON_MODULE_SUFFIX}', "
+                  "extension = '${PYTHON_MODULE_EXTENSION}")
+
+    mlir_detect_nanobind_install()
+    find_package(nanobind 2.9 CONFIG REQUIRED)
+    message(STATUS "Found nanobind v${nanobind_VERSION}: ${nanobind_INCLUDE_DIR}")
+    message(STATUS "Python prefix = '${PYTHON_MODULE_PREFIX}', "
+                  "suffix = '${PYTHON_MODULE_SUFFIX}', "
+                  "extension = '${PYTHON_MODULE_EXTENSION}")
   endif()
 endmacro()
+
+# Detects a pybind11 package installed in the current python environment
+# and sets variables to allow it to be found. This allows pybind11 to be
+# installed via pip, which typically yields a much more recent version than
+# the OS install, which will be available otherwise.
+function(mlir_detect_pybind11_install)
+  if(pybind11_DIR)
+    message(STATUS "Using explicit pybind11 cmake directory: ${pybind11_DIR} (-Dpybind11_DIR to change)")
+  else()
+    message(STATUS "Checking for pybind11 in python path...")
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}"
+      -c "import pybind11;print(pybind11.get_cmake_dir(), end='')"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      ERROR_QUIET)
+    if(NOT STATUS EQUAL "0")
+      message(STATUS "not found (install via 'pip install pybind11' or set pybind11_DIR)")
+      return()
+    endif()
+    message(STATUS "found (${PACKAGE_DIR})")
+    set(pybind11_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
+  endif()
+endfunction()
+
+
+# Detects a nanobind package installed in the current python environment
+# and sets variables to allow it to be found. This allows nanobind to be
+# installed via pip, which typically yields a much more recent version than
+# the OS install, which will be available otherwise.
+function(mlir_detect_nanobind_install)
+  if(nanobind_DIR)
+    message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR} (-Dnanobind_DIR to change)")
+  else()
+    message(STATUS "Checking for nanobind in python path...")
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}"
+      -c "import nanobind;print(nanobind.cmake_dir(), end='')"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      ERROR_QUIET)
+    if(NOT STATUS EQUAL "0")
+      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
+      return()
+    endif()
+    message(STATUS "found (${PACKAGE_DIR})")
+    set(nanobind_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
+    execute_process(
+      COMMAND "${Python3_EXECUTABLE}"
+      -c "import nanobind;print(nanobind.include_dir(), end='')"
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE PACKAGE_DIR
+      ERROR_QUIET)
+    if(NOT STATUS EQUAL "0")
+      message(STATUS "not found (install via 'pip install nanobind' or set nanobind_DIR)")
+      return()
+    endif()
+    set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}" PARENT_SCOPE)
+  endif()
+endfunction()

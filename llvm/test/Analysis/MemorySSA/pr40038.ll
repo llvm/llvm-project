@@ -10,21 +10,21 @@ target triple = "s390x-ibm-linux"
 
 ; Function Attrs: nounwind
 ; CHECK-LABEL: @main
-define dso_local void @main() #0 {
+define dso_local void @main() {
 bb:
   call void @func_1()
   unreachable
 }
 
 ; Function Attrs: nounwind
-define dso_local void @func_1() #0 {
+define dso_local void @func_1() {
 bb:
   call void @func_2()
   unreachable
 }
 
 ; Function Attrs: nounwind
-define dso_local void @func_2() #0 {
+define dso_local void @func_2() {
 bb:
   %tmp = alloca i32, align 4
   store i32 0, ptr @g_80, align 4, !tbaa !1
@@ -68,10 +68,7 @@ bb18:                                             ; preds = %bb12, %bb1
 }
 
 ; Function Attrs: cold noreturn nounwind
-declare void @llvm.trap() #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="z13" "target-features"="+transactional-execution,+vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { cold noreturn nounwind }
+declare void @llvm.trap()
 
 !llvm.ident = !{!0}
 

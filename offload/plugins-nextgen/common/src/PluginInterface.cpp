@@ -1524,12 +1524,6 @@ Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
   return Err;
 }
 
-Error GenericDeviceTy::initDeviceInfo(__tgt_device_info *DeviceInfo) {
-  assert(DeviceInfo && "Invalid device info");
-
-  return initDeviceInfoImpl(DeviceInfo);
-}
-
 Error GenericDeviceTy::printInfo() {
   auto Info = obtainInfoImpl();
 
@@ -1604,6 +1598,10 @@ Error GenericDeviceTy::syncEvent(void *EventPtr) {
 }
 
 bool GenericDeviceTy::useAutoZeroCopy() { return useAutoZeroCopyImpl(); }
+
+Expected<bool> GenericDeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
+  return isAccessiblePtrImpl(Ptr, Size);
+}
 
 Error GenericPluginTy::init() {
   if (Initialized)
@@ -2128,21 +2126,6 @@ int32_t GenericPluginTy::init_async_info(int32_t DeviceId,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::init_device_info(int32_t DeviceId,
-                                          __tgt_device_info *DeviceInfo,
-                                          const char **ErrStr) {
-  *ErrStr = "";
-
-  auto Err = getDevice(DeviceId).initDeviceInfo(DeviceInfo);
-  if (Err) {
-    REPORT("Failure to initialize device info at " DPxMOD " on device %d: %s\n",
-           DPxPTR(DeviceInfo), DeviceId, toString(std::move(Err)).data());
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
                                                int32_t DeviceId) {
   UserDeviceIds[DeviceId] = UserId;
@@ -2152,6 +2135,22 @@ int32_t GenericPluginTy::set_device_identifier(int32_t UserId,
 
 int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
   return getDevice(DeviceId).useAutoZeroCopy();
+}
+
+int32_t GenericPluginTy::is_accessible_ptr(int32_t DeviceId, const void *Ptr,
+                                           size_t Size) {
+  auto HandleError = [&](Error Err) -> bool {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failure while checking accessibility of pointer %p for device %d: %s",
+       Ptr, DeviceId, ErrStr.c_str());
+    return false;
+  };
+
+  auto AccessibleOrErr = getDevice(DeviceId).isAccessiblePtr(Ptr, Size);
+  if (Error Err = AccessibleOrErr.takeError())
+    return HandleError(std::move(Err));
+
+  return *AccessibleOrErr;
 }
 
 int32_t GenericPluginTy::get_global(__tgt_device_binary Binary, uint64_t Size,
