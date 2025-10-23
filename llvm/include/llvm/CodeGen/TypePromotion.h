@@ -26,7 +26,7 @@ private:
   const TargetMachine *TM;
 
 public:
-  TypePromotionPass(const TargetMachine *TM): TM(TM) { }
+  TypePromotionPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

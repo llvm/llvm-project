@@ -20,7 +20,7 @@ private:
   const TargetMachine *TM;
 
 public:
-  explicit ExpandLargeDivRemPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit ExpandLargeDivRemPass(const TargetMachine &TM_) : TM(&TM_) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

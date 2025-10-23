@@ -22,7 +22,7 @@ private:
   CodeGenOptLevel OptLevel;
 
 public:
-  explicit ExpandFpPass(const TargetMachine *TM, CodeGenOptLevel OptLevel);
+  explicit ExpandFpPass(const TargetMachine &TM, CodeGenOptLevel OptLevel);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }

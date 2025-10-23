@@ -19,7 +19,7 @@ class SafeStackPass : public PassInfoMixin<SafeStackPass> {
   const TargetMachine *TM;
 
 public:
-  explicit SafeStackPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit SafeStackPass(const TargetMachine &TM_) : TM(&TM_) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
