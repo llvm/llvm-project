@@ -412,16 +412,16 @@ child (level 1).
 The **children** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`) and its children.
 
+The **debugger** layout prints each statement line in order and variables
+live at each line (if `--print=symbols` given), as well as instructions
+(if `--print=instructions` given).
+
 The **parents** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`) and its parents.
 
 The combined **view** layout includes the elements that match any given
 criteria (:option:`--select`) or (:option:`--compare`), its parents
 and children.
-
-The combined **debugger** layout prints each statement line in order and
-variables live at each line (if `--print=symbols` given), as well as
-instructions (if `--print=instructions` given).
 
 **Notes**:
 
