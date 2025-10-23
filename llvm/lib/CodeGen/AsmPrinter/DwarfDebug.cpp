@@ -3291,14 +3291,12 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
 }
 
 template <typename Ranges, typename PayloadEmitter>
-static void emitRangeList(
-    DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
-    const DwarfCompileUnit &CU, unsigned BaseAddressx, unsigned OffsetPair,
-    unsigned StartxLength, unsigned EndOfList,
-    StringRef (*StringifyEnum)(unsigned),
-    bool ShouldUseBaseAddress,
-    PayloadEmitter EmitPayload) {
-
+static void
+emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
+              const DwarfCompileUnit &CU, unsigned BaseAddressx,
+              unsigned OffsetPair, unsigned StartxLength, unsigned StartxEndx,
+              unsigned EndOfList, StringRef (*StringifyEnum)(unsigned),
+              bool ShouldUseBaseAddress, PayloadEmitter EmitPayload) {
   auto Size = Asm->MAI->getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
@@ -3317,7 +3315,8 @@ static void emitRangeList(
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
-    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB())) {
+    if ((Asm->TM.getTargetTriple().isNVPTX() && DD.tuneForGDB()) ||
+        (DD.useSplitDwarf() && UseDwarf5 && P.first->isLinkerRelaxable())) {
       // PTX does not support subtracting labels from the code section in the
       // debug_loc section.  To work around this, the NVPTX backend needs the
       // compile unit to have no low_pc in order to have a zero base_address
@@ -3373,12 +3372,21 @@ static void emitRangeList(
           Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
-        Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
-        Asm->emitInt8(StartxLength);
-        Asm->OutStreamer->AddComment("  start index");
-        Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
-        Asm->OutStreamer->AddComment("  length");
-        Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        if (DD.useSplitDwarf() && llvm::isRangeRelaxable(Begin, End)) {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxEndx));
+          Asm->emitInt8(StartxEndx);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  end index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(End));
+        } else {
+          Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
+          Asm->emitInt8(StartxLength);
+          Asm->OutStreamer->AddComment("  start index");
+          Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
+          Asm->OutStreamer->AddComment("  length");
+          Asm->emitLabelDifferenceAsULEB128(End, Begin);
+        }
       } else {
         Asm->OutStreamer->emitSymbolValue(Begin, Size);
         Asm->OutStreamer->emitSymbolValue(End, Size);
@@ -3399,14 +3407,14 @@ static void emitRangeList(
 
 // Handles emission of both debug_loclist / debug_loclist.dwo
 static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::List &List) {
-  emitRangeList(DD, Asm, List.Label, DD.getDebugLocs().getEntries(List),
-                *List.CU, dwarf::DW_LLE_base_addressx,
-                dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
-                dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
-                /* ShouldUseBaseAddress */ true,
-                [&](const DebugLocStream::Entry &E) {
-                  DD.emitDebugLocEntryLocation(E, List.CU);
-                });
+  emitRangeList(
+      DD, Asm, List.Label, DD.getDebugLocs().getEntries(List), *List.CU,
+      dwarf::DW_LLE_base_addressx, dwarf::DW_LLE_offset_pair,
+      dwarf::DW_LLE_startx_length, dwarf::DW_LLE_startx_endx,
+      dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
+      /* ShouldUseBaseAddress */ true, [&](const DebugLocStream::Entry &E) {
+        DD.emitDebugLocEntryLocation(E, List.CU);
+      });
 }
 
 void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
@@ -3628,8 +3636,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
   emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
                 dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
-                llvm::dwarf::RangeListEncodingString,
+                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_startx_endx,
+                dwarf::DW_RLE_end_of_list, llvm::dwarf::RangeListEncodingString,
                 List.CU->getCUNode()->getRangesBaseAddress() ||
                     DD.getDwarfVersion() >= 5,
                 [](auto) {});
