@@ -35,7 +35,6 @@ template <typename ObjectType> struct PerThread {
   PerThread &operator=(const PerThread &) = delete;
   PerThread &operator=(PerThread &&) = delete;
   ~PerThread() {
-    std::lock_guard<std::mutex> Lock(Mutex);
     ThreadDataList.clear();
   }
 
@@ -63,7 +62,6 @@ public:
   ObjectType &get() { return getThreadEntry(); }
 
   template <class F> void clear(F f) {
-    std::lock_guard<std::mutex> Lock(Mutex);
     for (auto ThData : ThreadDataList) {
       if (!ThData->ThEntry)
         continue;
@@ -107,10 +105,10 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
 
   struct PerThreadData {
     size_t NElements = 0;
-    std::unique_ptr<ContainerType> ThEntry;
+    std::unique_ptr<ContainerType> ThreadEntry;
   };
 
-  std::mutex Mtx;
+  std::mutex Mutex;
   std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
@@ -120,33 +118,32 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   PerThreadTable &operator=(const PerThreadTable &) = delete;
   PerThreadTable &operator=(PerThreadTable &&) = delete;
   ~PerThreadTable() {
-    std::lock_guard<std::mutex> Lock(Mtx);
     ThreadDataList.clear();
   }
 
 private:
   PerThreadData &getThreadData() {
-    static thread_local std::shared_ptr<PerThreadData> ThData = nullptr;
-    if (!ThData) {
-      ThData = std::make_shared<PerThreadData>();
-      std::lock_guard<std::mutex> Lock(Mtx);
-      ThreadDataList.push_back(ThData);
+    static thread_local std::shared_ptr<PerThreadData> ThreadData = nullptr;
+    if (!ThreadData) {
+      ThreadData = std::make_shared<PerThreadData>();
+      std::lock_guard<std::mutex> Lock(Mutex);
+      ThreadDataList.push_back(ThreadData);
     }
-    return *ThData;
+    return *ThreadData;
   }
 
 protected:
   ContainerType &getThreadEntry() {
-    auto &ThData = getThreadData();
-    if (ThData.ThEntry)
-      return *ThData.ThEntry;
-    ThData.ThEntry = std::make_unique<ContainerType>();
-    return *ThData.ThEntry;
+    auto &ThreadData = getThreadData();
+    if (ThreadData.ThreadEntry)
+      return *ThreadData.ThreadEntry;
+    ThreadData.ThreadEntry = std::make_unique<ContainerType>();
+    return *ThreadData.ThreadEntry;
   }
 
   size_t &getThreadNElements() {
-    auto &ThData = getThreadData();
-    return ThData.NElements;
+    auto &ThreadData = getThreadData();
+    return ThreadData.NElements;
   }
 
   void setNElements(size_t Size) {
@@ -183,36 +180,35 @@ public:
   }
 
   template <class F> void clear(F f) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry || ThData->NElements == 0)
+    std::lock_guard<std::mutex> Lock(Mutex);
+    for (auto ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
       if constexpr (has_clearAll<ContainerType>::value) {
-        ThData->ThEntry->clearAll(f);
+        ThreadData->ThreadEntry->clearAll(f);
       } else if constexpr (has_iterator<ContainerType>::value &&
                            has_clear<ContainerType>::value) {
-        for (auto &Obj : *ThData->ThEntry) {
+        for (auto &Obj : *ThreadData->ThreadEntry) {
           if constexpr (is_associative<ContainerType>::value) {
             f(Obj.second);
           } else {
             f(Obj);
           }
         }
-        ThData->ThEntry->clear();
+        ThreadData->ThreadEntry->clear();
       } else {
         static_assert(true, "Container type not supported");
       }
-      ThData->NElements = 0;
+      ThreadData->NElements = 0;
     }
     ThreadDataList.clear();
   }
 
   template <class F> llvm::Error deinit(F f) {
-    std::lock_guard<std::mutex> Lock(Mtx);
-    for (auto ThData : ThreadDataList) {
-      if (!ThData->ThEntry || ThData->NElements == 0)
+    for (auto ThreadData : ThreadDataList) {
+      if (!ThreadData->ThreadEntry || ThreadData->NElements == 0)
         continue;
-      for (auto &Obj : *ThData->ThEntry) {
+      for (auto &Obj : *ThreadData->ThreadEntry) {
         if constexpr (is_associative<ContainerType>::value) {
           if (auto Err = f(Obj.second))
             return Err;
