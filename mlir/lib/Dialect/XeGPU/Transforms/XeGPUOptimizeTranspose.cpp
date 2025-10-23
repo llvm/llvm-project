@@ -35,6 +35,21 @@ namespace xegpu {
 
 using namespace mlir;
 
+struct TransposableBlockRange {
+  int minWidth, maxWidth, minHeight, maxHeight;
+};
+
+// TODO: Use uArch to get supported block ranges.
+static TransposableBlockRange getBlockRange(int bitWidth) {
+  switch (bitWidth) {
+  case 32:
+    return {/**min width**/ 1, /**max width**/ 8, /**min height**/ 1,
+            /**max height**/ 32};
+  default:
+    llvm_unreachable("Add support for other element bitwidths");
+  }
+}
+
 namespace {
 
 static std::optional<SmallVector<int64_t>>
