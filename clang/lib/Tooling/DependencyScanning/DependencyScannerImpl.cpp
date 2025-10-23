@@ -787,12 +787,15 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
   auto &CI = *CIPtr;
-  CompilerInvocation Inv(*OriginalInvocation);
 
   CI.clearDependencyCollectors();
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts), CWD, Consumer,
-      Worker.Service, Inv, Controller, PrebuiltModuleASTMap, StableDirs);
+      Worker.Service,
+      /* The MDC's constructor makes a copy of the OriginalInvocation, so
+      we can pass it in without worrying that it might be changed across
+      invocations of computeDependencies. */
+      *OriginalInvocation, Controller, PrebuiltModuleASTMap, StableDirs);
 
   if (!SrcLocOffset) {
     // When SrcLocOffset is zero, we are at the beginning of the fake source
@@ -839,13 +842,20 @@ llvm::Error CompilerInstanceWithContext::computeDependencies(
   auto DCs = CI.getDependencyCollectors();
   for (auto &DC : DCs) {
     auto *CB = DC->getPPCallbacks();
-    assert(CB && "DC must have dependency collector callback");
-    CB->moduleImport(SourceLocation(), Path, ModResult);
-    CB->EndOfMainFile();
+    if (CB) {
+      CB->moduleImport(SourceLocation(), Path, ModResult);
+
+      // Note that we are calling the CB's EndOfMainFile function, which
+      // forwards the results to the dependency consumer.
+      // It does not indicate the end of processing the fake file.
+      CB->EndOfMainFile();
+    }
   }
 
-  MDC->applyDiscoveredDependencies(Inv);
-  Consumer.handleBuildCommand({CommandLine[0], Inv.getCC1CommandLine()});
+  CompilerInvocation ModuleInvocation(*OriginalInvocation);
+  MDC->applyDiscoveredDependencies(ModuleInvocation);
+  Consumer.handleBuildCommand(
+      {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
 
   // Remove the PPCallbacks since they are going out of scope.
   CI.getPreprocessor().removePPCallbacks();
