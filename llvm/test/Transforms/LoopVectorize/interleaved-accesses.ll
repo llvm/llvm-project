@@ -783,7 +783,7 @@ for.body:                                         ; preds = %for.body, %entry
 @SA = common global i32 0, align 4
 @SB = common global float 0.000000e+00, align 4
 
-define void @int_float_struct(ptr nocapture readonly %A) #0 {
+define void @int_float_struct(ptr nocapture readonly %A) {
 ; CHECK-LABEL: @int_float_struct(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -1546,5 +1546,3 @@ loop:
 end:
   ret void
 }
-
-attributes #0 = { "unsafe-fp-math"="true" }

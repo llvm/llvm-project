@@ -454,6 +454,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     assert(!cir::MissingFeatures::coroSizeBuiltinCall());
     return getUndefRValue(e->getType());
   }
+  case Builtin::BI__builtin_prefetch: {
+    auto evaluateOperandAsInt = [&](const Expr *arg) {
+      Expr::EvalResult res;
+      [[maybe_unused]] bool evalSucceed =
+          arg->EvaluateAsInt(res, cgm.getASTContext());
+      assert(evalSucceed && "expression should be able to evaluate as int");
+      return res.Val.getInt().getZExtValue();
+    };
+
+    bool isWrite = false;
+    if (e->getNumArgs() > 1)
+      isWrite = evaluateOperandAsInt(e->getArg(1));
+
+    int locality = 3;
+    if (e->getNumArgs() > 2)
+      locality = evaluateOperandAsInt(e->getArg(2));
+
+    mlir::Value address = emitScalarExpr(e->getArg(0));
+    cir::PrefetchOp::create(builder, loc, address, locality, isWrite);
+    return RValue::get(nullptr);
+  }
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

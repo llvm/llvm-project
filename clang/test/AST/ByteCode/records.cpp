@@ -1840,3 +1840,11 @@ namespace DiamondDowncast {
   constexpr Middle2 &fail = (Middle2&)top1; // both-error {{must be initialized by a constant expression}} \
                                             // both-note {{cannot cast object of dynamic type 'const Bottom' to type 'Middle2'}}
 }
+
+namespace PrimitiveInitializedByInitList {
+  constexpr struct {
+    int a;
+    int b{this->a};
+  } c{ 17 };
+  static_assert(c.b == 17, "");
+}
