@@ -39,6 +39,21 @@ curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/l
 /tmp/xz-download/bin_x86-64/xz.exe -d -qq "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
 tar xf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
 
+# Cleam up clang download & remove unnecessary files.
+cd /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc
+rm -Rf libexec
+rm -Rf share
+mv bin bin-full
+mkdir bin
+cd bin
+cp ../bin-full/*.dll .
+cp ../bin-full/clang-cl.exe .
+cp ../bin-full/lld-link.exe .
+cd ..
+rm -Rf bin-full
+popd
+
+
 export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 export LD=link
