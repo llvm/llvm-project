@@ -66,9 +66,21 @@ int main(int, char**)
     }
 #if TEST_STD_VER >= 26
     {
-      typedef int& T;
-      static_assert(std::is_trivially_destructible<T>::value, "");
-      static_assert(std::is_trivially_destructible<optional<T>>::value, "");
+      typedef X& T;
+      static_assert(std::is_trivially_destructible<T>::value);
+      static_assert(std::is_trivially_destructible<optional<T>>::value);
+    }
+    X::dtor_called = false;
+    X x;
+    {
+      optional<X&> opt{x};
+      assert(X::dtor_called == false);
+    }
+    assert(X::dtor_called == false);
+
+    {
+      static_assert(std::is_trivially_destructible<X (&)()>::value);
+      static_assert(std::is_trivially_destructible<optional<X (&)()>>::value);
     }
 #endif
     return 0;
