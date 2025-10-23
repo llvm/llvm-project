@@ -5554,8 +5554,10 @@ struct AAAlignCallSiteReturned final
     Instruction *I = getIRPosition().getCtxI();
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
       Align Align = getAssumedAlignForIntrinsic(A, *this, *II);
-      return clampStateAndIndicateChange<StateType>(this->getState(),
-                                                    Align.value());
+      if (Align.value() > 1) {
+        return clampStateAndIndicateChange<StateType>(this->getState(),
+                                                      Align.value());
+      }
     }
     return Base::updateImpl(A);
   };
