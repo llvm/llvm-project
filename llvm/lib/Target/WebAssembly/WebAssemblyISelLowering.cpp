@@ -3601,25 +3601,33 @@ static SDValue performMulCombine(SDNode *N,
 SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT OutVT = N->getValueType(0);
-  if (N->getValueType(0) == MVT::v4i8 &&
-      N->getOperand(0)->getValueType(0) == MVT::v4f32) {
+  if (N->getOperand(0)->getValueType(0) == MVT::v4f32) {
     // First, convert to i32.
     EVT InVT = MVT::v4i32;
     SDValue ToInt = DAG.getNode(N->getOpcode(), DL, InVT, N->getOperand(0));
     APInt Mask = APInt::getLowBitsSet(InVT.getScalarSizeInBits(),
                                       OutVT.getScalarSizeInBits());
-    // Mask out the top 3 MSBs.
+    // Mask out the top MSBs.
     SDValue Masked =
         DAG.getNode(ISD::AND, DL, InVT, ToInt, DAG.getConstant(Mask, DL, InVT));
-    // Create a wide enough vector that we can use narrow: v16i32 -> v16i8.
-    SDValue BigFakeVector =
-        DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i32,
-                    DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32, Masked,
-                                DAG.getUNDEF(MVT::v4i32)),
-                    DAG.getUNDEF(MVT::v8i32));
-    SDValue Trunc =
-        truncateVectorWithNARROW(MVT::v16i8, BigFakeVector, DL, DAG);
-    return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 32));
+
+    if (N->getValueType(0) == MVT::v4i8) {
+      // Create a wide enough vector that we can use narrow: v16i32 -> v16i8.
+      SDValue WideVector =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v16i32,
+                      DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32, Masked,
+                                  DAG.getUNDEF(MVT::v4i32)),
+                      DAG.getUNDEF(MVT::v8i32));
+      SDValue Trunc = truncateVectorWithNARROW(MVT::v16i8, WideVector, DL, DAG);
+      return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 32));
+    }
+    if (N->getValueType(0) == MVT::v4i16) {
+      // Create a wide enough vector that we can use narrow: v8i32 -> v8i16.
+      SDValue WideVector = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8i32,
+                                       Masked, DAG.getUNDEF(MVT::v4i32));
+      SDValue Trunc = truncateVectorWithNARROW(MVT::v8i16, WideVector, DL, DAG);
+      return DAG.getBitcast(OutVT, extractSubVector(Trunc, 0, DAG, DL, 64));
+    }
   }
   return SDValue();
 }
