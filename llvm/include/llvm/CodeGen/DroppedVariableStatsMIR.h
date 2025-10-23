@@ -44,12 +44,11 @@ private:
                                                  StringRef FuncOrModName);
   /// Override base class method to run on an llvm::MachineFunction
   /// specifically.
-  virtual void
-  visitEveryInstruction(unsigned &DroppedCount,
-                        DenseMap<VarID, DILocation *> &InlinedAtsMap,
-                        VarID Var) override;
+  void visitEveryInstruction(unsigned &DroppedCount,
+                             DenseMap<VarID, DILocation *> &InlinedAtsMap,
+                             VarID Var) override;
   /// Override base class method to run on DBG_VALUEs specifically.
-  virtual void visitEveryDebugRecord(
+  void visitEveryDebugRecord(
       DenseSet<VarID> &VarIDSet,
       DenseMap<StringRef, DenseMap<VarID, DILocation *>> &InlinedAtsMap,
       StringRef FuncName, bool Before) override;

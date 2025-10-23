@@ -25,6 +25,7 @@
 #if !defined(__USING_SJLJ_EXCEPTIONS__)
 
 #if defined(__i386__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -109,6 +110,7 @@ DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
   .text
 
 #elif defined(__x86_64__)
+.att_syntax
 
 #
 # extern int __unw_getcontext(unw_context_t* thread_state)
@@ -760,6 +762,10 @@ LnoR2Fix:
 
 
 #elif defined(__aarch64__)
+
+#ifndef __has_feature
+#define __has_feature(__feature) 0
+#endif
 
 //
 // extern int __unw_getcontext(unw_context_t* thread_state)

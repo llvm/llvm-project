@@ -610,6 +610,20 @@ LogicalResult acc::FirstprivateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// FirstprivateMapInitialOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::FirstprivateMapInitialOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_firstprivate)
+    return emitError("data clause associated with firstprivate operation must "
+                     "match its intent");
+  if (failed(checkVarAndVarType(*this)))
+    return failure();
+  if (failed(checkNoModifier(*this)))
+    return failure();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::ReductionOp::verify() {
