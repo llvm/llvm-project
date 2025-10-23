@@ -1,6 +1,6 @@
 ; RUN: opt -S  -scalarizer -dxil-op-lower -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s
 
-; Make sure dxil operation function calls for fwidth are generated for half/float and matching vectors
+; Make sure dxil operation function calls for ddx_coarse are generated for half/float and matching vectors
 
 define noundef half @deriv_coarse_x_half(half noundef %a) {
 ; CHECK: call half @dx.op.unary.f16(i32 83, half %{{.*}})
