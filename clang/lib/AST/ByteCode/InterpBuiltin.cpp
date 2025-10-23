@@ -3809,6 +3809,21 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_ia32_movmsk_op(S, OpPC, Call);
   }
 
+  case X86::BI__builtin_ia32_psignb128:
+  case X86::BI__builtin_ia32_psignb256:
+  case X86::BI__builtin_ia32_psignw128:
+  case X86::BI__builtin_ia32_psignw256:
+  case X86::BI__builtin_ia32_psignd128:
+  case X86::BI__builtin_ia32_psignd256:
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [](const APInt &AElem, const APInt &BElem) {
+          if (BElem.isZero())
+            return APInt::getZero(AElem.getBitWidth());
+          if (BElem.isNegative())
+            return -AElem;
+          return AElem;
+        });
+
   case clang::X86::BI__builtin_ia32_pavgb128:
   case clang::X86::BI__builtin_ia32_pavgw128:
   case clang::X86::BI__builtin_ia32_pavgb256:
