@@ -5,9 +5,9 @@ RUN: %lldb-server p -h 2>&1 | FileCheck %s
 RUN: %lldb-server platform --help 2>&1 | FileCheck %s
 RUN: %lldb-server platform -h 2>&1 | FileCheck %s
 
-CHECK: OVERVIEW: lldb-server platform
+CHECK: OVERVIEW: lldb-server{{(\.exe)?}} platform
 
-CHECK: USAGE: lldb-server {{p|platform}} [options] --listen <[host]:port> {{\[}}[--] program args...]
+CHECK: USAGE: lldb-server{{(\.exe)?}} {{p|platform}} [options] --listen <[host]:port> {{\[}}[--] program args...]
 
 CHECK: CONNECTION OPTIONS:
 CHECK: --gdbserver-port <port>
@@ -33,8 +33,8 @@ CHECK: Acts as a platform server for remote debugging
 
 CHECK: EXAMPLES
 CHECK: # Listen on port 1234, exit after first connection
-CHECK: lldb-server platform --listen tcp://0.0.0.0:1234
+CHECK: lldb-server{{(\.exe)?}} platform --listen tcp://0.0.0.0:1234
 CHECK: # Listen on port 5555, accept multiple connections
-CHECK: lldb-server platform --server --listen tcp://localhost:5555
+CHECK: lldb-server{{(\.exe)?}} platform --server --listen tcp://localhost:5555
 CHECK: # Listen on Unix domain socket
-CHECK: lldb-server platform --listen unix:///tmp/lldb-server.sock
+CHECK: lldb-server{{(\.exe)?}} platform --listen unix:///tmp/lldb-server.sock
