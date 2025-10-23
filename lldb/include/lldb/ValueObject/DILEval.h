@@ -60,11 +60,18 @@ private:
   Visit(const FloatLiteralNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const CStyleCastNode *node) override;
 
   llvm::Expected<CompilerType>
   PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
                   const IntegerLiteralNode *literal);
+
+  llvm::Expected<CompilerType>
+  VerifyCStyleCastType(lldb::ValueObjectSP &operand, CompilerType &op_type,
+                       CompilerType target_type, CastPromoKind &promo_kind,
+                       CStyleCastKind &cast_kind, int location);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
