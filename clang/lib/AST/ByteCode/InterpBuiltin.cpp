@@ -3471,7 +3471,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_lrotl:
   case Builtin::BI_rotl64:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
           return Value.rotl(Amount);
         });
 
@@ -3485,7 +3485,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) -> APInt {
+        S, OpPC, Call, [](const APSInt &Value, const APSInt &Amount) {
           return Value.rotr(Amount);
         });
 
