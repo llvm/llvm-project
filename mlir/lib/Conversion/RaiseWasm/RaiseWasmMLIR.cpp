@@ -167,8 +167,9 @@ struct WasmFuncOpConversion : OpConversionPattern<FuncOp> {
   LogicalResult
   matchAndRewrite(FuncOp funcOp, FuncOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto newFunc = rewriter.create<func::FuncOp>(
-        funcOp->getLoc(), funcOp.getSymName(), funcOp.getFunctionType());
+    auto newFunc =
+        func::FuncOp::create(rewriter, funcOp->getLoc(), funcOp.getSymName(),
+                             funcOp.getFunctionType());
     rewriter.cloneRegionBefore(funcOp.getBody(), newFunc.getBody(),
                                newFunc.getBody().end());
     Block *oldEntryBlock = &newFunc.getBody().front();
@@ -261,23 +262,26 @@ struct WasmGlobalWithGetGlobalInitConversion
     globalReplacement.setConstant(!globalOp.getIsMutable());
     auto loc = globalOp.getLoc();
     auto initializerName = (globalOp.getSymName() + "::initializer").str();
-    auto globalInitializer = rewriter.create<func::FuncOp>(
-        loc, initializerName, FunctionType::get(getContext(), {}, {}));
+    auto globalInitializer =
+        func::FuncOp::create(rewriter, loc, initializerName,
+                             FunctionType::get(getContext(), {}, {}));
     globalInitializer->setAttr(rewriter.getStringAttr("initializer"),
                                rewriter.getUnitAttr());
     auto *initializerBody = globalInitializer.addEntryBlock();
     auto sip = rewriter.saveInsertionPoint();
     rewriter.setInsertionPointToStart(initializerBody);
-    auto srcGlobalPtr = rewriter.create<memref::GetGlobalOp>(
-        loc, MemRefType::get({1}, constInit.getType()), constInit.getGlobal());
-    auto destGlobalPtr = rewriter.create<memref::GetGlobalOp>(
-        loc, globalReplacement.getType(), globalReplacement.getSymName());
-    auto idx = rewriter.create<arith::ConstantIndexOp>(loc, 0).getResult();
+    auto srcGlobalPtr = memref::GetGlobalOp::create(
+        rewriter, loc, MemRefType::get({1}, constInit.getType()),
+        constInit.getGlobal());
+    auto destGlobalPtr =
+        memref::GetGlobalOp::create(rewriter, loc, globalReplacement.getType(),
+                                    globalReplacement.getSymName());
+    auto idx = arith::ConstantIndexOp::create(rewriter, loc, 0).getResult();
     auto loadSrc =
-        rewriter.create<memref::LoadOp>(loc, srcGlobalPtr, ValueRange{idx});
-    rewriter.create<memref::StoreOp>(
-        loc, loadSrc.getResult(), destGlobalPtr.getResult(), ValueRange{idx});
-    rewriter.create<func::ReturnOp>(loc);
+        memref::LoadOp::create(rewriter, loc, srcGlobalPtr, ValueRange{idx});
+    memref::StoreOp::create(rewriter, loc, loadSrc.getResult(),
+                            destGlobalPtr.getResult(), ValueRange{idx});
+    func::ReturnOp::create(rewriter, loc);
     rewriter.restoreInsertionPoint(sip);
     return success();
   }
@@ -301,11 +305,11 @@ struct WasmLocalConversion : OpConversionPattern<LocalOp> {
     auto alloca = rewriter.replaceOpWithNewOp<memref::AllocaOp>(
         localOp,
         MemRefType::get({}, localOp.getResult().getType().getElementType()));
-    auto initializer = rewriter.create<arith::ConstantOp>(
-        localOp->getLoc(),
+    auto initializer = arith::ConstantOp::create(
+        rewriter, localOp->getLoc(),
         getInitializerAttr(localOp.getResult().getType().getElementType()));
-    rewriter.create<memref::StoreOp>(localOp->getLoc(), initializer.getResult(),
-                                     alloca.getResult());
+    memref::StoreOp::create(rewriter, localOp->getLoc(),
+                            initializer.getResult(), alloca.getResult());
     return success();
   }
 };
@@ -338,8 +342,8 @@ struct WasmLocalTeeConversion : OpConversionPattern<LocalTeeOp> {
   LogicalResult
   matchAndRewrite(LocalTeeOp localTeeOp, LocalTeeOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.create<memref::StoreOp>(localTeeOp->getLoc(), adaptor.getValue(),
-                                     adaptor.getLocalVar());
+    memref::StoreOp::create(rewriter, localTeeOp->getLoc(), adaptor.getValue(),
+                            adaptor.getLocalVar());
     rewriter.replaceOp(localTeeOp, adaptor.getValue());
     return success();
   }
@@ -375,9 +379,9 @@ struct RaiseWasmMLIRPass : public impl::RaiseWasmMLIRBase<RaiseWasmMLIRPass> {
       if (values.size() != 1 ||
           values.front().getType() != destType.getElementType())
         return {};
-      auto localVar = builder.create<memref::AllocaOp>(loc, destType);
-      builder.create<memref::StoreOp>(loc, values.front(),
-                                      localVar.getResult());
+      auto localVar = memref::AllocaOp::create(builder, loc, destType);
+      memref::StoreOp::create(builder, loc, values.front(),
+                              localVar.getResult());
       return localVar.getResult();
     });
     populateRaiseWasmMLIRConversionPatterns(tc, patterns);
