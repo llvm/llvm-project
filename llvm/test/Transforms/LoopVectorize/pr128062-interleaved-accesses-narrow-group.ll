@@ -21,32 +21,13 @@ define void @pr128062(ptr %dst.start, i8 %a, i16 %b) {
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
 ; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
 ; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i8> [[STRIDED_VEC]] to <4 x i16>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <4 x i16> [[TMP0]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i16> [[TMP1]], splat (i16 255)
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw <4 x i16> [[TMP2]] to <4 x i8>
-; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i8> [[BROADCAST_SPLAT2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[STRIDED_VEC3]] to <4 x i16>
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw <4 x i16> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = udiv <4 x i16> [[TMP6]], splat (i16 255)
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc nuw <4 x i16> [[TMP7]] to <4 x i8>
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i8> [[BROADCAST_SPLAT2]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[STRIDED_VEC4]] to <4 x i16>
-; CHECK-NEXT:    [[TMP11:%.*]] = mul nuw <4 x i16> [[TMP10]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = udiv <4 x i16> [[TMP11]], splat (i16 255)
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw <4 x i16> [[TMP12]] to <4 x i8>
-; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i8> [[BROADCAST_SPLAT2]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[STRIDED_VEC5]] to <4 x i16>
+; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i8> [[STRIDED_VEC]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw <4 x i16> [[TMP15]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = udiv <4 x i16> [[TMP16]], splat (i16 255)
 ; CHECK-NEXT:    [[TMP18:%.*]] = trunc nuw <4 x i16> [[TMP17]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP19:%.*]] = add <4 x i8> [[BROADCAST_SPLAT2]], [[TMP18]]
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i8> [[TMP4]], <4 x i8> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i8> [[TMP14]], <4 x i8> [[TMP19]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <8 x i8> [[TMP20]], <8 x i8> [[TMP21]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <16 x i8> [[TMP22]], <16 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    store <16 x i8> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    store <4 x i8> [[TMP19]], ptr [[NEXT_GEP]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
