@@ -194,8 +194,9 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
         emitc::PointerType::get(
             emitc::OpaqueType::get(rewriter.getContext(), "void")),
         allocFunctionName, args);
-
-    emitc::PointerType targetPointerType = emitc::PointerType::get(elementType);
+    emitc::ArrayType arrayType =
+        emitc::ArrayType::get(memrefType.getShape(), elementType);
+    emitc::PointerType targetPointerType = emitc::PointerType::get(arrayType);
     emitc::CastOp castOp = emitc::CastOp::create(
         rewriter, loc, targetPointerType, allocCall.getResult(0));
 
@@ -340,13 +341,17 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     if (!resultTy) {
       return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
     }
-
-    auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value memrefVal = operands.getMemref();
+    Value deref;
+    if (auto ptrVal = dyn_cast<TypedValue<emitc::PointerType>>(memrefVal)) {
+      auto arrayTy = dyn_cast<emitc::ArrayType>(ptrVal.getType().getPointee());
+      if (!arrayTy)
+        return failure();
+      deref = emitc::ApplyOp::create(b, arrayTy, b.getStringAttr("*"), ptrVal);
     }
 
+    auto arrayValue = dyn_cast<TypedValue<emitc::ArrayType>>(deref);
     auto subscript = emitc::SubscriptOp::create(
         rewriter, op.getLoc(), arrayValue, operands.getIndices());
 
@@ -361,16 +366,21 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
-    auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
-    if (!arrayValue) {
-      return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value memrefVal = operands.getMemref();
+    Value deref;
+    if (auto ptrVal = dyn_cast<TypedValue<emitc::PointerType>>(memrefVal)) {
+      auto arrayTy = dyn_cast<emitc::ArrayType>(ptrVal.getType().getPointee());
+      if (!arrayTy)
+        return failure();
+      deref = emitc::ApplyOp::create(b, arrayTy, b.getStringAttr("*"), ptrVal);
     }
-
+    auto arrayValue = dyn_cast<TypedValue<emitc::ArrayType>>(deref);
     auto subscript = emitc::SubscriptOp::create(
         rewriter, op.getLoc(), arrayValue, operands.getIndices());
-    rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
-                                                 operands.getValue());
+    Value valueToStore = operands.getOperands()[0];
+
+    rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript, valueToStore);
     return success();
   }
 };
@@ -386,8 +396,10 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
             typeConverter.convertType(memRefType.getElementType());
         if (!convertedElementType)
           return {};
-        return emitc::ArrayType::get(memRefType.getShape(),
-                                     convertedElementType);
+        Type innerArrayType =
+            emitc::ArrayType::get(memRefType.getShape(), convertedElementType);
+        return emitc::PointerType::get(innerArrayType);
+
       });
 
   auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,

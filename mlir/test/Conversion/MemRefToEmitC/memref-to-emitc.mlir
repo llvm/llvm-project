@@ -13,9 +13,10 @@ func.func @alloca() {
 // CHECK-LABEL: memref_store
 // CHECK-SAME:  %[[buff:.*]]: memref<4x8xf32>, %[[v:.*]]: f32, %[[i:.*]]: index, %[[j:.*]]: index
 func.func @memref_store(%buff : memref<4x8xf32>, %v : f32, %i: index, %j: index) {
-  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.array<4x8xf32>
+  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.ptr<!emitc.array<4x8xf32>>
   
-  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[BUFFER]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
+  // CHECK-NEXT: %[[APPLY:.+]] = emitc.apply "*"(%[[BUFFER]]) : (!emitc.ptr<!emitc.array<4x8xf32>>) -> !emitc.array<4x8xf32>
+  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[APPLY]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
   // CHECK-NEXT: emitc.assign %[[v]] : f32 to %[[SUBSCRIPT]] : <f32>
   memref.store %v, %buff[%i, %j] : memref<4x8xf32>
   return
@@ -26,9 +27,10 @@ func.func @memref_store(%buff : memref<4x8xf32>, %v : f32, %i: index, %j: index)
 // CHECK-LABEL: memref_load
 // CHECK-SAME:  %[[buff:.*]]: memref<4x8xf32>, %[[i:.*]]: index, %[[j:.*]]: index
 func.func @memref_load(%buff : memref<4x8xf32>, %i: index, %j: index) -> f32 {
-  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.array<4x8xf32>
+  // CHECK-NEXT: %[[BUFFER:.*]] = builtin.unrealized_conversion_cast %[[buff]] : memref<4x8xf32> to !emitc.ptr<!emitc.array<4x8xf32>>
   
-  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[BUFFER]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
+  // CHECK-NEXT: %[[APPLY:.+]] = emitc.apply "*"(%[[BUFFER]]) : (!emitc.ptr<!emitc.array<4x8xf32>>) -> !emitc.array<4x8xf32>
+  // CHECK-NEXT: %[[SUBSCRIPT:.*]] = emitc.subscript %[[APPLY]][%[[i]], %[[j]]] : (!emitc.array<4x8xf32>, index, index) -> !emitc.lvalue<f32>
   // CHECK-NEXT: %[[LOAD:.*]] = emitc.load %[[SUBSCRIPT]] : <f32>
   %1 = memref.load %buff[%i, %j] : memref<4x8xf32>
   // CHECK-NEXT: return %[[LOAD]] : f32

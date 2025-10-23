@@ -192,6 +192,9 @@ struct CppEmitter {
   // Returns the textual representation of a subscript operation.
   std::string getSubscriptName(emitc::SubscriptOp op);
 
+  // Returns a string representing the expression of an emitc.apply operation.
+  std::string getApplyName(emitc::ApplyOp op);
+
   // Returns the textual representation of a member (of object) operation.
   std::string createMemberAccess(emitc::MemberOp op);
 
@@ -831,64 +834,6 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    mlir::UnrealizedConversionCastOp castOp) {
-  raw_ostream &os = emitter.ostream();
-  Operation &op = *castOp.getOperation();
-
-  if (castOp.getResults().size() != 1 || castOp.getOperands().size() != 1) {
-    return castOp.emitOpError(
-        "expected single result and single operand for conversion cast");
-  }
-
-  Type destType = castOp.getResult(0).getType();
-
-  auto srcPtrType =
-      mlir::dyn_cast<emitc::PointerType>(castOp.getOperand(0).getType());
-  auto destArrayType = mlir::dyn_cast<emitc::ArrayType>(destType);
-
-  if (srcPtrType && destArrayType) {
-
-    // Emit declaration: (*v13)[dims] =
-    if (failed(emitter.emitType(op.getLoc(), destArrayType.getElementType())))
-      return failure();
-    os << " (*" << emitter.getOrCreateName(op.getResult(0)) << ")";
-    for (int64_t dim : destArrayType.getShape())
-      os << "[" << dim << "]";
-    os << " = ";
-
-    os << "(";
-
-    // Emit the C++ type for "datatype (*)[dim1][dim2]..."
-    if (failed(emitter.emitType(op.getLoc(), destArrayType.getElementType())))
-      return failure();
-
-    os << " (*)"; // Pointer to array
-
-    for (int64_t dim : destArrayType.getShape()) {
-      os << "[" << dim << "]";
-    }
-    os << ")";
-    if (failed(emitter.emitOperand(castOp.getOperand(0))))
-      return failure();
-
-    return success();
-  }
-
-  // Fallback to generic C-style cast for other cases
-  if (failed(emitter.emitAssignPrefix(op)))
-    return failure();
-
-  os << "(";
-  if (failed(emitter.emitType(op.getLoc(), destType)))
-    return failure();
-  os << ")";
-  if (failed(emitter.emitOperand(castOp.getOperand(0))))
-    return failure();
-
-  return success();
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::ApplyOp applyOp) {
   raw_ostream &os = emitter.ostream();
   Operation &op = *applyOp.getOperation();
@@ -1399,24 +1344,12 @@ std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   llvm::raw_string_ostream ss(out);
   Value baseValue = op.getValue();
 
-  // Check if the baseValue (%arg1) is a result of UnrealizedConversionCastOp
-  // that converts a pointer to an array type.
-  if (auto castOp = dyn_cast_or_null<mlir::UnrealizedConversionCastOp>(
-          baseValue.getDefiningOp())) {
-    auto destArrayType =
-        mlir::dyn_cast<emitc::ArrayType>(castOp.getResult(0).getType());
-    auto srcPtrType =
-        mlir::dyn_cast<emitc::PointerType>(castOp.getOperand(0).getType());
-
-    // If it's a pointer being cast to an array, emit (*varName)
-    if (srcPtrType && destArrayType) {
-      ss << "(*" << getOrCreateName(baseValue) << ")";
-    } else {
-      // Fallback if the cast is not our specific pointer-to-array case
+  if (auto applyOp = baseValue.getDefiningOp<emitc::ApplyOp>()) {
+    if (applyOp.getApplicableOperator() == "*")
+      ss << "(*" << getOrCreateName(applyOp.getOperand()) << ")";
+    else
       ss << getOrCreateName(baseValue);
-    }
   } else {
-    // Default behavior for a regular array or other base types
     ss << getOrCreateName(baseValue);
   }
 
@@ -1424,6 +1357,26 @@ std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
     ss << "[" << getOrCreateName(index) << "]";
   }
   return out;
+}
+
+std::string CppEmitter::getApplyName(emitc::ApplyOp op) {
+  std::string expr;
+  llvm::raw_string_ostream ss(expr);
+
+  StringRef opStr = op.getApplicableOperator();
+  Value operand = op.getOperand();
+
+  // Handle dereference and address-of operators specially
+  if (opStr == "*") {
+    ss << "(*" << getOrCreateName(operand) << ")";
+  } else if (opStr == "&") {
+    ss << "&" << getOrCreateName(operand);
+  } else {
+    // Generic operator form: operand followed by operator
+    ss << getOrCreateName(operand) << opStr;
+  }
+
+  return ss.str();
 }
 
 std::string CppEmitter::createMemberAccess(emitc::MemberOp op) {
@@ -1833,20 +1786,19 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
-                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
-                emitc::BitwiseNotOp, emitc::BitwiseOrOp,
-                emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
-                emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
-                emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::DoOp,
-                emitc::ExpressionOp, emitc::FieldOp, emitc::FileOp,
-                emitc::ForOp, emitc::FuncOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+          .Case<emitc::AddOp, emitc::AssignOp, emitc::BitwiseAndOp,
+                emitc::BitwiseLeftShiftOp, emitc::BitwiseNotOp,
+                emitc::BitwiseOrOp, emitc::BitwiseRightShiftOp,
+                emitc::BitwiseXorOp, emitc::CallOp, emitc::CallOpaqueOp,
+                emitc::CastOp, emitc::ClassOp, emitc::CmpOp,
+                emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
+                emitc::DivOp, emitc::DoOp, emitc::ExpressionOp, emitc::FieldOp,
+                emitc::FileOp, emitc::ForOp, emitc::FuncOp, emitc::GlobalOp,
+                emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
@@ -1876,8 +1828,19 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
             cacheDeferredOpResult(op.getResult(), getSubscriptName(op));
             return success();
           })
-          .Case<mlir::UnrealizedConversionCastOp>(
-              [&](auto op) { return printOperation(*this, op); })
+          .Case<emitc::ApplyOp>([&](emitc::ApplyOp op) {
+            std::string expr = getApplyName(op);
+            cacheDeferredOpResult(op.getResult(), expr);
+            // If the result is unused, emit it as a standalone statement.
+            if (op->use_empty()) {
+              std::string tmpName = "tmp" + std::to_string(++valueCount);
+              if (failed(emitType(op->getLoc(), op.getResult().getType())))
+                return failure();
+              os << " " << tmpName << " = " << expr << ";\n";
+            }
+            return success();
+          })
+
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
@@ -1896,9 +1859,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // Never emit a semicolon for some operations, especially if endening with
   // `}`.
   trailingSemicolon &=
-      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
-           emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
-           emitc::VerbatimOp>(op);
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
+           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp,
+           emitc::ApplyOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 
@@ -1915,6 +1878,17 @@ LogicalResult CppEmitter::emitVariableDeclaration(Location loc, Type type,
       os << "[" << dim << "]";
     }
     return success();
+  }
+  // Handle pointer-to-array types: e.g., int (*ptr)[4][8];
+  if (auto pType = dyn_cast<emitc::PointerType>(type)) {
+    if (auto arrayPointee = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      if (failed(emitType(loc, arrayPointee.getElementType())))
+        return failure();
+      os << " (*" << name << ")";
+      for (auto dim : arrayPointee.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
   }
   if (failed(emitType(loc, type)))
     return failure();
@@ -1999,8 +1973,21 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   if (auto lType = dyn_cast<emitc::LValueType>(type))
     return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
-    if (isa<ArrayType>(pType.getPointee()))
-      return emitError(loc, "cannot emit pointer to array type ") << type;
+    if (auto arrayPointee = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      if (!arrayPointee.hasStaticShape())
+        return emitError(
+            loc, "cannot emit pointer to array type with non-static shape");
+      if (arrayPointee.getShape().empty())
+        return emitError(loc, "cannot emit pointer to empty array type");
+
+      if (failed(emitType(loc, arrayPointee.getElementType())))
+        return failure();
+
+      os << " (*)";
+      for (int64_t dim : arrayPointee.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";
