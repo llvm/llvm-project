@@ -1336,7 +1336,7 @@ public:
     ColdCodeSectionName = Name.str();
   }
 
-  /// Return true iif the function will halt execution on entry.
+  /// Return true if the function will halt execution on entry.
   bool trapsOnEntry() const { return TrapsOnEntry; }
 
   /// Make the function always trap on entry. Other than the trap instruction,

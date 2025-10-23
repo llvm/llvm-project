@@ -228,6 +228,114 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SUB) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Op), 2u);
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADD) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto Nneg1 = DAG->getConstant(0xFF, Loc, IntVT);
+  auto N0 = DAG->getConstant(0x00, Loc, IntVT);
+  auto N1 = DAG->getConstant(0x01, Loc, IntVT);
+  auto N5 = DAG->getConstant(0x05, Loc, IntVT);
+  auto N8 = DAG->getConstant(0x08, Loc, IntVT);
+  auto Nsign1 = DAG->getConstant(0x55, Loc, IntVT);
+  auto UnknownOp = DAG->getRegister(0, IntVT);
+  auto Mask = DAG->getConstant(0x1e, Loc, IntVT);
+  auto Nsign3 = DAG->getNode(ISD::AND, Loc, IntVT, Mask, UnknownOp);
+  // RHS early out
+  // Nsign1 = 01010101
+  // Nsign3 = 000????0
+  auto OpRhsEo = DAG->getNode(ISD::ADD, Loc, IntVT, Nsign3, Nsign1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpRhsEo), 1u);
+
+  // ADD 0 -1
+  // N0    = 00000000
+  // Nneg1 = 11111111
+  auto OpNegZero = DAG->getNode(ISD::ADD, Loc, IntVT, N0, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNegZero), 8u);
+
+  // ADD 1 -1
+  // N1    = 00000001
+  // Nneg1 = 11111111
+  auto OpNegOne = DAG->getNode(ISD::ADD, Loc, IntVT, N1, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNegOne), 8u);
+
+  // ADD 8 -1
+  // N8    = 00001000
+  // Nneg1 = 11111111
+  auto OpSeven = DAG->getNode(ISD::ADD, Loc, IntVT, N8, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpSeven), 5u);
+
+  // Non negative
+  // Nsign3 = 000????0
+  // Nneg1  = 11111111
+  auto OpNonNeg = DAG->getNode(ISD::ADD, Loc, IntVT, Nsign3, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNonNeg), 3u);
+
+  // LHS early out
+  // Nsign1 = 01010101
+  // Nsign3 = 000????0
+  auto OpLhsEo = DAG->getNode(ISD::ADD, Loc, IntVT, Nsign1, Nsign3);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpLhsEo), 1u);
+
+  // Nsign3 = 000????0
+  // N5     = 00000101
+  auto Op = DAG->getNode(ISD::ADD, Loc, IntVT, Nsign3, N5);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 2u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_ADDC) {
+  SDLoc Loc;
+  auto IntVT = EVT::getIntegerVT(Context, 8);
+  auto Nneg1 = DAG->getConstant(0xFF, Loc, IntVT);
+  auto N0 = DAG->getConstant(0x00, Loc, IntVT);
+  auto N1 = DAG->getConstant(0x01, Loc, IntVT);
+  auto N5 = DAG->getConstant(0x05, Loc, IntVT);
+  auto N8 = DAG->getConstant(0x08, Loc, IntVT);
+  auto Nsign1 = DAG->getConstant(0x55, Loc, IntVT);
+  auto UnknownOp = DAG->getRegister(0, IntVT);
+  auto Mask = DAG->getConstant(0x1e, Loc, IntVT);
+  auto Nsign3 = DAG->getNode(ISD::AND, Loc, IntVT, Mask, UnknownOp);
+  // RHS early out
+  // Nsign1 = 01010101
+  // Nsign3 = 000????0
+  auto OpRhsEo = DAG->getNode(ISD::ADDC, Loc, IntVT, Nsign3, Nsign1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpRhsEo), 1u);
+
+  // ADD 0 -1
+  // N0    = 00000000
+  // Nneg1 = 11111111
+  auto OpNegZero = DAG->getNode(ISD::ADDC, Loc, IntVT, N0, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNegZero), 8u);
+
+  // ADD 1 -1
+  // N1    = 00000001
+  // Nneg1 = 11111111
+  auto OpNegOne = DAG->getNode(ISD::ADDC, Loc, IntVT, N1, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNegOne), 8u);
+
+  // ADD 8 -1
+  // N8    = 00001000
+  // Nneg1 = 11111111
+  auto OpSeven = DAG->getNode(ISD::ADDC, Loc, IntVT, N8, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpSeven), 4u);
+
+  // Non negative
+  // Nsign3 = 000????0
+  // Nneg1  = 11111111
+  auto OpNonNeg = DAG->getNode(ISD::ADDC, Loc, IntVT, Nsign3, Nneg1);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpNonNeg), 3u);
+
+  // LHS early out
+  // Nsign1 = 01010101
+  // Nsign3 = 000????0
+  auto OpLhsEo = DAG->getNode(ISD::ADDC, Loc, IntVT, Nsign1, Nsign3);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpLhsEo), 1u);
+
+  // Nsign3 = 000????0
+  // N5     = 00000101
+  auto Op = DAG->getNode(ISD::ADDC, Loc, IntVT, Nsign3, N5);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 2u);
+}
+
 TEST_F(AArch64SelectionDAGTest, SimplifyDemandedVectorElts_EXTRACT_SUBVECTOR) {
   TargetLowering TL(*TM);
 

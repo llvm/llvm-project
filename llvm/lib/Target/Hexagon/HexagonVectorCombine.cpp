@@ -300,7 +300,6 @@ private:
     const_iterator end() const { return Blocks.end(); }
   };
 
-  Align getAlignFromValue(const Value *V) const;
   std::optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
   // This function is only used for assertions at the moment.
@@ -364,7 +363,7 @@ private:
   const HexagonVectorCombine &HVC;
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   OS << "Inst: " << AI.Inst << "  " << *AI.Inst << '\n';
   OS << "Addr: " << *AI.Addr << '\n';
@@ -375,7 +374,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::AddrInfo &AI) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   OS << "IsLoad:" << (MG.IsLoad ? "yes" : "no");
   OS << ", IsHvx:" << (MG.IsHvx ? "yes" : "no") << '\n';
@@ -394,7 +393,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS,
                         const AlignVectors::ByteSpan::Block &B) {
   OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] ";
@@ -408,7 +407,7 @@ raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
   for (const AlignVectors::ByteSpan::Block &B : BS)
@@ -612,12 +611,6 @@ auto AlignVectors::ByteSpan::values() const -> SmallVector<Value *, 8> {
   return Values;
 }
 
-auto AlignVectors::getAlignFromValue(const Value *V) const -> Align {
-  const auto *C = dyn_cast<ConstantInt>(V);
-  assert(C && "Alignment must be a compile-time constant integer");
-  return C->getAlignValue();
-}
-
 auto AlignVectors::getAddrInfo(Instruction &In) const
     -> std::optional<AddrInfo> {
   if (auto *L = isCandidate<LoadInst>(&In))
@@ -631,11 +624,11 @@ auto AlignVectors::getAddrInfo(Instruction &In) const
     switch (ID) {
     case Intrinsic::masked_load:
       return AddrInfo(HVC, II, II->getArgOperand(0), II->getType(),
-                      getAlignFromValue(II->getArgOperand(1)));
+                      II->getParamAlign(0).valueOrOne());
     case Intrinsic::masked_store:
       return AddrInfo(HVC, II, II->getArgOperand(1),
                       II->getArgOperand(0)->getType(),
-                      getAlignFromValue(II->getArgOperand(2)));
+                      II->getParamAlign(1).valueOrOne());
     }
   }
   return std::nullopt;
@@ -660,9 +653,9 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::masked_load:
-      return II->getArgOperand(2);
+      return II->getArgOperand(1);
     case Intrinsic::masked_store:
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
     }
   }
 
@@ -675,7 +668,7 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
 auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
   if (auto *II = dyn_cast<IntrinsicInst>(Val)) {
     if (II->getIntrinsicID() == Intrinsic::masked_load)
-      return II->getArgOperand(3);
+      return II->getArgOperand(2);
   }
   return UndefValue::get(getPayload(Val)->getType());
 }

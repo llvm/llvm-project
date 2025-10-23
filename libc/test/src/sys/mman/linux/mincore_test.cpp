@@ -12,6 +12,7 @@
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munlock.h"
 #include "src/sys/mman/munmap.h"
+#include "src/unistd/sysconf.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -20,8 +21,7 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcMincoreTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-// TODO: Replace with sysconf call once the function is properly implemented.
-constexpr size_t PAGE_SIZE = 4096;
+const size_t PAGE_SIZE = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
 
 TEST_F(LlvmLibcMincoreTest, UnMappedMemory) {
   unsigned char vec;

@@ -338,7 +338,7 @@ public:
   /// GcReadWeakFn -- LLVM objc_read_weak (id *src) function.
   llvm::FunctionCallee getGcReadWeakFn() {
     // id objc_read_weak (id *)
-    llvm::Type *args[] = {CGM.UnqualPtrTy};
+    llvm::Type *args[] = {CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_read_weak");
   }
@@ -346,7 +346,7 @@ public:
   /// GcAssignWeakFn -- LLVM objc_assign_weak function.
   llvm::FunctionCallee getGcAssignWeakFn() {
     // id objc_assign_weak (id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_weak");
   }
@@ -354,7 +354,7 @@ public:
   /// GcAssignGlobalFn -- LLVM objc_assign_global function.
   llvm::FunctionCallee getGcAssignGlobalFn() {
     // id objc_assign_global(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_global");
   }
@@ -362,7 +362,7 @@ public:
   /// GcAssignThreadLocalFn -- LLVM objc_assign_threadlocal function.
   llvm::FunctionCallee getGcAssignThreadLocalFn() {
     // id objc_assign_threadlocal(id src, id * dest)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_threadlocal");
   }
@@ -370,7 +370,7 @@ public:
   /// GcAssignIvarFn -- LLVM objc_assign_ivar function.
   llvm::FunctionCallee getGcAssignIvarFn() {
     // id objc_assign_ivar(id, id *, ptrdiff_t)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy, CGM.PtrDiffTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy, CGM.PtrDiffTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_ivar");
   }
@@ -386,7 +386,7 @@ public:
   /// GcAssignStrongCastFn -- LLVM objc_assign_strongCast function.
   llvm::FunctionCallee getGcAssignStrongCastFn() {
     // id objc_assign_strongCast(id, id *)
-    llvm::Type *args[] = {ObjectPtrTy, CGM.UnqualPtrTy};
+    llvm::Type *args[] = {ObjectPtrTy, CGM.DefaultPtrTy};
     llvm::FunctionType *FTy = llvm::FunctionType::get(ObjectPtrTy, args, false);
     return CGM.CreateRuntimeFunction(FTy, "objc_assign_strongCast");
   }
@@ -517,7 +517,7 @@ public:
 
   /// ExceptionTryEnterFn - LLVM objc_exception_try_enter function.
   llvm::FunctionCallee getExceptionTryEnterFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_enter");
@@ -525,7 +525,7 @@ public:
 
   /// ExceptionTryExitFn - LLVM objc_exception_try_exit function.
   llvm::FunctionCallee getExceptionTryExitFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.VoidTy, params, false),
         "objc_exception_try_exit");
@@ -533,7 +533,7 @@ public:
 
   /// ExceptionExtractFn - LLVM objc_exception_extract function.
   llvm::FunctionCallee getExceptionExtractFn() {
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(ObjectPtrTy, params, false),
         "objc_exception_extract");
@@ -550,7 +550,7 @@ public:
   /// SetJmpFn - LLVM _setjmp function.
   llvm::FunctionCallee getSetJmpFn() {
     // This is specifically the prototype for x86.
-    llvm::Type *params[] = {CGM.UnqualPtrTy};
+    llvm::Type *params[] = {CGM.DefaultPtrTy};
     return CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(CGM.Int32Ty, params, false), "_setjmp",
         llvm::AttributeList::get(CGM.getLLVMContext(),
@@ -1927,7 +1927,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   // If we don't already have it, construct the type for a constant NSString.
   if (!NSConstantStringType) {
     NSConstantStringType =
-        llvm::StructType::create({CGM.UnqualPtrTy, CGM.Int8PtrTy, CGM.IntTy},
+        llvm::StructType::create({CGM.DefaultPtrTy, CGM.Int8PtrTy, CGM.IntTy},
                                  "struct.__builtin_NSString");
   }
 
@@ -2495,7 +2495,7 @@ void CGObjCCommonMac::BuildRCBlockVarRecordLayout(const RecordType *RT,
                                                   CharUnits BytePos,
                                                   bool &HasUnion,
                                                   bool ByrefLayout) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
   SmallVector<const FieldDecl *, 16> Fields(RD->fields());
   llvm::Type *Ty = CGM.getTypes().ConvertType(QualType(RT, 0));
   const llvm::StructLayout *RecLayout =
@@ -5184,7 +5184,7 @@ CGObjCCommonMac::GetIvarLayoutName(IdentifierInfo *Ident,
 }
 
 void IvarLayoutBuilder::visitRecord(const RecordType *RT, CharUnits offset) {
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
 
   // If this is a union, remember that we had one, because it might mess
   // up the ordering of layout entries.
@@ -5959,7 +5959,7 @@ ObjCNonFragileABITypesHelper::ObjCNonFragileABITypesHelper(
       Int8PtrTy, PropertyListPtrTy);
 
   // ImpnfABITy - LLVM for id (*)(id, SEL, ...)
-  ImpnfABITy = CGM.UnqualPtrTy;
+  ImpnfABITy = CGM.DefaultPtrTy;
 
   // struct _class_t {
   //   struct _class_t *isa;
@@ -6380,7 +6380,7 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
           CGM.getModule(), ObjCTypes.ImpnfABITy, false,
           llvm::GlobalValue::ExternalLinkage, nullptr, "_objc_empty_vtable");
     else
-      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.UnqualPtrTy);
+      ObjCEmptyVtableVar = llvm::ConstantPointerNull::get(CGM.DefaultPtrTy);
   }
 
   // FIXME: Is this correct (that meta class size is never computed)?

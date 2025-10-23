@@ -352,7 +352,7 @@ typedef struct {
 
 /// Create a rewrite pattern that matches the operation
 /// with the given rootName, corresponding to mlir::OpRewritePattern.
-MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePattenCreate(
+MLIR_CAPI_EXPORTED MlirRewritePattern mlirOpRewritePatternCreate(
     MlirStringRef rootName, unsigned benefit, MlirContext context,
     MlirRewritePatternCallbacks callbacks, void *userData,
     size_t nGeneratedNames, MlirStringRef *generatedNames);

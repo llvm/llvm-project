@@ -2026,7 +2026,7 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 
     // Anonymous union members do not have their destructors called.
     const RecordType *RT = type->getAsUnionType();
-    if (RT && RT->getOriginalDecl()->isAnonymousStructOrUnion())
+    if (RT && RT->getDecl()->isAnonymousStructOrUnion())
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);

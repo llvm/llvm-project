@@ -519,6 +519,10 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   if (CGM.getCodeGenOpts().OptimizationLevel == 0)
     Fn->addFnAttr(llvm::Attribute::OptimizeNone);
   Fn->addFnAttr(llvm::Attribute::NoInline);
+
+  if (CGM.getLangOpts().HLSLSpvEnableMaximalReconvergence) {
+    Fn->addFnAttr("enable-maximal-reconvergence", "true");
+  }
 }
 
 static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s modernize-use-override,cppcoreguidelines-explicit-virtual-functions %t -- -- -fexceptions
+// RUN: %check_clang_tidy %s modernize-use-override,cppcoreguidelines-explicit-virtual-functions %t -- -- -fexceptions
 
 #define ABSTRACT = 0
 
@@ -96,7 +96,8 @@ public:
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: prefer using
   // CHECK-FIXES: void j() const override;
 
-  virtual MustUseResultObject k();  // Has an implicit attribute.
+  // Has an implicit attribute.
+  virtual MustUseResultObject k();
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: prefer using
   // CHECK-FIXES: MustUseResultObject k() override;
 
@@ -203,7 +204,8 @@ public:
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: prefer using
   // CHECK-FIXES: void j() const override
 
-  virtual MustUseResultObject k();  // Has an implicit attribute.
+  // Has an implicit attribute.
+  virtual MustUseResultObject k();
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: prefer using
   // CHECK-FIXES: MustUseResultObject k() override;
 

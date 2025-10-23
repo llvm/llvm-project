@@ -839,6 +839,25 @@ TEST_F(FormatTestComments, MultiLineCommentsInDefines) {
                    getLLVMStyleWithColumns(17)));
 }
 
+TEST_F(FormatTestComments, LineCommentsInMacrosDoNotGetEscapedNewlines) {
+  FormatStyle Style = getLLVMStyleWithColumns(0);
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  verifyFormat("#define FOO (1U) // comment\n"
+               "                 // comment",
+               Style);
+
+  Style.ColumnLimit = 32;
+  verifyFormat("#define SOME_MACRO(x) x\n"
+               "#define FOO                    \\\n"
+               "  SOME_MACRO(1) +              \\\n"
+               "      SOME_MACRO(2) // comment\n"
+               "                    // comment",
+               "#define SOME_MACRO(x) x\n"
+               "#define FOO SOME_MACRO(1) + SOME_MACRO(2) // comment\n"
+               "                                          // comment",
+               Style);
+}
+
 TEST_F(FormatTestComments, ParsesCommentsAdjacentToPPDirectives) {
   EXPECT_EQ("namespace {}\n// Test\n#define A",
             format("namespace {}\n   // Test\n#define A"));
@@ -4697,6 +4716,58 @@ TEST_F(FormatTestComments, SplitCommentIntroducers) {
 / 
   )",
                    getLLVMStyleWithColumns(10)));
+}
+
+TEST_F(FormatTestComments, LineCommentsOnStartOfFunctionCall) {
+  auto Style = getLLVMStyle();
+
+  EXPECT_EQ(Style.Cpp11BracedListStyle, FormatStyle::BLS_AlignFirstComment);
+  verifyFormat("Type name{// Comment\n"
+               "          value};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
+  verifyFormat("Type name{ // Comment\n"
+               "           value\n"
+               "};",
+               Style);
+
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_FunctionCall;
+  verifyFormat("Type name{ // Comment\n"
+               "    value};",
+               Style);
+
+  verifyFormat("T foo( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("T bar{ // Comment\n"
+               "    arg};",
+               Style);
+
+  verifyFormat("T baz({ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("T baz{{ // Comment\n"
+               "    arg}};",
+               Style);
+
+  verifyFormat("T b0z(f( // Comment\n"
+               "    arg));",
+               Style);
+
+  verifyFormat("T b0z(F{ // Comment\n"
+               "    arg});",
+               Style);
+
+  verifyFormat("func( // Comment\n"
+               "    arg);",
+               Style);
+
+  verifyFormat("func({ // Comment\n"
+               "    arg});",
+               Style);
 }
 
 } // end namespace

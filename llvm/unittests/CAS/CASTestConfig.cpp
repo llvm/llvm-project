@@ -9,6 +9,7 @@
 #include "CASTestConfig.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "gtest/gtest.h"
+#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -19,3 +20,17 @@ static CASTestingEnv createInMemory(int I) {
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
                          ::testing::Values(createInMemory));
+
+#if LLVM_ENABLE_ONDISK_CAS
+namespace llvm::cas::ondisk {
+extern void setMaxMappingSize(uint64_t Size);
+} // namespace llvm::cas::ondisk
+
+void setMaxOnDiskCASMappingSize() {
+  static std::once_flag Flag;
+  std::call_once(
+      Flag, [] { llvm::cas::ondisk::setMaxMappingSize(100 * 1024 * 1024); });
+}
+#else
+void setMaxOnDiskCASMappingSize() {}
+#endif /* LLVM_ENABLE_ONDISK_CAS */

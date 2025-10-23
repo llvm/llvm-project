@@ -105,12 +105,6 @@ setupStatsFile(StringRef StatsFilename);
 /// ordered indices to elements in the input array.
 LLVM_ABI std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
 
-/// Updates MemProf attributes (and metadata) based on whether the index
-/// has recorded that we are linking with allocation libraries containing
-/// the necessary APIs for downstream transformations.
-LLVM_ABI void updateMemProfAttributes(Module &Mod,
-                                      const ModuleSummaryIndex &Index);
-
 class LTO;
 struct SymbolResolution;
 

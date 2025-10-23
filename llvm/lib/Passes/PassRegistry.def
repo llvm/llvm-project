@@ -113,6 +113,7 @@ MODULE_PASS("pgo-force-function-attrs",
                                           ? PGOOpt->ColdOptType
                                           : PGOOptions::ColdFuncOpt::Default))
 MODULE_PASS("memprof-context-disambiguation", MemProfContextDisambiguation())
+MODULE_PASS("memprof-remove-attributes", MemProfRemoveInfo())
 MODULE_PASS("memprof-module", ModuleMemProfilerPass())
 MODULE_PASS("mergefunc", MergeFunctionsPass())
 MODULE_PASS("metarenamer", MetaRenamerPass())
@@ -125,7 +126,6 @@ MODULE_PASS("openmp-opt", OpenMPOptPass())
 MODULE_PASS("openmp-opt-postlink",
             OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink))
 MODULE_PASS("partial-inliner", PartialInlinerPass())
-MODULE_PASS("alloc-token", AllocTokenPass())
 MODULE_PASS("pgo-icall-prom", PGOIndirectCallPromotion())
 MODULE_PASS("pgo-instr-gen", PGOInstrumentationGen())
 MODULE_PASS("pgo-instr-use", PGOInstrumentationUse())
@@ -181,6 +181,10 @@ MODULE_PASS("wholeprogramdevirt", WholeProgramDevirtPass())
 #ifndef MODULE_PASS_WITH_PARAMS
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+MODULE_PASS_WITH_PARAMS(
+    "alloc-token", "AllocTokenPass",
+    [](AllocTokenOptions Opts) { return AllocTokenPass(Opts); },
+    parseAllocTokenPassOptions, "mode=<mode>")
 MODULE_PASS_WITH_PARAMS(
     "asan", "AddressSanitizerPass",
     [](AddressSanitizerOptions Opts) { return AddressSanitizerPass(Opts); },

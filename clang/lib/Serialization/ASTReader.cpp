@@ -3190,6 +3190,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             F.Kind == MK_ImplicitModule)
           N = ForceValidateUserInputs ? NumUserInputs : 0;
 
+        if (N != 0)
+          Diag(diag::remark_module_validation)
+              << N << F.ModuleName << F.FileName;
+
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);
           if (!IF.getFile() || IF.isOutOfDate())
@@ -5500,7 +5504,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid FILE type in AST file");
             return;
           }
-          Context.setFILEDecl(Tag->getOriginalDecl());
+          Context.setFILEDecl(Tag->getDecl());
         }
       }
     }
@@ -5521,7 +5525,7 @@ void ASTReader::InitializeContext() {
             Error("Invalid jmp_buf type in AST file");
             return;
           }
-          Context.setjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5539,7 +5543,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Sigjmp_bufType->getAs<TagType>();
           assert(Tag && "Invalid sigjmp_buf type in AST file");
-          Context.setsigjmp_bufDecl(Tag->getOriginalDecl());
+          Context.setsigjmp_bufDecl(Tag->getDecl());
         }
       }
     }
@@ -5574,7 +5578,7 @@ void ASTReader::InitializeContext() {
         else {
           const TagType *Tag = Ucontext_tType->getAs<TagType>();
           assert(Tag && "Invalid ucontext_t type in AST file");
-          Context.setucontext_tDecl(Tag->getOriginalDecl());
+          Context.setucontext_tDecl(Tag->getDecl());
         }
       }
     }
@@ -5807,7 +5811,13 @@ bool ASTReader::readASTFileControlBlock(
 
     // FIXME: This allows use of the VFS; we do not allow use of the
     // VFS when actually loading a module.
-    auto BufferOrErr = FileMgr.getBufferForFile(Filename);
+    auto Entry =
+        Filename == "-" ? FileMgr.getSTDIN() : FileMgr.getFileRef(Filename);
+    if (!Entry) {
+      llvm::consumeError(Entry.takeError());
+      return true;
+    }
+    auto BufferOrErr = FileMgr.getBufferForFile(*Entry);
     if (!BufferOrErr)
       return true;
     OwnedBuffer = std::move(*BufferOrErr);
@@ -11684,7 +11694,10 @@ void OMPClauseReader::VisitOMPDetachClause(OMPDetachClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
 }
 
-void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *) {}
+void OMPClauseReader::VisitOMPNowaitClause(OMPNowaitClause *C) {
+  C->setCondition(Record.readSubExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
 
 void OMPClauseReader::VisitOMPUntiedClause(OMPUntiedClause *) {}
 
@@ -13006,7 +13019,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     SourceLocation LParenLoc = readSourceLocation();
     OpenACCReductionOperator Op = readEnum<OpenACCReductionOperator>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
-    llvm::SmallVector<OpenACCReductionRecipe> RecipeList;
+    llvm::SmallVector<OpenACCReductionRecipeWithStorage> RecipeList;
 
     for (unsigned I = 0; I < VarList.size(); ++I) {
       VarDecl *Recipe = readDeclAs<VarDecl>();

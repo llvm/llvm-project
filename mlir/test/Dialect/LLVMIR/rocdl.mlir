@@ -1035,6 +1035,20 @@ llvm.func @rocdl.s.wait.expcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.wait.asynccnt() {
+  // CHECK-LABEL: rocdl.s.wait.asynccnt
+  // CHECK: rocdl.s.wait.asynccnt 0
+  rocdl.s.wait.asynccnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.tensorcnt() {
+  // CHECK-LABEL: rocdl.s.wait.tensorcnt
+  // CHECK: rocdl.s.wait.tensorcnt 0
+  rocdl.s.wait.tensorcnt 0
+  llvm.return
+}
+
 // -----
 
 llvm.func @rocdl.readfirstlane(%src : f32) -> f32 {
@@ -1191,6 +1205,57 @@ llvm.func @rocdl.cvt.scale.pk16(%v3xi32: vector<3xi32>, %scale:i32) {
   %4 =      rocdl.cvt.scale.pk16.bf16.bf6 %v3xi32, %scale[0] : vector<16xbf16>
   // CHECK: rocdl.cvt.scale.pk16.f32.bf6
   %5 =      rocdl.cvt.scale.pk16.f32.bf6 %v3xi32, %scale[0] : vector<16xf32>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: rocdl.cvt.scalef32.pk16
+llvm.func @rocdl.cvt.scalef32.pk16(%v16xf32: vector<16xf32>,
+                                  %v16xf16: vector<16xf16>,
+                                  %v16xbf16: vector<16xbf16>,
+                                  %scale: f32) {
+
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.f16
+  %0 =      rocdl.cvt.scalef32.pk16.fp6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.bf16
+  %1 =      rocdl.cvt.scalef32.pk16.fp6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.fp6.f32
+  %2 =      rocdl.cvt.scalef32.pk16.fp6.f32 %v16xf32, %scale : vector<3xi32>
+
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.f16
+  %3 =      rocdl.cvt.scalef32.pk16.bf6.f16 %v16xf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.bf16
+  %4 =      rocdl.cvt.scalef32.pk16.bf6.bf16 %v16xbf16, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.pk16.bf6.f32
+  %5 =      rocdl.cvt.scalef32.pk16.bf6.f32 %v16xf32, %scale : vector<3xi32>
+
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: rocdl.cvt.scalef32.sr.pk16
+llvm.func @rocdl.cvt.scalef32.sr.pk16(%v16xf32: vector<16xf32>,
+                                     %v16xf16: vector<16xf16>,
+                                     %v16xbf16: vector<16xbf16>,
+                                     %seed: i32,
+                                     %scale: f32) {
+
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.f16
+  %0 =      rocdl.cvt.scalef32.sr.pk16.fp6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.bf16
+  %1 =      rocdl.cvt.scalef32.sr.pk16.fp6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.fp6.f32
+  %2 =      rocdl.cvt.scalef32.sr.pk16.fp6.f32 %v16xf32, %seed, %scale : vector<3xi32>
+
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.f16
+  %3 =      rocdl.cvt.scalef32.sr.pk16.bf6.f16 %v16xf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.bf16
+  %4 =      rocdl.cvt.scalef32.sr.pk16.bf6.bf16 %v16xbf16, %seed, %scale : vector<3xi32>
+  // CHECK: rocdl.cvt.scalef32.sr.pk16.bf6.f32
+  %5 =      rocdl.cvt.scalef32.sr.pk16.bf6.f32 %v16xf32, %seed, %scale : vector<3xi32>
 
   llvm.return
 }

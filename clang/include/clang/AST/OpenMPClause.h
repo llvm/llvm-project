@@ -2291,18 +2291,68 @@ public:
 /// This represents 'nowait' clause in the '#pragma omp ...' directive.
 ///
 /// \code
-/// #pragma omp for nowait
+/// #pragma omp for nowait (cond)
 /// \endcode
-/// In this example directive '#pragma omp for' has 'nowait' clause.
-class OMPNowaitClause final : public OMPNoChildClause<llvm::omp::OMPC_nowait> {
+/// In this example directive '#pragma omp for' has simple 'nowait' clause with
+/// condition 'cond'.
+class OMPNowaitClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Condition of the 'nowait' clause.
+  Stmt *Condition = nullptr;
+
+  /// Set condition.
+  void setCondition(Expr *Cond) { Condition = Cond; }
+
 public:
-  /// Build 'nowait' clause.
+  /// Build 'nowait' clause with condition \a Cond.
   ///
+  /// \param Cond Condition of the clause.
   /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPNowaitClause(SourceLocation StartLoc = SourceLocation(),
-                  SourceLocation EndLoc = SourceLocation())
-      : OMPNoChildClause(StartLoc, EndLoc) {}
+  OMPNowaitClause(Expr *Cond, SourceLocation StartLoc, SourceLocation LParenLoc,
+                  SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_nowait, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Condition(Cond) {}
+
+  /// Build an empty clause.
+  OMPNowaitClause()
+      : OMPClause(llvm::omp::OMPC_nowait, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns condition.
+  Expr *getCondition() const { return cast_or_null<Expr>(Condition); }
+
+  child_range children() {
+    if (Condition)
+      return child_range(&Condition, &Condition + 1);
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (Condition)
+      return const_child_range(&Condition, &Condition + 1);
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children();
+  const_child_range used_children() const {
+    auto Children = const_cast<OMPNowaitClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_nowait;
+  }
 };
 
 /// This represents 'untied' clause in the '#pragma omp ...' directive.

@@ -152,14 +152,24 @@ static bool IsFunctionEpilogue(const CompilandIndexItem &cci,
   return false;
 }
 
+// See llvm::codeview::TypeIndex::simpleTypeName as well as strForPrimitiveTi
+// from the original pdbdump:
+// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/pdbdump/pdbdump.cpp#L1896-L1974
+//
+// For 64bit integers we use "long long" like DIA instead of "__int64".
 static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
   switch (kind) {
   case SimpleTypeKind::Boolean128:
-  case SimpleTypeKind::Boolean16:
-  case SimpleTypeKind::Boolean32:
+    return "__bool128";
   case SimpleTypeKind::Boolean64:
+    return "__bool64";
+  case SimpleTypeKind::Boolean32:
+    return "__bool32";
+  case SimpleTypeKind::Boolean16:
+    return "__bool16";
   case SimpleTypeKind::Boolean8:
     return "bool";
+
   case SimpleTypeKind::Byte:
   case SimpleTypeKind::UnsignedCharacter:
     return "unsigned char";
@@ -168,57 +178,81 @@ static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
   case SimpleTypeKind::SignedCharacter:
   case SimpleTypeKind::SByte:
     return "signed char";
-  case SimpleTypeKind::Character16:
-    return "char16_t";
   case SimpleTypeKind::Character32:
     return "char32_t";
+  case SimpleTypeKind::Character16:
+    return "char16_t";
   case SimpleTypeKind::Character8:
     return "char8_t";
+
+  case SimpleTypeKind::Complex128:
+    return "_Complex __float128";
   case SimpleTypeKind::Complex80:
+    return "_Complex long double";
   case SimpleTypeKind::Complex64:
+    return "_Complex double";
+  case SimpleTypeKind::Complex48:
+    return "_Complex __float48";
   case SimpleTypeKind::Complex32:
-    return "complex";
+  case SimpleTypeKind::Complex32PartialPrecision:
+    return "_Complex float";
+  case SimpleTypeKind::Complex16:
+    return "_Complex _Float16";
+
   case SimpleTypeKind::Float128:
+    return "__float128";
   case SimpleTypeKind::Float80:
     return "long double";
   case SimpleTypeKind::Float64:
     return "double";
+  case SimpleTypeKind::Float48:
+    return "__float48";
   case SimpleTypeKind::Float32:
+  case SimpleTypeKind::Float32PartialPrecision:
     return "float";
   case SimpleTypeKind::Float16:
-    return "single";
+    return "_Float16";
+
+  case SimpleTypeKind::Int128Oct:
   case SimpleTypeKind::Int128:
     return "__int128";
   case SimpleTypeKind::Int64:
   case SimpleTypeKind::Int64Quad:
-    return "int64_t";
+    return "long long";
+  case SimpleTypeKind::Int32Long:
+    return "long";
   case SimpleTypeKind::Int32:
     return "int";
   case SimpleTypeKind::Int16:
+  case SimpleTypeKind::Int16Short:
     return "short";
+
+  case SimpleTypeKind::UInt128Oct:
   case SimpleTypeKind::UInt128:
     return "unsigned __int128";
   case SimpleTypeKind::UInt64:
   case SimpleTypeKind::UInt64Quad:
-    return "uint64_t";
-  case SimpleTypeKind::HResult:
-    return "HRESULT";
+    return "unsigned long long";
   case SimpleTypeKind::UInt32:
     return "unsigned";
   case SimpleTypeKind::UInt16:
   case SimpleTypeKind::UInt16Short:
     return "unsigned short";
-  case SimpleTypeKind::Int32Long:
-    return "long";
   case SimpleTypeKind::UInt32Long:
     return "unsigned long";
+
+  case SimpleTypeKind::HResult:
+    return "HRESULT";
   case SimpleTypeKind::Void:
     return "void";
   case SimpleTypeKind::WideCharacter:
     return "wchar_t";
-  default:
+
+  case SimpleTypeKind::None:
+  case SimpleTypeKind::NotTranslated:
     return "";
   }
+  return "";
 }
 
 static bool IsClassRecord(TypeLeafKind kind) {
@@ -598,8 +632,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti,
   uint64_t uid = toOpaqueUid(PdbTypeSymId(ti, false));
   if (ti == TypeIndex::NullptrT()) {
     Declaration decl;
-    return MakeType(uid, ConstString("std::nullptr_t"), 0, nullptr,
-                    LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
+    return MakeType(uid, ConstString("decltype(nullptr)"), std::nullopt,
+                    nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                     Type::ResolveState::Full);
   }
 

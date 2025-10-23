@@ -1001,8 +1001,12 @@ OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
       !outputTy.hasStaticShape())
     return {};
 
-  if (inputTy.getDimSize(getAxis()) == 1)
-    return DenseElementsAttr::get(outputTy, 0);
+  const Type outputElementTy = getElementTypeOrSelf(outputTy);
+  if (inputTy.getDimSize(getAxis()) == 1 && outputElementTy.isInteger()) {
+    const auto outputElemIntTy = cast<IntegerType>(outputElementTy);
+    const APInt zero = APInt::getZero(outputElemIntTy.getWidth());
+    return DenseElementsAttr::get(outputTy, zero);
+  }
 
   return {};
 }

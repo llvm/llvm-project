@@ -31,8 +31,8 @@ public:
   struct SymbolAddrs {
     ExecutorAddr Instance;
     ExecutorAddr Reserve;
-    ExecutorAddr Finalize;
-    ExecutorAddr Deallocate;
+    ExecutorAddr Initialize;
+    ExecutorAddr Release;
     ExecutorAddr RegisterEHFrame;
     ExecutorAddr DeregisterEHFrame;
   };

@@ -120,14 +120,14 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
   if (!MergedHeader.Id.empty() && (MergedHeader.Id != Header.Id))
     errs() << "WARNING: build-ids in merged profiles do not match\n";
 
-  // Cannot merge samples profile with LBR profile.
+  // Cannot merge samples profile with brstack profile.
   if (!MergedHeader.Flags)
     MergedHeader.Flags = Header.Flags;
 
   constexpr auto Mask = llvm::bolt::BinaryFunction::PF_BRANCH |
                         llvm::bolt::BinaryFunction::PF_BASIC;
   if ((MergedHeader.Flags & Mask) != (Header.Flags & Mask)) {
-    errs() << "ERROR: cannot merge LBR profile with non-LBR profile\n";
+    errs() << "ERROR: cannot merge brstack profile with non-brstack profile\n";
     exit(1);
   }
   MergedHeader.Flags = MergedHeader.Flags | Header.Flags;

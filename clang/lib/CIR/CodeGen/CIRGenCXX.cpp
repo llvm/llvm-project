@@ -151,7 +151,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
     // Don't confuse lexical cleanup.
     builder.clearInsertionPoint();
   } else {
-    builder.create<cir::YieldOp>(addr.getLoc());
+    cir::YieldOp::create(builder, addr.getLoc());
   }
 }
 
@@ -171,7 +171,8 @@ cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl gd) {
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, fn);
-  assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
+  setCIRFunctionAttributesForDefinition(mlir::cast<FunctionDecl>(gd.getDecl()),
+                                        fn);
   return fn;
 }
 

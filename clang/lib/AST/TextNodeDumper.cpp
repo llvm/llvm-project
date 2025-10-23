@@ -1401,7 +1401,7 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
       OS << " -> ";
 
     const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAsCanonical<RecordType>()->getOriginalDecl());
+        Base->getType()->castAsCanonical<RecordType>()->getDecl());
 
     if (Base->isVirtual())
       OS << "virtual ";
@@ -2180,7 +2180,7 @@ void TextNodeDumper::VisitTagType(const TagType *T) {
       K != ElaboratedTypeKeyword::None)
     OS << ' ' << TypeWithKeyword::getKeywordName(K);
   dumpNestedNameSpecifier(T->getQualifier());
-  dumpDeclRef(T->getOriginalDecl());
+  dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
@@ -2232,7 +2232,7 @@ void TextNodeDumper::VisitTemplateSpecializationType(
 
 void TextNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *T) {
-  dumpDeclRef(T->getOriginalDecl());
+  dumpDeclRef(T->getDecl());
 }
 
 void TextNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *T) {

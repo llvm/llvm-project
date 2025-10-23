@@ -361,11 +361,11 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
     if (!Callee->getIdentifier())
       return false;
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
-        .Cases("end", "rend", "cend", "crend", true)
-        .Cases("c_str", "data", "get", true)
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
+        .Cases({"c_str", "data", "get"}, true)
         // Map and set types.
-        .Cases("find", "equal_range", "lower_bound", "upper_bound", true)
+        .Cases({"find", "equal_range", "lower_bound", "upper_bound"}, true)
         .Default(false);
   }
   if (Callee->getReturnType()->isReferenceType()) {
@@ -377,7 +377,7 @@ static bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee) {
              OO == OverloadedOperatorKind::OO_Star;
     }
     return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases("front", "back", "at", "top", "value", true)
+        .Cases({"front", "back", "at", "top", "value"}, true)
         .Default(false);
   }
   return false;
@@ -394,14 +394,14 @@ static bool shouldTrackFirstArgument(const FunctionDecl *FD) {
   if (FD->getReturnType()->isPointerType() ||
       isRecordWithAttr<PointerAttr>(FD->getReturnType())) {
     return llvm::StringSwitch<bool>(FD->getName())
-        .Cases("begin", "rbegin", "cbegin", "crbegin", true)
-        .Cases("end", "rend", "cend", "crend", true)
+        .Cases({"begin", "rbegin", "cbegin", "crbegin"}, true)
+        .Cases({"end", "rend", "cend", "crend"}, true)
         .Case("data", true)
         .Default(false);
   }
   if (FD->getReturnType()->isReferenceType()) {
     return llvm::StringSwitch<bool>(FD->getName())
-        .Cases("get", "any_cast", true)
+        .Cases({"get", "any_cast"}, true)
         .Default(false);
   }
   return false;

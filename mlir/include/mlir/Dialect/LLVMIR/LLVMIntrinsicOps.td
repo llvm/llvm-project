@@ -1025,11 +1025,13 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   string mlirBuilder = [{
     auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
     bool nontemporal = intrinInst->hasMetadata(llvm::LLVMContext::MD_nontemporal);
+    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
     $res = LLVM::MaskedLoadOp::create($_builder, $_location,
-      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment),
-        nontemporal ? $_builder.getUnitAttr() : nullptr);
+      $_resultType, $data, $mask, $pass_thru,
+      $_builder.getI32IntegerAttr(alignment.value()),
+      nontemporal ? $_builder.getUnitAttr() : nullptr);
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1, -1];
+  list<int> llvmArgIndices = [0, 1, 2, -1, -1];
 }
 
 /// Create a call to Masked Store intrinsic.
@@ -1045,10 +1047,12 @@ def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
       $value, $data, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
     $_op = LLVM::MaskedStoreOp::create($_builder, $_location,
-      $value, $data, $mask, $_int_attr($alignment));
+      $value, $data, $mask, $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 1, 3, 2];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 }
 
 /// Create a call to Masked Gather intrinsic.
@@ -1068,10 +1072,13 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
         $_resultType, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(0).valueOrOne();
     $res = LLVM::masked_gather::create($_builder, $_location,
-      $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
+      $_resultType, $ptrs, $mask, $pass_thru,
+      $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 2, 3, 1];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 
   let hasVerifier = 1;
 }
@@ -1089,10 +1096,12 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
       $value, $ptrs, llvm::Align($alignment), $mask);
   }];
   string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::Align alignment = intrinInst->getParamAlign(1).valueOrOne();
     $_op = LLVM::masked_scatter::create($_builder, $_location,
-      $value, $ptrs, $mask, $_int_attr($alignment));
+      $value, $ptrs, $mask, $_builder.getI32IntegerAttr(alignment.value()));
   }];
-  list<int> llvmArgIndices = [0, 1, 3, 2];
+  list<int> llvmArgIndices = [0, 1, 2, -1];
 
   let hasVerifier = 1;
 }

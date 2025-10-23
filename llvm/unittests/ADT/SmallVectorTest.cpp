@@ -127,24 +127,24 @@ public:
     return c0.getValue() == c1.getValue();
   }
 
-  friend bool LLVM_ATTRIBUTE_UNUSED operator!=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator!=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() != c1.getValue();
   }
 
   friend bool operator<(const Constructable &c0, const Constructable &c1) {
     return c0.getValue() < c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator<=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator<=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() <= c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>(const Constructable &c0,
-                                              const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>(const Constructable &c0,
+                                         const Constructable &c1) {
     return c0.getValue() > c1.getValue();
   }
-  friend bool LLVM_ATTRIBUTE_UNUSED operator>=(const Constructable &c0,
-                                               const Constructable &c1) {
+  [[maybe_unused]] friend bool operator>=(const Constructable &c0,
+                                          const Constructable &c1) {
     return c0.getValue() >= c1.getValue();
   }
 };
@@ -597,6 +597,15 @@ TYPED_TEST(SmallVectorTest, AssignSmallVector) {
   V.push_back(Constructable(1));
   V.assign(otherVector);
   assertValuesInOrder(V, 2u, 7, 7);
+}
+
+TYPED_TEST(SmallVectorTest, AssignArrayRef) {
+  SCOPED_TRACE("AssignArrayRef");
+  auto &V = this->theVector;
+  Constructable Other[] = {7, 8, 9};
+  V.push_back(Constructable(1));
+  V.assign(ArrayRef(Other));
+  assertValuesInOrder(V, 3u, 7, 8, 9);
 }
 
 // Move-assign test

@@ -478,8 +478,7 @@ void CIRGenFunction::getVTablePointers(BaseSubobject base,
 
   for (const auto &nextBase : rd->bases()) {
     const auto *baseDecl =
-        cast<CXXRecordDecl>(
-            nextBase.getType()->castAs<RecordType>()->getOriginalDecl())
+        cast<CXXRecordDecl>(nextBase.getType()->castAs<RecordType>()->getDecl())
             ->getDefinitionOrSelf();
 
     // Ignore classes without a vtable.
@@ -726,8 +725,9 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // Emit the constructor call that will execute for every array element.
     mlir::Value arrayOp =
         builder.createPtrBitcast(arrayBase.getPointer(), arrayTy);
-    builder.create<cir::ArrayCtor>(
-        *currSrcLoc, arrayOp, [&](mlir::OpBuilder &b, mlir::Location loc) {
+    cir::ArrayCtor::create(
+        builder, *currSrcLoc, arrayOp,
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
           mlir::BlockArgument arg =
               b.getInsertionBlock()->addArgument(ptrToElmType, loc);
           Address curAddr = Address(arg, elementType, eltAlignment);
@@ -739,7 +739,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           emitCXXConstructorCall(ctor, Ctor_Complete,
                                  /*ForVirtualBase=*/false,
                                  /*Delegating=*/false, currAVS, e);
-          builder.create<cir::YieldOp>(loc);
+          cir::YieldOp::create(builder, loc);
         });
   }
 }
@@ -895,6 +895,26 @@ void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
 }
 
 namespace {
+mlir::Value loadThisForDtorDelete(CIRGenFunction &cgf,
+                                  const CXXDestructorDecl *dd) {
+  if (Expr *thisArg = dd->getOperatorDeleteThisArg())
+    return cgf.emitScalarExpr(thisArg);
+  return cgf.loadCXXThis();
+}
+
+/// Call the operator delete associated with the current destructor.
+struct CallDtorDelete final : EHScopeStack::Cleanup {
+  CallDtorDelete() {}
+
+  void emit(CIRGenFunction &cgf) override {
+    const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(cgf.curFuncDecl);
+    const CXXRecordDecl *classDecl = dtor->getParent();
+    cgf.emitDeleteCall(dtor->getOperatorDelete(),
+                       loadThisForDtorDelete(cgf, dtor),
+                       cgf.getContext().getCanonicalTagType(classDecl));
+  }
+};
+
 class DestroyField final : public EHScopeStack::Cleanup {
   const FieldDecl *field;
   CIRGenFunction::Destroyer *destroyer;
@@ -932,7 +952,18 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
   // The deleting-destructor phase just needs to call the appropriate
   // operator delete that Sema picked up.
   if (dtorType == Dtor_Deleting) {
-    cgm.errorNYI(dd->getSourceRange(), "deleting destructor cleanups");
+    assert(dd->getOperatorDelete() &&
+           "operator delete missing - EnterDtorCleanups");
+    if (cxxStructorImplicitParamValue) {
+      cgm.errorNYI(dd->getSourceRange(), "deleting destructor with vtt");
+    } else {
+      if (dd->getOperatorDelete()->isDestroyingOperatorDelete()) {
+        cgm.errorNYI(dd->getSourceRange(),
+                     "deleting destructor with destroying operator delete");
+      } else {
+        ehStack.pushCleanup<CallDtorDelete>(NormalAndEHCleanup);
+      }
+    }
     return;
   }
 
@@ -994,7 +1025,7 @@ void CIRGenFunction::enterDtorCleanups(const CXXDestructorDecl *dd,
 
     // Anonymous union members do not have their destructors called.
     const RecordType *rt = type->getAsUnionType();
-    if (rt && rt->getOriginalDecl()->isAnonymousStructOrUnion())
+    if (rt && rt->getDecl()->isAnonymousStructOrUnion())
       continue;
 
     CleanupKind cleanupKind = getCleanupKind(dtorKind);

@@ -754,7 +754,6 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->setVirtualFileSystem(
       FileSystem::Instance().GetVirtualFileSystem());
-  m_compiler->createFileManager();
 
   // 2. Configure the compiler with a set of default options that are
   // appropriate for most situations.
