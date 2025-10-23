@@ -2301,6 +2301,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
+      NewMI->setCFIType(*MBB.getParent(), MI.getCFIType());
+
       // Update call info and delete the pseudo instruction TCRETURN.
       if (MI.isCandidateForAdditionalCallInfo())
         MI.getMF()->moveAdditionalCallInfo(&MI, &*NewMI);

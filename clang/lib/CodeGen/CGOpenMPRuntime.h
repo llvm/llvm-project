@@ -1051,13 +1051,9 @@ public:
   virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
                                          const Expr *Message,
                                          SourceLocation Loc);
-  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
-                                         const OMPMessageClause *MessageClause);
 
   virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity,
                                           SourceLocation Loc);
-  virtual llvm::Value *
-  emitSeverityClause(const OMPSeverityClause *SeverityClause);
 
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'

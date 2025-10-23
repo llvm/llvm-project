@@ -2113,6 +2113,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     Err(ctx) << "A value must be specified for /thinlto-remote-compiler if "
                 "/thinlto-distributor is specified.";
 
+  // Handle /thinlto-remote-compiler-prepend-arg:<arg>
+  config->dtltoCompilerPrependArgs =
+      args::getStrings(args, OPT_thinlto_remote_compiler_prepend_arg);
+
   // Handle /thinlto-remote-compiler-arg:<arg>
   config->dtltoCompilerArgs =
       args::getStrings(args, OPT_thinlto_remote_compiler_arg);
