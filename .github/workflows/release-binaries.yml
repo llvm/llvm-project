@@ -269,7 +269,7 @@ jobs:
 
     - name: Install libxml2
       run: |
-        vcpkg libxml2
+        vcpkg install libxml2
 
     - name: Configure
       id: build
