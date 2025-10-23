@@ -10,4 +10,4 @@ entry:
 }
 
 ; CHECK-NO-VOCAB: error: IR2Vec vocabulary file path not specified; You may need to set it using --ir2vec-vocab-path
-; CHECK-FUNC-NOT-FOUND: Error: Function 'nonexistent' not found
+; CHECK-FUNC-NOT-FOUND: error: Function 'nonexistent' not found
