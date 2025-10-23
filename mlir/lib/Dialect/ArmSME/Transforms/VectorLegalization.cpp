@@ -542,7 +542,7 @@ struct FoldExtractFromVectorOfSMELikeCreateMasks
                                 PatternRewriter &rewriter) const override {
     auto loc = extractOp.getLoc();
     auto createMaskOp =
-        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+        extractOp.getSource().getDefiningOp<vector::CreateMaskOp>();
     if (!createMaskOp)
       return rewriter.notifyMatchFailure(
           extractOp, "extract not from vector.create_mask op");

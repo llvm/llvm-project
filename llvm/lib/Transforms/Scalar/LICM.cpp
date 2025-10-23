@@ -437,10 +437,9 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   // potentially happen in other passes where instructions are being moved
   // across that edge.
   bool HasCoroSuspendInst = llvm::any_of(L->getBlocks(), [](BasicBlock *BB) {
-    return llvm::any_of(*BB, [](Instruction &I) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      return II && II->getIntrinsicID() == Intrinsic::coro_suspend;
-    });
+    using namespace PatternMatch;
+    return any_of(make_pointer_range(*BB),
+                  match_fn(m_Intrinsic<Intrinsic::coro_suspend>()));
   });
 
   MemorySSAUpdater MSSAU(MSSA);
@@ -474,7 +473,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, AC, TLI, L,
                            MSSAU, SE, &SafetyInfo, Flags, ORE, LoopNestMode,
-                           LicmAllowSpeculation, HasCoroSuspendInst);
+                           LicmAllowSpeculation);
 
   // Now that all loop invariants have been removed from the loop, promote any
   // memory references to scalars that we can.
@@ -892,7 +891,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                        ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
                        OptimizationRemarkEmitter *ORE, bool LoopNestMode,
-                       bool AllowSpeculation, bool HasCoroSuspendInst) {
+                       bool AllowSpeculation) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
          CurLoop != nullptr && SafetyInfo != nullptr &&
@@ -925,7 +924,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
-      if (CurLoop->hasLoopInvariantOperands(&I, HasCoroSuspendInst) &&
+      if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
           isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
                                          Preheader->getTerminator(), AC,
@@ -975,7 +974,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop);
       };
       if ((IsInvariantStart(I) || isGuard(&I)) &&
-          CurLoop->hasLoopInvariantOperands(&I, HasCoroSuspendInst) &&
+          CurLoop->hasLoopInvariantOperands(&I) &&
           MustExecuteWithoutWritesBefore(I)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
@@ -1705,10 +1704,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
-    if (ProfcheckDisableMetadataFixes)
-      I.dropUBImplyingAttrsAndMetadata();
-    else
-      I.dropUBImplyingAttrsAndMetadata({LLVMContext::MD_prof});
+    I.dropUBImplyingAttrsAndMetadata();
   }
 
   if (isa<PHINode>(I))

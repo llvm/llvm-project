@@ -144,7 +144,7 @@ void nested(__global int *g, __global int * __private *gg, __local int *l, __loc
   gg = g;    // expected-error {{assigning '__global int *__private' to '__global int *__private *__private' changes address space of pointer}}
   gg = l;    // expected-error {{assigning '__local int *__private' to '__global int *__private *__private' changes address space of pointer}}
   gg = ll;   // expected-error {{assigning '__local int *__private *__private' to '__global int *__private *__private' changes address space of nested pointer}}
-  gg = gg_f; // expected-warning {{incompatible pointer types assigning to '__global int *__private *__private' from '__global float *__private *__private'}}
+  gg = gg_f; // expected-error {{incompatible pointer types assigning to '__global int *__private *__private' from '__global float *__private *__private'}}
   gg = (__global int * __private *)gg_f;
 
   l = g;     // expected-error {{assigning '__global int *__private' to '__local int *__private' changes address space of pointer}}
@@ -160,14 +160,13 @@ void nested(__global int *g, __global int * __private *gg, __local int *l, __loc
   ll = (__local int * __private *)gg_f; // expected-warning {{casting '__global float *__private *' to type '__local int *__private *' discards qualifiers in nested pointer types}}
 
   gg_f = g;  // expected-error {{assigning '__global int *__private' to '__global float *__private *__private' changes address space of pointer}}
-  gg_f = gg; // expected-warning {{incompatible pointer types assigning to '__global float *__private *__private' from '__global int *__private *__private'}}
+  gg_f = gg; // expected-error {{incompatible pointer types assigning to '__global float *__private *__private' from '__global int *__private *__private'}}
   gg_f = l;  // expected-error {{assigning '__local int *__private' to '__global float *__private *__private' changes address space of pointer}}
   gg_f = ll; // expected-error {{assigning '__local int *__private *__private' to '__global float *__private *__private' changes address space of nested pointer}}
   gg_f = (__global float * __private *)gg;
 
-  // FIXME: This doesn't seem right. This should be an error, not a warning.
   __local int * __global * __private * lll;
-  lll = gg; // expected-warning {{incompatible pointer types assigning to '__local int *__global *__private *__private' from '__global int *__private *__private'}}
+  lll = gg; // expected-error {{incompatible pointer types assigning to '__local int *__global *__private *__private' from '__global int *__private *__private'}}
 
   typedef __local int * l_t;
   typedef __global int * g_t;

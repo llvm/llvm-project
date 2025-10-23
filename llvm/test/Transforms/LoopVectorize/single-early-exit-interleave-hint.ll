@@ -8,7 +8,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:  [[ENTRY:.*:]]
 ; VF4IC4-NEXT:    [[SRC:%.*]] = alloca [128 x i32], align 4
 ; VF4IC4-NEXT:    call void @init_mem(ptr [[SRC]])
-; VF4IC4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4IC4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4IC4:       [[VECTOR_PH]]:
 ; VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4IC4:       [[VECTOR_BODY]]:
@@ -43,7 +43,7 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4-NEXT:    br label %[[E2:.*]]
 ; VF4IC4:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC4-NEXT:    br label %[[E1:.*]]
-; VF4IC4:       [[SCALAR_PH]]:
+; VF4IC4:       [[SCALAR_PH:.*]]:
 ; VF4IC4-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; VF4IC4:       [[LOOP_HEADER]]:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], %[[LOOP_LATCH:.*]] ], [ 0, %[[SCALAR_PH]] ]
@@ -94,5 +94,6 @@ e2:
 ; VF4IC4: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; VF4IC4: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; VF4IC4: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; VF4IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; VF4IC4: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]]}
+; VF4IC4: [[META4]] = !{!"llvm.loop.interleave.count", i32 4}
 ;.

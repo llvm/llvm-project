@@ -577,8 +577,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
       DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
-      ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
-      CI.getHeaderSearchOpts());
+      ASTUnit::LoadEverything, CI.getVirtualFileSystemPtr(), DiagOpts, Diags,
+      CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
 }
 
 /// Load the AST from a source-file, which is supposed to be located inside the

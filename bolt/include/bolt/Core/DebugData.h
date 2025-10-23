@@ -135,8 +135,6 @@ struct DebugLineTableRowRef {
   uint32_t DwCompileUnitIndex;
   uint32_t RowIndex;
 
-  const static DebugLineTableRowRef NULL_ROW;
-
   bool operator==(const DebugLineTableRowRef &Rhs) const {
     return DwCompileUnitIndex == Rhs.DwCompileUnitIndex &&
            RowIndex == Rhs.RowIndex;
@@ -144,24 +142,6 @@ struct DebugLineTableRowRef {
 
   bool operator!=(const DebugLineTableRowRef &Rhs) const {
     return !(*this == Rhs);
-  }
-
-  static DebugLineTableRowRef fromSMLoc(const SMLoc &Loc) {
-    union {
-      decltype(Loc.getPointer()) Ptr;
-      DebugLineTableRowRef Ref;
-    } U;
-    U.Ptr = Loc.getPointer();
-    return U.Ref;
-  }
-
-  SMLoc toSMLoc() const {
-    union {
-      decltype(SMLoc().getPointer()) Ptr;
-      DebugLineTableRowRef Ref;
-    } U;
-    U.Ref = *this;
-    return SMLoc::getFromPointer(U.Ptr);
   }
 };
 
@@ -210,7 +190,7 @@ public:
   static bool classof(const DebugRangesSectionWriter *Writer) {
     return Writer->getKind() == RangesWriterKind::DebugRangesWriter;
   }
-  
+
   /// Append a range to the main buffer.
   void appendToRangeBuffer(const DebugBufferVector &CUBuffer);
 
@@ -852,6 +832,97 @@ public:
   // Returns DWARF Version for this line table.
   uint16_t getDwarfVersion() const { return DwarfVersion; }
 };
+
+/// ClusteredRows represents a collection of debug line table row references.
+///
+/// MEMORY LAYOUT AND DESIGN:
+/// This class uses a flexible array member pattern to store all
+/// DebugLineTableRowRef elements in a single contiguous memory allocation.
+/// The memory layout is:
+///
+/// +------------------+
+/// | ClusteredRows    |  <- Object header (Size + first element)
+/// | - Size           |
+/// | - Rows (element) |  <- First DebugLineTableRowRef element
+/// +------------------+
+/// | element[1]       |  <- Additional DebugLineTableRowRef elements
+/// | element[2]       |     stored immediately after the object
+/// | ...              |
+/// | element[Size-1]  |
+/// +------------------+
+///
+/// The 'Rows' member serves as both the first element storage and the base
+/// address for pointer arithmetic to access subsequent elements.
+class ClusteredRows {
+public:
+  ArrayRef<DebugLineTableRowRef> getRows() const {
+    return ArrayRef<DebugLineTableRowRef>(beginPtrConst(), Size);
+  }
+
+  /// Returns the number of elements in the array.
+  uint64_t size() const { return Size; }
+
+  /// We re-purpose SMLoc inside MCInst to store the pointer
+  /// to ClusteredRows. fromSMLoc() and toSMLoc() are helper
+  /// functions to convert between SMLoc and ClusteredRows.
+
+  static const ClusteredRows *fromSMLoc(const SMLoc &Loc) {
+    return reinterpret_cast<const ClusteredRows *>(Loc.getPointer());
+  }
+  SMLoc toSMLoc() const {
+    return SMLoc::getFromPointer(reinterpret_cast<const char *>(this));
+  }
+
+  /// Given a vector of DebugLineTableRowRef, this method
+  /// copies the elements into pre-allocated memory.
+  template <typename T> void populate(const T Vec) {
+    assert(Vec.size() == Size && "Sizes must match");
+    DebugLineTableRowRef *CurRawPtr = beginPtr();
+    for (DebugLineTableRowRef RowRef : Vec) {
+      *CurRawPtr = RowRef;
+      ++CurRawPtr;
+    }
+  }
+
+private:
+  uint64_t Size;
+  DebugLineTableRowRef Rows;
+
+  ClusteredRows(uint64_t Size) : Size(Size) {}
+
+  /// Total size of the object including the array.
+  static uint64_t getTotalSize(uint64_t Size) {
+    assert(Size > 0 && "Size must be greater than 0");
+    return sizeof(ClusteredRows) + (Size - 1) * sizeof(DebugLineTableRowRef);
+  }
+  const DebugLineTableRowRef *beginPtrConst() const {
+    return reinterpret_cast<const DebugLineTableRowRef *>(&Rows);
+  }
+  DebugLineTableRowRef *beginPtr() {
+    return reinterpret_cast<DebugLineTableRowRef *>(&Rows);
+  }
+
+  friend class ClusteredRowsContainer;
+};
+
+/// ClusteredRowsContainer manages the lifecycle of ClusteredRows objects.
+class ClusteredRowsContainer {
+public:
+  ClusteredRows *createClusteredRows(uint64_t Size) {
+    auto *CR = new (std::malloc(ClusteredRows::getTotalSize(Size)))
+        ClusteredRows(Size);
+    Clusters.push_back(CR);
+    return CR;
+  }
+  ~ClusteredRowsContainer() {
+    for (auto *CR : Clusters)
+      std::free(CR);
+  }
+
+private:
+  std::vector<ClusteredRows *> Clusters;
+};
+
 } // namespace bolt
 } // namespace llvm
 

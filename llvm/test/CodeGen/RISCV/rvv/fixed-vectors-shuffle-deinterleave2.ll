@@ -472,7 +472,7 @@ define void @vnsrl_0_i8_undef(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -488,7 +488,7 @@ define void @vnsrl_0_i8_undef2(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 undef, i32 6, i32 undef, i32 10, i32 12, i32 14>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 poison, i32 6, i32 poison, i32 10, i32 12, i32 14>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -504,7 +504,7 @@ define void @vnsrl_0_i8_undef3(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 undef, i32 undef, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -534,7 +534,7 @@ define void @vnsrl_0_i8_undef_negative(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 1>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 poison, i32 1>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -639,7 +639,7 @@ define void @vnsrl_0_i8_single_wideuse(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -686,7 +686,7 @@ define void @vnsrl_0_i32_single_src_m8(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
-  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }
@@ -731,7 +731,7 @@ define void @vnsrl_0_i32_single_src_m8_2(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
-  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }

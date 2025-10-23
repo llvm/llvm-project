@@ -18,6 +18,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_FP)
 #if defined(__APPLE__)
@@ -29,9 +30,12 @@
 // The extra !defined(APPLE) condition is to cause x86_64 MacOS builds to use
 // the dummy implementations below. Once a proper x86_64 darwin fenv is set up,
 // the apple condition here should be removed.
-#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
+// TODO: fully support fenv for MSVC.
+#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__) &&               \
+    !defined(LIBC_COMPILER_IS_MSVC)
 #include "x86_64/FEnvImpl.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP)
+#elif defined(LIBC_TARGET_ARCH_IS_ARM) && defined(__ARM_FP) &&                 \
+    !defined(LIBC_COMPILER_IS_MSVC)
 #include "arm/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen)
 #include "riscv/FEnvImpl.h"

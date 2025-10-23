@@ -29,6 +29,7 @@ public:
 class D : public B, public C {
 public:
   long d;
+  D();
   virtual void y();
 };
 
@@ -166,3 +167,321 @@ void D::y() {}
 // OGCG-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // OGCG-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]
 // OGCG-SAME: }, align 8
+
+D::D() {}
+
+// In CIR, this gets emitted after the B and C constructors. See below.
+// Base (C2) constructor for D
+
+// OGCG: define {{.*}} void @_ZN1DC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   %[[VTT_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// OGCG:   %[[B_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 1
+// OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} %[[B_VTT]])
+// OGCG:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
+// OGCG:   %[[C_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 3
+// OGCG:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} %[[C_VTT]])
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// OGCG:   store ptr %[[VPTR]], ptr %[[THIS]]
+// OGCG:   %[[D_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 5
+// OGCG:   %[[D_VPTR:.*]] = load ptr, ptr %[[D_VPTR_ADDR]]
+// OGCG:   %[[D_VPTR_ADDR2:.*]] = load ptr, ptr %[[THIS]]
+// OGCG:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[D_VPTR_ADDR2]], i64 -24
+// OGCG:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// OGCG:   %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// OGCG:   store ptr %[[D_VPTR]], ptr %[[BASE_PTR]]
+// OGCG:   %[[C_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 6
+// OGCG:   %[[C_VPTR:.*]] = load ptr, ptr %[[C_VPTR_ADDR]]
+// OGCG:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
+// OGCG:   store ptr %[[C_VPTR]], ptr %[[C_ADDR]]
+
+
+// Base (C2) constructor for B
+
+// CIR:      cir.func {{.*}} @_ZN1BC2Ev
+// CIR-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_B>
+// CIR-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
+// CIR:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
+// CIR:        %[[VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
+// CIR:        %[[B_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
+// CIR:        cir.store{{.*}} %[[VPTR]], %[[B_VPTR_ADDR]]
+// CIR:        %[[B_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[B_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[B_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[B_VPTR:.*]] = cir.load{{.*}} %[[B_VPTR_ADDR]]
+// CIR:        %[[B_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
+// CIR:        %[[VPTR:.*]] = cir.load{{.*}} %[[B_VPTR_ADDR]]
+// CIR:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
+// CIR:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_B>), !cir.ptr<!u8i>
+// CIR:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_B>
+// CIR:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
+// CIR:        cir.store{{.*}} %[[B_VPTR]], %[[BASE_VPTR_ADDR]]
+
+// LLVM: define {{.*}} void @_ZN1BC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// LLVM:   store ptr %[[VPTR]], ptr %[[THIS]]
+// LLVM:   %[[B_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 1
+// LLVM:   %[[B_VPTR:.*]] = load ptr, ptr %[[B_VPTR_ADDR]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
+// LLVM:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[VPTR]], i64 -24
+// LLVM:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// LLVM:   %[[BASE_PTR:.*]] = getelementptr i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// LLVM:   store ptr %[[B_VPTR]], ptr %[[BASE_PTR]]
+
+// OGCG: define {{.*}} void @_ZN1BC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   %[[VTT_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// OGCG:   store ptr %[[VPTR]], ptr %[[THIS]]
+// OGCG:   %[[B_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 1
+// OGCG:   %[[B_VPTR:.*]] = load ptr, ptr %[[B_VPTR_ADDR]]
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
+// OGCG:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[VPTR]], i64 -24
+// OGCG:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// OGCG:   %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// OGCG:   store ptr %[[B_VPTR]], ptr %[[BASE_PTR]]
+
+// Base (C2) constructor for C
+
+// CIR:      cir.func {{.*}} @_ZN1CC2Ev
+// CIR-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
+// CIR-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
+// CIR:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
+// CIR:        %[[VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]]
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
+// CIR:        cir.store{{.*}} %[[VPTR]], %[[C_VPTR_ADDR]]
+// CIR:        %[[C_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[C_VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]]
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
+// CIR:        %[[VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]]
+// CIR:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR:        %[[CONST_24:.*]] = cir.const #cir.int<-24>
+// CIR:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_C>), !cir.ptr<!u8i>
+// CIR:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_C>
+// CIR:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
+// CIR:        cir.store{{.*}} %[[C_VPTR]], %[[BASE_VPTR_ADDR]]
+
+// LLVM: define {{.*}} void @_ZN1CC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// LLVM:   store ptr %[[VPTR]], ptr %[[THIS]]
+// LLVM:   %[[B_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 1
+// LLVM:   %[[B_VPTR:.*]] = load ptr, ptr %[[B_VPTR_ADDR]]
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
+// LLVM:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[VPTR]], i64 -24
+// LLVM:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// LLVM:   %[[BASE_PTR:.*]] = getelementptr i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// LLVM:   store ptr %[[B_VPTR]], ptr %[[BASE_PTR]]
+
+// OGCG: define {{.*}} void @_ZN1CC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   %[[VTT_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// OGCG:   store ptr %[[VPTR]], ptr %[[THIS]]
+// OGCG:   %[[B_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i64 1
+// OGCG:   %[[B_VPTR:.*]] = load ptr, ptr %[[B_VPTR_ADDR]]
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[THIS]]
+// OGCG:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[VPTR]], i64 -24
+// OGCG:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// OGCG:   %[[BASE_PTR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// OGCG:   store ptr %[[B_VPTR]], ptr %[[BASE_PTR]]
+
+// Base (C2) constructor for D
+
+// CIR:      cir.func {{.*}} @_ZN1DC2Ev
+// CIR-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
+// CIR-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
+// CIR:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
+// CIR:        %[[B_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:        %[[B_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
+// CIR:        %[[C_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR:        %[[D_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[VPTR_ADDR:.*]] = cir.cast(bitcast, %[[D_VTT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:        %[[D_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]]
+// CIR:        cir.store{{.*}} %[[VPTR]], %[[D_VPTR_ADDR]]
+// CIR:        %[[D_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 5 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[D_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[D_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[D_VPTR:.*]] = cir.load{{.*}} %[[D_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:        %[[D_VPTR_ADDR2:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+// CIR:        %[[VPTR2:.*]] = cir.load{{.*}} %[[D_VPTR_ADDR2]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:        %[[VPTR_ADDR2:.*]] = cir.cast(bitcast, %[[VPTR2]] : !cir.vptr), !cir.ptr<!u8i>
+// CIR:        %[[CONST_24:.*]] = cir.const #cir.int<-24> : !s64i
+// CIR:        %[[BASE_OFFSET_ADDR:.*]] = cir.ptr_stride(%[[VPTR_ADDR2]] : !cir.ptr<!u8i>, %[[CONST_24]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_OFFSET_PTR:.*]] = cir.cast(bitcast, %[[BASE_OFFSET_ADDR]] : !cir.ptr<!u8i>), !cir.ptr<!s64i>
+// CIR:        %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:        %[[THIS_PTR:.*]] = cir.cast(bitcast, %[[THIS]] : !cir.ptr<!rec_D>), !cir.ptr<!u8i>
+// CIR:        %[[BASE_PTR:.*]] = cir.ptr_stride(%[[THIS_PTR]] : !cir.ptr<!u8i>, %[[BASE_OFFSET]] : !s64i), !cir.ptr<!u8i>
+// CIR:        %[[BASE_CAST:.*]] = cir.cast(bitcast, %[[BASE_PTR]] : !cir.ptr<!u8i>), !cir.ptr<!rec_D>
+// CIR:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
+// CIR:        cir.store{{.*}} %[[D_VPTR]], %[[BASE_VPTR_ADDR]]
+// CIR:        %[[C_VTT_ADDR_POINT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 6 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.cast(bitcast, %[[C_VTT_ADDR_POINT]] : !cir.ptr<!cir.ptr<!void>>), !cir.ptr<!cir.vptr>
+// CIR:        %[[C_VPTR:.*]] = cir.load{{.*}} %[[C_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+// CIR:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+
+// LLVM: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]) {
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   %[[VTT_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   store ptr %[[VTT_ARG]], ptr %[[VTT_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
+// LLVM:   %[[B_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 1
+// LLVM:   call void @_ZN1BC2Ev(ptr %[[THIS]], ptr %[[B_VTT]])
+// LLVM:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
+// LLVM:   %[[C_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 3
+// LLVM:   call void @_ZN1CC2Ev(ptr %[[C_ADDR]], ptr %[[C_VTT]])
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
+// LLVM:   store ptr %[[VPTR]], ptr %[[THIS]]
+// LLVM:   %[[D_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 5
+// LLVM:   %[[D_VPTR:.*]] = load ptr, ptr %[[D_VPTR_ADDR]]
+// LLVM:   %[[D_VPTR_ADDR2:.*]] = load ptr, ptr %[[THIS]]
+// LLVM:   %[[BASE_OFFSET_ADDR:.*]] = getelementptr i8, ptr %[[D_VPTR_ADDR2]], i64 -24
+// LLVM:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_ADDR]]
+// LLVM:   %[[BASE_PTR:.*]] = getelementptr i8, ptr %[[THIS]], i64 %[[BASE_OFFSET]]
+// LLVM:   store ptr %[[D_VPTR]], ptr %[[BASE_PTR]]
+// LLVM:   %[[C_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 6
+// LLVM:   %[[C_VPTR:.*]] = load ptr, ptr %[[C_VPTR_ADDR]]
+// LLVM:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
+// LLVM:   store ptr %[[C_VPTR]], ptr %[[C_ADDR]]
+
+// The C2 constructor for D gets emitted earlier in OGCG, see above.
+
+// Base (C2) constructor for A
+
+// CIR:      cir.func {{.*}} @_ZN1AC2Ev
+// CIR-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_A>
+// CIR:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:        %[[VPTR:.*]] = cir.vtable.address_point(@_ZTV1A, address_point = <index = 0, offset = 2>) : !cir.vptr
+// CIR:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+// CIR:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+
+// LLVM: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]) {
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1A, i64 16), ptr %[[THIS]]
+
+// The C2 constructor for A gets emitted later in OGCG, see below.
+
+// Complete (C1) constructor for D
+
+// CIR:      cir.func {{.*}} @_ZN1DC1Ev
+// CIR-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
+// CIR:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
+// CIR:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
+// CIR:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>
+// CIR:        cir.call @_ZN1AC2Ev(%[[A_ADDR]]) nothrow : (!cir.ptr<!rec_A>) -> ()
+// CIR:        %[[B_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:        %[[B_VTT:.*]] = cir.vtt.address_point @_ZTT1D, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
+// CIR:        %[[C_VTT:.*]] = cir.vtt.address_point @_ZTT1D, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
+// CIR:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR:        %[[D_VPTR:.*]] = cir.vtable.address_point(@_ZTV1D, address_point = <index = 0, offset = 3>) : !cir.vptr
+// CIR:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
+// CIR:        cir.store{{.*}} %[[D_VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+// CIR:        %[[A_VPTR:.*]] = cir.vtable.address_point(@_ZTV1D, address_point = <index = 2, offset = 3>) : !cir.vptr
+// CIR:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>
+// CIR:        %[[A_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[A_ADDR]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
+// CIR:        cir.store{{.*}} %[[A_VPTR]], %[[A_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+// CIR:        %[[C_VPTR:.*]] = cir.vtable.address_point(@_ZTV1D, address_point = <index = 1, offset = 3>) : !cir.vptr
+// CIR:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
+// CIR:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
+// CIR:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
+
+// LLVM: define {{.*}} void @_ZN1DC1Ev(ptr %[[THIS_ARG:.*]])
+// LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// LLVM:   %[[A_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
+// LLVM:   call void @_ZN1AC2Ev(ptr %[[A_ADDR]])
+// LLVM:   call void @_ZN1BC2Ev(ptr %[[THIS]], ptr getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 8))
+// LLVM:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
+// LLVM:   call void @_ZN1CC2Ev(ptr %[[C_ADDR]], ptr getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 24))
+// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 24), ptr %[[THIS]]
+// LLVM:   %[[A_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
+// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 96), ptr %[[A_ADDR]]
+// LLVM:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
+// LLVM:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 64), ptr %[[C_ADDR]]
+
+// OGCG: define {{.*}} void @_ZN1DC1Ev(ptr {{.*}} %[[THIS_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
+// OGCG:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A_ADDR]])
+// OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 1))
+// OGCG:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
+// OGCG:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 3))
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 16) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 3), ptr %[[THIS]]
+// OGCG:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 8) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 2, i32 3), ptr %[[A_ADDR]]
+// OGCG:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 8) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 1, i32 3), ptr %[[C_ADDR]]
+
+// OGCG: define {{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[THIS_ARG:.*]])
+// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
+// OGCG:   store ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV1A, i32 0, i32 0, i32 2), ptr %[[THIS]]

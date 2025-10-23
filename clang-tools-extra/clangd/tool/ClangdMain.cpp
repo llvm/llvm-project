@@ -775,8 +775,8 @@ It should be used via an editor plugin rather than invoked directly. For more in
 clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment variable.
 )";
   llvm::cl::HideUnrelatedOptions(ClangdCategories);
-  llvm::cl::ParseCommandLineOptions(argc, argv, Overview,
-                                    /*Errs=*/nullptr, FlagsEnvVar);
+  llvm::cl::ParseCommandLineOptions(argc, argv, Overview, /*Errs=*/nullptr,
+                                    /*VFS=*/nullptr, FlagsEnvVar);
   if (Test) {
     if (!Sync.getNumOccurrences())
       Sync = true;

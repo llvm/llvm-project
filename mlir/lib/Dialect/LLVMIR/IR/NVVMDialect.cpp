@@ -800,8 +800,8 @@ inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
-      addressSpace != NVVM::kSharedMemorySpace)
+  if (addressSpace != 0 && addressSpace != NVVMMemorySpace::Global &&
+      addressSpace != NVVMMemorySpace::Shared)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
 
@@ -821,8 +821,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
       llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != 0 && addressSpace != NVVM::kGlobalMemorySpace &&
-      addressSpace != NVVM::kSharedMemorySpace)
+  if (addressSpace != 0 && addressSpace != NVVMMemorySpace::Global &&
+      addressSpace != NVVMMemorySpace::Shared)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
 
@@ -951,7 +951,7 @@ LogicalResult NVVM::StMatrixOp::verify() {
   return success();
 }
 
-FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
+static FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   if (typeA == NVVM::WGMMATypes::tf32)
     return 8;
   if (typeA == NVVM::WGMMATypes::f16 || typeA == NVVM::WGMMATypes::bf16)
@@ -965,9 +965,9 @@ FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
   return failure();
 }
 
-LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
-                                     NVVM::WGMMATypes typeA,
-                                     NVVM::WGMMATypes typeB) {
+static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
+                                            NVVM::WGMMATypes typeA,
+                                            NVVM::WGMMATypes typeB) {
   switch (typeA) {
   case NVVM::WGMMATypes::f16:
     if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
@@ -1007,7 +1007,7 @@ LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
   return failure();
 }
 
-LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
+static LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
   SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
                                72,  80,  88,  96,  104, 112, 120, 128,
                                136, 144, 152, 160, 168, 176, 184, 192,
@@ -1339,8 +1339,8 @@ LogicalResult NVVM::PrefetchOp::verify() {
     return emitOpError("cannot specify both tensormap and cache level");
 
   if (getTensormap()) {
-    if (addressSpace != MemSpace::kGenericMemorySpace &&
-        addressSpace != MemSpace::kConstantMemorySpace) {
+    if (addressSpace != MemSpace::Generic &&
+        addressSpace != MemSpace::Constant) {
       return emitOpError(
           "prefetch tensormap requires a generic or constant pointer");
     }
@@ -1350,15 +1350,14 @@ LogicalResult NVVM::PrefetchOp::verify() {
           "prefetch tensormap does not support eviction priority");
     }
 
-    if (getInParamSpace() && addressSpace != MemSpace::kGenericMemorySpace) {
+    if (getInParamSpace() && addressSpace != MemSpace::Generic) {
       return emitOpError(
           "in_param_space can only be specified for a generic pointer");
     }
 
   } else if (cacheLevel) {
-    if (addressSpace != MemSpace::kGenericMemorySpace &&
-        addressSpace != MemSpace::kGlobalMemorySpace &&
-        addressSpace != MemSpace::kLocalMemorySpace) {
+    if (addressSpace != MemSpace::Generic && addressSpace != MemSpace::Global &&
+        addressSpace != MemSpace::Local) {
       return emitOpError("prefetch to cache level requires a generic, global, "
                          "or local pointer");
     }
@@ -1370,7 +1369,7 @@ LogicalResult NVVM::PrefetchOp::verify() {
             "cache level is L1");
       }
 
-      if (addressSpace != MemSpace::kGenericMemorySpace) {
+      if (addressSpace != MemSpace::Generic) {
         return emitOpError(
             "prefetch to uniform cache requires a generic pointer");
       }
@@ -1381,7 +1380,7 @@ LogicalResult NVVM::PrefetchOp::verify() {
         return emitOpError(
             "cache eviction priority supported only for cache level L2");
 
-      if (addressSpace != MemSpace::kGlobalMemorySpace)
+      if (addressSpace != MemSpace::Global)
         return emitOpError("cache eviction priority requires a global pointer");
 
       if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
@@ -1399,6 +1398,24 @@ LogicalResult NVVM::PrefetchOp::verify() {
         "requires specification of either cache level or tensormap");
   }
 
+  return success();
+}
+
+LogicalResult NVVM::ClusterLaunchControlQueryCancelOp::verify() {
+  switch (getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    if (!getType().isInteger(1))
+      return emitOpError("is_canceled query type returns an i1");
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    if (!getType().isInteger(32)) {
+      return emitOpError("get_first_cta_id_x, get_first_cta_id_y, "
+                         "get_first_cta_id_z query types return an i32");
+    }
+    break;
+  }
   return success();
 }
 
@@ -1796,7 +1813,7 @@ Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
+  bool isShared = as == NVVMMemorySpace::Shared;
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id;
@@ -1845,7 +1862,7 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
   auto curOp = cast<NVVM::Tcgen05CommitOp>(op);
   unsigned as = llvm::cast<LLVM::LLVMPointerType>(curOp.getAddr().getType())
                     .getAddressSpace();
-  bool isShared = as == NVVMMemorySpace::kSharedMemorySpace;
+  bool isShared = as == NVVMMemorySpace::Shared;
   bool hasMulticast = static_cast<bool>(curOp.getMulticastMask());
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
@@ -2051,18 +2068,18 @@ PrefetchOp::getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,
     }
   }
 
-  switch (addressSpace) {
-  case MemSpace::kGenericMemorySpace:
+  switch (static_cast<MemSpace>(addressSpace)) {
+  case MemSpace::Generic:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L1, args})
                : NVVM::IDArgPair({llvm::Intrinsic::nvvm_prefetch_L2, args});
-  case MemSpace::kGlobalMemorySpace:
+  case MemSpace::Global:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_global_L1, args})
                : NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_global_L2, args});
-  case MemSpace::kLocalMemorySpace:
+  case MemSpace::Local:
     return *cacheLevel == CacheLevel::L1
                ? NVVM::IDArgPair(
                      {llvm::Intrinsic::nvvm_prefetch_local_L1, args})
@@ -2086,6 +2103,51 @@ bool NVVM::InlinePtxOp::getAsmValues(
   if (getPredicate())
     asmValues.push_back({getPredicate(), mlir::NVVM::PTXRegisterMod::Read});
   return false; // No manual mapping needed
+}
+
+NVVM::IDArgPair ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlTryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getSmemAddress()));
+  args.push_back(mt.lookupValue(curOp.getMbarrier()));
+
+  llvm::Intrinsic::ID intrinsicID =
+      curOp.getMulticast()
+          ? llvm::Intrinsic::
+                nvvm_clusterlaunchcontrol_try_cancel_async_multicast_shared
+          : llvm::Intrinsic::nvvm_clusterlaunchcontrol_try_cancel_async_shared;
+
+  return {intrinsicID, args};
+}
+
+NVVM::IDArgPair ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::ClusterLaunchControlQueryCancelOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(curOp.getTryCancelResponse()));
+
+  llvm::Intrinsic::ID intrinsicID;
+
+  switch (curOp.getQueryType()) {
+  case NVVM::ClusterLaunchControlQueryType::IS_CANCELED:
+    intrinsicID =
+        llvm::Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_X:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Y:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y;
+    break;
+  case NVVM::ClusterLaunchControlQueryType::GET_FIRST_CTA_ID_Z:
+    intrinsicID = llvm::Intrinsic::
+        nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z;
+    break;
+  }
+  return {intrinsicID, args};
 }
 
 //===----------------------------------------------------------------------===//
@@ -2183,6 +2245,66 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Address Space Attr
+//===----------------------------------------------------------------------===//
+
+unsigned NVVMMemorySpaceAttr::getAddressSpace() const {
+  return static_cast<unsigned>(getValue());
+}
+
+bool NVVMMemorySpaceAttr::isValidLoad(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
+                                            dataLayout, emitError);
+}
+
+bool NVVMMemorySpaceAttr::isValidStore(
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  return LLVM::detail::isValidLoadStoreImpl(type, ordering, alignment,
+                                            dataLayout, emitError);
+}
+
+bool NVVMMemorySpaceAttr::isValidAtomicOp(
+    ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_rmw` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidAtomicXchg(
+    Type type, ptr::AtomicOrdering successOrdering,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once `ptr.atomic_cmpxchg` is implemented.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidAddrSpaceCast(
+    Type tgt, Type src, function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the `ptr.addrspace_cast` op is added to the
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
+}
+
+bool NVVMMemorySpaceAttr::isValidPtrIntCast(
+    Type intLikeTy, Type ptrLikeTy,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  // TODO: update this method once the int-cast ops are added to the `ptr`
+  // dialect.
+  assert(false && "unimplemented, see TODO in the source.");
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

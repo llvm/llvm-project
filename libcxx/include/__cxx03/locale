@@ -2460,6 +2460,8 @@ _LIBCPP_HIDE_FROM_ABI void __double_or_nothing(unique_ptr<_Tp, void (*)(void*)>&
     __throw_bad_alloc();
   if (__owns)
     __b.release();
+  else
+    std::memcpy(__t, __b.get(), __cur_cap);
   __b = unique_ptr<_Tp, void (*)(void*)>(__t, free);
   __new_cap /= sizeof(_Tp);
   __n = __b.get() + __n_off;
@@ -2655,20 +2657,22 @@ _InputIterator money_get<_CharT, _InputIterator>::do_get(
     char_type __atoms[sizeof(__src) - 1];
     __ct.widen(__src, __src + (sizeof(__src) - 1), __atoms);
     char __nbuf[__bz];
-    char* __nc = __nbuf;
+    char* __nc          = __nbuf;
+    const char* __nc_in = __nc;
     unique_ptr<char, void (*)(void*)> __h(nullptr, free);
     if (__wn - __wb.get() > __bz - 2) {
       __h.reset((char*)malloc(static_cast<size_t>(__wn - __wb.get() + 2)));
       if (__h.get() == nullptr)
         __throw_bad_alloc();
-      __nc = __h.get();
+      __nc    = __h.get();
+      __nc_in = __nc;
     }
     if (__neg)
       *__nc++ = '-';
     for (const char_type* __w = __wb.get(); __w < __wn; ++__w, ++__nc)
       *__nc = __src[std::find(__atoms, std::end(__atoms), *__w) - __atoms];
     *__nc = char();
-    if (sscanf(__nbuf, "%Lf", &__v) != 1)
+    if (sscanf(__nc_in, "%Lf", &__v) != 1)
       __throw_runtime_error("money_get error");
   }
   if (__b == __e)

@@ -118,7 +118,7 @@ concept __signed_integer_like = signed_integral<_Tp>;
 
 template <class _Ip>
 concept weakly_incrementable =
-    // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
+    // TODO: remove this once the clang bug is fixed (https://llvm.org/PR48173).
     !same_as<_Ip, bool> && // Currently, clang does not handle bool correctly.
     movable<_Ip> && requires(_Ip __i) {
       typename iter_difference_t<_Ip>;

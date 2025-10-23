@@ -222,23 +222,6 @@ public:
   bool fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
                         const Instruction *CtxI) const;
 
-  Constant *getLosslessTrunc(Constant *C, Type *TruncTy, unsigned ExtOp) {
-    Constant *TruncC = ConstantExpr::getTrunc(C, TruncTy);
-    Constant *ExtTruncC =
-        ConstantFoldCastOperand(ExtOp, TruncC, C->getType(), DL);
-    if (ExtTruncC && ExtTruncC == C)
-      return TruncC;
-    return nullptr;
-  }
-
-  Constant *getLosslessUnsignedTrunc(Constant *C, Type *TruncTy) {
-    return getLosslessTrunc(C, TruncTy, Instruction::ZExt);
-  }
-
-  Constant *getLosslessSignedTrunc(Constant *C, Type *TruncTy) {
-    return getLosslessTrunc(C, TruncTy, Instruction::SExt);
-  }
-
   std::optional<std::pair<Intrinsic::ID, SmallVector<Value *, 3>>>
   convertOrOfShiftsToFunnelShift(Instruction &Or);
 
@@ -710,7 +693,7 @@ public:
   bool foldAllocaCmp(AllocaInst *Alloca);
   Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
                                             GetElementPtrInst *GEP,
-                                            GlobalVariable *GV, CmpInst &ICI,
+                                            CmpInst &ICI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);

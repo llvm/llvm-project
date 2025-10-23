@@ -3435,7 +3435,7 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GFX1250-SDAG-NEXT:    s_add_f32 s1, s1, 0
 ; GFX1250-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[0:1] scope:SCOPE_SE
+; GFX1250-SDAG-NEXT:    flat_store_b64 v[0:1], v[0:1]
 ; GFX1250-SDAG-NEXT:    s_endpgm
 ;
 ; GFX1250-GISEL-LABEL: fadd_fadd_fsub_0:
@@ -3450,7 +3450,7 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v3, v0
-; GFX1250-GISEL-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    flat_store_b64 v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    s_endpgm
 bb:
   %i12 = fadd <2 x float> zeroinitializer, %arg

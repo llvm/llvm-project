@@ -108,6 +108,9 @@ static void ParseAndSetPath(const char *pattern, char *dest,
   CHECK(dest);
   CHECK_GE(dest_size, 1);
   dest[0] = '\0';
+  // Return empty string if empty string was passed
+  if (internal_strlen(pattern) == 0)
+    return;
   uptr next_substr_start_idx = 0;
   for (uptr i = 0; i < internal_strlen(pattern) - 1; i++) {
     if (pattern[i] != '%')

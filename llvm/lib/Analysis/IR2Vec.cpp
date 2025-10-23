@@ -155,7 +155,7 @@ void Embedding::print(raw_ostream &OS) const {
 Embedder::Embedder(const Function &F, const Vocabulary &Vocab)
     : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
       OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight),
-      FuncVector(Embedding(Dimension, 0)) {}
+      FuncVector(Embedding(Dimension)) {}
 
 std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
                                            const Vocabulary &Vocab) {
@@ -260,15 +260,8 @@ void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
 // Vocabulary
 //===----------------------------------------------------------------------===//
 
-Vocabulary::Vocabulary(VocabVector &&Vocab)
-    : Vocab(std::move(Vocab)), Valid(true) {}
-
-bool Vocabulary::isValid() const {
-  return Vocab.size() == NumCanonicalEntries && Valid;
-}
-
 unsigned Vocabulary::getDimension() const {
-  assert(Valid && "IR2Vec Vocabulary is invalid");
+  assert(isValid() && "IR2Vec Vocabulary is invalid");
   return Vocab[0].size();
 }
 
@@ -472,7 +465,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
 
   // Handle Opcodes
   std::vector<Embedding> NumericOpcodeEmbeddings(Vocabulary::MaxOpcodes,
-                                                 Embedding(Dim, 0));
+                                                 Embedding(Dim));
   NumericOpcodeEmbeddings.reserve(Vocabulary::MaxOpcodes);
   for (unsigned Opcode : seq(0u, Vocabulary::MaxOpcodes)) {
     StringRef VocabKey = Vocabulary::getVocabKeyForOpcode(Opcode + 1);
@@ -487,7 +480,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
 
   // Handle Types - only canonical types are present in vocabulary
   std::vector<Embedding> NumericTypeEmbeddings(Vocabulary::MaxCanonicalTypeIDs,
-                                               Embedding(Dim, 0));
+                                               Embedding(Dim));
   NumericTypeEmbeddings.reserve(Vocabulary::MaxCanonicalTypeIDs);
   for (unsigned CTypeID : seq(0u, Vocabulary::MaxCanonicalTypeIDs)) {
     StringRef VocabKey = Vocabulary::getVocabKeyForCanonicalTypeID(
@@ -503,7 +496,7 @@ void IR2VecVocabAnalysis::generateNumMappedVocab() {
 
   // Handle Arguments/Operands
   std::vector<Embedding> NumericArgEmbeddings(Vocabulary::MaxOperandKinds,
-                                              Embedding(Dim, 0));
+                                              Embedding(Dim));
   NumericArgEmbeddings.reserve(Vocabulary::MaxOperandKinds);
   for (unsigned OpKind : seq(0u, Vocabulary::MaxOperandKinds)) {
     Vocabulary::OperandKind Kind = static_cast<Vocabulary::OperandKind>(OpKind);

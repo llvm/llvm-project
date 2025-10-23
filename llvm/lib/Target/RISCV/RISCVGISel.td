@@ -143,6 +143,9 @@ def : Pat<(anyext (i32 GPR:$src)), (COPY GPR:$src)>;
 def : Pat<(sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 def : Pat<(i32 (trunc GPR:$src)), (COPY GPR:$src)>;
 
+def : Pat<(sext_inreg (i64 (add GPR:$rs1, simm12:$imm)), i32),
+          (ADDIW GPR:$rs1, simm12:$imm)>;
+
 // Use sext if the sign bit of the input is 0.
 def : Pat<(zext_is_sext (i32 GPR:$src)), (ADDIW GPR:$src, 0)>;
 }

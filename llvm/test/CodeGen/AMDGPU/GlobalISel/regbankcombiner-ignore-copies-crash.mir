@@ -24,7 +24,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    ; CHECK-NEXT: INLINEASM &"v_mov_b32 $0, 0", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def %5(s32)
+    ; CHECK-NEXT: INLINEASM &"v_mov_b32 $0, 0", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def %5(s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C1]](s32)
     ; CHECK-NEXT: [[AMDGPU_FMED3_:%[0-9]+]]:vgpr(s32) = nnan G_AMDGPU_FMED3 [[FMUL]], %5, [[COPY2]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_FMED3_]](s32)
@@ -33,7 +33,7 @@ body: |
     %2:vgpr(s32) = COPY %1(s32)
     %3:vgpr(s32) = G_FMUL %0, %2
     %4:sgpr(s32) = G_FCONSTANT float 1.000000e+00
-    INLINEASM &"v_mov_b32 $0, 0", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def %5:vgpr_32
+    INLINEASM &"v_mov_b32 $0, 0", 0 /* attdialect */, 2031626 /* regdef:VGPR_32 */, def %5:vgpr_32
     %6:vgpr(s32) = COPY %4(s32)
     %7:vgpr(s32) = nnan G_AMDGPU_FMED3 %3(s32), %5(s32), %6(s32)
     $vgpr0 = COPY %7(s32)

@@ -21,10 +21,10 @@ typedef __bf16 __m256bh_u __attribute__((__vector_size__(32), __aligned__(1)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS256                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2-256"),    \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2"),        \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
-  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2-256"),    \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx10.2"),        \
                  __min_vector_width__(128)))
 
 static __inline __m256bh __DEFAULT_FN_ATTRS256 _mm256_setzero_pbh(void) {

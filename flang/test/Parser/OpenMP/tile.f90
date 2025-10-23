@@ -17,7 +17,7 @@ subroutine openmp_tiles(x)
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
 !PARSE-TREE: OmpBeginLoopDirective
-!PARSE-TREE: OmpLoopDirective -> llvm::omp::Directive = tile
+!PARSE-TREE: OmpDirectiveName -> llvm::omp::Directive = tile
 
 END subroutine openmp_tiles
 

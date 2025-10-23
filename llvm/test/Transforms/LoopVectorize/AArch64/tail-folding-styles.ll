@@ -51,7 +51,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-LABEL: @simple_memset_tailfold(
 ; DATA-NEXT:  entry:
 ; DATA-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA-NEXT:    br label [[VECTOR_PH:%.*]]
 ; DATA:       vector.ph:
 ; DATA-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -75,7 +75,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA:       scalar.ph:
 ; DATA-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA:       while.body:
-; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; DATA-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -87,7 +87,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-LABEL: @simple_memset_tailfold(
 ; DATA_NO_LANEMASK-NEXT:  entry:
 ; DATA_NO_LANEMASK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_NO_LANEMASK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA_NO_LANEMASK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; DATA_NO_LANEMASK:       vector.ph:
 ; DATA_NO_LANEMASK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_NO_LANEMASK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -119,7 +119,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK:       scalar.ph:
 ; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_NO_LANEMASK:       while.body:
-; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_NO_LANEMASK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -131,7 +131,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-LABEL: @simple_memset_tailfold(
 ; DATA_AND_CONTROL-NEXT:  entry:
 ; DATA_AND_CONTROL-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_AND_CONTROL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA_AND_CONTROL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; DATA_AND_CONTROL:       vector.ph:
 ; DATA_AND_CONTROL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -154,7 +154,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL:       scalar.ph:
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL:       while.body:
-; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; DATA_AND_CONTROL-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_AND_CONTROL-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -166,7 +166,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-LABEL: @simple_memset_tailfold(
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:  entry:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       vector.ph:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
@@ -194,7 +194,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK:       scalar.ph:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       while.body:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1

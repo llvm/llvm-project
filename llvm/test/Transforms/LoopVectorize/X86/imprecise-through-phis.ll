@@ -67,7 +67,7 @@ done:
 define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-LABEL: @sumIfVector(
 ; SSE-NEXT:  entry:
-; SSE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SSE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; SSE:       vector.ph:
 ; SSE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SSE:       vector.body:
@@ -94,7 +94,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE:       scalar.ph:
 ; SSE-NEXT:    br label [[LOOP:%.*]]
 ; SSE:       loop:
-; SSE-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
+; SSE-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
 ; SSE-NEXT:    [[TOT:%.*]] = phi double [ 0.000000e+00, [[SCALAR_PH]] ], [ [[TOT_NEXT:%.*]], [[NEXT_ITER]] ]
 ; SSE-NEXT:    [[ADDR:%.*]] = getelementptr double, ptr [[ARR]], i32 [[I]]
 ; SSE-NEXT:    [[NEXTVAL:%.*]] = load double, ptr [[ADDR]], align 8
@@ -109,14 +109,14 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; SSE-NEXT:    [[TOT_NEXT]] = phi double [ [[TOT]], [[NO_ADD]] ], [ [[TOT_NEW]], [[DO_ADD]] ]
 ; SSE-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; SSE-NEXT:    [[AGAIN:%.*]] = icmp ult i32 [[I_NEXT]], 32
-; SSE-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]], !llvm.loop [[LOOP3:![0-9]+]]
+; SSE-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]]
 ; SSE:       done:
 ; SSE-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
 ; SSE-NEXT:    ret double [[TOT_NEXT_LCSSA]]
 ;
 ; AVX-LABEL: @sumIfVector(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; AVX-NEXT:    br label [[VECTOR_PH:%.*]]
 ; AVX:       vector.ph:
 ; AVX-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX:       vector.body:
@@ -157,7 +157,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX:       scalar.ph:
 ; AVX-NEXT:    br label [[LOOP:%.*]]
 ; AVX:       loop:
-; AVX-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
+; AVX-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[I_NEXT:%.*]], [[NEXT_ITER:%.*]] ]
 ; AVX-NEXT:    [[TOT:%.*]] = phi double [ 0.000000e+00, [[SCALAR_PH]] ], [ [[TOT_NEXT:%.*]], [[NEXT_ITER]] ]
 ; AVX-NEXT:    [[ADDR:%.*]] = getelementptr double, ptr [[ARR]], i32 [[I]]
 ; AVX-NEXT:    [[NEXTVAL:%.*]] = load double, ptr [[ADDR]], align 8
@@ -172,7 +172,7 @@ define double @sumIfVector(ptr nocapture readonly %arr) {
 ; AVX-NEXT:    [[TOT_NEXT]] = phi double [ [[TOT]], [[NO_ADD]] ], [ [[TOT_NEW]], [[DO_ADD]] ]
 ; AVX-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; AVX-NEXT:    [[AGAIN:%.*]] = icmp ult i32 [[I_NEXT]], 32
-; AVX-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]], !llvm.loop [[LOOP3:![0-9]+]]
+; AVX-NEXT:    br i1 [[AGAIN]], label [[LOOP]], label [[DONE]]
 ; AVX:       done:
 ; AVX-NEXT:    [[TOT_NEXT_LCSSA:%.*]] = phi double [ [[TOT_NEXT]], [[NEXT_ITER]] ], [ [[TMP21]], [[MIDDLE_BLOCK]] ]
 ; AVX-NEXT:    ret double [[TOT_NEXT_LCSSA]]

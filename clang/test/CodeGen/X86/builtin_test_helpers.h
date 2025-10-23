@@ -230,6 +230,11 @@ constexpr bool match_v16si(__m512i _v, int a, int b, int c, int d, int e, int f,
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
 }
 
+constexpr bool match_v16su(__m512i _v, unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int e, unsigned int f, unsigned int g, unsigned int h, unsigned int i, unsigned int j, unsigned int k, unsigned int l, unsigned int m, unsigned int n, unsigned int o, unsigned int p) {
+  __v16su v = (__v16su)_v;
+  return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
+}
+
 constexpr bool match_v32hi(__m512i _v, short __e00, short __e01, short __e02, short __e03, short __e04, short __e05, short __e06, short __e07,
                                        short __e08, short __e09, short __e10, short __e11, short __e12, short __e13, short __e14, short __e15,
                                        short __e16, short __e17, short __e18, short __e19, short __e20, short __e21, short __e22, short __e23,

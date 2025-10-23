@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SarifDiagnostics.h"
 #include "clang/Analysis/MacroExpansionContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/Sarif.h"
@@ -54,14 +55,24 @@ void ento::createSarifDiagnosticConsumer(
     const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions) {
 
+  createSarifDiagnosticConsumerImpl(DiagOpts, C, Output, PP);
+
+  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
+                                          CTU, MacroExpansions);
+}
+
+/// Creates and registers a SARIF diagnostic consumer, without any additional
+/// text consumer.
+void ento::createSarifDiagnosticConsumerImpl(
+    PathDiagnosticConsumerOptions DiagOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &PP) {
+
   // TODO: Emit an error here.
   if (Output.empty())
     return;
 
   C.push_back(std::make_unique<SarifDiagnostics>(Output, PP.getLangOpts(),
                                                  PP.getSourceManager()));
-  createTextMinimalPathDiagnosticConsumer(std::move(DiagOpts), C, Output, PP,
-                                          CTU, MacroExpansions);
 }
 
 static StringRef getRuleDescription(StringRef CheckName) {

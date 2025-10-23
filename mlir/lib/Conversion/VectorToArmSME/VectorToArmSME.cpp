@@ -462,7 +462,7 @@ struct VectorExtractToArmSMELowering
     auto loc = extractOp.getLoc();
     auto position = extractOp.getMixedPosition();
 
-    Value sourceVector = extractOp.getVector();
+    Value sourceVector = extractOp.getSource();
 
     // Extract entire vector. Should be handled by folder, but just to be safe.
     if (position.empty()) {
@@ -692,7 +692,7 @@ struct ExtractFromCreateMaskToPselLowering
       return rewriter.notifyMatchFailure(extractOp, "result not VectorType");
 
     auto createMaskOp =
-        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+        extractOp.getSource().getDefiningOp<vector::CreateMaskOp>();
     if (!createMaskOp)
       return rewriter.notifyMatchFailure(extractOp, "source not CreateMaskOp");
 

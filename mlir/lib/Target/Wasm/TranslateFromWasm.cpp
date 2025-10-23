@@ -571,7 +571,7 @@ public:
       if (failed(varT))
         return failure();
       for (size_t j = 0; j < *nSubVar; ++j) {
-        auto local = builder.create<LocalOp>(varLoc, *varT);
+        auto local = LocalOp::create(builder, varLoc, *varT);
         locals.push_back(local.getResult());
       }
     }
@@ -581,7 +581,7 @@ public:
     if (!cParser.end())
       return emitError(cParser.getLocation(),
                        "unparsed garbage remaining at end of code block");
-    builder.create<ReturnOp>(func->getLoc(), *res);
+    ReturnOp::create(builder, func->getLoc(), *res);
     returnOp->erase();
     return success();
   }
@@ -802,7 +802,7 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
   if (*id >= locals.size())
     return emitError(instLoc, "invalid local index. function has ")
            << locals.size() << " accessible locals, received index " << *id;
-  return {{builder.create<LocalGetOp>(instLoc, locals[*id]).getResult()}};
+  return {{LocalGetOp::create(builder, instLoc, locals[*id]).getResult()}};
 }
 
 template <>
@@ -817,8 +817,8 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
            << symbols.globalSymbols.size()
            << " accessible globals, received index " << *id;
   GlobalSymbolRefContainer globalVar = symbols.globalSymbols[*id];
-  auto globalOp = builder.create<GlobalGetOp>(instLoc, globalVar.globalType,
-                                              globalVar.symbol);
+  auto globalOp = GlobalGetOp::create(builder, instLoc, globalVar.globalType,
+                                      globalVar.symbol);
 
   return {{globalOp.getResult()}};
 }
@@ -840,7 +840,7 @@ parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
   if (failed(poppedOp))
     return failure();
   return {
-      builder.create<OpToCreate>(*currentOpLoc, locals[*id], poppedOp->front())
+      OpToCreate::create(builder, *currentOpLoc, locals[*id], poppedOp->front())
           ->getResults()};
 }
 
@@ -960,7 +960,7 @@ inline parsed_inst_t ExpressionParser::buildNumericOp(
   auto operands = popOperands(tysToPop);
   if (failed(operands))
     return failure();
-  auto op = builder.create<opcode>(*currentOpLoc, *operands).getResult();
+  auto op = opcode::create(builder, *currentOpLoc, *operands).getResult();
   LDBG() << "Built operation: " << op;
   return {{op}};
 }
@@ -1475,8 +1475,8 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
 
   GlobalTypeRecord globalType = *globalTypeParsed;
   auto symbol = builder.getStringAttr(symbols.getNewGlobalSymbolName());
-  auto globalOp = builder.create<wasmssa::GlobalOp>(
-      globalLocation, symbol, globalType.type, globalType.isMutable);
+  auto globalOp = wasmssa::GlobalOp::create(
+      builder, globalLocation, symbol, globalType.type, globalType.isMutable);
   symbols.globalSymbols.push_back(
       {{FlatSymbolRefAttr::get(globalOp)}, globalOp.getType()});
   OpBuilder::InsertionGuard guard{builder};
@@ -1491,7 +1491,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
     return emitError(
         globalLocation,
         "initializer result type does not match global declaration type");
-  builder.create<ReturnOp>(globalLocation, *expr);
+  ReturnOp::create(builder, globalLocation, *expr);
   return success();
 }
 

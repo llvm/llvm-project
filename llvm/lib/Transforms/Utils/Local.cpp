@@ -3342,8 +3342,11 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
   // retain their original debug locations (DILocations) and debug intrinsic
   // instructions.
   //
-  // Doing so would degrade the debugging experience and adversely affect the
-  // accuracy of profiling information.
+  // Doing so would degrade the debugging experience.
+  //
+  // FIXME: Issue #152767: debug info should also be the same as the
+  // original branch, **if** the user explicitly indicated that (for sampling
+  // PGO)
   //
   // Currently, when hoisting the instructions, we take the following actions:
   // - Remove their debug intrinsic instructions.
@@ -3397,8 +3400,8 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
     APInt const &API = APF.bitcastToAPInt();
-    if (auto Temp = API.getZExtValue())
-      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    if (uint64_t Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(Temp);
     return DIB.createConstantValueExpression(*API.getRawData());
   }
 

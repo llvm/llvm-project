@@ -1364,8 +1364,6 @@ namespace llvm {
 
     SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 
-    bool ExpandInlineAsm(CallInst *CI) const override;
-
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.

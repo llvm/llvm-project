@@ -481,7 +481,7 @@ class Foo final {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "auto";
          HI.Kind = index::SymbolKind::TypeAlias;
-         HI.Definition = "/* not deduced */";
+         HI.Definition = "T";
        }},
       // constrained auto
       {R"cpp(
@@ -2657,7 +2657,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "/* not deduced */";
+            HI.Definition = "T";
           }},
       {
           R"cpp(// Undeduced auto return type

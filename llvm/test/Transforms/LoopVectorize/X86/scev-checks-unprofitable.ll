@@ -21,7 +21,7 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    [[IV_1_LCSSA:%.*]] = phi i64 [ [[IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_2_PREHEADER:.*]], label %[[LOOP_3_PREHEADER:.*]]
 ; CHECK:       [[LOOP_3_PREHEADER]]:
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[IV_1_LCSSA2]], 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
@@ -33,7 +33,7 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_1_LOOPEXIT1:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
@@ -54,7 +54,7 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK-NEXT:    store i8 0, ptr [[GEP_DST_2]], align 1
 ; CHECK-NEXT:    [[IV_4_NEXT]] = add i64 [[IV_4]], 1
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ult i64 [[IV_4_NEXT]], [[IV_1_LCSSA]]
-; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP_3]], label %[[EXIT_1_LOOPEXIT1]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP_3]], label %[[EXIT_1_LOOPEXIT1]]
 ; CHECK:       [[EXIT_1_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[EXIT_1:.*]]
 ; CHECK:       [[EXIT_1_LOOPEXIT1]]:
@@ -97,8 +97,3 @@ loop.3:
 exit.1:
   ret void
 }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
-;.

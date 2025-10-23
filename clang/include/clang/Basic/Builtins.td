@@ -854,7 +854,7 @@ def BuiltinAssumeAligned : Builtin {
 def BuiltinAssumeDereferenceable : Builtin {
   let Spellings = ["__builtin_assume_dereferenceable"];
   let Attributes = [NoThrow, Const];
-  let Prototype = "void(void const*, _Constant size_t)";
+  let Prototype = "void(void const*, size_t)";
 }
 
 def BuiltinFree : Builtin {
@@ -1540,24 +1540,24 @@ def ElementwiseSubSat : Builtin {
 
 def ElementwiseFshl : Builtin {
   let Spellings = ["__builtin_elementwise_fshl"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseFshr : Builtin {
   let Spellings = ["__builtin_elementwise_fshr"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseCtlz : Builtin {
-  let Spellings = ["__builtin_elementwise_ctlz"];
+  let Spellings = ["__builtin_elementwise_clzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseCttz : Builtin {
-  let Spellings = ["__builtin_elementwise_cttz"];
+  let Spellings = ["__builtin_elementwise_ctzg"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

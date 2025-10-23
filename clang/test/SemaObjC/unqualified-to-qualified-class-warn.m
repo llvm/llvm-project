@@ -24,7 +24,7 @@ void functionTakingAClassConformingToAProtocol(AClass <Fooable> *instance) { // 
 int main (void) {
     AClass *aobject = 0;
     BClass *bobject = 0;
-    functionTakingAClassConformingToAProtocol(aobject);  // expected-warning {{incompatible pointer types passing 'AClass *' to parameter of type 'AClass<Fooable> *'}}
+    functionTakingAClassConformingToAProtocol(aobject);  // expected-error {{incompatible pointer types passing 'AClass *' to parameter of type 'AClass<Fooable> *'}}
     functionTakingAClassConformingToAProtocol(bobject); // Shouldn't warn -  does implement Fooable
     return 0;
 }

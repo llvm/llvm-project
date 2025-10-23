@@ -25,6 +25,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TimeProfiler.h"
 
 #include <algorithm>
 #include <cassert>
@@ -57,9 +59,6 @@
 #include <tuple>
 #include <utility>
 #include <vector>
-namespace llvm {
-class Argument;
-}
 
 using namespace llvm;
 
@@ -81,8 +80,6 @@ static cl::opt<bool> DisableLazyLoading(
              "loading bitcode for importing."));
 
 namespace {
-
-static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 class BitcodeReaderMetadataList {
   /// Array of metadata references.
@@ -128,10 +125,7 @@ public:
   void pop_back() { MetadataPtrs.pop_back(); }
   bool empty() const { return MetadataPtrs.empty(); }
 
-  Metadata *operator[](unsigned i) const {
-    assert(i < MetadataPtrs.size());
-    return MetadataPtrs[i];
-  }
+  Metadata *operator[](unsigned i) const { return MetadataPtrs[i]; }
 
   Metadata *lookup(unsigned I) const {
     if (I < MetadataPtrs.size())
@@ -177,6 +171,9 @@ public:
 private:
   Metadata *resolveTypeRefArray(Metadata *MaybeTuple);
 };
+} // namespace
+
+static int64_t unrotateSign(uint64_t U) { return (U & 1) ? ~(U >> 1) : U >> 1; }
 
 void BitcodeReaderMetadataList::assignValue(Metadata *MD, unsigned Idx) {
   if (auto *MDN = dyn_cast<MDNode>(MD))
@@ -390,8 +387,6 @@ void PlaceholderQueue::flush(BitcodeReaderMetadataList &MetadataList) {
     PHs.pop_front();
   }
 }
-
-} // anonymous namespace
 
 static Error error(const Twine &Message) {
   return make_error<StringError>(
@@ -1052,6 +1047,7 @@ void MetadataLoader::MetadataLoaderImpl::callMDTypeCallback(Metadata **Val,
 /// Parse a METADATA_BLOCK. If ModuleLevel is true then we are parsing
 /// module level metadata.
 Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
+  llvm::TimeTraceScope timeScope("Parse metadata");
   if (!ModuleLevel && MetadataList.hasFwdRefs())
     return error("Invalid metadata: fwd refs into function blocks");
 

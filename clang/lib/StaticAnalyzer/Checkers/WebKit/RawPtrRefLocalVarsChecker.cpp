@@ -295,7 +295,7 @@ public:
                 if (isa<CXXThisExpr>(InitArgOrigin))
                   return true;
 
-                if (isa<CXXNullPtrLiteralExpr>(InitArgOrigin))
+                if (isNullPtr(InitArgOrigin))
                   return true;
 
                 if (isa<IntegerLiteral>(InitArgOrigin))
@@ -434,10 +434,10 @@ public:
     return RTC->isUnretained(T);
   }
   bool isSafePtr(const CXXRecordDecl *Record) const final {
-    return isRetainPtr(Record);
+    return isRetainPtrOrOSPtr(Record);
   }
   bool isSafePtrType(const QualType type) const final {
-    return isRetainPtrType(type);
+    return isRetainPtrOrOSPtrType(type);
   }
   bool isSafeExpr(const Expr *E) const final {
     return ento::cocoa::isCocoaObjectRef(E->getType()) &&

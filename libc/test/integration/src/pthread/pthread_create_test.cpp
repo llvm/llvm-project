@@ -29,10 +29,9 @@
 #include "src/__support/CPP/new.h"
 #include "src/__support/threads/thread.h"
 
-#include "src/__support/libc_errno.h"
-
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 
@@ -332,7 +331,7 @@ static void run_failure_tests() {
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  errno = 0;
   run_success_tests();
   run_failure_tests();
   return 0;

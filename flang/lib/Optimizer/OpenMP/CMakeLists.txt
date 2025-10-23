@@ -26,6 +26,7 @@ add_flang_library(FlangOpenMPTransforms
   FIRSupport
   FortranSupport
   HLFIRDialect
+  FortranUtils
 
   MLIR_DEPS
   ${dialect_libs}

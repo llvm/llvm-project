@@ -396,7 +396,7 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   assert(PtrTPR.getEntry() &&
          "Need a valid pointer entry to perform pointer-attachment");
 
-  int64_t VoidPtrSize = sizeof(void *);
+  constexpr int64_t VoidPtrSize = sizeof(void *);
   assert(HstPtrSize >= VoidPtrSize && "PointerSize is too small");
 
   uint64_t Delta = reinterpret_cast<uint64_t>(HstPteeBegin) -
@@ -411,23 +411,8 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
      DPxPTR(TgtPteeBase), DPxPTR(TgtPteeBegin));
 
   // Add shadow pointer tracking
-  // TODO: Support shadow-tracking of larger than VoidPtrSize pointers,
-  // to support restoration of Fortran descriptors. Currently, this check
-  // would return false, even if the host Fortran descriptor had been
-  // updated since its previous map, and we should have updated its
-  // device counterpart. e.g.
-  //
-  //   !$omp target enter data map(x(1:100)) !             (1)
-  //   p => x(10: 19)
-  //   !$omp target enter data map(p, p(:)) !              (2)
-  //   p => x(5: 9)
-  //   !$omp target enter data map(attach(always): p(:)) ! (3)
-  //
-  // While PtrAddr(&desc_p) and PteeBase(&p(1)) are same for (2) and (3), the
-  // pointer attachment for (3) needs to update the bounds information
-  // in the descriptor of p on device.
   if (!PtrTPR.getEntry()->addShadowPointer(
-          ShadowPtrInfoTy{HstPtrAddr, HstPteeBase, TgtPtrAddr, TgtPteeBase})) {
+          ShadowPtrInfoTy{HstPtrAddr, TgtPtrAddr, TgtPteeBase, HstPtrSize})) {
     DP("Pointer " DPxMOD " is already attached to " DPxMOD "\n",
        DPxPTR(TgtPtrAddr), DPxPTR(TgtPteeBase));
     return OFFLOAD_SUCCESS;
@@ -940,17 +925,29 @@ postProcessingTargetDataEnd(DeviceTy *Device,
       DelEntry = false;
     }
 
-    // If we copied back to the host a struct/array containing pointers,
-    // we need to restore the original host pointer values from their
-    // shadow copies. If the struct is going to be deallocated, remove any
-    // remaining shadow pointer entries for this struct.
+    // If we copied back to the host a struct/array containing pointers, or
+    // Fortran descriptors (which are larger than a "void *"), we need to
+    // restore the original host pointer/descriptor values from their shadow
+    // copies. If the struct is going to be deallocated, remove any remaining
+    // shadow pointer entries for this struct.
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
       Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
-        *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-        DP("Restoring original host pointer value " DPxMOD " for host "
-           "pointer " DPxMOD "\n",
-           DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+        constexpr int64_t VoidPtrSize = sizeof(void *);
+        if (ShadowPtr.PtrSize > VoidPtrSize) {
+          DP("Restoring host descriptor " DPxMOD
+             " to its original content (%" PRId64
+             " bytes), containing pointee address " DPxMOD "\n",
+             DPxPTR(ShadowPtr.HstPtrAddr), ShadowPtr.PtrSize,
+             DPxPTR(ShadowPtr.HstPtrContent.data()));
+        } else {
+          DP("Restoring host pointer " DPxMOD " to its original value " DPxMOD
+             "\n",
+             DPxPTR(ShadowPtr.HstPtrAddr),
+             DPxPTR(ShadowPtr.HstPtrContent.data()));
+        }
+        std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
+                    ShadowPtr.PtrSize);
         return OFFLOAD_SUCCESS;
       });
     }
@@ -1163,12 +1160,22 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     if (TPR.getEntry()) {
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
           [&](ShadowPtrInfoTy &ShadowPtr) {
-            DP("Restoring original target pointer value " DPxMOD " for target "
-               "pointer " DPxMOD "\n",
-               DPxPTR(ShadowPtr.TgtPtrVal), DPxPTR(ShadowPtr.TgtPtrAddr));
+            constexpr int64_t VoidPtrSize = sizeof(void *);
+            if (ShadowPtr.PtrSize > VoidPtrSize) {
+              DP("Restoring target descriptor " DPxMOD
+                 " to its original content (%" PRId64
+                 " bytes), containing pointee address " DPxMOD "\n",
+                 DPxPTR(ShadowPtr.TgtPtrAddr), ShadowPtr.PtrSize,
+                 DPxPTR(ShadowPtr.TgtPtrContent.data()));
+            } else {
+              DP("Restoring target pointer " DPxMOD
+                 " to its original value " DPxMOD "\n",
+                 DPxPTR(ShadowPtr.TgtPtrAddr),
+                 DPxPTR(ShadowPtr.TgtPtrContent.data()));
+            }
             Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
-                                    (void *)&ShadowPtr.TgtPtrVal,
-                                    sizeof(void *), AsyncInfo);
+                                    ShadowPtr.TgtPtrContent.data(),
+                                    ShadowPtr.PtrSize, AsyncInfo);
             if (Ret != OFFLOAD_SUCCESS) {
               REPORT("Copying data to device failed.\n");
               return OFFLOAD_FAIL;
@@ -1193,15 +1200,26 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     }
 
     // Wait for device-to-host memcopies for whole struct to complete,
-    // before restoring the correct host pointer.
+    // before restoring the correct host pointer/descriptor.
     if (auto *Entry = TPR.getEntry()) {
       AsyncInfo.addPostProcessingFunction([=]() -> int {
         int Ret = Entry->foreachShadowPointerInfo(
             [&](const ShadowPtrInfoTy &ShadowPtr) {
-              *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-              DP("Restoring original host pointer value " DPxMOD
-                 " for host pointer " DPxMOD "\n",
-                 DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+              constexpr int64_t VoidPtrSize = sizeof(void *);
+              if (ShadowPtr.PtrSize > VoidPtrSize) {
+                DP("Restoring host descriptor " DPxMOD
+                   " to its original content (%" PRId64
+                   " bytes), containing pointee address " DPxMOD "\n",
+                   DPxPTR(ShadowPtr.HstPtrAddr), ShadowPtr.PtrSize,
+                   DPxPTR(ShadowPtr.HstPtrContent.data()));
+              } else {
+                DP("Restoring host pointer " DPxMOD
+                   " to its original value " DPxMOD "\n",
+                   DPxPTR(ShadowPtr.HstPtrAddr),
+                   DPxPTR(ShadowPtr.HstPtrContent.data()));
+              }
+              std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
+                          ShadowPtr.PtrSize);
               return OFFLOAD_SUCCESS;
             });
         Entry->unlock();

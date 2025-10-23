@@ -42,7 +42,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       L2.header.backedge:
 ; CHECK-NEXT:    br label [[L2_HEADER]]
 ; CHECK:       L2.Inner.header.preheader:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[L1_EXIT_VAL]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -71,7 +71,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[L2_INNER_HEADER:%.*]]
 ; CHECK:       L2.Inner.header:
-; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ 1, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[L2_ACCUM:%.*]] = phi i32 [ [[L2_ACCUM_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ 1, [[SCALAR_PH:%.*]] ]
 ; CHECK-NEXT:    [[L2_IV:%.*]] = phi i64 [ [[L2_IV_NEXT:%.*]], [[L2_INNER_HEADER]] ], [ 1, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[L2_ACCUM_NEXT]] = sub i32 [[L2_ACCUM]], [[L1_EXIT_VAL]]
 ; CHECK-NEXT:    [[L2_DUMMY_BUT_NEED_IT:%.*]] = sext i32 [[L2_ACCUM_NEXT]] to i64
@@ -79,7 +79,7 @@ define void @test(i32 %arg, i32 %L1.limit, i32 %L2.switch, i1 %c, ptr %dst) {
 ; CHECK-NEXT:    store i64 [[L2_DUMMY_BUT_NEED_IT]], ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[L2_IV_NEXT]] = add nuw nsw i64 [[L2_IV]], 1
 ; CHECK-NEXT:    [[L2_EXIT_COND:%.*]] = icmp ugt i64 [[L2_IV]], 11
-; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[L2_EXIT_COND]], label [[L2_HEADER_LOOPEXIT]], label [[L2_INNER_HEADER]]
 ; CHECK:       L2.exit:
 ; CHECK-NEXT:    ret void
 ;

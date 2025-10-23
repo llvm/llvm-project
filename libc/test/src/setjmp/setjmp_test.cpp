@@ -10,6 +10,8 @@
 #include "src/setjmp/setjmp_impl.h"
 #include "test/UnitTest/Test.h"
 
+namespace {
+
 constexpr int MAX_LOOP = 123;
 int longjmp_called = 0;
 
@@ -45,3 +47,5 @@ TEST(LlvmLibcSetJmpTest, SetAndJumpBackValOne) {
   ASSERT_EQ(longjmp_called, 1);
   ASSERT_EQ(val, 1);
 }
+
+} // namespace

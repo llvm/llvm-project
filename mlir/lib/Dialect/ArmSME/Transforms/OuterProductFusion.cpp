@@ -445,7 +445,7 @@ struct SwapVectorExtractOfArithExtend
       return rewriter.notifyMatchFailure(
           extractOp, "extracted type is not a 1-D scalable vector type");
 
-    auto *extendOp = extractOp.getVector().getDefiningOp();
+    auto *extendOp = extractOp.getSource().getDefiningOp();
     if (!isa_and_present<arith::ExtSIOp, arith::ExtUIOp, arith::ExtFOp>(
             extendOp))
       return rewriter.notifyMatchFailure(extractOp,

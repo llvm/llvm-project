@@ -723,7 +723,9 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
   IntegerType intTy = llvm::dyn_cast<IntegerType>(type);
 
   if (IntegerAttr intCst = llvm::dyn_cast<IntegerAttr>(getValue())) {
-    if (intTy && intTy.getWidth() == 1) {
+    assert(intTy);
+
+    if (intTy.getWidth() == 1) {
       return setNameFn(getResult(), (intCst.getInt() ? "true" : "false"));
     }
 

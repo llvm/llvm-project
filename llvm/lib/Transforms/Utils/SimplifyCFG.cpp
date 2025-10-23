@@ -203,6 +203,8 @@ static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
     cl::desc("Limit number of blocks a define in a threaded block is allowed "
              "to be live in"));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -329,6 +331,17 @@ public:
     return true;
   }
 };
+
+// we synthesize a || b as select a, true, b
+// we synthesize a && b as select a, b, false
+// this function determines if SI is playing one of those roles.
+[[maybe_unused]] bool
+isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
+  return ((isa<ConstantInt>(SI->getTrueValue()) &&
+           (dyn_cast<ConstantInt>(SI->getTrueValue())->isOne())) ||
+          (isa<ConstantInt>(SI->getFalseValue()) &&
+           (dyn_cast<ConstantInt>(SI->getFalseValue())->isNullValue())));
+}
 
 } // end anonymous namespace
 
@@ -612,6 +625,9 @@ private:
   /// If CompValue is already set, the function is expected to fail if a match
   /// is found but the value compared to is different.
   bool matchInstruction(Instruction *I, bool isEQ) {
+    if (match(I, m_Not(m_Instruction(I))))
+      isEQ = !isEQ;
+
     Value *Val;
     if (match(I, m_NUWTrunc(m_Value(Val)))) {
       // If we already have a value for the switch, it has to match!
@@ -3376,7 +3392,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   // hoisting above.
   for (auto &I : make_early_inc_range(*ThenBB)) {
     if (!SpeculatedStoreValue || &I != SpeculatedStore) {
-      I.setDebugLoc(DebugLoc::getDropped());
+      I.dropLocation();
     }
     I.dropUBImplyingAttrsAndMetadata();
 
@@ -4028,6 +4044,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   // Try to update branch weights.
   uint64_t PredTrueWeight, PredFalseWeight, SuccTrueWeight, SuccFalseWeight;
+  SmallVector<uint32_t, 2> MDWeights;
   if (extractPredSuccWeights(PBI, BI, PredTrueWeight, PredFalseWeight,
                              SuccTrueWeight, SuccFalseWeight)) {
     SmallVector<uint64_t, 8> NewWeights;
@@ -4058,7 +4075,7 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
     // Halve the weights if any of them cannot fit in an uint32_t
     fitWeights(NewWeights);
 
-    SmallVector<uint32_t, 8> MDWeights(NewWeights.begin(), NewWeights.end());
+    append_range(MDWeights, NewWeights);
     setBranchWeights(PBI, MDWeights[0], MDWeights[1], /*IsExpected=*/false);
 
     // TODO: If BB is reachable from all paths through PredBlock, then we
@@ -4095,6 +4112,13 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   Value *BICond = VMap[BI->getCondition()];
   PBI->setCondition(
       createLogicalOp(Builder, Opc, PBI->getCondition(), BICond, "or.cond"));
+  if (!ProfcheckDisableMetadataFixes)
+    if (auto *SI = dyn_cast<SelectInst>(PBI->getCondition()))
+      if (!MDWeights.empty()) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        setBranchWeights(SI, MDWeights[0], MDWeights[1],
+                         /*IsExpected=*/false);
+      }
 
   ++NumFoldBranchToCommonDest;
   return true;
@@ -4435,6 +4459,20 @@ static bool mergeConditionalStoreToAddress(
   auto *T = SplitBlockAndInsertIfThen(CombinedPred, InsertPt,
                                       /*Unreachable=*/false,
                                       /*BranchWeights=*/nullptr, DTU);
+  if (hasBranchWeightMD(*PBranch) && hasBranchWeightMD(*QBranch) &&
+      !ProfcheckDisableMetadataFixes) {
+    SmallVector<uint32_t, 2> PWeights, QWeights;
+    extractBranchWeights(*PBranch, PWeights);
+    extractBranchWeights(*QBranch, QWeights);
+    if (InvertPCond)
+      std::swap(PWeights[0], PWeights[1]);
+    if (InvertQCond)
+      std::swap(QWeights[0], QWeights[1]);
+    auto CombinedWeights = getDisjunctionWeights(PWeights, QWeights);
+    setBranchWeights(PostBB->getTerminator(), CombinedWeights[0],
+                     CombinedWeights[1],
+                     /*IsExpected=*/false);
+  }
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
@@ -4793,6 +4831,18 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     fitWeights(NewWeights);
 
     setBranchWeights(PBI, NewWeights[0], NewWeights[1], /*IsExpected=*/false);
+    // Cond may be a select instruction with the first operand set to "true", or
+    // the second to "false" (see how createLogicalOp works for `and` and `or`)
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *SI = dyn_cast<SelectInst>(Cond)) {
+        assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
+        // The select is predicated on PBICond
+        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        // The corresponding probabilities are what was referred to above as
+        // PredCommon and PredOther.
+        setBranchWeights(SI, PredCommon, PredOther,
+                         /*IsExpected=*/false);
+      }
   }
 
   // OtherDest may have phi nodes.  If so, add an entry from PBI's
@@ -4812,23 +4862,12 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
       SelectInst *NV = cast<SelectInst>(
           Builder.CreateSelect(PBICond, PBIV, BIV, PBIV->getName() + ".mux"));
       PN.setIncomingValue(PBBIdx, NV);
-      // Although the select has the same condition as PBI, the original branch
-      // weights for PBI do not apply to the new select because the select's
-      // 'logical' edges are incoming edges of the phi that is eliminated, not
-      // the outgoing edges of PBI.
+      // The select has the same condition as PBI, in the same BB. The
+      // probabilities don't change.
       if (HasWeights) {
-        uint64_t PredCommon = PBIOp ? PredFalseWeight : PredTrueWeight;
-        uint64_t PredOther = PBIOp ? PredTrueWeight : PredFalseWeight;
-        uint64_t SuccCommon = BIOp ? SuccFalseWeight : SuccTrueWeight;
-        uint64_t SuccOther = BIOp ? SuccTrueWeight : SuccFalseWeight;
-        // The weight to PredCommonDest should be PredCommon * SuccTotal.
-        // The weight to PredOtherDest should be PredOther * SuccCommon.
-        uint64_t NewWeights[2] = {PredCommon * (SuccCommon + SuccOther),
-                                  PredOther * SuccCommon};
-
-        fitWeights(NewWeights);
-
-        setBranchWeights(NV, NewWeights[0], NewWeights[1],
+        uint64_t TrueWeight = PBIOp ? PredFalseWeight : PredTrueWeight;
+        uint64_t FalseWeight = PBIOp ? PredTrueWeight : PredFalseWeight;
+        setBranchWeights(NV, TrueWeight, FalseWeight,
                          /*IsExpected=*/false);
       }
     }
@@ -6466,6 +6505,9 @@ public:
   /// Return the default value of the switch.
   Constant *getDefaultValue();
 
+  /// Return true if the replacement is a lookup table.
+  bool isLookupTable();
+
 private:
   // Depending on the switch, there are different alternatives.
   enum {
@@ -6613,7 +6655,6 @@ SwitchReplacement::SwitchReplacement(
         (void)M.smul_ov(APInt(M.getBitWidth(), TableSize - 1), MayWrap);
       LinearMapValWrapped = NonMonotonic || MayWrap;
       Kind = LinearMapKind;
-      ++NumLinearMaps;
       return;
     }
   }
@@ -6633,7 +6674,6 @@ SwitchReplacement::SwitchReplacement(
     BitMap = ConstantInt::get(M.getContext(), TableInt);
     BitMapElementTy = IT;
     Kind = BitMapKind;
-    ++NumBitMaps;
     return;
   }
 
@@ -6650,6 +6690,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
   case SingleValueKind:
     return SingleValue;
   case LinearMapKind: {
+    ++NumLinearMaps;
     // Derive the result value from the input value.
     Value *Result = Builder.CreateIntCast(Index, LinearMultiplier->getType(),
                                           false, "switch.idx.cast");
@@ -6665,6 +6706,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     return Result;
   }
   case BitMapKind: {
+    ++NumBitMaps;
     // Type of the bitmap (e.g. i59).
     IntegerType *MapTy = BitMap->getIntegerType();
 
@@ -6687,6 +6729,7 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case LookupTableKind: {
+    ++NumLookupTables;
     auto *Table =
         new GlobalVariable(*Func->getParent(), Initializer->getType(),
                            /*isConstant=*/true, GlobalVariable::PrivateLinkage,
@@ -6752,6 +6795,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
 }
 
 Constant *SwitchReplacement::getDefaultValue() { return DefaultValue; }
+
+bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   // 40% is the default density for building a jump table in optsize/minsize
@@ -6923,11 +6968,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
 
   BasicBlock *BB = SI->getParent();
   Function *Fn = BB->getParent();
-  // Only build lookup table when we have a target that supports it or the
-  // attribute is not set.
-  if (!TTI.shouldBuildLookupTables() ||
-      (Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
-    return false;
 
   // FIXME: If the switch is too sparse for a lookup table, perhaps we could
   // split off a dense part and build a lookup table for that.
@@ -7086,6 +7126,20 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 
+  bool AnyLookupTables = any_of(
+      PhiToReplacementMap, [](auto &KV) { return KV.second.isLookupTable(); });
+
+  // A few conditions prevent the generation of lookup tables:
+  //     1. The target does not support lookup tables.
+  //     2. The "no-jump-tables" function attribute is set.
+  // However, these objections do not apply to other switch replacements, like
+  // the bitmap, so we only stop here if any of these conditions are met and we
+  // want to create a LUT. Otherwise, continue with the switch replacement.
+  if (AnyLookupTables &&
+      (!TTI.shouldBuildLookupTables() ||
+       Fn->getFnAttribute("no-jump-tables").getValueAsBool()))
+    return false;
+
   Builder.SetInsertPoint(SI);
   // TableIndex is the switch condition - TableIndexOffset if we don't
   // use the condition directly
@@ -7227,7 +7281,6 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   if (DTU)
     DTU->applyUpdates(Updates);
 
-  ++NumLookupTables;
   if (NeedMask)
     ++NumLookupTablesHoles;
   return true;

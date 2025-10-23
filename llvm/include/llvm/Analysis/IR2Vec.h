@@ -24,6 +24,12 @@
 ///   Code Optimization (TACO), 2020. https://doi.org/10.1145/3418463.
 ///   https://arxiv.org/abs/1909.06228
 ///
+/// To obtain embeddings:
+/// First run IR2VecVocabAnalysis to populate the vocabulary.
+/// Then, use the Embedder interface to generate embeddings for the desired IR
+/// entities. See the documentation for more details -
+/// https://llvm.org/docs/MLGO.html#ir2vec-embeddings
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_IR2VEC_H
@@ -86,7 +92,7 @@ public:
   Embedding(std::vector<double> &&V) : Data(std::move(V)) {}
   Embedding(std::initializer_list<double> IL) : Data(IL) {}
 
-  explicit Embedding(size_t Size) : Data(Size) {}
+  explicit Embedding(size_t Size) : Data(Size, 0.0) {}
   Embedding(size_t Size, double InitialValue) : Data(Size, InitialValue) {}
 
   size_t size() const { return Data.size(); }
@@ -158,7 +164,6 @@ class Vocabulary {
   friend class llvm::IR2VecVocabAnalysis;
   using VocabVector = std::vector<ir2vec::Embedding>;
   VocabVector Vocab;
-  bool Valid = false;
 
 public:
   // Slot layout:
@@ -204,9 +209,9 @@ public:
       static_cast<unsigned>(OperandKind::MaxOperandKind);
 
   Vocabulary() = default;
-  LLVM_ABI Vocabulary(VocabVector &&Vocab);
+  LLVM_ABI Vocabulary(VocabVector &&Vocab) : Vocab(std::move(Vocab)) {}
 
-  LLVM_ABI bool isValid() const;
+  LLVM_ABI bool isValid() const { return Vocab.size() == NumCanonicalEntries; };
   LLVM_ABI unsigned getDimension() const;
   /// Total number of entries (opcodes + canonicalized types + operand kinds)
   static constexpr size_t getCanonicalSize() { return NumCanonicalEntries; }
@@ -237,22 +242,22 @@ public:
   /// Const Iterator type aliases
   using const_iterator = VocabVector::const_iterator;
   const_iterator begin() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.begin();
   }
 
   const_iterator cbegin() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.cbegin();
   }
 
   const_iterator end() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.end();
   }
 
   const_iterator cend() const {
-    assert(Valid && "IR2Vec Vocabulary is invalid");
+    assert(isValid() && "IR2Vec Vocabulary is invalid");
     return Vocab.cend();
   }
 

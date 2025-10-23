@@ -530,8 +530,7 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:  EMIT branch-on-cond ir<false>
-; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, vector.ph
+; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector.body
@@ -557,24 +556,6 @@ define i32 @print_mulacc_sub(ptr %a, ptr %b) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
 ; CHECK-NEXT:   IR   %add.lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[RED_RESULT]]> from middle.block)
-; CHECK-NEXT: No successors
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT: Successor(s): ir-bb<loop>
-; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i64 [ 0, %scalar.ph ], [ %iv.next, %loop ] (extra operand: ir<0> from ir-bb<scalar.ph>)
-; CHECK-NEXT:   IR   %accum = phi i32 [ 0, %scalar.ph ], [ %add, %loop ] (extra operand: ir<0> from ir-bb<scalar.ph>)
-; CHECK-NEXT:   IR   %gep.a = getelementptr i8, ptr %a, i64 %iv
-; CHECK-NEXT:   IR   %load.a = load i8, ptr %gep.a, align 1
-; CHECK-NEXT:   IR   %ext.a = zext i8 %load.a to i32
-; CHECK-NEXT:   IR   %gep.b = getelementptr i8, ptr %b, i64 %iv
-; CHECK-NEXT:   IR   %load.b = load i8, ptr %gep.b, align 1
-; CHECK-NEXT:   IR   %ext.b = zext i8 %load.b to i32
-; CHECK-NEXT:   IR   %mul = mul i32 %ext.b, %ext.a
-; CHECK-NEXT:   IR   %add = sub i32 %accum, %mul
-; CHECK-NEXT:   IR   %iv.next = add i64 %iv, 1
-; CHECK-NEXT:   IR   %exitcond.not = icmp eq i64 %iv.next, 1024
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 entry:

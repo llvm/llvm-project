@@ -401,12 +401,16 @@
 
 // -march overwrite -mcpu's default -march
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-e31 -march=rv32imc | FileCheck -check-prefix=MCPU-MARCH %s
-// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+c"
+// MCPU-MARCH: "-nostdsysteminc" "-target-cpu" "sifive-e31"
+// MCPU-MARCH: "-target-feature" "+m" "-target-feature" "+c"
 // MCPU-MARCH: "-target-abi" "ilp32"
 
 // -march=unset erases previous march
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -march=rv32imc -march=unset -mcpu=sifive-e31 | FileCheck -check-prefix=MARCH-UNSET %s
-// MARCH-UNSET: "-nostdsysteminc" "-target-cpu" "sifive-e31" "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+c"
+// MARCH-UNSET: "-nostdsysteminc" "-target-cpu" "sifive-e31"
+// MARCH-UNSET: "-target-feature" "+m"
+// MARCH-UNSET: "-target-feature" "+a"
+// MARCH-UNSET: "-target-feature" "+c"
 // MARCH-UNSET-SAME: "-target-abi" "ilp32"
 
 // Check interaction between -mcpu and mtune, -mtune won't affect arch related

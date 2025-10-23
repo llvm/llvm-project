@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/string_view.h"
 #include "src/stdio/printf_core/writer.h"
 
+#include "src/__support/CPP/string_view.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-
 #include "test/UnitTest/Test.h"
+
+namespace {
 
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::printf_core::WriteBuffer;
@@ -314,3 +315,5 @@ TEST(LlvmLibcPrintfWriterTest, NullStringWithZeroMaxLengthWithCallback) {
   ASSERT_EQ(writer.get_chars_written(), 12);
   ASSERT_STREQ("aaaDEF111456", str);
 }
+
+} // namespace

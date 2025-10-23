@@ -2905,6 +2905,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
+  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
+
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
   // FIXME: This isn't the right factoring.  This is here for initial
@@ -2912,11 +2914,10 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // expect to always be CFGElements and then fill in the BuildOptions
   // appropriately.  This is essentially a layering violation.
   if (P.enableCheckUnreachable || P.enableThreadSafetyAnalysis ||
-      P.enableConsumedAnalysis) {
+      P.enableConsumedAnalysis || EnableLifetimeSafetyAnalysis) {
     // Unreachable code analysis and thread safety require a linearized CFG.
     AC.getCFGBuildOptions().setAllAlwaysAdd();
-  }
-  else {
+  } else {
     AC.getCFGBuildOptions()
       .setAlwaysAdd(Stmt::BinaryOperatorClass)
       .setAlwaysAdd(Stmt::CompoundAssignOperatorClass)
@@ -2927,7 +2928,6 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       .setAlwaysAdd(Stmt::UnaryOperatorClass);
   }
 
-  bool EnableLifetimeSafetyAnalysis = S.getLangOpts().EnableLifetimeSafety;
   // Install the logical handler.
   std::optional<LogicalErrorHandler> LEH;
   if (LogicalErrorHandler::hasActiveDiagnostics(Diags, D->getBeginLoc())) {

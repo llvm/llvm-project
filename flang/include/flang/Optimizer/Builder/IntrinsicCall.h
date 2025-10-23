@@ -246,9 +246,15 @@ struct IntrinsicLibrary {
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCPtrCompare(mlir::Type,
                                     llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoBroadcast(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMax(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoMin(llvm::ArrayRef<fir::ExtendedValue>);
+  void genCoSum(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCosd(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCospi(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genDsecnds(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
@@ -568,15 +574,6 @@ struct IntrinsicLibrary {
                                        llvm::StringRef errMsg);
 
   void setResultMustBeFreed() { resultMustBeFreed = true; }
-
-  // Check support of coarray features
-  void checkCoarrayEnabled() {
-    if (converter &&
-        !converter->getFoldingContext().languageFeatures().IsEnabled(
-            Fortran::common::LanguageFeature::Coarray))
-      fir::emitFatalError(loc, "Coarrays disabled, use '-fcoarray' to enable.",
-                          false);
-  }
 
   fir::FirOpBuilder &builder;
   mlir::Location loc;

@@ -55,7 +55,7 @@ void callnull(void){
   null(0,        0); // no error
   null(0, (char*)0); // no error
   null(0, (void*)0); // no error
-  null(0,  (int*)0); // expected-warning {{incompatible pointer types}}
+  null(0,  (int*)0); // expected-error {{incompatible pointer types}}
 }
 
 // FreeBSD kernel extensions

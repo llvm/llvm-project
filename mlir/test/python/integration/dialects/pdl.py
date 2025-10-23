@@ -16,20 +16,7 @@ def construct_and_print_in_module(f):
             print(module)
     return f
 
-
-# CHECK-LABEL: TEST: test_add_to_mul
-# CHECK: arith.muli
-@construct_and_print_in_module
-def test_add_to_mul(module_):
-    index_type = IndexType.get()
-
-    # Create a test case.
-    @module(sym_name="ir")
-    def ir():
-        @func.func(index_type, index_type)
-        def add_func(a, b):
-            return arith.addi(a, b)
-
+def get_pdl_patterns():
     # Create a rewrite from add to mul. This will match
     # - operation name is arith.addi
     # - operands are index types.
@@ -61,7 +48,41 @@ def test_add_to_mul(module_):
     # not yet captured Python side/has sharp edges. So best to construct the
     # module and PDL module in same scope.
     # FIXME: This should be made more robust.
-    frozen = PDLModule(m).freeze()
+    return PDLModule(m).freeze()
+
+
+# CHECK-LABEL: TEST: test_add_to_mul
+# CHECK: arith.muli
+@construct_and_print_in_module
+def test_add_to_mul(module_):
+    index_type = IndexType.get()
+
+    # Create a test case.
+    @module(sym_name="ir")
+    def ir():
+        @func.func(index_type, index_type)
+        def add_func(a, b):
+            return arith.addi(a, b)
+
+    frozen = get_pdl_patterns()
     # Could apply frozen pattern set multiple times.
     apply_patterns_and_fold_greedily(module_, frozen)
+    return module_
+
+
+# CHECK-LABEL: TEST: test_add_to_mul_with_op
+# CHECK: arith.muli
+@construct_and_print_in_module
+def test_add_to_mul_with_op(module_):
+    index_type = IndexType.get()
+
+    # Create a test case.
+    @module(sym_name="ir")
+    def ir():
+        @func.func(index_type, index_type)
+        def add_func(a, b):
+            return arith.addi(a, b)
+
+    frozen = get_pdl_patterns()
+    apply_patterns_and_fold_greedily(module_.operation, frozen)
     return module_

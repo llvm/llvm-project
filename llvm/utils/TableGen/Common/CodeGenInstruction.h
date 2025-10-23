@@ -320,6 +320,8 @@ public:
     return RV && isa<DagInit>(RV->getValue());
   }
 
+  StringRef getName() const { return TheDef->getName(); }
+
 private:
   bool isOperandImpl(StringRef OpListName, unsigned i,
                      StringRef PropertyName) const;

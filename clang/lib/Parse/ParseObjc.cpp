@@ -3295,9 +3295,9 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   assert(Tok.isOneOf(tok::l_brace, tok::kw_try, tok::colon) &&
          "Inline objective-c method not starting with '{' or 'try' or ':'");
   // Enter a scope for the method or c-function body.
-  ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
-                                 Scope::FnScope | Scope::DeclScope |
-                                 Scope::CompoundStmtScope);
+  ParseScope BodyScope(
+      this, (parseMethod ? Scope::ObjCMethodScope : Scope::NoScope) |
+                Scope::FnScope | Scope::DeclScope | Scope::CompoundStmtScope);
   Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   // Tell the actions module that we have entered a method or c-function definition

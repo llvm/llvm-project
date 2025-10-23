@@ -1269,6 +1269,12 @@ class OMPDefaultClause : public OMPClause {
   /// Start location of the kind in source code.
   SourceLocation KindKwLoc;
 
+  /// Variable-Category to indicate where Kind is applied
+  OpenMPDefaultClauseVariableCategory VC = OMPC_DEFAULT_VC_all;
+
+  /// Start location of Variable-Category
+  SourceLocation VCLoc;
+
   /// Set kind of the clauses.
   ///
   /// \param K Argument of clause.
@@ -1279,6 +1285,15 @@ class OMPDefaultClause : public OMPClause {
   /// \param KLoc Argument location.
   void setDefaultKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
 
+  /// Set Variable Category used with the Kind Clause (Default Modifier)
+  void setDefaultVariableCategory(OpenMPDefaultClauseVariableCategory VC) {
+    this->VC = VC;
+  }
+
+  void setDefaultVariableCategoryLocation(SourceLocation VCLoc) {
+    this->VCLoc = VCLoc;
+  }
+
 public:
   /// Build 'default' clause with argument \a A ('none' or 'shared').
   ///
@@ -1288,10 +1303,11 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   OMPDefaultClause(llvm::omp::DefaultKind A, SourceLocation ALoc,
+                   OpenMPDefaultClauseVariableCategory VC, SourceLocation VCLoc,
                    SourceLocation StartLoc, SourceLocation LParenLoc,
                    SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_default, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc) {}
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc), VC(VC), VCLoc(VCLoc) {}
 
   /// Build an empty clause.
   OMPDefaultClause()
@@ -1309,6 +1325,10 @@ public:
 
   /// Returns location of clause kind.
   SourceLocation getDefaultKindKwLoc() const { return KindKwLoc; }
+
+  OpenMPDefaultClauseVariableCategory getDefaultVC() const { return VC; }
+
+  SourceLocation getDefaultVCLoc() const { return VCLoc; }
 
   child_range children() {
     return child_range(child_iterator(), child_iterator());

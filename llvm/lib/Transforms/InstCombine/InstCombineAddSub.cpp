@@ -2002,6 +2002,16 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
   if (Instruction *FoldedFAdd = foldBinOpIntoSelectOrPhi(I))
     return FoldedFAdd;
 
+  // B = fadd A, 0.0
+  // Z = Op B
+  // can be transformed into
+  // Z = Op A
+  // Where Op is such that we can ignore sign of 0 in fadd
+  Value *A;
+  if (match(&I, m_OneUse(m_FAdd(m_Value(A), m_AnyZeroFP()))) &&
+      canIgnoreSignBitOfZero(*I.use_begin()))
+    return replaceInstUsesWith(I, A);
+
   // (-X) + Y --> Y - X
   Value *X, *Y;
   if (match(&I, m_c_FAdd(m_FNeg(m_Value(X)), m_Value(Y))))
@@ -2115,6 +2125,7 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   }
 
   // Find common base and collect RHS GEPs.
+  bool First = true;
   while (true) {
     if (Ptrs.contains(RHS)) {
       Base.Ptr = RHS;
@@ -2123,7 +2134,12 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
 
     if (auto *GEP = dyn_cast<GEPOperator>(RHS)) {
       Base.RHSGEPs.push_back(GEP);
-      Base.RHSNW &= GEP->getNoWrapFlags();
+      if (First) {
+        First = false;
+        Base.RHSNW = GEP->getNoWrapFlags();
+      } else {
+        Base.RHSNW = Base.RHSNW.intersectForOffsetAdd(GEP->getNoWrapFlags());
+      }
       RHS = GEP->getPointerOperand();
     } else {
       // No common base.
@@ -2132,13 +2148,19 @@ CommonPointerBase CommonPointerBase::compute(Value *LHS, Value *RHS) {
   }
 
   // Collect LHS GEPs.
+  First = true;
   while (true) {
     if (LHS == Base.Ptr)
       break;
 
     auto *GEP = cast<GEPOperator>(LHS);
     Base.LHSGEPs.push_back(GEP);
-    Base.LHSNW &= GEP->getNoWrapFlags();
+    if (First) {
+      First = false;
+      Base.LHSNW = GEP->getNoWrapFlags();
+    } else {
+      Base.LHSNW = Base.LHSNW.intersectForOffsetAdd(GEP->getNoWrapFlags());
+    }
     LHS = GEP->getPointerOperand();
   }
 
@@ -2332,12 +2354,8 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // and let's try to sink `(sub 0, b)` into `b` itself. But only if this isn't
   // a pure negation used by a select that looks like abs/nabs.
   bool IsNegation = match(Op0, m_ZeroInt());
-  if (!IsNegation || none_of(I.users(), [&I, Op1](const User *U) {
-        const Instruction *UI = dyn_cast<Instruction>(U);
-        if (!UI)
-          return false;
-        return match(UI, m_c_Select(m_Specific(Op1), m_Specific(&I)));
-      })) {
+  if (!IsNegation || none_of(I.users(), match_fn(m_c_Select(m_Specific(Op1),
+                                                            m_Specific(&I))))) {
     if (Value *NegOp1 = Negator::Negate(IsNegation, /* IsNSW */ IsNegation &&
                                                         I.hasNoSignedWrap(),
                                         Op1, *this))
@@ -2717,6 +2735,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       !Op1->hasNUsesOrMore(3) && isFreeToInvert(Y, Y->hasOneUse())) {
     Value *Not = Builder.CreateNot(Op0);
     return BinaryOperator::CreateSub(X, Not);
+  }
+
+  // min(X+1, Y) - min(X, Y) --> zext X < Y
+  // Replacing a sub and at least one min with an icmp
+  // and a zext is a potential improvement.
+  if (match(Op0, m_c_SMin(m_NSWAddLike(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_SMin(m_Specific(X), m_Specific(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpSLT(X, Y);
+    return new ZExtInst(Cond, I.getType());
+  }
+  if (match(Op0, m_c_UMin(m_NUWAddLike(m_Value(X), m_One()), m_Value(Y))) &&
+      match(Op1, m_c_UMin(m_Specific(X), m_Specific(Y))) &&
+      I.getType()->getScalarSizeInBits() != 1 &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Cond = Builder.CreateICmpULT(X, Y);
+    return new ZExtInst(Cond, I.getType());
   }
 
   // Optimize pointer differences into the same array into a size.  Consider:

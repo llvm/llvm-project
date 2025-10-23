@@ -729,41 +729,6 @@ let Class = TemplateSpecializationType in {
   }]>;
 }
 
-let Class = DependentTemplateSpecializationType in {
-  def : ReadHelper<[{
-    const auto &dtn = node->getDependentTemplateName();
-    auto name = dtn.getName();
-  }]>;
-
-  def : Property<"qualifier", NestedNameSpecifier> {
-    let Read = [{ dtn.getQualifier() }];
-  }
-  def : Property<"identifier", Optional<Identifier>> {
-    let Read = [{ makeOptionalFromPointer(name.getIdentifier()) }];
-  }
-  def : Property<"operatorKind", OverloadedOperatorKind> {
-    let Conditional = [{ !identifier }];
-    let Read = [{ name.getOperator() }];
-  }
-  def : Property<"HasTemplateKeyword", Bool> {
-    let Read = [{ dtn.hasTemplateKeyword() }];
-  }
-
-  def : Property<"keyword", ElaboratedTypeKeyword> {
-    let Read = [{ node->getKeyword() }];
-  }
-  def : Property<"templateArguments", Array<TemplateArgument>> {
-    let Read = [{ node->template_arguments() }];
-  }
-
-  def : Creator<[{
-    DependentTemplateStorage S(qualifier, identifier ? IdentifierOrOverloadedOperator(*identifier) :
-                                                       IdentifierOrOverloadedOperator(*operatorKind),
-                               HasTemplateKeyword);
-    return ctx.getDependentTemplateSpecializationType(keyword, S, templateArguments);
-  }]>;
-}
-
 let Class = TemplateTypeParmType in {
   def : Property<"depth", UInt32> {
     let Read = [{ node->getDepth() }];

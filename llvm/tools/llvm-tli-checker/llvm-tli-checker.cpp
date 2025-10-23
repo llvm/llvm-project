@@ -98,16 +98,13 @@ static void reportArchiveChildIssue(const object::Archive::Child &C, int Index,
 }
 
 // Return Name, and if Name is mangled, append "aka" and the demangled name.
-static std::string getPrintableName(StringRef Name) {
-  std::string OutputName = "'";
-  OutputName += Name;
-  OutputName += "'";
+static raw_ostream &printPrintableName(raw_ostream &OS, StringRef Name) {
+  OS << '\'' << Name << '\'';
+
   std::string DemangledName(demangle(Name));
-  if (Name != DemangledName) {
-    OutputName += " aka ";
-    OutputName += DemangledName;
-  }
-  return OutputName;
+  if (Name != DemangledName)
+    OS << " aka " << DemangledName;
+  return OS;
 }
 
 static void reportNumberOfEntries(const TargetLibraryInfo &TLI,
@@ -133,8 +130,8 @@ static void dumpTLIEntries(const TargetLibraryInfo &TLI) {
     bool IsAvailable = TLI.has(LF);
     StringRef FuncName = TargetLibraryInfo::getStandardName(LF);
 
-    outs() << (IsAvailable ? "    " : "not ")
-           << "available: " << getPrintableName(FuncName) << '\n';
+    outs() << (IsAvailable ? "    " : "not ") << "available: ";
+    printPrintableName(outs(), FuncName) << '\n';
   }
 }
 
@@ -335,7 +332,9 @@ int main(int argc, char *argv[]) {
         constexpr char YesNo[2][4] = {"no ", "yes"};
         constexpr char Indicator[4][3] = {"!!", ">>", "<<", "=="};
         outs() << Indicator[Which] << " TLI " << YesNo[TLIHas] << " SDK "
-               << YesNo[SDKHas] << ": " << getPrintableName(TLIName) << '\n';
+               << YesNo[SDKHas] << ": ";
+        printPrintableName(outs(), TLIName);
+        outs() << '\n';
       }
     }
 

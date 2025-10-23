@@ -8,7 +8,7 @@ config.substitutions.append(('%{compile_flags}',
     '-nostdinc++ -I %{include}'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib -nostdlib++ -L %{lib} -lunwind'
+    '-fuse-ld=lld -nostdlib -nostdlib++ -L %{lib} -lunwind'
     ' -lc -lm -lclang_rt.builtins -lsemihost -lcrt0-semihost' +
     ' -T {}'.format(libc_linker_script) +
     ' -Wl,--defsym=__flash=0x0'

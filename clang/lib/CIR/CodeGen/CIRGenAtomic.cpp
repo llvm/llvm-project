@@ -159,9 +159,9 @@ bool AtomicInfo::requiresMemSetZero(mlir::Type ty) const {
   case cir::TEK_Scalar:
     return !isFullSizeType(cgf.cgm, ty, atomicSizeInBits);
   case cir::TEK_Complex:
-    cgf.cgm.errorNYI(loc, "AtomicInfo::requiresMemSetZero: complex type");
-    return false;
-
+    return !isFullSizeType(cgf.cgm,
+                           mlir::cast<cir::ComplexType>(ty).getElementType(),
+                           atomicSizeInBits / 2);
   // Padding in structs has an undefined bit pattern.  User beware.
   case cir::TEK_Aggregate:
     return false;
@@ -244,8 +244,94 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
   }
 }
 
+static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
+                              Address dest, Address ptr, Address val1,
+                              Address val2, uint64_t size,
+                              cir::MemOrder successOrder,
+                              cir::MemOrder failureOrder) {
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value expected = builder.createLoad(loc, val1);
+  mlir::Value desired = builder.createLoad(loc, val2);
+
+  auto cmpxchg = cir::AtomicCmpXchg::create(
+      builder, loc, expected.getType(), builder.getBoolTy(), ptr.getPointer(),
+      expected, desired,
+      cir::MemOrderAttr::get(&cgf.getMLIRContext(), successOrder),
+      cir::MemOrderAttr::get(&cgf.getMLIRContext(), failureOrder),
+      builder.getI64IntegerAttr(ptr.getAlignment().getAsAlign().value()));
+
+  cmpxchg.setIsVolatile(e->isVolatile());
+  cmpxchg.setWeak(isWeak);
+
+  mlir::Value failed = builder.createNot(cmpxchg.getSuccess());
+  cir::IfOp::create(builder, loc, failed, /*withElseRegion=*/false,
+                    [&](mlir::OpBuilder &, mlir::Location) {
+                      auto ptrTy = mlir::cast<cir::PointerType>(
+                          val1.getPointer().getType());
+                      if (val1.getElementType() != ptrTy.getPointee()) {
+                        val1 = val1.withPointer(builder.createPtrBitcast(
+                            val1.getPointer(), val1.getElementType()));
+                      }
+                      builder.createStore(loc, cmpxchg.getOld(), val1);
+                      builder.createYield(loc);
+                    });
+
+  // Update the memory at Dest with Success's value.
+  cgf.emitStoreOfScalar(cmpxchg.getSuccess(),
+                        cgf.makeAddrLValue(dest, e->getType()),
+                        /*isInit=*/false);
+}
+
+static void emitAtomicCmpXchgFailureSet(CIRGenFunction &cgf, AtomicExpr *e,
+                                        bool isWeak, Address dest, Address ptr,
+                                        Address val1, Address val2,
+                                        Expr *failureOrderExpr, uint64_t size,
+                                        cir::MemOrder successOrder) {
+  Expr::EvalResult failureOrderEval;
+  if (failureOrderExpr->EvaluateAsInt(failureOrderEval, cgf.getContext())) {
+    uint64_t failureOrderInt = failureOrderEval.Val.getInt().getZExtValue();
+
+    cir::MemOrder failureOrder;
+    if (!cir::isValidCIRAtomicOrderingCABI(failureOrderInt)) {
+      failureOrder = cir::MemOrder::Relaxed;
+    } else {
+      switch ((cir::MemOrder)failureOrderInt) {
+      case cir::MemOrder::Relaxed:
+        // 31.7.2.18: "The failure argument shall not be memory_order_release
+        // nor memory_order_acq_rel". Fallback to monotonic.
+      case cir::MemOrder::Release:
+      case cir::MemOrder::AcquireRelease:
+        failureOrder = cir::MemOrder::Relaxed;
+        break;
+      case cir::MemOrder::Consume:
+      case cir::MemOrder::Acquire:
+        failureOrder = cir::MemOrder::Acquire;
+        break;
+      case cir::MemOrder::SequentiallyConsistent:
+        failureOrder = cir::MemOrder::SequentiallyConsistent;
+        break;
+      }
+    }
+
+    // Prior to c++17, "the failure argument shall be no stronger than the
+    // success argument". This condition has been lifted and the only
+    // precondition is 31.7.2.18. Effectively treat this as a DR and skip
+    // language version checks.
+    emitAtomicCmpXchg(cgf, e, isWeak, dest, ptr, val1, val2, size, successOrder,
+                      failureOrder);
+    return;
+  }
+
+  assert(!cir::MissingFeatures::atomicExpr());
+  cgf.cgm.errorNYI(e->getSourceRange(),
+                   "emitAtomicCmpXchgFailureSet: non-constant failure order");
+}
+
 static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
-                         Address ptr, Address val1, uint64_t size,
+                         Address ptr, Address val1, Address val2,
+                         Expr *isWeakExpr, Expr *failureOrderExpr, int64_t size,
                          cir::MemOrder order) {
   std::unique_ptr<AtomicScopeModel> scopeModel = expr->getScopeModel();
   if (scopeModel) {
@@ -255,6 +341,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   }
 
   assert(!cir::MissingFeatures::atomicSyncScopeID());
+  llvm::StringRef opName;
 
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(expr->getSourceRange());
@@ -263,6 +350,30 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   switch (expr->getOp()) {
   case AtomicExpr::AO__c11_atomic_init:
     llvm_unreachable("already handled!");
+
+  case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+    emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/false, dest, ptr, val1,
+                                val2, failureOrderExpr, size, order);
+    return;
+
+  case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+    emitAtomicCmpXchgFailureSet(cgf, expr, /*isWeak=*/true, dest, ptr, val1,
+                                val2, failureOrderExpr, size, order);
+    return;
+
+  case AtomicExpr::AO__atomic_compare_exchange:
+  case AtomicExpr::AO__atomic_compare_exchange_n: {
+    bool isWeak = false;
+    if (isWeakExpr->EvaluateAsBooleanCondition(isWeak, cgf.getContext())) {
+      emitAtomicCmpXchgFailureSet(cgf, expr, isWeak, dest, ptr, val1, val2,
+                                  failureOrderExpr, size, order);
+    } else {
+      assert(!cir::MissingFeatures::atomicExpr());
+      cgf.cgm.errorNYI(expr->getSourceRange(),
+                       "emitAtomicOp: non-constant isWeak");
+    }
+    return;
+  }
 
   case AtomicExpr::AO__c11_atomic_load:
   case AtomicExpr::AO__atomic_load_n:
@@ -290,18 +401,20 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     return;
   }
 
+  case AtomicExpr::AO__c11_atomic_exchange:
+  case AtomicExpr::AO__atomic_exchange_n:
+  case AtomicExpr::AO__atomic_exchange:
+    opName = cir::AtomicXchg::getOperationName();
+    break;
+
   case AtomicExpr::AO__opencl_atomic_init:
 
-  case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
 
-  case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:
   case AtomicExpr::AO__hip_atomic_compare_exchange_weak:
 
-  case AtomicExpr::AO__atomic_compare_exchange:
-  case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
 
@@ -315,11 +428,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__scoped_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
 
-  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
-  case AtomicExpr::AO__atomic_exchange_n:
-  case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange_n:
   case AtomicExpr::AO__scoped_atomic_exchange:
 
@@ -397,8 +507,23 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__atomic_clear:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
-    break;
+    return;
   }
+
+  assert(!opName.empty() && "expected operation name to build");
+  mlir::Value loadVal1 = builder.createLoad(loc, val1);
+
+  SmallVector<mlir::Value> atomicOperands = {ptr.getPointer(), loadVal1};
+  SmallVector<mlir::Type> atomicResTys = {loadVal1.getType()};
+  mlir::Operation *rmwOp = builder.create(loc, builder.getStringAttr(opName),
+                                          atomicOperands, atomicResTys);
+
+  rmwOp->setAttr("mem_order", orderAttr);
+  if (expr->isVolatile())
+    rmwOp->setAttr("is_volatile", builder.getUnitAttr());
+
+  mlir::Value result = rmwOp->getResult(0);
+  builder.createStore(loc, result, dest);
 }
 
 static bool isMemOrderValid(uint64_t order, bool isStore, bool isLoad) {
@@ -421,7 +546,11 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   if (const auto *ty = atomicTy->getAs<AtomicType>())
     memTy = ty->getValueType();
 
+  Expr *isWeakExpr = nullptr;
+  Expr *orderFailExpr = nullptr;
+
   Address val1 = Address::invalid();
+  Address val2 = Address::invalid();
   Address dest = Address::invalid();
   Address ptr = emitPointerWithAlignment(e->getPtr());
 
@@ -462,7 +591,32 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     val1 = emitPointerWithAlignment(e->getVal1());
     break;
 
+  case AtomicExpr::AO__atomic_exchange:
+    val1 = emitPointerWithAlignment(e->getVal1());
+    dest = emitPointerWithAlignment(e->getVal2());
+    break;
+
+  case AtomicExpr::AO__atomic_compare_exchange:
+  case AtomicExpr::AO__atomic_compare_exchange_n:
+  case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
+  case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
+    val1 = emitPointerWithAlignment(e->getVal1());
+    if (e->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
+        e->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
+      val2 = emitPointerWithAlignment(e->getVal2());
+    else
+      val2 = emitValToTemp(*this, e->getVal2());
+    orderFailExpr = e->getOrderFail();
+    if (e->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
+        e->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
+        e->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange_n ||
+        e->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
+      isWeakExpr = e->getWeak();
+    break;
+
+  case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_store_n:
+  case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__c11_atomic_store:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
@@ -484,6 +638,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   if (dest.isValid()) {
     if (shouldCastToIntPtrTy)
       dest = atomics.castToAtomicIntPointer(dest);
+  } else if (e->isCmpXChg()) {
+    dest = createMemTemp(resultTy, getLoc(e->getSourceRange()), "cmpxchg.bool");
   } else if (!resultTy->isVoidType()) {
     dest = atomics.createTempAlloca();
     if (shouldCastToIntPtrTy)
@@ -530,8 +686,8 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     // value, but it's hard to enforce that in general.
     uint64_t ord = orderConst.Val.getInt().getZExtValue();
     if (isMemOrderValid(ord, isStore, isLoad))
-      emitAtomicOp(*this, e, dest, ptr, val1, size,
-                   static_cast<cir::MemOrder>(ord));
+      emitAtomicOp(*this, e, dest, ptr, val1, val2, isWeakExpr, orderFailExpr,
+                   size, static_cast<cir::MemOrder>(ord));
   } else {
     assert(!cir::MissingFeatures::atomicExpr());
     cgm.errorNYI(e->getSourceRange(), "emitAtomicExpr: dynamic memory order");
@@ -556,9 +712,11 @@ void CIRGenFunction::emitAtomicInit(Expr *init, LValue dest) {
     return;
   }
 
-  case cir::TEK_Complex:
-    cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: complex type");
+  case cir::TEK_Complex: {
+    mlir::Value value = emitComplexExpr(init);
+    atomics.emitCopyIntoMemory(RValue::get(value));
     return;
+  }
 
   case cir::TEK_Aggregate:
     cgm.errorNYI(init->getSourceRange(), "emitAtomicInit: aggregate type");

@@ -405,16 +405,14 @@ struct ConvertNVGPUToNVVMPass
         converter, [](gpu::AddressSpace space) -> unsigned {
           switch (space) {
           case gpu::AddressSpace::Global:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Global);
           case gpu::AddressSpace::Workgroup:
-            return static_cast<unsigned>(
-                NVVM::NVVMMemorySpace::kSharedMemorySpace);
+            return static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
           case gpu::AddressSpace::Private:
             return 0;
           }
           llvm_unreachable("unknown address space enum value");
-          return 0;
+          return static_cast<unsigned>(NVVM::NVVMMemorySpace::Generic);
         });
     /// device-side async tokens cannot be materialized in nvvm. We just
     /// convert them to a dummy i32 type in order to easily drop them during
@@ -677,7 +675,7 @@ struct NVGPUAsyncCopyLowering
                              adaptor.getSrcIndices());
     // Intrinsics takes a global pointer so we need an address space cast.
     auto srcPointerGlobalType = LLVM::LLVMPointerType::get(
-        op->getContext(), NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        op->getContext(), static_cast<unsigned>(NVVM::NVVMMemorySpace::Global));
     scrPtr = LLVM::AddrSpaceCastOp::create(b, srcPointerGlobalType, scrPtr);
     int64_t dstElements = adaptor.getDstElements().getZExtValue();
     int64_t sizeInBytes =

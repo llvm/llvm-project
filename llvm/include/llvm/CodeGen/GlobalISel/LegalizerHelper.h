@@ -364,6 +364,43 @@ public:
                                                       LLT HalfTy,
                                                       LLT ShiftAmtTy);
 
+  /// Multi-way shift legalization: directly split wide shifts into target-sized
+  /// parts in a single step, avoiding recursive binary splitting.
+  LLVM_ABI LegalizeResult narrowScalarShiftMultiway(MachineInstr &MI,
+                                                    LLT TargetTy);
+
+  /// Optimized path for constant shift amounts using static indexing.
+  /// Directly calculates which source parts contribute to each output part
+  /// without generating runtime select chains.
+  LLVM_ABI LegalizeResult narrowScalarShiftByConstantMultiway(MachineInstr &MI,
+                                                              const APInt &Amt,
+                                                              LLT TargetTy,
+                                                              LLT ShiftAmtTy);
+
+  struct ShiftParams {
+    Register WordShift;   // Number of complete words to shift
+    Register BitShift;    // Number of bits to shift within words
+    Register InvBitShift; // Complement bit shift (TargetBits - BitShift)
+    Register Zero;        // Zero constant for SHL/LSHR fill
+    Register SignBit;     // Sign extension value for ASHR fill
+  };
+
+  /// Generates a single output part for constant shifts using direct indexing.
+  /// Calculates which source parts contribute and how they're combined.
+  LLVM_ABI Register buildConstantShiftPart(unsigned Opcode, unsigned PartIdx,
+                                           unsigned NumParts,
+                                           ArrayRef<Register> SrcParts,
+                                           const ShiftParams &Params,
+                                           LLT TargetTy, LLT ShiftAmtTy);
+
+  /// Generates a shift part with carry for variable shifts.
+  /// Combines main operand shifted by BitShift with carry bits from adjacent
+  /// operand.
+  LLVM_ABI Register buildVariableShiftPart(unsigned Opcode,
+                                           Register MainOperand,
+                                           Register ShiftAmt, LLT TargetTy,
+                                           Register CarryOperand = Register());
+
   LLVM_ABI LegalizeResult fewerElementsVectorReductions(MachineInstr &MI,
                                                         unsigned TypeIdx,
                                                         LLT NarrowTy);
@@ -473,6 +510,8 @@ public:
   LLVM_ABI LegalizeResult lowerExtract(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerInsert(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSADDE(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSSUBE(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAddSubSatToAddoSubo(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerShlSat(MachineInstr &MI);
@@ -485,6 +524,8 @@ public:
   LLVM_ABI LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerAbsToCNeg(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerAbsDiffToSelect(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerAbsDiffToMinMax(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerFAbs(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemcpyInline(MachineInstr &MI);

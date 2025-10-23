@@ -52,6 +52,14 @@ template <typename... Args>
 constexpr bool is_constructible_v = __is_constructible(Args...);
 
 template <typename T>
+struct is_aggregate {
+    static constexpr bool value = __is_aggregate(T);
+};
+
+template <typename T>
+constexpr bool is_aggregate_v = __is_aggregate(T);
+
+template <typename T>
 struct is_final {
     static constexpr bool value = __is_final(T);
 };
@@ -96,7 +104,7 @@ constexpr bool is_assignable_v = __is_assignable(T, U);
 
 template <typename T>
 struct __details_is_empty {
-    static constexpr bool value = __is_empty(T);
+  static constexpr bool value = __is_empty(T);
 };
 template <typename T>
 using is_empty  = __details_is_empty<T>;
@@ -105,9 +113,7 @@ constexpr bool is_empty_v = __is_empty(T);
 
 template <typename T>
 struct __details_is_standard_layout {
-static constexpr bool value = __is_standard_layout(T);
-
-
+    static constexpr bool value = __is_standard_layout(T);
 };
 template <typename T>
 using is_standard_layout = __details_is_standard_layout<T>;
@@ -124,6 +130,17 @@ using is_constructible  = __details_is_constructible<Args...>;
 
 template <typename... Args>
 constexpr bool is_constructible_v = __is_constructible(Args...);
+
+template <typename T>
+struct __details_is_aggregate {
+    static constexpr bool value = __is_aggregate(T);
+};
+
+template <typename T>
+using is_aggregate  = __details_is_aggregate<T>;
+
+template <typename T>
+constexpr bool is_aggregate_v = __is_aggregate(T);
 
 template <typename T>
 struct __details_is_final {
@@ -191,10 +208,19 @@ template <typename... Args>
 struct __details_is_constructible : bool_constant<__is_constructible(Args...)> {};
 
 template <typename... Args>
-using is_constructible  = __details_is_constructible<Args...>;
+using is_constructible = __details_is_constructible<Args...>;
 
 template <typename... Args>
 constexpr bool is_constructible_v = is_constructible<Args...>::value;
+
+template <typename T>
+struct __details_is_aggregate : bool_constant<__is_aggregate(T)> {};
+
+template <typename T>
+using is_aggregate = __details_is_aggregate<T>;
+
+template <typename T>
+constexpr bool is_aggregate_v = is_aggregate<T>::value;
 
 template <typename T>
 struct __details_is_final : bool_constant<__is_final(T)> {};
@@ -204,7 +230,6 @@ template <typename T>
 constexpr bool is_final_v = is_final<T>::value;
 
 #endif
-
 }
 
 static_assert(std::is_trivially_relocatable<int>::value);
@@ -299,6 +324,18 @@ static_assert(std::is_final_v<Arr>);
 // expected-note@-1 {{'int[3]' is not final}} \
 // expected-note@-1 {{because it is not a class or union type}}
 
+
+static_assert(!std::is_aggregate<int>::value);
+
+static_assert(std::is_aggregate<void>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_aggregate<void>::value'}} \
+// expected-note@-1 {{'void' is not aggregate}} \
+// expected-note@-1 {{because it is a cv void type}}
+static_assert(std::is_aggregate_v<void>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_aggregate_v<void>'}} \
+// expected-note@-1 {{'void' is not aggregate}} \
+// expected-note@-1 {{because it is a cv void type}}
+
 namespace test_namespace {
     using namespace std;
     static_assert(is_trivially_relocatable<int&>::value);
@@ -350,6 +387,15 @@ namespace test_namespace {
     // expected-note@-1 {{because it is a cv void type}}
     static_assert(is_constructible_v<void>);
     // expected-error@-1 {{static assertion failed due to requirement 'is_constructible_v<void>'}} \
+    // expected-note@-1 {{because it is a cv void type}}
+    
+    static_assert(std::is_aggregate<void>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_aggregate<void>::value'}} \
+    // expected-note@-1 {{'void' is not aggregate}} \
+    // expected-note@-1 {{because it is a cv void type}}
+    static_assert(std::is_aggregate_v<void>);
+    // expected-error@-1 {{static assertion failed due to requirement 'std::is_aggregate_v<void>'}} \
+    // expected-note@-1 {{'void' is not aggregate}} \
     // expected-note@-1 {{because it is a cv void type}}
 
     static_assert(is_final<int&>::value);
@@ -413,6 +459,14 @@ concept C3 = std::is_constructible_v<Args...>; // #concept6
 template <C3 T> void g3();  // #cand6
 
 
+template <typename T>
+requires std::is_aggregate<T>::value void f5();  // #cand9
+
+template <typename T>
+concept C5 = std::is_aggregate_v<T>; // #concept10
+
+template <C5 T> void g5();  // #cand10
+
 void test() {
     f<int&>();
     // expected-error@-1 {{no matching function for call to 'f'}} \
@@ -469,6 +523,21 @@ void test() {
     // expected-note@#cand6 {{because 'void' does not satisfy 'C3'}} \
     // expected-note@#concept6 {{because 'std::is_constructible_v<void>' evaluated to false}} \
     // expected-note@#concept6 {{because it is a cv void type}}
+
+    f5<void>();
+    // expected-error@-1 {{no matching function for call to 'f5'}} \
+    // expected-note@#cand9 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note-re@#cand9 {{because '{{.*}}is_aggregate<void>::value' evaluated to false}} \
+    // expected-note@#cand9 {{'void' is not aggregate}} \
+    // expected-note@#cand9 {{because it is a cv void type}}
+
+    g5<void>();
+    // expected-error@-1 {{no matching function for call to 'g5'}} \
+    // expected-note@#cand10 {{candidate template ignored: constraints not satisfied [with T = void]}} \
+    // expected-note@#cand10 {{because 'void' does not satisfy 'C5'}} \
+    // expected-note@#concept10 {{because 'std::is_aggregate_v<void>' evaluated to false}} \
+    // expected-note@#concept10 {{'void' is not aggregate}} \
+    // expected-note@#concept10 {{because it is a cv void type}}
 }
 }
 

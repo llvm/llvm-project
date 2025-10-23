@@ -91,6 +91,13 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *call = dyn_cast<CallExpr>(E)) {
+      if (auto *Callee = call->getCalleeDecl()) {
+        if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+          return callback(E, true);
+        }
+      }
+
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
@@ -108,7 +115,7 @@ bool tryToFindPtrOrigin(
         if (auto *Callee = operatorCall->getDirectCallee()) {
           auto ClsName = safeGetName(Callee->getParent());
           if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
-              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              isRetainPtrOrOSPtr(ClsName) || ClsName == "unique_ptr" ||
               ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
               ClsName == "WeakRef") {
             if (operatorCall->getNumArgs() == 1) {
@@ -153,6 +160,29 @@ bool tryToFindPtrOrigin(
         if (Name == "__builtin___CFStringMakeConstantString" ||
             Name == "NSClassFromString")
           return callback(E, true);
+      } else if (auto *CalleeE = call->getCallee()) {
+        if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
+          if (isSingleton(E->getFoundDecl()))
+            return callback(E, true);
+        }
+      }
+
+      // Sometimes, canonical type erroneously turns Ref<T> into T.
+      // Workaround this problem by checking again if the original type was
+      // a SubstTemplateTypeParmType of a safe smart pointer type (e.g. Ref).
+      if (auto *CalleeDecl = call->getCalleeDecl()) {
+        if (auto *FD = dyn_cast<FunctionDecl>(CalleeDecl)) {
+          auto RetType = FD->getReturnType();
+          if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(RetType)) {
+            if (auto *SubstType = Subst->desugar().getTypePtr()) {
+              if (auto *RD = dyn_cast<RecordType>(SubstType)) {
+                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getOriginalDecl()))
+                  if (isSafePtr(CXX))
+                    return callback(E, true);
+              }
+            }
+          }
+        }
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
@@ -208,11 +238,23 @@ bool isASafeCallArg(const Expr *E) {
         return true;
     }
   }
+  if (isa<CXXTemporaryObjectExpr>(E))
+    return true; // A temporary lives until the end of this statement.
   if (isConstOwnerPtrMemberExpr(E))
     return true;
 
   // TODO: checker for method calls on non-refcounted objects
   return isa<CXXThisExpr>(E);
+}
+
+bool isNullPtr(const clang::Expr *E) {
+  if (isa<CXXNullPtrLiteralExpr>(E) || isa<GNUNullExpr>(E))
+    return true;
+  if (auto *Int = dyn_cast_or_null<IntegerLiteral>(E)) {
+    if (Int->getValue().isZero())
+      return true;
+  }
+  return false;
 }
 
 bool isConstOwnerPtrMemberExpr(const clang::Expr *E) {
@@ -273,7 +315,7 @@ public:
   bool VisitReturnStmt(const ReturnStmt *RS) {
     if (auto *RV = RS->getRetValue()) {
       RV = RV->IgnoreParenCasts();
-      if (isa<CXXNullPtrLiteralExpr>(RV))
+      if (isNullPtr(RV))
         return true;
       return isConstOwnerPtrMemberExpr(RV);
     }

@@ -63,15 +63,15 @@ static void handleCustomErrorUPVoid(std::unique_ptr<CustomError> CE) {}
 } // end anonymous namespace
 
 // Test that a checked success value doesn't cause any issues.
-TEST(Error, CheckedSuccess) {
+TEST(ErrorTest, CheckedSuccess) {
   Error E = Error::success();
   EXPECT_FALSE(E) << "Unexpected error while testing Error 'Success'";
 }
 
 // Check that a consumed success value doesn't cause any issues.
-TEST(Error, ConsumeSuccess) { consumeError(Error::success()); }
+TEST(ErrorTest, ConsumeSuccess) { consumeError(Error::success()); }
 
-TEST(Error, ConsumeError) {
+TEST(ErrorTest, ConsumeError) {
   Error E = make_error<CustomError>(42);
   if (E) {
     consumeError(std::move(E));
@@ -80,7 +80,7 @@ TEST(Error, ConsumeError) {
 }
 
 // Test that unchecked success values cause an abort.
-TEST(Error, UncheckedSuccess) {
+TEST(ErrorTest, UncheckedSuccess) {
   EXPECT_DEATH(
       { Error E = Error::success(); },
       "Error must be checked prior to destruction")
@@ -88,7 +88,7 @@ TEST(Error, UncheckedSuccess) {
 }
 
 // Test that a checked but unhandled error causes an abort.
-TEST(Error, CheckedButUnhandledError) {
+TEST(ErrorTest, CheckedButUnhandledError) {
   auto DropUnhandledError = []() {
     Error E = make_error<CustomError>(42);
     (void)!E;
@@ -99,7 +99,7 @@ TEST(Error, CheckedButUnhandledError) {
 }
 
 // Check that we can handle a custom error.
-TEST(Error, HandleCustomError) {
+TEST(ErrorTest, HandleCustomError) {
   int CaughtErrorInfo = 0;
   handleAllErrors(make_error<CustomError>(42), [&](const CustomError &CE) {
     CaughtErrorInfo = CE.getInfo();
@@ -121,7 +121,7 @@ TEST(Error, HandleCustomError) {
 // void (unique_ptr<Err>)
 // Error (unique_ptr<Err>) mutable
 // void (unique_ptr<Err>) mutable
-TEST(Error, HandlerTypeDeduction) {
+TEST(ErrorTest, HandlerTypeDeduction) {
 
   handleAllErrors(make_error<CustomError>(42), [](const CustomError &CE) {});
 
@@ -173,7 +173,7 @@ TEST(Error, HandlerTypeDeduction) {
 }
 
 // Test that we can handle errors with custom base classes.
-TEST(Error, HandleCustomErrorWithCustomBaseClass) {
+TEST(ErrorTest, HandleCustomErrorWithCustomBaseClass) {
   int CaughtErrorInfo = 0;
   std::string CaughtErrorExtraInfo;
   handleAllErrors(make_error<CustomSubError>(42, "foo"),
@@ -188,7 +188,7 @@ TEST(Error, HandleCustomErrorWithCustomBaseClass) {
 }
 
 // Check that we trigger only the first handler that applies.
-TEST(Error, FirstHandlerOnly) {
+TEST(ErrorTest, FirstHandlerOnly) {
   int DummyInfo = 0;
   int CaughtErrorInfo = 0;
   std::string CaughtErrorExtraInfo;
@@ -208,7 +208,7 @@ TEST(Error, FirstHandlerOnly) {
 }
 
 // Check that general handlers shadow specific ones.
-TEST(Error, HandlerShadowing) {
+TEST(ErrorTest, HandlerShadowing) {
   int CaughtErrorInfo = 0;
   int DummyInfo = 0;
   std::string DummyExtraInfo;
@@ -240,14 +240,14 @@ static void errAsOutParamHelper(Error &Err) {
 }
 
 // Test that ErrorAsOutParameter sets the checked flag on construction.
-TEST(Error, ErrorAsOutParameterChecked) {
+TEST(ErrorTest, ErrorAsOutParameterChecked) {
   Error E = Error::success();
   errAsOutParamHelper(E);
   (void)!!E;
 }
 
 // Test that ErrorAsOutParameter clears the checked flag on destruction.
-TEST(Error, ErrorAsOutParameterUnchecked) {
+TEST(ErrorTest, ErrorAsOutParameterUnchecked) {
   EXPECT_DEATH(
       {
         Error E = Error::success();
@@ -258,7 +258,7 @@ TEST(Error, ErrorAsOutParameterUnchecked) {
 }
 
 // Check 'Error::isA<T>' method handling.
-TEST(Error, IsAHandling) {
+TEST(ErrorTest, IsAHandling) {
   // Check 'isA' handling.
   Error E = make_error<CustomError>(42);
   Error F = make_error<CustomSubError>(42, "foo");
@@ -275,7 +275,7 @@ TEST(Error, IsAHandling) {
   consumeError(std::move(G));
 }
 
-TEST(Error, StringError) {
+TEST(ErrorTest, StringError) {
   auto E = make_error<StringError>("foo");
   if (E.isA<StringError>())
     EXPECT_EQ(toString(std::move(E)), "foo") << "Unexpected StringError value";
@@ -284,7 +284,7 @@ TEST(Error, StringError) {
 }
 
 // Test Checked Expected<T> in success mode.
-TEST(Error, CheckedExpectedInSuccessMode) {
+TEST(ErrorTest, CheckedExpectedInSuccessMode) {
   Expected<int> A = 7;
   EXPECT_TRUE(!!A) << "Expected with non-error value doesn't convert to 'true'";
   // Access is safe in second test, since we checked the error in the first.
@@ -292,7 +292,7 @@ TEST(Error, CheckedExpectedInSuccessMode) {
 }
 
 // Test Expected with reference type.
-TEST(Error, ExpectedWithReferenceType) {
+TEST(ErrorTest, ExpectedWithReferenceType) {
   int A = 7;
   Expected<int &> B = A;
   // 'Check' B.
@@ -304,7 +304,7 @@ TEST(Error, ExpectedWithReferenceType) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(Error, UncheckedExpectedInSuccessModeDestruction) {
+TEST(ErrorTest, UncheckedExpectedInSuccessModeDestruction) {
   EXPECT_DEATH(
       { Expected<int> A = 7; },
       "Expected<T> must be checked before access or destruction.")
@@ -314,7 +314,7 @@ TEST(Error, UncheckedExpectedInSuccessModeDestruction) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(Error, UncheckedExpectedInSuccessModeAccess) {
+TEST(ErrorTest, UncheckedExpectedInSuccessModeAccess) {
   EXPECT_DEATH(
       {
         Expected<int> A = 7;
@@ -327,7 +327,7 @@ TEST(Error, UncheckedExpectedInSuccessModeAccess) {
 // Test Unchecked Expected<T> in success mode.
 // We expect this to blow up the same way Error would.
 // Test runs in debug mode only.
-TEST(Error, UncheckedExpectedInSuccessModeAssignment) {
+TEST(ErrorTest, UncheckedExpectedInSuccessModeAssignment) {
   EXPECT_DEATH(
       {
         Expected<int> A = 7;
@@ -338,7 +338,7 @@ TEST(Error, UncheckedExpectedInSuccessModeAssignment) {
 }
 
 // Test Expected<T> in failure mode.
-TEST(Error, ExpectedInFailureMode) {
+TEST(ErrorTest, ExpectedInFailureMode) {
   Expected<int> A = make_error<CustomError>(42);
   EXPECT_FALSE(!!A) << "Expected with error value doesn't convert to 'false'";
   Error E = A.takeError();
@@ -349,7 +349,7 @@ TEST(Error, ExpectedInFailureMode) {
 // Check that an Expected instance with an error value doesn't allow access to
 // operator*.
 // Test runs in debug mode only.
-TEST(Error, AccessExpectedInFailureMode) {
+TEST(ErrorTest, AccessExpectedInFailureMode) {
   Expected<int> A = make_error<CustomError>(42);
   EXPECT_DEATH(*A, "Expected<T> must be checked before access or destruction.")
       << "Incorrect Expected error value";
@@ -359,7 +359,7 @@ TEST(Error, AccessExpectedInFailureMode) {
 // Check that an Expected instance with an error triggers an abort if
 // unhandled.
 // Test runs in debug mode only.
-TEST(Error, UnhandledExpectedInFailureMode) {
+TEST(ErrorTest, UnhandledExpectedInFailureMode) {
   EXPECT_DEATH(
       { Expected<int> A = make_error<CustomError>(42); },
       "Expected<T> must be checked before access or destruction.")
@@ -367,7 +367,7 @@ TEST(Error, UnhandledExpectedInFailureMode) {
 }
 
 // Test covariance of Expected.
-TEST(Error, ExpectedCovariance) {
+TEST(ErrorTest, ExpectedCovariance) {
   class B {};
   class D : public B {};
 
@@ -387,7 +387,7 @@ TEST(Error, ExpectedCovariance) {
 }
 
 // Test that the ExitOnError utility works as expected.
-TEST(Error, CantFailSuccess) {
+TEST(ErrorTest, CantFailSuccess) {
   cantFail(Error::success());
 
   int X = cantFail(Expected<int>(42));
@@ -399,7 +399,7 @@ TEST(Error, CantFailSuccess) {
 }
 
 // Test that cantFail results in a crash if you pass it a failure value.
-TEST(Error, CantFailDeath) {
+TEST(ErrorTest, CantFailDeath) {
   EXPECT_DEATH(cantFail(make_error<StringError>("foo")), "")
       << "cantFail(Error) did not cause an abort for failure value";
 

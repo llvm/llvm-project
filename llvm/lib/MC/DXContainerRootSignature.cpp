@@ -137,7 +137,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                              llvm::endianness::little);
       rewriteOffsetToCurrentByte(BOS, writePlaceholder(BOS));
       for (const auto &Range : Table) {
-        support::endian::write(BOS, Range.RangeType, llvm::endianness::little);
+        support::endian::write(BOS, static_cast<uint32_t>(Range.RangeType),
+                               llvm::endianness::little);
         support::endian::write(BOS, Range.NumDescriptors,
                                llvm::endianness::little);
         support::endian::write(BOS, Range.BaseShaderRegister,
