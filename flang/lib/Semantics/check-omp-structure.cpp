@@ -61,6 +61,124 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 using namespace Fortran::parser::omp;
 
+OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
+    : DirectiveStructureChecker(context,
+#define GEN_FLANG_DIRECTIVE_CLAUSE_MAP
+#include "llvm/Frontend/OpenMP/OMP.inc"
+      ) {
+  scopeStack_.push_back(&context.globalScope());
+}
+
+bool OmpStructureChecker::Enter(const parser::MainProgram &x) {
+  using StatementProgramStmt = parser::Statement<parser::ProgramStmt>;
+  if (auto &stmt{std::get<std::optional<StatementProgramStmt>>(x.t)}) {
+    scopeStack_.push_back(stmt->statement.v.symbol->scope());
+  } else {
+    for (const Scope &scope : context_.globalScope().children()) {
+      // There can only be one main program.
+      if (scope.kind() == Scope::Kind::MainProgram) {
+        scopeStack_.push_back(&scope);
+        break;
+      }
+    }
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::MainProgram &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::BlockData &x) {
+  // The BLOCK DATA name is optional, so we need to look for the
+  // corresponding scope in the global scope.
+  auto &stmt{std::get<parser::Statement<parser::BlockDataStmt>>(x.t)};
+  if (auto &name{stmt.statement.v}) {
+    scopeStack_.push_back(name->symbol->scope());
+  } else {
+    for (const Scope &scope : context_.globalScope().children()) {
+      if (scope.kind() == Scope::Kind::BlockData) {
+        if (scope.symbol()->name().empty()) {
+          scopeStack_.push_back(&scope);
+          break;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::BlockData &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::Module &x) {
+  auto &stmt{std::get<parser::Statement<parser::ModuleStmt>>(x.t)};
+  const Symbol *sym{stmt.statement.v.symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::Module &x) {
+  scopeStack_.pop_back();
+}
+
+bool OmpStructureChecker::Enter(const parser::Submodule &x) {
+  auto &stmt{std::get<parser::Statement<parser::SubmoduleStmt>>(x.t)};
+  const Symbol *sym{std::get<parser::Name>(stmt.statement.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::Submodule &x) {
+  scopeStack_.pop_back();
+}
+
+// Function/subroutine subprogram nodes don't appear in INTERFACEs, but
+// the subprogram/end statements do.
+bool OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
+  const Symbol *sym{std::get<parser::Name>(x.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+  scopeStack_.pop_back();
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
+  const Symbol *sym{std::get<parser::Name>(x.t).symbol};
+  scopeStack_.push_back(sym->scope());
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+  scopeStack_.pop_back();
+  return true;
+}
+
+bool OmpStructureChecker::Enter(const parser::BlockConstruct &x) {
+  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
+  auto &execPart{std::get<parser::Block>(x.t)};
+  if (auto &&source{parser::GetSource(specPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  } else if (auto &&source{parser::GetSource(execPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  }
+  return true;
+}
+
+void OmpStructureChecker::Leave(const parser::BlockConstruct &x) {
+  auto &specPart{std::get<parser::BlockSpecificationPart>(x.t)};
+  auto &execPart{std::get<parser::Block>(x.t)};
+  if (auto &&source{parser::GetSource(specPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  } else if (auto &&source{parser::GetSource(execPart)}) {
+    scopeStack_.push_back(&context_.FindScope(*source));
+  }
+}
+
 // Use when clause falls under 'struct OmpClause' in 'parse-tree.h'.
 #define CHECK_SIMPLE_CLAUSE(X, Y) \
   void OmpStructureChecker::Enter(const parser::OmpClause::X &) { \
@@ -360,6 +478,36 @@ bool OmpStructureChecker::IsNestedInDirective(llvm::omp::Directive directive) {
     }
   }
   return false;
+}
+
+bool OmpStructureChecker::InTargetRegion() {
+  if (IsNestedInDirective(llvm::omp::Directive::OMPD_target)) {
+    // Return true even for device_type(host).
+    return true;
+  }
+  for (const Scope *scope : llvm::reverse(scopeStack_)) {
+    if (const auto *symbol{scope->symbol()}) {
+      if (symbol->test(Symbol::Flag::OmpDeclareTarget)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
+  const Scope &unit{GetProgramUnit(*scopeStack_.back())};
+  return common::visit(
+      [&](const auto &details) {
+        if constexpr (std::is_convertible_v<decltype(details),
+                          const WithOmpDeclarative &>) {
+          if (auto *reqs{details.ompRequires()}) {
+            return reqs->test(req);
+          }
+        }
+        return false;
+      },
+      DEREF(unit.symbol()).details());
 }
 
 void OmpStructureChecker::CheckVariableListItem(
@@ -1562,40 +1710,95 @@ void OmpStructureChecker::Leave(const parser::OpenMPRequiresConstruct &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
-  isPredefinedAllocator = true;
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
-  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
-  SymbolSourceMap currSymbols;
-  GetSymbolsInObjectList(objectList, currSymbols);
-  for (auto &[symbol, source] : currSymbols) {
-    if (IsPointer(*symbol)) {
-      context_.Say(source,
-          "List item '%s' in ALLOCATE directive must not have POINTER "
-          "attribute"_err_en_US,
-          source.ToString());
+void OmpStructureChecker::CheckAllocateDirective(parser::CharBlock source,
+    const parser::OmpObjectList &objects,
+    const parser::OmpClauseList &clauses) {
+  const Scope &thisScope{context_.FindScope(source)};
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(objects, symbols);
+
+  auto maybeHasPredefinedAllocator{[&](const parser::OmpClause *calloc) {
+    // Return "true" if the ALLOCATOR clause was provided with an argument
+    // that is either a prefdefined allocator, or a run-time value.
+    // Otherwise return "false".
+    if (!calloc) {
+      return false;
     }
-    if (IsDummy(*symbol)) {
+    auto *allocator{std::get_if<parser::OmpClause::Allocator>(&calloc->u)};
+    if (auto val{ToInt64(GetEvaluateExpr(DEREF(allocator).v))}) {
+      // Predefined allocators (defined in OpenMP 6.0 20.8.1):
+      //   omp_null_allocator = 0,
+      //   omp_default_mem_alloc = 1,
+      //   omp_large_cap_mem_alloc = 2,
+      //   omp_const_mem_alloc = 3,
+      //   omp_high_bw_mem_alloc = 4,
+      //   omp_low_lat_mem_alloc = 5,
+      //   omp_cgroup_mem_alloc = 6,
+      //   omp_pteam_mem_alloc = 7,
+      //   omp_thread_mem_alloc = 8
+      return *val >= 0 && *val <= 8;
+    }
+    return true;
+  }};
+
+  const auto *allocator{FindClause(llvm::omp::Clause::OMPC_allocator)};
+  if (InTargetRegion()) {
+    bool hasDynAllocators{
+        HasRequires(llvm::omp::Clause::OMPC_dynamic_allocators)};
+    if (!allocator && !hasDynAllocators) {
       context_.Say(source,
-          "List item '%s' in ALLOCATE directive must not be a dummy "
-          "argument"_err_en_US,
-          source.ToString());
+          "An ALLOCATE directive in a TARGET region must specify an ALLOCATOR clause or REQUIRES(DYNAMIC_ALLOCATORS) must be specified"_err_en_US);
+    }
+  }
+
+  auto maybePredefined{maybeHasPredefinedAllocator(allocator)};
+
+  for (auto &[symbol, source] : symbols) {
+    if (!inExecutableAllocate_) {
+      if (symbol->owner() != thisScope) {
+        context_.Say(source,
+            "A list item on a declarative ALLOCATE must be declared in the same scope in which the directive appears"_err_en_US);
+      }
+      if (IsPointer(*symbol) || IsAllocatable(*symbol)) {
+        context_.Say(source,
+            "A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute"_err_en_US);
+      }
     }
     if (symbol->GetUltimate().has<AssocEntityDetails>()) {
       context_.Say(source,
-          "List item '%s' in ALLOCATE directive must not be an associate "
-          "name"_err_en_US,
-          source.ToString());
+          "A list item in a declarative ALLOCATE cannot be an associate name"_err_en_US);
+    }
+    if (symbol->attrs().test(Attr::SAVE) || IsCommonBlock(*symbol)) {
+      if (!allocator) {
+        context_.Say(source,
+            "If a list item is a named common block or has SAVE attribute, an ALLOCATOR clause must be present with a predefined allocator"_err_en_US);
+      } else if (!maybePredefined) {
+        context_.Say(source,
+            "If a list item is a named common block or has SAVE attribute, only a predefined allocator may be used on the ALLOCATOR clause"_err_en_US);
+      }
+    }
+    if (FindCommonBlockContaining(*symbol)) {
+      context_.Say(source,
+          "A variable that is part of a common block may not be specified as a list item in an ALLOCATE directive, except implicitly via the named common block"_err_en_US);
     }
   }
-  CheckVarIsNotPartOfAnotherVar(dir.source, objectList);
+  CheckVarIsNotPartOfAnotherVar(source, objects);
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeAllocate &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPDeclarativeAllocate &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
-  CheckPredefinedAllocatorRestriction(dir.source, objectList);
+  if (!inExecutableAllocate_) {
+    const auto &dir{std::get<parser::Verbatim>(x.t)};
+    const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+    const auto &objectList{std::get<parser::OmpObjectList>(x.t)};
+
+    isPredefinedAllocator = true;
+    CheckAllocateDirective(dir.source, objectList, clauseList);
+  }
   dirContext_.pop_back();
 }
 
@@ -1951,6 +2154,7 @@ void OmpStructureChecker::CheckNameInAllocateStmt(
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
+  inExecutableAllocate_ = true;
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
 
@@ -1958,24 +2162,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
   if (version >= 52) {
     context_.Warn(common::UsageWarning::OpenMPUsage, x.source,
         "The executable form of the OpenMP ALLOCATE directive has been deprecated, please use ALLOCATORS instead"_warn_en_US);
-  }
-
-  bool hasAllocator = false;
-  // TODO: Investigate whether searching the clause list can be done with
-  // parser::Unwrap instead of the following loop
-  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
-  for (const auto &clause : clauseList.v) {
-    if (std::get_if<parser::OmpClause::Allocator>(&clause.u)) {
-      hasAllocator = true;
-    }
-  }
-
-  if (IsNestedInDirective(llvm::omp::Directive::OMPD_target) && !hasAllocator) {
-    // TODO: expand this check to exclude the case when a requires
-    //       directive with the dynamic_allocators clause is present
-    //       in the same compilation unit (OMP5.0 2.11.3).
-    context_.Say(x.source,
-        "ALLOCATE directives that appear in a TARGET region must specify an allocator clause"_err_en_US);
   }
 
   const auto &allocateStmt =
@@ -1994,18 +2180,34 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
   }
 
   isPredefinedAllocator = true;
-  const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  if (objectList) {
-    CheckVarIsNotPartOfAnotherVar(dir.source, *objectList);
-  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
-  const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
-  if (objectList)
-    CheckPredefinedAllocatorRestriction(dir.source, *objectList);
+  parser::OmpObjectList empty{std::list<parser::OmpObject>{}};
+  auto &objects{[&]() -> const parser::OmpObjectList & {
+    if (auto &objects{std::get<std::optional<parser::OmpObjectList>>(x.t)}) {
+      return *objects;
+    } else {
+      return empty;
+    }
+  }()};
+  auto &clauses{std::get<parser::OmpClauseList>(x.t)};
+  CheckAllocateDirective(
+      std::get<parser::Verbatim>(x.t).source, objects, clauses);
+
+  if (const auto &subDirs{
+          std::get<std::optional<std::list<parser::OpenMPDeclarativeAllocate>>>(
+              x.t)}) {
+    for (const auto &dalloc : *subDirs) {
+      const auto &dir{std::get<parser::Verbatim>(x.t)};
+      const auto &clauses{std::get<parser::OmpClauseList>(dalloc.t)};
+      const auto &objects{std::get<parser::OmpObjectList>(dalloc.t)};
+      CheckAllocateDirective(dir.source, objects, clauses);
+    }
+  }
+
   dirContext_.pop_back();
+  inExecutableAllocate_ = false;
 }
 
 void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {

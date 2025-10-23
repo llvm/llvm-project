@@ -7,6 +7,7 @@ add_libc_test(
   SRCS
     nl_types_test.cpp
   DEPENDS
+    libc.include.llvm-libc-macros.nl_types_macros
     libc.include.llvm-libc-types.nl_catd
     libc.src.nl_types.catopen
     libc.src.nl_types.catclose
