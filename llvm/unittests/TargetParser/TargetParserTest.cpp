@@ -47,6 +47,7 @@ const char *ARMArch[] = {
     "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
     "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
     "armv9.4a",    "armv9.5-a", "armv9.5a",     "armv9.6a",    "armv9.6-a",
+    "armv9.7a",    "armv9.7-a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -622,6 +623,8 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.6-a", "generic", "v9.6a",
                           ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(testARMArch("armv9.7-a", "generic", "v9.7a",
+                          ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
       testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
@@ -937,6 +940,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_4A:
     case ARM::ArchKind::ARMV9_5A:
     case ARM::ArchKind::ARMV9_6A:
+    case ARM::ArchKind::ARMV9_7A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1294,6 +1298,7 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv9.4-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.6-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.7-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1438,7 +1443,12 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
-      AArch64::AEK_SVESM4,
+      AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
+      AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
+      AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
+      AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
+      AArch64::AEK_SVE2P3,       AArch64::AEK_SVE_B16MM,
+      AArch64::AEK_F16MM,
   };
 
   std::vector<StringRef> Features;
@@ -1550,6 +1560,16 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+mtetc"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+gcie"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme2p3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve2p3"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sve-b16mm"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+f16mm"));
 
   // Assuming we listed every extension above, this should produce the same
   // result.
@@ -1576,6 +1596,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   EXPECT_EQ(AArch64::ARMV9_4A.ArchFeature, "+v9.4a");
   EXPECT_EQ(AArch64::ARMV9_5A.ArchFeature, "+v9.5a");
   EXPECT_EQ(AArch64::ARMV9_6A.ArchFeature, "+v9.6a");
+  EXPECT_EQ(AArch64::ARMV9_7A.ArchFeature, "+v9.7a");
   EXPECT_EQ(AArch64::ARMV8R.ArchFeature, "+v8r");
 }
 
@@ -1605,7 +1626,8 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
 
   for (const auto *A :
        {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
-        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A})
+        &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A,
+        &AArch64::ARMV9_7A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1624,6 +1646,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_4A.implies(AArch64::ARMV9_3A));
   EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
   EXPECT_TRUE(AArch64::ARMV9_6A.implies(AArch64::ARMV9_5A));
+  EXPECT_TRUE(AArch64::ARMV9_7A.implies(AArch64::ARMV9_6A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
@@ -1713,6 +1736,16 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"pops", "nopops", "+pops", "-pops"},
       {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
       {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
+      {"cmh", "nocmh", "+cmh", "-cmh"},
+      {"lscp", "nolscp", "+lscp", "-lscp"},
+      {"tlbid", "notlbid", "+tlbid", "-tlbid"},
+      {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
+      {"mtetc", "nomtetc", "+mtetc", "-mtetc"},
+      {"gcie", "nogcie", "+gcie", "-gcie"},
+      {"sme2p3", "nosme2p3", "+sme2p3", "-sme2p3"},
+      {"sve2p3", "nosve2p3", "+sve2p3", "-sve2p3"},
+      {"sve-b16mm", "nosve-b16mm", "+sve-b16mm", "-sve-b16mm"},
+      {"f16mm", "nof16mm", "+f16mm", "-f16mm"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
@@ -1961,17 +1994,19 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"nosimd", "fcma"}, {"neon", "complxnum"}, {}},
         {AArch64::ARMV8A, {"fcma", "nosimd"}, {}, {"neon", "complxnum"}},
 
-        // fp16 -> {fp16fml, sve}
+        // fp16 -> {fp16fml, sve, f16mm}
         {AArch64::ARMV8A, {"nofp16", "fp16fml"}, {"fullfp16", "fp16fml"}, {}},
         {AArch64::ARMV8A, {"fp16fml", "nofp16"}, {}, {"fullfp16", "fp16fml"}},
         {AArch64::ARMV8A, {"nofp16", "sve"}, {"fullfp16", "sve"}, {}},
         {AArch64::ARMV8A, {"sve", "nofp16"}, {}, {"fullfp16", "sve"}},
+        {AArch64::ARMV9_7A, {"nofp16", "f16mm"}, {"fullfp16", "f16mm"}, {}},
+        {AArch64::ARMV9_7A, {"f16mm", "nofp16"}, {}, {"fullfp16", "f16mm"}},
 
         // bf16 -> {sme}
         {AArch64::ARMV8A, {"nobf16", "sme"}, {"bf16", "sme"}, {}},
         {AArch64::ARMV8A, {"sme", "nobf16"}, {}, {"bf16", "sme"}},
 
-        // sve -> {sve2, f32mm, f64mm, sve-f16f32mm}
+        // sve -> {sve2, f32mm, f64mm, sve-f16f32mm, sve-b16mm}
         {AArch64::ARMV8A, {"nosve", "sve2"}, {"sve", "sve2"}, {}},
         {AArch64::ARMV8A, {"sve2", "nosve"}, {}, {"sve", "sve2"}},
         {AArch64::ARMV8A, {"nosve", "f32mm"}, {"sve", "f32mm"}, {}},
@@ -1986,6 +2021,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
          {"sve-f16f32mm", "nosve"},
          {},
          {"sve", "sve-f16f32mm"}},
+        {AArch64::ARMV9_7A, {"nosve", "sve-b16mm"}, {"sve", "sve-b16mm"}, {}},
+        {AArch64::ARMV9_7A, {"sve-b16mm", "nosve"}, {}, {"sve", "sve-b16mm"}},
 
         // aes -> {sve-aes}
         {AArch64::ARMV8A, {"noaes", "sve-aes"}, {"aes", "sve-aes"}, {}},
@@ -2030,6 +2067,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // sve2p1 -> {sve2p2}
         {AArch64::ARMV9_6A, {"nosve2p1", "sve2p2"}, {"sve2p1", "sve2p2"}, {}},
         {AArch64::ARMV9_6A, {"sve2p2", "nosve2p1"}, {}, {"sve2p1", "sve2p2"}},
+
+        // sve2p2 -> {sve2p3}
+        {AArch64::ARMV9_7A, {"nosve2p2", "sve2p3"}, {"sve2p2", "sve2p3"}, {}},
+        {AArch64::ARMV9_7A, {"sve2p3", "nosve2p2"}, {}, {"sve2p2", "sve2p3"}},
 
         // sme -> {sme2, sme-f16f16, sme-f64f64, sme-i16i64, sme-fa64}
         {AArch64::ARMV8A, {"nosme", "sme2"}, {"sme", "sme2"}, {}},
@@ -2083,6 +2124,10 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // sme2p1 -> {sme2p2}
         {AArch64::ARMV9_6A, {"nosme2p1", "sme2p2"}, {"sme2p2", "sme2p1"}, {}},
         {AArch64::ARMV9_6A, {"sme2p2", "nosme2p1"}, {}, {"sme2p1", "sme2p2"}},
+
+        // sme2p2 -> {sme2p3}
+        {AArch64::ARMV9_7A, {"nosme2p2", "sme2p3"}, {"sme2p3", "sme2p2"}, {}},
+        {AArch64::ARMV9_7A, {"sme2p3", "nosme2p2"}, {}, {"sme2p2", "sme2p3"}},
 
         // fp8 -> {sme-f8f16, sme-f8f32, f8f16mm, f8f32mm, fp8dot4, fp8dot2,
         // ssve-fp8dot4, ssve-fp8dot2}
