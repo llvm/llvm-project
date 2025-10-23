@@ -24,9 +24,10 @@ TEST(RegisterTest, Idx2StackSlot) {
 }
 
 TEST(RegisterTest, StackSlotIndex) {
-  std::vector<int64_t> FIs = {0, 1 - 1, (1 << 29) - 1, -(1 << 29)};
+  int MaxPowOf2 = 1 << (Register::MaxFrameIndexBitwidth - 1);
+  std::vector<int> FIs = {0, 1 - 1, MaxPowOf2 - 1, -MaxPowOf2};
 
-  for (int64_t FI : FIs) {
+  for (int FI : FIs) {
     Register Reg = Register::index2StackSlot(FI);
     EXPECT_EQ(Reg.stackSlotIndex(), FI);
   }

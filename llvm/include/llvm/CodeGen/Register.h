@@ -50,7 +50,7 @@ public:
   /// Convert a non-negative frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
     assert(isInt<MaxFrameIndexBitwidth>(FI) &&
-           "Frame index must be at most 30 bit as an unsigned integer");
+           "Frame index must be at most 30 bits.");
     unsigned FIMasked = FI & Register::StackSlotMask;
     return Register(FIMasked | Register::StackSlotZero);
   }
