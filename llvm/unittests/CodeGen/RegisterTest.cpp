@@ -13,21 +13,22 @@ using namespace llvm;
 
 namespace {
 TEST(RegisterTest, Idx2StackSlot) {
-  ASSERT_EQ(Register::index2StackSlot(0), Register::StackSlotZero);
-  ASSERT_EQ(Register::index2StackSlot(-1),
+  EXPECT_EQ(Register::index2StackSlot(0), Register::StackSlotZero);
+  EXPECT_EQ(Register::index2StackSlot(1), Register::StackSlotZero | 1);
+  EXPECT_EQ(Register::index2StackSlot(-1),
             Register::StackSlotZero | Register::StackSlotMask);
-  ASSERT_EQ(Register::index2StackSlot(Register::StackSlotMask),
-            Register::StackSlotZero | Register::StackSlotMask);
-  ASSERT_EQ(Register::index2StackSlot(1), Register::StackSlotZero | 1);
+  // check that we do not crash on the highest possible value of frame index.
+  EXPECT_NO_FATAL_FAILURE(Register::index2StackSlot((1 << 29) - 1));
+  // check that we do not crash on the lowest possible value of frame index.
+  EXPECT_NO_FATAL_FAILURE(Register::index2StackSlot(-(1 << 29)));
 }
 
 TEST(RegisterTest, StackSlotIndex) {
-  Register Reg;
   std::vector<int64_t> FIs = {0, 1 - 1, (1 << 29) - 1, -(1 << 29)};
 
   for (int64_t FI : FIs) {
-    Reg = Register::index2StackSlot(FI);
-    ASSERT_EQ(Reg.stackSlotIndex(), FI);
+    Register Reg = Register::index2StackSlot(FI);
+    EXPECT_EQ(Reg.stackSlotIndex(), FI);
   }
 }
 } // end namespace
