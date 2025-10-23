@@ -87,6 +87,7 @@ private:
   StringRef Pattern;
   size_t PrefixSize = 0;
   size_t SuffixSize = 0;
+
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
     LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
