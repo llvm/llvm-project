@@ -976,10 +976,10 @@ def : GCNPat <
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
-def : ThreeOp_i32_Pats<add, smax, V_ADD_MAX_I32_e64>;
-def : ThreeOp_i32_Pats<add, umax, V_ADD_MAX_U32_e64>;
-def : ThreeOp_i32_Pats<add, smin, V_ADD_MIN_I32_e64>;
-def : ThreeOp_i32_Pats<add, umin, V_ADD_MIN_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smax, V_ADD_MAX_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umax, V_ADD_MAX_U32_e64>;
+def : ThreeOp_i32_Pats<saddsat, smin, V_ADD_MIN_I32_e64>;
+def : ThreeOp_i32_Pats<uaddsat, umin, V_ADD_MIN_U32_e64>;
 }
 
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
