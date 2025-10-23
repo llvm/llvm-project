@@ -65,6 +65,8 @@ public:
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
+  static const MessageFixedText endOfFileMessage; // "end of file"_err_en_US
+
 private:
   CharBlock text_;
   Severity severity_{Severity::None};

@@ -1371,7 +1371,7 @@ public:
   offset_base(const std::pair<BaseT, ptrdiff_t> &base, ptrdiff_t index) {
     // We encode the internal base as a pair of the derived base and a start
     // index into the derived base.
-    return std::make_pair(base.first, base.second + index);
+    return {base.first, base.second + index};
   }
   /// See `detail::indexed_accessor_range_base` for details.
   static ReferenceT

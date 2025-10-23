@@ -3080,6 +3080,13 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
       assert(ZextLowShlAmt->uge(HighSize) &&
              ZextLowShlAmt->ule(Width - LowSize) && "Invalid concat");
 
+      // We cannot reuse the result if it may produce poison.
+      // Drop poison generating flags in the expression tree.
+      // Or
+      cast<Instruction>(U)->dropPoisonGeneratingFlags();
+      // Shl
+      cast<Instruction>(X)->dropPoisonGeneratingFlags();
+
       FShiftArgs = {U, U, ConstantInt::get(Or0->getType(), *ZextHighShlAmt)};
       break;
     }

@@ -409,6 +409,18 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  gethostname_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    gethostname_test.cpp
+  DEPENDS
+    libc.src.unistd.gethostname
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
   getpid_test
   SUITE
     libc_unistd_unittests

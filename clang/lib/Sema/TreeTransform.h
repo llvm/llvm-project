@@ -1783,6 +1783,14 @@ public:
                                                        LParenLoc, EndLoc);
   }
 
+  OMPClause *
+  RebuildOMPLoopRangeClause(Expr *First, Expr *Count, SourceLocation StartLoc,
+                            SourceLocation LParenLoc, SourceLocation FirstLoc,
+                            SourceLocation CountLoc, SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPLoopRangeClause(
+        First, Count, StartLoc, LParenLoc, FirstLoc, CountLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'allocator' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -9609,6 +9617,17 @@ StmtResult TreeTransform<Derived>::TransformOMPInterchangeDirective(
 
 template <typename Derived>
 StmtResult
+TreeTransform<Derived>::TransformOMPFuseDirective(OMPFuseDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().OpenMP().StartOpenMPDSABlock(
+      D->getDirectiveKind(), DirName, nullptr, D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().OpenMP().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult
 TreeTransform<Derived>::TransformOMPForDirective(OMPForDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().OpenMP().StartOpenMPDSABlock(
@@ -10498,6 +10517,31 @@ TreeTransform<Derived>::TransformOMPPartialClause(OMPPartialClause *C) {
     return C;
   return RebuildOMPPartialClause(Factor, C->getBeginLoc(), C->getLParenLoc(),
                                  C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPLoopRangeClause(OMPLoopRangeClause *C) {
+  ExprResult F = getDerived().TransformExpr(C->getFirst());
+  if (F.isInvalid())
+    return nullptr;
+
+  ExprResult Cn = getDerived().TransformExpr(C->getCount());
+  if (Cn.isInvalid())
+    return nullptr;
+
+  Expr *First = F.get();
+  Expr *Count = Cn.get();
+
+  bool Changed = (First != C->getFirst()) || (Count != C->getCount());
+
+  // If no changes and AlwaysRebuild() is false, return the original clause
+  if (!Changed && !getDerived().AlwaysRebuild())
+    return C;
+
+  return RebuildOMPLoopRangeClause(First, Count, C->getBeginLoc(),
+                                   C->getLParenLoc(), C->getFirstLoc(),
+                                   C->getCountLoc(), C->getEndLoc());
 }
 
 template <typename Derived>
@@ -16289,20 +16333,68 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
       IndexExpr.get(), ExpandedExprs, FullySubstituted);
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
-                                          SubstNonTypeTemplateParmPackExpr *E) {
-  // Default behavior is to do nothing with this transformation.
-  return E;
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
+    SubstNonTypeTemplateParmPackExpr *E) {
+  if (!getSema().ArgPackSubstIndex)
+    // We aren't expanding the parameter pack, so just return ourselves.
+    return E;
+
+  TemplateArgument Pack = E->getArgumentPack();
+  TemplateArgument Arg = SemaRef.getPackSubstitutedTemplateArgument(Pack);
+  return SemaRef.BuildSubstNonTypeTemplateParmExpr(
+      E->getAssociatedDecl(), E->getParameterPack(),
+      E->getParameterPackLocation(), Arg, SemaRef.getPackIndex(Pack),
+      E->getFinal());
 }
 
-template<typename Derived>
-ExprResult
-TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
-                                          SubstNonTypeTemplateParmExpr *E) {
-  // Default behavior is to do nothing with this transformation.
-  return E;
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
+    SubstNonTypeTemplateParmExpr *E) {
+  Expr *OrigReplacement = E->getReplacement()->IgnoreImplicitAsWritten();
+  ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
+  if (Replacement.isInvalid())
+    return true;
+
+  Decl *AssociatedDecl =
+      getDerived().TransformDecl(E->getNameLoc(), E->getAssociatedDecl());
+  if (!AssociatedDecl)
+    return true;
+
+  if (Replacement.get() == OrigReplacement &&
+      AssociatedDecl == E->getAssociatedDecl())
+    return E;
+
+  // If the replacement expression did not change, and the parameter type
+  // did not change, we can skip the semantic action because it would
+  // produce the same result anyway.
+  auto *Param = cast<NonTypeTemplateParmDecl>(
+      getReplacedTemplateParameterList(AssociatedDecl)
+          ->asArray()[E->getIndex()]);
+  if (QualType ParamType = Param->getType();
+      !SemaRef.Context.hasSameType(ParamType, E->getParameter()->getType()) ||
+      Replacement.get() != OrigReplacement) {
+
+    // When transforming the replacement expression previously, all Sema
+    // specific annotations, such as implicit casts, are discarded. Calling the
+    // corresponding sema action is necessary to recover those. Otherwise,
+    // equivalency of the result would be lost.
+    TemplateArgument SugaredConverted, CanonicalConverted;
+    Replacement = SemaRef.CheckTemplateArgument(
+        Param, ParamType, Replacement.get(), SugaredConverted,
+        CanonicalConverted,
+        /*StrictCheck=*/false, Sema::CTAK_Specified);
+    if (Replacement.isInvalid())
+      return true;
+  } else {
+    // Otherwise, the same expression would have been produced.
+    Replacement = E->getReplacement();
+  }
+
+  return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
+      Replacement.get()->getType(), Replacement.get()->getValueKind(),
+      E->getNameLoc(), Replacement.get(), AssociatedDecl, E->getIndex(),
+      E->getPackIndex(), E->isReferenceParameter(), E->getFinal());
 }
 
 template<typename Derived>

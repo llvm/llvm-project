@@ -2463,6 +2463,11 @@ public:
     return buildInstr(TargetOpcode::G_GET_ROUNDING, {Dst}, {});
   }
 
+  /// Build and insert G_SET_ROUNDING
+  MachineInstrBuilder buildSetRounding(const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_SET_ROUNDING, {}, {Src});
+  }
+
   virtual MachineInstrBuilder
   buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps, ArrayRef<SrcOp> SrcOps,
              std::optional<unsigned> Flags = std::nullopt);

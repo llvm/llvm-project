@@ -2545,6 +2545,18 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
+/// Helper to determine wether \c E is a CXXConstructExpr constructing
+/// a DecompositionDecl. Used to skip Clang-generated calls to std::get
+/// for structured bindings.
+static bool IsDecompositionDeclRefExpr(const Expr *E) {
+  const auto *Unwrapped = E->IgnoreUnlessSpelledInSource();
+  const auto *Ref = dyn_cast<DeclRefExpr>(Unwrapped);
+  if (!Ref)
+    return false;
+
+  return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
+}
+
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
   // according to [expr]p10:
@@ -3159,10 +3171,39 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     }
     return E;
   };
+
+  // Used when Clang generates calls to std::get for decomposing
+  // structured bindings.
+  auto IgnoreImplicitCallSingleStep = [](Expr *E) {
+    auto *C = dyn_cast<CallExpr>(E);
+    if (!C)
+      return E;
+
+    // Looking for calls to a std::get, which usually just takes
+    // 1 argument (i.e., the structure being decomposed). If it has
+    // more than 1 argument, the others need to be defaulted.
+    unsigned NumArgs = C->getNumArgs();
+    if (NumArgs == 0 || (NumArgs > 1 && !isa<CXXDefaultArgExpr>(C->getArg(1))))
+      return E;
+
+    Expr *A = C->getArg(0);
+
+    // This was spelled out in source. Don't ignore.
+    if (A->getSourceRange() != E->getSourceRange())
+      return E;
+
+    // If the argument refers to a DecompositionDecl construction,
+    // ignore it.
+    if (IsDecompositionDeclRefExpr(A))
+      return A;
+
+    return E;
+  };
+
   return IgnoreExprNodes(
       this, IgnoreImplicitSingleStep, IgnoreImplicitCastsExtraSingleStep,
       IgnoreParensOnlySingleStep, IgnoreImplicitConstructorSingleStep,
-      IgnoreImplicitMemberCallSingleStep);
+      IgnoreImplicitMemberCallSingleStep, IgnoreImplicitCallSingleStep);
 }
 
 bool Expr::isDefaultArgument() const {
@@ -3631,10 +3672,10 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
 
   switch (getStmtClass()) {
   case NoStmtClass:
-  #define ABSTRACT_STMT(Type)
-  #define STMT(Type, Base) case Type##Class:
-  #define EXPR(Type, Base)
-  #include "clang/AST/StmtNodes.inc"
+#define ABSTRACT_STMT(Type)
+#define STMT(Type, Base) case Type##Class:
+#define EXPR(Type, Base)
+#include "clang/AST/StmtNodes.inc"
     llvm_unreachable("unexpected Expr kind");
 
   case DependentScopeDeclRefExprClass:
@@ -3790,8 +3831,8 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
 
   case GenericSelectionExprClass:
-    return cast<GenericSelectionExpr>(this)->getResultExpr()->
-        HasSideEffects(Ctx, IncludePossibleEffects);
+    return cast<GenericSelectionExpr>(this)->getResultExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
 
   case ChooseExprClass:
     return cast<ChooseExpr>(this)->getChosenSubExpr()->HasSideEffects(
@@ -3815,7 +3856,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     if (DCE->getTypeAsWritten()->isReferenceType() &&
         DCE->getCastKind() == CK_Dynamic)
       return true;
-    }
+  }
     [[fallthrough]];
   case ImplicitCastExprClass:
   case CStyleCastExprClass:
@@ -3904,7 +3945,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ObjCBridgedCastExprClass:
   case ObjCMessageExprClass:
   case ObjCPropertyRefExprClass:
-  // FIXME: Classify these cases better.
+    // FIXME: Classify these cases better.
     if (IncludePossibleEffects)
       return true;
     break;

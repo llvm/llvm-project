@@ -21,6 +21,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
@@ -131,35 +132,24 @@ static CXXMethodDecl *lookupMethod(CXXRecordDecl *Record, StringRef Name,
 
 static CXXMethodDecl *lookupResourceInitMethodAndSetupArgs(
     CodeGenModule &CGM, CXXRecordDecl *ResourceDecl, llvm::Value *Range,
-    llvm::Value *Index, StringRef Name, HLSLResourceBindingAttr *RBA,
-    HLSLVkBindingAttr *VkBinding, CallArgList &Args) {
-  assert((VkBinding || RBA) && "at least one a binding attribute expected");
+    llvm::Value *Index, StringRef Name, ResourceBindingAttrs &Binding,
+    CallArgList &Args) {
+  assert(Binding.hasBinding() && "at least one binding attribute expected");
 
   ASTContext &AST = CGM.getContext();
-  std::optional<uint32_t> RegisterSlot;
-  uint32_t SpaceNo = 0;
-  if (VkBinding) {
-    RegisterSlot = VkBinding->getBinding();
-    SpaceNo = VkBinding->getSet();
-  } else {
-    if (RBA->hasRegisterSlot())
-      RegisterSlot = RBA->getSlotNumber();
-    SpaceNo = RBA->getSpaceNumber();
-  }
-
   CXXMethodDecl *CreateMethod = nullptr;
   Value *NameStr = buildNameForResource(Name, CGM);
-  Value *Space = llvm::ConstantInt::get(CGM.IntTy, SpaceNo);
+  Value *Space = llvm::ConstantInt::get(CGM.IntTy, Binding.getSpace());
 
-  if (RegisterSlot.has_value()) {
+  if (Binding.isExplicit()) {
     // explicit binding
-    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RegisterSlot.value());
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, Binding.getSlot());
     Args.add(RValue::get(RegSlot), AST.UnsignedIntTy);
     CreateMethod = lookupMethod(ResourceDecl, "__createFromBinding", SC_Static);
   } else {
     // implicit binding
     auto *OrderID =
-        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+        llvm::ConstantInt::get(CGM.IntTy, Binding.getImplicitOrderID());
     Args.add(RValue::get(OrderID), AST.UnsignedIntTy);
     CreateMethod =
         lookupMethod(ResourceDecl, "__createFromImplicitBinding", SC_Static);
@@ -194,8 +184,8 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
     CodeGenFunction &CGF, CXXRecordDecl *ResourceDecl,
     const ConstantArrayType *ArrayTy, AggValueSlot &ValueSlot,
     llvm::Value *Range, llvm::Value *StartIndex, StringRef ResourceName,
-    HLSLResourceBindingAttr *RBA, HLSLVkBindingAttr *VkBinding,
-    ArrayRef<llvm::Value *> PrevGEPIndices, SourceLocation ArraySubsExprLoc) {
+    ResourceBindingAttrs &Binding, ArrayRef<llvm::Value *> PrevGEPIndices,
+    SourceLocation ArraySubsExprLoc) {
 
   ASTContext &AST = CGF.getContext();
   llvm::IntegerType *IntTy = CGF.CGM.IntTy;
@@ -220,7 +210,7 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
       }
       std::optional<llvm::Value *> MaybeIndex = initializeLocalResourceArray(
           CGF, ResourceDecl, SubArrayTy, ValueSlot, Range, Index, ResourceName,
-          RBA, VkBinding, GEPIndices, ArraySubsExprLoc);
+          Binding, GEPIndices, ArraySubsExprLoc);
       if (!MaybeIndex)
         return std::nullopt;
       Index = *MaybeIndex;
@@ -244,8 +234,7 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
 
     CallArgList Args;
     CXXMethodDecl *CreateMethod = lookupResourceInitMethodAndSetupArgs(
-        CGF.CGM, ResourceDecl, Range, Index, ResourceName, RBA, VkBinding,
-        Args);
+        CGF.CGM, ResourceDecl, Range, Index, ResourceName, Binding, Args);
 
     if (!CreateMethod)
       // This can happen if someone creates an array of structs that looks like
@@ -439,14 +428,7 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
   // Initialize cbuffer from binding (implicit or explicit)
-  if (HLSLVkBindingAttr *VkBinding = BufDecl->getAttr<HLSLVkBindingAttr>()) {
-    initializeBufferFromBinding(BufDecl, BufGV, VkBinding);
-  } else {
-    HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
-    assert(RBA &&
-           "cbuffer/tbuffer should always have resource binding attribute");
-    initializeBufferFromBinding(BufDecl, BufGV, RBA);
-  }
+  initializeBufferFromBinding(BufDecl, BufGV);
 }
 
 void CGHLSLRuntime::addRootSignature(
@@ -810,44 +792,29 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 }
 
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                                llvm::GlobalVariable *GV,
-                                                HLSLVkBindingAttr *VkBinding) {
-  assert(VkBinding && "expect a nonnull binding attribute");
+                                                llvm::GlobalVariable *GV) {
+  ResourceBindingAttrs Binding(BufDecl);
+  assert(Binding.hasBinding() &&
+         "cbuffer/tbuffer should always have resource binding attribute");
+
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
-  auto *Set = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getSet());
-  auto *Binding = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getBinding());
+  auto *Space = llvm::ConstantInt::get(CGM.IntTy, Binding.getSpace());
   Value *Name = buildNameForResource(BufDecl->getName(), CGM);
-  llvm::Intrinsic::ID IntrinsicID =
-      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
-
-  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, Name};
-  initializeBuffer(CGM, GV, IntrinsicID, Args);
-}
-
-void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                                llvm::GlobalVariable *GV,
-                                                HLSLResourceBindingAttr *RBA) {
-  assert(RBA && "expect a nonnull binding attribute");
-  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
-  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
-  auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
-  Value *Name = buildNameForResource(BufDecl->getName(), CGM);
-
-  llvm::Intrinsic::ID IntrinsicID =
-      RBA->hasRegisterSlot()
-          ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
-          : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
 
   // buffer with explicit binding
-  if (RBA->hasRegisterSlot()) {
-    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+  if (Binding.isExplicit()) {
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, Binding.getSlot());
     SmallVector<Value *> Args{Space, RegSlot, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   } else {
     // buffer with implicit binding
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
     auto *OrderID =
-        llvm::ConstantInt::get(CGM.IntTy, RBA->getImplicitBindingOrderID());
+        llvm::ConstantInt::get(CGM.IntTy, Binding.getImplicitOrderID());
     SmallVector<Value *> Args{OrderID, Space, RangeSize, Index, Name};
     initializeBuffer(CGM, GV, IntrinsicID, Args);
   }
@@ -960,9 +927,9 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 
   // Find binding info for the resource array. For implicit binding
   // an HLSLResourceBindingAttr should have been added by SemaHLSL.
-  HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
-  HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
-  assert((VkBinding || RBA) && "resource array must have a binding attribute");
+  ResourceBindingAttrs Binding(ArrayDecl);
+  assert((Binding.hasBinding()) &&
+         "resource array must have a binding attribute");
 
   // Find the individual resource type.
   QualType ResultTy = ArraySubsExpr->getType();
@@ -992,7 +959,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
     CallArgList Args;
     CXXMethodDecl *CreateMethod = lookupResourceInitMethodAndSetupArgs(
         CGF.CGM, ResourceTy->getAsCXXRecordDecl(), Range, Index,
-        ArrayDecl->getName(), RBA, VkBinding, Args);
+        ArrayDecl->getName(), Binding, Args);
 
     if (!CreateMethod)
       // This can happen if someone creates an array of structs that looks like
@@ -1009,8 +976,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
         cast<ConstantArrayType>(ResultTy.getTypePtr());
     std::optional<llvm::Value *> EndIndex = initializeLocalResourceArray(
         CGF, ResourceTy->getAsCXXRecordDecl(), ArrayTy, ValueSlot, Range, Index,
-        ArrayDecl->getName(), RBA, VkBinding,
-        {llvm::ConstantInt::get(CGM.IntTy, 0)}, ArraySubsExpr->getExprLoc());
+        ArrayDecl->getName(), Binding, {llvm::ConstantInt::get(CGM.IntTy, 0)},
+        ArraySubsExpr->getExprLoc());
     if (!EndIndex)
       return std::nullopt;
   }

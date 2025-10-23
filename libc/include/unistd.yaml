@@ -141,6 +141,13 @@ functions:
     return_type: uid_t
     arguments:
       - type: void
+  - name: gethostname
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: char *
+      - type: size_t
   - name: getopt
     standards:
       - POSIX

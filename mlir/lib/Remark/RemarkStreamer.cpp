@@ -20,8 +20,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
   if (ec)
     return failure();
 
-  auto serOr = llvm::remarks::createRemarkSerializer(
-      fmt, llvm::remarks::SerializerMode::Separate, f->os());
+  auto serOr = llvm::remarks::createRemarkSerializer(fmt, f->os());
   if (!serOr) {
     llvm::consumeError(serOr.takeError());
     return failure();
@@ -49,6 +48,12 @@ void LLVMRemarkStreamer::streamOptimizationRemark(const Remark &remark) {
 LLVMRemarkStreamer::~LLVMRemarkStreamer() {
   if (file && remarkStreamer)
     file->keep();
+}
+
+void LLVMRemarkStreamer::finalize() {
+  if (!remarkStreamer)
+    return;
+  remarkStreamer->releaseSerializer();
 }
 } // namespace mlir::remark::detail
 

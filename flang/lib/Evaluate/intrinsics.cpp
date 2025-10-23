@@ -1674,7 +1674,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine}, // elemental
+        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -2903,7 +2903,7 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
-      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"}, {"rename"}, {"second"},
       {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
@@ -3765,6 +3765,9 @@ bool IntrinsicProcTable::IsIntrinsicFunction(const std::string &name) const {
 }
 bool IntrinsicProcTable::IsIntrinsicSubroutine(const std::string &name) const {
   return DEREF(impl_.get()).IsIntrinsicSubroutine(name);
+}
+bool IntrinsicProcTable::IsDualIntrinsic(const std::string &name) const {
+  return DEREF(impl_.get()).IsDualIntrinsic(name);
 }
 
 IntrinsicClass IntrinsicProcTable::GetIntrinsicClass(

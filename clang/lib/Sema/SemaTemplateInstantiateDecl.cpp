@@ -3742,7 +3742,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     ExpandedParams.reserve(D->getNumExpansionTemplateParameters());
     for (unsigned I = 0, N = D->getNumExpansionTemplateParameters();
          I != N; ++I) {
-      LocalInstantiationScope Scope(SemaRef);
+      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       TemplateParameterList *Expansion =
         SubstTemplateParams(D->getExpansionTemplateParameters(I));
       if (!Expansion)
@@ -3774,7 +3774,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     if (Expand) {
       for (unsigned I = 0; I != *NumExpansions; ++I) {
         Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, I);
-        LocalInstantiationScope Scope(SemaRef);
+        LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
         TemplateParameterList *Expansion = SubstTemplateParams(TempParams);
         if (!Expansion)
           return nullptr;
@@ -3785,21 +3785,18 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
       // expanded parameter pack is the original expansion type, but callers
       // will end up using the expanded parameter pack types for type-checking.
       IsExpandedParameterPack = true;
-      InstParams = TempParams;
-    } else {
-      // We cannot fully expand the pack expansion now, so just substitute
-      // into the pattern.
-      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, std::nullopt);
-
-      LocalInstantiationScope Scope(SemaRef);
-      InstParams = SubstTemplateParams(TempParams);
-      if (!InstParams)
-        return nullptr;
     }
+
+    Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, std::nullopt);
+
+    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
+    InstParams = SubstTemplateParams(TempParams);
+    if (!InstParams)
+      return nullptr;
   } else {
     // Perform the actual substitution of template parameters within a new,
     // local instantiation scope.
-    LocalInstantiationScope Scope(SemaRef);
+    LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
     InstParams = SubstTemplateParams(TempParams);
     if (!InstParams)
       return nullptr;

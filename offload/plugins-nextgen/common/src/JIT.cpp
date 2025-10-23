@@ -180,9 +180,10 @@ Expected<std::unique_ptr<MemoryBuffer>>
 JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
                    unsigned OptLevel) {
 
-  auto RemarksFileOrErr = setupLLVMOptimizationRemarks(
-      M.getContext(), /*RemarksFilename=*/"", /*RemarksPasses=*/"",
-      /*RemarksFormat=*/"", /*RemarksWithHotness=*/false);
+  Expected<LLVMRemarkFileHandle> RemarksFileOrErr =
+      setupLLVMOptimizationRemarks(
+          M.getContext(), /*RemarksFilename=*/"", /*RemarksPasses=*/"",
+          /*RemarksFormat=*/"", /*RemarksWithHotness=*/false);
   if (Error E = RemarksFileOrErr.takeError())
     return std::move(E);
   if (*RemarksFileOrErr)

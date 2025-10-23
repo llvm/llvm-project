@@ -148,9 +148,10 @@ public:
   }
 
   mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
-    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
-    return cir::ComplexRealOp::create(*this, loc, operandTy.getElementType(),
-                                      operand);
+    auto resultType = operand.getType();
+    if (auto complexResultType = mlir::dyn_cast<cir::ComplexType>(resultType))
+      resultType = complexResultType.getElementType();
+    return cir::ComplexRealOp::create(*this, loc, resultType, operand);
   }
 
   mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
@@ -241,6 +242,13 @@ public:
                            mlir::Type type, llvm::StringRef name,
                            mlir::IntegerAttr alignment) {
     return cir::AllocaOp::create(*this, loc, addrType, type, name, alignment);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    return createAlloca(loc, addrType, type, name, alignmentAttr);
   }
 
   /// Get constant address of a global variable as an MLIR attribute.

@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Simplify these tests and split them up. mlock, mlock2, mlockall,
+// munlock, and munlockall should have separate test files which only need to
+// check our code paths (succeeds and errors).
+
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/libc_errno.h"
 #include "src/sys/mman/madvise.h"
@@ -24,10 +28,7 @@
 #include "test/UnitTest/Test.h"
 
 #include <linux/capability.h>
-#include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/syscall.h>
-#include <unistd.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

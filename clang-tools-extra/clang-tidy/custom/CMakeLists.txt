@@ -9,6 +9,7 @@ if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
     QueryCheck.cpp
 
     LINK_LIBS
+    clangQuery
     clangTidy
     clangTidyBugproneModule
     clangTidyMiscModule
@@ -31,7 +32,6 @@ if(CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS)
     clangDynamicASTMatchers
     clangFrontend
     clangLex
-    clangQuery
     clangSerialization
     clangTooling
   )

@@ -17,7 +17,7 @@ namespace clang::tidy::hicpp {
 /// are not ignored according to rule 17.5.1.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/hicpp/ignored-remove-result.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/ignored-remove-result.html
 class IgnoredRemoveResultCheck : public bugprone::UnusedReturnValueCheck {
 public:
   IgnoredRemoveResultCheck(StringRef Name, ClangTidyContext *Context);

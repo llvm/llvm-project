@@ -99,6 +99,7 @@ protected:
   bool EnableDS128 = false;
   bool EnablePRTStrictNull = false;
   bool DumpCode = false;
+  bool AssemblerPermissiveWavesize = false;
 
   // Subtarget statically properties set by tablegen
   bool FP64 = false;
@@ -284,6 +285,8 @@ protected:
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
   bool HasGloballyAddressableScratch = false;
+
+  bool Has45BitNumRecordsBufferResource = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1848,6 +1851,12 @@ public:
     if (getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
       return 4;
     return 3;
+  }
+
+  /// \returns true if the sub-target supports buffer resource (V#) with 45-bit
+  /// num_records.
+  bool has45BitNumRecordsBufferResource() const {
+    return Has45BitNumRecordsBufferResource;
   }
 };
 

@@ -615,7 +615,7 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
       continue;
     // If any member falls at an offset that it not a multiple of its alignment,
     // then the entire record must be packed.
-    if (member.offset % getAlignment(member.data))
+    if (!member.offset.isMultipleOf(getAlignment(member.data)))
       packed = true;
     if (member.offset < nvSize)
       nvAlignment = std::max(nvAlignment, getAlignment(member.data));
@@ -623,12 +623,12 @@ void CIRRecordLowering::determinePacked(bool nvBaseType) {
   }
   // If the size of the record (the capstone's offset) is not a multiple of the
   // record's alignment, it must be packed.
-  if (members.back().offset % alignment)
+  if (!members.back().offset.isMultipleOf(alignment))
     packed = true;
   // If the non-virtual sub-object is not a multiple of the non-virtual
   // sub-object's alignment, it must be packed.  We cannot have a packed
   // non-virtual sub-object and an unpacked complete object or vise versa.
-  if (nvSize % nvAlignment)
+  if (!nvSize.isMultipleOf(nvAlignment))
     packed = true;
   // Update the alignment of the sentinel.
   if (!packed)
@@ -824,7 +824,7 @@ void CIRRecordLowering::lowerUnion() {
     appendPaddingBytes(layoutSize - getSize(storageType));
 
   // Set packed if we need it.
-  if (layoutSize % getAlignment(storageType))
+  if (!layoutSize.isMultipleOf(getAlignment(storageType)))
     packed = true;
 }
 

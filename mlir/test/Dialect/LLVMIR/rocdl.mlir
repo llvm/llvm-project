@@ -29,6 +29,20 @@ func.func @rocdl_special_regs() -> i32 {
   llvm.return %0 : i32
 }
 
+func.func @rocdl.fmed3.scalar(%a: f32, %b: f32, %c: f32) -> f32 {
+  // CHECK-LABEL: rocdl.fmed3.scalar
+  // CHECK: %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : f32
+  %0 = rocdl.fmed3 %a, %b, %c : f32
+  llvm.return %0 : f32
+}
+
+func.func @rocdl.fmed3.vector(%a: vector<4xf16>, %b: vector<4xf16>, %c: vector<4xf16>) -> vector<4xf16> {
+  // CHECK-LABEL: rocdl.fmed3.vector
+  // CHECK: %0 = rocdl.fmed3 %arg0, %arg1, %arg2 : vector<4xf16>
+  %0 = rocdl.fmed3 %a, %b, %c : vector<4xf16>
+  llvm.return %0 : vector<4xf16>
+}
+
 func.func @rocdl.barrier() {
   // CHECK: rocdl.barrier
   rocdl.barrier
@@ -652,7 +666,7 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
 
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
-                                  %numRecords : i32,
+                                  %numRecords : i64,
                                   %flags : i32) -> !llvm.ptr<8> {
   // CHECK-LABEL: rocdl.make.buffer.rsrc
   // CHECK: %{{.*}} = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : !llvm.ptr to <8>

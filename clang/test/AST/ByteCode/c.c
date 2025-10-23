@@ -368,3 +368,7 @@ void discardedCmp(void)
 {
     (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
 }
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }

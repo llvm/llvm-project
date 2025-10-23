@@ -15,6 +15,10 @@
 #include <cerrno>
 #include <sys/resource.h>
 
+#ifdef __linux__
+#include <linux/version.h>
+#endif // __linux__
+
 using namespace lldb_private;
 
 namespace {
@@ -116,7 +120,12 @@ TEST_F(HostTest, GetProcessInfoSetsPriority) {
   ASSERT_TRUE(Info.IsZombie().has_value());
   ASSERT_FALSE(Info.IsZombie().value());
 
+  // CoreDumping was added in kernel version 4.15.
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 15, 0)
   ASSERT_TRUE(Info.IsCoreDumping().has_value());
   ASSERT_FALSE(Info.IsCoreDumping().value());
+#else
+  ASSERT_FALSE(Info.IsCoreDumping().has_value());
+#endif
 }
 #endif

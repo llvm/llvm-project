@@ -634,4 +634,37 @@ def XeVM_TargetAttr : XeVM_Attr<"XeVMTarget", "target"> {
   let genVerifyDecl = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// XeVM special register op definitions
+//===----------------------------------------------------------------------===//
+
+class XeVM_SpecialIdRegisterOp<string mnemonic, list<Trait> traits = []>
+    : XeVM_Op<mnemonic, traits>,
+      Results<(outs AnyTypeOf<[I32, I64]>:$res)>,
+      Arguments<(ins OptionalAttr<LLVM_ConstantRangeAttr>:$range)> {
+  let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
+}
+
+multiclass XeVM_SpecialRegisterXYZ<string mnemonic, list<Trait> traits = []> {
+  def XOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".x"), traits>;
+  def YOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".y"), traits>;
+  def ZOp : XeVM_SpecialIdRegisterOp<!strconcat(mnemonic, ".z"), traits>;
+}
+
+//===----------------------------------------------------------------------===//
+// Workitem index and range
+defm XeVM_WorkitemId : XeVM_SpecialRegisterXYZ<"local_id">;
+defm XeVM_WorkgroupDim : XeVM_SpecialRegisterXYZ<"local_size">;
+
+//===----------------------------------------------------------------------===//
+// Workgroup index and range
+defm XeVM_WorkgroupId : XeVM_SpecialRegisterXYZ<"group_id">;
+defm XeVM_GridDim : XeVM_SpecialRegisterXYZ<"group_count">;
+
+//===----------------------------------------------------------------------===//
+// Lane, Subgroup index and range
+def XeVM_LaneIdOp : XeVM_SpecialIdRegisterOp<"lane_id">;
+def XeVM_SubgroupIdOp : XeVM_SpecialIdRegisterOp<"subgroup_id">;
+def XeVM_SubgroupSizeOp : XeVM_SpecialIdRegisterOp<"subgroup_size">;
+
 #endif // XEVMIR_OPS

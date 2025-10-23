@@ -927,7 +927,7 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
       Ret.HintWeights += Freq;
   }
   Ret.IsRemat = VirtRegAuxInfo::isRematerializable(
-      LI, *LIS, *VRM, *MF.getSubtarget().getInstrInfo());
+      LI, *LIS, *VRM, *MRI, *MF.getSubtarget().getInstrInfo());
   return Ret;
 }
 

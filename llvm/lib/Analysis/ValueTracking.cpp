@@ -7651,25 +7651,26 @@ static bool isGuaranteedNotToBeUndefOrPoison(
         return true;
     }
 
-    if (const auto *PN = dyn_cast<PHINode>(V)) {
-      unsigned Num = PN->getNumIncomingValues();
-      bool IsWellDefined = true;
-      for (unsigned i = 0; i < Num; ++i) {
-        if (PN == PN->getIncomingValue(i))
-          continue;
-        auto *TI = PN->getIncomingBlock(i)->getTerminator();
-        if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
-                                              DT, Depth + 1, Kind)) {
-          IsWellDefined = false;
-          break;
+    if (!::canCreateUndefOrPoison(Opr, Kind,
+                                  /*ConsiderFlagsAndMetadata=*/true)) {
+      if (const auto *PN = dyn_cast<PHINode>(V)) {
+        unsigned Num = PN->getNumIncomingValues();
+        bool IsWellDefined = true;
+        for (unsigned i = 0; i < Num; ++i) {
+          if (PN == PN->getIncomingValue(i))
+            continue;
+          auto *TI = PN->getIncomingBlock(i)->getTerminator();
+          if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
+                                                DT, Depth + 1, Kind)) {
+            IsWellDefined = false;
+            break;
+          }
         }
-      }
-      if (IsWellDefined)
+        if (IsWellDefined)
+          return true;
+      } else if (all_of(Opr->operands(), OpCheck))
         return true;
-    } else if (!::canCreateUndefOrPoison(Opr, Kind,
-                                         /*ConsiderFlagsAndMetadata*/ true) &&
-               all_of(Opr->operands(), OpCheck))
-      return true;
+    }
   }
 
   if (auto *I = dyn_cast<LoadInst>(V))

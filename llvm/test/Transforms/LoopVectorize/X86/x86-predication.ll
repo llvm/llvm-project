@@ -134,30 +134,9 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SINK-GATHER:       middle.block:
 ; SINK-GATHER-NEXT:    [[TMP49:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP47]])
-; SINK-GATHER-NEXT:    br label [[FOR_END:%.*]]
-; SINK-GATHER:       scalar.ph:
-; SINK-GATHER-NEXT:    br label [[FOR_BODY:%.*]]
-; SINK-GATHER:       for.body:
-; SINK-GATHER-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; SINK-GATHER-NEXT:    [[R:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[T7:%.*]], [[FOR_INC]] ]
-; SINK-GATHER-NEXT:    [[T0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; SINK-GATHER-NEXT:    [[T1:%.*]] = load i32, ptr [[T0]], align 4
-; SINK-GATHER-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; SINK-GATHER:       if.then:
-; SINK-GATHER-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; SINK-GATHER-NEXT:    [[T3:%.*]] = load i32, ptr [[T2]], align 4
-; SINK-GATHER-NEXT:    [[T4:%.*]] = sdiv i32 [[T3]], [[X]]
-; SINK-GATHER-NEXT:    [[T5:%.*]] = add nsw i32 [[T4]], [[T1]]
-; SINK-GATHER-NEXT:    br label [[FOR_INC]]
-; SINK-GATHER:       for.inc:
-; SINK-GATHER-NEXT:    [[T6:%.*]] = phi i32 [ [[T1]], [[FOR_BODY]] ], [ [[T5]], [[IF_THEN]] ]
-; SINK-GATHER-NEXT:    [[T7]] = add i32 [[R]], [[T6]]
-; SINK-GATHER-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; SINK-GATHER-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 10000
-; SINK-GATHER-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[FOR_BODY]]
+; SINK-GATHER-NEXT:    br label [[FOR_INC:%.*]]
 ; SINK-GATHER:       for.end:
-; SINK-GATHER-NEXT:    [[T8:%.*]] = phi i32 [ [[T7]], [[FOR_INC]] ], [ [[TMP49]], [[MIDDLE_BLOCK]] ]
-; SINK-GATHER-NEXT:    ret i32 [[T8]]
+; SINK-GATHER-NEXT:    ret i32 [[TMP49]]
 ;
 entry:
   br label %for.body

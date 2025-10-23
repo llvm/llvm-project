@@ -1114,16 +1114,10 @@ entry:
 }
 
 define ptr @v3ext(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %x) {
-; CHECK-SD-LABEL: v3ext:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldr d0, [sp]
-; CHECK-SD-NEXT:    fmov x0, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: v3ext:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr x0, [sp]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: v3ext:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x0, [sp]
+; CHECK-NEXT:    ret
 entry:
   %c = extractelement <3 x ptr> %x, i32 2
   ret ptr %c

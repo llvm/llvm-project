@@ -190,12 +190,12 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
             std::vector<BasicBlock *> *NewBBs) {
   SelectInst *SI = SIToUnfold.getInst();
   PHINode *SIUse = SIToUnfold.getUse();
-  BasicBlock *StartBlock = SI->getParent();
+  assert(SI->hasOneUse());
+  // The select may come indirectly, instead of from where it is defined.
+  BasicBlock *StartBlock = SIUse->getIncomingBlock(*SI->use_begin());
   BranchInst *StartBlockTerm =
       dyn_cast<BranchInst>(StartBlock->getTerminator());
-
   assert(StartBlockTerm);
-  assert(SI->hasOneUse());
 
   if (StartBlockTerm->isUnconditional()) {
     BasicBlock *EndBlock = StartBlock->getUniqueSuccessor();
@@ -332,7 +332,7 @@ void unfold(DomTreeUpdater *DTU, LoopInfo *LI, SelectInstToUnfold SIToUnfold,
   }
 
   // Preserve loop info
-  if (Loop *L = LI->getLoopFor(SI->getParent())) {
+  if (Loop *L = LI->getLoopFor(StartBlock)) {
     for (BasicBlock *NewBB : *NewBBs)
       L->addBasicBlockToLoop(NewBB, *LI);
   }
@@ -533,6 +533,8 @@ private:
       return false;
 
     // Only fold the select coming from directly where it is defined.
+    // TODO: We have dealt with the select coming indirectly now. This
+    // constraint can be relaxed.
     PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
     if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;

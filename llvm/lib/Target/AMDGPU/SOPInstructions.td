@@ -1616,16 +1616,14 @@ def S_BARRIER_WAIT : SOPP_Pseudo <"s_barrier_wait", (ins i16imm:$simm16), "$simm
   let isConvergent = 1;
 }
 
-def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave", (ins)> {
+  def S_BARRIER_LEAVE : SOPP_Pseudo <"s_barrier_leave",
+    (ins), "", [(int_amdgcn_s_barrier_leave (i16 srcvalue))] > {
   let SchedRW = [WriteBarrier];
   let simm16 = 0;
   let fixed_imm = 1;
   let isConvergent = 1;
   let Defs = [SCC];
 }
-
-def S_BARRIER_LEAVE_IMM : SOPP_Pseudo <"s_barrier_leave",
-    (ins i16imm:$simm16), "$simm16", [(int_amdgcn_s_barrier_leave timm:$simm16)]>;
 
 def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
   let SubtargetPredicate = isGFX8Plus;
