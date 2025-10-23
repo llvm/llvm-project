@@ -4882,13 +4882,11 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
       FirstReg, Count, Stride, NumElements, ElementWidth, VectorKind, S,
       getLoc(), getContext()));
 
-  if (Mnemonic == "luti6") {
-    if (getTok().isNot(AsmToken::Comma)) {
-      ParseStatus Res = tryParseVectorIndex(Operands);
-      if (Res.isFailure())
-        return ParseStatus::Failure;
-      return ParseStatus::Success;
-    }
+  if (getTok().isNot(AsmToken::Comma)) {
+    ParseStatus Res = tryParseVectorIndex(Operands);
+    if (Res.isFailure())
+      return ParseStatus::Failure;
+    return ParseStatus::Success;
   }
 
   return ParseStatus::Success;
