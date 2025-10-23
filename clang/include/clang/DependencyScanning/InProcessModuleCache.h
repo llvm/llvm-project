@@ -28,7 +28,7 @@ struct ModuleCacheEntries {
   llvm::StringMap<std::unique_ptr<ModuleCacheEntry>> Map;
 };
 
-IntrusiveRefCntPtr<ModuleCache>
+std::shared_ptr<ModuleCache>
 makeInProcessModuleCache(ModuleCacheEntries &Entries);
 
 } // namespace dependencies
