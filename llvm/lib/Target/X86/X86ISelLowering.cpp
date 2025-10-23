@@ -57637,16 +57637,16 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(RHS)) {
     SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
     if (X86ISD::SUB == N->getOpcode()) {
-      // With LHS - C, fold LHS + (-C)
+      // Fold generic add(LHS, -C) to X86ISD::SUB(LHS, C).
       MatchGeneric(ISD::ADD, LHS, NegC, false);
     } else {
-      // With -(LHS + C), fold (-C) - LHS
+      // Negate X86ISD::ADD(LHS, C) and replace generic sub(-C, LHS).
       MatchGeneric(ISD::SUB, NegC, LHS, true);
     }
   } else if (ConstantSDNode *Const = dyn_cast<ConstantSDNode>(LHS)) {
     SDValue NegC = DAG.getConstant(-Const->getAPIntValue(), DL, VT);
     if (X86ISD::SUB == N->getOpcode()) {
-      // With -(C - RHS), fold RHS + (-C)
+      // Negate X86ISD::SUB(C, RHS) and replace generic add(RHS, -C).
       MatchGeneric(ISD::ADD, RHS, NegC, true);
     }
   }
