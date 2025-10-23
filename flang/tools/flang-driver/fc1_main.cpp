@@ -21,12 +21,14 @@
 #include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/FrontendTool/Utils.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/X86TargetParser.h"
 
 #include <cstdio>
 
@@ -49,6 +51,35 @@ static int printSupportedCPUs(llvm::StringRef triple) {
       target->createTargetMachine(parsedTriple, "", "+cpuhelp", targetOpts,
                                   std::nullopt));
   return 0;
+}
+
+/// Check that given CPU is valid for given target.
+static bool checkSupportedCPU(clang::DiagnosticsEngine &diags,
+                              llvm::StringRef str_cpu,
+                              llvm::StringRef str_triple) {
+
+  llvm::Triple triple{str_triple};
+
+  // Need to check for empty CPU string, because it can be empty for some
+  // cases, e.g., "-x cuda" compilation.
+  if (triple.getArch() == llvm::Triple::x86_64 && !str_cpu.empty()) {
+    constexpr bool only64bit{true};
+    llvm::X86::CPUKind x86cpu = llvm::X86::parseArchX86(str_cpu, only64bit);
+    if (x86cpu == llvm::X86::CK_None) {
+      diags.Report(clang::diag::err_target_unknown_cpu) << str_cpu;
+      llvm::SmallVector<llvm::StringRef, 32> validList;
+      llvm::X86::fillValidCPUArchList(validList, only64bit);
+      if (!validList.empty())
+        diags.Report(clang::diag::note_valid_options)
+            << llvm::join(validList, ", ");
+
+      return false;
+    }
+  }
+
+  // TODO: only support check for x86_64 for now. Anything else is considered
+  // as "supported".
+  return true;
 }
 
 int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
@@ -80,6 +111,11 @@ int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0) {
   // --print-supported-cpus takes priority over the actual compilation.
   if (flang->getFrontendOpts().printSupportedCPUs)
     return printSupportedCPUs(flang->getInvocation().getTargetOpts().triple);
+
+  // Check that requested CPU can be properly supported
+  success = success &&
+            checkSupportedCPU(diags, flang->getInvocation().getTargetOpts().cpu,
+                              flang->getInvocation().getTargetOpts().triple);
 
   diagsBuffer->flushDiagnostics(flang->getDiagnostics());
 
