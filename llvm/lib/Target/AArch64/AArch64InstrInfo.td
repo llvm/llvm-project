@@ -242,6 +242,11 @@ def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                        AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
 
+def HasCMH          : Predicate<"Subtarget->hasCMH()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
+def HasLSCP         : Predicate<"Subtarget->hasLSCP()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
+
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVE_or_SME
@@ -310,6 +315,10 @@ def HasSVE2p2_or_SME2p2
     : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p2() || Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSME2p2, FeatureSVE2p2),
                 "sme2p2 or sve2p2">;
+def HasSVE2p3_or_SME2p3
+    : Predicate<"Subtarget->isSVEorStreamingSVEAvailable() && (Subtarget->hasSVE2p3() || Subtarget->hasSME2p3())">,
+                AssemblerPredicateWithAll<(any_of FeatureSME2p3, FeatureSVE2p3),
+                "sme2p3 or sve2p3">;
 def HasNonStreamingSVE2p2_or_SME2p2
     : Predicate<"(Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()) ||"
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
@@ -395,6 +404,14 @@ def HasGCS           : Predicate<"Subtarget->hasGCS()">,
                        AssemblerPredicateWithAll<(all_of FeatureGCS), "gcs">;
 def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                        AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
+def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
+                       AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
+def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
+                       AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
+def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
+                       AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
+def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
+                       AssemblerPredicateWithAll<(all_of FeatureGCIE), "gcie">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
@@ -3691,6 +3708,12 @@ def UDF : UDFType<0, "udf">;
 //===----------------------------------------------------------------------===//
 // Load instructions.
 //===----------------------------------------------------------------------===//
+
+let Predicates = [HasLSCP] in {
+defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
+defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
+defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
+}
 
 // Pair (indexed, offset)
 defm LDPW : LoadPairOffset<0b00, 0, GPR32z, simm7s4, "ldp">;
@@ -11246,6 +11269,15 @@ let Predicates = [HasLSFE] in {
 
 let Uses = [FPMR, FPCR] in
 defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla">;
+
+//===----------------------------------------------------------------------===//
+// Contention Management Hints (FEAT_CMH)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasCMH] in {
+  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
+  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
+}
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
