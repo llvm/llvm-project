@@ -24,9 +24,6 @@ class RewritePatternSet;
 void populateRaiseWasmMLIRConversionPatterns(TypeConverter &,
                                              RewritePatternSet &);
 
-/// Create a pass to convert ops from WasmDialect to standard dialects.
-std::unique_ptr<Pass> createRaiseWasmMLIRPass();
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_RAISEWASM_RAISEWASMMLIR_H

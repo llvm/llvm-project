@@ -209,8 +209,7 @@ struct GlobalOpConverter : OpConversionPattern<GlobalOp> {
   LogicalResult
   matchAndRewrite(GlobalOp globalOp, GlobalOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    ReturnOp rop;
-    globalOp->walk([&rop](ReturnOp op) { rop = op; });
+    ReturnOp rop = globalOp.getInitTerminator();
 
     if (rop->getNumOperands() != 1)
       return rewriter.notifyMatchFailure(
@@ -461,6 +460,6 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
   // clang-format on
 }
 
-std::unique_ptr<Pass> mlir::createRaiseWasmMLIRPass() {
+std::unique_ptr<Pass> createRaiseWasmMLIRPass() {
   return std::make_unique<RaiseWasmMLIRPass>();
 }
