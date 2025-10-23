@@ -362,31 +362,31 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    sbcs r0, r1, #0
 ; CHECK-NEXT:    blt.w .LBB1_28
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond2.preheader.lr.ph
-; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    csel r7, r2, r0, lt
 ; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    mov r1, r7
+; CHECK-NEXT:    csinc r7, r2, zr, ge
+; CHECK-NEXT:    movw r1, #43691
+; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    cmp r7, #3
 ; CHECK-NEXT:    it ls
-; CHECK-NEXT:    movls r1, #3
+; CHECK-NEXT:    movls r0, #3
+; CHECK-NEXT:    movt r1, #43690
+; CHECK-NEXT:    subs r0, r0, r7
 ; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    subs r1, r1, r7
-; CHECK-NEXT:    movw r2, #43691
-; CHECK-NEXT:    adds r1, #2
-; CHECK-NEXT:    movt r2, #43690
+; CHECK-NEXT:    adds r0, #2
+; CHECK-NEXT:    movs r2, #4
 ; CHECK-NEXT:    ldr r6, [sp, #128]
 ; CHECK-NEXT:    movw r8, :lower16:c
-; CHECK-NEXT:    umull r1, r2, r1, r2
+; CHECK-NEXT:    umull r0, r1, r0, r1
 ; CHECK-NEXT:    movt r8, :upper16:c
-; CHECK-NEXT:    movs r1, #4
+; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    @ implicit-def: $r10
 ; CHECK-NEXT:    @ implicit-def: $r5
 ; CHECK-NEXT:    @ implicit-def: $r11
 ; CHECK-NEXT:    mov.w r9, #12
 ; CHECK-NEXT:    str r4, [sp, #12] @ 4-byte Spill
-; CHECK-NEXT:    add.w r1, r1, r2, lsr #1
-; CHECK-NEXT:    add.w r0, r0, r2, lsr #1
+; CHECK-NEXT:    add.w r0, r0, r1, lsr #1
+; CHECK-NEXT:    add.w r1, r2, r1, lsr #1
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    adr r1, .LCPI1_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
