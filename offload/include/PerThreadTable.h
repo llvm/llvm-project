@@ -107,7 +107,7 @@ template <typename ContainerType, typename ObjectType> struct PerThreadTable {
   };
 
   std::mutex Mutex;
-  std::list<std::shared_ptr<PerThreadData>> ThreadDataList;
+  llvm::SmallVector<std::shared_ptr<PerThreadData>> ThreadDataList;
 
   // define default constructors, disable copy and move constructors
   PerThreadTable() = default;
