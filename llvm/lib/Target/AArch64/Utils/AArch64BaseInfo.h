@@ -677,6 +677,14 @@ namespace AArch64BTIHint {
 #include "AArch64GenSystemOperands.inc"
 }
 
+namespace AArch64CMHPriorityHint {
+struct CMHPriorityHint : SysAlias {
+  using SysAlias::SysAlias;
+};
+#define GET_CMHPRIORITYHINT_DECL
+#include "AArch64GenSystemOperands.inc"
+} // namespace AArch64CMHPriorityHint
+
 namespace AArch64SME {
 enum ToggleCondition : unsigned {
   Always,
