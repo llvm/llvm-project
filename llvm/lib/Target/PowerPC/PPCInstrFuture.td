@@ -16,8 +16,11 @@ class XForm_RS5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   bits<5> RS;
 
   let Pattern = pattern;
+
   let Inst{6...10} = RS;
+  let Inst{11...20} = 0;
   let Inst{21...30} = xo;
+  let Inst{31} = 0;
 }
 
 class XOForm_RTAB5_L1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
@@ -311,6 +314,9 @@ let Predicates = [IsISAFuture] in {
                                        (ins gprc:$RB, gprc:$RS, u2imm:$RIC,
                                            u1imm:$PRS, u1imm:$R),
                                        "tlbiep $RB, $RS, $RIC, $PRS, $R", []>;
+  def TLBIEIO
+      : XForm_RSB5_UIMM2<31, 18, (outs), (ins g8rc:$RB, g8rc:$RS, u2imm:$RIC),
+                         "tlbieio $RB, $RS, $RIC", []>;
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def TLBIEP8
         : XForm_RSB5_UIMM2_2UIMM1<31, 50, (outs),

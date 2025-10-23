@@ -861,9 +861,12 @@ class XForm_RSB5_UIMM2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   let Inst{6...10} = RS;
+  let Inst{11} = 0;
   let Inst{12...13} = RIC;
+  let Inst{14...15} = 0;
   let Inst{16...20} = RB;
   let Inst{21...30} = xo;
+  let Inst{31} = 0;
 }
 
 class XForm_RSB5_UIMM2_2UIMM1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,

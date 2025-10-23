@@ -9,6 +9,10 @@
 #CHECK-LE: tlbiep 8, 10, 2, 1, 0          # encoding: [0x64,0x40,0x4a,0x7d]
            tlbiep 8, 10, 2, 1, 0
 
+# CHECK-BE: tlbieio 8, 10, 2              # encoding: [0x7d,0x48,0x40,0x24]
+# CHECK-LE: tlbieio 8, 10, 2              # encoding: [0x24,0x40,0x48,0x7d]
+            tlbieio 8, 10, 2
+
 # CHECK-BE: tlbsyncio 15                  # encoding: [0x7d,0xe0,0x04,0x68]
 # CHECK-LE: tlbsyncio 15                  # encoding: [0x68,0x04,0xe0,0x7d]
             tlbsyncio 15
