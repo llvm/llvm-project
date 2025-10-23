@@ -877,6 +877,8 @@ eLanguageTypeC_sharp = _lldb.eLanguageTypeC_sharp
 
 eLanguageTypeMojo = _lldb.eLanguageTypeMojo
 
+eLanguageTypeLastStandardLanguage = _lldb.eLanguageTypeLastStandardLanguage
+
 eLanguageTypeMipsAssembler = _lldb.eLanguageTypeMipsAssembler
 r"""Mips_Assembler."""
 eNumLanguageTypes = _lldb.eNumLanguageTypes
@@ -3160,8 +3162,20 @@ class SBBreakpoint(object):
         return _lldb.SBBreakpoint_SetIsHardware(self, is_hardware)
 
     def AddLocation(self, address):
-        r"""AddLocation(SBBreakpoint self, SBAddress address) -> SBError"""
+        r"""
+        Adds a location to the breakpoint at the address passed in.
+        Can only be called from a ScriptedBreakpointResolver...
+        """
         return _lldb.SBBreakpoint_AddLocation(self, address)
+
+    def AddFacadeLocation(self):
+        r"""
+        Add a "Facade location" to the breakpoint.  This returns the Facade
+        Location that was added, which you can then use in
+        get_location_description and was_hit in your breakpoint resolver.
+        Can only be called from a ScriptedBreakpointResolver.
+        """
+        return _lldb.SBBreakpoint_AddFacadeLocation(self)
 
     def SerializeToStructuredData(self):
         r"""SerializeToStructuredData(SBBreakpoint self) -> SBStructuredData"""
@@ -13489,6 +13503,7 @@ class SBTarget(object):
         BreakpointCreateByName(SBTarget self, char const * symbol_name, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
         BreakpointCreateByName(SBTarget self, char const * symbol_name, uint32_t name_type_mask, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
         BreakpointCreateByName(SBTarget self, char const * symbol_name, uint32_t name_type_mask, lldb::LanguageType symbol_language, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
+        BreakpointCreateByName(SBTarget self, char const * symbol_name, uint32_t name_type_mask, lldb::LanguageType symbol_language, lldb::addr_t offset, bool offset_is_insn_count, SBFileSpecList module_list, SBFileSpecList comp_unit_list) -> SBBreakpoint
         """
         return _lldb.SBTarget_BreakpointCreateByName(self, *args)
 
