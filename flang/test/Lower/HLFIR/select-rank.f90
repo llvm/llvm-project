@@ -371,7 +371,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1(%[[VAL_11]]#0) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_12:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_12:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_13:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
@@ -435,7 +435,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrdefault(%[[VAL_8]]#0) fastmath<contract> : (!fir.box<!fir.array<*:f32>>) -> ()
 ! CHECK:           cf.br ^bb5
 ! CHECK:         ^bb4:
-! CHECK:           %[[VAL_9:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_9:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_10:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_9]] : (index) -> !fir.shape<1>
@@ -482,7 +482,7 @@ end subroutine
 ! CHECK:           fir.call @_QPr1_implicit(%[[VAL_21]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_22:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_22:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_23:.*]] = fir.box_addr %[[VAL_2]]#1 : (!fir.box<!fir.array<*:f32>>) -> !fir.ref<!fir.array<*:f32>>
 ! CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.ref<!fir.array<*:f32>>) -> !fir.ref<!fir.array<?xf32>>
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_22]] : (index) -> !fir.shape<1>
@@ -534,7 +534,7 @@ end subroutine
 ! CHECK:           fir.call @_QPrc1_implicit(%[[VAL_26]]) fastmath<contract> : (!fir.boxchar<1>) -> ()
 ! CHECK:           cf.br ^bb6
 ! CHECK:         ^bb5:
-! CHECK:           %[[VAL_27:.*]] = arith.constant -1 : index
+! CHECK:           %[[VAL_27:.*]] = fir.assumed_size_extent : index
 ! CHECK:           %[[VAL_28:.*]] = fir.box_addr %[[VAL_8]]#1 : (!fir.box<!fir.array<*:!fir.char<1,?>>>) -> !fir.ref<!fir.array<*:!fir.char<1,?>>>
 ! CHECK:           %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (!fir.ref<!fir.array<*:!fir.char<1,?>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_27]] : (index) -> !fir.shape<1>
