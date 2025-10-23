@@ -61,6 +61,18 @@ entry:
   ret <vscale x 4 x i32> %add
 }
 
+define <vscale x 4 x i32> @insert_add_non_splat_subvector() {
+; CHECK-LABEL: @insert_add_non_splat_subvector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> <i32 101, i32 102, i32 103, i32 104>, i64 0)
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
+;
+entry:
+  %0 = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i64 0)
+  %add = add <vscale x 4 x i32> %0, splat (i32 100)
+  ret <vscale x 4 x i32> %add
+}
+
 define <vscale x 8 x i32> @insert_add_scalable_subvector() {
 ; CHECK-LABEL: @insert_add_scalable_subvector(
 ; CHECK-NEXT:  entry:
