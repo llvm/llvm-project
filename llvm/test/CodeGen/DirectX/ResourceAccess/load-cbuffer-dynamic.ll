@@ -19,6 +19,8 @@ entry:
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", %__cblayout_CB), ptr @CB.cb
   %CB.cb = load target("dx.CBuffer", %__cblayout_CB), ptr @CB.cb, align 4
 
+  ;; s[idx]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 %idx)
   ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 0
   ; CHECK: store i32 [[X]], ptr %dst
@@ -27,6 +29,8 @@ entry:
   %s_load = load i32, ptr addrspace(2) %s_gep, align 4
   store i32 %s_load, ptr %dst, align 4
 
+  ;; t[idx]
+  ;
   ; CHECK: [[T_IDX:%.*]] = add i32 10, %idx
   ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 [[T_IDX]])
   ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 0

@@ -13,6 +13,9 @@ entry:
   %CB.cb_h = call target("dx.CBuffer", %__cblayout_CB) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.CBuffer", %__cblayout_CB) %CB.cb_h, ptr @CB.cb, align 4
 
+  ;; a1[1]
+  ;; Note that the valid GEPs of a1 are `0, 0, 0`, `0, 0, 1`, and `0, 1`.
+  ;
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", %__cblayout_CB), ptr @CB.cb
   ; CHECK: [[LOAD:%.*]] = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 1)
   ; CHECK: [[X:%.*]] = extractvalue { float, float, float, float } [[LOAD]], 0

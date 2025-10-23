@@ -32,6 +32,8 @@ entry:
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", %__cblayout_CB), ptr @CB.cb
   %CB.cb = load target("dx.CBuffer", %__cblayout_CB), ptr @CB.cb, align 4
 
+  ;; a1[1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 1)
   ; CHECK: [[X:%.*]] = extractvalue { float, float, float, float } [[LOAD]], 0
   ; CHECK: store float [[X]], ptr %dst
@@ -40,6 +42,8 @@ entry:
   %a1 = load float, ptr addrspace(2) %a1_gep, align 4
   store float %a1, ptr %dst, align 32
 
+  ;; a2[1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { double, double } @llvm.dx.resource.load.cbufferrow.2.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 5)
   ; CHECK: [[X:%.*]] = extractvalue { double, double } [[LOAD]], 0
   ; CHECK: [[Y:%.*]] = extractvalue { double, double } [[LOAD]], 1
@@ -56,6 +60,8 @@ entry:
   %a2.i = getelementptr inbounds nuw i8, ptr %dst, i32 8
   store <3 x double> %a2, ptr %a2.i, align 32
 
+  ;; a3[0][1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { half, half, half, half, half, half, half, half } @llvm.dx.resource.load.cbufferrow.8.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 8)
   ; CHECK: [[X:%.*]] = extractvalue { half, half, half, half, half, half, half, half } [[LOAD]], 0
   ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 32
@@ -66,6 +72,8 @@ entry:
   %a3.i = getelementptr inbounds nuw i8, ptr %dst, i32 32
   store half %a3, ptr %a3.i, align 2
 
+  ;; a4[1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i64, i64 } @llvm.dx.resource.load.cbufferrow.2.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 12)
   ; CHECK: [[X:%.*]] = extractvalue { i64, i64 } [[LOAD]], 0
   ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 40
@@ -76,6 +84,8 @@ entry:
   %a4.i = getelementptr inbounds nuw i8, ptr %dst, i32 40
   store i64 %a4, ptr %a4.i, align 8
 
+  ;; a5[1][0][0]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 26)
   ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 0
   ; CHECK: [[Y:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 1
@@ -93,6 +103,8 @@ entry:
   %a5.i = getelementptr inbounds nuw i8, ptr %dst, i32 48
   store <4 x i32> %a5, ptr %a5.i, align 4
 
+  ;; a6[0]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i16, i16, i16, i16, i16, i16, i16, i16 } @llvm.dx.resource.load.cbufferrow.8.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 38)
   ; CHECK: [[X:%.*]] = extractvalue { i16, i16, i16, i16, i16, i16, i16, i16 } [[LOAD]], 0
   ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 64
@@ -102,6 +114,8 @@ entry:
   %a6.i = getelementptr inbounds nuw i8, ptr %dst, i32 64
   store i16 %a6, ptr %a6.i, align 2
 
+  ;; a7[1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i64, i64 } @llvm.dx.resource.load.cbufferrow.2.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 40)
   ; CHECK: [[X:%.*]] = extractvalue { i64, i64 } [[LOAD]], 0
   ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 72
@@ -112,6 +126,8 @@ entry:
   %a7.i = getelementptr inbounds nuw i8, ptr %dst, i32 72
   store i64 %a7, ptr %a7.i, align 8
 
+  ;; a8[1]
+  ;
   ; CHECK: [[LOAD:%.*]] = call { i32, i32, i32, i32 } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", %__cblayout_CB) [[CB]], i32 42)
   ; CHECK: [[X:%.*]] = extractvalue { i32, i32, i32, i32 } [[LOAD]], 0
   ; CHECK: [[PTR:%.*]] = getelementptr inbounds nuw i8, ptr %dst, i32 80
