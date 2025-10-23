@@ -1508,6 +1508,41 @@ def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
 
+defvar AEABIOverrides = [
+  __eqsf2, __eqdf2,
+  __nesf2, __nedf2,
+  __ltsf2, __ltdf2,
+  __lesf2, __ledf2,
+  __gesf2, __gedf2,
+  __gtsf2, __gtdf2,
+  __unordsf2, __unorddf2,
+
+  __addsf3, __adddf3,
+  __divsf3, __divdf3,
+  __mulsf3, __muldf3,
+  __subsf3, __subdf3,
+
+  __fixdfsi, __fixunsdfsi,
+  __fixdfdi, __fixunsdfdi,
+  __fixsfsi, __fixunssfsi,
+  __fixsfdi, __fixunssfdi,
+
+  __floatsidf, __floatunsidf,
+  __floatdidf, __floatundidf,
+  __floatsisf, __floatunsisf,
+  __floatdisf, __floatundisf,
+
+  __muldi3, __ashldi3,
+  __lshrdi3, __ashrdi3,
+
+  __divsi3, __udivsi3
+
+  // Half conversion cases are a mess and handled separately.
+  //  __truncdfsf2, __truncdfhf2,
+  //  __extendsfdf2,
+  //  __truncsfhf2, __extendhfsf2
+];
+
 // Double-precision floating-point comparison helper functions
 // RTABI chapter 4.1.2, Table 3
 def __aeabi_dcmpeq__oeq : RuntimeLibcallImpl<OEQ_F64, "__aeabi_dcmpeq">; // CallingConv::ARM_AAPCS, CmpInst::ICMP_NE
@@ -1793,7 +1828,8 @@ def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
       (add (sub WinDefaultLibcallImpls, ARMLibgccHalfConvertCalls,
                                         GNUEABIHalfConvertCalls,
-                                        ARMDoubleToHalfCalls),
+                                        ARMDoubleToHalfCalls,
+                                        AEABIOverrides),
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1812,6 +1848,11 @@ def ARMSystemLibrary
            GNUEABIHalfConvertCalls,
            ARMDoubleToHalfCalls,
 
+           LibcallImpls<(add AEABIOverrides),
+             RuntimeLibcallPredicate<[{
+               (!hasAEABILibcalls(TT) || !isAAPCS_ABI(TT, ABIName)) &&
+               !TT.isOSWindows()
+            }]>>,
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
