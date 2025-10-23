@@ -8646,11 +8646,6 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
 
   Style.ColumnLimit = 70;
   verifyFormat(
-      "void foo( //\n"
-      "    const MySuperSuperSuperSuperSuperSuperSuperSuperLongTypeName*\n"
-      "        const my_super_super_super_super_long_variable_name) {}",
-      Style);
-  verifyFormat(
       "void foo(const MySuperSuperSuperSuperSuperSuperSuperSuperLongTypeName*\n"
       "             my_super_super_super_super_long_variable_name) {}",
       Style);
@@ -8660,11 +8655,6 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
       Style);
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
-  verifyFormat(
-      "void foo( //\n"
-      "    const MySuperSuperSuperSuperSuperSuperSuperSuperLongTypeName *\n"
-      "        const my_super_super_super_super_long_variable_name) {}",
-      Style);
   verifyFormat(
       "void foo(\n"
       "    const MySuperSuperSuperSuperSuperSuperSuperSuperLongTypeName *\n"
