@@ -100,7 +100,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-RUN powershell -Command [Environment]::SetEnvironmentVariable('LLVM_VERSION', '21.1.2', 'Machine')
+ENV LLVM_VERSION=21.1.2
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer
