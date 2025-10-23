@@ -2323,20 +2323,6 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
   return ConstantVector::get(NewVecC);
 }
 
-// Match a vector.insert where both the destination and subvector are constant.
-static bool matchConstantSubVector(Value *V, Constant *&Dest,
-                                   Constant *&SubVector, Value *&Idx) {
-  return match(V, m_Intrinsic<Intrinsic::vector_insert>(
-                      m_Constant(Dest), m_Constant(SubVector), m_Value(Idx)));
-}
-
-static Constant *matchConstantSplat(Value *V) {
-  Constant *C;
-  if (match(V, m_Constant(C)))
-    return C->getSplatValue();
-  return nullptr;
-}
-
 // Get the result of `Vector Op Splat` (or Splat Op Vector if \p SplatLHS).
 static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
                                             Constant *Splat, bool SplatLHS,
@@ -2364,9 +2350,11 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
       [&](Value *MaybeSubVector, Value *MaybeSplat,
           bool SplatLHS) -> Instruction * {
     Value *Idx;
-    Constant *SubVector, *Dest, *Splat;
-    Splat = matchConstantSplat(MaybeSplat);
-    if (!Splat || !matchConstantSubVector(MaybeSubVector, Dest, SubVector, Idx))
+    Constant *Splat, *SubVector, *Dest;
+    if (!match(MaybeSplat, m_Splat(m_Constant(Splat))) ||
+        !match(MaybeSubVector,
+               m_VectorInsert(m_Constant(Dest), m_Constant(SubVector),
+                              m_Value(Idx))))
       return nullptr;
     SubVector =
         constantFoldBinOpWithSplat(Opcode, SubVector, Splat, SplatLHS, DL);
