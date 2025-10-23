@@ -1850,7 +1850,7 @@ def err_placeholder_expected_auto_or_decltype_auto : Error<
 
 let CategoryName = "Reflection Issue" in {
 def err_cannot_reflect_operand : Error<
-  "cannot reflect the provided operand">;
+  "expected reflectable entity">;
 }
 
 def warn_max_tokens : Warning<
