@@ -255,6 +255,12 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   if (!ContainedType)
     return;
 
+  SmallVector<uint64_t> ArrayDimensions;
+  while (ArrayType *AT = dyn_cast<ArrayType>(ContainedType)) {
+    ArrayDimensions.push_back(AT->getNumElements());
+    ContainedType = AT->getElementType();
+  }
+
   StringRef ElementName;
   ElementType ET = toDXILElementType(ContainedType, IsSigned);
   if (ET != ElementType::Invalid) {
@@ -271,6 +277,8 @@ static void formatTypeName(SmallString<64> &Dest, StringRef Name,
   DestStream << "<" << ElementName;
   if (const FixedVectorType *VTy = dyn_cast<FixedVectorType>(ContainedType))
     DestStream << VTy->getNumElements();
+  for (uint64_t Dim : ArrayDimensions)
+    DestStream << "[" << Dim << "]";
   DestStream << ">";
 }
 
@@ -279,6 +287,38 @@ static StructType *getOrCreateElementStruct(Type *ElemType, StringRef Name) {
   if (Ty && Ty->getNumElements() == 1 && Ty->getElementType(0) == ElemType)
     return Ty;
   return StructType::create(ElemType, Name);
+}
+
+static Type *getTypeWithoutPadding(Type *Ty) {
+  // Recursively remove padding from structures.
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    LLVMContext &Ctx = Ty->getContext();
+    SmallVector<Type *> ElementTypes;
+    ElementTypes.reserve(ST->getNumElements());
+    for (Type *ElTy : ST->elements()) {
+      if (isa<PaddingExtType>(ElTy))
+        continue;
+      ElementTypes.push_back(getTypeWithoutPadding(ElTy));
+    }
+
+    // Handle explicitly padded cbuffer arrays like { [ n x paddedty ], ty }
+    if (ElementTypes.size() == 2)
+      if (auto *AT = dyn_cast<ArrayType>(ElementTypes[0]))
+        if (ElementTypes[1] == AT->getElementType())
+          return ArrayType::get(ElementTypes[1], AT->getNumElements() + 1);
+
+    // If we only have a single element, don't wrap it in a struct.
+    if (ElementTypes.size() == 1)
+      return ElementTypes[0];
+
+    return StructType::get(Ctx, ElementTypes, /*IsPacked=*/false);
+  }
+  // Arrays just need to have their element type adjusted.
+  if (auto *AT = dyn_cast<ArrayType>(Ty))
+    return ArrayType::get(getTypeWithoutPadding(AT->getElementType()),
+                          AT->getNumElements());
+  // Anything else should be good as is.
+  return Ty;
 }
 
 StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
@@ -334,14 +374,21 @@ StructType *ResourceTypeInfo::createElementStruct(StringRef CBufferName) {
   }
   case ResourceKind::CBuffer: {
     auto *RTy = cast<CBufferExtType>(HandleTy);
-    LayoutExtType *LayoutType = cast<LayoutExtType>(RTy->getResourceType());
-    StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
     SmallString<64> Name = getResourceKindName(Kind);
     if (!CBufferName.empty()) {
       Name.append(".");
       Name.append(CBufferName);
     }
-    return StructType::create(Ty->elements(), Name);
+
+    // TODO: Remove this when we update the frontend to use explicit padding.
+    if (LayoutExtType *LayoutType =
+            dyn_cast<LayoutExtType>(RTy->getResourceType())) {
+      StructType *Ty = cast<StructType>(LayoutType->getWrappedType());
+      return StructType::create(Ty->elements(), Name);
+    }
+
+    return getOrCreateElementStruct(
+        getTypeWithoutPadding(RTy->getResourceType()), Name);
   }
   case ResourceKind::Sampler: {
     auto *RTy = cast<SamplerExtType>(HandleTy);
@@ -454,10 +501,10 @@ uint32_t ResourceTypeInfo::getCBufferSize(const DataLayout &DL) const {
 
   Type *ElTy = cast<CBufferExtType>(HandleTy)->getResourceType();
 
+  // TODO: Remove this when we update the frontend to use explicit padding.
   if (auto *LayoutTy = dyn_cast<LayoutExtType>(ElTy))
     return LayoutTy->getSize();
 
-  // TODO: What should we do with unannotated arrays?
   return DL.getTypeAllocSize(ElTy);
 }
 

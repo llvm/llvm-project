@@ -76,9 +76,6 @@ def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
 
-def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
-
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
 def CString : Package<"cstring">, ParentPackage<Unix>;

@@ -98,6 +98,13 @@ public:
   mlir::Type getElementOrSequenceType() const {
     return hlfir::getFortranElementOrSequenceType(getType());
   }
+  /// Return the fir.class or fir.box type needed to describe this entity.
+  fir::BaseBoxType getBoxType() const {
+    if (isBoxAddressOrValue())
+      return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
+    const bool isVolatile = fir::isa_volatile_type(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
+  }
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();

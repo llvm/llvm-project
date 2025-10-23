@@ -22,8 +22,7 @@ extern "C" {
 
 void __kmpc_omp_wait_deps(ident_t *loc_ref, int32_t gtid, int32_t ndeps,
                           kmp_depend_info_t *dep_list, int32_t ndeps_noalias,
-                          kmp_depend_info_t *noalias_dep_list)
-    __attribute__((weak));
+                          kmp_depend_info_t *noalias_dep_list);
 
 } // extern "C"
 
