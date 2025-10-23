@@ -589,6 +589,11 @@ enum {
   SHN_MIPS_SUNDEFINED = 0xff04 // Undefined symbols for global data area
 };
 
+// x86-64 speciifc section index
+enum {
+  SHN_X86_64_LCOMMON = 0xff02, // Large FORTRAN COMMON variables
+};
+
 // ELF Relocation types for Mips
 enum {
 #include "ELFRelocs/Mips.def"

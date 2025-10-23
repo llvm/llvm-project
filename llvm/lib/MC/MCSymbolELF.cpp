@@ -37,6 +37,9 @@ enum {
 
   // One bit.
   ELF_IsMemoryTagged_Shift = 13,
+
+  // One bit.
+  ELF_LargeCommon_Shift = 14,
 };
 }
 
@@ -205,5 +208,14 @@ void MCSymbolELF::setMemtag(bool Tagged) {
     setFlags(OtherFlags | (1 << ELF_IsMemoryTagged_Shift));
   else
     setFlags(OtherFlags);
+}
+
+bool MCSymbolELF::isLargeCommon() const {
+  return getFlags() & (0x1 << ELF_LargeCommon_Shift);
+}
+
+void MCSymbolELF::setIsLargeCommon() {
+  uint32_t OtherFlags = getFlags() & ~(0x1 << ELF_LargeCommon_Shift);
+  setFlags(OtherFlags | (1 << ELF_LargeCommon_Shift));
 }
 }
