@@ -385,6 +385,28 @@ public:
     return inherited::TraverseStmt(E->getReplacement());
   }
 
+  bool TraverseTemplateName(TemplateName Template) {
+    if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
+            Template.getAsTemplateDecl());
+        TTP && TTP->getDepth() < TemplateArgs.getNumLevels()) {
+      if (!TemplateArgs.hasTemplateArgument(TTP->getDepth(),
+                                            TTP->getPosition()))
+        return true;
+
+      TemplateArgument Arg = TemplateArgs(TTP->getDepth(), TTP->getPosition());
+      if (TTP->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+        assert(Arg.getKind() == TemplateArgument::Pack &&
+               "Missing argument pack");
+        Arg = SemaRef.getPackSubstitutedTemplateArgument(Arg);
+      }
+      assert(!Arg.getAsTemplate().isNull() &&
+             "Null template template argument");
+      UsedTemplateArgs.push_back(
+          SemaRef.Context.getCanonicalTemplateArgument(Arg));
+    }
+    return inherited::TraverseTemplateName(Template);
+  }
+
   void VisitConstraint(const NormalizedConstraintWithParamMapping &Constraint) {
     if (!Constraint.hasParameterMapping()) {
       for (const auto &List : TemplateArgs)
