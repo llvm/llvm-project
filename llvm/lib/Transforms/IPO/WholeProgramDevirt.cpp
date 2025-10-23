@@ -948,16 +948,16 @@ void llvm::updateVCallVisibilityInIndex(
     // linker, as we have no information on their eventual use.
     if (DynamicExportSymbols.count(P.first))
       continue;
+    // With validation enabled, we want to exclude symbols visible to regular
+    // objects. Local symbols will be in this group due to the current
+    // implementation but those with VCallVisibilityTranslationUnit will have
+    // already been marked in clang so are unaffected.
+    if (VisibleToRegularObjSymbols.count(P.first))
+      continue;
     for (auto &S : P.second.getSummaryList()) {
       auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
       if (!GVar ||
           GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
-        continue;
-      // With validation enabled, we want to exclude symbols visible to regular
-      // objects. Local symbols will be in this group due to the current
-      // implementation but those with VCallVisibilityTranslationUnit will have
-      // already been marked in clang so are unaffected.
-      if (VisibleToRegularObjSymbols.count(P.first))
         continue;
       GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
     }
