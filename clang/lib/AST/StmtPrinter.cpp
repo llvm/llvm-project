@@ -2567,8 +2567,7 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
 }
 
 void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
-  // TODO: Make this better.
-  OS << "^^(...)";
+  // TODO(Reflection): Implement this.
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(
