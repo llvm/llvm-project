@@ -3843,13 +3843,15 @@ static bool handleScalarCast(EvalInfo &Info, const FPOptions FPO, const Expr *E,
       if (!HandleConversionToBool(Original, BoolResult))
         return false;
       uint64_t IntResult = BoolResult;
-      Result = APValue(Info.Ctx.MakeIntValue(
-          IntResult, Info.Ctx.getIntTypeForBitwidth(64, true)));
+      QualType IntType = DestTy->isIntegerType()
+                             ? DestTy
+                             : Info.Ctx.getIntTypeForBitwidth(64, false);
+      Result = APValue(Info.Ctx.MakeIntValue(IntResult, IntType));
     }
     if (DestTy->isFloatingType()) {
       APValue Result2 = APValue(APFloat(0.0));
       if (!HandleIntToFloatCast(Info, E, FPO,
-                                Info.Ctx.getIntTypeForBitwidth(64, true),
+                                Info.Ctx.getIntTypeForBitwidth(64, false),
                                 Result.getInt(), DestTy, Result2.getFloat()))
         return false;
       Result = Result2;

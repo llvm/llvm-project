@@ -5,9 +5,7 @@
 // Note: these tests are a bit awkward because at time of writing we don't have a
 // good way to constexpr `any` for bool vector conditions, and the condition for
 // _Static_assert must be an integral constant.
-
 export void fn() {
-
   // This compiling successfully verifies that the vector constant expression
   // gets truncated to an integer at compile time for instantiation.
   _Static_assert(((int)1.xxxx) + 0 == 1, "Woo!");
