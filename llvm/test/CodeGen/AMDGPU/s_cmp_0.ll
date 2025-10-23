@@ -459,16 +459,14 @@ define amdgpu_ps i32 @bfe_u64(i64 inreg %val0) {
 define amdgpu_ps i32 @bcnt032(i32 inreg %val0) {
 ; CHECK-LABEL: bcnt032:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_bcnt1_i32_b32 s0, s0
-; CHECK-NEXT:    s_sub_i32 s0, 32, s0
-; CHECK-NEXT:    s_cmp_lg_u32 s0, 0
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s0
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT: s_bcnt0_i32_b32 s0, s0
+; CHECK-NEXT: ;;#ASMSTART
+; CHECK-NEXT: ; use s0
+; CHECK-NEXT: ;;#ASMEND
+; CHECK-NEXT: s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT: v_readfirstlane_b32 s0, v0
+; CHECK-NEXT: ; return to shader part epilog
   %result = call i32 @llvm.ctpop.i32(i32 %val0) nounwind readnone
   %result2 = sub i32 32, %result
   call void asm "; use $0", "s"(i32 %result2)
@@ -480,17 +478,15 @@ define amdgpu_ps i32 @bcnt032(i32 inreg %val0) {
 define amdgpu_ps i32 @bcnt064(i64 inreg %val0) {
 ; CHECK-LABEL: bcnt064:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_bcnt1_i32_b64 s0, s[0:1]
-; CHECK-NEXT:    s_sub_u32 s0, 64, s0
-; CHECK-NEXT:    s_subb_u32 s1, 0, 0
-; CHECK-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use s[0:1]
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    ; return to shader part epilog
+; CHECK-NEXT: s_bcnt0_i32_b64 s0, s[0:1]
+; CHECK-NEXT: s_mov_b32 s1, 0
+; CHECK-NEXT: ;;#ASMSTART
+; CHECK-NEXT: ; use s[0:1]
+; CHECK-NEXT: ;;#ASMEND
+; CHECK-NEXT: s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT: v_cndmask_b32_e64 v0, 0, 1, s[0:1]
+; CHECK-NEXT: v_readfirstlane_b32 s0, v0
+; CHECK-NEXT: ; return to shader part epilog
   %result = call i64 @llvm.ctpop.i64(i64 %val0) nounwind readnone
   %result2 = sub i64 64, %result
   call void asm "; use $0", "s"(i64 %result2)
