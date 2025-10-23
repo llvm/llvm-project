@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ;; one set of indexing calculations and a load
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @bar(i32 %arg, i32 %arg1, i32 %arg2) #0 {
+define i32 @bar(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
@@ -58,8 +58,6 @@ bb17:                                             ; preds = %bb3
 bb20:                                             ; preds = %bb17
   ret i32 %tmp14
 }
-
-attributes #0 = { nounwind ssp uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
