@@ -518,8 +518,10 @@ public:
                   loopOp));
         });
 
+    mlir::ConversionConfig config;
+    config.allowPatternRollback = false;
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+                                               std::move(patterns), config))) {
       mlir::emitError(func.getLoc(), "error in converting `omp.loop` op");
       signalPassFailure();
     }

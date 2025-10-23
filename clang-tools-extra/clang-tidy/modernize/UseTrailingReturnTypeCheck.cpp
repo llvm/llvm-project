@@ -1,4 +1,4 @@
-//===--- UseTrailingReturnTypeCheck.cpp - clang-tidy-----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -77,7 +77,7 @@ public:
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
         break;
-      if (visitUnqualName(T->getOriginalDecl()->getName()))
+      if (visitUnqualName(T->getDecl()->getName()))
         return false;
       break;
     }

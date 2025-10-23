@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-c++20-extensions
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-c++11-extensions -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
 namespace N {
@@ -24,14 +24,7 @@ namespace N {
 
   M::Promote<int>::type *ret_intptr3(int* ip) { return ip; }
   M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; }
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
-
   M::template Promote<int> pi;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{'template' keyword outside of a template}}
-#endif
 }
 
 N::M::Promote<int>::type *ret_intptr5(int* ip) { return ip; }
@@ -181,3 +174,39 @@ namespace SubstTemplateTypeParmPackType {
   template void f<B>();
 } // namespace SubstTemplateTypeParmPackType
 #endif
+
+namespace DependentUnaryTransform {
+  template <class T> using decay_t = __decay(T);
+  template <class, class> struct A;
+  template <class T> struct A<T, typename decay_t<T>::X>;
+} // namespace DependentUnaryTransform
+
+namespace DependentSizedArray {
+  template <int V> using Z = int[V];
+  template <class, class> struct A;
+  template <class T> struct A<T, typename Z<T(0)>::X>;
+} // namespace DependentUnaryTransform
+
+namespace GH155281 {
+  template <bool> struct enable_if;
+  template <class _Tp, _Tp> struct integral_constant;
+  template <typename> struct conjunction;
+  template <typename T> using value_type_t = T;
+  template <class Check> using require_t = typename enable_if<Check::value>::type;
+  template <template <class> class, template <class> class,
+            template <class> class, class... Check>
+  using container_type_check_base =
+      integral_constant<bool, conjunction<Check...>::value>;
+  template <typename> struct is_std_vector;
+  template <template <class> class TypeCheck, class... Check>
+  using require_std_vector_vt =
+      require_t<container_type_check_base<is_std_vector, value_type_t, TypeCheck,
+                                          Check...> >;
+  template <typename, typename> class vector_seq_view;
+  namespace internal {
+  template <typename> using is_matrix_or_std_vector = int;
+  }
+  template <typename T>
+  class vector_seq_view<
+      T, require_std_vector_vt<internal::is_matrix_or_std_vector, T> >;
+} // namespace GH155281

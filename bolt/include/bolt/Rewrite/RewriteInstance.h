@@ -249,12 +249,11 @@ private:
   /// Analyze relocation \p Rel.
   /// Return true if the relocation was successfully processed, false otherwise.
   /// The \p SymbolName, \p SymbolAddress, \p Addend and \p ExtractedValue
-  /// parameters will be set on success. The \p Skip argument indicates
-  /// that the relocation was analyzed, but it must not be processed.
+  /// parameters will be set on success.
   bool analyzeRelocation(const object::RelocationRef &Rel, uint32_t &RType,
                          std::string &SymbolName, bool &IsSectionRelocation,
                          uint64_t &SymbolAddress, int64_t &Addend,
-                         uint64_t &ExtractedValue, bool &Skip) const;
+                         uint64_t &ExtractedValue) const;
 
   /// Rewrite non-allocatable sections with modifications.
   void rewriteNoteSections();

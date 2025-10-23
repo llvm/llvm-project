@@ -1194,7 +1194,7 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
   Style.SpaceBeforeSquareBrackets = false;
   Style.SpacesInSquareBrackets = false;
   Style.SpaceBeforeCpp11BracedList = true;
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   Style.SpacesInContainerLiterals = false;
   Style.SpaceAfterCStyleCast = false;
 

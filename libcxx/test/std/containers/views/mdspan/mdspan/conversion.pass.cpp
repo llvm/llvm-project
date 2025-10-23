@@ -232,7 +232,7 @@ int main(int, char**) {
   test<t, o, t, t, t, t, t, t, conv_test_accessor_c<int, t, t, o, o>>(conv_test_accessor_nc<int, t, o>());
 // FIXME: these tests trigger what appears to be a compiler bug on MINGW32 with --target=x86_64-w64-windows-gnu
 // https://godbolt.org/z/KK8aj5bs7
-// Bug report: https://github.com/llvm/llvm-project/issues/64077
+// Bug report: https://llvm.org/PR64077
 #ifndef __MINGW32__
   test<t, t, t, o, t, t, t, t, conv_test_accessor_c<int, o, t, t, t>>(conv_test_accessor_nc<int, t, t>());
   test<t, t, t, t, t, t, t, t, conv_test_accessor_c<int, o, o, o, o>>(conv_test_accessor_nc<int, t, o>());

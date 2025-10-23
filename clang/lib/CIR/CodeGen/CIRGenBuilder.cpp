@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenBuilder.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::CIRGen;
@@ -19,8 +22,8 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
 
   if (arrayTy) {
     const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
-    return create<cir::CastOp>(loc, flatPtrTy, cir::CastKind::array_to_ptrdecay,
-                               arrayPtr);
+    return cir::CastOp::create(*this, loc, flatPtrTy,
+                               cir::CastKind::array_to_ptrdecay, arrayPtr);
   }
 
   assert(arrayPtrTy.getPointee() == eltTy &&
@@ -37,7 +40,7 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   if (shouldDecay)
     basePtr = maybeBuildArrayDecay(arrayLocBegin, arrayPtr, eltTy);
   const mlir::Type flatPtrTy = basePtr.getType();
-  return create<cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr, idx);
+  return cir::PtrStrideOp::create(*this, arrayLocEnd, flatPtrTy, basePtr, idx);
 }
 
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
@@ -57,14 +60,14 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc,
 cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
                                              uint64_t c) {
   assert(mlir::isa<cir::IntType>(t) && "expected cir::IntType");
-  return create<cir::ConstantOp>(loc, cir::IntAttr::get(t, c));
+  return cir::ConstantOp::create(*this, loc, cir::IntAttr::get(t, c));
 }
 
 cir::ConstantOp
 clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
                                            llvm::APFloat fpVal) {
   assert(mlir::isa<cir::FPTypeInterface>(t) && "expected floating point type");
-  return create<cir::ConstantOp>(loc, cir::FPAttr::get(t, fpVal));
+  return cir::ConstantOp::create(*this, loc, cir::FPAttr::get(t, fpVal));
 }
 
 void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
@@ -128,6 +131,39 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
 
   assert(subType);
   computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+}
+
+cir::RecordType clang::CIRGen::CIRGenBuilderTy::getCompleteRecordType(
+    mlir::ArrayAttr fields, bool packed, bool padded, llvm::StringRef name) {
+  assert(!cir::MissingFeatures::astRecordDeclAttr());
+  llvm::SmallVector<mlir::Type> members;
+  members.reserve(fields.size());
+  llvm::transform(fields, std::back_inserter(members),
+                  [](mlir::Attribute attr) {
+                    return mlir::cast<mlir::TypedAttr>(attr).getType();
+                  });
+
+  if (name.empty())
+    return getAnonRecordTy(members, packed, padded);
+
+  return getCompleteNamedRecordType(members, packed, padded, name);
+}
+
+mlir::Attribute clang::CIRGen::CIRGenBuilderTy::getConstRecordOrZeroAttr(
+    mlir::ArrayAttr arrayAttr, bool packed, bool padded, mlir::Type type) {
+  auto recordTy = mlir::cast_or_null<cir::RecordType>(type);
+
+  // Record type not specified: create anon record type from members.
+  if (!recordTy) {
+    recordTy = getCompleteRecordType(arrayAttr, packed, padded);
+  }
+
+  // Return zero or anonymous constant record.
+  const bool isZero = llvm::all_of(
+      arrayAttr, [&](mlir::Attribute a) { return isNullValue(a); });
+  if (isZero)
+    return cir::ZeroAttr::get(recordTy);
+  return cir::ConstRecordAttr::get(recordTy, arrayAttr);
 }
 
 // This can't be defined in Address.h because that file is included by

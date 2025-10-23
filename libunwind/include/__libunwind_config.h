@@ -73,11 +73,11 @@
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC
 # elif defined(__aarch64__)
 #  define _LIBUNWIND_TARGET_AARCH64 1
-#  define _LIBUNWIND_CONTEXT_SIZE 66
+#define _LIBUNWIND_CONTEXT_SIZE 67
 #  if defined(__SEH__)
 #    define _LIBUNWIND_CURSOR_SIZE 164
 #  else
-#    define _LIBUNWIND_CURSOR_SIZE 78
+#define _LIBUNWIND_CURSOR_SIZE 79
 #  endif
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64
 # elif defined(__arm__)
@@ -211,5 +211,14 @@
 # define _LIBUNWIND_CURSOR_SIZE 204
 # define _LIBUNWIND_HIGHEST_DWARF_REGISTER 287
 #endif // _LIBUNWIND_IS_NATIVE_ONLY
+
+#if defined(__has_feature)
+#  if __has_feature(ptrauth_calls) && __has_feature(ptrauth_returns)
+#    define _LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING 1
+#  elif __has_feature(ptrauth_calls) != __has_feature(ptrauth_returns)
+#    error "Either both or none of ptrauth_calls and ptrauth_returns "\
+           "is allowed to be enabled"
+#  endif
+#endif
 
 #endif // ____LIBUNWIND_CONFIG_H__

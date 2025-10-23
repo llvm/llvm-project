@@ -1,4 +1,5 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
+#include "benchmarks/gpu/Random.h"
 
 #include "hdr/stdint_proxy.h"
 #include "src/math/sin.h"
@@ -10,8 +11,10 @@
 
 #define BM_RANDOM_INPUT(T, Func, MinExp, MaxExp, N)                            \
   [](uint32_t call_index) {                                                    \
-    return LIBC_NAMESPACE::benchmarks::MathPerf<T>::run_throughput_in_range<   \
-        N>(Func, MinExp, MaxExp, call_index);                                  \
+    using namespace LIBC_NAMESPACE::benchmarks;                                \
+                                                                               \
+    const UniformExponent<T> dist(MinExp, MaxExp);                             \
+    return MathPerf<T>::template run_throughput<N>(Func, dist, call_index);    \
   }
 
 #define BENCH(T, Name, Func, MinExp, MaxExp)                                   \

@@ -45,7 +45,7 @@ query, respectively.
 The ``AliasAnalysis`` interface exposes information about memory, represented in
 several different ways.  In particular, memory objects are represented as a
 starting address and size, and function calls are represented as the actual
-``call`` or ``invoke`` instructions that performs the call.  The
+``call`` or ``invoke`` instructions that perform the call.  The
 ``AliasAnalysis`` interface also exposes some helper methods which allow you to
 get mod/ref information for arbitrary instructions.
 
@@ -119,20 +119,20 @@ Must, May, and No Alias Responses
 
 The ``NoAlias`` response may be used when there is never an immediate dependence
 between any memory reference *based* on one pointer and any memory reference
-*based* the other. The most obvious example is when the two pointers point to
+*based on* the other. The most obvious example is when the two pointers point to
 non-overlapping memory ranges. Another is when the two pointers are only ever
 used for reading memory. Another is when the memory is freed and reallocated
 between accesses through one pointer and accesses through the other --- in this
 case, there is a dependence, but it's mediated by the free and reallocation.
 
-As an exception to this is with the :ref:`noalias <noalias>` keyword;
+An exception to this is with the :ref:`noalias <noalias>` keyword;
 the "irrelevant" dependencies are ignored.
 
 The ``MayAlias`` response is used whenever the two pointers might refer to the
 same object.
 
 The ``PartialAlias`` response is used when the two memory objects are known to
-be overlapping in some way, regardless whether they start at the same address
+be overlapping in some way, regardless of whether they start at the same address
 or not.
 
 The ``MustAlias`` response may only be returned if the two memory objects are
@@ -205,15 +205,15 @@ satisfy the ``doesNotAccessMemory`` method also satisfy ``onlyReadsMemory``.
 Writing a new ``AliasAnalysis`` Implementation
 ==============================================
 
-Writing a new alias analysis implementation for LLVM is quite straight-forward.
+Writing a new alias analysis implementation for LLVM is quite straightforward.
 There are already several implementations that you can use for examples, and the
-following information should help fill in any details.  For examples, take a
+following information should help fill in any details.  For example, take a
 look at the `various alias analysis implementations`_ included with LLVM.
 
 Different Pass styles
 ---------------------
 
-The first step to determining what type of :doc:`LLVM pass <WritingAnLLVMPass>`
+The first step is to determine what type of :doc:`LLVM pass <WritingAnLLVMPass>`
 you need to use for your Alias Analysis.  As is the case with most other
 analyses and transformations, the answer should be fairly obvious from what type
 of problem you are trying to solve:
@@ -233,7 +233,7 @@ Your subclass of ``AliasAnalysis`` is required to invoke two methods on the
 ``AliasAnalysis`` base class: ``getAnalysisUsage`` and
 ``InitializeAliasAnalysis``.  In particular, your implementation of
 ``getAnalysisUsage`` should explicitly call into the
-``AliasAnalysis::getAnalysisUsage`` method in addition to doing any declaring
+``AliasAnalysis::getAnalysisUsage`` method in addition to declaring
 any pass dependencies your pass has.  Thus you should have something like this:
 
 .. code-block:: c++
@@ -243,7 +243,7 @@ any pass dependencies your pass has.  Thus you should have something like this:
     // declare your dependencies here.
   }
 
-Additionally, your must invoke the ``InitializeAliasAnalysis`` method from your
+Additionally, you must invoke the ``InitializeAliasAnalysis`` method from your
 analysis run method (``run`` for a ``Pass``, ``runOnFunction`` for a
 ``FunctionPass``, or ``InitializePass`` for an ``ImmutablePass``).  For example
 (as part of a ``Pass``):
@@ -344,7 +344,7 @@ The ``addEscapingUse`` method
 The ``addEscapingUse`` method is used when the uses of a pointer value have
 changed in ways that may invalidate precomputed analysis information.
 Implementations may either use this callback to provide conservative responses
-for points whose uses have change since analysis time, or may recompute some or
+for points whose uses have changed since analysis time, or may recompute some or
 all of their internal state to continue providing accurate responses.
 
 In general, any new use of a pointer value is considered an escaping use, and
@@ -379,16 +379,16 @@ also no way of setting a chain of analyses as the default.
 There is no way for transform passes to declare that they preserve
 ``AliasAnalysis`` implementations. The ``AliasAnalysis`` interface includes
 ``deleteValue`` and ``copyValue`` methods which are intended to allow a pass to
-keep an AliasAnalysis consistent, however there's no way for a pass to declare
+keep an AliasAnalysis consistent; however, there's no way for a pass to declare
 in its ``getAnalysisUsage`` that it does so. Some passes attempt to use
-``AU.addPreserved<AliasAnalysis>``, however this doesn't actually have any
+``AU.addPreserved<AliasAnalysis>``; however, this doesn't actually have any
 effect.
 
 Similarly, the ``opt -p`` option introduces ``ModulePass`` passes between each
 pass, which prevents the use of ``FunctionPass`` alias analysis passes.
 
 The ``AliasAnalysis`` API does have functions for notifying implementations when
-values are deleted or copied, however these aren't sufficient. There are many
+values are deleted or copied; however, these aren't sufficient. There are many
 other ways that LLVM IR can be modified which could be relevant to
 ``AliasAnalysis`` implementations which can not be expressed.
 
@@ -406,7 +406,7 @@ unreliable.
 Many alias queries can be reformulated in terms of other alias queries. When
 multiple ``AliasAnalysis`` queries are chained together, it would make sense to
 start those queries from the beginning of the chain, with care taken to avoid
-infinite looping, however currently an implementation which wants to do this can
+infinite looping; however, currently an implementation which wants to do this can
 only start such queries from itself.
 
 Using alias analysis results
@@ -477,7 +477,7 @@ will help make sense of why things are designed the way they are.
 Using the ``AliasAnalysis`` interface directly
 ----------------------------------------------
 
-If neither of these utility class are what your pass needs, you should use the
+If neither of these utility classes are what your pass needs, you should use the
 interfaces exposed by the ``AliasAnalysis`` class directly.  Try to use the
 higher-level methods when possible (e.g., use mod/ref information instead of the
 `alias`_ method directly if possible) to get the best precision and efficiency.
@@ -488,7 +488,7 @@ Existing alias analysis implementations and clients
 If you're going to be working with the LLVM alias analysis infrastructure, you
 should know what clients and implementations of alias analysis are available.
 In particular, if you are implementing an alias analysis, you should be aware of
-the `the clients`_ that are useful for monitoring and evaluating different
+`the clients`_ that are useful for monitoring and evaluating different
 implementations.
 
 .. _various alias analysis implementations:
@@ -513,7 +513,7 @@ important facts:
 * Many common standard C library functions `never access memory or only read
   memory`_.
 * Pointers that obviously point to constant globals "``pointToConstantMemory``".
-* Function calls can not modify or references stack allocations if they never
+* Function calls cannot modify or reference stack allocations if they never
   escape from the function that allocates them (a common case for automatic
   arrays).
 
@@ -590,7 +590,7 @@ with any of the implementations above.
 The ``-adce`` pass
 ^^^^^^^^^^^^^^^^^^
 
-The ``-adce`` pass, which implements Aggressive Dead Code Elimination uses the
+The ``-adce`` pass, which implements Aggressive Dead Code Elimination, uses the
 ``AliasAnalysis`` interface to delete calls to functions that do not have
 side-effects and are not used.
 
@@ -602,7 +602,7 @@ transformations.  It uses the ``AliasAnalysis`` interface for several different
 transformations:
 
 * It uses mod/ref information to hoist or sink load instructions out of loops if
-  there are no instructions in the loop that modifies the memory loaded.
+  no instructions in the loop modify the memory loaded.
 
 * It uses mod/ref information to hoist function calls out of loops that do not
   write to memory and are loop-invariant.
@@ -615,7 +615,7 @@ The ``-argpromotion`` pass
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``-argpromotion`` pass promotes by-reference arguments to be passed in
-by-value instead.  In particular, if pointer arguments are only loaded from it
+by-value instead.  In particular, if pointer arguments are only loaded from, it
 passes in the value loaded instead of the address to the function.  This pass
 uses alias information to make sure that the value loaded from the argument
 pointer is not modified between the entry of the function and any load of the

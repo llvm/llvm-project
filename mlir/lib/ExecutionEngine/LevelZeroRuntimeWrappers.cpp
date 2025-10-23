@@ -328,12 +328,12 @@ struct DynamicEventPool {
   }
 };
 
-L0RTContextWrapper &getRtContext() {
+static L0RTContextWrapper &getRtContext() {
   thread_local static L0RTContextWrapper rtContext(0);
   return rtContext;
 }
 
-DynamicEventPool &getDynamicEventPool() {
+static DynamicEventPool &getDynamicEventPool() {
   thread_local static DynamicEventPool dynEventPool{&getRtContext()};
   return dynEventPool;
 }
@@ -492,8 +492,8 @@ extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
 }
 
 template <typename PATTERN_TYPE>
-void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
-                StreamWrapper *stream) {
+static void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
+                       StreamWrapper *stream) {
   L0RTContextWrapper &rtContext = getRtContext();
   auto listType =
       rtContext.copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)

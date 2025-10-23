@@ -322,6 +322,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_JT_SIZES)
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CFI_JUMP_TABLE)
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_CALL_GRAPH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_SFRAME);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
@@ -837,7 +838,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2 || Version > 3)
+    if (Version < 2 || Version > 4)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
     Feature = Data.getU8(Cur); // Feature byte
@@ -847,9 +848,14 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     if (!FeatEnableOrErr)
       return FeatEnableOrErr.takeError();
     FeatEnable = *FeatEnableOrErr;
-    if (FeatEnable.CallsiteOffsets && Version < 3)
+    if (FeatEnable.CallsiteEndOffsets && Version < 3)
       return createError("version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
                          "callsite offsets feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
+    if (FeatEnable.BBHash && Version < 4)
+      return createError("version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when "
+                         "basic block hash feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;
@@ -890,23 +896,24 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           uint32_t ID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           // Read the callsite offsets.
-          uint32_t LastCallsiteOffset = 0;
-          SmallVector<uint32_t, 1> CallsiteOffsets;
-          if (FeatEnable.CallsiteOffsets) {
+          uint32_t LastCallsiteEndOffset = 0;
+          SmallVector<uint32_t, 1> CallsiteEndOffsets;
+          if (FeatEnable.CallsiteEndOffsets) {
             uint32_t NumCallsites =
                 readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-            CallsiteOffsets.reserve(NumCallsites);
+            CallsiteEndOffsets.reserve(NumCallsites);
             for (uint32_t CallsiteIndex = 0;
                  !ULEBSizeErr && Cur && (CallsiteIndex < NumCallsites);
                  ++CallsiteIndex) {
-              LastCallsiteOffset +=
+              LastCallsiteEndOffset +=
                   readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-              CallsiteOffsets.push_back(LastCallsiteOffset);
+              CallsiteEndOffsets.push_back(LastCallsiteEndOffset);
             }
           }
           uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
-                          LastCallsiteOffset;
+                          LastCallsiteEndOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          uint64_t Hash = FeatEnable.BBHash ? Data.getU64(Cur) : 0;
           Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
               BBAddrMap::BBEntry::Metadata::decode(MD);
           if (!MetadataOrErr) {
@@ -914,7 +921,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             break;
           }
           BBEntries.push_back({ID, Offset + PrevBBEndOffset, Size,
-                               *MetadataOrErr, CallsiteOffsets});
+                               *MetadataOrErr, CallsiteEndOffsets, Hash});
           PrevBBEndOffset += Offset + Size;
         }
         TotalNumBlocks += BBEntries.size();

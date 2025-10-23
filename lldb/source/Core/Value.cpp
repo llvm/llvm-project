@@ -347,6 +347,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     else
       data.SetAddressByteSize(sizeof(void *));
 
+    if (!type_size)
+      return Status::FromErrorString("type does not have a size");
+
     uint32_t result_byte_size = *type_size;
     if (m_value.GetData(data, result_byte_size))
       return error; // Success;

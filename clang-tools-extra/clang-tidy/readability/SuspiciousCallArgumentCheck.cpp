@@ -1,4 +1,4 @@
-//===--- SuspiciousCallArgumentCheck.cpp - clang-tidy ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -208,7 +208,7 @@ static bool applyLevenshteinHeuristic(StringRef Arg, StringRef Param,
   return Dist > Threshold;
 }
 
-// Based on http://en.wikipedia.org/wiki/Jaro–Winkler_distance.
+// Based on https://en.wikipedia.org/wiki/Jaro–Winkler_distance.
 static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
                                       int8_t Threshold) {
   std::size_t Match = 0, Transpos = 0;
@@ -269,7 +269,7 @@ static bool applyJaroWinklerHeuristic(StringRef Arg, StringRef Param,
   return Dist > Threshold;
 }
 
-// Based on http://en.wikipedia.org/wiki/Sørensen–Dice_coefficient
+// Based on https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient
 static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
                                int8_t Threshold) {
   llvm::StringSet<> ArgBigrams;
@@ -288,8 +288,8 @@ static bool applyDiceHeuristic(StringRef Arg, StringRef Param,
   std::size_t Intersection = 0;
 
   // Find the intersection between the two sets.
-  for (auto IT = ParamBigrams.begin(); IT != ParamBigrams.end(); ++IT)
-    Intersection += ArgBigrams.count((IT->getKey()));
+  for (const auto &[Key, _] : ParamBigrams)
+    Intersection += ArgBigrams.count(Key);
 
   // Calculate Dice coefficient.
   return percentage(Intersection * 2.0,
@@ -414,9 +414,9 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
     if ((ParamType->isEnumeralType() &&
-         ParamType->castAs<EnumType>()->getOriginalDecl()->isScoped()) ||
+         ParamType->castAsCanonical<EnumType>()->getDecl()->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAs<EnumType>()->getOriginalDecl()->isScoped()))
+         ArgType->castAsCanonical<EnumType>()->getDecl()->isScoped()))
       return false;
 
     return true;

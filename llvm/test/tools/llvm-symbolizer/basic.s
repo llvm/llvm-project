@@ -8,8 +8,8 @@ foo:
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o -g
 
 # Check input addresses specified on stdin.
-# RUN: echo -e "0xa\n0xb" | llvm-symbolizer --obj=%t.o | FileCheck %s
-# RUN: echo -e "10\n11" | llvm-symbolizer --obj=%t.o | FileCheck %s
+# RUN: printf "0xa\n0xb" | llvm-symbolizer --obj=%t.o | FileCheck %s
+# RUN: printf "10\n11" | llvm-symbolizer --obj=%t.o | FileCheck %s
 
 # Check input addresses specified on the command-line.
 # RUN: llvm-symbolizer 0xa 0xb --obj=%t.o | FileCheck %s

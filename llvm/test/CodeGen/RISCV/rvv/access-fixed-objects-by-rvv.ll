@@ -57,7 +57,7 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(ptr %val) {
   %len = load i64, ptr %local
 
   %a = call <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64(
-    <vscale x 1 x i64> undef,
+    <vscale x 1 x i64> poison,
     <vscale x 1 x i64> %v1,
     <vscale x 1 x i64> %v2,
     i64 %len)

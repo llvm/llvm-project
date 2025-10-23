@@ -106,6 +106,12 @@ if(MSVC)
 endif()
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
+# Win/ASan relies on the runtime functions being hotpatchable. See
+# https://github.com/llvm/llvm-project/pull/149444
+if(MSVC)
+  list(APPEND ASAN_CFLAGS /hotpatch)
+endif()
+
 append_list_if(MSVC /Zl ASAN_CFLAGS)
 
 set(ASAN_COMMON_DEFINITIONS "")

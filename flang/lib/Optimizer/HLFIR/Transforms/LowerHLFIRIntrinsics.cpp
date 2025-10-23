@@ -551,6 +551,107 @@ class ReshapeOpConversion : public HlfirIntrinsicConversion<hlfir::ReshapeOp> {
   }
 };
 
+class CmpCharOpConversion : public HlfirIntrinsicConversion<hlfir::CmpCharOp> {
+  using HlfirIntrinsicConversion<hlfir::CmpCharOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CmpCharOp cmp,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, cmp.getOperation()};
+    const mlir::Location &loc = cmp->getLoc();
+    hlfir::Entity lhs{cmp.getLchr()};
+    hlfir::Entity rhs{cmp.getRchr()};
+
+    auto [lhsExv, lhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, lhs);
+    auto [rhsExv, rhsCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, rhs);
+
+    auto resultVal = fir::runtime::genCharCompare(
+        builder, loc, cmp.getPredicate(), lhsExv, rhsExv);
+    if (lhsCleanUp || rhsCleanUp) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(cmp);
+      if (lhsCleanUp)
+        (*lhsCleanUp)();
+      if (rhsCleanUp)
+        (*rhsCleanUp)();
+    }
+    auto resultEntity = hlfir::EntityWithAttributes{resultVal};
+
+    processReturnValue(cmp, resultEntity, /*mustBeFreed=*/false, builder,
+                       rewriter);
+    return mlir::success();
+  }
+};
+
+class CharTrimOpConversion
+    : public HlfirIntrinsicConversion<hlfir::CharTrimOp> {
+  using HlfirIntrinsicConversion<hlfir::CharTrimOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CharTrimOp trim,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, trim.getOperation()};
+    const mlir::Location &loc = trim->getLoc();
+
+    llvm::SmallVector<IntrinsicArgument, 1> inArgs;
+    mlir::Value chr = trim.getChr();
+    inArgs.push_back({chr, chr.getType()});
+
+    auto *argLowering = fir::getIntrinsicArgumentLowering("trim");
+    llvm::SmallVector<fir::ExtendedValue, 1> args =
+        lowerArguments(trim, inArgs, rewriter, argLowering);
+
+    mlir::Type resultType = hlfir::getFortranElementType(trim.getType());
+
+    auto [resultExv, mustBeFreed] =
+        fir::genIntrinsicCall(builder, loc, "trim", resultType, args);
+
+    processReturnValue(trim, resultExv, mustBeFreed, builder, rewriter);
+    return mlir::success();
+  }
+};
+
+class IndexOpConversion : public HlfirIntrinsicConversion<hlfir::IndexOp> {
+  using HlfirIntrinsicConversion<hlfir::IndexOp>::HlfirIntrinsicConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::IndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder{rewriter, op.getOperation()};
+    const mlir::Location &loc = op->getLoc();
+    hlfir::Entity substr{op.getSubstr()};
+    hlfir::Entity str{op.getStr()};
+
+    auto [substrExv, substrCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, substr);
+    auto [strExv, strCleanUp] =
+        hlfir::translateToExtendedValue(loc, builder, str);
+
+    mlir::Value back = op.getBack();
+    if (!back)
+      back = builder.createBool(loc, false);
+
+    mlir::Value result =
+        fir::runtime::genIndex(builder, loc, strExv, substrExv, back);
+    result = builder.createConvert(loc, op.getType(), result);
+    if (strCleanUp || substrCleanUp) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.setInsertionPointAfter(op);
+      if (strCleanUp)
+        (*strCleanUp)();
+      if (substrCleanUp)
+        (*substrCleanUp)();
+    }
+    auto resultEntity = hlfir::EntityWithAttributes{result};
+
+    processReturnValue(op, resultEntity, /*mustBeFreed=*/false, builder,
+                       rewriter);
+    return mlir::success();
+  }
+};
+
 class LowerHLFIRIntrinsics
     : public hlfir::impl::LowerHLFIRIntrinsicsBase<LowerHLFIRIntrinsics> {
 public:
@@ -564,7 +665,8 @@ public:
         TransposeOpConversion, CountOpConversion, DotProductOpConversion,
         MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
         MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
-        ArrayShiftOpConversion<hlfir::EOShiftOp>, ReshapeOpConversion>(context);
+        ArrayShiftOpConversion<hlfir::EOShiftOp>, ReshapeOpConversion,
+        CmpCharOpConversion, CharTrimOpConversion, IndexOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass

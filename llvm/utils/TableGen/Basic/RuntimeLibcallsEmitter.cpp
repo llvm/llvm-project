@@ -15,6 +15,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -178,7 +179,7 @@ public:
   bool isDefault() const { return TheDef->getValueAsBit("IsDefault"); }
 
   void emitEnumEntry(raw_ostream &OS) const {
-    OS << "RTLIB::" << TheDef->getName();
+    OS << "RTLIB::impl_" << this->getName();
   }
 
   void emitSetImplCall(raw_ostream &OS) const {
@@ -287,18 +288,12 @@ public:
   void run(raw_ostream &OS);
 };
 
-/// Helper struct for the name hash table.
-struct LookupEntry {
-  StringRef FuncName;
-  uint64_t Hash = 0;
-  unsigned TableValue = 0;
-};
-
 } // End anonymous namespace.
 
 void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
-  OS << "#ifdef GET_RUNTIME_LIBCALL_ENUM\n"
-        "namespace llvm {\n"
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_ENUM");
+
+  OS << "namespace llvm {\n"
         "namespace RTLIB {\n"
         "enum Libcall : unsigned short {\n";
 
@@ -312,17 +307,17 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
         "enum LibcallImpl : unsigned short {\n"
         "  Unsupported = 0,\n";
 
-  // FIXME: Emit this in a different namespace. And maybe use enum class.
   for (const RuntimeLibcallImpl &LibCall : RuntimeLibcallImplDefList) {
-    OS << "  " << LibCall.getName() << " = " << LibCall.getEnumVal() << ", // "
-       << LibCall.getLibcallFuncName() << '\n';
+    OS << "  impl_" << LibCall.getName() << " = " << LibCall.getEnumVal()
+       << ", // " << LibCall.getLibcallFuncName() << '\n';
   }
 
-  OS << "  NumLibcallImpls = " << RuntimeLibcallImplDefList.size() + 1
-     << "\n};\n"
+  OS << "};\n"
+     << "constexpr size_t NumLibcallImpls = "
+     << RuntimeLibcallImplDefList.size() + 1
+     << ";\n"
         "} // End namespace RTLIB\n"
-        "} // End namespace llvm\n"
-        "#endif\n\n";
+        "} // End namespace llvm\n";
 }
 
 // StringMap uses xxh3_64bits, truncated to uint32_t.
@@ -339,14 +334,17 @@ static void emitHashFunction(raw_ostream &OS) {
 /// Return the table size, maximum number of collisions for the set of hashes
 static std::pair<int, int>
 computePerfectHashParameters(ArrayRef<uint64_t> Hashes) {
-  const int SizeOverhead = 10;
-  const int NumHashes = Hashes.size();
+  // Chosen based on experimentation with llvm/benchmarks/RuntimeLibcalls.cpp
+  const int SizeOverhead = 4;
 
   // Index derived from hash -> number of collisions.
   DenseMap<uint64_t, int> Table;
 
+  unsigned NumHashes = Hashes.size();
+
   for (int MaxCollisions = 1;; ++MaxCollisions) {
-    for (int N = NumHashes; N < SizeOverhead * NumHashes; ++N) {
+    for (unsigned N = NextPowerOf2(NumHashes - 1); N < SizeOverhead * NumHashes;
+         N <<= 1) {
       Table.clear();
 
       bool NeedResize = false;
@@ -365,41 +363,29 @@ computePerfectHashParameters(ArrayRef<uint64_t> Hashes) {
   }
 }
 
-static std::vector<LookupEntry>
+static std::vector<unsigned>
 constructPerfectHashTable(ArrayRef<RuntimeLibcallImpl> Keywords,
-                          ArrayRef<uint64_t> Hashes, int Size, int Collisions,
-                          StringToOffsetTable &OffsetTable) {
-  DenseSet<StringRef> Seen;
-  std::vector<LookupEntry> Lookup(Size * Collisions);
+                          ArrayRef<uint64_t> Hashes,
+                          ArrayRef<unsigned> TableValues, int Size,
+                          int Collisions, StringToOffsetTable &OffsetTable) {
+  std::vector<unsigned> Lookup(Size * Collisions);
 
-  for (const RuntimeLibcallImpl &LibCallImpl : Keywords) {
-    StringRef ImplName = LibCallImpl.getLibcallFuncName();
-
-    // We do not want to add repeated entries for cases with the same name, only
-    // an entry for the first, with the name collision enum values immediately
-    // following.
-    if (!Seen.insert(ImplName).second)
-      continue;
-
-    uint64_t HashValue = Hashes[LibCallImpl.getEnumVal() - 1];
-
+  for (auto [HashValue, TableValue] : zip(Hashes, TableValues)) {
     uint64_t Idx = (HashValue % static_cast<uint64_t>(Size)) *
                    static_cast<uint64_t>(Collisions);
 
     bool Found = false;
     for (int J = 0; J < Collisions; ++J) {
-      LookupEntry &Entry = Lookup[Idx + J];
-      if (Entry.TableValue == 0) {
-        Entry.FuncName = ImplName;
-        Entry.TableValue = LibCallImpl.getEnumVal();
-        Entry.Hash = HashValue;
+      unsigned &Entry = Lookup[Idx + J];
+      if (Entry == 0) {
+        Entry = TableValue;
         Found = true;
         break;
       }
     }
 
     if (!Found)
-      reportFatalInternalError("failure to hash " + ImplName);
+      reportFatalInternalError("failure to hash");
   }
 
   return Lookup;
@@ -409,14 +395,24 @@ constructPerfectHashTable(ArrayRef<RuntimeLibcallImpl> Keywords,
 void RuntimeLibcallEmitter::emitNameMatchHashTable(
     raw_ostream &OS, StringToOffsetTable &OffsetTable) const {
   std::vector<uint64_t> Hashes(RuntimeLibcallImplDefList.size());
+  std::vector<unsigned> TableValues(RuntimeLibcallImplDefList.size());
+  DenseSet<StringRef> SeenFuncNames;
 
   size_t MaxFuncNameSize = 0;
   size_t Index = 0;
+
   for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
     StringRef ImplName = LibCallImpl.getLibcallFuncName();
-    MaxFuncNameSize = std::max(MaxFuncNameSize, ImplName.size());
-    Hashes[Index++] = hash(ImplName);
+    if (SeenFuncNames.insert(ImplName).second) {
+      MaxFuncNameSize = std::max(MaxFuncNameSize, ImplName.size());
+      TableValues[Index] = LibCallImpl.getEnumVal();
+      Hashes[Index++] = hash(ImplName);
+    }
   }
+
+  // Trim excess elements from non-unique entries.
+  Hashes.resize(SeenFuncNames.size());
+  TableValues.resize(SeenFuncNames.size());
 
   LLVM_DEBUG({
     for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
@@ -437,23 +433,26 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   //
   // TODO: It may make more sense to split the search by string size more. There
   // are a few outliers, most call names are small.
-  OS << "#ifdef GET_LOOKUP_LIBCALL_IMPL_NAME_BODY\n"
-        "  size_t Size = Name.size();\n"
-        "  if (Size == 0 || Size > "
-     << MaxFuncNameSize
-     << ")\n"
-        "    return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);\n"
-        " return lookupLibcallImplNameImpl(Name);\n"
-        "#endif\n";
+  {
+    IfDefEmitter IfDef(OS, "GET_LOOKUP_LIBCALL_IMPL_NAME_BODY");
+
+    OS << "  size_t Size = Name.size();\n"
+          "  if (Size == 0 || Size > "
+       << MaxFuncNameSize
+       << ")\n"
+          "    return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);\n"
+          " return lookupLibcallImplNameImpl(Name);\n";
+  }
 
   auto [Size, Collisions] = computePerfectHashParameters(Hashes);
-  std::vector<LookupEntry> Lookup = constructPerfectHashTable(
-      RuntimeLibcallImplDefList, Hashes, Size, Collisions, OffsetTable);
+  std::vector<unsigned> Lookup =
+      constructPerfectHashTable(RuntimeLibcallImplDefList, Hashes, TableValues,
+                                Size, Collisions, OffsetTable);
 
   LLVM_DEBUG(dbgs() << "Runtime libcall perfect hashing parameters: Size = "
                     << Size << ", maximum collisions = " << Collisions << '\n');
 
-  OS << "#ifdef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME\n";
+  IfDefEmitter IfDef(OS, "DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME");
   emitHashFunction(OS);
 
   OS << "iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::"
@@ -463,13 +462,8 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   OS << "  static constexpr uint16_t HashTableNameToEnum[" << Lookup.size()
      << "] = {\n";
 
-  for (auto [FuncName, Hash, TableVal] : Lookup) {
-    OS << "    " << TableVal << ',';
-    if (TableVal != 0)
-      OS << " // " << format_hex(Hash, 16) << ", " << FuncName;
-
-    OS << '\n';
-  }
+  for (unsigned TableVal : Lookup)
+    OS << "    " << TableVal << ",\n";
 
   OS << "  };\n\n";
 
@@ -490,59 +484,57 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
 }
 )";
-
-  OS << "#endif\n\n";
 }
 
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
     raw_ostream &OS) const {
-  OS << "#ifdef GET_INIT_RUNTIME_LIBCALL_NAMES\n";
-
   // Emit the implementation names
   StringToOffsetTable Table(/*AppendZero=*/true,
                             "RTLIB::RuntimeLibcallsInfo::");
 
-  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
-    Table.GetOrAddStringOffset(LibCallImpl.getLibcallFuncName());
+  {
+    IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_NAMES");
 
-  Table.EmitStringTableDef(OS, "RuntimeLibcallImplNameTable");
-  OS << R"(
+    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+      Table.GetOrAddStringOffset(LibCallImpl.getLibcallFuncName());
+
+    Table.EmitStringTableDef(OS, "RuntimeLibcallImplNameTable");
+    OS << R"(
 const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
 )";
 
-  OS << formatv("  {}, // {}\n", Table.GetStringOffset(""),
-                ""); // Unsupported entry
-  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
-    StringRef ImplName = LibCallImpl.getLibcallFuncName();
-    OS << formatv("  {}, // {}\n", Table.GetStringOffset(ImplName), ImplName);
-  }
-  OS << "};\n";
+    OS << formatv("  {}, // {}\n", Table.GetStringOffset(""),
+                  ""); // Unsupported entry
+    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+      StringRef ImplName = LibCallImpl.getLibcallFuncName();
+      OS << formatv("  {}, // {}\n", Table.GetStringOffset(ImplName), ImplName);
+    }
+    OS << "};\n";
 
-  OS << R"(
+    OS << R"(
 const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 )";
 
-  OS << "  0,\n";
-  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
-    OS << "  " << LibCallImpl.getLibcallFuncName().size() << ",\n";
-  OS << "};\n\n";
+    OS << "  0,\n";
+    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList)
+      OS << "  " << LibCallImpl.getLibcallFuncName().size() << ",\n";
+    OS << "};\n\n";
 
-  // Emit the reverse mapping from implementation libraries to RTLIB::Libcall
-  OS << "const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::"
-        "ImplToLibcall[RTLIB::NumLibcallImpls] = {\n"
-        "  RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported\n";
+    // Emit the reverse mapping from implementation libraries to RTLIB::Libcall
+    OS << "const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::"
+          "ImplToLibcall[RTLIB::NumLibcallImpls] = {\n"
+          "  RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported\n";
 
-  for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
-    const RuntimeLibcall *Provides = LibCallImpl.getProvides();
-    OS << "  ";
-    Provides->emitEnumEntry(OS);
-    OS << ", // ";
-    LibCallImpl.emitEnumEntry(OS);
-    OS << '\n';
+    for (const RuntimeLibcallImpl &LibCallImpl : RuntimeLibcallImplDefList) {
+      const RuntimeLibcall *Provides = LibCallImpl.getProvides();
+      OS << "  ";
+      Provides->emitEnumEntry(OS);
+      OS << ", // ";
+      LibCallImpl.emitEnumEntry(OS);
+      OS << '\n';
+    }
+    OS << "};\n\n";
   }
-  OS << "};\n\n";
-
-  OS << "#endif\n\n";
 
   emitNameMatchHashTable(OS, Table);
 }
@@ -556,16 +548,6 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         "  struct LibcallImplPair {\n"
         "    RTLIB::Libcall Func;\n"
         "    RTLIB::LibcallImpl Impl;\n"
-        "  };\n"
-        "  auto setLibcallsImpl = [this](\n"
-        "    ArrayRef<LibcallImplPair> Libcalls,\n"
-        "    std::optional<llvm::CallingConv::ID> CC = {})\n"
-        "  {\n"
-        "    for (const auto [Func, Impl] : Libcalls) {\n"
-        "      setLibcallImpl(Func, Impl);\n"
-        "      if (CC)\n"
-        "        setLibcallImplCallingConv(Impl, *CC);\n"
-        "    }\n"
         "  };\n";
   ArrayRef<const Record *> AllLibs =
       Records.getAllDerivedDefinitions("SystemRuntimeLibrary");
@@ -607,7 +589,12 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     PredicateSorter.insert(
         PredicateWithCC()); // No predicate or CC override first.
 
+    constexpr unsigned BitsPerStorageElt = 64;
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
+
+    SmallVector<uint64_t, 32> BitsetValues(
+        divideCeil(RuntimeLibcallImplDefList.size() + 1, BitsPerStorageElt));
+
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
@@ -616,22 +603,46 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         continue;
       }
 
+      size_t BitIdx = LibCallImpl->getEnumVal();
+      uint64_t BitmaskVal = uint64_t(1) << (BitIdx % BitsPerStorageElt);
+      size_t BitsetIdx = BitIdx / BitsPerStorageElt;
+
       auto It = Func2Preds.find(LibCallImpl);
       if (It == Func2Preds.end()) {
+        BitsetValues[BitsetIdx] |= BitmaskVal;
         Pred2Funcs[PredicateWithCC()].LibcallImpls.push_back(LibCallImpl);
         continue;
       }
 
       for (const Record *Pred : It->second.first) {
         const Record *CC = It->second.second;
-        PredicateWithCC Key(Pred, CC);
+        AvailabilityPredicate SubsetPredicate(Pred);
+        if (SubsetPredicate.isAlwaysAvailable())
+          BitsetValues[BitsetIdx] |= BitmaskVal;
 
+        PredicateWithCC Key(Pred, CC);
         auto &Entry = Pred2Funcs[Key];
         Entry.LibcallImpls.push_back(LibCallImpl);
         Entry.CallingConv = It->second.second;
         PredicateSorter.insert(Key);
       }
     }
+
+    OS << "    static constexpr LibcallImplBitset SystemAvailableImpls({\n"
+       << indent(6);
+
+    ListSeparator LS;
+    unsigned EntryCount = 0;
+    for (uint64_t Bits : BitsetValues) {
+      if (EntryCount++ == 4) {
+        EntryCount = 1;
+        OS << ",\n" << indent(6);
+      } else
+        OS << LS;
+      OS << format_hex(Bits, 16);
+    }
+    OS << "\n    });\n"
+          "    AvailableLibcallImpls = SystemAvailableImpls;\n\n";
 
     SmallVector<PredicateWithCC, 0> SortedPredicates =
         PredicateSorter.takeVector();
@@ -691,18 +702,37 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       Funcs.erase(UniqueI, Funcs.end());
 
-      OS << indent(IndentDepth + 2) << "setLibcallsImpl({\n";
+      OS << indent(IndentDepth + 2)
+         << "static const LibcallImplPair LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << "[] = {\n";
       for (const RuntimeLibcallImpl *LibCallImpl : Funcs) {
-        OS << indent(IndentDepth + 4);
+        OS << indent(IndentDepth + 6);
         LibCallImpl->emitTableEntry(OS);
       }
-      OS << indent(IndentDepth + 2) << "}";
+
+      OS << indent(IndentDepth + 2) << "};\n\n"
+         << indent(IndentDepth + 2)
+         << "for (const auto [Func, Impl] : LibraryCalls";
+      SubsetPredicate.emitTableVariableNameSuffix(OS);
+      if (FuncsWithCC.CallingConv)
+        OS << '_' << FuncsWithCC.CallingConv->getName();
+
+      OS << ") {\n"
+         << indent(IndentDepth + 4) << "setLibcallImpl(Func, Impl);\n";
+
       if (FuncsWithCC.CallingConv) {
         StringRef CCEnum =
             FuncsWithCC.CallingConv->getValueAsString("CallingConv");
-        OS << ", " << CCEnum;
+        OS << indent(IndentDepth + 4) << "setLibcallImplCallingConv(Impl, "
+           << CCEnum << ");\n";
       }
-      OS << ");\n\n";
+
+      OS << indent(IndentDepth + 2) << "}\n";
+      OS << '\n';
 
       if (!SubsetPredicate.isAlwaysAvailable()) {
         OS << indent(IndentDepth);
@@ -728,9 +758,10 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
 
   emitGetInitRuntimeLibcallNames(OS);
 
-  OS << "#ifdef GET_SET_TARGET_RUNTIME_LIBCALL_SETS\n";
-  emitSystemRuntimeLibrarySetCalls(OS);
-  OS << "#endif\n\n";
+  {
+    IfDefEmitter IfDef(OS, "GET_SET_TARGET_RUNTIME_LIBCALL_SETS");
+    emitSystemRuntimeLibrarySetCalls(OS);
+  }
 }
 
 void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,

@@ -10,7 +10,19 @@
 # We may not want to guarantee this forever, but since this works today and
 # it's something that users rely on, it makes sense to put a test on it.
 #
-# https://github.com/llvm/llvm-project/issues/117630
+# https://llvm.org/PR117630
+
+# Some parts of the code like <fstream> use non-standard functions in their implementation,
+# and these functions are not provided when _XOPEN_SOURCE is set to older values. This
+# breaks when building with modules even when we don't use the offending headers directly.
+# UNSUPPORTED: clang-modules-build
+
+# The AIX localization support uses some functions as part of their headers that require a
+# recent value of _XOPEN_SOURCE.
+# UNSUPPORTED: LIBCXX-AIX-FIXME
+
+# This test fails on FreeBSD for an unknown reason.
+# UNSUPPORTED: LIBCXX-FREEBSD-FIXME
 
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
@@ -33,19 +45,6 @@ for header in public_headers:
         print(
             f"""\
 //--- {header}.xopen_source_{version}.compile.pass.cpp
-
-// Some parts of the code like <fstream> use non-standard functions in their implementation,
-// and these functions are not provided when _XOPEN_SOURCE is set to older values. This
-// breaks when building with modules even when we don't use the offending headers directly.
-// UNSUPPORTED: clang-modules-build
-
-// The AIX localization support uses some functions as part of their headers that require a
-// recent value of _XOPEN_SOURCE.
-// UNSUPPORTED: LIBCXX-AIX-FIXME
-
-// This test fails on FreeBSD for an unknown reason.
-// UNSUPPORTED: LIBCXX-FREEBSD-FIXME
-
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 

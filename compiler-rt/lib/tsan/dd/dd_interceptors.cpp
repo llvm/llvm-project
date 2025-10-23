@@ -11,6 +11,7 @@
 #include "dd_rtl.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_glibc_version.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 
 using namespace __dsan;
