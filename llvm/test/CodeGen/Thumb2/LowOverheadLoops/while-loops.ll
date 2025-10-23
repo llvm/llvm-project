@@ -180,7 +180,7 @@ define dso_local i32 @b(ptr %c, i32 %d, i32 %e, ptr %n) "frame-pointer"="all" {
 ; CHECK-NEXT:    muls r1, r3, r1
 ; CHECK-NEXT:    adds r4, r4, r1
 ; CHECK-NEXT:    adc.w r1, r2, r1, asr #31
-; CHECK-NEXT:    adds.w r2, r4, #-2147483648
+; CHECK-NEXT:    cmn.w r4, #-2147483648
 ; CHECK-NEXT:    ldrd r2, r4, [r8]
 ; CHECK-NEXT:    adc r5, r1, #0
 ; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
