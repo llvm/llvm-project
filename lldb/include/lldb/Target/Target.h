@@ -1552,23 +1552,7 @@ public:
 
   void SetAllStopHooksActiveState(bool active_state);
 
-  const std::vector<StopHookSP> &GetInternalStopHooks() const {
-    return m_internal_stop_hooks;
-  }
-
-  size_t GetNumStopHooks() const { return m_stop_hooks.size(); }
-
-  StopHookSP GetStopHookAtIndex(size_t index) {
-    if (index >= GetNumStopHooks())
-      return StopHookSP();
-    StopHookCollection::iterator pos = m_stop_hooks.begin();
-
-    while (index > 0) {
-      pos++;
-      index--;
-    }
-    return (*pos).second;
-  }
+  const std::vector<StopHookSP> GetStopHooks(bool internal = false) const;
 
   lldb::PlatformSP GetPlatform() { return m_platform_sp; }
 

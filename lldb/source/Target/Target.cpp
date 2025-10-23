@@ -3107,6 +3107,23 @@ void Target::SetAllStopHooksActiveState(bool active_state) {
   }
 }
 
+// FIXME:  Ideally we would like to return a `const &` (const reference) instead
+//   of creating copy here, but that is not possible due to different container
+//   types.  In C++20, we should be able to use `std::ranges::views::values` to
+//   adapt the key-pair entries in the `std::map` (behind `StopHookCollection`)
+//   to avoid creating the copy.
+const std::vector<Target::StopHookSP>
+Target::GetStopHooks(bool internal) const {
+  if (internal)
+    return m_internal_stop_hooks;
+
+  std::vector<StopHookSP> stop_hooks;
+  for (auto &[_, hook] : m_stop_hooks)
+    stop_hooks.push_back(hook);
+
+  return stop_hooks;
+}
+
 bool Target::RunStopHooks(bool at_initial_stop) {
   if (m_suppress_stop_hooks)
     return false;

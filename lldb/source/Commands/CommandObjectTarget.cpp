@@ -5273,27 +5273,17 @@ protected:
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
 
-    if (m_options.m_internal) {
-      for (auto &hook : target.GetInternalStopHooks()) {
-        hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+    bool printed_hook = false;
+    for (auto &hook : target.GetStopHooks(m_options.m_internal)) {
+      if (printed_hook)
         result.GetOutputStream().PutCString("\n");
-      }
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-      return;
+      hook->GetDescription(result.GetOutputStream(), eDescriptionLevelFull);
+      printed_hook = true;
     }
 
-    size_t num_hooks = target.GetNumStopHooks();
-    if (num_hooks == 0) {
+    if (!printed_hook)
       result.GetOutputStream().PutCString("No stop hooks.\n");
-    } else {
-      for (size_t i = 0; i < num_hooks; i++) {
-        Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
-        if (i > 0)
-          result.GetOutputStream().PutCString("\n");
-        this_hook->GetDescription(result.GetOutputStream(),
-                                  eDescriptionLevelFull);
-      }
-    }
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
