@@ -286,11 +286,41 @@ static ExprResult buildCoroutineHandle(Sema &S, QualType PromiseType,
   return S.BuildCallExpr(nullptr, FromAddr.get(), Loc, FramePtr, Loc);
 }
 
+// To support [[clang::coro_await_suspend_destroy]], this builds
+//   *static_cast<Promise*>(
+//       __builtin_coro_promise(handle, alignof(Promise), false))
+static ExprResult buildPromiseRef(Sema &S, QualType PromiseType,
+                                  SourceLocation Loc) {
+  uint64_t Align =
+      S.Context.getTypeAlign(PromiseType) / S.Context.getCharWidth();
+
+  // Build the call to __builtin_coro_promise()
+  SmallVector<Expr *, 3> Args = {
+      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {}),
+      S.ActOnIntegerConstant(Loc, Align).get(),         // alignof(Promise)
+      S.ActOnCXXBoolLiteral(Loc, tok::kw_false).get()}; // false
+  ExprResult CoroPromiseCall =
+      S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_promise, Args);
+
+  if (CoroPromiseCall.isInvalid())
+    return ExprError();
+
+  // Cast to Promise*
+  ExprResult CastExpr = S.ImpCastExprToType(
+      CoroPromiseCall.get(), S.Context.getPointerType(PromiseType), CK_BitCast);
+  if (CastExpr.isInvalid())
+    return ExprError();
+
+  // Dereference to get Promise&
+  return S.CreateBuiltinUnaryOp(Loc, UO_Deref, CastExpr.get());
+}
+
 struct ReadySuspendResumeResult {
   enum AwaitCallType { ACT_Ready, ACT_Suspend, ACT_Resume };
   Expr *Results[3];
   OpaqueValueExpr *OpaqueValue;
   bool IsInvalid;
+  bool UseAwaitSuspendDestroy;
 };
 
 static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
@@ -362,7 +392,8 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
 
   // Assume valid until we see otherwise.
   // Further operations are responsible for setting IsInalid to true.
-  ReadySuspendResumeResult Calls = {{}, Operand, /*IsInvalid=*/false};
+  ReadySuspendResumeResult Calls = {
+      {}, Operand, /*IsInvalid=*/false, /*UseAwaitSuspendDestroy=*/false};
 
   using ACT = ReadySuspendResumeResult::AwaitCallType;
 
@@ -403,10 +434,39 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     return Calls;
   }
   Expr *CoroHandle = CoroHandleRes.get();
+  Calls.UseAwaitSuspendDestroy = false;
   CallExpr *AwaitSuspend = cast_or_null<CallExpr>(
       BuildSubExpr(ACT::ACT_Suspend, "await_suspend", CoroHandle));
   if (!AwaitSuspend)
     return Calls;
+
+  // When this `await_suspend()` overload is annotated with
+  // `[[clang::coro_await_suspend_destroy]]`, do NOT call `await_suspend()` --
+  // instead call `await_suspend_destroy(Promise&)`.  This assumes that the
+  // `await_suspend()` is just a compatibility stub consisting of:
+  //     await_suspend_destroy(handle.promise());
+  //     handle.destroy();
+  // Users of the attribute must follow this contract.  Then, diagnostics from
+  // both `await_suspend` and `await_suspend_destroy` will get exposed.
+  CallExpr *PlainAwaitSuspend = nullptr;
+  if (FunctionDecl *AwaitSuspendCallee = AwaitSuspend->getDirectCallee()) {
+    if (AwaitSuspendCallee->hasAttr<CoroAwaitSuspendDestroyAttr>()) {
+      Calls.UseAwaitSuspendDestroy = true;
+      ExprResult PromiseRefRes =
+          buildPromiseRef(S, CoroPromise->getType(), Loc);
+      if (PromiseRefRes.isInvalid()) {
+        Calls.IsInvalid = true;
+        return Calls;
+      }
+      Expr *PromiseRef = PromiseRefRes.get();
+      PlainAwaitSuspend = AwaitSuspend;
+      AwaitSuspend = cast_or_null<CallExpr>(
+          BuildSubExpr(ACT::ACT_Suspend, "await_suspend_destroy", PromiseRef));
+      if (!AwaitSuspend)
+        return Calls;
+    }
+  }
+
   if (!AwaitSuspend->getType()->isDependentType()) {
     // [expr.await]p3 [...]
     //   - await-suspend is the expression e.await_suspend(h), which shall be
@@ -414,25 +474,45 @@ static ReadySuspendResumeResult buildCoawaitCalls(Sema &S, VarDecl *CoroPromise,
     //     type Z.
     QualType RetType = AwaitSuspend->getCallReturnType(S.Context);
 
-    // Support for coroutine_handle returning await_suspend.
-    if (Expr *TailCallSuspend =
-            maybeTailCall(S, RetType, AwaitSuspend, Loc))
+    auto EmitAwaitSuspendDiag = [&](unsigned int DiagCode, auto... args) {
+      ((S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(), DiagCode)
+        << RetType)
+       << ... << args);
+      S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
+          << AwaitSuspend->getDirectCallee();
+      Calls.IsInvalid = true;
+    };
+
+    if (Calls.UseAwaitSuspendDestroy) {
+      // The return types of `await_suspend` and `await_suspend_destroy` must
+      // match. For now, the latter must return `void` -- though this could be
+      // extended to support returning handles.
+      QualType PlainRetType = PlainAwaitSuspend->getCallReturnType(S.Context);
+      if (!S.Context.hasSameType(PlainRetType, RetType)) {
+        EmitAwaitSuspendDiag(
+            diag::err_await_suspend_suspend_destroy_return_type_mismatch,
+            PlainRetType);
+      } else if (RetType->isVoidType()) {
+        Calls.Results[ACT::ACT_Suspend] =
+            S.MaybeCreateExprWithCleanups(AwaitSuspend);
+      } else {
+        EmitAwaitSuspendDiag(
+            diag::err_await_suspend_destroy_invalid_return_type);
+      }
+      // Support for coroutine_handle returning await_suspend.
+    } else if (Expr *TailCallSuspend =
+                   maybeTailCall(S, RetType, AwaitSuspend, Loc)) {
       // Note that we don't wrap the expression with ExprWithCleanups here
       // because that might interfere with tailcall contract (e.g. inserting
       // clean up instructions in-between tailcall and return). Instead
       // ExprWithCleanups is wrapped within maybeTailCall() prior to the resume
       // call.
       Calls.Results[ACT::ACT_Suspend] = TailCallSuspend;
-    else {
+    } else {
       // non-class prvalues always have cv-unqualified types
       if (RetType->isReferenceType() ||
           (!RetType->isBooleanType() && !RetType->isVoidType())) {
-        S.Diag(AwaitSuspend->getCalleeDecl()->getLocation(),
-               diag::err_await_suspend_invalid_return_type)
-            << RetType;
-        S.Diag(Loc, diag::note_coroutine_promise_call_implicitly_required)
-            << AwaitSuspend->getDirectCallee();
-        Calls.IsInvalid = true;
+        EmitAwaitSuspendDiag(diag::err_await_suspend_invalid_return_type);
       } else
         Calls.Results[ACT::ACT_Suspend] =
             S.MaybeCreateExprWithCleanups(AwaitSuspend);
@@ -950,6 +1030,8 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
   Expr *Res = new (Context)
       CoawaitExpr(Loc, Operand, Awaiter, RSS.Results[0], RSS.Results[1],
                   RSS.Results[2], RSS.OpaqueValue, IsImplicit);
+  static_cast<CoroutineSuspendExpr *>(Res)->setUseAwaitSuspendDestroy(
+      RSS.UseAwaitSuspendDestroy);
 
   return Res;
 }
@@ -1007,6 +1089,8 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
   Expr *Res =
       new (Context) CoyieldExpr(Loc, Operand, E, RSS.Results[0], RSS.Results[1],
                                 RSS.Results[2], RSS.OpaqueValue);
+  static_cast<CoroutineSuspendExpr *>(Res)->setUseAwaitSuspendDestroy(
+      RSS.UseAwaitSuspendDestroy);
 
   return Res;
 }
