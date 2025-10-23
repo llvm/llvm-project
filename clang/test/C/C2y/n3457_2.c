@@ -6,5 +6,5 @@
 // the value too large is fine. Expanding to a too-large value is not.
 #ifdef EXPAND_IT
   // This one should fail.
-  signed long i = __COUNTER__; // expected-error {{'__COUNTER__' value cannot exceed 2147483647}}
+  signed long i = __COUNTER__; // expected-error {{'__COUNTER__' value cannot exceed 2'147'483'647}}
 #endif
