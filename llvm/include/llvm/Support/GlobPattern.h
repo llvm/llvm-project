@@ -63,21 +63,22 @@ public:
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
   bool isTrivialMatchAll() const {
-    if (!Prefix.empty())
+    if (PrefixSize)
       return false;
-    if (!Suffix.empty())
+    if (SuffixSize)
       return false;
     if (SubGlobs.size() != 1)
       return false;
     return SubGlobs[0].getPat() == "*";
   }
 
-  StringRef prefix() const { return Prefix; }
-  StringRef suffix() const { return Suffix; }
+  StringRef prefix() const { return Pattern.take_front(PrefixSize); }
+  StringRef suffix() const { return Pattern.take_back(SuffixSize); }
 
 private:
-  StringRef Prefix;
-  StringRef Suffix;
+  StringRef Pattern;
+  size_t PrefixSize = 0;
+  size_t SuffixSize = 0;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
