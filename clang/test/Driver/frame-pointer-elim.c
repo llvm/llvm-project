@@ -244,6 +244,7 @@
 // RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
 
 // AArch64 Windows requires that the frame pointer be reserved
+// But -mno-reserve-frame-pointer-reg should override the target platform default
 // RUN: %clang -### --target=aarch64-pc-windows-msvc -S -fomit-frame-pointer -mno-reserve-frame-pointer-reg %s 2>&1 |  \
 // RUN:   FileCheck --check-prefix=KEEP-RESERVED %s
 
