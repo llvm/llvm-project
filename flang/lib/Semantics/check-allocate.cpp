@@ -470,6 +470,29 @@ static bool HaveCompatibleLengths(
   }
 }
 
+bool IsSameAllocation(const SomeExpr *root, const SomeExpr *path) {
+  if (root) {
+    if (std::optional<evaluate::DataRef> rootRef{ExtractDataRef(root)}) {
+      if (path) {
+        if (std::optional<evaluate::DataRef> pathRef{ExtractDataRef(path)}) {
+          if (pathRef->IsPathFrom(*rootRef)) {
+            return true;
+          }
+        } else {
+          if (*root == *path) {
+            return true;
+          }
+        }
+      }
+    } else {
+      if (path && *root == *path) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   if (!ultimate_) {
     CHECK(context.AnyFatalError());
@@ -700,12 +723,13 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           "Object in ALLOCATE must have DEVICE attribute when STREAM option is specified"_err_en_US);
     }
   }
+
   if (const SomeExpr *allocObj{GetExpr(context, allocateObject_)}) {
-    if (allocateInfo_.statVar && *allocObj == *allocateInfo_.statVar) {
+    if (IsSameAllocation(allocObj, allocateInfo_.statVar)) {
       context.Say(allocateInfo_.statSource.value_or(name_.source),
           "STAT variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
-    if (allocateInfo_.msgVar && *allocObj == *allocateInfo_.msgVar) {
+    if (IsSameAllocation(allocObj, allocateInfo_.msgVar)) {
       context.Say(allocateInfo_.msgSource.value_or(name_.source),
           "ERRMSG variable in ALLOCATE must not be the variable being allocated"_err_en_US);
     }
