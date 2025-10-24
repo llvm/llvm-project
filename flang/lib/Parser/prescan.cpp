@@ -1467,6 +1467,10 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
       return nullptr;
     }
   }
+  if (p[0] == '/' && p[1] == '*') {
+    p = SkipCComment(p);
+    p = SkipWhiteSpaceIncludingEmptyMacros(p);
+  }
   if (p[0] == '!' && p[1] == '$' && !preprocessingOnly_ &&
       features_.IsEnabled(LanguageFeature::OpenMP)) {
     // !$ conditional line can be a continuation
