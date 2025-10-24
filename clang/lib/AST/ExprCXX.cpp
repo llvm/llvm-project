@@ -2050,6 +2050,12 @@ CXXExpansionInitListExpr::CreateEmpty(const ASTContext &C, EmptyShell Empty,
   return new (Mem) CXXExpansionInitListExpr(Empty, NumExprs);
 }
 
+bool CXXExpansionInitListExpr::containsPackExpansion() const {
+  return llvm::any_of(getExprs(), [](const Expr* E) {
+    return isa<PackExpansionExpr>(E);
+  });
+}
+
 CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(EmptyShell Empty)
     : Expr(CXXExpansionInitListSelectExprClass, Empty) {
 }

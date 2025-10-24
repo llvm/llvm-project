@@ -5530,6 +5530,8 @@ public:
   MutableArrayRef<Expr *> getExprs() { return getTrailingObjects(NumExprs); }
   unsigned getNumExprs() const { return NumExprs; }
 
+  bool containsPackExpansion() const;
+
   SourceLocation getBeginLoc() const { return getLBraceLoc(); }
   SourceLocation getEndLoc() const { return getRBraceLoc(); }
 

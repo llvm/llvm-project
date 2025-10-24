@@ -166,18 +166,24 @@ VarDecl *CXXExpansionStmt::getExpansionVariable() {
 
 bool CXXExpansionStmt::hasDependentSize() const {
   if (isa<CXXEnumeratingExpansionStmt>(this))
-    return getExpansionVariable()->getInit()->containsUnexpandedParameterPack();
+    return cast<CXXExpansionInitListSelectExpr>(
+               getExpansionVariable()->getInit())
+        ->getRangeExpr()
+        ->containsPackExpansion();
 
   llvm_unreachable("Invalid expansion statement class");
 }
 
 size_t CXXExpansionStmt::getNumInstantiations() const {
-  if (isa<CXXEnumeratingExpansionStmt>(this))
+  assert(!hasDependentSize());
+
+  if (isa<CXXEnumeratingExpansionStmt>(this)) {
     return cast<CXXExpansionInitListSelectExpr>(
                getExpansionVariable()->getInit())
         ->getRangeExpr()
         ->getExprs()
         .size();
+  }
 
   llvm_unreachable("Invalid expansion statement class");
 }

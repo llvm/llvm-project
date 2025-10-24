@@ -1826,6 +1826,11 @@ void TextNodeDumper::VisitCXXDependentScopeMemberExpr(
   OS << " " << (Node->isArrow() ? "->" : ".") << Node->getMember();
 }
 
+void TextNodeDumper::VisitCXXExpansionInitListExpr(const CXXExpansionInitListExpr *Node) {
+  if (Node->containsPackExpansion())
+    OS << " contains_pack";
+}
+
 void TextNodeDumper::VisitObjCMessageExpr(const ObjCMessageExpr *Node) {
   OS << " selector=";
   Node->getSelector().print(OS);

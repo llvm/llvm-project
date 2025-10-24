@@ -456,7 +456,7 @@ ExprResult Sema::BuildCXXExpansionInitializer(ExpansionStmtDecl *ESD,
 ExprResult
 Sema::BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
                                           Expr *Idx) {
-  if (Range->containsUnexpandedParameterPack() || Idx->isValueDependent())
+  if (Range->containsPackExpansion() || Idx->isValueDependent())
     return new (Context) CXXExpansionInitListSelectExpr(Context, Range, Idx);
 
   // The index is a DRE to a template parameter; we should never

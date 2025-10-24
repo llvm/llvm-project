@@ -2013,6 +2013,12 @@ Decl *TemplateInstantiator::TransformDecl(SourceLocation Loc, Decl *D) {
       maybeInstantiateFunctionParameterToScope(PVD))
     return nullptr;
 
+  if (isa<ExpansionStmtDecl>(D)) {
+    assert(SemaRef.CurrentInstantiationScope);
+    return cast<Decl *>(
+        *SemaRef.CurrentInstantiationScope->findInstantiationOf(D));
+  }
+
   return SemaRef.FindInstantiatedDecl(Loc, cast<NamedDecl>(D), TemplateArgs);
 }
 
@@ -2408,8 +2414,12 @@ TemplateInstantiator::TransformFunctionParmPackRefExpr(DeclRefExpr *E,
                                                        ValueDecl *PD) {
   typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
   llvm::PointerUnion<Decl *, DeclArgumentPack *> *Found
-    = getSema().CurrentInstantiationScope->findInstantiationOf(PD);
-  assert(Found && "no instantiation for parameter pack");
+    = getSema().CurrentInstantiationScope->getInstantiationOfIfExists(PD);
+
+  // This can happen when instantiating an expansion statement that contains
+  // a pack (e.g. `template for (auto x : {{ts...}})`).
+  if (!Found)
+    return E;
 
   Decl *TransformedDecl;
   if (DeclArgumentPack *Pack = dyn_cast<DeclArgumentPack *>(*Found)) {
