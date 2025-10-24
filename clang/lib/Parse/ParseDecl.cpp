@@ -2613,7 +2613,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       }
 
       PreferredType.enterVariableInit(Tok.getLocation(), ThisDecl);
-      ExprResult Init = ParseInitializer();
+      ExprResult Init = ParseInitializer(ThisDecl);
 
       // If this is the only decl in (possibly) range based for statement,
       // our best guess is that the user meant ':' instead of '='.
