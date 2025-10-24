@@ -65,7 +65,8 @@ namespace llvm {
 /// inserted into it. When an element is removed or the tree is destroyed,
 /// these objects will be destructed.
 /// However, if `KeyType` is a reference-like type, e.g., StringRef or range,
-/// the user must guarantee that destination has lifetime longer than the tree.
+/// the user must guarantee that the referenced data has a lifetime longer than
+/// the tree.
 template <typename KeyType, typename T> class RadixTree {
 public:
   using key_type = KeyType;
@@ -311,8 +312,8 @@ public:
     // from the argument.
     // FIXME: Determine that we need a new node, before expanding
     // `KeyValuePairs`.
-    const value_type &NewValue =
-        KeyValuePairs.emplace_front(std::move(Key), T(std::move(Args)...));
+    const value_type &NewValue = KeyValuePairs.emplace_front(
+        std::move(Key), T(std::forward<Ts>(Args)...));
     Node &Node = findOrCreate(NewValue.first);
     bool HasValue = Node.Value != typename ContainerType::iterator();
     if (!HasValue)
