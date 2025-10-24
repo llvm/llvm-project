@@ -155,6 +155,7 @@ getEntityLifetime(const InitializedEntity *Entity,
   case InitializedEntity::EK_LambdaToBlockConversionBlockElement:
   case InitializedEntity::EK_LambdaCapture:
   case InitializedEntity::EK_VectorElement:
+  case InitializedEntity::EK_MatrixElement:
   case InitializedEntity::EK_ComplexElement:
     return {nullptr, LK_FullExpression};
 

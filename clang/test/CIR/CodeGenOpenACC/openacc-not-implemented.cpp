@@ -3,8 +3,8 @@
 void HelloWorld(int *A, int *B, int *C, int N) {
 
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Atomic Construct}}
-#pragma acc atomic
-  N = N + 1;
+#pragma acc atomic capture
+  B = A += ++N;
 
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Declare Construct}}
 #pragma acc declare create(A)
