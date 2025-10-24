@@ -374,6 +374,8 @@ def err_ppc_impossible_musttail: Error<
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
+def err_wasm_musttail_unsupported: Error<
+  "'musttail' attribute is not supported on this target without tail-call feature">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
