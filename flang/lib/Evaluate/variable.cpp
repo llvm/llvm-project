@@ -769,7 +769,7 @@ struct has_GetFirstSymbol<T,
 
 template <typename P, typename R>
 bool TestVariableIsPathFromRoot(const P &path, const R &root) {
-  const SymbolRef *pathSym, *rootSym;
+  const SymbolRef *pathSym{nullptr}, *rootSym{nullptr};
   if constexpr (has_union<P>::value) {
     pathSym = std::get_if<SymbolRef>(&path.u);
   }
