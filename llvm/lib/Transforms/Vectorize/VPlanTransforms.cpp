@@ -4492,6 +4492,9 @@ static bool CheckPathFromSrcBBToDestBB(VPBlockBase *Src, VPBlockBase *Dest) {
 // for certain tripcount values.
 //
 void VPlanTransforms::removeRedundantAndMasks(VPlan &Plan) {
+  if (!Plan.getVectorLoopRegion())
+    return;
+
   auto FindSCEVCheckBlock = [&]() -> VPIRBasicBlock * {
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getEntry()))) {
