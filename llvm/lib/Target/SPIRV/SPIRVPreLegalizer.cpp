@@ -212,8 +212,13 @@ static void lowerBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(2).getReg();
         SPIRVType *DstType = GR->getSPIRVTypeForVReg(DstReg);
+        assert(
+            DstType &&
+            "Expected destination SPIR-V type to have been assigned already.");
         SPIRVType *SrcType = GR->getSPIRVTypeForVReg(SrcReg);
-        if (DstType && SrcType && DstType == SrcType) {
+        assert(SrcType &&
+               "Expected source SPIR-V type to have been assigned already.");
+        if (DstType == SrcType) {
           MIB.setInsertPt(*MI.getParent(), MI);
           MIB.buildCopy(DstReg, SrcReg);
           ToErase.push_back(&MI);
