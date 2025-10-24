@@ -427,8 +427,8 @@ LogicalResult PassManager::runWithCrashRecovery(Operation *op,
   return passManagerResult;
 }
 
-static ReproducerStreamFactory
-makeReproducerStreamFactory(StringRef outputFile) {
+ReproducerStreamFactory
+mlir::makeReproducerStreamFactory(StringRef outputFile) {
   // Capture the filename by value in case outputFile is out of scope when
   // invoked.
   std::string filename = outputFile.str();
@@ -453,13 +453,22 @@ std::string mlir::makeReproducer(
     const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
     Operation *op, StringRef outputFile, bool disableThreads,
     bool verifyPasses) {
+  return makeReproducer(anchorName, passes, op,
+                        makeReproducerStreamFactory(outputFile), disableThreads,
+                        verifyPasses);
+}
 
+std::string mlir::makeReproducer(
+    StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    Operation *op, const ReproducerStreamFactory &streamFactory,
+    bool disableThreads, bool verifyPasses) {
   std::string description;
   std::string pipelineStr;
   llvm::raw_string_ostream passOS(pipelineStr);
   ::printAsTextualPipeline(passOS, anchorName, passes);
-  appendReproducer(description, op, makeReproducerStreamFactory(outputFile),
-                   pipelineStr, disableThreads, verifyPasses);
+  appendReproducer(description, op, streamFactory, pipelineStr, disableThreads,
+                   verifyPasses);
   return description;
 }
 

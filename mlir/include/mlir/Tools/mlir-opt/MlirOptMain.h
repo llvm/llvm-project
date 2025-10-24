@@ -242,10 +242,7 @@ public:
     return hasFilters;
   }
 
-  /// Reproducer file generation (no crash required).
-  StringRef getReproducerFilename() const { return generateReproducerFileFlag; }
-
-  /// Set the reproducer output filename
+  /// Set the remarks output filename
   RemarkFormat getRemarkFormat() const { return remarkFormatFlag; }
   /// Set the remark policy to use.
   RemarkPolicy getRemarkPolicy() const { return remarkPolicyFlag; }
@@ -349,9 +346,6 @@ protected:
 
   /// Verify that the input IR round-trips perfectly.
   bool verifyRoundtripFlag = false;
-
-  /// The reproducer output filename (no crash required).
-  std::string generateReproducerFileFlag = "";
 };
 
 /// This defines the function type used to setup the pass manager. This can be

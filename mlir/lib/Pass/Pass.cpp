@@ -1033,6 +1033,14 @@ LogicalResult PassManager::run(Operation *op) {
        << size() << " passes, verifyPasses=" << verifyPasses << " pipeline: ";
     printAsTextualPipeline(os, /*pretty=*/false);
   });
+  // Generate reproducers if requested
+  if (forceGenerateReproducer) {
+    StringRef anchorName = getAnyOpAnchorName();
+    const auto &passes = getPasses();
+    makeReproducer(anchorName, passes, op, forceGenerateReproducer,
+                   /*disableThreads=*/!getContext()->isMultithreadingEnabled(),
+                   verifyPasses);
+  }
 
   MLIRContext *context = getContext();
   std::optional<OperationName> anchorOp = getOpName(*context);
