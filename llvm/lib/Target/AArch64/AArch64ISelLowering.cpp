@@ -9002,12 +9002,12 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
 }
 
 static SMECallAttrs
-getSMECallAttrs(const Function &Caller, const AArch64TargetLowering &TLI,
+getSMECallAttrs(const Function &Caller, const RTLIB::RuntimeLibcallsInfo &RTLCI,
                 const TargetLowering::CallLoweringInfo &CLI) {
   if (CLI.CB)
-    return SMECallAttrs(*CLI.CB, &TLI);
+    return SMECallAttrs(*CLI.CB, &RTLCI);
   if (auto *ES = dyn_cast<ExternalSymbolSDNode>(CLI.Callee))
-    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), TLI));
+    return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(ES->getSymbol(), RTLCI));
   return SMECallAttrs(SMEAttrs(Caller), SMEAttrs(SMEAttrs::Normal));
 }
 
@@ -9029,7 +9029,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
 
   // SME Streaming functions are not eligible for TCO as they may require
   // the streaming mode or ZA to be restored after returning from the call.
-  SMECallAttrs CallAttrs = getSMECallAttrs(CallerF, *this, CLI);
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(CallerF, getRuntimeLibcallsInfo(), CLI);
   if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
       CallAttrs.requiresPreservingAllZAState() ||
       CallAttrs.caller().hasStreamingBody())
@@ -9454,7 +9455,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
+  SMECallAttrs CallAttrs =
+      getSMECallAttrs(MF.getFunction(), getRuntimeLibcallsInfo(), CLI);
 
   std::optional<unsigned> ZAMarkerNode;
   bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
@@ -29818,7 +29820,7 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallAttrs = SMECallAttrs(*Base, this);
+    auto CallAttrs = SMECallAttrs(*Base, &getRuntimeLibcallsInfo());
     if (CallAttrs.requiresSMChange() || CallAttrs.requiresLazySave() ||
         CallAttrs.requiresPreservingZT0() ||
         CallAttrs.requiresPreservingAllZAState())
