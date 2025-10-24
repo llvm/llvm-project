@@ -362,8 +362,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
   }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitMaterializeTemporaryExpr");
+    Visit(e->getSubExpr());
   }
   void VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
