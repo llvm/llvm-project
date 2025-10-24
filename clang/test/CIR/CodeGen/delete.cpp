@@ -114,7 +114,7 @@ void destroy(StructWithVirtualDestructor *x) {
 // LLVM:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
 // LLVM:   call void %[[DTOR_FN_ADDR]](ptr %[[X]])
 
-// OGCG: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[X_ARG:.*]])
+// OGCG: define {{.*}} void @_Z7destroyP27StructWithVirtualDestructor(ptr {{.*}} %[[X_ARG:.*]])
 // OGCG:   %[[X_ADDR:.*]] = alloca ptr
 // OGCG:   store ptr %[[X_ARG]], ptr %[[X_ADDR]]
 // OGCG:   %[[X:.*]] = load ptr, ptr %[[X_ADDR]]
@@ -122,6 +122,6 @@ void destroy(StructWithVirtualDestructor *x) {
 // OGCG:   br i1 %[[ISNULL]], label %{{.*}}, label %[[DELETE_NOTNULL:.*]]
 // OGCG: [[DELETE_NOTNULL]]:
 // OGCG:   %[[VTABLE:.*]] = load ptr, ptr %[[X]]
-// OGCG:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i32 1
+// OGCG:   %[[DTOR_FN_ADDR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 1
 // OGCG:   %[[DTOR_FN_ADDR:.*]] = load ptr, ptr %[[DTOR_FN_ADDR_PTR]]
 // OGCG:   call void %[[DTOR_FN_ADDR]](ptr {{.*}} %[[X]])
