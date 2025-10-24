@@ -8,11 +8,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   %polly.access.tmp2.load = load i32, ptr %polly.access.tmp2, align 1
 ; CHECK-NEXT:   store i32 %polly.access.tmp2.load, ptr %tmp.preload.s2a
 
-
 %struct.hoge = type { [4 x i8], i32, i32, i32, i32, i32, [16 x i8], [16 x i8], i64, i64, i64, i64, i64 }
 
 ; Function Attrs: nounwind uwtable
-define void @widget() #0 {
+define void @widget() {
 bb:
   %tmp2 = alloca %struct.hoge, align 1
   br label %bb3
@@ -39,8 +38,6 @@ bb12:                                             ; preds = %bb10
 bb13:                                             ; preds = %bb10
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

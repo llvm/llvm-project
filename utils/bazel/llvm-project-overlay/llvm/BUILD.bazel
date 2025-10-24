@@ -5672,6 +5672,57 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-sim",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-sim/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ir2vec",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ir2vec/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llvm-ctxprof-util",
+    testonly = True,
+    srcs = glob([
+        "tools/llvm-ctxprof-util/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Object",
+        ":ProfileData",
+        ":Support",
+        ":config",
+    ],
+)
+
+cc_binary(
     name = "obj2yaml",
     testonly = True,
     srcs = glob([

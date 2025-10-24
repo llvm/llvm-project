@@ -3292,8 +3292,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx != 2)
       return UnableToLegalize;
     Observer.changingInstr(MI);
-    // TODO: Probably should be zext
-    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -3325,8 +3324,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     if (TypeIdx == 2) {
       Observer.changingInstr(MI);
-      // TODO: Probably should be zext
-      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
       Observer.changedInstr(MI);
       return Legalized;
     }

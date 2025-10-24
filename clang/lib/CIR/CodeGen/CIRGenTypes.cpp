@@ -159,7 +159,7 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
     for (const clang::CXXBaseSpecifier &i : crd->bases())
       if (!isSafeToConvert(i.getType()
                                ->castAs<RecordType>()
-                               ->getOriginalDecl()
+                               ->getDecl()
                                ->getDefinitionOrSelf(),
                            cgt, alreadyChecked))
         return false;
@@ -279,8 +279,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
-    return convertRecordDeclType(
-        recordType->getOriginalDecl()->getDefinitionOrSelf());
+    return convertRecordDeclType(recordType->getDecl()->getDefinitionOrSelf());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);
@@ -418,6 +417,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     mlir::Type pointeeType = convertType(elemTy);
 
     resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    break;
+  }
+
+  case Type::VariableArray: {
+    const VariableArrayType *a = cast<VariableArrayType>(ty);
+    if (a->getIndexTypeCVRQualifiers() != 0)
+      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+    // VLAs resolve to the innermost element type; this matches
+    // the return of alloca, and there isn't any obviously better choice.
+    resultType = convertTypeForMem(a->getElementType());
     break;
   }
 

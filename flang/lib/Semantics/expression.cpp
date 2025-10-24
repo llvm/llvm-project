@@ -176,8 +176,8 @@ public:
 
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
-  MaybeExpr TryDefinedOp(
-      const char *, parser::MessageFixedText, bool isUserOp = false);
+  MaybeExpr TryDefinedOp(const char *, parser::MessageFixedText,
+      bool isUserOp = false, bool checkForNullPointer = true);
   template <typename E>
   MaybeExpr TryDefinedOp(E opr, parser::MessageFixedText msg) {
     return TryDefinedOp(
@@ -211,7 +211,8 @@ private:
   void SayNoMatch(
       const std::string &, bool isAssignment = false, bool isAmbiguous = false);
   std::string TypeAsFortran(std::size_t);
-  bool AnyUntypedOrMissingOperand() const;
+  bool AnyUntypedOperand() const;
+  bool AnyMissingOperand() const;
 
   ExpressionAnalyzer &context_;
   ActualArguments actuals_;
@@ -1954,9 +1955,10 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
   const auto &control{std::get<parser::AcImpliedDoControl>(impliedDo.t)};
   const auto &bounds{std::get<parser::AcImpliedDoControl::Bounds>(control.t)};
   exprAnalyzer_.Analyze(bounds.name);
-  parser::CharBlock name{bounds.name.thing.thing.source};
+  const auto &parsedName{parser::UnwrapRef<parser::Name>(bounds.name)};
+  parser::CharBlock name{parsedName.source};
   int kind{ImpliedDoIntType::kind};
-  if (const Symbol * symbol{bounds.name.thing.thing.symbol}) {
+  if (const Symbol *symbol{parsedName.symbol}) {
     if (auto dynamicType{DynamicType::From(symbol)}) {
       if (dynamicType->category() == TypeCategory::Integer) {
         kind = dynamicType->kind();
@@ -1981,7 +1983,7 @@ void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
       auto cUpper{ToInt64(upper)};
       auto cStride{ToInt64(stride)};
       if (!(messageDisplayedSet_ & 0x10) && cStride && *cStride == 0) {
-        exprAnalyzer_.SayAt(bounds.step.value().thing.thing.value().source,
+        exprAnalyzer_.SayAt(parser::UnwrapRef<parser::Expr>(bounds.step).source,
             "The stride of an implied DO loop must not be zero"_err_en_US);
         messageDisplayedSet_ |= 0x10;
       }
@@ -2526,7 +2528,7 @@ static const Symbol *GetBindingResolution(
 auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
     const parser::ProcComponentRef &pcr, ActualArguments &&arguments,
     bool isSubroutine) -> std::optional<CalleeAndArguments> {
-  const parser::StructureComponent &sc{pcr.v.thing};
+  const auto &sc{parser::UnwrapRef<parser::StructureComponent>(pcr)};
   if (MaybeExpr base{Analyze(sc.base)}) {
     if (const Symbol *sym{sc.component.symbol}) {
       if (context_.HasError(sym)) {
@@ -3695,11 +3697,12 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Parentheses &x) {
   if (MaybeExpr operand{Analyze(x.v.value())}) {
-    if (const semantics::Symbol *symbol{GetLastSymbol(*operand)}) {
+    if (IsNullPointerOrAllocatable(&*operand)) {
+      Say("NULL() may not be parenthesized"_err_en_US);
+    } else if (const semantics::Symbol *symbol{GetLastSymbol(*operand)}) {
       if (const semantics::Symbol *result{FindFunctionResult(*symbol)}) {
         if (semantics::IsProcedurePointer(*result)) {
-          Say("A function reference that returns a procedure "
-              "pointer may not be parenthesized"_err_en_US); // C1003
+          Say("A function reference that returns a procedure pointer may not be parenthesized"_err_en_US); // C1003
         }
       }
     }
@@ -3788,7 +3791,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::DefinedUnary &x) {
   ArgumentAnalyzer analyzer{*this, name.source};
   analyzer.Analyze(std::get<1>(x.t));
   return analyzer.TryDefinedOp(name.source.ToString().c_str(),
-      "No operator %s defined for %s"_err_en_US, true);
+      "No operator %s defined for %s"_err_en_US, /*isUserOp=*/true);
 }
 
 // Binary (dyadic) operations
@@ -3997,7 +4000,9 @@ static bool CheckFuncRefToArrayElement(semantics::SemanticsContext &context,
   auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
   const auto *name{std::get_if<parser::Name>(&proc.u)};
   if (!name) {
-    name = &std::get<parser::ProcComponentRef>(proc.u).v.thing.component;
+    name = &parser::UnwrapRef<parser::StructureComponent>(
+        std::get<parser::ProcComponentRef>(proc.u))
+                .component;
   }
   if (!name->symbol) {
     return false;
@@ -4047,14 +4052,16 @@ static void FixMisparsedFunctionReference(
       }
     }
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    if (Symbol *origSymbol{
-            common::visit(common::visitors{
-                              [&](parser::Name &name) { return name.symbol; },
-                              [&](parser::ProcComponentRef &pcr) {
-                                return pcr.v.thing.component.symbol;
-                              },
-                          },
-                proc.u)}) {
+    if (Symbol *
+        origSymbol{common::visit(
+            common::visitors{
+                [&](parser::Name &name) { return name.symbol; },
+                [&](parser::ProcComponentRef &pcr) {
+                  return parser::UnwrapRef<parser::StructureComponent>(pcr)
+                      .component.symbol;
+                },
+            },
+            proc.u)}) {
       Symbol &symbol{origSymbol->GetUltimate()};
       if (symbol.has<semantics::ObjectEntityDetails>() ||
           symbol.has<semantics::AssocEntityDetails>()) {
@@ -4176,15 +4183,23 @@ MaybeExpr ExpressionAnalyzer::IterativelyAnalyzeSubexpressions(
   } while (!queue.empty());
   // Analyze the collected subexpressions in bottom-up order.
   // On an error, bail out and leave partial results in place.
-  MaybeExpr result;
-  for (auto riter{finish.rbegin()}; riter != finish.rend(); ++riter) {
-    const parser::Expr &expr{**riter};
-    result = ExprOrVariable(expr, expr.source);
-    if (!result) {
-      return result;
+  if (finish.size() == 1) {
+    const parser::Expr &expr{DEREF(finish.front())};
+    return ExprOrVariable(expr, expr.source);
+  } else {
+    // NULL() operand catching is deferred to operation analysis so
+    // that they can be accepted by defined operators.
+    auto restorer{AllowNullPointer()};
+    MaybeExpr result;
+    for (auto riter{finish.rbegin()}; riter != finish.rend(); ++riter) {
+      const parser::Expr &expr{**riter};
+      result = ExprOrVariable(expr, expr.source);
+      if (!result) {
+        return result;
+      }
     }
+    return result; // last value was from analysis of "top"
   }
-  return result; // last value was from analysis of "top"
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
@@ -4681,7 +4696,7 @@ bool ArgumentAnalyzer::AnyCUDADeviceData() const {
 // attribute.
 bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
     const char *opr) const {
-  if (AnyCUDADeviceData() && !AnyUntypedOrMissingOperand()) {
+  if (AnyCUDADeviceData() && !AnyUntypedOperand() && !AnyMissingOperand()) {
     std::string oprNameString{"operator("s + opr + ')'};
     parser::CharBlock oprName{oprNameString};
     parser::Messages buffer;
@@ -4709,9 +4724,9 @@ bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
   return false;
 }
 
-MaybeExpr ArgumentAnalyzer::TryDefinedOp(
-    const char *opr, parser::MessageFixedText error, bool isUserOp) {
-  if (AnyUntypedOrMissingOperand()) {
+MaybeExpr ArgumentAnalyzer::TryDefinedOp(const char *opr,
+    parser::MessageFixedText error, bool isUserOp, bool checkForNullPointer) {
+  if (AnyMissingOperand()) {
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
     return std::nullopt;
   }
@@ -4790,7 +4805,9 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     context_.Say(
         "Operands of %s are not conformable; have rank %d and rank %d"_err_en_US,
         ToUpperCase(opr), actuals_[0]->Rank(), actuals_[1]->Rank());
-  } else if (CheckForNullPointer() && CheckForAssumedRank()) {
+  } else if (!CheckForAssumedRank()) {
+  } else if (checkForNullPointer && !CheckForNullPointer()) {
+  } else { // use the supplied error
     context_.Say(error, ToUpperCase(opr), TypeAsFortran(0), TypeAsFortran(1));
   }
   return result;
@@ -4808,15 +4825,16 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     for (std::size_t i{0}; i < oprs.size(); ++i) {
       parser::Messages buffer;
       auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
-      if (MaybeExpr thisResult{TryDefinedOp(oprs[i], error)}) {
+      if (MaybeExpr thisResult{TryDefinedOp(oprs[i], error, /*isUserOp=*/false,
+              /*checkForNullPointer=*/false)}) {
         result = std::move(thisResult);
         hit.push_back(oprs[i]);
         hitBuffer = std::move(buffer);
       }
     }
   }
-  if (hit.empty()) { // for the error
-    result = TryDefinedOp(oprs[0], error);
+  if (hit.empty()) { // run TryDefinedOp() again just to emit errors
+    CHECK(!TryDefinedOp(oprs[0], error).has_value());
   } else if (hit.size() > 1) {
     context_.Say(
         "Matching accessible definitions were found with %zd variant spellings of the generic operator ('%s', '%s')"_err_en_US,
@@ -5232,10 +5250,19 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   }
 }
 
-bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() const {
+bool ArgumentAnalyzer::AnyUntypedOperand() const {
   for (const auto &actual : actuals_) {
-    if (!actual ||
-        (!actual->GetType() && !IsBareNullPointer(actual->UnwrapExpr()))) {
+    if (actual && !actual->GetType() &&
+        !IsBareNullPointer(actual->UnwrapExpr())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ArgumentAnalyzer::AnyMissingOperand() const {
+  for (const auto &actual : actuals_) {
+    if (!actual) {
       return true;
     }
   }
@@ -5268,9 +5295,9 @@ void ExprChecker::Post(const parser::DataStmtObject &obj) {
 bool ExprChecker::Pre(const parser::DataImpliedDo &ido) {
   parser::Walk(std::get<parser::DataImpliedDo::Bounds>(ido.t), *this);
   const auto &bounds{std::get<parser::DataImpliedDo::Bounds>(ido.t)};
-  auto name{bounds.name.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(bounds.name)};
   int kind{evaluate::ResultType<evaluate::ImpliedDoIndex>::kind};
-  if (const auto dynamicType{evaluate::DynamicType::From(*name.symbol)}) {
+  if (const auto dynamicType{evaluate::DynamicType::From(DEREF(name.symbol))}) {
     if (dynamicType->category() == TypeCategory::Integer) {
       kind = dynamicType->kind();
     }

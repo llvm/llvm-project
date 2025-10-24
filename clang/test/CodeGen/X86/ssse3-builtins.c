@@ -110,6 +110,7 @@ __m128i test_mm_mulhrs_epi16(__m128i a, __m128i b) {
   // CHECK: call <8 x i16> @llvm.x86.ssse3.pmul.hr.sw.128(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_mulhrs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_mulhrs_epi16((__m128i)(__v8hi){+100, +200, -300, -400, +500, +600, -700, +800}, (__m128i)(__v8hi){+8000, -7000, +6000, -5000, +4000, -3000, +2000, -1000}), +24, -43, -55, +61, +61, -55, -43, -24));
 
 __m128i test_mm_shuffle_epi8(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_shuffle_epi8

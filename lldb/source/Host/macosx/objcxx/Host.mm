@@ -1221,13 +1221,12 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     //
     using posix_spawnattr_set_use_sec_transition_shims_np_t =
         int (*)(posix_spawnattr_t *attr, uint32_t flags);
-    auto posix_spawnattr_set_use_sec_transition_shims_np_fn =
+    auto posix_spawnattr_enable_memory_tagging_fn =
         (posix_spawnattr_set_use_sec_transition_shims_np_t)dlsym(
             RTLD_DEFAULT, "posix_spawnattr_set_use_sec_transition_shims_np");
-    if (posix_spawnattr_set_use_sec_transition_shims_np_fn) {
-      error =
-          Status(posix_spawnattr_set_use_sec_transition_shims_np_fn(&attr, 0),
-                 eErrorTypePOSIX);
+    if (posix_spawnattr_enable_memory_tagging_fn) {
+      error = Status(posix_spawnattr_enable_memory_tagging_fn(&attr, 0),
+                     eErrorTypePOSIX);
       if (error.Fail()) {
         LLDB_LOG(log,
                  "error: {0}, "

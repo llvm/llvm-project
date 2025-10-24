@@ -407,6 +407,10 @@ public:
   VPBasicBlock *getParent() { return Parent; }
   const VPBasicBlock *getParent() const { return Parent; }
 
+  /// \return the VPRegionBlock which the recipe belongs to.
+  VPRegionBlock *getRegion();
+  const VPRegionBlock *getRegion() const;
+
   /// The method which generates the output IR instructions that correspond to
   /// this VPRecipe, thereby "executing" the VPlan.
   virtual void execute(VPTransformState &State) = 0;
@@ -1003,6 +1007,11 @@ public:
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
+    /// Extracts all lanes from its (non-scalable) vector operand. This is an
+    /// abstract VPInstruction whose single defined VPValue represents VF
+    /// scalars extracted from a vector, to be replaced by VF ExtractElement
+    /// VPInstructions.
+    Unpack,
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
@@ -2711,6 +2720,15 @@ public:
     return R && classof(R);
   }
 
+  static inline bool classof(const VPValue *VPV) {
+    const VPRecipeBase *R = VPV->getDefiningRecipe();
+    return R && classof(R);
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *R) {
+    return classof(static_cast<const VPRecipeBase *>(R));
+  }
+
   /// Generate the reduction in the loop.
   void execute(VPTransformState &State) override;
 
@@ -3096,6 +3114,9 @@ public:
   /// Returns true if this expression contains recipes that may have side
   /// effects.
   bool mayHaveSideEffects() const;
+
+  /// Returns true if the result of this VPExpressionRecipe is a single-scalar.
+  bool isSingleScalar() const;
 };
 
 /// VPPredInstPHIRecipe is a recipe for generating the phi nodes needed when
@@ -4075,6 +4096,14 @@ public:
   }
 };
 
+inline VPRegionBlock *VPRecipeBase::getRegion() {
+  return getParent()->getParent();
+}
+
+inline const VPRegionBlock *VPRecipeBase::getRegion() const {
+  return getParent()->getParent();
+}
+
 /// VPlan models a candidate for vectorization, encoding various decisions take
 /// to produce efficient output IR, including which branches, basic-blocks and
 /// output IR instructions to generate, and their cost. VPlan holds a
@@ -4122,6 +4151,9 @@ class VPlan {
 
   /// Represents the vectorization factor of the loop.
   VPValue VF;
+
+  /// Represents the symbolic unroll factor of the loop.
+  VPValue UF;
 
   /// Represents the loop-invariant VF * UF of the vector loop region.
   VPValue VFxUF;
@@ -4267,12 +4299,17 @@ public:
       BackedgeTakenCount = new VPValue();
     return BackedgeTakenCount;
   }
+  VPValue *getBackedgeTakenCount() const { return BackedgeTakenCount; }
 
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
 
   /// Returns the VF of the vector loop region.
   VPValue &getVF() { return VF; };
+  const VPValue &getVF() const { return VF; };
+
+  /// Returns the symbolic UF of the vector loop region.
+  VPValue &getSymbolicUF() { return UF; };
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
@@ -4282,6 +4319,12 @@ public:
   }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
+
+  /// Remove \p VF from the plan.
+  void removeVF(ElementCount VF) {
+    assert(hasVF(VF) && "tried to remove VF not present in plan");
+    VFs.remove(VF);
+  }
 
   void setVF(ElementCount VF) {
     assert(hasVF(VF) && "Cannot set VF not already in plan");
@@ -4407,22 +4450,24 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Entry, \p Exiting and \p Name. If \p
-  /// IsReplicator is true, the region is a replicate region. The returned block
-  /// is owned by the VPlan and deleted once the VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
-                                     const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, IsReplicator);
+  /// Create a new loop region with \p Name and entry and exiting blocks set
+  /// to \p Entry and \p Exiting respectively, if set. The returned block is
+  /// owned by the VPlan and deleted once the VPlan is destroyed.
+  VPRegionBlock *createLoopRegion(const std::string &Name = "",
+                                  VPBlockBase *Entry = nullptr,
+                                  VPBlockBase *Exiting = nullptr) {
+    auto *VPB = Entry ? new VPRegionBlock(Entry, Exiting, Name)
+                      : new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
-    auto *VPB = new VPRegionBlock(Name);
+  /// Create a new replicate region with \p Entry, \p Exiting and \p Name. The
+  /// returned block is owned by the VPlan and deleted once the VPlan is
+  /// destroyed.
+  VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
+                                       const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Entry, Exiting, Name, true);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }

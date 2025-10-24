@@ -42,6 +42,7 @@ unittest("OrcJITTests") {
     "SymbolStringPoolTest.cpp",
     "TaskDispatchTest.cpp",
     "ThreadSafeModuleTest.cpp",
+    "WaitingOnGraphTest.cpp",
     "WrapperFunctionUtilsTest.cpp",
   ]
 

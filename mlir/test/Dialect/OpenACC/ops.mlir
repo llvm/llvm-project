@@ -1766,6 +1766,12 @@ acc.set default_async(%i32Value : i32)
 func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
   // CHECK: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
   acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+
+  // CHECK-NEXT: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.read if(%[[IFCOND1]]) %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
+  %ifCond = arith.constant true
+  acc.atomic.read if(%ifCond) %v = %x : memref<i32>, memref<i32>, i32
+
   return
 }
 
@@ -1776,6 +1782,12 @@ func.func @acc_atomic_read(%v: memref<i32>, %x: memref<i32>) {
 func.func @acc_atomic_write(%addr : memref<i32>, %val : i32) {
   // CHECK: acc.atomic.write %[[ADDR]] = %[[VAL]] : memref<i32>, i32
   acc.atomic.write %addr = %val : memref<i32>, i32
+
+  // CHECK-NEXT: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.write if(%[[IFCOND1]]) %[[ADDR]] = %[[VAL]] : memref<i32>, i32
+  %ifCond = arith.constant true
+  acc.atomic.write if(%ifCond) %addr = %val : memref<i32>, i32
+
   return
 }
 
@@ -1793,6 +1805,19 @@ func.func @acc_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>,
     %newval = llvm.add %xval, %expr : i32
     acc.yield %newval : i32
   }
+
+  // CHECK: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.update if(%[[IFCOND1]]) %[[X]] : memref<i32>
+  // CHECK-NEXT: (%[[XVAL:.*]]: i32):
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.add %[[XVAL]], %[[EXPR]] : i32
+  // CHECK-NEXT:   acc.yield %[[NEWVAL]] : i32
+  %ifCond = arith.constant true
+  acc.atomic.update if (%ifCond) %x : memref<i32> {
+  ^bb0(%xval: i32):
+    %newval = llvm.add %xval, %expr : i32
+    acc.yield %newval : i32
+  }
+
   // CHECK: acc.atomic.update %[[XBOOL]] : memref<i1>
   // CHECK-NEXT: (%[[XVAL:.*]]: i1):
   // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.and %[[XVAL]], %[[EXPRBOOL]] : i1
@@ -1898,6 +1923,17 @@ func.func @acc_atomic_capture(%v: memref<i32>, %x: memref<i32>, %expr: i32) {
   // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
   // CHECK-NEXT: }
   acc.atomic.capture {
+    acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
+    acc.atomic.write %x = %expr : memref<i32>, i32
+  }
+
+  // CHECK: %[[IFCOND1:.*]] = arith.constant true
+  // CHECK-NEXT: acc.atomic.capture if(%[[IFCOND1]]) {
+  // CHECK-NEXT: acc.atomic.read %[[v]] = %[[x]] : memref<i32>, memref<i32>, i32
+  // CHECK-NEXT: acc.atomic.write %[[x]] = %[[expr]] : memref<i32>, i32
+  // CHECK-NEXT: }
+  %ifCond = arith.constant true
+  acc.atomic.capture if (%ifCond) {
     acc.atomic.read %v = %x : memref<i32>, memref<i32>, i32
     acc.atomic.write %x = %expr : memref<i32>, i32
   }

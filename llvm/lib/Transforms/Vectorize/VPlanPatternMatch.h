@@ -173,10 +173,10 @@ inline int_pred_ty<is_zero_int> m_ZeroInt() {
 /// For vectors, this includes constants with undefined elements.
 inline int_pred_ty<is_one> m_One() { return int_pred_ty<is_one>(); }
 
-struct bind_const_int {
-  uint64_t &Res;
+struct bind_apint {
+  const APInt *&Res;
 
-  bind_const_int(uint64_t &Res) : Res(Res) {}
+  bind_apint(const APInt *&Res) : Res(Res) {}
 
   bool match(VPValue *VPV) const {
     if (!VPV->isLiveIn())
@@ -188,7 +188,23 @@ struct bind_const_int {
     const auto *CI = dyn_cast<ConstantInt>(V);
     if (!CI)
       return false;
-    if (auto C = CI->getValue().tryZExtValue()) {
+    Res = &CI->getValue();
+    return true;
+  }
+};
+
+inline bind_apint m_APInt(const APInt *&C) { return C; }
+
+struct bind_const_int {
+  uint64_t &Res;
+
+  bind_const_int(uint64_t &Res) : Res(Res) {}
+
+  bool match(VPValue *VPV) const {
+    const APInt *APConst;
+    if (!bind_apint(APConst).match(VPV))
+      return false;
+    if (auto C = APConst->tryZExtValue()) {
       Res = *C;
       return true;
     }
@@ -372,6 +388,12 @@ m_ExtractLastElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractLastElement>(Op0);
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<Instruction::ExtractElement, Op0_t, Op1_t>
+m_ExtractElement(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<Instruction::ExtractElement>(Op0, Op1);
+}
+
 template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::ExtractLastLanePerPart, Op0_t>
 m_ExtractLastLanePerPart(const Op0_t &Op0) {
@@ -398,6 +420,12 @@ template <typename Op0_t>
 inline VPInstruction_match<VPInstruction::AnyOf, Op0_t>
 m_AnyOf(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::AnyOf>(Op0);
+}
+
+template <typename Op0_t>
+inline VPInstruction_match<VPInstruction::FirstActiveLane, Op0_t>
+m_FirstActiveLane(const Op0_t &Op0) {
+  return m_VPInstruction<VPInstruction::FirstActiveLane>(Op0);
 }
 
 template <unsigned Opcode, typename Op0_t>

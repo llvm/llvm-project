@@ -993,7 +993,7 @@ def PPR_3b : PPRClass<0, 7> { // Restricted 3 bit SVE predicate register class.
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 0, 8>";
 }
 def PPR_p8to15 : PPRClass<8, 15> {
-  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PNRRegClassID, 8, 8>";
+  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::PPRRegClassID, 8, 8>";
 }
 
 def PPRMul2 : PPRClass<0, 14, 2>;

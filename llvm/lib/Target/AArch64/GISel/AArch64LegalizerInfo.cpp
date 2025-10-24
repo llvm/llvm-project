@@ -1855,6 +1855,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerTriOp(AArch64::G_UDOT);
   case Intrinsic::aarch64_neon_sdot:
     return LowerTriOp(AArch64::G_SDOT);
+  case Intrinsic::aarch64_neon_usdot:
+    return LowerTriOp(AArch64::G_USDOT);
   case Intrinsic::aarch64_neon_sqxtn:
     return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_S);
   case Intrinsic::aarch64_neon_sqxtun:

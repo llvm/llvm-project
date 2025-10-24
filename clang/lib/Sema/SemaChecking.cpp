@@ -3580,9 +3580,8 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
   if (const RecordType *UT = Expr->getType()->getAsUnionType();
-      UT && UT->getOriginalDecl()
-                ->getMostRecentDecl()
-                ->hasAttr<TransparentUnionAttr>()) {
+      UT &&
+      UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>()) {
     if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
       if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
         Expr = ILE->getInit(0);
@@ -6927,13 +6926,13 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Cases("gnu_scanf", "scanf", FormatStringType::Scanf)
-      .Cases("gnu_printf", "printf", "printf0", "syslog",
+      .Cases({"gnu_scanf", "scanf"}, FormatStringType::Scanf)
+      .Cases({"gnu_printf", "printf", "printf0", "syslog"},
              FormatStringType::Printf)
-      .Cases("NSString", "CFString", FormatStringType::NSString)
-      .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
-      .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
-      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
+      .Cases({"NSString", "CFString"}, FormatStringType::NSString)
+      .Cases({"gnu_strftime", "strftime"}, FormatStringType::Strftime)
+      .Cases({"gnu_strfmon", "strfmon"}, FormatStringType::Strfmon)
+      .Cases({"kprintf", "cmn_err", "vcmn_err", "zcmn_err"},
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
       .Case("os_trace", FormatStringType::OSLog)
@@ -12310,13 +12309,20 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
                                                    SourceLocation CC) {
   assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
          Source != Target);
+
+  // Lone surrogates have a distinct representation in UTF-32.
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
+  // so don't warn on such conversion.
+  if (Source->isChar16Type() && Target->isChar32Type())
+    return;
+
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
                        S.isConstantEvaluatedContext())) {
     llvm::APSInt Value(32);
     Value = Result.Val.getInt();
     bool IsASCII = Value <= 0x7F;
-    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool IsBMP = Value <= 0xDFFF || (Value >= 0xE000 && Value <= 0xFFFF);
     bool ConversionPreservesSemantics =
         IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
 
@@ -12879,8 +12885,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (const EnumType *SourceEnum = Source->getAsCanonical<EnumType>())
     if (const EnumType *TargetEnum = Target->getAsCanonical<EnumType>())
-      if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
-          TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
+      if (SourceEnum->getDecl()->hasNameForLinkage() &&
+          TargetEnum->getDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {
         if (SourceMgr.isInSystemMacro(CC))
           return;
@@ -16240,9 +16246,9 @@ getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
     return {};
   }
   uint64_t Dim = Value->getZExtValue();
-  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+  if (Dim == 0 || Dim > S.Context.getLangOpts().MaxMatrixDimension) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
-        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+        << Name << S.Context.getLangOpts().MaxMatrixDimension;
     return {};
   }
   return Dim;

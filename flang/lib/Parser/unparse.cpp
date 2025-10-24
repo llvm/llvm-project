@@ -2384,6 +2384,11 @@ public:
     Walk(x.v);
     Put(")");
   }
+  void Unparse(const OmpAttachModifier &x) {
+    Word("ATTACH(");
+    Walk(x.v);
+    Put(")");
+  }
   void Unparse(const OmpOrderClause &x) {
     using Modifier = OmpOrderClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ":");
@@ -2820,6 +2825,7 @@ public:
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
   WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpAttachModifier, Value)
   WALK_NESTED_ENUM(OmpCloseModifier, Value)
   WALK_NESTED_ENUM(OmpDeleteModifier, Value)
   WALK_NESTED_ENUM(OmpPresentModifier, Value)

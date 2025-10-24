@@ -52,9 +52,9 @@ define void @masked_loadstore(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; NO-VP-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; NO-VP-NEXT:    [[TMP7:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; NO-VP-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[INDEX]]
-; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP8]], i32 4, <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> poison)
+; NO-VP-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> poison)
 ; NO-VP-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[WIDE_LOAD]], [[WIDE_MASKED_LOAD]]
-; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP9]], ptr [[TMP8]], i32 4, <vscale x 4 x i1> [[TMP7]])
+; NO-VP-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP9]], ptr align 4 [[TMP8]], <vscale x 4 x i1> [[TMP7]])
 ; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; NO-VP-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[INC]]
 ; NO-VP-NEXT:    br i1 [[TMP10]], label [[FOR_INC:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
