@@ -62,7 +62,6 @@ void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
   if (auto *DRE = dyn_cast<DeclRefExpr>(PE->getSubExpr())) {
     const std::string Name = DRE->getDecl()->getQualifiedNameAsString();
-    llvm::errs() << Name << "\n";
     bool Allowed = llvm::any_of(AllowedDecls, [&Name](const llvm::Regex &NM) {
       return NM.isValid() && NM.match(Name);
     });
