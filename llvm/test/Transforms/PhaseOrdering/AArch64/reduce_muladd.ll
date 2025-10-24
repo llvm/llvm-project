@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 ; This function (a 16x reduction of a[i] * b[i]) should be vectorized successfully.
 
-define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1) #0 {
+define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1) {
 ; CHECK-LABEL: define dso_local nofpclass(nan inf) float @vmlaq
 ; CHECK-SAME: (ptr noundef readonly captures(none) [[TMP0:%.*]], ptr noundef readonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x float>, ptr [[TMP0]], align 4, !tbaa [[TBAA4:![0-9]+]]
@@ -21,9 +21,9 @@ define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1)
   %6 = alloca i32, align 4
   store ptr %0, ptr %3, align 8, !tbaa !4
   store ptr %1, ptr %4, align 8, !tbaa !4
-  call void @llvm.lifetime.start.p0(ptr %5) #2
+  call void @llvm.lifetime.start.p0(ptr %5)
   store float 0.000000e+00, ptr %5, align 4, !tbaa !9
-  call void @llvm.lifetime.start.p0(ptr %6) #2
+  call void @llvm.lifetime.start.p0(ptr %6)
   store i32 0, ptr %6, align 4, !tbaa !11
   br label %7
 
@@ -33,7 +33,7 @@ define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1)
   br i1 %9, label %11, label %10
 
 10:                                               ; preds = %7
-  call void @llvm.lifetime.end.p0(ptr %6) #2
+  call void @llvm.lifetime.end.p0(ptr %6)
   br label %28
 
 11:                                               ; preds = %7
@@ -61,16 +61,12 @@ define dso_local nofpclass(nan inf) float @vmlaq(ptr noundef %0, ptr noundef %1)
 
 28:                                               ; preds = %10
   %29 = load float, ptr %5, align 4, !tbaa !9
-  call void @llvm.lifetime.end.p0(ptr %5) #2
+  call void @llvm.lifetime.end.p0(ptr %5)
   ret float %29
 }
 
-declare void @llvm.lifetime.start.p0(ptr captures(none)) #1
-declare void @llvm.lifetime.end.p0(ptr captures(none)) #1
-
-attributes #0 = { nounwind uwtable "frame-pointer"="non-leaf" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+fp-armv8,+neon,+v8a,-fmv" "unsafe-fp-math"="true" }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #2 = { nounwind }
+declare void @llvm.lifetime.start.p0(ptr captures(none))
+declare void @llvm.lifetime.end.p0(ptr captures(none))
 
 !llvm.module.flags = !{!0, !1, !2}
 !llvm.ident = !{!3}

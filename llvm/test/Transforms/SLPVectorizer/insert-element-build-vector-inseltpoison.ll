@@ -6,7 +6,7 @@
 ; RUN: %if aarch64-registered-target %{ opt -S -passes=slp-vectorizer -slp-threshold=0 -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,NOTHRESHOLD %}
 ; RUN: %if aarch64-registered-target %{ opt -S -passes=slp-vectorizer -slp-threshold=-10000 -slp-min-tree-size=0 -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,MINTREESIZE %}
 
-define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
@@ -42,7 +42,7 @@ define <4 x float> @simple_select(<4 x float> %a, <4 x float> %b, <4 x i32> %c) 
 declare void @llvm.assume(i1) nounwind
 
 ; This entire tree is ephemeral, don't vectorize any of it.
-define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; THRESHOLD-LABEL: @simple_select_eph(
 ; THRESHOLD-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
 ; THRESHOLD-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
@@ -199,7 +199,7 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 
 ; Insert in an order different from the vector indices to make sure it
 ; doesn't matter
-define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select_insert_out_of_order(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
@@ -233,15 +233,15 @@ define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float
   ret <4 x float> %rd
 }
 
-declare void @v4f32_user(<4 x float>) #0
-declare void @f32_user(float) #0
+declare void @v4f32_user(<4 x float>)
+declare void @f32_user(float)
 
 ; Multiple users of the final constructed vector
-define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select_users(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
-; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[TMP2]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @v4f32_user(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP2]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
@@ -268,12 +268,12 @@ define <4 x float> @simple_select_users(<4 x float> %a, <4 x float> %b, <4 x i32
   %rb = insertelement <4 x float> %ra, float %s1, i32 1
   %rc = insertelement <4 x float> %rb, float %s2, i32 2
   %rd = insertelement <4 x float> %rc, float %s3, i32 3
-  call void @v4f32_user(<4 x float> %rd) #0
+  call void @v4f32_user(<4 x float> %rd)
   ret <4 x float> %rd
 }
 
 ; Unused insertelement
-define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select_no_users(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
@@ -319,7 +319,7 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 
 ; Make sure infinite loop doesn't happen which I ran into when trying
 ; to do this backwards this backwards
-define <4 x i32> @reconstruct(<4 x i32> %c) #0 {
+define <4 x i32> @reconstruct(<4 x i32> %c) {
 ; CHECK-LABEL: @reconstruct(
 ; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
 ; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
@@ -342,7 +342,7 @@ define <4 x i32> @reconstruct(<4 x i32> %c) #0 {
   ret <4 x i32> %rd
 }
 
-define <2 x float> @simple_select_v2(<2 x float> %a, <2 x float> %b, <2 x i32> %c) #0 {
+define <2 x float> @simple_select_v2(<2 x float> %a, <2 x float> %b, <2 x i32> %c) {
 ; CHECK-LABEL: @simple_select_v2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32> [[C:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[A:%.*]], <2 x float> [[B:%.*]]
@@ -366,7 +366,7 @@ define <2 x float> @simple_select_v2(<2 x float> %a, <2 x float> %b, <2 x i32> %
 ; Make sure when we construct partial vectors, we don't keep
 ; re-visiting the insertelement chains starting with undef
 ; (low cost threshold needed to force this to happen)
-define <4 x float> @simple_select_partial_vector(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
+define <4 x float> @simple_select_partial_vector(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
 ; CHECK-LABEL: @simple_select_partial_vector(
 ; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
 ; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
@@ -487,7 +487,7 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
   ret <4 x double> %i4
 }
 
-define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr #0 {
+define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr {
 ; CHECK-LABEL: @_vadd256(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <8 x float> [[TMP1]]
@@ -526,5 +526,3 @@ define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr 
   %vecinit7.i = insertelement <8 x float> %vecinit6.i, float %add22, i32 7
   ret <8 x float> %vecinit7.i
 }
-
-attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
