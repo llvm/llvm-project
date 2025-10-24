@@ -16,9 +16,10 @@
 #define SIGSEGV 11
 #define SIGTERM 15
 
-#define SIG_DFL ((void (*)(int))(0))
-#define SIG_IGN ((void (*)(int))(1))
-#define SIG_ERR ((void (*)(int))(-1))
+#define SIG_ERR __LLVM_LIBC_CAST(reinterpret_cast, (void (*)(int)), -1)
+#define SIG_DFL __LLVM_LIBC_CAST(reinterpret_cast, (void (*)(int)), 0)
+#define SIG_IGN __LLVM_LIBC_CAST(reinterpret_cast, (void (*)(int)), 1)
+#define SIG_HOLD __LLVM_LIBC_CAST(reinterpret_cast, (void (*)(int)), 2)
 
 // Max signal number
 #define NSIG 64
