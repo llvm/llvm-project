@@ -320,6 +320,7 @@ namespace llvm {
                                 bool AllowParens = false);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
+    bool parseOptionalFlattenDeepDepth(lltok::Kind AttrKind, uint64_t &Depth);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
