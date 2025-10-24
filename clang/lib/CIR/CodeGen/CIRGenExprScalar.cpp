@@ -1889,7 +1889,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                       cgf.getLoc(subExpr->getExprLoc()));
     }
 
-    clang::LangAS srcLangAS = subExpr->getType().getAddressSpace();
+    clang::QualType srcTy = subExpr->IgnoreImpCasts()->getType();
+    if (srcTy->isPointerType() || srcTy->isReferenceType())
+      srcTy = srcTy->getPointeeType();
+
+    clang::LangAS srcLangAS = srcTy.getAddressSpace();
     cir::TargetAddressSpaceAttr subExprAS;
     if (clang::isTargetAddressSpace(srcLangAS))
       subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
