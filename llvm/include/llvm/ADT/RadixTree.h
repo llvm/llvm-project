@@ -84,7 +84,7 @@ private:
   struct Node {
     KeyConstIteratorRangeType Key = {KeyConstIteratorType{},
                                      KeyConstIteratorType{}};
-    SmallVector<Node, 0> Children;
+    std::vector<Node> Children;
 
     /// An iterator to the value associated with this node.
     ///
@@ -152,7 +152,9 @@ private:
     }
   };
 
-  Node Root; // Root is always for empty range.
+  /// Root always corresponds to the empty key, which is the shortest possible
+  /// prefix for everything.
+  Node Root;
   ContainerType KeyValuePairs;
 
   /// Finds or creates a new tail or leaf node corresponding to the `Key`.
@@ -188,9 +190,9 @@ private:
       return *Curr;
     }
 
-    // `Key` is a suffix of original `Key` unmatched by path from the `Root` to the
-    // `Curr`, and we have no candidate in the children to match more. Create a
-    // new one.
+    // `Key` is a suffix of original `Key` unmatched by path from the `Root` to
+    // the `Curr`, and we have no candidate in the children to match more.
+    // Create a new one.
     return Curr->Children.emplace_back(Key);
   }
 
@@ -270,10 +272,10 @@ public:
   using const_iterator = typename ContainerType::const_iterator;
 
   /// Returns true if the tree is empty.
-  bool empty() const { return Values.empty(); }
+  bool empty() const { return KeyValuePairs.empty(); }
 
   /// Returns the number of elements in the tree.
-  size_t size() const { return Values.size(); }
+  size_t size() const { return KeyValuePairs.size(); }
 
   /// Returns the number of nodes in the tree.
   ///
@@ -282,12 +284,12 @@ public:
   size_t countNodes() const { return Root.countNodes(); }
 
   /// Returns an iterator to the first element.
-  iterator begin() { return Values.begin(); }
-  const_iterator begin() const { return Values.begin(); }
+  iterator begin() { return KeyValuePairs.begin(); }
+  const_iterator begin() const { return KeyValuePairs.begin(); }
 
   /// Returns an iterator to the end of the tree.
-  iterator end() { return Values.end(); }
-  const_iterator end() const { return Values.end(); }
+  iterator end() { return KeyValuePairs.end(); }
+  const_iterator end() const { return KeyValuePairs.end(); }
 
   /// Constructs and inserts a new element into the tree.
   ///
@@ -305,13 +307,13 @@ public:
   template <typename... Ts>
   std::pair<iterator, bool> emplace(key_type &&Key, Ts &&...Args) {
     const value_type &NewValue =
-        Values.emplace_front(std::move(Key), T(std::move(Args)...));
+        KeyValuePairs.emplace_front(std::move(Key), T(std::move(Args)...));
     Node &Node = findOrCreate(NewValue.first);
     bool HasValue = Node.Value != typename ContainerType::iterator();
     if (!HasValue) {
-      Node.Value = Values.begin();
+      Node.Value = KeyValuePairs.begin();
     } else {
-      Values.pop_front();
+      KeyValuePairs.pop_front();
     }
     return std::make_pair(Node.Value, !HasValue);
   }
@@ -333,8 +335,7 @@ public:
   iterator_range<const_prefix_iterator>
   find_prefixes(const key_type &Key) const {
     return iterator_range<const_prefix_iterator>{
-        const_prefix_iterator(
-            &Root, KeyConstIteratorRangeType(Key)),
+        const_prefix_iterator(&Root, KeyConstIteratorRangeType(Key)),
         const_prefix_iterator{}};
   }
 };
