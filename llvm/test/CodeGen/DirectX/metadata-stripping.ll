@@ -25,7 +25,8 @@ _Z4mainDv3_j.exit:                                ; preds = %for.body.i, %entry
 ; No more metadata should be necessary, the rest (the current 0 and 1)
 ; should be removed.
 ; CHECK-DAG: [[RANGEMD]] = !{i32 1, i32 5}
+; CHECK-DAG: [[LOOPMD]] = distinct !{[[LOOPMD]]}
 ; CHECK-NOT: {!"llvm.loop.mustprogress"}
-!0 = distinct !{!0, !1}
+!0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}
 !2 = !{i32 1, i32 5}

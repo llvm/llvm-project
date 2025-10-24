@@ -327,81 +327,90 @@ static void translateBranchMetadata(Module &M, Instruction *BBTerminatorInst) {
   BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
 }
 
-static void translateLoopMetadata(Module &M, MDNode *LoopMD) {
+// Determines if the metadata node will be compatible with DXIL's loop metadata
+// representation.
+//
+// Reports an error for compatible metadata that is ill-formed.
+static bool isLoopMDCompatible(Module &M, Metadata *MD) {
   // DXIL only accepts the following loop hints:
-  //   llvm.loop.unroll.disable, llvm.loop.unroll.full, llvm.loop.unroll.count
   std::array<StringLiteral, 3> ValidHintNames = {"llvm.loop.unroll.count",
                                                  "llvm.loop.unroll.disable",
                                                  "llvm.loop.unroll.full"};
 
-  // llvm.loop metadata must have its first operand be a self-reference, so we
-  // require at least 1 operand.
-  //
-  // It only makes sense to specify up to 1 of the hints on a branch, so we can
-  // have at most 2 operands.
+  MDNode *HintMD = dyn_cast<MDNode>(MD);
+  if (!HintMD || HintMD->getNumOperands() == 0)
+    return false;
 
-  if (LoopMD->getNumOperands() != 1 && LoopMD->getNumOperands() != 2) {
-    reportLoopError(M, "Requires exactly 1 or 2 operands");
-    return;
-  }
+  auto *HintStr = dyn_cast<MDString>(HintMD->getOperand(0));
+  if (!HintStr)
+    return false;
 
-  if (LoopMD != LoopMD->getOperand(0)) {
-    reportLoopError(M, "First operand must be a self-reference");
-    return;
-  }
+  if (!llvm::is_contained(ValidHintNames, HintStr->getString()))
+    return false;
 
-  // A node only containing a self-reference is a valid use to denote a loop
-  if (LoopMD->getNumOperands() == 1)
-    return;
-
-  LoopMD = dyn_cast<MDNode>(LoopMD->getOperand(1));
-  if (!LoopMD) {
-    reportLoopError(M, "Second operand must be a metadata node");
-    return;
-  }
-
-  if (LoopMD->getNumOperands() != 1 && LoopMD->getNumOperands() != 2) {
-    reportLoopError(M, "Requires exactly 1 or 2 operands");
-    return;
-  }
-
-  // It is valid to have a chain of self-referential loop metadata nodes so if
-  // we have another self-reference, recurse.
-  //
-  // Eg:
-  // !0 = !{!0, !1}
-  // !1 = !{!1, !2}
-  // !2 = !{"llvm.loop.unroll.disable"}
-  if (LoopMD == LoopMD->getOperand(0))
-    return translateLoopMetadata(M, LoopMD);
-
-  // Otherwise, we are at our base hint metadata node
-  auto *HintStr = dyn_cast<MDString>(LoopMD->getOperand(0));
-  if (!HintStr || !llvm::is_contained(ValidHintNames, HintStr->getString())) {
-    reportLoopError(M,
-                    "First operand must be a valid \"llvm.loop.unroll\" hint");
-    return;
-  }
-
-  // Ensure count node is a constant integer value
-  auto ValidCountNode = [](MDNode *HintMD) -> bool {
-    if (HintMD->getNumOperands() == 2)
-      if (auto *CountMD = dyn_cast<ConstantAsMetadata>(HintMD->getOperand(1)))
-        if (isa<ConstantInt>(CountMD->getValue()))
+  auto ValidCountNode = [](MDNode *CountMD) -> bool {
+    if (CountMD->getNumOperands() == 2)
+      if (auto *Count = dyn_cast<ConstantAsMetadata>(CountMD->getOperand(1)))
+        if (isa<ConstantInt>(Count->getValue()))
           return true;
     return false;
   };
 
   if (HintStr->getString() == "llvm.loop.unroll.count") {
-    if (!ValidCountNode(LoopMD)) {
-      reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
-                         "must be a constant integer");
-      return;
-    }
-  } else if (LoopMD->getNumOperands() != 1) {
-    reportLoopError(M, "Can't have a second operand");
-    return;
-  }
+    if (!ValidCountNode(HintMD))
+      return reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
+                                "must be a constant integer");
+  } else if (HintMD->getNumOperands() != 1)
+    return reportLoopError(
+        M, "\"llvm.loop.unroll.disable\" and \"llvm.loop.unroll.disable\" "
+           "must be provided as a single operand");
+
+  return true;
+}
+
+static void translateLoopMetadata(Module &M, Instruction *I, MDNode *BaseMD) {
+  // A distinct node has the self-referential form: !0 = !{ !0, ... }
+  auto IsDistinctNode = [](MDNode *Node) -> bool {
+    return Node && Node->getNumOperands() != 0 && Node == Node->getOperand(0);
+  };
+
+  // Strip empty metadata or a non-distinct node
+  if (BaseMD->getNumOperands() == 0 || !IsDistinctNode(BaseMD))
+    return I->setMetadata("llvm.loop", nullptr);
+
+  // It is valid to have a chain of self-refential loop metadata nodes, as
+  // below. We will collapse these into just one when we reconstruct the
+  // metadata.
+  //
+  // Eg:
+  // !0 = !{!0, !1}
+  // !1 = !{!1, !2}
+  // !2 = !{!"llvm.loop.unroll.disable"}
+  //
+  // So, traverse down a potential self-referential chain
+  while (1 < BaseMD->getNumOperands() &&
+         IsDistinctNode(dyn_cast<MDNode>(BaseMD->getOperand(1))))
+    BaseMD = dyn_cast<MDNode>(BaseMD->getOperand(1));
+
+  // To reconstruct a distinct node we create a temporary node that we will
+  // then update to create a self-reference.
+  llvm::TempMDTuple TempNode = llvm::MDNode::getTemporary(M.getContext(), {});
+  SmallVector<Metadata *> CompatibleOperands = {TempNode.get()};
+
+  // Iterate and reconstruct the metadata nodes that contains any hints,
+  // stripping any unrecognized metadata.
+  ArrayRef<MDOperand> Operands = BaseMD->operands();
+  for (auto &Op : Operands.drop_front())
+    if (isLoopMDCompatible(M, Op.get()))
+      CompatibleOperands.push_back(Op.get());
+
+  if (2 < CompatibleOperands.size())
+    reportLoopError(M, "Provided conflicting hints");
+
+  MDNode *CompatibleLoopMD = MDNode::get(M.getContext(), CompatibleOperands);
+  TempNode->replaceAllUsesWith(CompatibleLoopMD);
+
+  I->setMetadata("llvm.loop", CompatibleLoopMD);
 }
 
 using InstructionMDList = std::array<unsigned, 7>;
@@ -427,10 +436,9 @@ static void translateInstructionMetadata(Module &M) {
         translateBranchMetadata(M, I);
 
       for (auto &I : make_early_inc_range(BB)) {
-        if (isa<BranchInst>(I)) {
+        if (isa<BranchInst>(I))
           if (MDNode *LoopMD = I.getMetadata(MDLoopKind))
-            translateLoopMetadata(M, LoopMD);
-        }
+            translateLoopMetadata(M, &I, LoopMD);
         I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
       }
     }
