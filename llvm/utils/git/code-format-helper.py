@@ -282,9 +282,9 @@ class DarkerFormatHelper(FormatHelper):
 
     def _construct_command(self, diff_expression: str | None) -> str:
         darker_cmd = [
-            self.darker_fmt_path,
-            "--check",
-            "--diff",
+        self.darker_fmt_path,
+        "--check",
+        "--diff",
         ]
         if diff_expression:
             darker_cmd += ["-r", diff_expression]
