@@ -5,7 +5,7 @@
 
 ;--- count.ll
 
-; Test that we allow a self-referential chain and a constant integer in count
+; Test that we collapse a self-referential chain and allow a unroll.count hint
 
 target triple = "dxilv1.0-unknown-shadermodel6.0-library"
 
@@ -27,8 +27,7 @@ exit:
   ret void
 }
 
-; CHECK: ![[#LOOP_MD]] = distinct !{![[#LOOP_MD]], ![[#EXTRA_REF:]]}
-; CHECK: ![[#EXTRA_REF]] = distinct !{![[#EXTRA_REF]], ![[#COUNT:]]}
+; CHECK: ![[#LOOP_MD]] = distinct !{![[#LOOP_MD]], ![[#COUNT:]]}
 ; CHECK: ![[#COUNT]] = !{!"llvm.loop.unroll.count", i6 4}
 
 !0 = !{!0, !1}
