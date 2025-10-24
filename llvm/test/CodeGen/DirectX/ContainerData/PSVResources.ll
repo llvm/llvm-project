@@ -14,7 +14,7 @@ define void @main() #0 {
 ; CHECK:          Kind:            CBuffer
 ; CHECK:          Flags:
 ; CHECK:            UsedByAtomic64:  false
-  %cbuf = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+  %cbuf = call target("dx.CBuffer", <{ float }>)
       @llvm.dx.resource.handlefrombinding(i32 3, i32 2, i32 1, i32 0, ptr null)
 
   ; ByteAddressBuffer Buf : register(t8, space1)
@@ -94,6 +94,18 @@ define void @main() #0 {
   %uav2_2 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 5, ptr null)
+
+  ; RWBuffer<float4> UnboundedArray[] : register(u10, space5)
+; CHECK:        - Type:            UAVTyped
+; CHECK:          Space:           5
+; CHECK:          LowerBound:      10
+; CHECK:          UpperBound:      4294967295
+; CHECK:          Kind:            TypedBuffer
+; CHECK:          Flags:
+; CHECK:            UsedByAtomic64:  false
+  ; RWBuffer<float4> Buf = BufferArray[100];
+  %uav3 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+              @llvm.dx.resource.handlefrombinding(i32 5, i32 10, i32 -1, i32 100, ptr null)
   ret void
 }
 

@@ -819,7 +819,7 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 }
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
-void LLVM_ATTRIBUTE_UNUSED CodeGenPrepare::verifyBFIUpdates(Function &F) {
+[[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
   LoopInfo NewLI(NewDT);
   BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
@@ -3194,7 +3194,7 @@ struct ExtAddrMode : public TargetLowering::AddrMode {
     case ScaledRegField:
       return ScaledReg;
     case BaseOffsField:
-      return ConstantInt::get(IntPtrTy, BaseOffs);
+      return ConstantInt::getSigned(IntPtrTy, BaseOffs);
     }
   }
 
@@ -6100,7 +6100,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
       // Add in the Base Offset if present.
       if (AddrMode.BaseOffs) {
-        Value *V = ConstantInt::get(IntPtrTy, AddrMode.BaseOffs);
+        Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
         if (ResultIndex) {
           // We need to add this separately from the scale above to help with
           // SDAG consecutive load/store merging.
@@ -6226,7 +6226,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
     // Add in the Base Offset if present.
     if (AddrMode.BaseOffs) {
-      Value *V = ConstantInt::get(IntPtrTy, AddrMode.BaseOffs);
+      Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
       if (Result)
         Result = Builder.CreateAdd(Result, V, "sunkaddr");
       else

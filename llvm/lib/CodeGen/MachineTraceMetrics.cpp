@@ -485,10 +485,7 @@ struct LoopBounds {
 
 // Specialize po_iterator_storage in order to prune the post-order traversal so
 // it is limited to the current loop and doesn't traverse the loop back edges.
-namespace llvm {
-
-template<>
-class po_iterator_storage<LoopBounds, true> {
+template <> class llvm::po_iterator_storage<LoopBounds, true> {
   LoopBounds &LB;
 
 public:
@@ -518,8 +515,6 @@ public:
     return LB.Visited.insert(To).second;
   }
 };
-
-} // end namespace llvm
 
 /// Compute the trace through MBB.
 void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {

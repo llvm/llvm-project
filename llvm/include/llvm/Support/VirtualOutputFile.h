@@ -31,7 +31,7 @@ class OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
 
 public:
   static char ID;
-  virtual ~OutputFileImpl() = default;
+  ~OutputFileImpl() override = default;
 
   virtual Error keep() = 0;
   virtual Error discard() = 0;

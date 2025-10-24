@@ -126,11 +126,15 @@ void definite_single_pointer_multiple_loans_gsl(bool cond) {
   v.use();      // expected-note 2 {{later used here}}
 }
 
-
-//===----------------------------------------------------------------------===//
-// Potential (Maybe) Use-After-Free (-W...strict)
-// These are cases where the pointer *may* become dangling, depending on the path taken.
-//===----------------------------------------------------------------------===//
+void definite_if_branch(bool cond) {
+  MyObj safe;
+  MyObj* p = &safe;
+  if (cond) {
+    MyObj temp;
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
+  }             // expected-note {{destroyed here}}
+  (void)*p;     // expected-note {{later used here}}
+}
 
 void potential_if_branch(bool cond) {
   MyObj safe;
@@ -139,15 +143,18 @@ void potential_if_branch(bool cond) {
     MyObj temp;
     p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
   }             // expected-note {{destroyed here}}
-  (void)*p;     // expected-note {{later used here}}
+  if (!cond)
+    (void)*p;   // expected-note {{later used here}}
+  else
+    p = &safe;
 }
 
-void potential_if_branch_gsl(bool cond) {
+void definite_if_branch_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   if (cond) {
     MyObj temp;
-    v = temp;   // expected-warning {{object whose reference is captured may not live long enough}}
+    v = temp;   // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   v.use();      // expected-note {{later used here}}
 }
@@ -159,13 +166,14 @@ void definite_potential_together(bool cond) {
 
   {
     MyObj s;
-    p_definite = &s;  // expected-warning {{does not live long enough}}
-    if (cond) {
-      p_maybe = &s;   // expected-warning {{may not live long enough}}
-    }                 
-  }                   // expected-note 2 {{destroyed here}}
-  (void)*p_definite;  // expected-note {{later used here}}
-  (void)*p_maybe;     // expected-note {{later used here}}
+    if (cond)
+      p_definite = &s;  // expected-warning {{does not live long enough}}
+    if (cond)
+      p_maybe = &s;     // expected-warning {{may not live long enough}}         
+  }                     // expected-note 2 {{destroyed here}}
+  (void)*p_definite;    // expected-note {{later used here}}
+  if (!cond)
+    (void)*p_maybe;     // expected-note {{later used here}}
 }
 
 void definite_overrides_potential(bool cond) {
@@ -189,10 +197,19 @@ void definite_overrides_potential(bool cond) {
   (void)*q;
 }
 
-
-//===----------------------------------------------------------------------===//
-// Control Flow Tests
-//===----------------------------------------------------------------------===//
+void potential_due_to_conditional_killing(bool cond) {
+  MyObj safe;
+  MyObj* q;
+  {
+    MyObj s;
+    q = &s;       // expected-warning {{may not live long enough}}
+  }               // expected-note {{destroyed here}}
+  if (cond) {
+    // 'q' is conditionally "rescued". 'p' is not.
+    q = &safe;
+  }
+  (void)*q;       // expected-note {{later used here}}
+}
 
 void potential_for_loop_use_after_loop_body(MyObj safe) {
   MyObj* p = &safe;
@@ -215,34 +232,35 @@ void potential_for_loop_gsl() {
 
 void potential_for_loop_use_before_loop_body(MyObj safe) {
   MyObj* p = &safe;
+  // Prefer the earlier use for diagnsotics.
   for (int i = 0; i < 1; ++i) {
     (void)*p;   // expected-note {{later used here}}
     MyObj s;
-    p = &s;     // expected-warning {{may not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}}
   }             // expected-note {{destroyed here}}
   (void)*p;
 }
 
-void potential_loop_with_break(bool cond) {
+void definite_loop_with_break(bool cond) {
   MyObj safe;
   MyObj* p = &safe;
   for (int i = 0; i < 10; ++i) {
     if (cond) {
       MyObj temp;
-      p = &temp; // expected-warning {{may not live long enough}}
+      p = &temp; // expected-warning {{does not live long enough}}
       break;     // expected-note {{destroyed here}}
     }           
   } 
   (void)*p;     // expected-note {{later used here}}
 }
 
-void potential_loop_with_break_gsl(bool cond) {
+void definite_loop_with_break_gsl(bool cond) {
   MyObj safe;
   View v = safe;
   for (int i = 0; i < 10; ++i) {
     if (cond) {
       MyObj temp;
-      v = temp;   // expected-warning {{object whose reference is captured may not live long enough}}
+      v = temp;   // expected-warning {{object whose reference is captured does not live long enough}}
       break;      // expected-note {{destroyed here}}
     }
   }
@@ -250,36 +268,51 @@ void potential_loop_with_break_gsl(bool cond) {
 }
 
 void potential_multiple_expiry_of_same_loan(bool cond) {
-  // Choose the last expiry location for the loan.
+  // Choose the last expiry location for the loan (e.g., through scope-ends and break statements).
   MyObj safe;
   MyObj* p = &safe;
   for (int i = 0; i < 10; ++i) {
     MyObj unsafe;
     if (cond) {
-      p = &unsafe; // expected-warning {{may not live long enough}}
-      break;
+      p = &unsafe; // expected-warning {{does not live long enough}}
+      break;       // expected-note {{destroyed here}} 
     }
-  }               // expected-note {{destroyed here}} 
+  }
   (void)*p;       // expected-note {{later used here}}
 
   p = &safe;
   for (int i = 0; i < 10; ++i) {
     MyObj unsafe;
     if (cond) {
-      p = &unsafe;    // expected-warning {{may not live long enough}}
+      p = &unsafe;    // expected-warning {{does not live long enough}}
       if (cond)
-        break;
+        break;        // expected-note {{destroyed here}}
     }
-  }                   // expected-note {{destroyed here}}
+  }
   (void)*p;           // expected-note {{later used here}}
 
   p = &safe;
   for (int i = 0; i < 10; ++i) {
     if (cond) {
       MyObj unsafe2;
-      p = &unsafe2;   // expected-warning {{may not live long enough}}
+      p = &unsafe2;   // expected-warning {{does not live long enough}}
       break;          // expected-note {{destroyed here}}
     }
+  }
+
+  // TODO: This can be argued to be a "maybe" warning. This is because
+  // we only check for confidence of liveness and not the confidence of
+  // the loan contained in an origin. To deal with this, we can introduce
+  // a confidence in loan propagation analysis as well like liveness.
+  (void)*p;           // expected-note {{later used here}}
+
+  p = &safe;
+  for (int i = 0; i < 10; ++i) {
+    MyObj unsafe;
+    if (cond)
+      p = &unsafe;    // expected-warning {{does not live long enough}}
+    if (cond)
+      break;          // expected-note {{destroyed here}}
   }
   (void)*p;           // expected-note {{later used here}}
 }
@@ -298,13 +331,14 @@ void potential_switch(int mode) {
     break;
   }
   }
-  (void)*p;     // expected-note {{later used here}}
+  if (mode == 2)
+    (void)*p;     // expected-note {{later used here}}
 }
 
 void definite_switch(int mode) {
   MyObj safe;
   MyObj* p = &safe;
-  // All cases are UaF --> Definite error.
+  // A use domintates all the loan expires --> all definite error.
   switch (mode) {
   case 1: {
     MyObj temp1;
@@ -347,6 +381,21 @@ void definite_switch_gsl(int mode) {
   v.use();      // expected-note 3 {{later used here}}
 }
 
+void loan_from_previous_iteration(MyObj safe, bool condition) {
+  MyObj* p = &safe;
+  MyObj* q = &safe;
+
+  while (condition) {
+    MyObj x;
+    p = &x;     // expected-warning {{may not live long enough}}
+
+    if (condition)
+      q = p;
+    (void)*p;
+    (void)*q;   // expected-note {{later used here}}
+  }             // expected-note {{destroyed here}}
+}
+
 //===----------------------------------------------------------------------===//
 // No-Error Cases
 //===----------------------------------------------------------------------===//
@@ -370,6 +419,19 @@ void no_error_if_dangle_then_rescue_gsl() {
   }
   v = safe;    // 'v' is "rescued" before use by reassigning to a valid object.
   v.use();     // This is safe.
+}
+
+void no_error_loan_from_current_iteration(bool cond) {
+  // See https://github.com/llvm/llvm-project/issues/156959.
+  MyObj b;
+  while (cond) {
+    MyObj a;
+    View p = b;
+    if (cond) {
+      p = a;
+    }
+    (void)p;
+  }
 }
 
 
@@ -415,9 +477,9 @@ void lifetimebound_multiple_args_potential(bool cond) {
     MyObj obj1;
     if (cond) {
       MyObj obj2;
-      v = Choose(true, 
-                 obj1,             // expected-warning {{object whose reference is captured may not live long enough}}
-                 obj2);            // expected-warning {{object whose reference is captured may not live long enough}}
+      v = Choose(true,
+                 obj1,             // expected-warning {{object whose reference is captured does not live long enough}}
+                 obj2);            // expected-warning {{object whose reference is captured does not live long enough}}
     }                              // expected-note {{destroyed here}}
   }                                // expected-note {{destroyed here}}
   v.use();                         // expected-note 2 {{later used here}}
@@ -488,7 +550,7 @@ void lifetimebound_partial_safety(bool cond) {
     MyObj temp_obj;
     v = Choose(true, 
                safe_obj,
-               temp_obj); // expected-warning {{object whose reference is captured may not live long enough}}
+               temp_obj); // expected-warning {{object whose reference is captured does not live long enough}}
   }                       // expected-note {{destroyed here}}
   v.use();                // expected-note {{later used here}}
 }

@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_UNITTESTS_TWEAKS_TWEAKTESTING_H
 
 #include "ParsedAST.h"
+#include "TestWorkspace.h"
 #include "index/Index.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -122,6 +123,73 @@ MATCHER_P2(FileWithContents, FileName, Contents, "") {
   } while (0)
 #define EXPECT_AVAILABLE(MarkedCode) EXPECT_AVAILABLE_(MarkedCode, true)
 #define EXPECT_UNAVAILABLE(MarkedCode) EXPECT_AVAILABLE_(MarkedCode, false)
+
+// A helper class to represent the return value of TweakWorkspaceTest::apply().
+struct TweakResult {
+  // A string representation the status of the operation.
+  // For failure cases, this is the same as the return value of
+  // TweakTest::apply() (see the comment above that for details).
+  // For success cases, this is "success".
+  std::string Status;
+  // The contents of all files changed by the tweak, including
+  // the file in which it was invoked. Keys are absolute paths.
+  llvm::StringMap<std::string> EditedFiles = {};
+};
+
+// GTest matchers to allow more easily writing assertions about the
+// expected value of a TweakResult.
+MATCHER_P(withStatus, S, "") { return arg.Status == S; }
+template <class EditedFilesMatcher>
+::testing::Matcher<TweakResult> editedFiles(EditedFilesMatcher M) {
+  return ::testing::Field(&TweakResult::EditedFiles, M);
+}
+
+// Used for formatting TweakResult objects in assertion failure messages,
+// so it's easier to understand what didn't match.
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Stream,
+                                     const TweakResult &Result) {
+  Stream << "{ status: " << Result.Status << ", editedFiles: [";
+  for (const auto &F : Result.EditedFiles) {
+    Stream << F.first() << ":\n";
+    Stream << F.second;
+  }
+  return Stream << "] }";
+}
+
+// A version of TweakTest that makes it easier to create test cases that
+// involve multiple files which are indexed.
+// Usage:
+//   - Call `Workspace.addMainFile(filename, contents)` to add
+//     source files which are indexer entry points (e.g. would show
+//     up in `compile_commands.json`).
+//   - Call `Workspace.addSource(filename, contents)` to add other
+//     source files (e.g. header files).
+//   - Call `apply(filename, range)` to invoke the tweak on the
+//     indicated file with the given range selected. Can be called
+//     multiple times for the same set of added files.
+// The implementation takes care of building an index reflecting
+// all added source files, and making it available to the tweak.
+// Unlike TweakTest, this does not have a notion of a `CodeContext`
+// (i.e. the contents of all added files are interpreted as being
+// in a File context).
+class TweakWorkspaceTest : public ::testing::Test {
+  const char *TweakID;
+
+public:
+  TweakWorkspaceTest(const char *TweakID) : TweakID(TweakID) {}
+
+  TweakResult apply(StringRef InvocationFile,
+                    llvm::Annotations::Range InvocationRange);
+
+protected:
+  TestWorkspace Workspace;
+};
+
+#define TWEAK_WORKSPACE_TEST(TweakID)                                          \
+  class TweakID##WorkspaceTest : public ::clang::clangd::TweakWorkspaceTest {  \
+  protected:                                                                   \
+    TweakID##WorkspaceTest() : TweakWorkspaceTest(#TweakID) {}                 \
+  }
 
 } // namespace clangd
 } // namespace clang

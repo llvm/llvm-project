@@ -168,7 +168,8 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 

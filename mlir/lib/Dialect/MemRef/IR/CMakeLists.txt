@@ -5,7 +5,7 @@ add_mlir_dialect_library(MLIRMemRefDialect
   ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
-  ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRefDialect
+  ${PROJECT_SOURCE_DIR}/inlude/mlir/Dialect/MemRef/IR
 
   DEPENDS
   MLIRMemRefOpsIncGen
@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIRMemRefDialect
   MLIRDialectUtils
   MLIRInferIntRangeCommon
   MLIRInferIntRangeInterface
+  MLIRInferStridedMetadataInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRMemOpInterfaces

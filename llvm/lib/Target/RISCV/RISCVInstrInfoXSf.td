@@ -217,6 +217,14 @@ let Predicates = [HasVendorXSfvcp], mayLoad = 0, mayStore = 0,
   defm FVW : CustomSiFiveVCIX<"fvw", VCIX_XVW, VR,    VR,    FPR32>, Sched<[]>;
 }
 
+let Predicates = [HasVendorXSfvfexpAny], DecoderNamespace = "XSfvector" in {
+  def SF_VFEXP_V : VALUVs2<0b010011, 0b00111, OPFVV, "sf.vfexp.v">;
+}
+
+let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
+  def SF_VFEXPA_V : VALUVs2<0b010011, 0b00110, OPFVV, "sf.vfexpa.v">;
+}
+
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
     DestEEW = EEWSEWx4, RVVConstraint=VS2Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
@@ -438,8 +446,10 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPList in {
     foreach m = f.MxList in {
-    defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
-    defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in {
+        defm f.FX # "V" : VPseudoVC_XV<m, f.fprclass, payload1>;
+        defm f.FX # "VV" : VPseudoVC_XVV<m, f.fprclass, payload1>;
+      }
     }
   }
   foreach m = MxListW in {
@@ -449,7 +459,8 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach f = FPListW in {
     foreach m = f.MxList in
-    defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
+      let AltFmtType = IS_NOT_ALTFMT in
+        defm f.FX # "VW" : VPseudoVC_XVW<m, f.fprclass, payload1>;
   }
 }
 
@@ -471,7 +482,7 @@ let Predicates = [HasVendorXSfvfwmaccqqq] in {
   defm SF_VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
-let Predicates = [HasVendorXSfvfnrclipxfqf] in {
+let Predicates = [HasVendorXSfvfnrclipxfqf], AltFmtType = IS_NOT_ALTFMT in {
   defm SF_VFNRCLIP_XU_F_QF : VPseudoSiFiveVFNRCLIP;
   defm SF_VFNRCLIP_X_F_QF : VPseudoSiFiveVFNRCLIP;
 }

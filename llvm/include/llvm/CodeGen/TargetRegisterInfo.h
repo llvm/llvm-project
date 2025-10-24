@@ -280,7 +280,7 @@ protected:
                      unsigned Mode = 0);
 
 public:
-  virtual ~TargetRegisterInfo();
+  ~TargetRegisterInfo() override;
 
   /// Return the number of registers for the function. (may overestimate)
   virtual unsigned getNumSupportedRegs(const MachineFunction &) const {

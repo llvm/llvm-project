@@ -7,6 +7,7 @@
 
 #include "resolve-names.h"
 #include "assignment.h"
+#include "data-to-inits.h"
 #include "definable.h"
 #include "mod-file.h"
 #include "pointer-assignment.h"
@@ -357,6 +358,7 @@ protected:
       DeclTypeSpec::Category category{DeclTypeSpec::TypeDerived};
     } derived;
     bool allowForwardReferenceToDerivedType{false};
+    const parser::Expr *originalKindParameter{nullptr};
   };
 
   bool allowForwardReferenceToDerivedType() const {
@@ -365,8 +367,10 @@ protected:
   void set_allowForwardReferenceToDerivedType(bool yes) {
     state_.allowForwardReferenceToDerivedType = yes;
   }
+  void set_inPDTDefinition(bool yes) { inPDTDefinition_ = yes; }
 
-  const DeclTypeSpec *GetDeclTypeSpec();
+  const DeclTypeSpec *GetDeclTypeSpec() const;
+  const parser::Expr *GetOriginalKindParameter() const;
   void BeginDeclTypeSpec();
   void EndDeclTypeSpec();
   void SetDeclTypeSpec(const DeclTypeSpec &);
@@ -380,6 +384,7 @@ protected:
 
 private:
   State state_;
+  bool inPDTDefinition_{false};
 
   void MakeNumericType(TypeCategory, int kind);
 };
@@ -1081,8 +1086,12 @@ public:
       const parser::Name &, const parser::InitialDataTarget &);
   void PointerInitialization(
       const parser::Name &, const parser::ProcPointerInit &);
+  bool CheckNonPointerInitialization(
+      const parser::Name &, bool inLegacyDataInitialization);
   void NonPointerInitialization(
       const parser::Name &, const parser::ConstantExpr &);
+  void LegacyDataInitialization(const parser::Name &,
+      const std::list<common::Indirection<parser::DataStmtValue>> &values);
   void CheckExplicitInterface(const parser::Name &);
   void CheckBindings(const parser::TypeBoundProcedureStmt::WithoutInterface &);
 
@@ -1131,7 +1140,7 @@ protected:
   std::optional<SourceName> BeginCheckOnIndexUseInOwnBounds(
       const parser::DoVariable &name) {
     std::optional<SourceName> result{checkIndexUseInOwnBounds_};
-    checkIndexUseInOwnBounds_ = name.thing.thing.source;
+    checkIndexUseInOwnBounds_ = parser::UnwrapRef<parser::Name>(name).source;
     return result;
   }
   void EndCheckOnIndexUseInOwnBounds(const std::optional<SourceName> &restore) {
@@ -1432,6 +1441,30 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenACCStandaloneConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCCacheConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCWaitConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCAtomicConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCEndConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCDeclarativeConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
 
   void CopySymbolWithDevice(const parser::Name *name);
 
@@ -1471,7 +1504,8 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // symbols are created for the one appearing in the use_device
   // clause. These new symbols have the CUDA Fortran device
   // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+      name->symbol) {
     name->symbol = currScope().CopySymbol(*name->symbol);
     if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
@@ -1481,15 +1515,12 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
   for (const auto &accObject : x.v.v) {
+    Walk(accObject);
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name{
-                      semantics::getDesignatorNameIfDataRef(designator)}) {
-                Symbol *prev{currScope().FindSymbol(name->source)};
-                if (prev != name->symbol) {
-                  name->symbol = prev;
-                }
+                      parser::GetDesignatorNameIfDataRef(designator)}) {
                 CopySymbolWithDevice(name);
               } else {
                 if (const auto *dataRef{
@@ -1498,13 +1529,8 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
                       common::Indirection<parser::ArrayElement>;
                   if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
                     const parser::ArrayElement &arrayElement{ind->value()};
-                    Walk(arrayElement.subscripts);
                     const parser::DataRef &base{arrayElement.base};
                     if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                      Symbol *prev{currScope().FindSymbol(name->source)};
-                      if (prev != name->symbol) {
-                        name->symbol = prev;
-                      }
                       CopySymbolWithDevice(name);
                     }
                   }
@@ -1528,6 +1554,7 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
 
 bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  currScope().AddSourceRange(x.source);
   return true;
 }
 
@@ -1639,7 +1666,7 @@ public:
           common::visitors{
               [&](const parser::Designator &designator) {
                 if (const auto *name{
-                        semantics::getDesignatorNameIfDataRef(designator)}) {
+                        parser::GetDesignatorNameIfDataRef(designator)}) {
                   specPartState_.declareTargetNames.insert(name->source);
                 }
               },
@@ -1745,11 +1772,11 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeSpecifier &x) {
+  bool Pre(const parser::OmpTypeName &x) {
     BeginDeclTypeSpec();
     return true;
   }
-  void Post(const parser::OmpTypeSpecifier &x) { //
+  void Post(const parser::OmpTypeName &x) { //
     EndDeclTypeSpec();
   }
 
@@ -1980,7 +2007,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       }
     }
     EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
     Walk(clauses);
     PopScope();
   }
@@ -2007,7 +2034,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
     if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{getDesignatorNameIfDataRef(*desg)}) {
+      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
             SayWithDecl(*name, *symbol,
@@ -2121,7 +2148,7 @@ public:
   void Post(const parser::SubstringInquiry &);
   template <typename A, typename B>
   void Post(const parser::LoopBounds<A, B> &x) {
-    ResolveName(*parser::Unwrap<parser::Name>(x.name));
+    ResolveName(parser::UnwrapRef<parser::Name>(x.name));
   }
   void Post(const parser::ProcComponentRef &);
   bool Pre(const parser::FunctionReference &);
@@ -2454,8 +2481,11 @@ bool AttrsVisitor::Pre(const common::CUDADataAttr x) {
 
 // DeclTypeSpecVisitor implementation
 
-const DeclTypeSpec *DeclTypeSpecVisitor::GetDeclTypeSpec() {
+const DeclTypeSpec *DeclTypeSpecVisitor::GetDeclTypeSpec() const {
   return state_.declTypeSpec;
+}
+const parser::Expr *DeclTypeSpecVisitor::GetOriginalKindParameter() const {
+  return state_.originalKindParameter;
 }
 
 void DeclTypeSpecVisitor::BeginDeclTypeSpec() {
@@ -2541,6 +2571,21 @@ void DeclTypeSpecVisitor::SetDeclTypeSpec(const DeclTypeSpec &declTypeSpec) {
 
 KindExpr DeclTypeSpecVisitor::GetKindParamExpr(
     TypeCategory category, const std::optional<parser::KindSelector> &kind) {
+  if (inPDTDefinition_) {
+    if (category != TypeCategory::Derived && kind) {
+      if (const auto *expr{
+              std::get_if<parser::ScalarIntConstantExpr>(&kind->u)}) {
+        CHECK(!state_.originalKindParameter);
+        // Save a pointer to the KIND= expression in the parse tree
+        // in case we need to reanalyze it during PDT instantiation.
+        state_.originalKindParameter = parser::Unwrap<parser::Expr>(expr);
+      }
+    }
+    // Inhibit some errors now that will be caught later during instantiations.
+    auto restorer{
+        context().foldingContext().AnalyzingPDTComponentKindSelector()};
+    return AnalyzeKindSelector(context(), category, kind);
+  }
   return AnalyzeKindSelector(context(), category, kind);
 }
 
@@ -3599,6 +3644,20 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
         }
       }
     }
+  }
+  // Go through the list of COMMON block symbols in the module scope and add
+  // their USE association to the current scope's USE-associated COMMON blocks.
+  for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
+    if (!currScope().FindCommonBlockInVisibleScopes(name)) {
+      currScope().AddCommonBlockUse(
+          name, symbol->attrs(), symbol->GetUltimate());
+    }
+  }
+  // Go through the list of USE-associated COMMON block symbols in the module
+  // scope and add USE associations to their ultimate symbols to the current
+  // scope's USE-associated COMMON blocks.
+  for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
+    currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
   useModuleScope_ = nullptr;
 }
@@ -5406,7 +5465,8 @@ void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
   }
 }
 
-// If name is a generic, return specific subprogram with the same name.
+// If name is a generic in the same scope, return its specific subprogram with
+// the same name, if any.
 Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
   // Search for the name but don't resolve it
   if (auto *symbol{currScope().FindSymbol(name.source)}) {
@@ -5416,6 +5476,9 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
         // symbol doesn't inherit it and ruin the ability to check it.
         symbol->attrs().reset(Attr::MODULE);
       }
+    } else if (&symbol->owner() != &currScope() && inInterfaceBlock() &&
+        !isGeneric()) {
+      // non-generic interface shadows outer definition
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};
@@ -5622,6 +5685,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   if (details->init() || symbol.test(Symbol::Flag::InDataStmt)) {
     Say(name, "Named constant '%s' already has a value"_err_en_US);
   }
+  parser::CharBlock at{parser::UnwrapRef<parser::Expr>(expr).source};
   if (inOldStyleParameterStmt_) {
     // non-standard extension PARAMETER statement (no parentheses)
     Walk(expr);
@@ -5630,7 +5694,6 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
       SayWithDecl(name, symbol,
           "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
     } else if (folded) {
-      auto at{expr.thing.value().source};
       if (evaluate::IsActuallyConstant(*folded)) {
         if (const auto *type{currScope().GetType(*folded)}) {
           if (type->IsPolymorphic()) {
@@ -5655,8 +5718,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     // standard-conforming PARAMETER statement (with parentheses)
     ApplyImplicitRules(symbol);
     Walk(expr);
-    if (auto converted{EvaluateNonPointerInitializer(
-            symbol, expr, expr.thing.value().source)}) {
+    if (auto converted{EvaluateNonPointerInitializer(symbol, expr, at)}) {
       details->set_init(std::move(*converted));
     }
   }
@@ -6122,7 +6184,7 @@ bool DeclarationVisitor::Pre(const parser::KindParam &x) {
   if (const auto *kind{std::get_if<
           parser::Scalar<parser::Integer<parser::Constant<parser::Name>>>>(
           &x.u)}) {
-    const parser::Name &name{kind->thing.thing.thing};
+    const auto &name{parser::UnwrapRef<parser::Name>(kind)};
     if (!FindSymbol(name)) {
       Say(name, "Parameter '%s' not found"_err_en_US);
     }
@@ -6410,6 +6472,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   details.set_isForwardReferenced(false);
   derivedTypeInfo_ = {};
   PopScope();
+  set_inPDTDefinition(false);
   return false;
 }
 
@@ -6437,6 +6500,10 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
     // component without producing spurious errors about already
     // existing.
     const Symbol &extendsSymbol{extendsType->typeSymbol()};
+    if (extendsSymbol.scope() &&
+        extendsSymbol.scope()->IsParameterizedDerivedType()) {
+      set_inPDTDefinition(true);
+    }
     auto restorer{common::ScopedSet(extendsName->symbol, nullptr)};
     if (OkToAddComponent(*extendsName, &extendsSymbol)) {
       auto &comp{DeclareEntity<ObjectEntityDetails>(*extendsName, Attrs{})};
@@ -6455,8 +6522,12 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
   }
   // Create symbols now for type parameters so that they shadow names
   // from the enclosing specification part.
+  const auto &paramNames{std::get<std::list<parser::Name>>(x.t)};
+  if (!paramNames.empty()) {
+    set_inPDTDefinition(true);
+  }
   if (auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
-    for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+    for (const auto &name : paramNames) {
       if (Symbol * symbol{MakeTypeSymbol(name, TypeParamDetails{})}) {
         details->add_paramNameOrder(*symbol);
       }
@@ -6544,8 +6615,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
     if (const auto *derived{declType->AsDerived()}) {
       if (!attrs.HasAny({Attr::POINTER, Attr::ALLOCATABLE})) {
         if (derivedTypeInfo_.type == &derived->typeSymbol()) { // C744
-          Say("Recursive use of the derived type requires "
-              "POINTER or ALLOCATABLE"_err_en_US);
+          Say("Recursive use of the derived type requires POINTER or ALLOCATABLE"_err_en_US);
         }
       }
     }
@@ -6558,7 +6628,11 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
         Initialization(name, *init, /*inComponentDecl=*/true);
       }
     }
-    currScope().symbol()->get<DerivedTypeDetails>().add_component(symbol);
+    auto &details{currScope().symbol()->get<DerivedTypeDetails>()};
+    details.add_component(symbol);
+    if (const parser::Expr *kindExpr{GetOriginalKindParameter()}) {
+      details.add_originalKindParameter(name.source, kindExpr);
+    }
   }
   ClearArraySpec();
   ClearCoarraySpec();
@@ -7421,7 +7495,7 @@ void DeclarationVisitor::DeclareLocalEntity(
 Symbol *DeclarationVisitor::DeclareStatementEntity(
     const parser::DoVariable &doVar,
     const std::optional<parser::IntegerTypeSpec> &type) {
-  const parser::Name &name{doVar.thing.thing};
+  const auto &name{parser::UnwrapRef<parser::Name>(doVar)};
   const DeclTypeSpec *declTypeSpec{nullptr};
   if (auto *prev{FindSymbol(name)}) {
     if (prev->owner() == currScope()) {
@@ -7854,13 +7928,14 @@ bool ConstructVisitor::Pre(const parser::DataIDoObject &x) {
   common::visit(
       common::visitors{
           [&](const parser::Scalar<Indirection<parser::Designator>> &y) {
-            Walk(y.thing.value());
-            const parser::Name &first{parser::GetFirstName(y.thing.value())};
+            const auto &designator{parser::UnwrapRef<parser::Designator>(y)};
+            Walk(designator);
+            const parser::Name &first{parser::GetFirstName(designator)};
             if (first.symbol) {
               first.symbol->set(Symbol::Flag::InDataStmt);
             }
           },
-          [&](const Indirection<parser::DataImpliedDo> &y) { Walk(y.value()); },
+          [&](const Indirection<parser::DataImpliedDo> &y) { Walk(y); },
       },
       x.u);
   return false;
@@ -8543,8 +8618,7 @@ public:
   void Post(const parser::WriteStmt &) { inAsyncIO_ = false; }
   void Post(const parser::IoControlSpec::Size &size) {
     if (const auto *designator{
-            std::get_if<common::Indirection<parser::Designator>>(
-                &size.v.thing.thing.u)}) {
+            parser::Unwrap<common::Indirection<parser::Designator>>(size)}) {
       NoteAsyncIODesignator(designator->value());
     }
   }
@@ -8995,6 +9069,14 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               ultimate.set(Symbol::Flag::InDataStmt);
             }
           },
+          [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
+            Walk(values);
+            if (inComponentDecl) {
+              LegacyDataInitialization(name, values);
+            } else {
+              ultimate.set(Symbol::Flag::InDataStmt);
+            }
+          },
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
             if (auto nullInit{EvaluateExpr(null)}) {
@@ -9027,11 +9109,6 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
               Walk(target);
               ultimate.set(Symbol::Flag::InDataStmt);
             }
-          },
-          [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
-            // Handled later in data-to-inits conversion
-            ultimate.set(Symbol::Flag::InDataStmt);
-            Walk(values);
           },
       },
       init.u);
@@ -9103,34 +9180,81 @@ void DeclarationVisitor::PointerInitialization(
   }
 }
 
-void DeclarationVisitor::NonPointerInitialization(
-    const parser::Name &name, const parser::ConstantExpr &expr) {
+bool DeclarationVisitor::CheckNonPointerInitialization(
+    const parser::Name &name, bool inLegacyDataInitialization) {
   if (!context().HasError(name.symbol)) {
     Symbol &ultimate{name.symbol->GetUltimate()};
     if (!context().HasError(ultimate)) {
-      if (IsPointer(ultimate)) {
+      if (IsPointer(ultimate) && !inLegacyDataInitialization) {
         Say(name,
             "'%s' is a pointer but is not initialized like one"_err_en_US);
       } else if (auto *details{ultimate.detailsIf<ObjectEntityDetails>()}) {
         if (details->init()) {
           SayWithDecl(name, *name.symbol,
               "'%s' has already been initialized"_err_en_US);
-        } else if (details->isCDefined()) {
-          context().Warn(common::UsageWarning::CdefinedInit, name.source,
-              "CDEFINED variable should not have an initializer"_warn_en_US);
         } else if (IsAllocatable(ultimate)) {
           Say(name, "Allocatable object '%s' cannot be initialized"_err_en_US);
-        } else if (ultimate.owner().IsParameterizedDerivedType()) {
-          // Save the expression for per-instantiation analysis.
-          details->set_unanalyzedPDTComponentInit(&expr.thing.value());
-        } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
-                       ultimate, expr, expr.thing.value().source)}) {
-          details->set_init(std::move(*folded));
-          ultimate.set(Symbol::Flag::InDataStmt, false);
+        } else {
+          if (details->isCDefined()) {
+            context().Warn(common::UsageWarning::CdefinedInit, name.source,
+                "CDEFINED variable should not have an initializer"_warn_en_US);
+          }
+          return true;
         }
       } else {
         Say(name, "'%s' is not an object that can be initialized"_err_en_US);
       }
+    }
+  }
+  return false;
+}
+
+void DeclarationVisitor::NonPointerInitialization(
+    const parser::Name &name, const parser::ConstantExpr &constExpr) {
+  if (CheckNonPointerInitialization(
+          name, /*inLegacyDataInitialization=*/false)) {
+    Symbol &ultimate{name.symbol->GetUltimate()};
+    auto &details{ultimate.get<ObjectEntityDetails>()};
+    const auto &expr{parser::UnwrapRef<parser::Expr>(constExpr)};
+    if (ultimate.owner().IsParameterizedDerivedType()) {
+      // Save the expression for per-instantiation analysis.
+      details.set_unanalyzedPDTComponentInit(&expr);
+    } else if (MaybeExpr folded{EvaluateNonPointerInitializer(
+                   ultimate, constExpr, expr.source)}) {
+      details.set_init(std::move(*folded));
+      ultimate.set(Symbol::Flag::InDataStmt, false);
+    }
+  }
+}
+
+void DeclarationVisitor::LegacyDataInitialization(const parser::Name &name,
+    const std::list<common::Indirection<parser::DataStmtValue>> &values) {
+  if (CheckNonPointerInitialization(
+          name, /*inLegacyDataInitialization=*/true)) {
+    Symbol &ultimate{name.symbol->GetUltimate()};
+    if (ultimate.owner().IsParameterizedDerivedType()) {
+      Say(name,
+          "Component '%s' in a parameterized data type may not be initialized with a legacy DATA-style value list"_err_en_US,
+          name.source);
+    } else {
+      evaluate::ExpressionAnalyzer exprAnalyzer{context()};
+      for (const auto &value : values) {
+        exprAnalyzer.Analyze(value.value());
+      }
+      DataInitializations inits;
+      auto oldSize{ultimate.size()};
+      if (auto chars{evaluate::characteristics::TypeAndShape::Characterize(
+              ultimate, GetFoldingContext())}) {
+        if (auto size{evaluate::ToInt64(
+                chars->MeasureSizeInBytes(GetFoldingContext()))}) {
+          // Temporarily set the byte size of the component so that we don't
+          // get bogus "initialization out of range" errors below.
+          ultimate.set_size(*size);
+        }
+      }
+      AccumulateDataInitializations(inits, exprAnalyzer, ultimate, values);
+      ConvertToInitializers(inits, exprAnalyzer);
+      ultimate.set_size(oldSize);
     }
   }
 }
@@ -10482,12 +10606,16 @@ private:
       if (const auto *target{
               std::get_if<parser::InitialDataTarget>(&init->u)}) {
         resolver_.PointerInitialization(name, *target);
-      } else if (const auto *expr{
-                     std::get_if<parser::ConstantExpr>(&init->u)}) {
-        if (name.symbol) {
-          if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
-              !object || !object->init()) {
+      } else if (name.symbol) {
+        if (const auto *object{name.symbol->detailsIf<ObjectEntityDetails>()};
+            !object || !object->init()) {
+          if (const auto *expr{std::get_if<parser::ConstantExpr>(&init->u)}) {
             resolver_.NonPointerInitialization(name, *expr);
+          } else {
+            // Don't check legacy DATA /initialization/ here.  Component
+            // initializations will have already been handled, and variable
+            // initializations need to be done in DATA checking so that
+            // EQUIVALENCE storage association can be handled.
           }
         }
       }
@@ -10595,9 +10723,6 @@ void ResolveNamesVisitor::Post(const parser::Program &x) {
   CHECK(!attrs_);
   CHECK(!cudaDataAttr_);
   CHECK(!GetDeclTypeSpec());
-  // Top-level resolution to propagate information across program units after
-  // each of them has been resolved separately.
-  ResolveOmpTopLevelParts(context(), x);
 }
 
 // A singleton instance of the scope -> IMPLICIT rules mapping is

@@ -193,11 +193,11 @@ llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
     case BuiltinType::Float16:
       if (Size == 16)
         return llvm::Type::getHalfTy(getVMContext());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case BuiltinType::Float:
       if (Size == 32)
         return llvm::Type::getFloatTy(getVMContext());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case BuiltinType::Double:
       return llvm::Type::getDoubleTy(getVMContext());
     default:

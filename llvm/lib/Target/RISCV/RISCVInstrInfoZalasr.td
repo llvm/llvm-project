@@ -30,21 +30,22 @@ class SRL_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
                     opcodestr, "$rs2, $rs1"> {
   let rd = 0;
 }
+
 multiclass LAQ_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _AQ    : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
-  def _AQ_RL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _AQ   : LAQ_r<1, 0, funct3, opcodestr # ".aq">;
+  def _AQRL : LAQ_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 multiclass SRL_r_aq_rl<bits<3> funct3, string opcodestr> {
-  def _RL    : SRL_r<0, 1, funct3, opcodestr # ".rl">;
-  def _AQ_RL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
+  def _RL   : SRL_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQRL : SRL_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZalasr] in {
+let Predicates = [HasStdExtZalasr], IsSignExtendingOpW = 1 in {
 defm LB : LAQ_r_aq_rl<0b000, "lb">;
 defm LH : LAQ_r_aq_rl<0b001, "lh">;
 defm LW : LAQ_r_aq_rl<0b010, "lw">;
@@ -93,11 +94,11 @@ let Predicates = [HasStdExtZalasr] in {
 
   def : PatSRL<releasing_store<atomic_store_32>, SW_RL>;
   def : PatSRL<seq_cst_store<atomic_store_32>, SW_RL>;
-} // Predicates = [HasStdExtZalasr]
+}
 
 let Predicates = [HasStdExtZalasr, IsRV32] in {
-  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ>;
-  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ>;
+  def : PatLAQ<acquiring_load<atomic_load_nonext_32>, LW_AQ, i32>;
+  def : PatLAQ<seq_cst_load<atomic_load_nonext_32>, LW_AQ, i32>;
 } // Predicates = [HasStdExtZalasr, IsRV32]
 
 let Predicates = [HasStdExtZalasr, IsRV64] in {
