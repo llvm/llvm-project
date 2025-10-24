@@ -172,7 +172,7 @@ private:
         // current and its children.
         Curr->split(I2);
 
-        // Split was caused by mismatch, so `findChild` will fail.
+        // Split was caused by mismatch, so `findChild` would fail.
         break;
       }
 
