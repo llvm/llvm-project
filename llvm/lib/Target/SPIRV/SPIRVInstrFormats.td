@@ -25,6 +25,11 @@ class Op<bits<16> Opcode, dag outs, dag ins, string asmstr, list<dag> pattern = 
   let Pattern = pattern;
 }
 
+class PureOp<bits<16> Opcode, dag outs, dag ins, string asmstr,
+             list<dag> pattern = []> : Op<Opcode, outs, ins, asmstr, pattern> {
+  let hasSideEffects = 0;
+}
+
 class UnknownOp<dag outs, dag ins, string asmstr, list<dag> pattern = []>
     : Op<0, outs, ins, asmstr, pattern> {
   let isPseudo = 1;

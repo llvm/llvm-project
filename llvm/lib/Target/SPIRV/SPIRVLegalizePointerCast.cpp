@@ -73,7 +73,10 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   // Returns the loaded value.
   Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
                               FixedVectorType *TargetType, Value *Source) {
-    assert(TargetType->getNumElements() <= SourceType->getNumElements());
+    const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+    [[maybe_unused]] TypeSize TargetTypeSize = DL.getTypeSizeInBits(TargetType);
+    [[maybe_unused]] TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
+    assert(TargetTypeSize <= SourceTypeSize);
     LoadInst *NewLoad = B.CreateLoad(SourceType, Source);
     buildAssignType(B, SourceType, NewLoad);
     Value *AssignValue = NewLoad;

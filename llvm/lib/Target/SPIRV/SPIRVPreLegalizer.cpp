@@ -192,6 +192,10 @@ static void buildOpBitcast(SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
         .addUse(OpReg);
 }
 
+// TODO: See if the comment needs to be more precise. This is a problem for more
+// than just pointers. A bitcast between an two type that map to the same LLT
+// will cause a problem. For example a bitcast from a float to an int.
+
 // We do instruction selections early instead of calling MIB.buildBitcast()
 // generating the general op code G_BITCAST. When MachineVerifier validates
 // G_BITCAST we see a check of a kind: if Source Type is equal to Destination
@@ -237,7 +241,7 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_bitcast) &&
+      if (/* !isSpvIntrinsic(MI, Intrinsic::spv_bitcast) && */
           !isSpvIntrinsic(MI, Intrinsic::spv_ptrcast))
         continue;
       assert(MI.getOperand(2).isReg());

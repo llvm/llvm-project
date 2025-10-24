@@ -155,6 +155,16 @@ LegalityPredicate LegalityPredicates::scalarOrEltNarrowerThan(unsigned TypeIdx,
   };
 }
 
+LegalityPredicate
+LegalityPredicates::vectorElementCountIsGreaterThan(unsigned TypeIdx,
+                                                    unsigned Size) {
+
+  return [=](const LegalityQuery &Query) {
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isFixedVector() && QueryTy.getNumElements() > Size;
+  };
+}
+
 LegalityPredicate LegalityPredicates::scalarOrEltWiderThan(unsigned TypeIdx,
                                                            unsigned Size) {
   return [=](const LegalityQuery &Query) {
