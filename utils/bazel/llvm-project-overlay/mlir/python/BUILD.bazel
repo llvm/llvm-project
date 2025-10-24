@@ -1010,6 +1010,39 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# Shard dialect.
+##---------------------------------------------------------------------------##
+
+gentbl_filegroup(
+    name = "ShardOpsPyGen",
+    tbl_outs = {
+        "mlir/dialects/_shard_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=shard",
+        ],
+        "mlir/dialects/_shard_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=shard",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/ShardOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:ShapeOpsTdFiles",
+        "//mlir:ShardTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ShardOpsPyFiles",
+    srcs = [
+        "mlir/dialects/shard.py",
+        ":ShardOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Shape dialect.
 ##---------------------------------------------------------------------------##
 

@@ -95,8 +95,8 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Attribute value,
                                                 mlir::Type type,
                                                 mlir::Location loc) {
-  return builder.create<cir::ConstantOp>(loc, type,
-                                         mlir::cast<mlir::TypedAttr>(value));
+  return cir::ConstantOp::create(builder, loc, type,
+                                 mlir::cast<mlir::TypedAttr>(value));
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,7 +184,7 @@ static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
 
   // Terminator was omitted correctly: recreate it.
   builder.setInsertionPointToEnd(&block);
-  builder.create<cir::YieldOp>(eLoc);
+  cir::YieldOp::create(builder, eLoc);
   return success();
 }
 
@@ -977,7 +977,7 @@ void cir::IfOp::print(OpAsmPrinter &p) {
 /// Default callback for IfOp builders.
 void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
   // add cir.yield to end of the block
-  builder.create<cir::YieldOp>(loc);
+  cir::YieldOp::create(builder, loc);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -1758,6 +1758,36 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  // Parse optional inline kind: inline(never|always|hint)
+  if (parser.parseOptionalKeyword("inline").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+
+    llvm::StringRef inlineKindStr;
+    const std::array<llvm::StringRef, cir::getMaxEnumValForInlineKind()>
+        allowedInlineKindStrs{
+            cir::stringifyInlineKind(cir::InlineKind::NoInline),
+            cir::stringifyInlineKind(cir::InlineKind::AlwaysInline),
+            cir::stringifyInlineKind(cir::InlineKind::InlineHint),
+        };
+    if (parser.parseOptionalKeyword(&inlineKindStr, allowedInlineKindStrs)
+            .failed())
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected 'never', 'always', or 'hint'");
+
+    std::optional<InlineKind> inlineKind =
+        cir::symbolizeInlineKind(inlineKindStr);
+    if (!inlineKind)
+      return parser.emitError(parser.getCurrentLocation(),
+                              "invalid inline kind");
+
+    state.addAttribute(getInlineKindAttrName(state.name),
+                       cir::InlineAttr::get(builder.getContext(), *inlineKind));
+
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1849,6 +1879,10 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (cir::InlineAttr inlineAttr = getInlineKindAttr()) {
+    p << " inline(" << cir::stringifyInlineKind(inlineAttr.getValue()) << ")";
   }
 
   // Print the body if this is not an external function.
@@ -1944,13 +1978,19 @@ void cir::TernaryOp::build(
   result.addOperands(cond);
   OpBuilder::InsertionGuard guard(builder);
   Region *trueRegion = result.addRegion();
-  Block *block = builder.createBlock(trueRegion);
+  builder.createBlock(trueRegion);
   trueBuilder(builder, result.location);
   Region *falseRegion = result.addRegion();
   builder.createBlock(falseRegion);
   falseBuilder(builder, result.location);
 
-  auto yield = dyn_cast<YieldOp>(block->getTerminator());
+  // Get result type from whichever branch has a yield (the other may have
+  // unreachable from a throw expression)
+  auto yield =
+      dyn_cast_or_null<cir::YieldOp>(trueRegion->back().getTerminator());
+  if (!yield)
+    yield = dyn_cast_or_null<cir::YieldOp>(falseRegion->back().getTerminator());
+
   assert((yield && yield.getNumOperands() <= 1) &&
          "expected zero or one result type");
   if (yield.getNumOperands() == 1)
@@ -2901,6 +2941,21 @@ mlir::LogicalResult cir::ThrowOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicFetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicFetchOp::verify() {
+  if (getBinop() != cir::AtomicFetchKind::Add &&
+      getBinop() != cir::AtomicFetchKind::Sub &&
+      getBinop() != cir::AtomicFetchKind::Max &&
+      getBinop() != cir::AtomicFetchKind::Min &&
+      !mlir::isa<cir::IntType>(getVal().getType()))
+    return emitError("only atomic add, sub, max, and min operation could "
+                     "operate on floating-point values");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TypeInfoAttr
 //===----------------------------------------------------------------------===//
 
@@ -2977,8 +3032,11 @@ static mlir::ParseResult parseTryHandlerRegions(
       return failure();
     }
 
-    if (!currRegion.empty() && !(currRegion.back().mightHaveTerminator() &&
-                                 currRegion.back().getTerminator()))
+    if (currRegion.empty())
+      return parser.emitError(regionLoc, "handler region shall not be empty");
+
+    if (!(currRegion.back().mightHaveTerminator() &&
+          currRegion.back().getTerminator()))
       return parser.emitError(
           regionLoc, "blocks are expected to be explicitly terminated");
 
