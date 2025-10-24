@@ -123,8 +123,9 @@ getRecipesForUncountableExit(VPlan &Plan,
                              SmallVectorImpl<VPRecipeBase *> &Recipes,
                              SmallVectorImpl<VPRecipeBase *> &GEPs);
 
-/// Extracts and returns nowrap flags from the induction binop in \p ID.
-inline VPIRFlags getNoWrapFlagsFromIndDesc(const InductionDescriptor &ID) {
+/// Extracts and returns NoWrap and FastMath flags from the induction binop in
+/// \p ID.
+inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
   if (ID.getKind() == InductionDescriptor::IK_FpInduction)
     return ID.getInductionBinOp()->getFastMathFlags();
 

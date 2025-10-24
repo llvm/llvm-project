@@ -7549,10 +7549,10 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
 
-  // It is always safe to copy over the NoWrap flags. In particular, when
-  // folding tail by masking, the masked-off lanes are never executed, so it is
-  // safe.
-  VPIRFlags Flags = vputils::getNoWrapFlagsFromIndDesc(IndDesc);
+  // It is always safe to copy over the NoWrap and FastMath flags. In
+  // particular, when folding tail by masking, the masked-off lanes are never
+  // executed, so it is safe.
+  VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
   if (auto *TruncI = dyn_cast<TruncInst>(PhiOrTrunc)) {
