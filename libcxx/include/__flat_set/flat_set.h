@@ -12,7 +12,6 @@
 
 #include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
-#include <__algorithm/min.h>
 #include <__algorithm/ranges_adjacent_find.h>
 #include <__algorithm/ranges_equal.h>
 #include <__algorithm/ranges_inplace_merge.h>
@@ -24,20 +23,16 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
 #include <__config>
-#include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
 #include <__flat_set/ra_iterator.h>
 #include <__flat_set/utils.h>
-#include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
 #include <__fwd/vector.h>
 #include <__iterator/concepts.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
-#include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
@@ -47,10 +42,7 @@
 #include <__ranges/container_compatible_range.h>
 #include <__ranges/drop_view.h>
 #include <__ranges/from_range.h>
-#include <__ranges/ref_view.h>
 #include <__ranges/size.h>
-#include <__ranges/subrange.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/container_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_allocator.h>
@@ -774,19 +766,19 @@ private:
 };
 
 template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
 flat_set(_KeyContainer, _Compare = _Compare()) -> flat_set<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator_v<_KeyContainer>)
 flat_set(_KeyContainer, _Allocator)
     -> flat_set<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
@@ -794,7 +786,7 @@ template <class _KeyContainer, class _Compare, class _Allocator>
 flat_set(_KeyContainer, _Compare, _Allocator) -> flat_set<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
@@ -802,12 +794,12 @@ flat_set(sorted_unique_t, _KeyContainer, _Compare = _Compare())
     -> flat_set<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
 template <class _KeyContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator_v<_KeyContainer>)
 flat_set(sorted_unique_t, _KeyContainer, _Allocator)
     -> flat_set<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
 template <class _KeyContainer, class _Compare, class _Allocator>
-  requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
+  requires(!__is_allocator_v<_Compare> && !__is_allocator_v<_KeyContainer> &&
            uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
@@ -815,37 +807,37 @@ template <class _KeyContainer, class _Compare, class _Allocator>
 flat_set(sorted_unique_t, _KeyContainer, _Compare, _Allocator)
     -> flat_set<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+template <class _InputIterator, class _Compare = less<__iterator_value_type<_InputIterator>>>
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_set(_InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_set<__iter_value_type<_InputIterator>, _Compare>;
+    -> flat_set<__iterator_value_type<_InputIterator>, _Compare>;
 
-template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
-  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
+template <class _InputIterator, class _Compare = less<__iterator_value_type<_InputIterator>>>
+  requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator_v<_Compare>)
 flat_set(sorted_unique_t, _InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_set<__iter_value_type<_InputIterator>, _Compare>;
+    -> flat_set<__iterator_value_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,
           class _Allocator = allocator<ranges::range_value_t<_Range>>,
-          class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
+          class            = __enable_if_t<!__is_allocator_v<_Compare> && __is_allocator_v<_Allocator>>>
 flat_set(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_set<
     ranges::range_value_t<_Range>,
     _Compare,
     vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
-template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
+template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator_v<_Allocator>>>
 flat_set(from_range_t, _Range&&, _Allocator) -> flat_set<
     ranges::range_value_t<_Range>,
     less<ranges::range_value_t<_Range>>,
     vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
 template <class _Key, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_set(initializer_list<_Key>, _Compare = _Compare()) -> flat_set<_Key, _Compare>;
 
 template <class _Key, class _Compare = less<_Key>>
-  requires(!__is_allocator<_Compare>::value)
+  requires(!__is_allocator_v<_Compare>)
 flat_set(sorted_unique_t, initializer_list<_Key>, _Compare = _Compare()) -> flat_set<_Key, _Compare>;
 
 template <class _Key, class _Compare, class _KeyContainer, class _Allocator>

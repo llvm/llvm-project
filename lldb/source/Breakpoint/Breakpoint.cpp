@@ -58,7 +58,13 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
       m_hit_counter() {}
 
 // Destructor
-Breakpoint::~Breakpoint() = default;
+Breakpoint::~Breakpoint() {
+  for (BreakpointLocationSP location_sp : m_locations.BreakpointLocations())
+    location_sp->SetInvalid();
+  for (BreakpointLocationSP location_sp :
+       m_facade_locations.BreakpointLocations())
+    location_sp->SetInvalid();
+}
 
 BreakpointSP Breakpoint::CopyFromBreakpoint(TargetSP new_target,
                                             const Breakpoint &bp_to_copy_from) {
@@ -302,6 +308,20 @@ BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                  new_location);
 }
 
+BreakpointLocationSP Breakpoint::AddFacadeLocation() {
+  size_t next_id = m_facade_locations.GetSize() + 1;
+  BreakpointLocationSP break_loc_sp =
+      std::make_shared<BreakpointLocation>(next_id, *this);
+  break_loc_sp->m_is_facade = true;
+  m_facade_locations.Add(break_loc_sp);
+  return break_loc_sp;
+}
+
+BreakpointLocationSP
+Breakpoint::GetFacadeLocationByID(lldb::break_id_t loc_id) {
+  return m_facade_locations.GetByIndex(loc_id - 1);
+}
+
 BreakpointLocationSP Breakpoint::FindLocationByAddress(const Address &addr) {
   return m_locations.FindByAddress(addr);
 }
@@ -310,15 +330,23 @@ break_id_t Breakpoint::FindLocationIDByAddress(const Address &addr) {
   return m_locations.FindIDByAddress(addr);
 }
 
-BreakpointLocationSP Breakpoint::FindLocationByID(break_id_t bp_loc_id) {
+BreakpointLocationSP Breakpoint::FindLocationByID(break_id_t bp_loc_id,
+                                                  bool use_facade) {
+  if (use_facade && m_facade_locations.GetSize())
+    return GetFacadeLocationByID(bp_loc_id);
   return m_locations.FindByID(bp_loc_id);
 }
 
-BreakpointLocationSP Breakpoint::GetLocationAtIndex(size_t index) {
+BreakpointLocationSP Breakpoint::GetLocationAtIndex(size_t index,
+                                                    bool use_facade) {
+  if (use_facade && m_facade_locations.GetSize() > 0)
+    return m_facade_locations.GetByIndex(index);
   return m_locations.GetByIndex(index);
 }
 
 void Breakpoint::RemoveInvalidLocations(const ArchSpec &arch) {
+  // FIXME: Should we ask the scripted resolver whether any of its facade
+  // locations are invalid?
   m_locations.RemoveInvalidLocations(arch);
 }
 
@@ -864,9 +892,15 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
 
 void Breakpoint::Dump(Stream *) {}
 
-size_t Breakpoint::GetNumResolvedLocations() const {
+size_t Breakpoint::GetNumResolvedLocations(bool use_facade) const {
   // Return the number of breakpoints that are actually resolved and set down
   // in the inferior process.
+  // All facade locations are considered to be resolved:
+  if (use_facade) {
+    size_t num_facade_locs = m_facade_locations.GetSize();
+    if (num_facade_locs)
+      return num_facade_locs;
+  }
   return m_locations.GetNumResolvedLocations();
 }
 
@@ -874,7 +908,14 @@ bool Breakpoint::HasResolvedLocations() const {
   return GetNumResolvedLocations() > 0;
 }
 
-size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
+size_t Breakpoint::GetNumLocations(bool use_facade) const {
+  if (use_facade) {
+    size_t num_facade_locs = m_facade_locations.GetSize();
+    if (num_facade_locs > 0)
+      return num_facade_locs;
+  }
+  return m_locations.GetSize();
+}
 
 void Breakpoint::AddName(llvm::StringRef new_name) {
   m_name_list.insert(new_name.str());
@@ -899,8 +940,31 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
     s->Printf("Kind: %s\n", GetBreakpointKind());
   }
 
-  const size_t num_locations = GetNumLocations();
-  const size_t num_resolved_locations = GetNumResolvedLocations();
+  bool show_both_types = level == eDescriptionLevelVerbose &&
+                         HasFacadeLocations() && show_locations;
+  uint8_t display_mask = eDisplayFacade;
+  if (show_both_types)
+    display_mask |= eDisplayHeader;
+
+  GetDescriptionForType(s, level, display_mask, show_locations);
+
+  if (show_both_types) {
+    display_mask = eDisplayReal | eDisplayHeader;
+    GetDescriptionForType(s, level, display_mask, show_locations);
+  }
+  // Reset the colors back to normal if they were previously greyed out.
+  if (dim_breakpoint_description)
+    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
+                        GetTarget().GetDebugger().GetDisabledAnsiSuffix())
+                        .c_str());
+}
+
+void Breakpoint::GetDescriptionForType(Stream *s, lldb::DescriptionLevel level,
+                                       uint8_t display_type,
+                                       bool show_locations) {
+  bool use_facade = (display_type & eDisplayFacade) != 0;
+  const size_t num_locations = GetNumLocations(use_facade);
+  const size_t num_resolved_locations = GetNumResolvedLocations(use_facade);
 
   // They just made the breakpoint, they don't need to be told HOW they made
   // it... Also, we'll print the breakpoint number differently depending on
@@ -957,7 +1021,7 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
     } else if (num_locations == 1 && !show_locations) {
       // There is only one location, so we'll just print that location
       // information.
-      GetLocationAtIndex(0)->GetDescription(s, level);
+      GetLocationAtIndex(0, use_facade)->GetDescription(s, level);
     } else {
       s->Printf("%" PRIu64 " locations.", static_cast<uint64_t>(num_locations));
     }
@@ -979,20 +1043,20 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
   // The brief description is just the location name (1.2 or whatever).  That's
   // pointless to show in the breakpoint's description, so suppress it.
   if (show_locations && level != lldb::eDescriptionLevelBrief) {
+    if ((display_type & eDisplayHeader) != 0) {
+      if ((display_type & eDisplayFacade) != 0)
+        s->Printf("Facade locations:\n");
+      else
+        s->Printf("Implementation Locations\n");
+    }
     s->IndentMore();
     for (size_t i = 0; i < num_locations; ++i) {
-      BreakpointLocation *loc = GetLocationAtIndex(i).get();
+      BreakpointLocation *loc = GetLocationAtIndex(i, use_facade).get();
       loc->GetDescription(s, level);
       s->EOL();
     }
     s->IndentLess();
   }
-
-  // Reset the colors back to normal if they were previously greyed out.
-  if (dim_breakpoint_description)
-    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
-                        GetTarget().GetDebugger().GetDisabledAnsiSuffix())
-                        .c_str());
 }
 
 void Breakpoint::GetResolverDescription(Stream *s) {

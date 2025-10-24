@@ -73,7 +73,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   %i33 = call { ptr } (i32, ptr, ptr, ...) @llvm.coro.suspend.async.sl_p0s(i32 0, ptr %i31, ptr nonnull @__swift_async_resume_get_context, ptr nonnull @coroutineA.1, ptr %i31, i64 0, i64 0, ptr %i29), !dbg !54
   %i34 = extractvalue { ptr } %i33, 0, !dbg !54
   %i35 = call ptr @__swift_async_resume_get_context(ptr %i34), !dbg !54
-  %i45 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %i3, i1 false, ptr nonnull @coroutineA.0.1, ptr undef, ptr undef), !dbg !54
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %i3, i1 false, ptr nonnull @coroutineA.0.1, ptr undef, ptr undef), !dbg !54
   unreachable, !dbg !54
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATY2_(
@@ -116,7 +116,7 @@ define swifttailcc void @coroutineB(ptr swiftasync %arg) !dbg !37 {
   %i3 = call ptr @llvm.coro.begin(token %i2, ptr null)
   %i6 = getelementptr inbounds <{ ptr, ptr }>, ptr %arg, i64 0, i32 1, !dbg !42
   %i712 = load ptr, ptr %i6, align 8, !dbg !42
-  %i10 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %i3, i1 false, ptr nonnull @coroutineB.0, ptr %i712, ptr %arg), !dbg !42
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %i3, i1 false, ptr nonnull @coroutineB.0, ptr %i712, ptr %arg), !dbg !42
   unreachable, !dbg !42
 }
 define hidden swifttailcc void @coroutineB.0(ptr %arg, ptr %arg1) !dbg !44 {
@@ -124,7 +124,7 @@ define hidden swifttailcc void @coroutineB.0(ptr %arg, ptr %arg1) !dbg !44 {
   ret void, !dbg !47
 }
 
-declare i1 @llvm.coro.end.async(ptr, i1, ...)
+declare void @llvm.coro.end.async(ptr, i1, ...)
 declare ptr @llvm.coro.async.resume()
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare ptr @llvm.swift.async.context.addr()

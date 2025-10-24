@@ -183,7 +183,7 @@ namespace {
 /// Converts memref.alloca to SPIR-V Function variables.
 class AllocaOpPattern final : public OpConversionPattern<memref::AllocaOp> {
 public:
-  using OpConversionPattern<memref::AllocaOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AllocaOp allocaOp, OpAdaptor adaptor,
@@ -196,7 +196,7 @@ public:
 /// wil ladd global variables into the spirv.module.
 class AllocOpPattern final : public OpConversionPattern<memref::AllocOp> {
 public:
-  using OpConversionPattern<memref::AllocOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AllocOp operation, OpAdaptor adaptor,
@@ -207,7 +207,7 @@ public:
 class AtomicRMWOpPattern final
     : public OpConversionPattern<memref::AtomicRMWOp> {
 public:
-  using OpConversionPattern<memref::AtomicRMWOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::AtomicRMWOp atomicOp, OpAdaptor adaptor,
@@ -218,7 +218,7 @@ public:
 /// removes deallocation if the memory space is workgroup memory.
 class DeallocOpPattern final : public OpConversionPattern<memref::DeallocOp> {
 public:
-  using OpConversionPattern<memref::DeallocOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::DeallocOp operation, OpAdaptor adaptor,
@@ -228,7 +228,7 @@ public:
 /// Converts memref.load to spirv.Load + spirv.AccessChain on integers.
 class IntLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
@@ -238,7 +238,7 @@ public:
 /// Converts memref.load to spirv.Load + spirv.AccessChain.
 class LoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern<memref::LoadOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
@@ -248,7 +248,7 @@ public:
 /// Converts memref.load to spirv.Image + spirv.ImageFetch
 class ImageLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
@@ -258,7 +258,7 @@ public:
 /// Converts memref.store to spirv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
-  using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
@@ -269,7 +269,7 @@ public:
 class MemorySpaceCastOpPattern final
     : public OpConversionPattern<memref::MemorySpaceCastOp> {
 public:
-  using OpConversionPattern<memref::MemorySpaceCastOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::MemorySpaceCastOp addrCastOp, OpAdaptor adaptor,
@@ -279,7 +279,7 @@ public:
 /// Converts memref.store to spirv.Store.
 class StoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
-  using OpConversionPattern<memref::StoreOp>::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
@@ -289,7 +289,7 @@ public:
 class ReinterpretCastPattern final
     : public OpConversionPattern<memref::ReinterpretCastOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ReinterpretCastOp op, OpAdaptor adaptor,
@@ -298,7 +298,7 @@ public:
 
 class CastPattern final : public OpConversionPattern<memref::CastOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::CastOp op, OpAdaptor adaptor,
@@ -322,7 +322,7 @@ public:
 class ExtractAlignedPointerAsIndexOpPattern final
     : public OpConversionPattern<memref::ExtractAlignedPointerAsIndexOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(memref::ExtractAlignedPointerAsIndexOp extractOp,
@@ -512,7 +512,7 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
   if (!sizeInBytes.has_value())
     return failure();
 
-  memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+  memoryAccess |= spirv::MemoryAccess::Aligned;
   auto memAccessAttr = spirv::MemoryAccessAttr::get(ctx, memoryAccess);
   auto alignmentValue = preferredAlignment ? preferredAlignment : *sizeInBytes;
   auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);
@@ -699,6 +699,35 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   return success();
 }
 
+template <typename OpAdaptor>
+static FailureOr<SmallVector<Value>>
+extractLoadCoordsForComposite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                              ConversionPatternRewriter &rewriter) {
+  // At present we only support linear "tiling" as specified in Vulkan, this
+  // means that texels are assumed to be laid out in memory in a row-major
+  // order. This allows us to support any memref layout that is a permutation of
+  // the dimensions. Future work will pass an optional image layout to the
+  // rewrite pattern so that we can support optimized target specific tilings.
+  SmallVector<Value> indices = adaptor.getIndices();
+  AffineMap map = loadOp.getMemRefType().getLayout().getAffineMap();
+  if (!map.isPermutation())
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "Cannot lower memrefs with memory layout which is not a permutation");
+
+  // The memrefs layout determines the dimension ordering so we need to follow
+  // the map to get the ordering of the dimensions/indices.
+  const unsigned dimCount = map.getNumDims();
+  SmallVector<Value, 3> coords(dimCount);
+  for (unsigned dim = 0; dim < dimCount; ++dim)
+    coords[map.getDimPosition(dim)] = indices[dim];
+
+  // We need to reverse the coordinates because the memref layout is slowest to
+  // fastest moving and the vector coordinates for the image op is fastest to
+  // slowest moving.
+  return llvm::to_vector(llvm::reverse(coords));
+}
+
 LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
@@ -755,13 +784,17 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 
   // Build a vector of coordinates or just a scalar index if we have a 1D image.
   Value coords;
-  if (memrefType.getRank() != 1) {
+  if (memrefType.getRank() == 1) {
+    coords = adaptor.getIndices()[0];
+  } else {
+    FailureOr<SmallVector<Value>> maybeCoords =
+        extractLoadCoordsForComposite(loadOp, adaptor, rewriter);
+    if (failed(maybeCoords))
+      return failure();
     auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
                                            adaptor.getIndices().getType()[0]);
     coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
-                                                 adaptor.getIndices());
-  } else {
-    coords = adaptor.getIndices()[0];
+                                                 maybeCoords.value());
   }
 
   // Fetch the value out of the image.

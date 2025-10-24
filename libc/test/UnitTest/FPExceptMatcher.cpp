@@ -31,7 +31,7 @@ namespace testing {
 static thread_local sigjmp_buf jumpBuffer;
 static thread_local bool caughtExcept;
 
-static void sigfpeHandler(int sig) {
+static void sigfpeHandler([[maybe_unused]] int sig) {
   caughtExcept = true;
   siglongjmp(jumpBuffer, -1);
 }

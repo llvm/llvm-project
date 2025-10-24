@@ -907,7 +907,7 @@ define i1 @mask_v8i32_2(<8 x i32> %a0) {
 ; SSE2-LABEL: mask_v8i32_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pslld $1, %xmm0
+; SSE2-NEXT:    paddd %xmm0, %xmm0
 ; SSE2-NEXT:    movmskps %xmm0, %eax
 ; SSE2-NEXT:    testl %eax, %eax
 ; SSE2-NEXT:    sete %al

@@ -285,11 +285,16 @@ mlir::LLVM::DIModuleAttr AddDebugInfoPass::getOrCreateModuleAttr(
   if (auto iter{moduleMap.find(name)}; iter != moduleMap.end()) {
     modAttr = iter->getValue();
   } else {
+    // When decl is true, it means that module is only being used in this
+    // compilation unit and it is defined elsewhere. But if the file/line/scope
+    // fields are valid, the module is not merged with its definition and is
+    // considered different. So we only set those fields when decl is false.
     modAttr = mlir::LLVM::DIModuleAttr::get(
-        context, fileAttr, scope, mlir::StringAttr::get(context, name),
+        context, decl ? nullptr : fileAttr, decl ? nullptr : scope,
+        mlir::StringAttr::get(context, name),
         /* configMacros */ mlir::StringAttr(),
         /* includePath */ mlir::StringAttr(),
-        /* apinotes */ mlir::StringAttr(), line, decl);
+        /* apinotes */ mlir::StringAttr(), decl ? 0 : line, decl);
     moduleMap[name] = modAttr;
   }
   return modAttr;
@@ -649,6 +654,19 @@ void AddDebugInfoPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+  mlir::OpBuilder builder(context);
+  if (dwarfVersion > 0) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToEnd(module.getBody());
+    llvm::SmallVector<mlir::Attribute> moduleFlags;
+    mlir::IntegerType int32Ty = mlir::IntegerType::get(context, 32);
+    moduleFlags.push_back(builder.getAttr<mlir::LLVM::ModuleFlagAttr>(
+        mlir::LLVM::ModFlagBehavior::Max,
+        mlir::StringAttr::get(context, "Dwarf Version"),
+        mlir::IntegerAttr::get(int32Ty, dwarfVersion)));
+    mlir::LLVM::ModuleFlagsOp::create(builder, module.getLoc(),
+                                      builder.getArrayAttr(moduleFlags));
+  }
   fir::DebugTypeGenerator typeGen(module, &symbolTable, *dl);
   // We need 2 type of file paths here.
   // 1. Name of the file as was presented to compiler. This can be absolute
@@ -681,12 +699,14 @@ void AddDebugInfoPass::runOnOperation() {
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       mlir::DistinctAttr::create(mlir::UnitAttr::get(context)),
       llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr, producer,
-      isOptimized, debugLevel);
+      isOptimized, debugLevel,
+      /*nameTableKind=*/mlir::LLVM::DINameTableKind::Default,
+      splitDwarfFile.empty() ? mlir::StringAttr()
+                             : mlir::StringAttr::get(context, splitDwarfFile));
 
   module.walk([&](mlir::func::FuncOp funcOp) {
     handleFuncOp(funcOp, fileAttr, cuAttr, typeGen, &symbolTable);
   });
-  mlir::OpBuilder builder(context);
   // We have processed all function. Attach common block variables to the
   // global that represent the storage.
   for (auto [global, exprs] : globalToGlobalExprsMap) {

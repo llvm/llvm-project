@@ -615,3 +615,62 @@ module @last_block_not_exit {
   // CHECK-LABEL: @call_private_but_not_use
   // CHECK: call @terminated_with_condbr(%false, %true) : (i1, i1)
 }
+
+// -----
+
+// Test the elimination of function arguments.
+
+// CHECK-LABEL: func private @single_parameter
+// CHECK-SAME: () {
+func.func private @single_parameter(%arg0: index) {
+  return
+}
+
+// CHECK-LABEL: func.func private @mutl_parameter(
+// CHECK-SAME: %[[ARG0:.*]]: index)
+// CHECK: return %[[ARG0]]
+func.func private @mutl_parameter(%arg0: index, %arg1: index, %arg2: index) -> index {
+  return %arg1 : index
+}
+
+// CHECK-LABEL: func private @eliminate_parameter
+// CHECK-SAME: () {
+func.func private @eliminate_parameter(%arg0: index, %arg1: index) {
+  call @single_parameter(%arg0) : (index) -> ()
+  return
+}
+
+// CHECK-LABEL: func @callee
+// CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index)
+func.func @callee(%arg0: index, %arg1: index, %arg2: index) -> index {
+// CHECK: call @eliminate_parameter() : () -> ()
+  call @eliminate_parameter(%arg0, %arg1) : (index, index) -> ()
+// CHECK: call @mutl_parameter(%[[ARG1]]) : (index) -> index
+  %res = call @mutl_parameter(%arg0, %arg1, %arg2) : (index, index, index) -> (index)
+  return %res : index
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs
+func.func @dead_value_loop_ivs_has_result(%lb: index, %ub: index, %step: index, %b: i1) -> i1 {
+  %loop_ret = scf.for %iv = %lb to %ub step %step iter_args(%iter = %b) -> (i1) {
+    cf.assert %b, "loop not dead"
+    scf.yield %b : i1
+  }
+  return %loop_ret : i1
+}
+
+// -----
+
+// This test verifies that the induction variables in loops are not deleted, the loop has no results.
+
+// CHECK-LABEL: func @dead_value_loop_ivs_no_result
+func.func @dead_value_loop_ivs_no_result(%lb: index, %ub: index, %step: index, %input: memref<?xf32>, %value: f32, %pos: index) {
+  scf.for %iv = %lb to %ub step %step {
+    memref.store %value, %input[%pos] : memref<?xf32>
+  }
+  return
+}

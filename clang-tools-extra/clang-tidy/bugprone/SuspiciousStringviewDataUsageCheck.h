@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// termination.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-stringview-data-usage.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/suspicious-stringview-data-usage.html
 class SuspiciousStringviewDataUsageCheck : public ClangTidyCheck {
 public:
   SuspiciousStringviewDataUsageCheck(StringRef Name, ClangTidyContext *Context);

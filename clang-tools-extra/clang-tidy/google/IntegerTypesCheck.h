@@ -25,7 +25,7 @@ namespace tidy::google::runtime {
 /// Corresponding cpplint.py check: 'runtime/int'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/google/runtime-int.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/google/runtime-int.html
 class IntegerTypesCheck : public ClangTidyCheck {
 public:
   IntegerTypesCheck(StringRef Name, ClangTidyContext *Context);

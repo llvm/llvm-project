@@ -13,14 +13,15 @@
 #ifndef LLVM_LIB_REMARKS_BITSTREAM_REMARK_PARSER_H
 #define LLVM_LIB_REMARKS_BITSTREAM_REMARK_PARSER_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Remarks/BitstreamRemarkContainer.h"
+#include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkParser.h"
+#include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Error.h"
-#include <array>
+#include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -28,66 +29,156 @@
 namespace llvm {
 namespace remarks {
 
-struct Remark;
+class BitstreamBlockParserHelperBase {
+protected:
+  BitstreamCursor &Stream;
+
+  StringRef BlockName;
+  unsigned BlockID;
+
+public:
+  BitstreamBlockParserHelperBase(BitstreamCursor &Stream, unsigned BlockID,
+                                 StringRef BlockName)
+      : Stream(Stream), BlockName(BlockName), BlockID(BlockID) {}
+
+  template <typename... Ts> Error error(char const *Fmt, const Ts &...Vals) {
+    std::string Buffer;
+    raw_string_ostream OS(Buffer);
+    OS << "Error while parsing " << BlockName << " block: ";
+    OS << formatv(Fmt, Vals...);
+    return make_error<StringError>(
+        std::move(Buffer),
+        std::make_error_code(std::errc::illegal_byte_sequence));
+  }
+
+  Error expectBlock();
+
+protected:
+  Error enterBlock();
+
+  Error unknownRecord(unsigned AbbrevID);
+  Error unexpectedRecord(StringRef RecordName);
+  Error malformedRecord(StringRef RecordName);
+  Error unexpectedBlock(unsigned Code);
+};
+
+template <typename Derived>
+class BitstreamBlockParserHelper : public BitstreamBlockParserHelperBase {
+protected:
+  using BitstreamBlockParserHelperBase::BitstreamBlockParserHelperBase;
+  Derived &derived() { return *static_cast<Derived *>(this); }
+
+  /// Parse a record and fill in the fields in the parser.
+  /// The subclass must statically override this method.
+  Error parseRecord(unsigned Code) = delete;
+
+  /// Parse a subblock and fill in the fields in the parser.
+  /// The subclass can statically override this method.
+  Error parseSubBlock(unsigned Code) { return unexpectedBlock(Code); }
+
+public:
+  /// Enter, parse, and leave this bitstream block. This expects the
+  /// BitstreamCursor to be right after the SubBlock entry (i.e. after calling
+  /// expectBlock).
+  Error parseBlock() {
+    if (Error E = enterBlock())
+      return E;
+
+    // Stop when there is nothing to read anymore or when we encounter an
+    // END_BLOCK.
+    while (true) {
+      Expected<BitstreamEntry> Next = Stream.advance();
+      if (!Next)
+        return Next.takeError();
+      switch (Next->Kind) {
+      case BitstreamEntry::SubBlock:
+        if (Error E = derived().parseSubBlock(Next->ID))
+          return E;
+        continue;
+      case BitstreamEntry::EndBlock:
+        return Error::success();
+      case BitstreamEntry::Record:
+        if (Error E = derived().parseRecord(Next->ID))
+          return E;
+        continue;
+      case BitstreamEntry::Error:
+        return error("Unexpected end of bitstream.");
+      }
+      llvm_unreachable("Unexpected BitstreamEntry");
+    }
+  }
+};
 
 /// Helper to parse a META_BLOCK for a bitstream remark container.
-struct BitstreamMetaParserHelper {
-  /// The Bitstream reader.
-  BitstreamCursor &Stream;
-  /// Reference to the storage for the block info.
-  BitstreamBlockInfo &BlockInfo;
-  /// The parsed content: depending on the container type, some fields might be
-  /// empty.
-  std::optional<uint64_t> ContainerVersion;
-  std::optional<uint8_t> ContainerType;
-  std::optional<StringRef> StrTabBuf;
-  std::optional<StringRef> ExternalFilePath;
+class BitstreamMetaParserHelper
+    : public BitstreamBlockParserHelper<BitstreamMetaParserHelper> {
+  friend class BitstreamBlockParserHelper<BitstreamMetaParserHelper>;
+
+public:
+  struct ContainerInfo {
+    uint64_t Version;
+    uint64_t Type;
+  };
+
+  /// The parsed content: depending on the container type, some fields might
+  /// be empty.
+  std::optional<ContainerInfo> Container;
   std::optional<uint64_t> RemarkVersion;
+  std::optional<StringRef> ExternalFilePath;
+  std::optional<StringRef> StrTabBuf;
 
-  /// Continue parsing with \p Stream. \p Stream is expected to contain a
-  /// ENTER_SUBBLOCK to the META_BLOCK at the current position.
-  /// \p Stream is expected to have a BLOCKINFO_BLOCK set.
-  BitstreamMetaParserHelper(BitstreamCursor &Stream,
-                            BitstreamBlockInfo &BlockInfo);
+  BitstreamMetaParserHelper(BitstreamCursor &Stream)
+      : BitstreamBlockParserHelper(Stream, META_BLOCK_ID, MetaBlockName) {}
 
-  /// Parse the META_BLOCK and fill the available entries.
-  /// This helper does not check for the validity of the fields.
-  Error parse();
+protected:
+  Error parseRecord(unsigned Code);
 };
 
 /// Helper to parse a REMARK_BLOCK for a bitstream remark container.
-struct BitstreamRemarkParserHelper {
-  /// The Bitstream reader.
-  BitstreamCursor &Stream;
+class BitstreamRemarkParserHelper
+    : public BitstreamBlockParserHelper<BitstreamRemarkParserHelper> {
+  friend class BitstreamBlockParserHelper<BitstreamRemarkParserHelper>;
+
+protected:
+  SmallVector<uint64_t, 5> Record;
+  StringRef RecordBlob;
+  unsigned RecordID;
+
+public:
+  struct RemarkLoc {
+    uint64_t SourceFileNameIdx;
+    uint64_t SourceLine;
+    uint64_t SourceColumn;
+  };
+
+  struct Argument {
+    std::optional<uint64_t> KeyIdx;
+    std::optional<uint64_t> ValueIdx;
+    std::optional<RemarkLoc> Loc;
+
+    Argument(std::optional<uint64_t> KeyIdx, std::optional<uint64_t> ValueIdx)
+        : KeyIdx(KeyIdx), ValueIdx(ValueIdx) {}
+  };
+
   /// The parsed content: depending on the remark, some fields might be empty.
   std::optional<uint8_t> Type;
   std::optional<uint64_t> RemarkNameIdx;
   std::optional<uint64_t> PassNameIdx;
   std::optional<uint64_t> FunctionNameIdx;
-  std::optional<uint64_t> SourceFileNameIdx;
-  std::optional<uint32_t> SourceLine;
-  std::optional<uint32_t> SourceColumn;
   std::optional<uint64_t> Hotness;
-  struct Argument {
-    std::optional<uint64_t> KeyIdx;
-    std::optional<uint64_t> ValueIdx;
-    std::optional<uint64_t> SourceFileNameIdx;
-    std::optional<uint32_t> SourceLine;
-    std::optional<uint32_t> SourceColumn;
-  };
-  std::optional<ArrayRef<Argument>> Args;
-  /// Avoid re-allocating a vector every time.
-  SmallVector<Argument, 8> TmpArgs;
+  std::optional<RemarkLoc> Loc;
 
-  /// Continue parsing with \p Stream. \p Stream is expected to contain a
-  /// ENTER_SUBBLOCK to the REMARK_BLOCK at the current position.
-  /// \p Stream is expected to have a BLOCKINFO_BLOCK set and to have already
-  /// parsed the META_BLOCK.
-  BitstreamRemarkParserHelper(BitstreamCursor &Stream);
+  SmallVector<Argument, 8> Args;
 
-  /// Parse the REMARK_BLOCK and fill the available entries.
-  /// This helper does not check for the validity of the fields.
-  Error parse();
+  BitstreamRemarkParserHelper(BitstreamCursor &Stream)
+      : BitstreamBlockParserHelper(Stream, REMARK_BLOCK_ID, RemarkBlockName) {}
+
+  /// Clear helper state and parse next remark block.
+  Error parseNext();
+
+protected:
+  Error parseRecord(unsigned Code);
+  Error handleRecord();
 };
 
 /// Helper to parse any bitstream remark container.
@@ -96,41 +187,49 @@ struct BitstreamParserHelper {
   BitstreamCursor Stream;
   /// The block info block.
   BitstreamBlockInfo BlockInfo;
+
+  /// Helper to parse the metadata blocks in this bitstream.
+  BitstreamMetaParserHelper MetaHelper;
+  /// Helper to parse the remark blocks in this bitstream. Only needed
+  /// for ContainerType RemarksFile.
+  std::optional<BitstreamRemarkParserHelper> RemarksHelper;
+  /// The position of the first remark block we encounter after
+  /// the initial metadata block.
+  std::optional<uint64_t> RemarkStartBitPos;
+
   /// Start parsing at \p Buffer.
-  BitstreamParserHelper(StringRef Buffer);
-  /// Parse the magic number.
-  Expected<std::array<char, 4>> parseMagic();
+  BitstreamParserHelper(StringRef Buffer)
+      : Stream(Buffer), MetaHelper(Stream), RemarksHelper(Stream) {}
+
+  /// Parse and validate the magic number.
+  Error expectMagic();
   /// Parse the block info block containing all the abbrevs.
   /// This needs to be called before calling any other parsing function.
   Error parseBlockInfoBlock();
-  /// Return true if the next block is a META_BLOCK. This function does not move
-  /// the cursor.
-  Expected<bool> isMetaBlock();
-  /// Return true if the next block is a REMARK_BLOCK. This function does not
-  /// move the cursor.
-  Expected<bool> isRemarkBlock();
-  /// Return true if the parser reached the end of the stream.
-  bool atEndOfStream() { return Stream.AtEndOfStream(); }
-  /// Jump to the end of the stream, skipping everything.
-  void skipToEnd() { return Stream.skipToEnd(); }
+
+  /// Parse all metadata blocks in the file. This populates the meta helper.
+  Error parseMeta();
+  /// Parse the next remark. This populates the remark helper data.
+  Error parseRemark();
 };
 
 /// Parses and holds the state of the latest parsed remark.
 struct BitstreamRemarkParser : public RemarkParser {
   /// The buffer to parse.
-  BitstreamParserHelper ParserHelper;
+  std::optional<BitstreamParserHelper> ParserHelper;
   /// The string table used for parsing strings.
   std::optional<ParsedStringTable> StrTab;
   /// Temporary remark buffer used when the remarks are stored separately.
   std::unique_ptr<MemoryBuffer> TmpRemarkBuffer;
+  /// Whether the metadata has already been parsed, so we can continue parsing
+  /// remarks.
+  bool IsMetaReady = false;
   /// The common metadata used to decide how to parse the buffer.
   /// This is filled when parsing the metadata block.
   uint64_t ContainerVersion = 0;
   uint64_t RemarkVersion = 0;
   BitstreamRemarkContainerType ContainerType =
-      BitstreamRemarkContainerType::Standalone;
-  /// Wether the parser is ready to parse remarks.
-  bool ReadyToParseRemarks = false;
+      BitstreamRemarkContainerType::RemarksFile;
 
   /// Create a parser that expects to find a string table embedded in the
   /// stream.
@@ -145,18 +244,15 @@ struct BitstreamRemarkParser : public RemarkParser {
   /// Parse and process the metadata of the buffer.
   Error parseMeta();
 
-  /// Parse a Bitstream remark.
-  Expected<std::unique_ptr<Remark>> parseRemark();
-
 private:
-  /// Helper functions.
-  Error processCommonMeta(BitstreamMetaParserHelper &Helper);
-  Error processStandaloneMeta(BitstreamMetaParserHelper &Helper);
-  Error processSeparateRemarksFileMeta(BitstreamMetaParserHelper &Helper);
-  Error processSeparateRemarksMetaMeta(BitstreamMetaParserHelper &Helper);
-  Expected<std::unique_ptr<Remark>>
-  processRemark(BitstreamRemarkParserHelper &Helper);
-  Error processExternalFilePath(std::optional<StringRef> ExternalFilePath);
+  Error processCommonMeta();
+  Error processFileContainerMeta();
+  Error processExternalFilePath();
+
+  Expected<std::unique_ptr<Remark>> processRemark();
+
+  Error processStrTab();
+  Error processRemarkVersion();
 };
 
 Expected<std::unique_ptr<BitstreamRemarkParser>> createBitstreamParserFromMeta(

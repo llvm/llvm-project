@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Finds code that uses epoll_create1() without using the EPOLL_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create1.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create1.html
 class CloexecEpollCreate1Check : public CloexecCheck {
 public:
   CloexecEpollCreate1Check(StringRef Name, ClangTidyContext *Context)

@@ -244,7 +244,7 @@ private:
   bool ShouldInternalize = EnableLTOInternalization;
   bool ShouldEmbedUselists = false;
   bool ShouldRestoreGlobalsLinkage = false;
-  std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
+  LLVMRemarkFileHandle DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
   std::string SaveIRBeforeOptPath;
 

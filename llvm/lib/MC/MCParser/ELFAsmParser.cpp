@@ -163,7 +163,7 @@ bool ELFAsmParser::parseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
         continue;
       }
 
-      MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+      MCSymbol *Sym = getContext().parseSymbol(Name);
 
       getStreamer().emitSymbolAttribute(Sym, Attr);
 
@@ -637,6 +637,8 @@ EndStmt:
       Type = ELF::SHT_LLVM_JT_SIZES;
     else if (TypeName == "llvm_cfi_jump_table")
       Type = ELF::SHT_LLVM_CFI_JUMP_TABLE;
+    else if (TypeName == "llvm_call_graph")
+      Type = ELF::SHT_LLVM_CALL_GRAPH;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

@@ -361,8 +361,8 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__av(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -417,8 +417,8 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__v(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -473,8 +473,8 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__a(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -538,13 +538,13 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
@@ -603,13 +603,13 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__v(ptr %ptr) #0 {
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
@@ -659,12 +659,12 @@ define void @flat_atomic_cmpxchg_i64_ret_v_a__v(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -717,12 +717,12 @@ define void @flat_atomic_cmpxchg_i64_ret_a_v__v(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -775,8 +775,8 @@ define void @flat_atomic_cmpxchg_i64_ret_v_v__a(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v4, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -836,8 +836,8 @@ define void @flat_atomic_cmpxchg_i64_ret_av_v__av(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -892,8 +892,8 @@ define void @flat_atomic_cmpxchg_i64_ret_v_av__av(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
-; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
+; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[2:3]
@@ -948,12 +948,12 @@ define void @flat_atomic_cmpxchg_i64_ret_av_a__av(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -1006,12 +1006,12 @@ define void @flat_atomic_cmpxchg_i64_ret_a_av__av(ptr %ptr) #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_add_co_u32_e32 v6, vcc, 0x50, v0
+; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_addc_co_u32_e32 v7, vcc, 0, v1, vcc
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a1
-; CHECK-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v7
 ; CHECK-NEXT:    ;;#ASMSTART

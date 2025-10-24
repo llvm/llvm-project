@@ -146,6 +146,14 @@ void testValueInRangeOfEnumerationValues() {
 
   const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
+struct EnumTest {
+  enum type {
+      Type1,
+      BOUND
+  };
+  static const type binding_completed = type(BOUND + 1); // both-error {{in-class initializer for static data member is not a constant expression}} \
+                                                         // both-note {{integer value 2 is outside the valid range of values}}
+};
 
 template<class T, unsigned size> struct Bitfield {
   static constexpr T max = static_cast<T>((1 << size) - 1);

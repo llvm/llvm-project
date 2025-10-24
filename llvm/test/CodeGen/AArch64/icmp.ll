@@ -2093,3 +2093,54 @@ define <2 x i1> @icmp_slt_v2i64_Zero_LHS(<2 x i64> %a) {
     %c = icmp slt <2 x i64> <i64 0, i64 0>, %a
     ret <2 x i1> %c
 }
+
+; Test TST optimization for i8 sign bit testing with cross-type select
+; This tests the pattern: icmp slt i8 %val, 0; select i1 %cmp, i32 %a, i32 %b
+; The optimization should convert sxtb+cmp to tst for sign bit testing.
+
+define i32 @i8_signbit_tst_constants(i8 %x, i8 %y) {
+; CHECK-SD-LABEL: i8_signbit_tst_constants:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w9, w0, w1
+; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
+; CHECK-SD-NEXT:    tst w9, #0x80
+; CHECK-SD-NEXT:    mov w9, #20894 // =0x519e
+; CHECK-SD-NEXT:    csel w0, w9, w8, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_tst_constants:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
+; CHECK-GI-NEXT:    mov w10, #20894 // =0x519e
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w10, w9, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 20894, i32 42
+  ret i32 %sel
+}
+
+; Test i8 sign bit testing with variable select values (problematic case)
+define i32 @i8_signbit_variables(i8 %x, i8 %y, i32 %a, i32 %b) {
+; CHECK-SD-LABEL: i8_signbit_variables:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w8, w0, w1
+; CHECK-SD-NEXT:    tst w8, #0x80
+; CHECK-SD-NEXT:    csel w0, w2, w3, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_variables:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w2, w3, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %sel
+}
