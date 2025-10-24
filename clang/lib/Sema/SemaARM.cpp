@@ -978,9 +978,11 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
           }
         }
       } else {
+        bool EmitDoubleWordDiagnostic =
+            IsDoubleWord && !Mask && TI.getARMLDREXMask();
         Diag(DRE->getBeginLoc(),
              diag::err_atomic_exclusive_builtin_pointer_size_none)
-            << ((IsDoubleWord && TI.getARMLDREXMask()) ? 1 : 0)
+            << (EmitDoubleWordDiagnostic ? 1 : 0)
             << PointerArg->getSourceRange();
       }
     }
