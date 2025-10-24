@@ -101,9 +101,9 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
                                  MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  MCRegister DwarfStackPtrReg = MCRI->getDwarfRegNum(StackPtrReg, false);
+  MCRegister DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
       ST.enableFlatScratch()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
@@ -350,11 +350,12 @@ class PrologEpilogSGPRSpillBuilder {
 
         // FIXME: CFI for EXEC needs a fix by accurately computing the spill
         // offset for both the low and high components.
-        if (SubReg != AMDGPU::EXEC_LO)
+        if (SubReg != AMDGPU::EXEC_LO) {
           TFI->buildCFI(MBB, MI, DL,
                         MCCFIInstruction::createOffset(
                             nullptr, MCRI->getDwarfRegNum(SubReg, false),
                             MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+        }
       }
       DwordOff += 4;
     }
@@ -1227,12 +1228,13 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
           int FI = Reg.second;
           buildPrologSpill(ST, TRI, *FuncInfo, LiveUnits, MF, MBB, MBBI, DL,
                            VGPR, FI, FrameReg);
-          if (NeedsFrameMoves)
+          if (NeedsFrameMoves) {
             // We spill the entire VGPR, so we can get away with just cfi_offset
             buildCFI(MBB, MBBI, DL,
                      MCCFIInstruction::createOffset(
                          nullptr, MCRI->getDwarfRegNum(VGPR, false),
                          MFI.getObjectOffset(FI) * ST.getWavefrontSize()));
+          }
         }
       };
 
@@ -1281,7 +1283,7 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
     // Skip if FP is saved to a scratch SGPR, the save has already been emitted.
     // Otherwise, FP has been moved to a temporary register and spill it
     // instead.
-    bool IsFramePtrPrologSpill = Spill.first == FramePtrReg ? true : false;
+    bool IsFramePtrPrologSpill = Spill.first == FramePtrReg;
     Register Reg = IsFramePtrPrologSpill ? FramePtrRegScratchCopy : Spill.first;
     if (!Reg)
       continue;
@@ -1650,11 +1652,9 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                          FramePtrRegScratchCopy);
   }
 
-  const bool NeedsFrameMoves = MF.needsFrameMoves();
-  if (hasFP(MF)) {
-    if (NeedsFrameMoves)
-      emitDefCFA(MBB, MBBI, DL, StackPtrReg, /*AspaceAlreadyDefined=*/false,
-                 MachineInstr::FrameDestroy);
+  if (hasFP(MF) && MF.needsFrameMoves()) {
+    emitDefCFA(MBB, MBBI, DL, StackPtrReg, /*AspaceAlreadyDefined=*/false,
+               MachineInstr::FrameDestroy);
   }
 
   if (FPSaved) {
