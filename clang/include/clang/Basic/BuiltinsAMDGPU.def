@@ -63,9 +63,6 @@ BUILTIN(__builtin_amdgcn_grid_size_z, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_hi, "UiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_lo, "UiUiUi", "nc")
 
-BUILTIN(__builtin_amdgcn_bcnt32_lo, "UiUi", "nc")
-BUILTIN(__builtin_amdgcn_bcnt64_lo, "UiWUi", "nc")
-
 TARGET_BUILTIN(__builtin_amdgcn_s_memtime, "WUi", "n", "s-memtime-inst")
 
 //===----------------------------------------------------------------------===//
