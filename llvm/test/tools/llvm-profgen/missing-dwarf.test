@@ -3,17 +3,16 @@
 ; RUN: cd %t
 
 ; RUN: echo -e "1\n401120-40113b:1\n1\n40112f->401110:1" > %t.prof
-; RUN: cp %S/Inputs/missing-dwarf.exe %t/missing-dwarf.exe
 
 ; Test --load-function-from-symbol=0
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%t/missing-dwarf.exe --output=%t1 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=0 2>&1 | FileCheck %s --check-prefix=CHECK-NO-LOAD-SYMTAB
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%S/Inputs/missing-dwarf.exe --output=%t1 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=0 2>&1 | FileCheck %s --check-prefix=CHECK-NO-LOAD-SYMTAB
 
 ; CHECK-NO-LOAD-SYMTAB:      warning: 100.00%(1/1) of function range samples do not belong to any function
 ; CHECK-NO-LOAD-SYMTAB-NEXT: warning: 100.00%(1/1) of LBR source samples do not belong to any function
 ; CHECK-NO-LOAD-SYMTAB-NEXT: warning: 100.00%(1/1) of LBR target samples do not belong to any function
 
 ; Test --load-function-from-symbol=1
-; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%t/missing-dwarf.exe --output=%t2 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=1
+; RUN: llvm-profgen --format=text --unsymbolized-profile=%t.prof --binary=%S/Inputs/missing-dwarf.exe --output=%t2 --fill-zero-for-all-funcs --show-detailed-warning --use-offset=0 --load-function-from-symbol=1
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-LOAD-SYMTAB
 
 ; CHECK-LOAD-SYMTAB:      main:2:1

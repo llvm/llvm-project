@@ -1214,18 +1214,19 @@ public:
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
     // of "B" in knownSuffixes.
-    const char *KnownSuffixes[] = {LLVMSuffix, PartSuffix, UniqSuffix, nullptr};
+    const SmallVector<StringRef> KnownSuffixes{LLVMSuffix, PartSuffix,
+                                               UniqSuffix};
     return getCanonicalFnName(FnName, KnownSuffixes, Attr);
   }
 
-  static StringRef getCanonicalFnName(StringRef FnName, const char *Suffixes[],
+  static StringRef getCanonicalFnName(StringRef FnName,
+                                      ArrayRef<StringRef> Suffixes,
                                       StringRef Attr = "selected") {
     if (Attr == "" || Attr == "all")
       return FnName.split('.').first;
     if (Attr == "selected") {
       StringRef Cand(FnName);
-      for (const char **Suf = Suffixes; *Suf; Suf++) {
-        StringRef Suffix(*Suf);
+      for (const auto Suffix : Suffixes) {
         // If the profile contains ".__uniq." suffix, don't strip the
         // suffix for names in the IR.
         if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
