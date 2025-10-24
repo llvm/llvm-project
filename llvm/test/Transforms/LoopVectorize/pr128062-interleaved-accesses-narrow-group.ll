@@ -80,3 +80,84 @@ loop:
 exit:
   ret void
 }
+
+; Same as above, except one zext is replaced with an sext.
+define void @opcode_mismatch(ptr %dst.start, i8 %a, i16 %b) {
+; CHECK-LABEL: define void @opcode_mismatch(
+; CHECK-SAME: ptr [[DST_START:%.*]], i8 [[A:%.*]], i16 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i8> poison, i8 [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT1]], <4 x i8> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST_START]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i8>, ptr [[NEXT_GEP]], align 1
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <16 x i8> [[WIDE_VEC]], <16 x i8> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEXT:    [[TMP0:%.*]] = zext <4 x i8> [[STRIDED_VEC]] to <4 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw <4 x i16> [[TMP0]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i16> [[TMP1]], splat (i16 255)
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw <4 x i16> [[TMP2]] to <4 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i8> [[BROADCAST_SPLAT2]], [[TMP3]]
+; CHECK-NEXT:    store <4 x i8> [[TMP4]], ptr [[NEXT_GEP]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %dst = phi ptr [ %dst.start, %entry ], [ %dst.next, %loop ]
+  %dst.next = getelementptr inbounds nuw i8, ptr %dst, i64 4
+  %load.dst = load i8, ptr %dst, align 1
+  %dst.ext = zext i8 %load.dst to i16
+  %mul.dst.0 = mul nuw i16 %dst.ext, %b
+  %udiv.0 = udiv i16 %mul.dst.0, 255
+  %trunc.0 = trunc nuw i16 %udiv.0 to i8
+  %val.0 = add i8 %a, %trunc.0
+  store i8 %val.0, ptr %dst, align 1
+  %gep.dst.1 = getelementptr inbounds nuw i8, ptr %dst, i64 1
+  %load.dst.1 = load i8, ptr %gep.dst.1, align 1
+  %dst.1.ext = sext i8 %load.dst.1 to i16
+  %mul.dst.1 = mul nuw i16 %dst.1.ext, %b
+  %udiv.1 = udiv i16 %mul.dst.1, 255
+  %trunc.1 = trunc nuw i16 %udiv.1 to i8
+  %val.1 = add i8 %a, %trunc.1
+  store i8 %val.1, ptr %gep.dst.1, align 1
+  %gep.dst.2 = getelementptr inbounds nuw i8, ptr %dst, i64 2
+  %load.dst.2 = load i8, ptr %gep.dst.2, align 1
+  %dst.2.ext = zext i8 %load.dst.2 to i16
+  %mul.dst.2 = mul nuw i16 %dst.2.ext, %b
+  %udiv.2 = udiv i16 %mul.dst.2, 255
+  %trunc.2 = trunc nuw i16 %udiv.2 to i8
+  %val.2 = add i8 %a, %trunc.2
+  store i8 %val.2, ptr %gep.dst.2, align 1
+  %gep.dst.3 = getelementptr inbounds nuw i8, ptr %dst, i64 3
+  %load.dst.3 = load i8, ptr %gep.dst.3, align 1
+  %dst.3.ext = zext i8 %load.dst.3 to i16
+  %mul.dst.3 = mul nuw i16 %dst.3.ext, %b
+  %udiv.3 = udiv i16 %mul.dst.3, 255
+  %trunc.3 = trunc nuw i16 %udiv.3 to i8
+  %val.3 = add i8 %a, %trunc.3
+  store i8 %val.3, ptr %gep.dst.3, align 1
+  %iv.next = add i64 %iv, 4
+  %exit.cond = icmp eq i64 %iv.next, 256
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
