@@ -189,7 +189,7 @@ private:
       return *Curr;
     }
 
-    // `Key` a suffix of original `Key` unmatched by path from the `Root` to the
+    // `Key` is a suffix of original `Key` unmatched by path from the `Root` to the
     // `Curr`, and we have no candidate in the children to match more. Create a
     // new one.
     return Curr->Children.emplace_back(Key);
