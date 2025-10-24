@@ -19,23 +19,25 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 
-#include "clang/AST/Mangle.h"
+#include "clang/CodeGenShared/CXXABIShared.h"
 
 namespace clang::CIRGen {
 
 /// Implements C++ ABI-specific code generation functions.
-class CIRGenCXXABI {
+class CIRGenCXXABI : public CXXABIShared {
 protected:
   CIRGenModule &cgm;
-  std::unique_ptr<clang::MangleContext> mangleContext;
+
+  CIRGenCXXABI(CIRGenModule &cgm)
+      : CXXABIShared(cgm.getASTContext()), cgm(cgm) {}
 
   virtual bool requiresArrayCookie(const CXXNewExpr *e);
 
+  bool constructorsAndDestructorsReturnThis() const override {
+    return cgm.getCodeGenOpts().CtorDtorReturnThis;
+  }
+
 public:
-  // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
-  // implemented.
-  CIRGenCXXABI(CIRGenModule &cgm)
-      : cgm(cgm), mangleContext(cgm.getASTContext().createMangleContext()) {}
   virtual ~CIRGenCXXABI();
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
@@ -62,17 +64,6 @@ public:
                                       bool isRefCast, Address src) = 0;
 
 public:
-  /// Similar to AddedStructorArgs, but only notes the number of additional
-  /// arguments.
-  struct AddedStructorArgCounts {
-    unsigned prefix = 0;
-    unsigned suffix = 0;
-    AddedStructorArgCounts() = default;
-    AddedStructorArgCounts(unsigned p, unsigned s) : prefix(p), suffix(s) {}
-    static AddedStructorArgCounts withPrefix(unsigned n) { return {n, 0}; }
-    static AddedStructorArgCounts withSuffix(unsigned n) { return {0, n}; }
-  };
-
   /// Additional implicit arguments to add to the beginning (Prefix) and end
   /// (Suffix) of a constructor / destructor arg list.
   ///
@@ -137,10 +128,6 @@ public:
   getThisArgumentTypeForMethod(const clang::CXXMethodDecl *md) {
     return md->getParent();
   }
-
-  /// Return whether the given global decl needs a VTT (virtual table table)
-  /// parameter.
-  virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
 
   /// Perform ABI-specific "this" argument adjustment required prior to
   /// a call of a virtual function.
@@ -214,12 +201,6 @@ public:
   /// this emits virtual table tables.
   virtual void emitVirtualInheritanceTables(const CXXRecordDecl *rd) = 0;
 
-  /// Returns true if the given destructor type should be emitted as a linkonce
-  /// delegating thunk, regardless of whether the dtor is defined in this TU or
-  /// not.
-  virtual bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
-                                      CXXDtorType dt) const = 0;
-
   virtual cir::GlobalLinkageKind
   getCXXDestructorLinkage(GVALinkage linkage, const CXXDestructorDecl *dtor,
                           CXXDtorType dt) const;
@@ -262,18 +243,6 @@ public:
   virtual bool
   doStructorsInitializeVPtrs(const clang::CXXRecordDecl *vtableClass) = 0;
 
-  /// Returns true if the given constructor or destructor is one of the kinds
-  /// that the ABI says returns 'this' (only applies when called non-virtually
-  /// for destructors).
-  ///
-  /// There currently is no way to indicate if a destructor returns 'this' when
-  /// called virtually, and CIR generation does not support this case.
-  virtual bool hasThisReturn(clang::GlobalDecl gd) const { return false; }
-
-  virtual bool hasMostDerivedReturn(clang::GlobalDecl gd) const {
-    return false;
-  }
-
   /// Returns true if the target allows calling a function through a pointer
   /// with a different signature than the actual function (or equivalently,
   /// bitcasting a function or function pointer to a different function type).
@@ -283,9 +252,6 @@ public:
   /// allowed; in other words, does the target do strict checking of signatures
   /// for all calls.
   virtual bool canCallMismatchedFunctionType() const { return true; }
-
-  /// Gets the mangle context.
-  clang::MangleContext &getMangleContext() { return *mangleContext; }
 
   clang::ImplicitParamDecl *&getStructorImplicitParamDecl(CIRGenFunction &cgf) {
     return cgf.cxxStructorImplicitParamDecl;

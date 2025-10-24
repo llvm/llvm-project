@@ -17,6 +17,7 @@
 #include "CodeGenFunction.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
+#include "clang/CodeGenShared/CXXABIShared.h"
 
 namespace llvm {
 class Constant;
@@ -31,7 +32,6 @@ class CXXConstructorDecl;
 class CXXDestructorDecl;
 class CXXMethodDecl;
 class CXXRecordDecl;
-class MangleContext;
 
 namespace CodeGen {
 class CGCallee;
@@ -40,15 +40,13 @@ class CodeGenModule;
 struct CatchTypeInfo;
 
 /// Implements C++ ABI-specific code generation functions.
-class CGCXXABI {
+class CGCXXABI : public CXXABIShared {
   friend class CodeGenModule;
 
 protected:
   CodeGenModule &CGM;
-  std::unique_ptr<MangleContext> MangleCtx;
 
-  CGCXXABI(CodeGenModule &CGM)
-    : CGM(CGM), MangleCtx(CGM.getContext().createMangleContext()) {}
+  CGCXXABI(CodeGenModule &CGM) : CXXABIShared(CGM.getContext()), CGM(CGM) {}
 
 protected:
   ImplicitParamDecl *getThisDecl(CodeGenFunction &CGF) {
@@ -78,8 +76,6 @@ protected:
 
   void setCXXABIThisValue(CodeGenFunction &CGF, llvm::Value *ThisPtr);
 
-  ASTContext &getContext() const { return CGM.getContext(); }
-
   bool mayNeedDestruction(const VarDecl *VD) const;
 
   /// Determine whether we will definitely emit this variable with a constant
@@ -95,40 +91,13 @@ protected:
   virtual bool requiresArrayCookie(const CXXDeleteExpr *E, QualType eltType);
   virtual bool requiresArrayCookie(const CXXNewExpr *E);
 
-  /// Determine whether there's something special about the rules of
-  /// the ABI tell us that 'this' is a complete object within the
-  /// given function.  Obvious common logic like being defined on a
-  /// final class will have been taken care of by the caller.
-  virtual bool isThisCompleteObject(GlobalDecl GD) const = 0;
-
-  virtual bool constructorsAndDestructorsReturnThis() const {
+  bool constructorsAndDestructorsReturnThis() const override {
     return CGM.getCodeGenOpts().CtorDtorReturnThis;
   }
 
 public:
 
   virtual ~CGCXXABI();
-
-  /// Gets the mangle context.
-  MangleContext &getMangleContext() {
-    return *MangleCtx;
-  }
-
-  /// Returns true if the given constructor or destructor is one of the
-  /// kinds that the ABI says returns 'this' (only applies when called
-  /// non-virtually for destructors).
-  ///
-  /// There currently is no way to indicate if a destructor returns 'this'
-  /// when called virtually, and code generation does not support the case.
-  virtual bool HasThisReturn(GlobalDecl GD) const {
-    if (isa<CXXConstructorDecl>(GD.getDecl()) ||
-        (isa<CXXDestructorDecl>(GD.getDecl()) &&
-         GD.getDtorType() != Dtor_Deleting))
-      return constructorsAndDestructorsReturnThis();
-    return false;
-  }
-
-  virtual bool hasMostDerivedReturn(GlobalDecl GD) const { return false; }
 
   virtual bool useSinitAndSterm() const { return false; }
 
@@ -353,29 +322,12 @@ public:
     }
   };
 
-  /// Similar to AddedStructorArgs, but only notes the number of additional
-  /// arguments.
-  struct AddedStructorArgCounts {
-    unsigned Prefix = 0;
-    unsigned Suffix = 0;
-    AddedStructorArgCounts() = default;
-    AddedStructorArgCounts(unsigned P, unsigned S) : Prefix(P), Suffix(S) {}
-    static AddedStructorArgCounts prefix(unsigned N) { return {N, 0}; }
-    static AddedStructorArgCounts suffix(unsigned N) { return {0, N}; }
-  };
-
   /// Build the signature of the given constructor or destructor variant by
   /// adding any required parameters.  For convenience, ArgTys has been
   /// initialized with the type of 'this'.
   virtual AddedStructorArgCounts
   buildStructorSignature(GlobalDecl GD,
                          SmallVectorImpl<CanQualType> &ArgTys) = 0;
-
-  /// Returns true if the given destructor type should be emitted as a linkonce
-  /// delegating thunk, regardless of whether the dtor is defined in this TU or
-  /// not.
-  virtual bool useThunkForDtorVariant(const CXXDestructorDecl *Dtor,
-                                      CXXDtorType DT) const = 0;
 
   virtual void setCXXDestructorDLLStorage(llvm::GlobalValue *GV,
                                           const CXXDestructorDecl *Dtor,
@@ -582,9 +534,6 @@ public:
                                const CXXDeleteExpr *expr,
                                QualType ElementType, llvm::Value *&NumElements,
                                llvm::Value *&AllocPtr, CharUnits &CookieSize);
-
-  /// Return whether the given global decl needs a VTT parameter.
-  virtual bool NeedsVTTParameter(GlobalDecl GD);
 
 protected:
   /// Returns the extra size required in order to store the array

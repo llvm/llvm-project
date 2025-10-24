@@ -206,12 +206,12 @@ CIRGenTypes::arrangeCXXStructorDeclaration(GlobalDecl gd) {
       (passParams && md->isVariadic() ? RequiredArgs(argTypes.size())
                                       : RequiredArgs::All);
 
-  CanQualType resultType = theCXXABI.hasThisReturn(gd) ? argTypes.front()
+  CanQualType resultType = theCXXABI.HasThisReturn(gd) ? argTypes.front()
                            : theCXXABI.hasMostDerivedReturn(gd)
                                ? astContext.VoidPtrTy
                                : astContext.VoidTy;
 
-  assert(!theCXXABI.hasThisReturn(gd) &&
+  assert(!theCXXABI.HasThisReturn(gd) &&
          "Please send PR with a test and remove this");
 
   assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
@@ -350,7 +350,7 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCXXConstructorCall(
                               : RequiredArgs::All;
 
   GlobalDecl gd(d, ctorKind);
-  if (theCXXABI.hasThisReturn(gd))
+  if (theCXXABI.HasThisReturn(gd))
     cgm.errorNYI(d->getSourceRange(),
                  "arrangeCXXConstructorCall: hasThisReturn");
   if (theCXXABI.hasMostDerivedReturn(gd))

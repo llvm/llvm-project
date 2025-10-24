@@ -24,6 +24,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenShared/ItaniumCXXABIShared.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -31,13 +32,14 @@ using namespace clang::CIRGen;
 
 namespace {
 
-class CIRGenItaniumCXXABI : public CIRGenCXXABI {
+class CIRGenItaniumCXXABI : public ItaniumCXXABIShared<CIRGenCXXABI> {
 protected:
   /// All the vtables which have been defined.
   llvm::DenseMap<const CXXRecordDecl *, cir::GlobalOp> vtables;
 
 public:
-  CIRGenItaniumCXXABI(CIRGenModule &cgm) : CIRGenCXXABI(cgm) {
+  CIRGenItaniumCXXABI(CIRGenModule &cgm)
+      : ItaniumCXXABIShared<CIRGenCXXABI>(cgm) {
     assert(!cir::MissingFeatures::cxxabiUseARMMethodPtrABI());
     assert(!cir::MissingFeatures::cxxabiUseARMGuardVarABI());
   }
@@ -47,8 +49,6 @@ public:
                                                CXXCtorType type,
                                                bool forVirtualBase,
                                                bool delegating) override;
-
-  bool needsVTTParameter(clang::GlobalDecl gd) override;
 
   AddedStructorArgCounts
   buildStructorSignature(GlobalDecl gd,
@@ -81,13 +81,6 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
-  bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
-                              CXXDtorType dt) const override {
-    // Itanium does not emit any destructor variant as an inline thunk.
-    // Delegating may occur as an optimization, but all variants are either
-    // emitted with external linkage or as linkonce if they are inline and used.
-    return false;
-  }
 
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                            CIRGenFunction::VPtr vptr) override;
@@ -118,10 +111,6 @@ public:
 
   mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                           QualType ty) override;
-
-  bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
-    return true;
-  }
 
   void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) override;
 
@@ -205,9 +194,9 @@ void CIRGenItaniumCXXABI::emitInstanceFunctionProlog(SourceLocation loc,
   /// 1) getThisValue is currently protected
   /// 2) in theory, an ABI could implement 'this' returns some other way;
   ///    HasThisReturn only specifies a contract, not the implementation
-  if (hasThisReturn(cgf.curGD)) {
+  if (HasThisReturn(cgf.curGD)) {
     cgf.cgm.errorNYI(cgf.curFuncDecl->getLocation(),
-                     "emitInstanceFunctionProlog: hasThisReturn");
+                     "emitInstanceFunctionProlog: HasThisReturn");
   }
 }
 
@@ -227,7 +216,7 @@ CIRGenItaniumCXXABI::buildStructorSignature(
     argTys.insert(argTys.begin() + 1,
                   astContext.getPointerType(
                       CanQualType::CreateUnsafe(astContext.VoidPtrTy)));
-    return AddedStructorArgCounts::withPrefix(1);
+    return AddedStructorArgCounts::prefix(1);
   }
 
   return AddedStructorArgCounts{};
@@ -334,7 +323,7 @@ void CIRGenItaniumCXXABI::addImplicitStructorParams(CIRGenFunction &cgf,
   assert(isa<CXXConstructorDecl>(md) || isa<CXXDestructorDecl>(md));
 
   // Check if we need a VTT parameter as well.
-  if (needsVTTParameter(cgf.curGD)) {
+  if (NeedsVTTParameter(cgf.curGD)) {
     ASTContext &astContext = cgm.getASTContext();
 
     // FIXME: avoid the fake decl
@@ -383,7 +372,7 @@ void CIRGenItaniumCXXABI::emitCXXDestructors(const CXXDestructorDecl *d) {
 CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
     CIRGenFunction &cgf, const CXXConstructorDecl *d, CXXCtorType type,
     bool forVirtualBase, bool delegating) {
-  if (!needsVTTParameter(GlobalDecl(d, type)))
+  if (!NeedsVTTParameter(GlobalDecl(d, type)))
     return AddedStructorArgs{};
 
   // Insert the implicit 'vtt' argument as the second argument. Make sure to
@@ -395,27 +384,6 @@ CIRGenCXXABI::AddedStructorArgs CIRGenItaniumCXXABI::getImplicitConstructorArgs(
       cgm.getASTContext().getPointerType(cgm.getASTContext().VoidPtrTy);
   assert(!cir::MissingFeatures::addressSpace());
   return AddedStructorArgs::withPrefix({{vtt, vttTy}});
-}
-
-/// Return whether the given global decl needs a VTT (virtual table table)
-/// parameter, which it does if it's a base constructor or destructor with
-/// virtual bases.
-bool CIRGenItaniumCXXABI::needsVTTParameter(GlobalDecl gd) {
-  auto *md = cast<CXXMethodDecl>(gd.getDecl());
-
-  // We don't have any virtual bases, just return early.
-  if (!md->getParent()->getNumVBases())
-    return false;
-
-  // Check if we have a base constructor.
-  if (isa<CXXConstructorDecl>(md) && gd.getCtorType() == Ctor_Base)
-    return true;
-
-  // Check if we have a base destructor.
-  if (isa<CXXDestructorDecl>(md) && gd.getDtorType() == Dtor_Base)
-    return true;
-
-  return false;
 }
 
 void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
@@ -1781,7 +1749,7 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
     CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
     const CXXRecordDecl *nearestVBase) {
   assert((base.getBase()->getNumVBases() || nearestVBase != nullptr) &&
-         needsVTTParameter(cgf.curGD) && "This class doesn't have VTT");
+         NeedsVTTParameter(cgf.curGD) && "This class doesn't have VTT");
 
   // Get the secondary vpointer index.
   uint64_t virtualPointerIndex =
@@ -1827,7 +1795,7 @@ mlir::Value CIRGenItaniumCXXABI::getVTableAddressPointInStructor(
     clang::BaseSubobject base, const clang::CXXRecordDecl *nearestVBase) {
 
   if ((base.getBase()->getNumVBases() || nearestVBase != nullptr) &&
-      needsVTTParameter(cgf.curGD)) {
+      NeedsVTTParameter(cgf.curGD)) {
     return getVTableAddressPointInStructorWithVTT(cgf, vtableClass, base,
                                                   nearestVBase);
   }
@@ -1838,7 +1806,7 @@ bool CIRGenItaniumCXXABI::isVirtualOffsetNeededForVTableField(
     CIRGenFunction &cgf, CIRGenFunction::VPtr vptr) {
   if (vptr.nearestVBase == nullptr)
     return false;
-  return needsVTTParameter(cgf.curGD);
+  return NeedsVTTParameter(cgf.curGD);
 }
 
 mlir::Value CIRGenItaniumCXXABI::getVirtualBaseClassOffset(

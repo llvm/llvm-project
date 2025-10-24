@@ -116,7 +116,7 @@ static void emitDeclDestroy(CIRGenFunction &cgf, const VarDecl *vd,
   // mismatch.
   const CXXRecordDecl *record = type->getAsCXXRecordDecl();
   bool canRegisterDestructor =
-      record && (!cgm.getCXXABI().hasThisReturn(
+      record && (!cgm.getCXXABI().HasThisReturn(
                      GlobalDecl(record->getDestructor(), Dtor_Complete)) ||
                  cgm.getCXXABI().canCallMismatchedFunctionType());
 

@@ -759,7 +759,7 @@ void CIRGenFunction::emitDelegateCXXConstructorCall(
 
   // FIXME: The location of the VTT parameter in the parameter list is specific
   // to the Itanium ABI and shouldn't be hardcoded here.
-  if (cgm.getCXXABI().needsVTTParameter(curGD)) {
+  if (cgm.getCXXABI().NeedsVTTParameter(curGD)) {
     cgm.errorNYI(loc, "emitDelegateCXXConstructorCall: VTT parameter");
     return;
   }
@@ -1068,7 +1068,7 @@ void CIRGenFunction::emitCXXDestructorCall(const CXXDestructorDecl *dd,
 
 mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
                                             bool delegating) {
-  if (!cgm.getCXXABI().needsVTTParameter(gd))
+  if (!cgm.getCXXABI().NeedsVTTParameter(gd))
     return nullptr;
 
   const CXXRecordDecl *rd = cast<CXXMethodDecl>(curCodeDecl)->getParent();
@@ -1082,7 +1082,7 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   } else if (rd == base) {
     // If the record matches the base, this is the complete ctor/dtor
     // variant calling the base variant in a class with virtual bases.
-    assert(!cgm.getCXXABI().needsVTTParameter(curGD) &&
+    assert(!cgm.getCXXABI().NeedsVTTParameter(curGD) &&
            "doing no-op VTT offset in base dtor/ctor?");
     assert(!forVirtualBase && "Can't have same class as virtual base!");
     subVTTIndex = 0;
@@ -1097,7 +1097,7 @@ mlir::Value CIRGenFunction::getVTTParameter(GlobalDecl gd, bool forVirtualBase,
   }
 
   mlir::Location loc = cgm.getLoc(rd->getBeginLoc());
-  if (cgm.getCXXABI().needsVTTParameter(curGD)) {
+  if (cgm.getCXXABI().NeedsVTTParameter(curGD)) {
     // A VTT parameter was passed to the constructor, use it.
     mlir::Value vtt = loadCXXVTT();
     return builder.createVTTAddrPoint(loc, vtt.getType(), vtt, subVTTIndex);
@@ -1266,7 +1266,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   // Emit the call.
   auto calleePtr = cgm.getAddrOfCXXStructor(GlobalDecl(d, type));
   const CIRGenFunctionInfo &info = cgm.getTypes().arrangeCXXConstructorCall(
-      args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
+      args, d, type, extraArgs.Prefix, extraArgs.Suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
