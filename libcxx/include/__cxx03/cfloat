@@ -71,9 +71,9 @@ Macros:
 
 #include <__cxx03/__config>
 
-#include <__cxx03/float.h>
+#include <float.h>
 
-#ifndef _LIBCPP___CXX03_FLOAT_H
+#ifndef _LIBCPP_FLOAT_H
 #   error <cfloat> tried including <float.h> but didn't find libc++'s <float.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \

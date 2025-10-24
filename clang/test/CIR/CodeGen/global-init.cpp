@@ -141,6 +141,34 @@ float _Complex a = {num, num};
 // OGCG:   store float %[[REAL]], ptr @a, align 4
 // OGCG:   store float %[[IMAG]], ptr getelementptr inbounds nuw ({ float, float }, ptr @a, i32 0, i32 1), align 4
 
+float fp;
+int i = (int)fp;
+
+// CIR-BEFORE-LPP: cir.global external @i = ctor : !s32i {
+// CIR-BEFORE-LPP:   %0 = cir.get_global @i : !cir.ptr<!s32i>
+// CIR-BEFORE-LPP:   %1 = cir.get_global @fp : !cir.ptr<!cir.float>
+// CIR-BEFORE-LPP:   %2 = cir.load{{.*}} %1 : !cir.ptr<!cir.float>, !cir.float
+// CIR-BEFORE-LPP:   %3 = cir.cast float_to_int %2 : !cir.float -> !s32i
+// CIR-BEFORE-LPP:   cir.store{{.*}} %3, %0 : !s32i, !cir.ptr<!s32i>
+// CIR-BEFORE-LPP: }
+
+// CIR: cir.func internal private @__cxx_global_var_init.4()
+// CIR:   %[[I_ADDR:.*]] = cir.get_global @i : !cir.ptr<!s32i>
+// CIR:   %[[FP_ADDR:.*]] = cir.get_global @fp : !cir.ptr<!cir.float>
+// CIR:   %[[TMP_FP:.*]] = cir.load{{.*}} %[[FP_ADDR]] : !cir.ptr<!cir.float>, !cir.float
+// CIR:   %[[FP_I32:.*]] = cir.cast float_to_int %[[TMP_FP]] : !cir.float -> !s32i
+// CIR:   cir.store{{.*}} %[[FP_I32]], %[[I_ADDR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: define internal void @__cxx_global_var_init.4()
+// LLVM:   %[[TMP_FP:.*]] = load float, ptr @fp, align 4
+// LLVM:   %[[FP_I32:.*]] = fptosi float %[[TMP_FP]] to i32
+// LLVM:   store i32 %[[FP_I32]], ptr @i, align 4
+
+// OGCG: define internal void @__cxx_global_var_init.4() {{.*}} section ".text.startup"
+// OGCG:   %[[TMP_FP:.*]] = load float, ptr @fp, align 4
+// OGCG:   %[[FP_I32:.*]] = fptosi float %[[TMP_FP]] to i32
+// OGCG:   store i32 %[[FP_I32]], ptr @i, align 4
+
 // Common init function for all globals with default priority
 
 // CIR: cir.func private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
@@ -148,15 +176,18 @@ float _Complex a = {num, num};
 // CIR:   cir.call @__cxx_global_var_init.1() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.2() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.3() : () -> ()
+// CIR:   cir.call @__cxx_global_var_init.4() : () -> ()
 
 // LLVM: define void @_GLOBAL__sub_I_[[FILENAME]]()
 // LLVM:   call void @__cxx_global_var_init()
 // LLVM:   call void @__cxx_global_var_init.1()
 // LLVM:   call void @__cxx_global_var_init.2()
 // LLVM:   call void @__cxx_global_var_init.3()
+// LLVM:   call void @__cxx_global_var_init.4()
 
 // OGCG: define internal void @_GLOBAL__sub_I_[[FILENAME]]() {{.*}} section ".text.startup" {
 // OGCG:   call void @__cxx_global_var_init()
 // OGCG:   call void @__cxx_global_var_init.1()
 // OGCG:   call void @__cxx_global_var_init.2()
 // OGCG:   call void @__cxx_global_var_init.3()
+// OGCG:   call void @__cxx_global_var_init.4()

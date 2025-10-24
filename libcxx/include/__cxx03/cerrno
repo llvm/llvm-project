@@ -24,9 +24,9 @@ Macros:
 
 #include <__cxx03/__config>
 
-#include <__cxx03/errno.h>
+#include <errno.h>
 
-#ifndef _LIBCPP___CXX03_ERRNO_H
+#ifndef _LIBCPP_ERRNO_H
 #   error <cerrno> tried including <errno.h> but didn't find libc++'s <errno.h> header. \
           This usually means that your header search paths are not configured properly. \
           The header search paths should contain the C++ Standard Library headers before \

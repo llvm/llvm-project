@@ -12906,6 +12906,66 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(Elems.data(), NumElems), E);
   }
+
+  case X86::BI__builtin_ia32_pslldqi128_byteshift:
+  case X86::BI__builtin_ia32_pslldqi256_byteshift:
+  case X86::BI__builtin_ia32_pslldqi512_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Src;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Src) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Src.getVectorLength();
+    unsigned Shift = Imm.getZExtValue() & 0xff;
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I < Shift) {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        } else {
+          ResultElements.push_back(Src.getVectorElt(Lane + I - Shift));
+        }
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_psrldqi128_byteshift:
+  case X86::BI__builtin_ia32_psrldqi256_byteshift:
+  case X86::BI__builtin_ia32_psrldqi512_byteshift: {
+    assert(E->getNumArgs() == 2);
+
+    APValue Src;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), Src) ||
+        !EvaluateInteger(E->getArg(1), Imm, Info))
+      return false;
+
+    unsigned VecLen = Src.getVectorLength();
+    unsigned Shift = Imm.getZExtValue() & 0xff;
+
+    SmallVector<APValue> ResultElements;
+    for (unsigned Lane = 0; Lane != VecLen; Lane += 16) {
+      for (unsigned I = 0; I != 16; ++I) {
+        if (I + Shift < 16) {
+          ResultElements.push_back(Src.getVectorElt(Lane + I + Shift));
+        } else {
+          APSInt Zero(8, /*isUnsigned=*/true);
+          Zero = 0;
+          ResultElements.push_back(APValue(Zero));
+        }
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
