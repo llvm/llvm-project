@@ -1132,7 +1132,8 @@ void RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
       Op.setReg(NewDst);
-      B.buildTrunc(Reg, NewDst);
+      if (!MRI.use_empty(Reg))
+        B.buildTrunc(Reg, NewDst);
       break;
     }
     case InvalidMapping: {
