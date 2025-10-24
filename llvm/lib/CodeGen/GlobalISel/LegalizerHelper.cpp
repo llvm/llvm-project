@@ -8785,8 +8785,7 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   unsigned Opc = MI.getOpcode();
   auto [Dst, Src0, Src1] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
-  LLT CmpTy =
-      Ty.isScalar() ? LLT::scalar(1) : LLT::vector(Ty.getElementCount(), 1);
+  LLT CmpTy = Ty.changeElementSize(1);
 
   bool IsMax = (Opc == TargetOpcode::G_FMAXIMUM);
   unsigned OpcIeee =
@@ -8829,18 +8828,21 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
     KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
 
     if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+      const unsigned Flags = MI.getFlags();
       Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
       auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);
 
       unsigned TestClass = IsMax ? fcPosZero : fcNegZero;
 
       auto LHSTestZero = MIRBuilder.buildIsFPClass(CmpTy, Src0, TestClass);
-      auto LHSSelect = MIRBuilder.buildSelect(Ty, LHSTestZero, Src0, Res);
+      auto LHSSelect =
+          MIRBuilder.buildSelect(Ty, LHSTestZero, Src0, Res, Flags);
 
       auto RHSTestZero = MIRBuilder.buildIsFPClass(CmpTy, Src1, TestClass);
-      auto RHSSelect = MIRBuilder.buildSelect(Ty, RHSTestZero, Src1, LHSSelect);
+      auto RHSSelect =
+          MIRBuilder.buildSelect(Ty, RHSTestZero, Src1, LHSSelect, Flags);
 
-      Res = MIRBuilder.buildSelect(Ty, IsZero, RHSSelect, Res).getReg(0);
+      Res = MIRBuilder.buildSelect(Ty, IsZero, RHSSelect, Res, Flags).getReg(0);
     }
   }
 
