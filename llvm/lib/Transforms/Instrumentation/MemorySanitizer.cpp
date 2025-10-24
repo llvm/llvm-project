@@ -1546,11 +1546,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   static bool isAArch64SVCount(Type *Ty) {
-    if (!isa<TargetExtType>(Ty))
-      return false;
-
-    TargetExtType *TTy = cast<TargetExtType>(Ty);
-    return TTy->getName() == "aarch64.svcount";
+    if (TargetExtType* TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "aarch64.svcount";
+    return false;
   }
 
   // This is intended to match the "AArch64 Predicate-as-Counter Type" (aka
@@ -1561,10 +1559,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         << "\n");
 
     return Ty->isScalableTy() && !isa<VectorType>(Ty);
-  }
-
-  static bool isScalableNonVectorType(Instruction *I) {
-    return isScalableNonVectorType(I->getType());
   }
 
   void materializeChecks() {
@@ -7007,7 +7001,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // an extra "select". This results in much more compact IR.
       // Sa = select Sb, poisoned, (select b, Sc, Sd)
       Sa1 = getPoisonedShadow(getShadowTy(I.getType()));
-    } else if (isScalableNonVectorType(&I)) {
+    } else if (isScalableNonVectorType(I.getType())) {
       // This is intended to handle target("aarch64.svcount"), which can't be
       // handled in the else branch because of incompatibility with CreateXor
       // ("The supported LLVM operations on this type are limited to load,
