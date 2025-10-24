@@ -56,9 +56,8 @@ namespace llvm {
 ///   }
 ///
 ///   // Iterate over all elements
-///   for (const auto &pair : Tree) {
-///     llvm::outs() << pair.first << ": " << pair.second << "\n";
-///   }
+///   for (const auto &[Key, Value] : Tree)
+///     llvm::outs() << Key << ": " << Value << "\n";
 /// \endcode
 ///
 /// \note
