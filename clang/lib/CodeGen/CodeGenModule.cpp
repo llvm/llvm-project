@@ -2751,6 +2751,15 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute("aarch64_new_zt0");
   }
 
+  // Handle flatten_deep attribute for depth-based inlining
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (const FlattenDeepAttr *FDA = FD->getAttr<FlattenDeepAttr>()) {
+      // Add the flatten_deep attribute with the max depth value as a typed int
+      // attribute
+      B.addRawIntAttr(llvm::Attribute::FlattenDeep, FDA->getMaxDepth());
+    }
+  }
+
   // Track whether we need to add the optnone LLVM attribute,
   // starting with the default for this optimization level.
   bool ShouldAddOptNone =
