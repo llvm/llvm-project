@@ -171,8 +171,12 @@ base::current_impl(size_t skip, size_t max_depth) {
   frame.AddrPC.Offset    = ccx.Pc;
   frame.AddrStack.Offset = ccx.Sp;
   frame.AddrFrame.Offset = ccx.Fp;
+#elif defined(_M_IX86)
+  frame.AddrPC.Offset    = ccx.Eip;
+  frame.AddrStack.Offset = ccx.Esp;
+  frame.AddrFrame.Offset = ccx.Ebp;
 #else
-# warning stacktrace requires x86-64 or ARM64; returned stacktraces will be empty
+# warning unrecognized architecture; returned stacktraces will be empty
   return;
 #endif
 
