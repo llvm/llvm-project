@@ -23,8 +23,39 @@ runtimes_targets="${4}"
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+# Download & unpack 'xz' so we can use it to get clang.
+mkdir /tmp/xz-download
+pushd /tmp/xz-download
+curl -L -o xz-5.8.1-windows.zip http://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1-windows.zip
+unzip xz-5.8.1-windows.zip
+ls -l /tmp/xz-download/bin_x86-64/xz.exe
+popd
+
+# Download & unpack clang.
+mkdir /tmp/clang-download
+pushd /tmp/clang-download
+curl -L -o "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz" http://github.com/llvm/llvm-project/releases/download/llvmorg-21.1.2/clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz
+
+/tmp/xz-download/bin_x86-64/xz.exe -d -qq "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar.xz"
+tar xf "clang+llvm-21.1.2-x86_64-pc-windows-msvc.tar"
+
+# Cleam up clang download & remove unnecessary files.
+cd /tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc
+rm -Rf libexec
+rm -Rf share
+mv bin bin-full
+mkdir bin
+cd bin
+cp ../bin-full/*.dll .
+cp ../bin-full/clang-cl.exe .
+cp ../bin-full/lld-link.exe .
+cd ..
+rm -Rf bin-full
+popd
+
+
+export CC=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
+export CXX=/tmp/clang-download/clang+llvm-21.1.2-x86_64-pc-windows-msvc/bin/clang-cl.exe
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
@@ -49,9 +80,11 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D CMAKE_CXX_FLAGS="-Wno-c++98-compat -Wno-c++14-compat" \
       -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
 start-group "ninja"
+
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
