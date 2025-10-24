@@ -1493,24 +1493,23 @@ def int_eh_sjlj_setup_dispatch  : Intrinsic<[], []>;
 //
 def int_var_annotation : DefaultAttrsIntrinsic<
     [], [llvm_anyptr_ty, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
-    [IntrInaccessibleMemOnly], "llvm.var.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 def int_ptr_annotation : DefaultAttrsIntrinsic<
     [llvm_anyptr_ty],
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
-    [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 def int_annotation : DefaultAttrsIntrinsic<
     [llvm_anyint_ty],
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty],
-    [IntrInaccessibleMemOnly], "llvm.annotation">;
+    [IntrInaccessibleMemOnly]>;
 
 // Annotates the current program point with metadata strings which are emitted
 // as CodeView debug info records. This is expensive, as it disables inlining
 // and is modelled as having side effects.
 def int_codeview_annotation : DefaultAttrsIntrinsic<[], [llvm_metadata_ty],
-                                        [IntrInaccessibleMemOnly, IntrNoDuplicate],
-                                        "llvm.codeview.annotation">;
+                                        [IntrInaccessibleMemOnly, IntrNoDuplicate]>;
 
 //===------------------------ Trampoline Intrinsics -----------------------===//
 //
@@ -1887,8 +1886,7 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 
 // Intrinsic to detect whether its argument is a constant.
 def int_is_constant : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty],
-                                [IntrNoMem, IntrConvergent],
-                                "llvm.is.constant">;
+                                [IntrNoMem, IntrConvergent]>;
 
 // Introduce a use of the argument without generating any code.
 def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],

@@ -298,7 +298,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC,
                      {MVT::i1, MVT::i32, MVT::i64, MVT::f32, MVT::f64}, Expand);
 
-  setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
+  setOperationAction({ISD::ABS, ISD::UADDO, ISD::USUBO}, MVT::i32, Legal);
 
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i32, Legal);
 
