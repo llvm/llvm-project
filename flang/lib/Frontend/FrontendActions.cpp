@@ -647,6 +647,49 @@ void CodeGenAction::lowerHLFIRToFIR() {
   }
 }
 
+void CodeGenAction::lowerFIRToMLIR() {
+  assert(mlirModule && "The MLIR module has not been generated yet.");
+
+  CompilerInstance &ci = this->getInstance();
+  CompilerInvocation &invoc = ci.getInvocation();
+  const CodeGenOptions &opts = invoc.getCodeGenOpts();
+  const auto &mathOpts = invoc.getLoweringOpts().getMathOptions();
+  llvm::OptimizationLevel level = mapToLevel(opts);
+  mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
+  mlir::TimingScope &timingScopeRoot = ci.getTimingScopeRoot();
+
+  fir::support::loadDialects(*mlirCtx);
+  mlir::DialectRegistry registry;
+  fir::support::registerNonCodegenDialects(registry);
+  fir::support::addFIRExtensions(registry);
+  mlirCtx->appendDialectRegistry(registry);
+  fir::support::registerLLVMTranslation(*mlirCtx);
+
+  // Set-up the MLIR pass manager
+  mlir::PassManager pm((*mlirModule)->getName(),
+                       mlir::OpPassManager::Nesting::Implicit);
+
+  pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
+  pm.enableVerifier(/*verifyPasses=*/true);
+
+  MLIRToLLVMPassPipelineConfig config(level, opts, mathOpts);
+  fir::registerDefaultInlinerPass(config);
+
+  // Create the pass pipeline
+  fir::createDefaultFIROptimizerPassPipeline(pm, config);
+  fir::createDefaultFIRCodeGenPassPipeline(pm, config);
+  (void)mlir::applyPassManagerCLOptions(pm);
+
+  mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
+      mlir::TimingIdentifier::get(timingIdMLIRPasses, timingMgr));
+  pm.enableTiming(timingScopeMLIRPasses);
+  if (!mlir::succeeded(pm.run(*mlirModule))) {
+    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
+        clang::DiagnosticsEngine::Error, "Lowering to FIR failed");
+    ci.getDiagnostics().Report(diagID);
+  }
+}
+
 static std::optional<std::pair<unsigned, unsigned>>
 getAArch64VScaleRange(CompilerInstance &ci) {
   const auto &langOpts = ci.getInvocation().getLangOpts();
@@ -858,6 +901,7 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
   case BackendActionTy::Backend_EmitFIR:
+  case BackendActionTy::Backend_EmitMLIR:
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");
@@ -1325,9 +1369,13 @@ void CodeGenAction::executeAction() {
     }
   }
 
-  if (action == BackendActionTy::Backend_EmitFIR) {
+  if (action == BackendActionTy::Backend_EmitFIR ||
+      action == BackendActionTy::Backend_EmitMLIR) {
     if (loweringOpts.getLowerToHighLevelFIR()) {
       lowerHLFIRToFIR();
+    }
+    if (action == BackendActionTy::Backend_EmitMLIR) {
+      lowerFIRToMLIR();
     }
     mlirModule->print(ci.isOutputStreamNull() ? *os : ci.getOutputStream());
     return;
