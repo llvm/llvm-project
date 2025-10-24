@@ -33,9 +33,10 @@ void RedundantTypenameCheck::registerMatchers(MatchFinder *Finder) {
           varDecl(hasDeclContext(anyOf(namespaceDecl(), translationUnitDecl())),
                   unless(parmVarDecl())),
           parmVarDecl(hasParent(expr(requiresExpr()))),
-          parmVarDecl(hasParent(typeLoc(hasParent(
-              decl(anyOf(cxxMethodDecl(), hasParent(friendDecl()),
-                         functionDecl(has(nestedNameSpecifier())))))))),
+          parmVarDecl(hasParent(typeLoc(hasParent(decl(
+              anyOf(cxxMethodDecl(), hasParent(friendDecl()),
+                    functionDecl(has(nestedNameSpecifier())),
+                    cxxDeductionGuideDecl(hasDeclContext(recordDecl())))))))),
           // Match return types.
           functionDecl(unless(cxxConversionDecl()))))),
       hasParent(expr(anyOf(cxxNamedCastExpr(), cxxNewExpr()))));

@@ -227,6 +227,17 @@ public:
   // CHECK-MESSAGES-20: :[[@LINE-1]]:17: warning: redundant 'typename' [readability-redundant-typename]
   // CHECK-FIXES-20: friend void k(T::R) {}
 
+  template <typename>
+  struct Nested {};
+
+#if __cplusplus >= 201703L
+  template <typename U>
+  Nested(U, const typename U::R *, typename U::R = typename U::R()) -> Nested<typename U::R>;
+  // CHECK-MESSAGES-20: :[[@LINE-1]]:19: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-MESSAGES-20: :[[@LINE-2]]:36: warning: redundant 'typename' [readability-redundant-typename]
+  // CHECK-FIXES-20: Nested(U, const U::R *, U::R = typename U::R()) -> Nested<typename U::R>;
+#endif
+
   friend struct T::R;
   using typename T::R;
   enum E1 : typename T::R {};
@@ -244,9 +255,7 @@ public:
 template <typename T, typename U = typename T::R>
 // CHECK-MESSAGES-20: :[[@LINE-1]]:36: warning: redundant 'typename' [readability-redundant-typename]
 // CHECK-FIXES-20: template <typename T, typename U = T::R>
-A(T, typename T::R) -> A<typename T::R, typename NotDependent::R>;
-// CHECK-MESSAGES-17: :[[@LINE-1]]:41: warning: redundant 'typename' [readability-redundant-typename]
-// CHECK-FIXES-17: A(T, typename T::R) -> A<typename T::R, NotDependent::R>;
+A(T, typename T::R) -> A<typename T::R>;
 
 #endif
 
