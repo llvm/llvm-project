@@ -113,7 +113,7 @@ are grouped into two flows:
 
 The passes to generate DXIL IR follow the flow:
 
-  DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata -> DXILValidateMetadata
+  DXILOpLowering -> DXILPrepare -> DXILTranslateMetadata
 
 Each of these passes has a defined responsibility:
 
@@ -122,8 +122,6 @@ Each of these passes has a defined responsibility:
    namely removing attributes, and inserting bitcasts to allow typed pointers
    to be inserted.
 #. DXILTranslateMetadata transforms and emits all recognized DXIL Metadata.
-#. DXILValidateMetadata validates that all emitted DXIL metadata structures
-   conform to DXIL validation.
 
 The passes to encode DXIL to binary in the DX Container follow the flow:
 
