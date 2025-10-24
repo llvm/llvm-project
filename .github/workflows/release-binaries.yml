@@ -295,7 +295,6 @@ jobs:
         VCPKG_CMAKE_CONFIGURE_OPTIONS: "-DBUILD_SHARED_LIBS=OFF"
       run: |
         vcpkg install libxml2:x64-windows-static
-        Get-Content C:\vcpkg\packages\libxml2_x65-windows-static/lib/libxml2.lib -Encoding Byte -TotalCount 100 | Format-Hex
 
     - name: Configure
       id: build
