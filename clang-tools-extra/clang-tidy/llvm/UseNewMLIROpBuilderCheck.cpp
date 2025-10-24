@@ -18,12 +18,11 @@
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang::tidy::llvm_check {
-namespace {
 
 using namespace ::clang::ast_matchers;
 using namespace ::clang::transformer;
 
-EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
+static EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
   // This is using an EditGenerator rather than ASTEdit as we want to warn even
   // if in macro.
   return [Call = std::move(Call),
@@ -119,7 +118,7 @@ EditGenerator rewrite(RangeSelector Call, RangeSelector Builder) {
   };
 }
 
-RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
+static RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
   Stencil Message = cat("use 'OpType::create(builder, ...)' instead of "
                         "'builder.create<OpType>(...)'");
   // Match a create call on an OpBuilder.
@@ -137,7 +136,6 @@ RewriteRuleWith<std::string> useNewMlirOpBuilderCheckRule() {
                 rewrite(node("call"), node("builder")), Message),
        makeRule(Base, noopEdit(node("call")), Message)});
 }
-} // namespace
 
 UseNewMlirOpBuilderCheck::UseNewMlirOpBuilderCheck(StringRef Name,
                                                    ClangTidyContext *Context)
