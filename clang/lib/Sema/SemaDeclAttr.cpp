@@ -3695,6 +3695,24 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) InitPriorityAttr(S.Context, AL, prioritynum));
 }
 
+static void handleFlattenDeepAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  uint32_t maxDepth;
+  if (!S.checkUInt32Argument(AL, E, maxDepth)) {
+    AL.setInvalid();
+    return;
+  }
+
+  if (maxDepth == 0) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
+        << AL << E->getSourceRange();
+    AL.setInvalid();
+    return;
+  }
+
+  D->addAttr(::new (S.Context) FlattenDeepAttr(S.Context, AL, maxDepth));
+}
+
 ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef NewUserDiagnostic) {
   if (const auto *EA = D->getAttr<ErrorAttr>()) {
@@ -7235,6 +7253,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Format:
     handleFormatAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_FlattenDeep:
+    handleFlattenDeepAttr(S, D, AL);
     break;
   case ParsedAttr::AT_FormatMatches:
     handleFormatMatchesAttr(S, D, AL);
