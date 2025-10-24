@@ -305,6 +305,7 @@ add_header_macro(
   DEPENDS
     .llvm-libc-macros.generic_error_number_macros
     .llvm-libc-macros.error_number_macros
+    .llvm-libc-types.errno_t
 )
 
 add_header_macro(
