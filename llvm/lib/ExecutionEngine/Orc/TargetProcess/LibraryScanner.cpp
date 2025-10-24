@@ -821,7 +821,8 @@ Expected<LibraryDepsInfo> parseMachODeps(const object::MachOObjectFile &Obj) {
     }
     }
   }
-  return Libdeps;
+
+  return Expected<LibraryDepsInfo>(std::move(Libdeps));
 }
 
 template <class ELFT>
@@ -899,7 +900,8 @@ Expected<LibraryDepsInfo> parseELF(const object::ELFFile<ELFT> &Elf) {
       break;
     }
   }
-  return Deps;
+
+  return Expected<LibraryDepsInfo>(std::move(Deps));
 }
 
 Expected<LibraryDepsInfo> parseELFDeps(const object::ELFObjectFileBase &Obj) {
