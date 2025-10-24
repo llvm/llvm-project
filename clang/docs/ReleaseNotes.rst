@@ -387,6 +387,9 @@ Improvements to Clang's diagnostics
   that were previously incorrectly accepted in case of other irrelevant
   conditions are now consistently diagnosed, identical to C++ mode.
 
+- Clang now diagnoses missing format attributes for non-template functions
+  and class/struct/union members. (#GH60718)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
