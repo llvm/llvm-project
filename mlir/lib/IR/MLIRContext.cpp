@@ -923,6 +923,20 @@ Attribute
 OperationName::UnregisteredOpModel::getPropertiesAsAttr(Operation *op) {
   return *op->getPropertiesStorage().as<Attribute *>();
 }
+LogicalResult OperationName::UnregisteredOpModel::setPropertyFromAttr(
+    OperationName opName, OpaqueProperties properties, StringRef name,
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
+  assert(false &&
+         "`setPropertyFromAttr` doesn't work with unregistered operations.");
+  return failure();
+}
+FailureOr<Attribute>
+OperationName::UnregisteredOpModel::getPropertyAsAttr(Operation *op,
+                                                      StringRef name) {
+  assert(false &&
+         "`getPropertyAsAttr` doesn't work with unregistered operations.");
+  return failure();
+}
 void OperationName::UnregisteredOpModel::copyProperties(OpaqueProperties lhs,
                                                         OpaqueProperties rhs) {
   *lhs.as<Attribute *>() = *rhs.as<Attribute *>();
