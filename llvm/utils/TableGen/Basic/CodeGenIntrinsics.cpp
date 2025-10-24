@@ -452,8 +452,23 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     if (ArgNo < 1)
       PrintFatalError(R->getLoc(),
                       "ArgInfo requires ArgNo >= 1 (0 is return value)");
-    StringRef ArgName = R->getValueAsString("ArgName");
-    StringRef FuncName = R->getValueAsString("FunctionName");
+    const ListInit *Properties = R->getValueAsListInit("Properties");
+    StringRef ArgName;
+    StringRef FuncName;
+    
+    for (const Init *PropInit : Properties->getElements()) {
+      if (const DefInit *PropDef = dyn_cast<DefInit>(PropInit)) {
+        const Record *PropRec = PropDef->getDef();
+        
+        if (PropRec->isSubClassOf("ArgName")) 
+          ArgName = PropRec->getValueAsString("Name");
+        else if (PropRec->isSubClassOf("ImmArgPrinter")) 
+          FuncName = PropRec->getValueAsString("FuncName");
+        else 
+          PrintFatalError(PropRec->getLoc(),
+                          "Unknown ArgProperty type: " + PropRec->getName());
+      }
+    }
     addPrettyPrintFunction(ArgNo - 1, ArgName, FuncName);
   } else {
     llvm_unreachable("Unknown property!");
