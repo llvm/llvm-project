@@ -3892,6 +3892,10 @@ static const struct Extension {
     {"gcie", {AArch64::FeatureGCIE}},
     {"sme2p3", {AArch64::FeatureSME2p3}},
     {"sve2p3", {AArch64::FeatureSVE2p3}},
+    {"sve-b16mm", {AArch64::FeatureSVE_B16MM}},
+    {"f16mm", {AArch64::FeatureF16MM}},
+    {"f16f32dot", {AArch64::FeatureF16F32DOT}},
+    {"f16f32mm", {AArch64::FeatureF16F32MM}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4879,6 +4883,13 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
   Operands.push_back(AArch64Operand::CreateVectorList(
       FirstReg, Count, Stride, NumElements, ElementWidth, VectorKind, S,
       getLoc(), getContext()));
+
+  if (getTok().is(AsmToken::LBrac)) {
+    ParseStatus Res = tryParseVectorIndex(Operands);
+    if (Res.isFailure())
+      return ParseStatus::Failure;
+    return ParseStatus::Success;
+  }
 
   return ParseStatus::Success;
 }
