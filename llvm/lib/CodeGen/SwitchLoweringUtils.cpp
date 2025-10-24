@@ -198,7 +198,6 @@ bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
   assert(First <= Last);
 
   auto Prob = BranchProbability::getZero();
-  unsigned NumCmps = 0;
   std::vector<MachineBasicBlock*> Table;
   DenseMap<MachineBasicBlock*, BranchProbability> JTProbs;
 
