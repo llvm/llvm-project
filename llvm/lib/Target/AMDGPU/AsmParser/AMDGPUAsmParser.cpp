@@ -2408,8 +2408,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
+      // If the symbol INV2PI is used as the operand, the value is set to
+      // 0x3fc45f306dc9c882 in parseImm().
       if (Lit == LitModifier::None && AsmParser->hasInv2PiInlineImm() &&
-          Literal == 0x3fc45f306725feed) {
+          (Literal == 0x3fc45f306725feed || Literal == 0x3fc45f306dc9c882)) {
         // This is the 1/(2*pi) which is going to be truncated to bf16 with the
         // loss of precision. The constant represents ideomatic fp32 value of
         // 1/(2*pi) = 0.15915494 since bf16 is in fact fp32 with cleared low 16
@@ -3227,6 +3229,10 @@ AMDGPUAsmParser::parseRegister(bool RestoreOnFailure) {
   return AMDGPUOperand::CreateReg(this, Reg, StartLoc, EndLoc);
 }
 
+static bool isInv2PiToken(const AsmToken &Tok) {
+  return Tok.is(AsmToken::Identifier) && Tok.getIdentifier() == "INV2PI";
+}
+
 ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
                                       bool HasSP3AbsModifier, LitModifier Lit) {
   // TODO: add syntactic sugar for 1/(2*PI)
@@ -3253,11 +3259,12 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
 
   const auto& Tok = getToken();
   const auto& NextTok = peekToken();
-  bool IsReal = Tok.is(AsmToken::Real);
+  bool IsReal = Tok.is(AsmToken::Real) || isInv2PiToken(Tok);
   SMLoc S = getLoc();
   bool Negate = false;
 
-  if (!IsReal && Tok.is(AsmToken::Minus) && NextTok.is(AsmToken::Real)) {
+  if (!IsReal && Tok.is(AsmToken::Minus) &&
+      (NextTok.is(AsmToken::Real) || isInv2PiToken(NextTok))) {
     lex();
     IsReal = true;
     Negate = true;
@@ -3272,6 +3279,10 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
     // optional sign.
 
     StringRef Num = getTokenStr();
+    if (Num == "INV2PI")
+      // Setting the imm to this for INV2PI works for all types except bf16.
+      // In addLiteralImmOperand() we specifically check for this.
+      Num = "0.15915494309189532";
     lex();
 
     APFloat RealVal(APFloat::IEEEdouble());
