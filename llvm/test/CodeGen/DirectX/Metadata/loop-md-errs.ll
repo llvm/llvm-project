@@ -1,11 +1,11 @@
 ; RUN: split-file %s %t
-; RUN: not opt -S --dxil-validate-metadata %t/args.ll 2>&1 | FileCheck %t/args.ll
-; RUN: not opt -S --dxil-validate-metadata %t/not-ref.ll 2>&1 | FileCheck %t/not-ref.ll
-; RUN: not opt -S --dxil-validate-metadata %t/not-md.ll 2>&1 | FileCheck %t/not-md.ll
-; RUN: not opt -S --dxil-validate-metadata %t/not-str.ll 2>&1 | FileCheck %t/not-str.ll
-; RUN: not opt -S --dxil-validate-metadata %t/bad-count.ll 2>&1 | FileCheck %t/bad-count.ll
-; RUN: not opt -S --dxil-validate-metadata %t/invalid-disable.ll 2>&1 | FileCheck %t/invalid-disable.ll
-; RUN: not opt -S --dxil-validate-metadata %t/invalid-full.ll 2>&1 | FileCheck %t/invalid-full.ll
+; RUN: not opt -S --dxil-translate-metadata %t/args.ll 2>&1 | FileCheck %t/args.ll
+; RUN: not opt -S --dxil-translate-metadata %t/not-ref.ll 2>&1 | FileCheck %t/not-ref.ll
+; RUN: not opt -S --dxil-translate-metadata %t/not-md.ll 2>&1 | FileCheck %t/not-md.ll
+; RUN: not opt -S --dxil-translate-metadata %t/not-str.ll 2>&1 | FileCheck %t/not-str.ll
+; RUN: not opt -S --dxil-translate-metadata %t/bad-count.ll 2>&1 | FileCheck %t/bad-count.ll
+; RUN: not opt -S --dxil-translate-metadata %t/invalid-disable.ll 2>&1 | FileCheck %t/invalid-disable.ll
+; RUN: not opt -S --dxil-translate-metadata %t/invalid-full.ll 2>&1 | FileCheck %t/invalid-full.ll
 
 ; Test that loop metadata is validated as with the DXIL validator
 
