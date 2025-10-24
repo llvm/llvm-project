@@ -454,8 +454,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cgm.getTypes().arrangeGlobalDeclaration(gd));
     const auto *nd = cast<NamedDecl>(gd.getDecl());
     cir::FuncOp fnOp =
-        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false,
-                                   /*DontDefer=*/false);
+        cgm.getOrCreateCIRFunction(nd->getName(), ty, gd, /*ForVTable=*/false);
     fnOp.setBuiltin(true);
     return emitCall(e->getCallee()->getType(), CIRGenCallee::forDirect(fnOp), e,
                     returnValue);

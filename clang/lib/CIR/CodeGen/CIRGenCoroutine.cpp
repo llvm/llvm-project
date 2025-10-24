@@ -69,15 +69,14 @@ cir::CallOp CIRGenFunction::emitCoroIDBuiltinCall(mlir::Location loc,
 
 cir::CallOp CIRGenFunction::emitCoroAllocBuiltinCall(mlir::Location loc) {
   cir::BoolType boolTy = builder.getBoolTy();
-  cir::IntType int32Ty = builder.getUInt32Ty();
 
   mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroAlloc);
 
   cir::FuncOp fnOp;
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(loc, cgm.builtinCoroAlloc,
-                                        cir::FuncType::get({int32Ty}, boolTy),
-                                        /*FD=*/nullptr);
+                                        cir::FuncType::get({UInt32Ty}, boolTy),
+                                        /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
     fnOp = cast<cir::FuncOp>(builtin);
@@ -90,15 +89,14 @@ cir::CallOp CIRGenFunction::emitCoroAllocBuiltinCall(mlir::Location loc) {
 cir::CallOp
 CIRGenFunction::emitCoroBeginBuiltinCall(mlir::Location loc,
                                          mlir::Value coroframeAddr) {
-  cir::IntType int32Ty = builder.getUInt32Ty();
   mlir::Operation *builtin = cgm.getGlobalValue(cgm.builtinCoroBegin);
 
   cir::FuncOp fnOp;
   if (!builtin) {
     fnOp = cgm.createCIRBuiltinFunction(
         loc, cgm.builtinCoroBegin,
-        cir::FuncType::get({int32Ty, VoidPtrTy}, VoidPtrTy),
-        /*FD=*/nullptr);
+        cir::FuncType::get({UInt32Ty, VoidPtrTy}, VoidPtrTy),
+        /*fd=*/nullptr);
     assert(fnOp && "should always succeed");
   } else {
     fnOp = cast<cir::FuncOp>(builtin);
@@ -149,7 +147,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
   if (s.getReturnStmtOnAllocFailure())
-    cgm.errorNYI("NYI");
+    cgm.errorNYI("handle coroutine return alloc failure");
 
   assert(!cir::MissingFeatures::generateDebugInfo());
   assert(!cir::MissingFeatures::emitBodyAndFallthrough());
