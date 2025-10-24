@@ -70,10 +70,23 @@ typedef struct kmp_task {
   int32_t part_id;
 } kmp_task_t;
 
-int32_t __kmpc_global_thread_num(void *) __attribute__((weak));
-bool __kmpc_omp_has_task_team(int32_t gtid) __attribute__((weak));
-void **__kmpc_omp_get_target_async_handle_ptr(int32_t gtid)
-    __attribute__((weak));
+// Implemented in libomp, they are called from within __tgt_* functions.
+int32_t __kmpc_global_thread_num(void *);
+bool __kmpc_omp_has_task_team(int32_t gtid);
+void **__kmpc_omp_get_target_async_handle_ptr(int32_t gtid);
+int __kmpc_get_target_offload(void);
+kmp_task_t *
+__kmpc_omp_target_task_alloc(ident_t *loc_ref, int32_t gtid, int32_t flags,
+                             size_t sizeof_kmp_task_t, size_t sizeof_shareds,
+                             kmp_routine_entry_t task_entry, int64_t device_id);
+int32_t __kmpc_omp_task_with_deps(ident_t *loc_ref, int32_t gtid,
+                                  kmp_task_t *new_task, int32_t ndeps,
+                                  kmp_depend_info_t *dep_list,
+                                  int32_t ndeps_noalias,
+                                  kmp_depend_info_t *noalias_dep_list);
+void __kmpc_omp_wait_deps(ident_t *loc_ref, int32_t gtid, int32_t ndeps,
+                          kmp_depend_info_t *dep_list, int32_t ndeps_noalias,
+                          kmp_depend_info_t *noalias_dep_list);
 
 /**
  * The argument set that is passed from asynchronous memory copy to block
