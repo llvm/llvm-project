@@ -1705,7 +1705,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // a 4GB boundary. llvm::MachO::section_64 have only 32 bit file offsets
     // for the file offset of the section contents, so we need to track and
     // sections that overflow and adjust the offsets accordingly.
-    const uint64_t section_file_offset = sect64.offset + section_offset_adjust;
+    const uint64_t section_file_offset = (uint64_t)sect64.offset + section_offset_adjust;
     const uint64_t end_section_offset = (uint64_t)sect64.offset + sect64.size;
     if (end_section_offset >= UINT32_MAX)
       section_offset_adjust += end_section_offset & 0xFFFFFFFF00000000ull;
