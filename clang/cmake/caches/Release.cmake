@@ -37,6 +37,8 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set_instrument_and_final_stage_var(LLDB_RELOCATABLE_PYTHON "1" STRING)
   set_instrument_and_final_stage_var(LLDB_EMBED_PYTHON_HOME "OFF" BOOL)
   set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "FORCE_ON" STRING)
+  # This is required in order to statically link LIBXML2
+  set_instrument_and_final_stage_var(LIBXML2_DEFINITIONS "-DLIBXML_STATIC" STRING)
   set_instrument_and_final_stage_var(LLDB_ENABLE_LIBXML2 "OFF" BOOL)
   set_instrument_and_final_stage_var(CLANG_ENABLE_LIBXML2 "OFF" BOOL)
   set_instrument_and_final_stage_var(LLVM_ENABLE_RPMALLOC "ON" BOOL)
