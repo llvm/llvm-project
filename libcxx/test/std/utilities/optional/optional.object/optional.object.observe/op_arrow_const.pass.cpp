@@ -70,7 +70,7 @@ int main(int, char**)
     {
       static constexpr Z z{};
       constexpr optional<const Z&> opt(z);
-      static_assert(opt->test() == 1, "");
+      static_assert(opt->test() == 1);
     }
 #endif
 
