@@ -12,7 +12,7 @@
 
 // <__hash_table>
 
-// size_t __next_prime(size_t n);
+// size_t __get_next_prime(size_t n);
 
 // If n == 0, return 0, else return the lowest prime greater than or equal to n
 
@@ -36,9 +36,9 @@ bool is_prime(std::size_t n) {
 }
 
 int main(int, char**) {
-  assert(std::__next_prime(0) == 0);
+  assert(std::__get_next_prime(0) == 0);
   for (std::size_t n = 1; n <= 100000; ++n) {
-    std::size_t p = std::__next_prime(n);
+    std::size_t p = std::__get_next_prime(n);
     assert(p >= n);
     for (std::size_t i = n; i < p; ++i)
       assert(!is_prime(i));
