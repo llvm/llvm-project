@@ -304,14 +304,14 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
   return mlir::success();
 }
 
-const VarDecl *getLValueDecl(const Expr *E) {
+const VarDecl *getLValueDecl(const Expr *e) {
   // We are going to assume that after stripping implicit casts, that the LValue
   // is just a DRE around the var-decl.
 
-  E = E->IgnoreImpCasts();
+  e = e->IgnoreImpCasts();
 
-  const auto *DRE = cast<DeclRefExpr>(E);
-  return cast<VarDecl>(DRE->getDecl());
+  const auto *dre = cast<DeclRefExpr>(E);
+  return cast<VarDecl>(dre->getDecl());
 }
 
 mlir::LogicalResult
@@ -370,11 +370,11 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
                        s.clauses());
     mlir::LogicalResult res = mlir::success();
     {
-      mlir::Type argTy = cast<cir::PointerType>(x.getType()).getPointee();
       mlir::OpBuilder::InsertionGuard guardCase(builder);
+      mlir::Type argTy = cast<cir::PointerType>(x.getType()).getPointee();
       std::array<mlir::Type, 1> recipeType{argTy};
       std::array<mlir::Location, 1> recipeLoc{start};
-      auto *recipeBlock = builder.createBlock(
+      mlir::Block *recipeBlock = builder.createBlock(
           &op.getRegion(), op.getRegion().end(), recipeType, recipeLoc);
       builder.setInsertionPointToEnd(recipeBlock);
 
