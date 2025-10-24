@@ -63,6 +63,19 @@ constexpr int test_address_of_incomplete_array_type() { // both-error {{never pr
 static_assert(test_address_of_incomplete_array_type() == 1234, ""); // both-error {{constant}} \
                                                                     // both-note {{in call}}
 
+namespace LocalExternRedecl {
+  constexpr int externRedecl1() {
+    extern int arr[];
+    return 0;
+  }
+  constexpr int externRedecl2() { // both-error {{never produces a constant expression}}
+    extern int arr[];
+    __builtin_memmove(&arr, &arr, 4 * sizeof(arr[0])); // both-note 2{{incomplete type}}
+    return 1234;
+  }
+  static_assert(externRedecl2() == 1234); // both-error {{not an integral constant expression}} \
+                                          // both-note {{in call to}}
+}
 
   struct NonTrivial {
     constexpr NonTrivial() : n(0) {}
@@ -454,6 +467,7 @@ namespace SourceLocation {
 }
 
 #define BITSIZE(x) (sizeof(x) * 8)
+constexpr bool __attribute__((ext_vector_type(4))) v4b{};
 namespace popcount {
   static_assert(__builtin_popcount(~0u) == __CHAR_BIT__ * sizeof(unsigned int), "");
   static_assert(__builtin_popcount(0) == 0, "");
@@ -471,6 +485,7 @@ namespace popcount {
   static_assert(__builtin_popcountg(0ul) == 0, "");
   static_assert(__builtin_popcountg(~0ull) == __CHAR_BIT__ * sizeof(unsigned long long), "");
   static_assert(__builtin_popcountg(0ull) == 0, "");
+  static_assert(__builtin_popcountg(v4b) == 0, "");
 #ifdef __SIZEOF_INT128__
   static_assert(__builtin_popcountg(~(unsigned __int128)0) == __CHAR_BIT__ * sizeof(unsigned __int128), "");
   static_assert(__builtin_popcountg((unsigned __int128)0) == 0, "");
@@ -743,6 +758,7 @@ namespace clz {
   char clz62[__builtin_clzg((unsigned _BitInt(128))0xf) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
   char clz63[__builtin_clzg((unsigned _BitInt(128))0xf, 42) == BITSIZE(_BitInt(128)) - 4 ? 1 : -1];
 #endif
+  char clz64[__builtin_clzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace ctz {
@@ -813,6 +829,7 @@ namespace ctz {
   char ctz62[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1)) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
   char ctz63[__builtin_ctzg((unsigned _BitInt(128))1 << (BITSIZE(_BitInt(128)) - 1), 42) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
 #endif
+  char clz64[__builtin_ctzg(v4b, 0) == 0 ? 1 : -1];
 }
 
 namespace bswap {

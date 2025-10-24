@@ -92,206 +92,202 @@ static codegen::RegisterCodeGenFlags CGF;
 #define DEBUG_TYPE "lli"
 
 namespace {
+enum class JITKind { MCJIT, Orc, OrcLazy };
+enum class JITLinkerKind { Default, RuntimeDyld, JITLink };
+} // namespace
 
-  enum class JITKind { MCJIT, Orc, OrcLazy };
-  enum class JITLinkerKind { Default, RuntimeDyld, JITLink };
+static cl::opt<std::string> InputFile(cl::desc("<input bitcode>"),
+                                      cl::Positional, cl::init("-"));
 
-  cl::opt<std::string>
-  InputFile(cl::desc("<input bitcode>"), cl::Positional, cl::init("-"));
+static cl::list<std::string> InputArgv(cl::ConsumeAfter,
+                                       cl::desc("<program arguments>..."));
 
-  cl::list<std::string>
-  InputArgv(cl::ConsumeAfter, cl::desc("<program arguments>..."));
+static cl::opt<bool>
+    ForceInterpreter("force-interpreter",
+                     cl::desc("Force interpretation: disable JIT"),
+                     cl::init(false));
 
-  cl::opt<bool> ForceInterpreter("force-interpreter",
-                                 cl::desc("Force interpretation: disable JIT"),
-                                 cl::init(false));
+static cl::opt<JITKind>
+    UseJITKind("jit-kind", cl::desc("Choose underlying JIT kind."),
+               cl::init(JITKind::Orc),
+               cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
+                          clEnumValN(JITKind::Orc, "orc", "Orc JIT"),
+                          clEnumValN(JITKind::OrcLazy, "orc-lazy",
+                                     "Orc-based lazy JIT.")));
 
-  cl::opt<JITKind> UseJITKind(
-      "jit-kind", cl::desc("Choose underlying JIT kind."),
-      cl::init(JITKind::Orc),
-      cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
-                 clEnumValN(JITKind::Orc, "orc", "Orc JIT"),
-                 clEnumValN(JITKind::OrcLazy, "orc-lazy",
-                            "Orc-based lazy JIT.")));
+static cl::opt<JITLinkerKind> JITLinker(
+    "jit-linker", cl::desc("Choose the dynamic linker/loader."),
+    cl::init(JITLinkerKind::Default),
+    cl::values(clEnumValN(JITLinkerKind::Default, "default",
+                          "Default for platform and JIT-kind"),
+               clEnumValN(JITLinkerKind::RuntimeDyld, "rtdyld", "RuntimeDyld"),
+               clEnumValN(JITLinkerKind::JITLink, "jitlink",
+                          "Orc-specific linker")));
+static cl::opt<std::string>
+    OrcRuntime("orc-runtime", cl::desc("Use ORC runtime from given path"),
+               cl::init(""));
 
-  cl::opt<JITLinkerKind>
-      JITLinker("jit-linker", cl::desc("Choose the dynamic linker/loader."),
-                cl::init(JITLinkerKind::Default),
-                cl::values(clEnumValN(JITLinkerKind::Default, "default",
-                                      "Default for platform and JIT-kind"),
-                           clEnumValN(JITLinkerKind::RuntimeDyld, "rtdyld",
-                                      "RuntimeDyld"),
-                           clEnumValN(JITLinkerKind::JITLink, "jitlink",
-                                      "Orc-specific linker")));
-  cl::opt<std::string> OrcRuntime("orc-runtime",
-                                  cl::desc("Use ORC runtime from given path"),
-                                  cl::init(""));
+static cl::opt<unsigned>
+    LazyJITCompileThreads("compile-threads",
+                          cl::desc("Choose the number of compile threads "
+                                   "(jit-kind=orc-lazy only)"),
+                          cl::init(0));
 
-  cl::opt<unsigned>
-  LazyJITCompileThreads("compile-threads",
-                        cl::desc("Choose the number of compile threads "
-                                 "(jit-kind=orc-lazy only)"),
-                        cl::init(0));
+static cl::list<std::string>
+    ThreadEntryPoints("thread-entry",
+                      cl::desc("calls the given entry-point on a new thread "
+                               "(jit-kind=orc-lazy only)"));
 
-  cl::list<std::string>
-  ThreadEntryPoints("thread-entry",
-                    cl::desc("calls the given entry-point on a new thread "
-                             "(jit-kind=orc-lazy only)"));
-
-  cl::opt<bool> PerModuleLazy(
-      "per-module-lazy",
-      cl::desc("Performs lazy compilation on whole module boundaries "
-               "rather than individual functions"),
-      cl::init(false));
-
-  cl::list<std::string>
-      JITDylibs("jd",
-                cl::desc("Specifies the JITDylib to be used for any subsequent "
-                         "-extra-module arguments."));
-
-  cl::list<std::string>
-      Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"));
-
-  // The MCJIT supports building for a target address space separate from
-  // the JIT compilation process. Use a forked process and a copying
-  // memory manager with IPC to execute using this functionality.
-  cl::opt<bool> RemoteMCJIT("remote-mcjit",
-    cl::desc("Execute MCJIT'ed code in a separate process."),
+static cl::opt<bool> PerModuleLazy(
+    "per-module-lazy",
+    cl::desc("Performs lazy compilation on whole module boundaries "
+             "rather than individual functions"),
     cl::init(false));
 
-  // Manually specify the child process for remote execution. This overrides
-  // the simulated remote execution that allocates address space for child
-  // execution. The child process will be executed and will communicate with
-  // lli via stdin/stdout pipes.
-  cl::opt<std::string>
-  ChildExecPath("mcjit-remote-process",
-                cl::desc("Specify the filename of the process to launch "
-                         "for remote MCJIT execution.  If none is specified,"
-                         "\n\tremote execution will be simulated in-process."),
-                cl::value_desc("filename"), cl::init(""));
+static cl::list<std::string>
+    JITDylibs("jd",
+              cl::desc("Specifies the JITDylib to be used for any subsequent "
+                       "-extra-module arguments."));
 
-  // Determine optimization level.
-  cl::opt<char> OptLevel("O",
-                         cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
-                                  "(default = '-O2')"),
-                         cl::Prefix, cl::init('2'));
+static cl::list<std::string>
+    Dylibs("dlopen", cl::desc("Dynamic libraries to load before linking"));
 
-  cl::opt<std::string>
-  TargetTriple("mtriple", cl::desc("Override target triple for module"));
+// The MCJIT supports building for a target address space separate from
+// the JIT compilation process. Use a forked process and a copying
+// memory manager with IPC to execute using this functionality.
+static cl::opt<bool>
+    RemoteMCJIT("remote-mcjit",
+                cl::desc("Execute MCJIT'ed code in a separate process."),
+                cl::init(false));
 
-  cl::opt<std::string>
-  EntryFunc("entry-function",
-            cl::desc("Specify the entry function (default = 'main') "
-                     "of the executable"),
-            cl::value_desc("function"),
-            cl::init("main"));
+// Manually specify the child process for remote execution. This overrides
+// the simulated remote execution that allocates address space for child
+// execution. The child process will be executed and will communicate with
+// lli via stdin/stdout pipes.
+static cl::opt<std::string> ChildExecPath(
+    "mcjit-remote-process",
+    cl::desc("Specify the filename of the process to launch "
+             "for remote MCJIT execution.  If none is specified,"
+             "\n\tremote execution will be simulated in-process."),
+    cl::value_desc("filename"), cl::init(""));
 
-  cl::list<std::string>
-  ExtraModules("extra-module",
-         cl::desc("Extra modules to be loaded"),
-         cl::value_desc("input bitcode"));
+// Determine optimization level.
+static cl::opt<char>
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init('2'));
 
-  cl::list<std::string>
-  ExtraObjects("extra-object",
-         cl::desc("Extra object files to be loaded"),
-         cl::value_desc("input object"));
+static cl::opt<std::string>
+    TargetTriple("mtriple", cl::desc("Override target triple for module"));
 
-  cl::list<std::string>
-  ExtraArchives("extra-archive",
-         cl::desc("Extra archive files to be loaded"),
-         cl::value_desc("input archive"));
+static cl::opt<std::string>
+    EntryFunc("entry-function",
+              cl::desc("Specify the entry function (default = 'main') "
+                       "of the executable"),
+              cl::value_desc("function"), cl::init("main"));
 
-  cl::opt<bool>
-  EnableCacheManager("enable-cache-manager",
-        cl::desc("Use cache manager to save/load modules"),
-        cl::init(false));
+static cl::list<std::string>
+    ExtraModules("extra-module", cl::desc("Extra modules to be loaded"),
+                 cl::value_desc("input bitcode"));
 
-  cl::opt<std::string>
-  ObjectCacheDir("object-cache-dir",
-                  cl::desc("Directory to store cached object files "
-                           "(must be user writable)"),
-                  cl::init(""));
+static cl::list<std::string>
+    ExtraObjects("extra-object", cl::desc("Extra object files to be loaded"),
+                 cl::value_desc("input object"));
 
-  cl::opt<std::string>
-  FakeArgv0("fake-argv0",
-            cl::desc("Override the 'argv[0]' value passed into the executing"
-                     " program"), cl::value_desc("executable"));
+static cl::list<std::string>
+    ExtraArchives("extra-archive", cl::desc("Extra archive files to be loaded"),
+                  cl::value_desc("input archive"));
 
-  cl::opt<bool>
-  DisableCoreFiles("disable-core-files", cl::Hidden,
-                   cl::desc("Disable emission of core files if possible"));
+static cl::opt<bool>
+    EnableCacheManager("enable-cache-manager",
+                       cl::desc("Use cache manager to save/load modules"),
+                       cl::init(false));
 
-  cl::opt<bool>
-  NoLazyCompilation("disable-lazy-compilation",
-                  cl::desc("Disable JIT lazy compilation"),
-                  cl::init(false));
+static cl::opt<std::string>
+    ObjectCacheDir("object-cache-dir",
+                   cl::desc("Directory to store cached object files "
+                            "(must be user writable)"),
+                   cl::init(""));
 
-  cl::opt<bool>
-  GenerateSoftFloatCalls("soft-float",
-    cl::desc("Generate software floating point library calls"),
+static cl::opt<std::string>
+    FakeArgv0("fake-argv0",
+              cl::desc("Override the 'argv[0]' value passed into the executing"
+                       " program"),
+              cl::value_desc("executable"));
+
+static cl::opt<bool>
+    DisableCoreFiles("disable-core-files", cl::Hidden,
+                     cl::desc("Disable emission of core files if possible"));
+
+static cl::opt<bool> NoLazyCompilation("disable-lazy-compilation",
+                                       cl::desc("Disable JIT lazy compilation"),
+                                       cl::init(false));
+
+static cl::opt<bool> GenerateSoftFloatCalls(
+    "soft-float", cl::desc("Generate software floating point library calls"),
     cl::init(false));
 
-  cl::opt<bool> NoProcessSymbols(
-      "no-process-syms",
-      cl::desc("Do not resolve lli process symbols in JIT'd code"),
-      cl::init(false));
+static cl::opt<bool> NoProcessSymbols(
+    "no-process-syms",
+    cl::desc("Do not resolve lli process symbols in JIT'd code"),
+    cl::init(false));
 
-  enum class LLJITPlatform { Inactive, Auto, ExecutorNative, GenericIR };
+enum class LLJITPlatform { Inactive, Auto, ExecutorNative, GenericIR };
 
-  cl::opt<LLJITPlatform> Platform(
-      "lljit-platform", cl::desc("Platform to use with LLJIT"),
-      cl::init(LLJITPlatform::Auto),
-      cl::values(clEnumValN(LLJITPlatform::Auto, "Auto",
-                            "Like 'ExecutorNative' if ORC runtime "
-                            "provided, otherwise like 'GenericIR'"),
-                 clEnumValN(LLJITPlatform::ExecutorNative, "ExecutorNative",
-                            "Use the native platform for the executor."
-                            "Requires -orc-runtime"),
-                 clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
-                            "Use LLJITGenericIRPlatform"),
-                 clEnumValN(LLJITPlatform::Inactive, "Inactive",
-                            "Disable platform support explicitly")),
-      cl::Hidden);
+static cl::opt<LLJITPlatform> Platform(
+    "lljit-platform", cl::desc("Platform to use with LLJIT"),
+    cl::init(LLJITPlatform::Auto),
+    cl::values(clEnumValN(LLJITPlatform::Auto, "Auto",
+                          "Like 'ExecutorNative' if ORC runtime "
+                          "provided, otherwise like 'GenericIR'"),
+               clEnumValN(LLJITPlatform::ExecutorNative, "ExecutorNative",
+                          "Use the native platform for the executor."
+                          "Requires -orc-runtime"),
+               clEnumValN(LLJITPlatform::GenericIR, "GenericIR",
+                          "Use LLJITGenericIRPlatform"),
+               clEnumValN(LLJITPlatform::Inactive, "Inactive",
+                          "Disable platform support explicitly")),
+    cl::Hidden);
 
-  enum class DumpKind {
-    NoDump,
-    DumpFuncsToStdOut,
-    DumpModsToStdOut,
-    DumpModsToDisk,
-    DumpDebugDescriptor,
-    DumpDebugObjects,
-  };
+enum class DumpKind {
+  NoDump,
+  DumpFuncsToStdOut,
+  DumpModsToStdOut,
+  DumpModsToDisk,
+  DumpDebugDescriptor,
+  DumpDebugObjects,
+};
 
-  cl::opt<DumpKind> OrcDumpKind(
-      "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
-      cl::init(DumpKind::NoDump),
-      cl::values(
-          clEnumValN(DumpKind::NoDump, "no-dump", "Don't dump anything."),
-          clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
-                     "Dump function names to stdout."),
-          clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
-                     "Dump modules to stdout."),
-          clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
-                     "Dump modules to the current "
-                     "working directory. (WARNING: "
-                     "will overwrite existing files)."),
-          clEnumValN(DumpKind::DumpDebugDescriptor, "jit-debug-descriptor",
-                     "Dump __jit_debug_descriptor contents to stdout"),
-          clEnumValN(DumpKind::DumpDebugObjects, "jit-debug-objects",
-                     "Dump __jit_debug_descriptor in-memory debug "
-                     "objects as tool output")),
-      cl::Hidden);
+static cl::opt<DumpKind> OrcDumpKind(
+    "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
+    cl::init(DumpKind::NoDump),
+    cl::values(clEnumValN(DumpKind::NoDump, "no-dump", "Don't dump anything."),
+               clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
+                          "Dump function names to stdout."),
+               clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
+                          "Dump modules to stdout."),
+               clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
+                          "Dump modules to the current "
+                          "working directory. (WARNING: "
+                          "will overwrite existing files)."),
+               clEnumValN(DumpKind::DumpDebugDescriptor, "jit-debug-descriptor",
+                          "Dump __jit_debug_descriptor contents to stdout"),
+               clEnumValN(DumpKind::DumpDebugObjects, "jit-debug-objects",
+                          "Dump __jit_debug_descriptor in-memory debug "
+                          "objects as tool output")),
+    cl::Hidden);
 
-  ExitOnError ExitOnErr;
-}
+static ExitOnError ExitOnErr;
 
-LLVM_ATTRIBUTE_USED void linkComponents() {
+LLVM_ATTRIBUTE_USED static void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
          << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
+namespace {
 //===----------------------------------------------------------------------===//
 // Object cache
 //
@@ -367,6 +363,7 @@ private:
     return true;
   }
 };
+} // namespace
 
 // On Mingw and Cygwin, an external symbol named '__main' is called from the
 // generated 'main' function to allow static initialization.  To avoid linking
@@ -400,7 +397,7 @@ static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
   EE.addModule(std::move(M));
 }
 
-CodeGenOptLevel getOptLevel() {
+static CodeGenOptLevel getOptLevel() {
   if (auto Level = CodeGenOpt::parseLevel(OptLevel))
     return *Level;
   WithColor::error(errs(), "lli") << "invalid optimization level.\n";
@@ -412,10 +409,10 @@ CodeGenOptLevel getOptLevel() {
   exit(1);
 }
 
-Error loadDylibs();
-int runOrcJIT(const char *ProgName);
-void disallowOrcOptions();
-Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
+static Error loadDylibs();
+static int runOrcJIT(const char *ProgName);
+static void disallowOrcOptions();
+static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 
 //===----------------------------------------------------------------------===//
 // main Driver function
@@ -863,7 +860,7 @@ static std::function<void(MemoryBuffer &)> createObjDebugDumper() {
   llvm_unreachable("Unknown DumpKind");
 }
 
-Error loadDylibs() {
+static Error loadDylibs() {
   for (const auto &Dylib : Dylibs) {
     std::string ErrMsg;
     if (sys::DynamicLibrary::LoadLibraryPermanently(Dylib.c_str(), &ErrMsg))
@@ -875,7 +872,7 @@ Error loadDylibs() {
 
 static void exitOnLazyCallThroughFailure() { exit(1); }
 
-Expected<orc::ThreadSafeModule>
+static Expected<orc::ThreadSafeModule>
 loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   SMDiagnostic Err;
   auto M = TSCtx.withContextDo(
@@ -895,7 +892,7 @@ loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   return orc::ThreadSafeModule(std::move(M), std::move(TSCtx));
 }
 
-int mingw_noop_main(void) {
+static int mingw_noop_main(void) {
   // Cygwin and MinGW insert calls from the main function to the runtime
   // function __main. The __main function is responsible for setting up main's
   // environment (e.g. running static constructors), however this is not needed
@@ -912,7 +909,7 @@ int mingw_noop_main(void) {
 // Try to enable debugger support for the given instance.
 // This alway returns success, but prints a warning if it's not able to enable
 // debugger support.
-Error tryEnableDebugSupport(orc::LLJIT &J) {
+static Error tryEnableDebugSupport(orc::LLJIT &J) {
   if (auto Err = enableDebuggerSupport(J)) {
     [[maybe_unused]] std::string ErrMsg = toString(std::move(Err));
     LLVM_DEBUG(dbgs() << "lli: " << ErrMsg << "\n");
@@ -920,7 +917,7 @@ Error tryEnableDebugSupport(orc::LLJIT &J) {
   return Error::success();
 }
 
-int runOrcJIT(const char *ProgName) {
+static int runOrcJIT(const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
@@ -1187,7 +1184,7 @@ int runOrcJIT(const char *ProgName) {
   return Result;
 }
 
-void disallowOrcOptions() {
+static void disallowOrcOptions() {
   // Make sure nobody used an orc-lazy specific option accidentally.
 
   if (LazyJITCompileThreads != 0) {
@@ -1206,7 +1203,7 @@ void disallowOrcOptions() {
   }
 }
 
-Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
+static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote() {
 #ifndef LLVM_ON_UNIX
   llvm_unreachable("launchRemote not supported on non-Unix platforms");
 #else

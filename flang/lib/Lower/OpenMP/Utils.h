@@ -114,16 +114,6 @@ struct OmpMapParentAndMemberData {
                                    semantics::SemanticsContext &semaCtx);
 };
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr,
-                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::ArrayAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false,
-                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
-
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
@@ -144,7 +134,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits);
+    mlir::omp::ClauseMapFlags mapTypeBits);
 
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
@@ -169,11 +159,23 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
-bool collectLoopRelatedInfo(
+int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, std::int64_t collapseValue,
+    // const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx);
 
 } // namespace omp
 } // namespace lower

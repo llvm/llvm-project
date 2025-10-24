@@ -73,9 +73,13 @@ int z;
   foo();
   #pragma omp target dyn_groupprivate(cgroup,cgroup: argc) // expected-error {{modifier 'cgroup' cannot be used along with modifier 'cgroup' in dyn_groupprivate}}
   foo();
-  #pragma omp target dyn_groupprivate(fallback,strict: argc) // expected-error {{modifier 'strict' cannot be used along with modifier 'fallback' in dyn_groupprivate}}
+  #pragma omp target dyn_groupprivate(fallback(default_mem),fallback(abort): argc) // expected-error {{modifier 'fallback(abort)' cannot be used along with modifier 'fallback(default_mem)' in dyn_groupprivate}}
   foo();
-  #pragma omp target dyn_groupprivate(strict,fallback: argc) // expected-error {{modifier 'fallback' cannot be used along with modifier 'strict' in dyn_groupprivate}}
+  #pragma omp target dyn_groupprivate(fallback(abort),fallback(null): argc) // expected-error {{modifier 'fallback(null)' cannot be used along with modifier 'fallback(abort)' in dyn_groupprivate}}
+  foo();
+  #pragma omp target dyn_groupprivate(fallback(cgroup): argc) // expected-error {{expected 'abort', 'null' or 'default_mem' in fallback modifier}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  foo();
+  #pragma omp target dyn_groupprivate(fallback(): argc) // expected-error {{expected 'abort', 'null' or 'default_mem' in fallback modifier}} expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   foo();
   #pragma omp target dyn_groupprivate(: argc) // expected-error {{expected ')'}} expected-error {{expected expression}} expected-note {{to match this '('}}
   foo();

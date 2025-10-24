@@ -728,11 +728,6 @@ public:
     return true;
   }
 
-  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
-    H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
-    return true;
-  }
-
   bool VisitFunctionDecl(FunctionDecl *D) {
     if (D->isOverloadedOperator()) {
       const auto AddOpDeclToken = [&](SourceLocation Loc) {
@@ -1087,11 +1082,12 @@ public:
     return true;
   }
 
-  bool VisitDependentTemplateSpecializationTypeLoc(
-      DependentTemplateSpecializationTypeLoc L) {
-    H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
-        .addModifier(HighlightingModifier::DependentName)
-        .addModifier(HighlightingModifier::ClassScope);
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc L) {
+    if (!L.getTypePtr()->getTemplateName().getAsTemplateDecl(
+            /*IgnoreDeduced=*/true))
+      H.addToken(L.getTemplateNameLoc(), HighlightingKind::Type)
+          .addModifier(HighlightingModifier::DependentName)
+          .addModifier(HighlightingModifier::ClassScope);
     H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
     return true;
   }

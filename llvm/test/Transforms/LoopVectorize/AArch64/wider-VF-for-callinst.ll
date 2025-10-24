@@ -7,7 +7,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-LABEL: @test_widen(
 ; WIDE-NEXT:  entry:
-; WIDE-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; WIDE-NEXT:    br label [[VECTOR_PH:%.*]]
 ; WIDE:       vector.ph:
 ; WIDE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; WIDE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
@@ -26,12 +26,11 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; WIDE-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; WIDE-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; WIDE:       middle.block:
-; WIDE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; WIDE-NEXT:    br i1 false, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH:%.*]]
 ; WIDE:       scalar.ph:
-; WIDE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; WIDE-NEXT:    br label [[FOR_BODY:%.*]]
 ; WIDE:       for.body:
-; WIDE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; WIDE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[N_VEC]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; WIDE-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[INDVARS_IV]]
 ; WIDE-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8
 ; WIDE-NEXT:    [[TRUNC:%.*]] = fptrunc double [[LOAD]] to float
@@ -46,7 +45,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ;
 ; NARROW-LABEL: @test_widen(
 ; NARROW-NEXT:  entry:
-; NARROW-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; NARROW-NEXT:    br label [[VECTOR_PH:%.*]]
 ; NARROW:       vector.ph:
 ; NARROW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NARROW:       vector.body:
@@ -55,8 +54,8 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; NARROW-NEXT:    [[TMP1:%.*]] = fptrunc <2 x double> [[WIDE_LOAD]] to <2 x float>
 ; NARROW-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i32 0
-; NARROW-NEXT:    [[TMP3:%.*]] = call float @foo(float [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; NARROW-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP1]], i32 1
+; NARROW-NEXT:    [[TMP3:%.*]] = call float @foo(float [[TMP2]]) #[[ATTR1:[0-9]+]]
 ; NARROW-NEXT:    [[TMP5:%.*]] = call float @foo(float [[TMP4]]) #[[ATTR1]]
 ; NARROW-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i32 0
 ; NARROW-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP5]], i32 1
@@ -66,12 +65,11 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #1 {
 ; NARROW-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; NARROW-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NARROW:       middle.block:
-; NARROW-NEXT:    br label [[SCALAR_PH]]
+; NARROW-NEXT:    br label [[SCALAR_PH:%.*]]
 ; NARROW:       scalar.ph:
-; NARROW-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; NARROW-NEXT:    br label [[FOR_BODY:%.*]]
 ; NARROW:       for.body:
-; NARROW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; NARROW-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1024, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; NARROW-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[B]], i64 [[INDVARS_IV]]
 ; NARROW-NEXT:    [[LOAD:%.*]] = load double, ptr [[GEP]], align 8
 ; NARROW-NEXT:    [[TRUNC:%.*]] = fptrunc double [[LOAD]] to float

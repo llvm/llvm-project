@@ -366,16 +366,33 @@ define i32 @icmp_ugt_constant_zero(i32 %a) nounwind {
 define i32 @icmp_ugt_constant_2047(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_ugt_constant_2047:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 2047
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    srli a0, a0, 11
+; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: icmp_ugt_constant_2047:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    li a1, 2047
-; RV32XQCILIA-NEXT:    sltu a0, a1, a0
+; RV32XQCILIA-NEXT:    srli a0, a0, 11
+; RV32XQCILIA-NEXT:    snez a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %1 = icmp ugt i32 %a, 2047
+  %2 = zext i1 %1 to i32
+  ret i32 %2
+}
+
+define i32 @icmp_ugt_constant_4095(i32 %a) nounwind {
+; RV32I-LABEL: icmp_ugt_constant_4095:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    srli a0, a0, 12
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    ret
+;
+; RV32XQCILIA-LABEL: icmp_ugt_constant_4095:
+; RV32XQCILIA:       # %bb.0:
+; RV32XQCILIA-NEXT:    srli a0, a0, 12
+; RV32XQCILIA-NEXT:    snez a0, a0
+; RV32XQCILIA-NEXT:    ret
+  %1 = icmp ugt i32 %a, 4095
   %2 = zext i1 %1 to i32
   ret i32 %2
 }
@@ -487,14 +504,14 @@ define i32 @icmp_uge_constant_2047(i32 %a) nounwind {
 define i32 @icmp_uge_constant_2048(i32 %a) nounwind {
 ; RV32I-LABEL: icmp_uge_constant_2048:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 2047
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    srli a0, a0, 11
+; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: icmp_uge_constant_2048:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    li a1, 2047
-; RV32XQCILIA-NEXT:    sltu a0, a1, a0
+; RV32XQCILIA-NEXT:    srli a0, a0, 11
+; RV32XQCILIA-NEXT:    snez a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %1 = icmp uge i32 %a, 2048
   %2 = zext i1 %1 to i32

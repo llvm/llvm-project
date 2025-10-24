@@ -449,9 +449,9 @@ interface.
 
 Here is an example of making a PR using git and the GitHub web interface:
 
-First follow the instructions to [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository).
+First follow the instructions to `fork the repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#forking-a-repository>`_.
 
-Next follow the instructions to [clone your forked repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository).
+Next follow the instructions to `clone your forked repository <https://docs.github.com/en/get-started/quickstart/fork-a-repo?tool=webui#cloning-your-forked-repository>`_.
 
 Once you've cloned your forked repository,
 
@@ -567,8 +567,11 @@ branch.  Just make sure to add the release milestone to the pull request.
 Getting admin access to CI infrastructure
 =========================================
 
-Any individual who is responsible for setting up and/or maintaining CI infrastructure for a LLVM project can
-request to be granted the CI/CD role to the LLVM organization admins. The request can be made by creating
-`a Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the ``infrastructure`` label.
-Applicants must include a justification for why the role is being requested. Applications are reviewed on a
-case-by-case basis by the LLVM admins and the role can be revoked at any point as the LLVM admins see fit.
+Any individual who is responsible for setting up and/or maintaining CI
+infrastructure for a LLVM project can request to be granted the CI/CD role by
+the LLVM infrastructure area team. The request can be made by creating `a
+Github issue <https://github.com/llvm/llvm-project/issues/new>`_ and using the
+``infrastructure`` label.  Applicants must include a justification for why the
+role is being requested. Applications are reviewed on a case-by-case basis by
+the LLVM infrastructure area team and the role can be revoked at any point as
+the area team sees fit.

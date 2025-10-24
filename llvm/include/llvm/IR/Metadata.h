@@ -41,6 +41,7 @@
 
 namespace llvm {
 
+enum class CaptureComponents : uint8_t;
 class Module;
 class ModuleSlotTracker;
 class raw_ostream;
@@ -919,8 +920,8 @@ public:
 
   // Check if MDOperand is of type MDString and equals `Str`.
   bool equalsStr(StringRef Str) const {
-    return isa<MDString>(this->get()) &&
-           cast<MDString>(this->get())->getString() == Str;
+    return isa_and_nonnull<MDString>(get()) &&
+           cast<MDString>(get())->getString() == Str;
   }
 
   ~MDOperand() { untrack(); }
@@ -1410,18 +1411,14 @@ private:
   void eraseFromStore();
 
   template <class NodeTy> struct HasCachedHash;
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *N, std::true_type) {
-    N->recalculateHash();
+  template <class NodeTy> static void dispatchRecalculateHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->recalculateHash();
   }
-  template <class NodeTy>
-  static void dispatchRecalculateHash(NodeTy *, std::false_type) {}
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *N, std::true_type) {
-    N->setHash(0);
+  template <class NodeTy> static void dispatchResetHash(NodeTy *N) {
+    if constexpr (HasCachedHash<NodeTy>::value)
+      N->setHash(0);
   }
-  template <class NodeTy>
-  static void dispatchResetHash(NodeTy *, std::false_type) {}
 
   /// Merge branch weights from two direct callsites.
   static MDNode *mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
@@ -1484,6 +1481,13 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+
+  /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
+  LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);
+  /// Convert CaptureComponents to !captures metadata. The return value may be
+  /// nullptr.
+  LLVM_ABI static MDNode *fromCaptureComponents(LLVMContext &Ctx,
+                                                CaptureComponents CC);
 };
 
 /// Tuple of metadata.

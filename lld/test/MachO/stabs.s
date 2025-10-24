@@ -1,4 +1,4 @@
-# REQUIRES: x86, shell
+# REQUIRES: x86
 # UNSUPPORTED: system-windows
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
@@ -9,61 +9,69 @@
 # RUN: env TZ=GMT touch -t "197001010000.32" %t/foo.o
 # RUN: llvm-ar rcsU %t/foo.a %t/foo.o
 
-# RUN: ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
-# RUN:       -D#TEST_TIME=0x10 -D#FOO_TIME=0x20
+# RUN: env ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o -o %t/test
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:   -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --input-file %t.out
 
 ## Check that we emit the right modtime even when the object file is in an
 ## archive.
-# RUN: ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
-# RUN:       -D#TEST_TIME=0x10 -D#FOO_TIME=0x20
+# RUN: env ZERO_AR_DATE=0 %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o -o %t/test
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
+# RUN:   -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --input-file %t.out
 
 ## Check that we don't emit modtimes if ZERO_AR_DATE is set.
 # RUN: env ZERO_AR_DATE=1 %lld -lSystem %t/test.o %t/foo.o %t/no-debug.o \
 # RUN:     -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
-# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:   -D#TEST_TIME=0 -D#FOO_TIME=0 --input-file %t.out
 # RUN: env %lld -lSystem %t/test.o %t/foo.a %t/no-debug.o \
 # RUN:     -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
-# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
+# RUN:   -D#TEST_TIME=0 -D#FOO_TIME=0 --input-file %t.out
 # RUN: env %lld -lSystem %t/test.o %t/no-debug.o \
 # RUN:     -all_load %t/foo.a -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
-# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
+# RUN:   -D#TEST_TIME=0 -D#FOO_TIME=0 --input-file %t.out
 # RUN: env %lld -lSystem %t/test.o %t/no-debug.o \
 # RUN:     -force_load %t/foo.a -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
-# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
+# RUN:   -D#TEST_TIME=0 -D#FOO_TIME=0 --input-file %t.out
 # RUN: env ZERO_AR_DATE=0 %lld -lSystem -reproducible %t/test.o %t/foo.o \
 # RUN:     %t/no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
-# RUN:       -D#TEST_TIME=0 -D#FOO_TIME=0
+# RUN: llvm-objdump --section-headers %t/test > %t.out 
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:   -D#TEST_TIME=0 -D#FOO_TIME=0 --input-file %t.out
 
 ## Check that we emit absolute paths to the object files in our OSO entries
 ## even if our inputs are relative paths.
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -o test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
-# RUN:       -D#TEST_TIME=0x10 -D#FOO_TIME=0x20
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -o test
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.o \
+# RUN:   -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --input-file %t.out
 
 ## Check that we emit relative path to object files in OSO entries
 ## when -oso_prefix <path> is used.
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "%t" -o %t/test-rel
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "%t" -o %t/test-rel
 # RUN: dsymutil -s  %t/test-rel | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-PATH
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "%t/" -o %t/test-rel
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "%t/" -o %t/test-rel
 # RUN: dsymutil -s  %t/test-rel | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-PATH-NO-SLASH
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o %t/test-rel-dot
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o %t/test-rel-dot
 # RUN: dsymutil -s  %t/test-rel-dot | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o %t/test-rel-dot
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o %t/test-rel-dot
 # RUN: dsymutil -s  %t/test-rel-dot | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT-EXPLICIT
 
 ## Check that symlinks are not expanded when -oso_prefix . is used.
@@ -71,9 +79,9 @@
 # RUN: cp %t/test.o %t/foo.o %t/no-debug.o %t/private/var/folders/tmp
 # RUN: env TZ=GMT touch -t "197001010000.16" %t/private/var/folders/tmp/test.o
 # RUN: env TZ=GMT touch -t "197001010000.32" %t/private/var/folders/tmp/foo.o
-# RUN: cd %t/var/folders/tmp && ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o test-rel-symlink
+# RUN: cd %t/var/folders/tmp && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.o no-debug.o -oso_prefix "." -o test-rel-symlink
 # RUN: dsymutil -s  %t/private/var/folders/tmp/test-rel-symlink | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT
-# RUN: cd %t/var/folders/tmp && ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o test-rel-symlink
+# RUN: cd %t/var/folders/tmp && env ZERO_AR_DATE=0 %lld -lSystem ./test.o ./foo.o ./no-debug.o -oso_prefix "." -o test-rel-symlink
 # RUN: dsymutil -s  %t/private/var/folders/tmp/test-rel-symlink | grep 'N_OSO' | FileCheck %s  -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --check-prefix=REL-DOT-EXPLICIT
 
 ## Check that we don't emit DWARF or stabs when -S is used
@@ -82,10 +90,11 @@
 ## expect to not find any entries which requires the exit code to be negated.
 # RUN: llvm-nm -ap %t/test-no-debug | not grep -e ' - '
 
-# RUN: cd %t && ZERO_AR_DATE=0 %lld -lSystem test.o foo.a no-debug.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | \
-# RUN:   FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
-# RUN:       -D#TEST_TIME=0x10 -D#FOO_TIME=0x20
+# RUN: cd %t && env ZERO_AR_DATE=0 %lld -lSystem test.o foo.a no-debug.o -o %t/test
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s -DDIR=%t -DFOO_PATH=%t/foo.a\(foo.o\) \
+# RUN:     -D#TEST_TIME=0x10 -D#FOO_TIME=0x20 --input-file %t.out
 
 # CHECK:       Sections:
 # CHECK-NEXT:  Idx                Name
@@ -159,7 +168,9 @@
 ## when forming N_SO.
 # RUN: llvm-mc -filetype obj -triple=x86_64-apple-darwin %t/abs-path.s -o %t/abs-path.o
 # RUN: %lld %t/abs-path.o -o %t/test
-# RUN: (llvm-objdump --section-headers %t/test; dsymutil -s %t/test) | FileCheck %s --check-prefix=ABS-PATH
+# RUN: llvm-objdump --section-headers %t/test > %t.out
+# RUN: dsymutil -s %t/test >> %t.out
+# RUN: FileCheck %s --check-prefix=ABS-PATH --input-file %t.out
 # ABS-PATH:      (N_SO         ) 00      0000   0000000000000000   '/foo.cpp'
 
 #--- test.s

@@ -112,6 +112,97 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
+def IsValidBlockSize: AttrConstraint<
+    CPred<"::llvm::is_contained({16, 32}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
+    "whose value is 16 or 32">;
+
+def AMDGPU_ScaledExtPacked816Op
+    : AMDGPU_Op<"scaled_ext_packed816", [Pure, AllShapesMatch<["source", "res"]>]>,
+      Arguments<(
+          ins AnyTypeOf<[FixedVectorOfShapeAndType<[8], F4E2M1FN>,
+                         FixedVectorOfShapeAndType<[8], F8E4M3FN>,
+                         FixedVectorOfShapeAndType<[8], F8E5M2>,
+                         FixedVectorOfShapeAndType<[16], F6E2M3FN>,
+                         FixedVectorOfShapeAndType<[16], F6E3M2FN>]>:$source,
+          FixedVectorOfShapeAndType<[4], F8E8M0FNU>:$scale,
+          ConfinedAttr<I32Attr, [IsValidBlockSize]>:$blockSize,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>:$firstScaleLane,
+          ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<2>]>:$firstScaleByte)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfShapeAndType<[8], F32>,
+                          FixedVectorOfShapeAndType<[8], F16>,
+                          FixedVectorOfShapeAndType<[8], BF16>,
+                          FixedVectorOfShapeAndType<[16], F32>,
+                          FixedVectorOfShapeAndType<[16], F16>,
+                          FixedVectorOfShapeAndType<[16], BF16>]>:$res)> {
+
+  let summary = "Extend a vector of packed floating point values";
+
+  let description = [{
+    The scales applied to the input microfloats are stored in two bytes which
+    come from the `scales` input provided in a *half* of the wave identified
+    by `firstScaleLane`. The pair of bytes used is selected by
+    `firstScaleByte`. The 16 vectors in consecutive lanes starting from
+    `firstScaleLane` (which we'll call the scale vectors) will be used by both
+    halves of the wave (with lane L reading from L % 16'th scale vector), but
+    each half will use a different byte.
+
+    When the block size is 32, `firstScaleByte` can be either 0 or 2,
+    selecting halves of the scale vectors. Lanes 0-15 will read from
+    `firstScaleByte` and lanes 16-31 will read from `firstScaleByte` + 1.
+    For example:
+    ```mlir
+    // Input: 8-element vector of F8E4M3FN, converting to F32
+    // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 1
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E4M3FN>, vector<4xf8E8M0FNU> -> vector<8xf32>
+
+    // Input: 16-element vector of F6E2M3FN, converting to F16
+    // Lanes 0-15 read from byte 2, lanes 16-31 read from byte 3
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(32) firstScaleLane(1) firstScaleByte(2)
+      : vector<16xf6E2M3FN>, vector<4xf8E8M0FNU> -> vector<16xf16>
+    ```
+
+    However, when the block size is 16, `firstScaleByte` can be 0 or 1.
+    Lanes 0-15 read from the `firstScaleByte`th element of the scale vectors,
+    while lanes 16-31 read from `firstScaleByte` + 2.
+    For example:
+    ```mlir
+    // Input: 8-element vector of F8E5M2, converting to BF16
+    // Lanes 0-15 read from byte 0, lanes 16-31 read from byte 2 (0+2)
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(0) firstScaleByte(0)
+      : vector<8xf8E5M2>, vector<4xf8E8M0FNU> -> vector<8xbf16>
+
+    // Input: 16-element vector of F6E3M2FN, converting to F32
+    // Lanes 0-15 read from byte 1, lanes 16-31 read from byte 3 (1+2)
+    %result = amdgpu.scaled_ext_packed816 %source scale(%scales)
+      blockSize(16) firstScaleLane(1) firstScaleByte(1)
+      : vector<16xf6E3M2FN>, vector<4xf8E8M0FNU> -> vector<16xf32>
+    ```
+
+    Note: the layout for the scales generally mirrors how the WMMA
+    instructions use for matix scales. These selection operands allows
+    one to choose portions of the matrix to convert.
+
+    Available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    attr-dict $source
+    `scale` `(` $scale `)`
+    `blockSize` `(` $blockSize `)`
+    `firstScaleLane` `(` $firstScaleLane`)`
+    `firstScaleByte` `(` $firstScaleByte `)`
+    `:` type($source) `,` type($scale) `->` type($res)
+  }];
+
+  let hasVerifier = 1;
+
+}
+
 def AMDGPU_ScaledExtPackedOp
     : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
       Arguments<(
@@ -235,7 +326,7 @@ def AMDGPU_FatRawBufferCastOp :
        DeclareOpInterfaceMethods<InferTypeOpInterface>,
        ViewLikeOpInterface, AttrSizedOperandSegments]>,
     Arguments<(ins AnyMemRef:$source,
-      Optional<I32>:$validBytes,
+      Optional<I64>:$validBytes,
       Optional<I<14>>:$cacheSwizzleStride,
       DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
       UnitAttr:$resetOffset)>,
@@ -670,8 +761,8 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
 
     Example:
     ```mlir
-    %0 = amdgpu.permlane %src 16 : f16
-    %1 = amdgpu.permlane %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
+    %0 = amdgpu.permlane_swap %src 16 : f16
+    %1 = amdgpu.permlane_swap %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
     ```
 
     Operands:
@@ -680,8 +771,8 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
     * `$fetch_inactive`: Optional. Used to dertermine behavior of a fetch from a disabled lane.
       `fetch_inactive = false`: If the source lane is disabled, use `bound_ctrl` to determine the source value.
       `fetch_inactive = true`: If the source lane is disabled, fetch the source value anyway (ignoring `bound_ctrl`).
-    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from 
-      a disabled lane: use the value zero, or disable the write. 
+    * `$bound_ctrl`: Optional. Used to determine what a thread should do if its source operand is from
+      a disabled lane: use the value zero, or disable the write.
       `bound_ctrl = false`: Do not write when source is from a disabled lane
       `bound_ctrl = true`: Use zero as input if source is from a disabled lane
 
@@ -860,7 +951,7 @@ def AMDGPU_MFMAOp :
     based on the provided `m`, `k`, `n`, and `nBlks` attributes, along with the
     types of the source and destination arguments.
 
-    For information on the layouts of the input and output matrces (which are stored
+    For information on the layouts of the input and output matrices (which are stored
     in `sourceA`, `sourceB`, `destC`, and `destD`), see the CDNA ISA documentation.
 
     The `cbsz`, `abid`, and `blgp` parameters control how the lanes of the wave
@@ -1048,5 +1139,6 @@ def AMDGPU_ScaledMFMAOp :
     attr-dict
     `:` type($scalesA) `,` type($sourceA) `,` type($scalesB) `,` type($sourceB) `,` type($destC)
   }];
+  let hasCanonicalizer = 1;
 }
 #endif // AMDGPU

@@ -626,6 +626,11 @@ TEST(raw_ostreamTest, writeToDevNull) {
   EXPECT_TRUE(DevNullIsUsed);
 }
 
+TEST(raw_ostreamTest, nullStreamZeroBufferSize) {
+  raw_ostream &NullStream = nulls();
+  EXPECT_EQ(NullStream.GetBufferSize(), 0u);
+}
+
 TEST(raw_ostreamTest, writeToStdOut) {
   outs().flush();
   testing::internal::CaptureStdout();

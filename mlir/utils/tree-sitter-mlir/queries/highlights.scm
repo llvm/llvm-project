@@ -181,7 +181,6 @@
   "vector.insert_strided_slice"
   "vector.matrix_multiply"
   "vector.print"
-  "vector.splat"
   "vector.transfer_read"
   "vector.transfer_write"
   "vector.yield"

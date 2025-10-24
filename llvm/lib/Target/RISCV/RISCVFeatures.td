@@ -78,6 +78,12 @@ def FeatureStdExtE
     : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
       RISCVExtensionBitmask<0, 4>;
 
+def FeatureStdExtZibi
+    : RISCVExperimentalExtension<0, 1, "Branch with Immediate">;
+def HasStdExtZibi : Predicate<"Subtarget->hasStdExtZibi()">,
+                    AssemblerPredicate<(all_of FeatureStdExtZibi),
+                                       "'Zibi' (Branch with Immediate)">;
+
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
 
@@ -212,6 +218,7 @@ def HasStdExtZaamo
     : Predicate<"Subtarget->hasStdExtZaamo()">,
       AssemblerPredicate<(any_of FeatureStdExtZaamo),
                          "'Zaamo' (Atomic Memory Operations)">;
+def NoStdExtZaamo : Predicate<"!Subtarget->hasStdExtZaamo()">;
 
 def FeatureStdExtZalrsc
     : RISCVExtension<1, 0, "Load-Reserved/Store-Conditional">;
@@ -234,7 +241,7 @@ def FeatureStdExtZtso
 def HasStdExtZtso : Predicate<"Subtarget->hasStdExtZtso()">,
                     AssemblerPredicate<(all_of FeatureStdExtZtso),
                         "'Ztso' (Memory Model - Total Store Order)">;
-def NotHasStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
+def NoStdExtZtso : Predicate<"!Subtarget->hasStdExtZtso()">;
 
 def FeatureStdExtZa64rs
     : RISCVExtension<1, 0, "Reservation Set Size of at Most 64 Bytes">;
@@ -259,7 +266,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 1, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -473,7 +480,7 @@ def FeatureStdExtZba
 def HasStdExtZba : Predicate<"Subtarget->hasStdExtZba()">,
                    AssemblerPredicate<(all_of FeatureStdExtZba),
                                       "'Zba' (Address Generation Instructions)">;
-def NotHasStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
+def NoStdExtZba : Predicate<"!Subtarget->hasStdExtZba()">;
 
 def FeatureStdExtZbb
     : RISCVExtension<1, 0, "Basic Bit-Manipulation">,
@@ -680,6 +687,13 @@ def FeatureStdExtV
                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>,
       RISCVExtensionBitmask<0, 21>;
 
+def FeatureStdExtZvfbfa
+    : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
+                                 [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
+def HasStdExtZvfbfa : Predicate<"Subtarget->hasStdExtZvfbfa()">,
+                      AssemblerPredicate<(all_of FeatureStdExtZvfbfa),
+                          "'Zvfbfa' (Additional BF16 vector compute support)">;
+
 def FeatureStdExtZvfbfmin
     : RISCVExtension<1, 0, "Vector BF16 Converts", [FeatureStdExtZve32f]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
@@ -709,6 +723,22 @@ def HasStdExtZfhOrZvfh
       AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZvfh),
                          "'Zfh' (Half-Precision Floating-Point) or "
                          "'Zvfh' (Vector Half-Precision Floating-Point)">;
+
+def FeatureStdExtZvfofp8min
+    : RISCVExperimentalExtension<0, 2,
+                                 "Vector OFP8 Converts", [FeatureStdExtZve32f]>;
+def HasStdExtZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(all_of FeatureStdExtZvfofp8min),
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
+
+def HasStdExtZvfbfminOrZvfofp8min
+    : Predicate<"Subtarget->hasStdExtZvfbfmin() ||"
+                "Subtarget->hasStdExtZvfofp8min()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvfbfmin,
+                             FeatureStdExtZvfofp8min),
+                         "'Zvfbfmin' (Vector BF16 Converts) or "
+                         "'Zvfofp8min' (Vector OFP8 Converts)">;
 
 // Vector Cryptography and Bitmanip Extensions
 
@@ -1305,6 +1335,44 @@ def HasVendorXSfvfnrclipxfqf
       AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
                          "'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)">;
 
+// Note: XSfvfbfexp16e depends on either Zvfbfmin _or_ Zvfbfa, which cannot be expressed here in
+// TableGen. Instead, we check that in RISCVISAInfo.
+def FeatureVendorXSfvfbfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, BFloat16">;
+def HasVendorXSfvfbfexp16e : Predicate<"Subtarget->hasVendorXSfvfbfexp16e()">;
+
+def FeatureVendorXSfvfexp16e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Half Precision",
+                     [FeatureStdExtZvfh]>;
+def HasVendorXSfvfexp16e : Predicate<"Subtarget->hasVendorXSfvfexp16e()">;
+
+def FeatureVendorXSfvfexp32e
+    : RISCVExtension<0, 5,
+                     "SiFive Vector Floating-Point Exponential Function Instruction, Single Precision",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexp32e : Predicate<"Subtarget->hasVendorXSfvfexp32e()">;
+
+def HasVendorXSfvfexpAnyFloat : Predicate<"Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">;
+def HasVendorXSfvfexpAny : Predicate<"Subtarget->hasVendorXSfvfbfexp16e() || Subtarget->hasVendorXSfvfexp16e() || Subtarget->hasVendorXSfvfexp32e()">,
+                           AssemblerPredicate<(any_of FeatureVendorXSfvfbfexp16e, FeatureVendorXSfvfexp16e, FeatureVendorXSfvfexp32e),
+                           "'Xsfvfbfexp16e', 'Xsfvfexp16e', or 'Xsfvfexp32e' (SiFive Vector Floating-Point Exponential Function Instruction)">;
+
+def FeatureVendorXSfvfexpa
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfexpa : Predicate<"Subtarget->hasVendorXSfvfexpa()">,
+                         AssemblerPredicate<(all_of FeatureVendorXSfvfexpa),
+                         "'Xsfvfexpa' (SiFive Vector Floating-Point Exponential Approximation Instruction)">;
+
+def FeatureVendorXSfvfexpa64e
+    : RISCVExtension<0, 2,
+                     "SiFive Vector Floating-Point Exponential Approximation Instruction with Double-Precision",
+                     [FeatureVendorXSfvfexpa, FeatureStdExtZve64d]>;
+def HasVendorXSfvfexpa64e : Predicate<"Subtarget->hasVendorXSfvfexpa64e()">;
+
 def FeatureVendorXSiFivecdiscarddlone
     : RISCVExtension<1, 0,
                      "SiFive sf.cdiscard.d.l1 Instruction", []>;
@@ -1395,20 +1463,27 @@ def HasVendorXMIPSCMov
     : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
                          "'Xmipscmov' ('mips.ccmov' instruction)">;
-def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
+def UseMIPSCCMovInsn : Predicate<"Subtarget->useMIPSCCMovInsn()">;
+
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
 def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
-def FeatureVendorXMIPSCBOP
-    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+
+def FeatureVendorXMIPSCBOP : RISCVExtension<1, 0, "MIPS Software Prefetch">;
 def HasVendorXMIPSCBOP
     : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
                          "'Xmipscbop' (MIPS hardware prefetch)">;
-def NotHasVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+def NoVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
+
+def FeatureVendorXMIPSEXECTL : RISCVExtension<1, 0, "MIPS execution control">;
+def HasVendorXMIPSEXECTL
+    : Predicate<"Subtarget->hasVendorXMIPSEXECTL()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSEXECTL),
+                         "'Xmipsexectl' (MIPS execution control)">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1478,6 +1553,8 @@ def HasVendorXqcicm
     : Predicate<"Subtarget->hasVendorXqcicm()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicm),
                          "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
+def NoVendorXqcicm
+    : Predicate<"!Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcics
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Conditional Select Extension">;
@@ -1487,9 +1564,6 @@ def HasVendorXqcics
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
 def NoVendorXqcics
     : Predicate<"!Subtarget->hasVendorXqcics()">;
-
-def HasVendorXqcicsOrXqcicm
-    : Predicate<"Subtarget->hasVendorXqcics() || Subtarget->hasVendorXqcicm()">;
 
 def FeatureVendorXqcicsr
     : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
@@ -1618,6 +1692,14 @@ def HasVendorXAndesVBFHCvt
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
 
+def FeatureVendorXAndesVSIntH
+    : RISCVExtension<5, 0, "Andes Vector Small INT Handling Extension",
+                     [FeatureStdExtZve32x]>;
+def HasVendorXAndesVSIntH
+    : Predicate<"Subtarget->hasVendorXAndesVSIntH()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVSIntH),
+                         "'XAndesVSIntH' (Andes Vector Small INT Handling Extension)">;
+
 def FeatureVendorXAndesVSIntLoad
     : RISCVExtension<5, 0, "Andes Vector INT4 Load Extension",
                      [FeatureStdExtZve32x]>;
@@ -1668,7 +1750,7 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
                                 "RV32I Base Instruction Set">;
 
 defvar RV32 = DefaultMode;
-def RV64           : HwMode<"+64bit", [IsRV64]>;
+def RV64 : HwMode<[IsRV64]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
@@ -1785,6 +1867,11 @@ def TuneConditionalCompressedMoveFusion
 def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()">;
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
+def TuneHasSingleElementVecFP64
+    : SubtargetFeature<"single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
+                       "Certain vector FP64 operations produce a single result "
+                       "element per cycle">;
+
 def TuneMIPSP8700
     : SubtargetFeature<"mips-p8700", "RISCVProcFamily", "MIPSP8700",
                        "MIPS p8700 processor">;
@@ -1816,7 +1903,7 @@ def FeatureForcedAtomics : SubtargetFeature<
     "forced-atomics", "HasForcedAtomics", "true",
     "Assume that lock-free native-width atomics are available">;
 def HasAtomicLdSt
-    : Predicate<"Subtarget->hasStdExtA() || Subtarget->hasForcedAtomics()">;
+    : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
