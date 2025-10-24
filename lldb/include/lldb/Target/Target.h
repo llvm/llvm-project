@@ -1532,8 +1532,6 @@ public:
   // control over the process for the first time.
   bool RunStopHooks(bool at_initial_stop = false);
 
-  size_t GetStopHookSize();
-
   bool SetSuppresStopHooks(bool suppress) {
     bool old_value = m_suppress_stop_hooks;
     m_suppress_stop_hooks = suppress;
