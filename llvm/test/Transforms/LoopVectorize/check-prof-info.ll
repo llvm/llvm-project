@@ -19,12 +19,8 @@ define void @_Z3foov() {
 ; CHECK:  vector.body:
 ; CHECK:    br i1 [[TMP6:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:  middle.block:
-; CHECK:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:  scalar.ph:
 ; CHECK:    br label [[FOR_BODY:%.*]]
 ; CHECK:  for.cond.cleanup:
-; CHECK:  for.body:
-; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF5:![0-9]+]]
 ;
 ; CHECK-MASKED-LABEL: @_Z3foov(
 ; CHECK-MASKED:  entry:
@@ -34,12 +30,8 @@ define void @_Z3foov() {
 ; CHECK-MASKED:  vector.body:
 ; CHECK-MASKED:    br i1 [[TMP18:%.*]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof [[PROF1:![0-9]+]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK-MASKED:  middle.block:
-; CHECK-MASKED:    br label [[FOR_COND_CLEANUP:%.*]]
-; CHECK-MASKED:  scalar.ph:
 ; CHECK-MASKED:    br label [[FOR_BODY:%.*]]
 ; CHECK-MASKED:  for.cond.cleanup:
-; CHECK-MASKED:  for.body:
-; CHECK-MASKED:    br i1 [[EXITCOND:%.*]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !prof [[PROF5:![0-9]+]]
 ;
 ; CHECK-SCALABLE-LABEL: @_Z3foov(
 ; CHECK-SCALABLE:  entry:

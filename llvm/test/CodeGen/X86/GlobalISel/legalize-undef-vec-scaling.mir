@@ -1,0 +1,32 @@
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=avx2 -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o -  | FileCheck %s --check-prefixes=CHECK,AVX2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=sse2 -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o -  | FileCheck %s --check-prefixes=CHECK,SSE2
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=avx512f -run-pass=legalizer -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o -  | FileCheck %s --check-prefixes=CHECK,AVX512F 
+
+
+---
+name: test_basic_g_implicit_def_v8i64
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_basic_g_implicit_def_v8i64
+    ; AVX512F: {{%[0-9]+}}:_(<8 x s64>) = G_IMPLICIT_DEF
+    ; AVX2: [[DEF_AVX2:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
+    ; AVX2-NEXT: {{%[0-9]+}}:_(<8 x s64>) = G_CONCAT_VECTORS [[DEF_AVX2]](<4 x s64>), [[DEF_AVX2]](<4 x s64>)
+    ; SSE2: [[DEF_SSE2:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; SSE2-NEXT: {{%[0-9]+}}:_(<8 x s64>) = G_CONCAT_VECTORS [[DEF_SSE2]](<2 x s64>), [[DEF_SSE2]](<2 x s64>), [[DEF_SSE2]](<2 x s64>), [[DEF_SSE2]](<2 x s64>)
+    %0:_(<8 x s64>) = G_IMPLICIT_DEF
+    RET 0, implicit %0
+...
+
+---
+name: test_g_implicit_def_cample_size
+body: |
+  bb.1:
+   ; CHECK-LABEL: name: test_g_implicit_def_cample_size
+   ; AVX512: {{%[0-9]+}}:_(<8 x s64>) = G_IMPLICIT_DEF
+   ; AVX2: {{%[0-9]+}}:_(<4 x s64>) = G_IMPLICIT_DEF
+   ; SSE2: {{%[0-9]+}}:_(<2 x s64>) = G_IMPLICIT_DEF
+    %0:_(<5 x s63>) = G_IMPLICIT_DEF
+    RET 0, implicit %0
+...
+
+

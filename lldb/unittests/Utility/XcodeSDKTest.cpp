@@ -27,6 +27,7 @@ TEST(XcodeSDKTest, ParseTest) {
   EXPECT_EQ(XcodeSDK("AppleTVOS.sdk").GetType(), XcodeSDK::AppleTVOS);
   EXPECT_EQ(XcodeSDK("WatchSimulator.sdk").GetType(), XcodeSDK::WatchSimulator);
   EXPECT_EQ(XcodeSDK("WatchOS.sdk").GetType(), XcodeSDK::watchOS);
+  EXPECT_EQ(XcodeSDK("BridgeOS.sdk").GetType(), XcodeSDK::BridgeOS);
   EXPECT_EQ(XcodeSDK("XRSimulator.sdk").GetType(), XcodeSDK::XRSimulator);
   EXPECT_EQ(XcodeSDK("XROS.sdk").GetType(), XcodeSDK::XROS);
   EXPECT_EQ(XcodeSDK("Linux.sdk").GetType(), XcodeSDK::Linux);

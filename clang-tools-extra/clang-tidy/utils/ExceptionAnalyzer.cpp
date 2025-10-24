@@ -595,6 +595,11 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
         Results.merge(DestructorExcs);
       }
     }
+  } else if (const auto *Lambda = dyn_cast<LambdaExpr>(St)) {
+    for (const Stmt *Init : Lambda->capture_inits()) {
+      ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
+      Results.merge(Excs);
+    }
   } else {
     for (const Stmt *Child : St->children()) {
       ExceptionInfo Excs = throwsException(Child, Caught, CallStack);

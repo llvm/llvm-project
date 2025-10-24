@@ -5272,11 +5272,18 @@ ArrayRef<int64_t> PackOp::getAllOuterDims() {
 
 SmallVector<int64_t> PackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getDestType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Recover the original order of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  invertPermutationVector(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }
@@ -5306,6 +5313,32 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
     }
+  }
+  return false;
+}
+
+bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                       ArrayRef<int64_t> innerDimsPos,
+                                       ArrayRef<int64_t> outputShape,
+                                       ArrayRef<int64_t> outerDimsPerm,
+                                       ArrayRef<OpFoldResult> innerTiles) {
+  SmallVector<int64_t> outputTileSizes(
+      outputShape.take_front(inputShape.size()));
+  if (!outerDimsPerm.empty()) {
+    assert(outerDimsPerm.size() == outputTileSizes.size() &&
+           "expected output and outer_dims_perm to have same size");
+    applyPermutationToVector(outputTileSizes,
+                             invertPermutationVector(outerDimsPerm));
+  }
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
+      return true;
+    std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
+    if (!constantTile)
+      return true;
+    if (inputShape[pos] % (*constantTile) != 0)
+      return true;
   }
   return false;
 }

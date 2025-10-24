@@ -75,9 +75,10 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 
+namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
-
 extern cl::opt<bool> ForceImportAll;
+} // end namespace llvm
 
 namespace llvm {
 /// Enable global value internalization in LTO.
@@ -456,7 +457,7 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+    for (auto &S : I.second.getSummaryList())
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
@@ -470,11 +471,13 @@ static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
-  auto ExternallyVisibleCopies =
-      llvm::count_if(VI.getSummaryList(),
-                     [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                       return !GlobalValue::isLocalLinkage(Summary->linkage());
-                     });
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
+
+  const bool SingleExternallyVisibleCopy =
+      VI.getSummaryList().size() == 1 &&
+      !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
@@ -538,7 +541,9 @@ static void thinLTOInternalizeAndPromoteGUID(
         GlobalValue::isExternalWeakLinkage(S->linkage()))
       continue;
 
-    if (isPrevailing(VI.getGUID(), S.get()) && ExternallyVisibleCopies == 1)
+    // We may have a single summary copy that is externally visible but not
+    // prevailing if the prevailing copy is in a native object.
+    if (SingleExternallyVisibleCopy && isPrevailing(VI.getGUID(), S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
@@ -550,9 +555,11 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  assert(!Index.withInternalizeAndPromote());
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
                                      isPrevailing);
+  Index.setWithInternalizeAndPromote();
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -1079,15 +1086,15 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing)
-        ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
+        ThinLTO.setPrevailingModuleForGUID(GUID, BM.getModuleIdentifier());
     }
   }
 
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
                          [&](GlobalValue::GUID GUID) {
-                           return ThinLTO.PrevailingModuleForGUID[GUID] ==
-                                  BM.getModuleIdentifier();
+                           return ThinLTO.isPrevailingModuleForGUID(
+                               GUID, BM.getModuleIdentifier());
                          }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
@@ -1101,8 +1108,8 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing) {
-        assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
-               BM.getModuleIdentifier());
+        assert(
+            ThinLTO.isPrevailingModuleForGUID(GUID, BM.getModuleIdentifier()));
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
@@ -1181,7 +1188,7 @@ Error LTO::checkPartiallySplit() {
   // Otherwise check if there are any recorded in the combined summary from the
   // ThinLTO modules.
   for (auto &P : ThinLTO.CombinedIndex) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;
@@ -1256,38 +1263,6 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   return Result;
 }
 
-void lto::updateMemProfAttributes(Module &Mod,
-                                  const ModuleSummaryIndex &Index) {
-  llvm::TimeTraceScope timeScope("LTO update memprof attributes");
-  if (Index.withSupportsHotColdNew())
-    return;
-
-  // The profile matcher applies hotness attributes directly for allocations,
-  // and those will cause us to generate calls to the hot/cold interfaces
-  // unconditionally. If supports-hot-cold-new was not enabled in the LTO
-  // link then assume we don't want these calls (e.g. not linking with
-  // the appropriate library, or otherwise trying to disable this behavior).
-  for (auto &F : Mod) {
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        auto *CI = dyn_cast<CallBase>(&I);
-        if (!CI)
-          continue;
-        if (CI->hasFnAttr("memprof"))
-          CI->removeFnAttr("memprof");
-        // Strip off all memprof metadata as it is no longer needed.
-        // Importantly, this avoids the addition of new memprof attributes
-        // after inlining propagation.
-        // TODO: If we support additional types of MemProf metadata beyond hot
-        // and cold, we will need to update the metadata based on the allocator
-        // APIs supported instead of completely stripping all.
-        CI->setMetadata(LLVMContext::MD_memprof, nullptr);
-        CI->setMetadata(LLVMContext::MD_callsite, nullptr);
-      }
-    }
-  }
-}
-
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
   LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
@@ -1344,8 +1319,6 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       GV->setName(I.first);
     }
   }
-
-  updateMemProfAttributes(*RegularLTO.CombinedModule, ThinLTO.CombinedIndex);
 
   bool WholeProgramVisibilityEnabledInLTO =
       Conf.HasWholeProgramVisibility &&
@@ -2015,7 +1988,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                                LocalWPDTargetsMap);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
-    return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
+    return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
   };
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
@@ -2251,6 +2224,7 @@ class OutOfProcessThinBackend : public CGThinBackend {
   ArrayRef<StringRef> DistributorArgs;
 
   SString RemoteCompiler;
+  ArrayRef<StringRef> RemoteCompilerPrependArgs;
   ArrayRef<StringRef> RemoteCompilerArgs;
 
   bool SaveTemps;
@@ -2287,12 +2261,14 @@ public:
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+      ArrayRef<StringRef> RemoteCompilerPrependArgs,
       ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
+        RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
         RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
 
   virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
@@ -2413,6 +2389,11 @@ public:
 
         JOS.attributeArray("args", [&]() {
           JOS.value(RemoteCompiler);
+
+          // Forward any supplied prepend options.
+          if (!RemoteCompilerPrependArgs.empty())
+            for (auto &A : RemoteCompilerPrependArgs)
+              JOS.value(A);
 
           JOS.value("-c");
 
@@ -2544,6 +2525,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
@@ -2553,7 +2535,7 @@ ThinBackend lto::createOutOfProcessThinBackend(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
             AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
             LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
-            RemoteCompilerArgs, SaveTemps);
+            RemoteCompilerPrependArgs, RemoteCompilerArgs, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);
 }

@@ -46,17 +46,15 @@ LLVM_ABI unsigned getDefaultStackSize();
 LLVM_ABI void runOnNewStack(unsigned StackSize, function_ref<void()> Fn);
 
 template <typename R, typename... Ts>
-std::enable_if_t<!std::is_same_v<R, void>, R>
-runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn, Ts &&...Args) {
-  std::optional<R> Ret;
-  runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
-  return std::move(*Ret);
-}
-
-template <typename... Ts>
-void runOnNewStack(unsigned StackSize, function_ref<void(Ts...)> Fn,
+auto runOnNewStack(unsigned StackSize, function_ref<R(Ts...)> Fn,
                    Ts &&...Args) {
-  runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  if constexpr (std::is_same_v<R, void>) {
+    runOnNewStack(StackSize, [&]() { Fn(std::forward<Ts>(Args)...); });
+  } else {
+    std::optional<R> Ret;
+    runOnNewStack(StackSize, [&]() { Ret = Fn(std::forward<Ts>(Args)...); });
+    return std::move(*Ret);
+  }
 }
 
 } // namespace llvm

@@ -1231,7 +1231,8 @@ void test_atomic_inc_dec(__attribute__((address_space(3))) uint *lptr, __attribu
   // CHECK: atomicrmw udec_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
   res = __builtin_amdgcn_atomic_dec32(lptr, val, __ATOMIC_SEQ_CST, "workgroup");
 
-  // CHECK: atomicrmw uinc_wrap ptr addrspace(1) %gptr, i32 %val syncscope("agent") seq_cst, align 4
+  // CHECK-AMDGCN: atomicrmw uinc_wrap ptr addrspace(1) %gptr, i32 %val syncscope("agent") seq_cst, align 4
+  // CHECK-SPIRV: atomicrmw uinc_wrap ptr addrspace(1) %gptr, i32 %val syncscope("device") seq_cst, align 4
   res = __builtin_amdgcn_atomic_inc32(gptr, val, __ATOMIC_SEQ_CST, "agent");
 
   // CHECK: atomicrmw udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4

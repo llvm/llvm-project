@@ -83,9 +83,9 @@ public:
   DenseSetImpl(llvm::from_range_t, Range &&R)
       : DenseSetImpl(adl_begin(R), adl_end(R)) {}
 
-  bool empty() const { return TheMap.empty(); }
-  size_type size() const { return TheMap.size(); }
-  size_t getMemorySize() const { return TheMap.getMemorySize(); }
+  [[nodiscard]] bool empty() const { return TheMap.empty(); }
+  [[nodiscard]] size_type size() const { return TheMap.size(); }
+  [[nodiscard]] size_t getMemorySize() const { return TheMap.getMemorySize(); }
 
   /// Grow the DenseSet so that it has at least Size buckets. Will not shrink
   /// the Size of the set.
@@ -154,14 +154,20 @@ public:
   using iterator = DenseSetIterator<false>;
   using const_iterator = DenseSetIterator<true>;
 
-  iterator begin() { return iterator(TheMap.begin()); }
-  iterator end() { return iterator(TheMap.end()); }
+  [[nodiscard]] iterator begin() { return iterator(TheMap.begin()); }
+  [[nodiscard]] iterator end() { return iterator(TheMap.end()); }
 
-  const_iterator begin() const { return const_iterator(TheMap.begin()); }
-  const_iterator end() const { return const_iterator(TheMap.end()); }
+  [[nodiscard]] const_iterator begin() const {
+    return const_iterator(TheMap.begin());
+  }
+  [[nodiscard]] const_iterator end() const {
+    return const_iterator(TheMap.end());
+  }
 
-  iterator find(const_arg_type_t<ValueT> V) { return iterator(TheMap.find(V)); }
-  const_iterator find(const_arg_type_t<ValueT> V) const {
+  [[nodiscard]] iterator find(const_arg_type_t<ValueT> V) {
+    return iterator(TheMap.find(V));
+  }
+  [[nodiscard]] const_iterator find(const_arg_type_t<ValueT> V) const {
     return const_iterator(TheMap.find(V));
   }
 
@@ -180,10 +186,12 @@ public:
   /// The DenseMapInfo is responsible for supplying methods
   /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key type
   /// used.
-  template <class LookupKeyT> iterator find_as(const LookupKeyT &Val) {
+  template <class LookupKeyT>
+  [[nodiscard]] iterator find_as(const LookupKeyT &Val) {
     return iterator(TheMap.find_as(Val));
   }
   template <class LookupKeyT>
+  [[nodiscard]]
   const_iterator find_as(const LookupKeyT &Val) const {
     return const_iterator(TheMap.find_as(Val));
   }
@@ -229,8 +237,9 @@ public:
 /// Equivalent to N calls to RHS.count. Amortized complexity is linear, worst
 /// case is O(N^2) (if every hash collides).
 template <typename ValueT, typename MapTy, typename ValueInfoT>
-bool operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-                const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+[[nodiscard]] bool
+operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
+           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -245,8 +254,9 @@ bool operator==(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
 template <typename ValueT, typename MapTy, typename ValueInfoT>
-bool operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
-                const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
+[[nodiscard]] bool
+operator!=(const DenseSetImpl<ValueT, MapTy, ValueInfoT> &LHS,
+           const DenseSetImpl<ValueT, MapTy, ValueInfoT> &RHS) {
   return !(LHS == RHS);
 }
 

@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -57,8 +58,25 @@ static Value convertUnsignedToI32(ConversionPatternRewriter &rewriter,
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
-  Type i32 = rewriter.getI32Type();
-  return LLVM::ConstantOp::create(rewriter, loc, i32, value);
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI32Type(), value);
+}
+
+/// Convert an unsigned number `val` to i64.
+static Value convertUnsignedToI64(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value val) {
+  IntegerType i64 = rewriter.getI64Type();
+  // Force check that `val` is of int type.
+  auto valTy = cast<IntegerType>(val.getType());
+  if (i64 == valTy)
+    return val;
+  return valTy.getWidth() > 64
+             ? Value(LLVM::TruncOp::create(rewriter, loc, i64, val))
+             : Value(LLVM::ZExtOp::create(rewriter, loc, i64, val));
+}
+
+static Value createI64Constant(ConversionPatternRewriter &rewriter,
+                               Location loc, int64_t value) {
+  return LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), value);
 }
 
 static Value createI1Constant(ConversionPatternRewriter &rewriter, Location loc,
@@ -95,7 +113,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                            MemRefType memrefType,
                            MemRefDescriptor &memrefDescriptor,
                            ArrayRef<int64_t> strides,
-                           uint32_t elementByteWidth) {
+                           int64_t elementByteWidth) {
   if (memrefType.hasStaticShape() &&
       !llvm::any_of(strides, ShapedType::isDynamic)) {
     int64_t size = memrefType.getRank() == 0 ? 1 : 0;
@@ -103,9 +121,7 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
     for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i)
       size = std::max(shape[i] * strides[i], size);
     size = size * elementByteWidth;
-    assert(size < std::numeric_limits<uint32_t>::max() &&
-           "the memref buffer is too large");
-    return createI32Constant(rewriter, loc, static_cast<int32_t>(size));
+    return createI64Constant(rewriter, loc, size);
   }
   Value maxIndex;
   for (uint32_t i = 0, e = memrefType.getRank(); i < e; ++i) {
@@ -116,9 +132,9 @@ static Value getNumRecords(ConversionPatternRewriter &rewriter, Location loc,
                    ? LLVM::UMaxOp::create(rewriter, loc, maxIndex, maxThisDim)
                    : maxThisDim;
   }
-  Value maxIndexI32 = convertUnsignedToI32(rewriter, loc, maxIndex);
-  Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
-  return LLVM::MulOp::create(rewriter, loc, maxIndexI32, byteWidthConst);
+  Value maxIndexI64 = convertUnsignedToI64(rewriter, loc, maxIndex);
+  Value byteWidthConst = createI64Constant(rewriter, loc, elementByteWidth);
+  return LLVM::MulOp::create(rewriter, loc, maxIndexI64, byteWidthConst);
 }
 
 static Value makeBufferRsrc(ConversionPatternRewriter &rewriter, Location loc,
@@ -978,28 +994,36 @@ mfmaOpToScaledIntrinsic(ScaledMFMAOp smfma, Chipset chipset) {
 /// on the architecture you are compiling for.
 static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
                                                   Chipset chipset) {
-  auto sourceVectorType = dyn_cast<VectorType>(wmma.getSourceA().getType());
-  auto sourceBVectorType = dyn_cast<VectorType>(wmma.getSourceB().getType());
-  auto destVectorType = dyn_cast<VectorType>(wmma.getDestC().getType());
-  auto elemSourceType = sourceVectorType.getElementType();
-  auto elemBSourceType = sourceBVectorType.getElementType();
-  auto elemDestType = destVectorType.getElementType();
+  auto sourceVectorType = cast<VectorType>(wmma.getSourceA().getType());
+  auto sourceBVectorType = cast<VectorType>(wmma.getSourceB().getType());
+  auto destVectorType = cast<VectorType>(wmma.getDestC().getType());
+  Type elemSourceType = sourceVectorType.getElementType();
+  Type elemBSourceType = sourceBVectorType.getElementType();
+  Type elemDestType = destVectorType.getElementType();
 
-  if (elemSourceType.isF16() && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
-  if (elemSourceType.isBF16() && elemDestType.isF32())
-    return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
-  if (elemSourceType.isF16() && elemDestType.isF16())
-    return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
-  if (elemSourceType.isBF16() && elemDestType.isBF16())
-    return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
-  if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
-    return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
-  if (chipset.majorVersion == 11) {
-    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
-      return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+  const uint32_t k = wmma.getK();
+
+  if (k == 16) {
+    if (elemSourceType.isF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isF32())
+      return ROCDL::wmma_f32_16x16x16_bf16::getOperationName();
+    if (elemSourceType.isF16() && elemDestType.isF16())
+      return ROCDL::wmma_f16_16x16x16_f16::getOperationName();
+    if (elemSourceType.isBF16() && elemDestType.isBF16())
+      return ROCDL::wmma_bf16_16x16x16_bf16::getOperationName();
+    if (elemSourceType.isInteger(8) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x16_iu8::getOperationName();
+    if (chipset.majorVersion == 11) {
+      if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+        return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
+    }
   }
-  if (chipset.majorVersion >= 12) {
+  if (chipset.majorVersion < 12)
+    return std::nullopt;
+
+  // gfx12+
+  if (k == 16) {
     if (isa<Float8E4M3FNType>(elemSourceType) &&
         isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x16_fp8_fp8::getOperationName();
@@ -1012,17 +1036,18 @@ static std::optional<StringRef> wmmaOpToIntrinsic(WMMAOp wmma,
     if (isa<Float8E5M2Type>(elemSourceType) &&
         isa<Float8E4M3FNType>(elemBSourceType) && elemDestType.isF32())
       return ROCDL::wmma_f32_16x16x16_bf8_fp8::getOperationName();
-    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32)) {
-      bool isWave64 = destVectorType.getNumElements() == 4;
-      // This is the ambiguous case. 8 inputs to the wave64 version means that
-      // we want the 16x16x32 version, but for wave32 they mean the short form.
-      bool has8Inputs = sourceVectorType.getNumElements() == 8;
-      if ((isWave64 && has8Inputs) || (!isWave64 && !has8Inputs))
-        return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
       return ROCDL::wmma_i32_16x16x16_iu4::getOperationName();
-    }
+
+    return std::nullopt;
   }
-  return std::nullopt;
+  if (k == 32) {
+    if (elemSourceType.isInteger(4) && elemDestType.isInteger(32))
+      return ROCDL::wmma_i32_16x16x32_iu4::getOperationName();
+    return std::nullopt;
+  }
+
+  llvm_unreachable("unhandled WMMA case");
 }
 
 namespace {
@@ -1912,16 +1937,16 @@ struct AMDGPUPermlaneLowering : public ConvertOpToLLVMPattern<PermlaneSwapOp> {
       else
         llvm_unreachable("unsupported row length");
 
-      const Value vdst0 = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
-      const Value vdst1 = LLVM::ExtractValueOp::create(rewriter, loc, res, {1});
+      Value vdst0 = LLVM::ExtractValueOp::create(rewriter, loc, res, {0});
+      Value vdst1 = LLVM::ExtractValueOp::create(rewriter, loc, res, {1});
 
-      const Value isEqual =
-          rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, vdst0, v);
+      Value isEqual = LLVM::ICmpOp::create(rewriter, loc,
+                                           LLVM::ICmpPredicate::eq, vdst0, v);
 
       // Per `permlane(16|32)` semantics: if the first extracted element equals
       // 'v', the result is the second element; otherwise it is the first.
       Value vdstNew =
-          rewriter.create<LLVM::SelectOp>(loc, isEqual, vdst1, vdst0);
+          LLVM::SelectOp::create(rewriter, loc, isEqual, vdst1, vdst0);
       permuted.emplace_back(vdstNew);
     }
 

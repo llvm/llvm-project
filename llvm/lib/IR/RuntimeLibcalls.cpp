@@ -21,9 +21,6 @@ using namespace RTLIB;
 #define GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 #define DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 #include "llvm/IR/RuntimeLibcalls.inc"
-#undef GET_INIT_RUNTIME_LIBCALL_NAMES
-#undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
-#undef DEFINE_GET_LOOKUP_LIBCALL_IMPL_NAME
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.

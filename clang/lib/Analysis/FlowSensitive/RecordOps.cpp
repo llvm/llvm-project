@@ -14,6 +14,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringMap.h"
 
 #define DEBUG_TYPE "dataflow"
 
@@ -79,18 +82,41 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
 
   if (SrcType == DstType || (SrcDecl != nullptr && DstDecl != nullptr &&
                              SrcDecl->isDerivedFrom(DstDecl))) {
+    // Dst may have children modeled from other derived types than SrcType, e.g.
+    // after casts of Dst to other types derived from DstType. Only copy the
+    // children and synthetic fields present in both Dst and SrcType.
+    const FieldSet FieldsInSrcType =
+        Env.getDataflowAnalysisContext().getModeledFields(SrcType);
     for (auto [Field, DstFieldLoc] : Dst.children())
-      copyField(*Field, Src.getChild(*Field), DstFieldLoc, Dst, Env);
+      if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);
+          FieldAsFieldDecl && FieldsInSrcType.contains(FieldAsFieldDecl))
+        copyField(*Field, Src.getChild(*Field), DstFieldLoc, Dst, Env);
+    const llvm::StringMap<QualType> SyntheticFieldsForSrcType =
+        Env.getDataflowAnalysisContext().getSyntheticFields(SrcType);
     for (const auto &[Name, DstFieldLoc] : Dst.synthetic_fields())
-      copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
-                         *DstFieldLoc, Env);
+      if (SyntheticFieldsForSrcType.contains(Name))
+        copySyntheticField(DstFieldLoc->getType(), Src.getSyntheticField(Name),
+                           *DstFieldLoc, Env);
   } else if (SrcDecl != nullptr && DstDecl != nullptr &&
              DstDecl->isDerivedFrom(SrcDecl)) {
-    for (auto [Field, SrcFieldLoc] : Src.children())
-      copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
-    for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields())
-      copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
-                         Dst.getSyntheticField(Name), Env);
+    // Src may have children modeled from other derived types than DstType, e.g.
+    // after other casts of Src to those types (likely in different branches,
+    // but without flow-condition-dependent field modeling). Only copy the
+    // children and synthetic fields of Src that are present in DstType.
+    const FieldSet FieldsInDstType =
+        Env.getDataflowAnalysisContext().getModeledFields(DstType);
+    for (auto [Field, SrcFieldLoc] : Src.children()) {
+      if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);
+          FieldAsFieldDecl && FieldsInDstType.contains(FieldAsFieldDecl))
+        copyField(*Field, SrcFieldLoc, Dst.getChild(*Field), Dst, Env);
+    }
+    const llvm::StringMap<QualType> SyntheticFieldsForDstType =
+        Env.getDataflowAnalysisContext().getSyntheticFields(DstType);
+    for (const auto &[Name, SrcFieldLoc] : Src.synthetic_fields()) {
+      if (SyntheticFieldsForDstType.contains(Name))
+        copySyntheticField(SrcFieldLoc->getType(), *SrcFieldLoc,
+                           Dst.getSyntheticField(Name), Env);
+    }
   } else {
     for (const FieldDecl *Field :
          Env.getDataflowAnalysisContext().getModeledFields(TypeToCopy)) {

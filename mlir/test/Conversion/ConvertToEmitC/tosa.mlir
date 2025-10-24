@@ -20,7 +20,7 @@
 // RUN: mlir-opt --pass-pipeline=%{pipeline} %s | FileCheck %s
 // -----
 
-//      CHECK: emitc.func @main(%[[ARG0:.*]]: !emitc.array<2xf32>, %[[ARG1:.*]]: !emitc.array<2xf32>, %[[RES:.*]]: !emitc.array<2xf32>) {
+//      CHECK: emitc.func private @main(%[[ARG0:.*]]: !emitc.array<2xf32>, %[[ARG1:.*]]: !emitc.array<2xf32>, %[[RES:.*]]: !emitc.array<2xf32>)
 //  CHECK-DAG:   %[[C0:.*]] = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
 //  CHECK-DAG:   %[[C1:.*]] = "emitc.constant"() <{value = 1 : index}> : () -> !emitc.size_t
 //  CHECK-DAG:   %[[C2:.*]] = "emitc.constant"() <{value = 2 : index}> : () -> !emitc.size_t
@@ -35,7 +35,7 @@
 // CHECK-NEXT:   }
 // CHECK-NEXT:   return
 // CHECK-NEXT: }
-func.func @main(%arg0: tensor<2xf32>, %arg1: tensor<2xf32>) -> tensor<2xf32> {
+func.func private @main(%arg0: tensor<2xf32>, %arg1: tensor<2xf32>) -> tensor<2xf32> {
   %0 = tosa.add %arg0, %arg1 : (tensor<2xf32>, tensor<2xf32>) -> tensor<2xf32>
   return %0 : tensor<2xf32>
 }

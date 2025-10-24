@@ -180,13 +180,11 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i128:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
-; CHECK-NEXT:    sbcs x9, x1, x3
-; CHECK-NEXT:    cset w10, lo
-; CHECK-NEXT:    sbfx x10, x10, #0, #1
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x10
-; CHECK-NEXT:    subs x8, x8, x10
-; CHECK-NEXT:    sbc x9, x9, x10
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbcs x11, x3, x1
+; CHECK-NEXT:    csel x8, x8, x10, lo
+; CHECK-NEXT:    csel x9, x9, x11, lo
 ; CHECK-NEXT:    negs x0, x8
 ; CHECK-NEXT:    ngc x1, x9
 ; CHECK-NEXT:    ret
@@ -203,13 +201,11 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i128_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x0, x2
-; CHECK-NEXT:    sbcs x9, x1, x3
-; CHECK-NEXT:    cset w10, lo
-; CHECK-NEXT:    sbfx x10, x10, #0, #1
-; CHECK-NEXT:    eor x8, x8, x10
-; CHECK-NEXT:    eor x9, x9, x10
-; CHECK-NEXT:    subs x8, x8, x10
-; CHECK-NEXT:    sbc x9, x9, x10
+; CHECK-NEXT:    sbc x9, x1, x3
+; CHECK-NEXT:    subs x10, x2, x0
+; CHECK-NEXT:    sbcs x11, x3, x1
+; CHECK-NEXT:    csel x8, x8, x10, lo
+; CHECK-NEXT:    csel x9, x9, x11, lo
 ; CHECK-NEXT:    negs x0, x8
 ; CHECK-NEXT:    ngc x1, x9
 ; CHECK-NEXT:    ret

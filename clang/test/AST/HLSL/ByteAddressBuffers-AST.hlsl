@@ -142,5 +142,19 @@ RESOURCE Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue Var {{.*}} 'tmp' 'hlsl::[[RESOURCE]]'
 // CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
 
+// GetDimensions method
+
+// CHECK-NEXT: CXXMethodDecl {{.*}} GetDimensions 'void (out unsigned int)'
+// CHECK-NEXT: ParmVarDecl {{.*}} dim 'unsigned int &__restrict'
+// CHECK-NEXT: HLSLParamModifierAttr {{.*}} out
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: CallExpr {{.*}} 'void'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(...) noexcept' <BuiltinFnToFnPtr>
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_getdimensions_x' 'void (...) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t {{.*}}' lvalue .__handle {{.*}}
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]' lvalue implicit this
+// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'dim' 'unsigned int &__restrict'
+// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+
 // CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'const char8_t &(unsigned int) const'
 // CHECK-NOSUBSCRIPT-NOT: CXXMethodDecl {{.*}} operator[] 'char8_t &(unsigned int)'

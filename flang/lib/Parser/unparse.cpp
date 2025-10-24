@@ -2089,6 +2089,11 @@ public:
   // OpenMP Clauses & Directives
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
 
+  void Unparse(const OmpBaseVariantNames &x) {
+    Walk(std::get<0>(x.t)); // OmpObject
+    Put(":");
+    Walk(std::get<1>(x.t)); // OmpObject
+  }
   void Unparse(const OmpTypeNameList &x) { //
     Walk(x.v, ",");
   }
@@ -2106,7 +2111,7 @@ public:
     Walk(std::get<OmpReductionIdentifier>(x.t));
     Put(":");
     Walk(std::get<OmpTypeNameList>(x.t));
-    Walk(": ", std::get<std::optional<OmpReductionCombiner>>(x.t));
+    Walk(": ", std::get<std::optional<OmpCombinerExpression>>(x.t));
   }
   void Unparse(const llvm::omp::Directive &x) {
     unsigned ompVersion{langOpts_.OpenMPVersion};
@@ -2340,6 +2345,13 @@ public:
       }
     }
   }
+  void Unparse(const OmpLoopRangeClause &x) {
+    Word("LOOPRANGE(");
+    Walk(std::get<0>(x.t));
+    Put(", ");
+    Walk(std::get<1>(x.t));
+    Put(")");
+  }
   void Unparse(const OmpReductionClause &x) {
     using Modifier = OmpReductionClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2369,6 +2381,11 @@ public:
   void Unparse(const OmpAllocatorSimpleModifier &x) { Walk(x.v); }
   void Unparse(const OmpAllocatorComplexModifier &x) {
     Word("ALLOCATOR(");
+    Walk(x.v);
+    Put(")");
+  }
+  void Unparse(const OmpAttachModifier &x) {
+    Word("ATTACH(");
     Walk(x.v);
     Put(")");
   }
@@ -2487,9 +2504,6 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OmpDeclareTargetWithList &x) {
-    Put("("), Walk(x.v), Put(")");
-  }
   void Unparse(const OmpInitializerProc &x) {
     Walk(std::get<ProcedureDesignator>(x.t));
     Put("(");
@@ -2505,7 +2519,7 @@ public:
       Walk(x.u);
     }
   }
-  void Unparse(const OmpReductionCombiner &x) {
+  void Unparse(const OmpCombinerExpression &x) {
     // Don't let the visitor go to the normal AssignmentStmt Unparse function,
     // it adds an extra newline that we don't want.
     if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
@@ -2534,12 +2548,8 @@ public:
   }
   void Unparse(const OmpDeclareVariantDirective &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE VARIANT ");
-    Put("(");
-    Walk(std::get<std::optional<Name>>(x.t), ":");
-    Walk(std::get<Name>(x.t));
-    Put(")");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2560,8 +2570,8 @@ public:
 
   void Unparse(const OpenMPDeclarativeAssumes &x) {
     BeginOpenMP();
-    Word("!$OMP ASSUMES ");
-    Walk(std::get<OmpClauseList>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2572,18 +2582,17 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPDeclareSimdConstruct &y) {
+  void Unparse(const OpenMPDeclareSimdConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE SIMD ");
-    Walk("(", std::get<std::optional<Name>>(y.t), ")");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPDeclareTargetConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DECLARE TARGET ");
-    Walk(std::get<parser::OmpDeclareTargetSpecifier>(x.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2597,10 +2606,10 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPRequiresConstruct &y) {
+  void Unparse(const OpenMPRequiresConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP REQUIRES ");
-    Walk(std::get<OmpClauseList>(y.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
@@ -2816,6 +2825,7 @@ public:
   WALK_NESTED_ENUM(OmpMapType, Value) // OMP map-type
   WALK_NESTED_ENUM(OmpMapTypeModifier, Value) // OMP map-type-modifier
   WALK_NESTED_ENUM(OmpAlwaysModifier, Value)
+  WALK_NESTED_ENUM(OmpAttachModifier, Value)
   WALK_NESTED_ENUM(OmpCloseModifier, Value)
   WALK_NESTED_ENUM(OmpDeleteModifier, Value)
   WALK_NESTED_ENUM(OmpPresentModifier, Value)
