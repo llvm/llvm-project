@@ -1346,6 +1346,13 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  /// Sends a breakpoint notification event.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               lldb::BreakpointEventType event_kind);
+  /// Sends a breakpoint notification event.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               const lldb::EventDataSP &breakpoint_data_sp);
+
   llvm::Expected<lldb::DisassemblerSP>
   ReadInstructions(const Address &start_addr, uint32_t count,
                    const char *flavor_string = nullptr);
@@ -1356,7 +1363,7 @@ public:
     StopHook(const StopHook &rhs);
     virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookKind : uint32_t { CommandBased = 0, ScriptBased };
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
