@@ -15,7 +15,7 @@ define amdgpu_kernel void @rcp_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-TRUE16-NEXT:    v_rcp_bf16_e32 v0.l, s2
-; SDAG-TRUE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16:
@@ -35,10 +35,10 @@ define amdgpu_kernel void @rcp_bf16_constant_4(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_bf16_constant_4:
 ; SDAG-TRUE16:       ; %bb.0:
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3e80
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3e80
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-TRUE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16_constant_4:
@@ -57,10 +57,10 @@ define amdgpu_kernel void @rcp_bf16_constant_100(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_bf16_constant_100:
 ; SDAG-TRUE16:       ; %bb.0:
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3c24
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x3c24
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-TRUE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rcp_bf16_constant_100:
@@ -79,10 +79,10 @@ define amdgpu_kernel void @rcp_undef_bf16(ptr addrspace(1) %out) #1 {
 ; SDAG-TRUE16-LABEL: rcp_undef_bf16:
 ; SDAG-TRUE16:       ; %bb.0:
 ; SDAG-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
 ; SDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7fc0
 ; SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-TRUE16-NEXT:    flat_store_b16 v1, v0, s[0:1]
+; SDAG-TRUE16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; SDAG-TRUE16-NEXT:    s_endpgm
 ;
 ; SDAG-FAKE16-LABEL: rcp_undef_bf16:

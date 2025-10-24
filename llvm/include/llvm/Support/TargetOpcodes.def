@@ -650,6 +650,9 @@ HANDLE_TARGET_OPCODE(G_FDIV)
 /// Generic FP remainder.
 HANDLE_TARGET_OPCODE(G_FREM)
 
+/// Generic FP modf
+HANDLE_TARGET_OPCODE(G_FMODF)
+
 /// Generic FP exponentiation.
 HANDLE_TARGET_OPCODE(G_FPOW)
 

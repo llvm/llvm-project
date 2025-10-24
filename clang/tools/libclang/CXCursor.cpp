@@ -1338,7 +1338,7 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);
   if (const TagType *Tag = Ty->getAs<TagType>())
-    return MakeCursorTypeRef(Tag->getOriginalDecl(), Loc, TU);
+    return MakeCursorTypeRef(Tag->getDecl(), Loc, TU);
   if (const TemplateTypeParmType *TemplP = Ty->getAs<TemplateTypeParmType>())
     return MakeCursorTypeRef(TemplP->getDecl(), Loc, TU);
 

@@ -123,11 +123,11 @@ end
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt1'
-!PARSE-TREE: | | | | OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | | | OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | | | Name = 'tt2'
-!PARSE-TREE: | | | | OmpReductionCombiner -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
+!PARSE-TREE: | | | | OmpCombinerExpression -> AssignmentStmt = 'omp_out%x=omp_in%x+omp_out%x'
 !PARSE-TREE: | | | | | | Designator -> DataRef -> StructureComponent
 !PARSE-TREE: | | | | | | | DataRef -> Name = 'omp_out'
 !PARSE-TREE: | | | | | | | Name = 'x'

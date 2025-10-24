@@ -199,12 +199,12 @@ define <8 x i32> @mul_const5(<8 x i32> %x) {
 define <8 x i32> @mul_const6(<8 x i32> %x) {
 ; X86-LABEL: mul_const6:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0 # [0,0,0,2,0,2,0,0]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: mul_const6:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,0,0,2,0,2,0,0]
 ; X64-NEXT:    retq
   %y = mul <8 x i32> %x, <i32 0, i32 0, i32 0, i32 2, i32 0, i32 2, i32 0, i32 0>
   ret <8 x i32> %y

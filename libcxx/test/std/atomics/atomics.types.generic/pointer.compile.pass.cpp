@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// XFAIL: availability-synchronization_library-missing
-
 // <atomic>
 
 // Tests the basic features and makes sure they work with a hijacking operator&.
