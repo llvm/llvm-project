@@ -5045,6 +5045,32 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
      << "}\n";
 }
 
+// Emits Sema calls for type dependent attributes
+void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
+                                  raw_ostream &OS) {
+  emitSourceFileHeader("Attribute is type dependent", OS, Records);
+
+  std::set<StringRef> Seen;
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &Attr = *A;
+    if (Attr.getValueAsBit("IsTypeDependent")) {
+      Seen.insert(Attr.getName());
+    }
+  }
+
+  OS << "void checkAttrIsTypeDependent(Expr *E, Decl *D, const Attr *A) {\n";
+  OS << "  switch (A->getKind()) {\n";
+  for (const StringRef &SeenAttr : Seen) {
+    OS << "  case attr::" << SeenAttr << ":\n";
+    OS << "    ActOn" << SeenAttr << "Attr(E, D, A);\n";
+    OS << "    break;\n";
+  }
+  OS << "  default:\n";
+  OS << "    break;\n";
+  OS << "  }\n";
+  OS << "}\n";
+}
+
 // Emits the code to dump an attribute.
 void EmitClangAttrTextNodeDump(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute text node dumper", OS, Records);

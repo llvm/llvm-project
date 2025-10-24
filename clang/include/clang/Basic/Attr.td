@@ -741,6 +741,9 @@ class Attr {
   // our existing general parsing we need to have a separate flag that
   // opts an attribute into strict parsing of attribute parameters
   bit StrictEnumParameters = 0;
+  // Set to true for attributes which have Sema checks which requires the type
+  // to be deduced.
+  bit IsTypeDependent = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
   list<LangOpt> LangOpts = [];
@@ -1400,6 +1403,7 @@ def Cleanup : InheritableAttr {
   let Args = [DeclArgument<Function, "FunctionDecl">];
   let Subjects = SubjectList<[LocalVar]>;
   let Documentation = [CleanupDocs];
+  bit IsTypeDependent = 1;
   // FIXME: DeclArgument should be reworked to also store the
   // Expr instead of adding attr specific hacks like the following.
   // See the discussion in https://github.com/llvm/llvm-project/pull/14023.

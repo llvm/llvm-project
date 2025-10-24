@@ -3360,13 +3360,7 @@ void Sema::CheckAttributesOnDeducedType(Expr *E, Decl *D) {
     return;
 
   for (const Attr *A : D->getAttrs()) {
-    switch (A->getKind()) {
-    case attr::Cleanup:
-      ActOnCleanupAttr(E, D, A);
-      break;
-    default:
-      continue;
-    }
+    checkAttrIsTypeDependent(E, D, A);
   }
 }
 
