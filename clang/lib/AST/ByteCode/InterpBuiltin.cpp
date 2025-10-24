@@ -3101,9 +3101,9 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool evalICmpImm(const uint8_t imm, APSInt A, APSInt B,
+static bool evalICmpImm(uint8_t Imm, APSInt A, APSInt B,
                         bool IsUnsigned) {
-  switch (imm & 0x7) {
+  switch (Imm & 0x7) {
   case 0x00: // _MM_CMPINT_EQ
     return (A == B);
   case 0x01: // _MM_CMPINT_LT
@@ -3125,7 +3125,7 @@ static bool evalICmpImm(const uint8_t imm, APSInt A, APSInt B,
   }
 }
 
-static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
+static bool interp__builtin_ia32_cmp_mask(InterpState &S, CodePtr OpPC,
                                      const CallExpr *Call, unsigned ID,
                                      bool IsUnsigned) {
   assert(Call->getNumArgs() == 4);
@@ -3143,8 +3143,7 @@ static bool interp__builtin_cmp_mask(InterpState &S, CodePtr OpPC,
   PrimType ElemT = LHS.getFieldDesc()->getPrimType();
 
   for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
-    APSInt A;
-    APSInt B;
+    APSInt A, B;
     INT_TYPE_SWITCH_NO_BOOL(ElemT, {
       A = LHS.elem<T>(ElemNum).toAPSInt();
       B = RHS.elem<T>(ElemNum).toAPSInt();
@@ -4208,7 +4207,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cmpw512_mask:
   case X86::BI__builtin_ia32_cmpd512_mask:
   case X86::BI__builtin_ia32_cmpq512_mask:
-    return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
+    return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
                                     /*IsUnsigned=*/false);
 
   case X86::BI__builtin_ia32_ucmpb128_mask:
@@ -4223,7 +4222,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_ucmpw512_mask:
   case X86::BI__builtin_ia32_ucmpd512_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
-    return interp__builtin_cmp_mask(S, OpPC, Call, BuiltinID,
+    return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
                                     /*IsUnsigned=*/true);
 
   default:

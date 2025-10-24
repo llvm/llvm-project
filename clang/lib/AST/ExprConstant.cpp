@@ -15491,11 +15491,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     assert(LHS.getVectorLength() == RHS.getVectorLength());
 
     unsigned VectorLen = LHS.getVectorLength();
-    unsigned RetWidth = VectorLen ? VectorLen : 1;
-    if (Mask.getBitWidth() > RetWidth)
-      RetWidth = Mask.getBitWidth();
+    unsigned RetWidth = Mask.getBitWidth();
 
     APSInt RetMask(llvm::APInt(RetWidth, 0), /*isUnsigned=*/true);
+    
     for (unsigned ElemNum = 0; ElemNum < VectorLen; ++ElemNum) {
       const APSInt &A = LHS.getVectorElt(ElemNum).getInt();
       const APSInt &B = RHS.getVectorElt(ElemNum).getInt();
