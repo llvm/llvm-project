@@ -744,6 +744,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   if (ShowColors)
     OS.resetColor();
   OS << '\n';
+  OS.flush();
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
