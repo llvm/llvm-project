@@ -154,7 +154,7 @@ private:
   };
 
   Node Root; // Root is always for empty range.
-  ContainerType Values;
+  ContainerType KeyValuePairs;
 
   /// Finds or creates a new tail or leaf node corresponding to the `Key`.
   Node &findOrCreate(KeyConstIteratorRangeType Key) {
