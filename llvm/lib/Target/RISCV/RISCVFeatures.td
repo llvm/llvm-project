@@ -1124,7 +1124,8 @@ def HasStdExtZbkbOrP
                          "'Base P' (Packed-SIMD)">;
 
 def HasStdExtZbbOrZbkbOrP
-    : Predicate<"Subtarget->HasStdExtZbbOrZbkb()|| Subtarget->hasStdExtP()">,
+    : Predicate<"Subtarget->hasStdExtZbb() || Subtarget->hasStdExtZbkb() || "
+                "Subtarget->hasStdExtP()">,
       AssemblerPredicate<(any_of FeatureStdExtZbb, FeatureStdExtZbkb, FeatureStdExtP),
                          "'Zbb' (Basic Bit-Manipulation) or "
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "

@@ -241,6 +241,7 @@ struct MissingFeatures {
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
+  static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }

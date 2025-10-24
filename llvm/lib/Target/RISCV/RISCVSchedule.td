@@ -523,6 +523,8 @@ include "RISCVScheduleZvk.td"
 // Vendor Extensions
 multiclass UnsupportedSchedXsf {
   defm : UnsupportedSchedXsfvcp;
+  defm : UnsupportedSchedXSfvfexp;
+  defm : UnsupportedSchedXSfvfexpa;
   defm : UnsupportedSchedXSfvfnrclipxfqf;
   defm : UnsupportedSchedXSfvfwmaccqqq;
   defm : UnsupportedSchedXSfvqmaccdod;
