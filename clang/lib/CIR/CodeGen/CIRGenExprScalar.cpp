@@ -1891,9 +1891,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     clang::LangAS srcLangAS = subExpr->getType().getAddressSpace();
     cir::TargetAddressSpaceAttr subExprAS;
-    if (clang::isTargetAddressSpace(srcLangAS)) {
+    if (clang::isTargetAddressSpace(srcLangAS))
       subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
-    }
+    else
+      cgf.cgm.errorNYI(subExpr->getSourceRange(),
+                       "non-target address space conversion");
     // Since target may map different address spaces in AST to the same address
     // space, an address space conversion may end up as a bitcast.
     return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(

@@ -1220,9 +1220,13 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
     cir::TargetAddressSpaceAttr srcAS;
-    if (clang::isTargetAddressSpace(srcLangAS)) {
+    if (clang::isTargetAddressSpace(srcLangAS))
       srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
-    }
+    else
+      cgm.errorNYI(
+          e->getSourceRange(),
+          "emitCastLValue: address space conversion from unknown address "
+          "space");
 
     mlir::Value v = getTargetHooks().performAddrSpaceCast(
         *this, lv.getPointer(), srcAS, convertType(destTy));
@@ -2334,7 +2338,10 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
 
-  LangAS allocaAS = cgm.getLangTempAllocaAddressSpace();
+  LangAS allocaAS = alloca.getAddressSpace()
+                        ? clang::getLangASFromTargetAS(
+                              alloca.getAddressSpace().getValue().getUInt())
+                        : clang::LangAS::Default;
   LangAS dstTyAS = clang::LangAS::Default;
   if (getCIRAllocaAddressSpace()) {
     dstTyAS = clang::getLangASFromTargetAS(
