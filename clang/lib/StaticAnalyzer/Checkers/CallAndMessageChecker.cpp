@@ -183,8 +183,6 @@ bool CallAndMessageChecker::uninitRefOrPointer(
     CheckerContext &C, SVal V, SourceRange ArgRange, const Expr *ArgEx,
     const BugType &BT, const ParmVarDecl *ParamDecl, int ArgumentNumber) const {
 
-  // The pointee being uninitialized is a sign of code smell, not a bug, no need
-  // to sink here.
   if (!ChecksEnabled[CK_ArgPointeeInitializedness])
     return false;
 
@@ -212,8 +210,14 @@ bool CallAndMessageChecker::uninitRefOrPointer(
 
   if (const MemRegion *SValMemRegion = V.getAsRegion()) {
     const ProgramStateRef State = C.getState();
-    const SVal PSV = State->getSVal(SValMemRegion, C.getASTContext().CharTy);
-    if (PSV.isUndef()) {
+    QualType T = ParamDecl->getType()->getPointeeType();
+    if (T->isVoidType())
+      T = C.getASTContext().CharTy;
+    const SVal PSV = State->getSVal(SValMemRegion, T);
+    bool IsUndef = PSV.isUndef();
+    if (auto LCV = PSV.getAs<nonloc::LazyCompoundVal>())
+      IsUndef = LCV->getStore() == nullptr;
+    if (IsUndef) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Os.str(), N);
         R->addRange(ArgRange);
