@@ -502,7 +502,7 @@ void SetupPythonRuntimeLibrary() {
     return;
 #endif
   llvm::errs() << "error: unable to find "
-                << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << ".\n";
+               << LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME << ".\n";
   return;
 #elif defined(LLDB_PYTHON_DLL_RELATIVE_PATH)
   if (!AddPythonDLLToSearchPath())
