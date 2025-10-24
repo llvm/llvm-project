@@ -206,12 +206,11 @@ static dxil::ElementType toDXILElementType(Type *Ty, bool IsSigned) {
   return ElementType::Invalid;
 }
 
-static dxil::ElementType toDXILTargetType(Type *Ty, bool IsSigned) {
+static dxil::ElementType toDXILTargetType(dxil::ElementType ET) {
   // TODO: Handle unorm, snorm, and packed.
-  Type *ScalarTy = Ty->getScalarType();
-  if (ScalarTy->isIntegerTy(64) || ScalarTy->isDoubleTy())
-    return ElementType::U32;
-  return toDXILElementType(Ty, IsSigned);
+  if (ET == dxil::ElementType::U64 || ET == dxil::ElementType::F64)
+    return dxil::ElementType::U32;
+  return ET;
 }
 
 ResourceTypeInfo::ResourceTypeInfo(TargetExtType *HandleTy,
@@ -577,7 +576,7 @@ ResourceTypeInfo::TypedInfo ResourceTypeInfo::getTyped() const {
 
   auto [ElTy, IsSigned] = getTypedElementType(Kind, HandleTy);
   dxil::ElementType ET = toDXILElementType(ElTy, IsSigned);
-  dxil::ElementType DXILTargetTy = toDXILTargetType(ElTy, IsSigned);
+  dxil::ElementType DXILTargetTy = toDXILTargetType(ET);
   uint32_t Count = 1;
   if (auto *VTy = dyn_cast<FixedVectorType>(ElTy))
     Count = VTy->getNumElements();
