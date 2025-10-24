@@ -6075,6 +6075,35 @@ bool SelectionDAG::isKnownNeverZeroFloat(SDValue Op) const {
       Op, [](ConstantFPSDNode *C) { return !C->isZero(); });
 }
 
+bool SelectionDAG::allUsesSignedZeroInsensitive(SDValue Op) const {
+  assert(Op.getValueType().isFloatingPoint());
+  return all_of(Op->uses(), [&](SDUse &Use) {
+    SDNode *User = Use.getUser();
+    unsigned OperandNo = Use.getOperandNo();
+
+    // Check if this use is insensitive to the sign of zero
+    switch (User->getOpcode()) {
+    case ISD::SETCC:
+      // Comparisons: IEEE-754 specifies +0.0 == -0.0.
+    case ISD::FABS:
+      // fabs always produces +0.0.
+      return true;
+    case ISD::FCOPYSIGN:
+      // copysign overwrites the sign bit of the first operand.
+      return OperandNo == 0;
+    case ISD::FADD:
+    case ISD::FSUB: {
+      // Arithmetic with non-zero constants fixes the uncertainty around the
+      // sign bit.
+      SDValue Other = User->getOperand(1 - OperandNo);
+      return isKnownNeverZeroFloat(Other);
+    }
+    default:
+      return false;
+    }
+  });
+}
+
 bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.

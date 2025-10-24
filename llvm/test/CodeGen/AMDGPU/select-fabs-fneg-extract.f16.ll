@@ -2615,64 +2615,42 @@ define half @select_fneg_posk_src_add_f16(i32 %c, half %x, half %y) {
 }
 
 define half @select_fneg_posk_src_sub_f16(i32 %c, half %x) {
-; CI-SAFE-LABEL: select_fneg_posk_src_sub_f16:
-; CI-SAFE:       ; %bb.0:
-; CI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-SAFE-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-SAFE-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; CI-SAFE-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-SAFE-NEXT:    v_add_f32_e32 v1, -4.0, v1
-; CI-SAFE-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v1, vcc
-; CI-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; CI-LABEL: select_fneg_posk_src_sub_f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; CI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; CI-NEXT:    v_sub_f32_e32 v1, 4.0, v1
+; CI-NEXT:    v_cndmask_b32_e32 v0, 2.0, v1, vcc
+; CI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; VI-SAFE-LABEL: select_fneg_posk_src_sub_f16:
-; VI-SAFE:       ; %bb.0:
-; VI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-SAFE-NEXT:    v_add_f16_e32 v1, -4.0, v1
-; VI-SAFE-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
-; VI-SAFE-NEXT:    v_mov_b32_e32 v2, 0x4000
-; VI-SAFE-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; VI-SAFE-NEXT:    s_setpc_b64 s[30:31]
+; VI-LABEL: select_fneg_posk_src_sub_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_sub_f16_e32 v1, 4.0, v1
+; VI-NEXT:    v_mov_b32_e32 v2, 0x4000
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SAFE-TRUE16-LABEL: select_fneg_posk_src_sub_f16:
 ; GFX11-SAFE-TRUE16:       ; %bb.0:
 ; GFX11-SAFE-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-TRUE16-NEXT:    v_add_f16_e32 v1.l, -4.0, v1.l
 ; GFX11-SAFE-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-TRUE16-NEXT:    v_xor_b16 v0.l, 0x8000, v1.l
+; GFX11-SAFE-TRUE16-NEXT:    v_sub_f16_e32 v0.l, 4.0, v1.l
+; GFX11-SAFE-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x4000, v0.l, vcc_lo
 ; GFX11-SAFE-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SAFE-FAKE16-LABEL: select_fneg_posk_src_sub_f16:
 ; GFX11-SAFE-FAKE16:       ; %bb.0:
 ; GFX11-SAFE-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-FAKE16-NEXT:    v_add_f16_e32 v1, -4.0, v1
+; GFX11-SAFE-FAKE16-NEXT:    v_sub_f16_e32 v1, 4.0, v1
 ; GFX11-SAFE-FAKE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX11-SAFE-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-FAKE16-NEXT:    v_xor_b32_e32 v1, 0x8000, v1
+; GFX11-SAFE-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SAFE-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x4000, v1, vcc_lo
 ; GFX11-SAFE-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; CI-NSZ-LABEL: select_fneg_posk_src_sub_f16:
-; CI-NSZ:       ; %bb.0:
-; CI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NSZ-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NSZ-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; CI-NSZ-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CI-NSZ-NEXT:    v_sub_f32_e32 v1, 4.0, v1
-; CI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 2.0, v1, vcc
-; CI-NSZ-NEXT:    s_setpc_b64 s[30:31]
-;
-; VI-NSZ-LABEL: select_fneg_posk_src_sub_f16:
-; VI-NSZ:       ; %bb.0:
-; VI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NSZ-NEXT:    v_sub_f16_e32 v1, 4.0, v1
-; VI-NSZ-NEXT:    v_mov_b32_e32 v2, 0x4000
-; VI-NSZ-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; VI-NSZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-NSZ-TRUE16-LABEL: select_fneg_posk_src_sub_f16:
 ; GFX11-NSZ-TRUE16:       ; %bb.0:

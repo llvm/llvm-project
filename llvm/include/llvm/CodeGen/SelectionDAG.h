@@ -2322,6 +2322,10 @@ public:
   /// +nan are considered positive, -0.0, -inf and -nan are not.
   LLVM_ABI bool cannotBeOrderedNegativeFP(SDValue Op) const;
 
+  /// Check if all uses of a floating-point value are insensitive to signed
+  /// zeros.
+  LLVM_ABI bool allUsesSignedZeroInsensitive(SDValue Op) const;
+
   /// Test whether two SDValues are known to compare equal. This
   /// is true if they are the same value, or if one is negative zero and the
   /// other positive zero.

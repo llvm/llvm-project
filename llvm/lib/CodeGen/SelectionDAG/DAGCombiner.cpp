@@ -18891,12 +18891,13 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP;
   assert(IsSigned || IsUnsigned);
 
-  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath;
+  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath ||
+                          DAG.allUsesSignedZeroInsensitive(SDValue(N, 0));
   // For signed conversions: The optimization changes signed zero behavior.
   if (IsSigned && !IsSignedZeroSafe)
     return SDValue();
   // For unsigned conversions, we need FABS to canonicalize -0.0 to +0.0
-  // (unless NoSignedZerosFPMath is set).
+  // (unless outputting a signed zero is OK).
   if (IsUnsigned && !IsSignedZeroSafe && !TLI.isFAbsFree(VT))
     return SDValue();
 
@@ -19375,10 +19376,17 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
   // FIXME: This is duplicated in getNegatibleCost, but getNegatibleCost doesn't
   // know it was called from a context with a nsz flag if the input fsub does
   // not.
-  if (N0.getOpcode() == ISD::FSUB && N->getFlags().hasNoSignedZeros() &&
-      N0.hasOneUse()) {
-    return DAG.getNode(ISD::FSUB, SDLoc(N), VT, N0.getOperand(1),
-                       N0.getOperand(0));
+  if (N0.getOpcode() == ISD::FSUB && N0.hasOneUse()) {
+    SDValue X = N0.getOperand(0);
+    SDValue Y = N0.getOperand(1);
+
+    // Safe if NoSignedZeros, or if we can prove X != Y (avoiding the -0.0 vs
+    // +0.0 issue) For now, we use a conservative check: if either operand is
+    // known never zero, then X - Y can't produce a signed zero from X == Y.
+    if (N->getFlags().hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(X) ||
+        DAG.isKnownNeverZeroFloat(Y)) {
+      return DAG.getNode(ISD::FSUB, SDLoc(N), VT, Y, X);
+    }
   }
 
   if (SimplifyDemandedBits(SDValue(N, 0)))
