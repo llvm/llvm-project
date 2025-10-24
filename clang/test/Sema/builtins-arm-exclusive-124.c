@@ -24,3 +24,27 @@ int test_strex(char *addr) {
   res |= __builtin_arm_strex(42, (long long *)addr); // expected-error {{address argument to load or store exclusive builtin must be a pointer to 1,2 or 4 byte type}}
   return res;
 }
+
+int test_ldrexd(char *addr) {
+  int sum = 0;
+  sum += __builtin_arm_ldrexd(addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((short *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((int *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((long long *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((unsigned long long *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((float *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  sum += __builtin_arm_ldrexd((double *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  return sum;
+}
+
+int test_strexd(char *addr) {
+  int res = 0;
+  res |= __builtin_arm_strexd(4, addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(42, (short *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(42, (int *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(42, (long long *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(42, (unsigned long long *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(2.71828f, (float *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  res |= __builtin_arm_strexd(3.14159, (double *)addr); // expected-error {{load and store exclusive builtins are not available on this architecture}}
+  return res;
+}
