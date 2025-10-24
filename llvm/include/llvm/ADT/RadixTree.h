@@ -317,7 +317,7 @@ public:
       Node.Value = KeyValuePairs.begin();
     else
       KeyValuePairs.pop_front();
-    return std::make_pair(Node.Value, !HasValue);
+    return {Node.Value, !HasValue};
   }
 
   ///
