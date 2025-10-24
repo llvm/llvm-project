@@ -82,8 +82,7 @@ private:
 
   /// Represents an internal node in the Radix Tree.
   struct Node {
-    KeyConstIteratorRangeType Key = {KeyConstIteratorType{},
-                                     KeyConstIteratorType{}};
+    KeyConstIteratorRangeType Key{};
     std::vector<Node> Children;
 
     /// An iterator to the value associated with this node.
