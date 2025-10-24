@@ -7682,7 +7682,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim
+  /// \endverbatim 
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 
