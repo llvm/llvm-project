@@ -90,12 +90,12 @@ static LogicalResult checkNestedLoop(SmallVector<scf::ForOp> loops,
   return success();
 }
 
-static SmallVector<Value> loadAcc(Location loc, RewriterBase &rewriter,
-                                  Type elementType, unsigned int M,
-                                  unsigned int N, unsigned int vectorSize,
-                                  Value subviewOpAcc) {
+static SmallVector<Value>
+loadAccumulatorBeforeGEMM(Location loc, RewriterBase &rewriter,
+                          Type elementType, unsigned int M, unsigned int N,
+                          unsigned int vectorSize, Value subviewOpAcc) {
 
-  SmallVector<Value> loopItrArgs;
+  SmallVector<Value> accumulators;
   unsigned int outerBound = M;
   unsigned int innerBound = N;
 
@@ -112,34 +112,74 @@ static SmallVector<Value> loadAcc(Location loc, RewriterBase &rewriter,
 
   for (unsigned int i = 0; i < outerBound; i = i + outerStep) {
     for (unsigned int j = 0; j < innerBound; j = j + innerStep) {
-      Value indexOp_A = rewriter.create<arith::ConstantIndexOp>(loc, i);
-      Value indexOp_B = rewriter.create<arith::ConstantIndexOp>(loc, j);
+      Value indexOp_A = arith::ConstantIndexOp::create(rewriter, loc, i);
+      Value indexOp_B = arith::ConstantIndexOp::create(rewriter, loc, j);
 
       if ((N / vectorSize) > M) {
         indexOp_A = indexOp_B;
-        indexOp_B = rewriter.create<arith::ConstantIndexOp>(loc, i);
+        indexOp_B = arith::ConstantIndexOp::create(rewriter, loc, i);
       }
 
-      auto valueCRow = rewriter.create<vector::LoadOp>(
-          loc, VectorType::get(vectorSize, elementType), subviewOpAcc,
+      auto valueCRow = vector::LoadOp::create(
+          rewriter, loc, VectorType::get(vectorSize, elementType), subviewOpAcc,
           ValueRange{indexOp_A, indexOp_B});
-      loopItrArgs.push_back(valueCRow);
+      accumulators.push_back(valueCRow);
     }
   }
 
-  return loopItrArgs;
+  return accumulators;
 }
 
-SmallVector<Value> nanoKernels(RewriterBase &rewriter, Location loc,
-                               Type elementType, unsigned int vectorSize,
-                               unsigned int vnni, unsigned int M,
-                               unsigned int N, ValueRange acc, Value matA,
-                               Value matB, unsigned int dimCount) {
+// Function accepts A Matrix, B Matrix, C Matrix (as vectors) and generate
+// equivalent target specific nanokernels. Returns the final accumulator as
+// output. Based on M tile, N tile, and vector size it generated optimized
+// nanokernels with condition of reduction and K dimension of the input matrix
+// are 1.
+//
+// Input: Matrix A, Matrix B, Accmulator as M*(N/vector size) vectors, M tile
+// size, N tile size, Vector size.
+//
+// Output:
+// case i: M > (N/vector size). For example, M=3; N=32; vector size = 16.
+//  load_B0 = load B[0-15] into vector<16xf32>
+//  load_B1 = load B[16-31] into vector<16xf32>
+//  bcst_A0 = load A[0] and broadcast it into vector<16xf32>
+//  o/p_Acc[0] = vector.fma bcst_A0, load_B0, i/p_Acc[0]
+//  o/p_Acc[1] = vector.fma bcst_A0, load_B1, i/p_Acc[1]
+//  bcst_A1 = load A[1] and broadcast it into vector<16xf32>
+//  o/p_Acc[2] = vector.fma bcst_A1, load_B0, i/p_Acc[2]
+//  o/p_Acc[3] = vector.fma bcst_A1, load_B1, i/p_Acc[3]
+//  bcst_A2 = load A[2] and broadcast it into vector<16xf32>
+//  o/p_Acc[4] = vector.fma bcst_A2, load_B0, i/p_Acc[4]
+//  o/p_Acc[5] = vector.fma bcst_A2, load_B1, i/p_Acc[5]
+//
+// case ii: M <= (N/vector size). For example, M=2; N=48; vector size = 16.
+//  bcst_A0 = load A[0] and broadcast it into vector<16xf32>
+//  bcst_A1 = load A[1] and broadcast it into vector<16xf32>
+//  bcst_A2 = load A[2] and broadcast it into vector<16xf32>
+//  load_B0 = load B[0-15] into vector<16xf32>
+//  o/p_Acc[0] = vector.fma bcst_A0, load_B0, i/p_Acc[0]
+//  o/p_Acc[1] = vector.fma bcst_A1, load_B0, i/p_Acc[1]
+//  load_B1 = load B[16-31] into vector<16xf32>
+//  o/p_Acc[2] = vector.fma bcst_A0, load_B1, i/p_Acc[2]
+//  o/p_Acc[3] = vector.fma bcst_A1, load_B1, i/p_Acc[3]
+//  load_B2 = load B[32-47] into vector<16xf32>
+//  o/p_Acc[4] = vector.fma bcst_A0, load_B2, i/p_Acc[4]
+//  o/p_Acc[5] = vector.fma bcst_A1, load_B2, i/p_Acc[5]
+//
+// return o/p_Acc;
+SmallVector<Value>
+generateNanokernels(RewriterBase &rewriter, Location loc, Type elementType,
+                    unsigned int vectorSize, unsigned int vnni, unsigned int M,
+                    unsigned int N, ValueRange acc, Value matA, Value matB,
+                    unsigned int dimCount) {
 
-  SmallVector<Value> accVector;
+  SmallVector<Value> accumulators;
   SmallVector<Value> matLoad;
-  Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Value c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
 
+  // Start with assumption that M tile size is smaller and create  the
+  // helper variables
   unsigned int outerBound = M;
   unsigned int outerStep = 1;
 
@@ -154,6 +194,7 @@ SmallVector<Value> nanoKernels(RewriterBase &rewriter, Location loc,
 
   unsigned int fmaBound = M;
 
+  // update helper variables if N tile size is smaller
   if ((N / vectorSize) < M) {
     outerBound = N;
     innerBound = M;
@@ -170,37 +211,52 @@ SmallVector<Value> nanoKernels(RewriterBase &rewriter, Location loc,
     fmaBound = N / vectorSize;
   }
 
+  // Load all the element of A or B matrix
   for (unsigned int i = 0; i < outerBound; i = i + outerStep) {
-    Value indexOp_i = rewriter.create<arith::ConstantIndexOp>(loc, i);
+    Value indexOp_i = arith::ConstantIndexOp::create(rewriter, loc, i);
     Value valueRow;
 
     if ((N / vectorSize) > M) {
 
+      // With the assumption as batch-reduce matmul initialize reduction, M, and
+      // K dimension.
       SmallVector<Value> index = {c0, indexOp_i, c0};
+
+      // Remove reduction dimension if it is a batch matmul
       if (dimCount == 3) {
         index.erase(index.begin());
       }
 
-      Value row = rewriter.create<vector::LoadOp>(
-          loc, VectorType::get(outerVectSize, elementType), outerMatrix, index);
-      valueRow = rewriter.create<vector::BroadcastOp>(
-          loc, VectorType::get(vectorSize, rewriter.getF32Type()), row);
+      // A Matrix load + broadcast
+      Value row = vector::LoadOp::create(
+          rewriter, loc, VectorType::get(outerVectSize, elementType),
+          outerMatrix, index);
+      valueRow = vector::BroadcastOp::create(
+          rewriter, loc, VectorType::get(vectorSize, rewriter.getF32Type()),
+          row);
     } else {
 
+      // With the assumption as batch-reduce matmul initialize reduction, K, and
+      // N dimension.
       SmallVector<Value> index = {c0, c0, indexOp_i};
+
+      // Remove reduction dimension if it is a batch matmul
       if (dimCount == 3) {
         index.erase(index.begin());
       }
 
-      valueRow = rewriter.create<vector::LoadOp>(
-          loc, VectorType::get(outerVectSize, elementType), outerMatrix, index);
+      // B Matrix load.
+      valueRow = vector::LoadOp::create(
+          rewriter, loc, VectorType::get(outerVectSize, elementType),
+          outerMatrix, index);
     }
 
     matLoad.push_back(valueRow);
   }
 
+  // Load elements of A/B Matrix one at a time and compute FMA
   for (unsigned int j = 0, k = 0; j < innerBound; j = j + innerStep) {
-    Value indexOp_j = rewriter.create<arith::ConstantIndexOp>(loc, j);
+    Value indexOp_j = arith::ConstantIndexOp::create(rewriter, loc, j);
     Value valueRow;
 
     if ((N / vectorSize) < M) {
@@ -208,11 +264,14 @@ SmallVector<Value> nanoKernels(RewriterBase &rewriter, Location loc,
       if (dimCount == 3) {
         index.erase(index.begin());
       }
-      Value row = rewriter.create<vector::LoadOp>(
-          loc, VectorType::get(innerVectSize, elementType), innerMatrix,
-          ValueRange(index));
-      valueRow = rewriter.create<vector::BroadcastOp>(
-          loc, VectorType::get(vectorSize, rewriter.getF32Type()), row);
+
+      // A Matrix load + broadcast
+      Value row = vector::LoadOp::create(
+          rewriter, loc, VectorType::get(innerVectSize, elementType),
+          innerMatrix, ValueRange(index));
+      valueRow = vector::BroadcastOp::create(
+          rewriter, loc, VectorType::get(vectorSize, rewriter.getF32Type()),
+          row);
     } else {
 
       SmallVector<Value> index = {c0, c0, indexOp_j};
@@ -220,58 +279,35 @@ SmallVector<Value> nanoKernels(RewriterBase &rewriter, Location loc,
         index.erase(index.begin());
       }
 
-      valueRow = rewriter.create<vector::LoadOp>(
-          loc, VectorType::get(innerVectSize, elementType), innerMatrix, index);
+      // B Matrix load
+      valueRow = vector::LoadOp::create(
+          rewriter, loc, VectorType::get(innerVectSize, elementType),
+          innerMatrix, index);
     }
 
+    // FMAs
     for (unsigned int i = 0; i < fmaBound; i = i + 1) {
       auto fmaOdd =
-          rewriter.create<vector::FMAOp>(loc, matLoad[i], valueRow, acc[k]);
+          vector::FMAOp::create(rewriter, loc, matLoad[i], valueRow, acc[k]);
       k++;
-      accVector.push_back(fmaOdd);
+      accumulators.push_back(fmaOdd);
     }
   }
 
-  return accVector;
+  return accumulators;
 }
 
-Value accVector(RewriterBase &rewriter, Location loc, VectorType vecType,
-                SmallVector<Value> FMAs, Value accVec, unsigned int vecSize,
-                unsigned int M, unsigned int N) {
-
-  auto strides = rewriter.getI64ArrayAttr({1});
-  if ((N / vecSize) > M) {
-    for (unsigned int j = 0, k = 0; j < (N / vecSize); j++) {
-      for (unsigned int i = 0; i < M; i++) {
-        unsigned int off = (j * vecSize) + (i * N);
-        auto offsets = rewriter.getI64ArrayAttr({off});
-        accVec = rewriter.create<vector::InsertStridedSliceOp>(
-            loc, vecType, FMAs[k], accVec, offsets, strides);
-        k++;
-      }
-    }
-
-  } else {
-    for (unsigned int i = 0, k = 0; i < M * N; i = i + vecSize) {
-      auto offsets = rewriter.getI64ArrayAttr({i});
-      accVec = rewriter.create<vector::InsertStridedSliceOp>(
-          loc, vecType, FMAs[k], accVec, offsets, strides);
-      k++;
-    }
-  }
-  return accVec;
-}
-
-scf::ForOp createLoop(RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
-                      vector::TransferReadOp vectorReadOpLhs,
-                      vector::TransferReadOp vectorReadOpRhs,
-                      Value ivNewReductionForOp, Type elementType,
-                      unsigned int vectorSize, unsigned int vnni,
-                      unsigned int M, unsigned int N,
-                      ValueRange iterArgsNewReductionForOp,
-                      unsigned int dimCount) {
-  auto newKForOp = rewriter.create<scf::ForOp>(
-      kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
+// Function to re-create K dimension loop with accumulator as IterArgs for
+// lowering a batch-reduce vector contraction to a system specific nanokernels.
+scf::ForOp createGEMMLoopsWithAccAsIterArgs(
+    RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
+    vector::TransferReadOp vectorReadOpLhs,
+    vector::TransferReadOp vectorReadOpRhs, Value ivNewReductionForOp,
+    Type elementType, unsigned int vectorSize, unsigned int vnni,
+    unsigned int M, unsigned int N, ValueRange iterArgsNewReductionForOp,
+    unsigned int dimCount) {
+  auto newKForOp = scf::ForOp::create(
+      rewriter, kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
       kForOp.getStep(), iterArgsNewReductionForOp,
       [&](OpBuilder &rewriterNewKForOp, Location locNewKForOp,
           Value ivNewKForOp, ValueRange iterArgsNewKForOp) {
@@ -291,27 +327,28 @@ scf::ForOp createLoop(RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
         auto rhsClone = rewriterNewKForOp.clone(
             *vectorReadOpRhs.getBase().getDefiningOp(), rhsMapping);
 
-        auto evenFMAs =
-            nanoKernels(rewriter, kForOp.getLoc(), elementType, vectorSize,
-                        vnni, M, N, iterArgsNewKForOp, lhsClone->getResult(0),
-                        rhsClone->getResult(0), dimCount);
+        auto evenFMAs = generateNanokernels(
+            rewriter, kForOp.getLoc(), elementType, vectorSize, vnni, M, N,
+            iterArgsNewKForOp, lhsClone->getResult(0), rhsClone->getResult(0),
+            dimCount);
 
-        rewriterNewKForOp.create<scf::YieldOp>(locNewKForOp, evenFMAs);
+        scf::YieldOp::create(rewriterNewKForOp, locNewKForOp, evenFMAs);
       });
 
   return newKForOp;
 }
 
-scf::ForOp createLoop(RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
-                      vector::TransferReadOp vectorReadOpLhs,
-                      vector::TransferReadOp vectorReadOpRhs, Type elementType,
-                      unsigned int vectorSize, unsigned int vnni,
-                      unsigned int M, unsigned int N,
-                      ValueRange iterArgsNewReductionForOp,
-                      unsigned int dimCount) {
+// Function to re-create K dimension loop with accumulator as IterArgs for
+// lowering a batch vector contraction to a system specific nanokernels.
+scf::ForOp createGEMMLoopsWithAccAsIterArgs(
+    RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
+    vector::TransferReadOp vectorReadOpLhs,
+    vector::TransferReadOp vectorReadOpRhs, Type elementType,
+    unsigned int vectorSize, unsigned int vnni, unsigned int M, unsigned int N,
+    ValueRange iterArgsNewReductionForOp, unsigned int dimCount) {
 
-  auto newKForOp = rewriter.create<scf::ForOp>(
-      kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
+  auto newKForOp = scf::ForOp::create(
+      rewriter, kForOp.getLoc(), kForOp.getLowerBound(), kForOp.getUpperBound(),
       kForOp.getStep(), iterArgsNewReductionForOp,
       [&](OpBuilder &rewriterNewKForOp, Location locNewKForOp,
           Value ivNewKForOp, ValueRange iterArgsNewKForOp) {
@@ -328,14 +365,43 @@ scf::ForOp createLoop(RewriterBase &rewriter, Location loc, scf::ForOp kForOp,
             *vectorReadOpRhs.getBase().getDefiningOp(), rhsMapping);
 
         auto evenFMAs =
-            nanoKernels(rewriter, loc, elementType, vectorSize, vnni, M, N,
-                        iterArgsNewKForOp, lhsClone->getResult(0),
-                        rhsClone->getResult(0), dimCount);
+            generateNanokernels(rewriter, loc, elementType, vectorSize, vnni, M,
+                                N, iterArgsNewKForOp, lhsClone->getResult(0),
+                                rhsClone->getResult(0), dimCount);
 
-        rewriterNewKForOp.create<scf::YieldOp>(locNewKForOp, evenFMAs);
+        scf::YieldOp::create(rewriterNewKForOp, locNewKForOp, evenFMAs);
       });
 
   return newKForOp;
+}
+
+Value mergeAccumulatedVectorAsMatrix(RewriterBase &rewriter, Location loc,
+                                     VectorType vecType,
+                                     SmallVector<Value> FMAs, Value accVec,
+                                     unsigned int vecSize, unsigned int M,
+                                     unsigned int N) {
+
+  auto strides = rewriter.getI64ArrayAttr({1});
+  if ((N / vecSize) > M) {
+    for (unsigned int j = 0, k = 0; j < (N / vecSize); j++) {
+      for (unsigned int i = 0; i < M; i++) {
+        unsigned int off = (j * vecSize) + (i * N);
+        auto offsets = rewriter.getI64ArrayAttr({off});
+        accVec = vector::InsertStridedSliceOp::create(
+            rewriter, loc, vecType, FMAs[k], accVec, offsets, strides);
+        k++;
+      }
+    }
+
+  } else {
+    for (unsigned int i = 0, k = 0; i < M * N; i = i + vecSize) {
+      auto offsets = rewriter.getI64ArrayAttr({i});
+      accVec = vector::InsertStridedSliceOp::create(
+          rewriter, loc, vecType, FMAs[k], accVec, offsets, strides);
+      k++;
+    }
+  }
+  return accVec;
 }
 
 struct VectorContractNanokernelLowering
@@ -450,47 +516,48 @@ struct VectorContractNanokernelLowering
       rewriter.setInsertionPoint(kForOp);
 
     // Load  MxN C sub matrix into acc vectors (e.g, <vectorSizexf32>)
-    SmallVector<Value> loopItrArgs =
-        loadAcc(loc, rewriter, elementType, M, N, vectorSize, subviewOpAcc);
+    SmallVector<Value> accumulators = loadAccumulatorBeforeGEMM(
+        loc, rewriter, elementType, M, N, vectorSize, subviewOpAcc);
 
     // Create the batch-reduce and K-loop with acc vectors as the loop
     // iterargs (batch-reduce matmul) + nanokernel generation
     scf::ForOp newLoop;
     if (dimCount == 4) {
-      newLoop = rewriter.create<scf::ForOp>(
-          reductionForOp.getLoc(), reductionForOp.getLowerBound(),
-          reductionForOp.getUpperBound(), reductionForOp.getStep(), loopItrArgs,
+      newLoop = scf::ForOp::create(
+          rewriter, reductionForOp.getLoc(), reductionForOp.getLowerBound(),
+          reductionForOp.getUpperBound(), reductionForOp.getStep(),
+          accumulators,
           [&](OpBuilder &rewriterNewReductionForOp,
               Location locNewReductionForOp, Value ivNewReductionForOp,
               ValueRange iterArgsNewReductionForOp) {
-            scf::ForOp newKForOp = createLoop(
+            scf::ForOp newKForOp = createGEMMLoopsWithAccAsIterArgs(
                 rewriter, loc, kForOp, vectorReadOpLhs, vectorReadOpRhs,
                 ivNewReductionForOp, elementType, vectorSize, vnni, M, N,
                 iterArgsNewReductionForOp, dimCount);
 
-            rewriterNewReductionForOp.create<scf::YieldOp>(
-                locNewReductionForOp, newKForOp.getResults());
+            scf::YieldOp::create(rewriterNewReductionForOp,
+                                 locNewReductionForOp, newKForOp.getResults());
           });
     }
 
     // Create only the K-loop (batch matmul) + nanokernel generation
     if (dimCount == 3) {
-      newLoop = createLoop(rewriter, loc, kForOp, vectorReadOpLhs,
-                           vectorReadOpRhs, elementType, vectorSize, vnni, M, N,
-                           loopItrArgs, dimCount);
+      newLoop = createGEMMLoopsWithAccAsIterArgs(
+          rewriter, loc, kForOp, vectorReadOpLhs, vectorReadOpRhs, elementType,
+          vectorSize, vnni, M, N, accumulators, dimCount);
     }
 
     // Combine all acc vectors into a MxN C matrix
     auto vecType = VectorType::get({M * N}, rewriter.getF32Type());
     auto zeroAttr =
         DenseElementsAttr::get(vecType, rewriter.getF32FloatAttr(0.0));
-    Value accVec = rewriter.create<arith::ConstantOp>(loc, vecType, zeroAttr);
+    Value accVec = arith::ConstantOp::create(rewriter, loc, vecType, zeroAttr);
 
-    accVec = accVector(rewriter, loc, vecType, newLoop.getResults(), accVec,
-                       vectorSize, M, N);
+    accVec = mergeAccumulatedVectorAsMatrix(
+        rewriter, loc, vecType, newLoop.getResults(), accVec, vectorSize, M, N);
 
     auto accTy = dyn_cast<VectorType>(contractOp.getAccType());
-    auto reshapeAcc = rewriter.create<vector::ShapeCastOp>(loc, accTy, accVec);
+    auto reshapeAcc = vector::ShapeCastOp::create(rewriter, loc, accTy, accVec);
 
     // Replace all the use of vector.contract with results of nanokernels
     if (dimCount == 4)
