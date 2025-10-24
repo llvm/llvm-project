@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # ===- cindex-dump.py - cindex/Python Source Dump -------------*- python -*--===#
 #

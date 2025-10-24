@@ -349,7 +349,7 @@ a few of them.  Here's a trivial example of adding two "utility" commands into a
 "my-utilities" container:
 
 ```python3
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import lldb
 
