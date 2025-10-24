@@ -1546,7 +1546,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   static bool isAArch64SVCount(Type *Ty) {
-    if (TargetExtType* TTy = dyn_cast<TargetExtType>(Ty))
+    if (TargetExtType *TTy = dyn_cast<TargetExtType>(Ty))
       return TTy->getName() == "aarch64.svcount";
     return false;
   }
