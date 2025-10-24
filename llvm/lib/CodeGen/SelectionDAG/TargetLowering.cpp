@@ -1753,13 +1753,13 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-    // If we're testing X < 0 or X >= 0 then we only need the sign mask of the previous
-    // result
+    // If we're testing X < 0 or X >= 0 then we only need the sign mask of the
+    // previous result
     // FIXME: We're limiting to integer types here, but this should also work
     // if we don't care about FP signed-zero. The use of SETLT with FP means
     // that we don't care about NaNs.
-    if ((CC == ISD::SETLT || CC == ISD::SETGE) && Op1.getValueType().isInteger() &&
-        (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode()))) {
+    if ((CC == ISD::SETLT || CC == ISD::SETGE) &&
+        Op1.getValueType().isInteger() && isNullOrNullSplat(Op1)) {
       KnownBits KnownOp0;
       bool Changed = false;
       if (SimplifyDemandedBits(
