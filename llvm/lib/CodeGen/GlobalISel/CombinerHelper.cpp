@@ -4425,7 +4425,7 @@ void CombinerHelper::applyBuildFnNoErase(
 }
 
 bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
-                                               bool ScalarConstantsAreLegal,
+                                               bool AllowScalarConstants,
                                                BuildFnTy &MatchInfo) const {
   assert(MI.getOpcode() == TargetOpcode::G_OR);
 
@@ -4467,7 +4467,7 @@ bool CombinerHelper::matchOrShiftToFunnelShift(MachineInstr &MI,
 
   LLT AmtTy = MRI.getType(Amt);
   if (!isLegalOrBeforeLegalizer({FshOpc, {Ty, AmtTy}}) &&
-      (!ScalarConstantsAreLegal || CstShlAmt == 0 || !Ty.isScalar()))
+      (!AllowScalarConstants || CstShlAmt == 0 || !Ty.isScalar()))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
