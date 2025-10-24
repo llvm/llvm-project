@@ -219,6 +219,9 @@ struct MissingFeatures {
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
+  static bool cleanupAppendInsts() { return false; }
+  static bool cleanupBranchThrough() { return false; }
+  static bool cleanupIndexAndBIAdjustment() { return false; }
   static bool cleanupsToDeactivate() { return false; }
   static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
@@ -228,6 +231,7 @@ struct MissingFeatures {
   static bool coverageMapping() { return false; }
   static bool createInvariantGroup() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
+  static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
@@ -237,8 +241,10 @@ struct MissingFeatures {
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
+  static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
@@ -296,6 +302,7 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
+  static bool simplifyCleanupEntry() { return false; }
   static bool sourceLanguageCases() { return false; }
   static bool stackBase() { return false; }
   static bool stackSaveOp() { return false; }

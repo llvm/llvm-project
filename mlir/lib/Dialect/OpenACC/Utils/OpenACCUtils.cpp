@@ -9,6 +9,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 mlir::Operation *mlir::acc::getEnclosingComputeOp(mlir::Region &region) {
@@ -77,4 +78,31 @@ mlir::acc::VariableTypeCategory mlir::acc::getTypeCategory(mlir::Value var) {
         cast<TypedValue<mlir::acc::PointerLikeType>>(var),
         pointerLikeTy.getElementType());
   return typeCategory;
+}
+
+std::string mlir::acc::getVariableName(mlir::Value v) {
+  Value current = v;
+
+  // Walk through view operations until a name is found or can't go further
+  while (Operation *definingOp = current.getDefiningOp()) {
+    // Check for `acc.var_name` attribute
+    if (auto varNameAttr =
+            definingOp->getAttrOfType<VarNameAttr>(getVarNameAttrName()))
+      return varNameAttr.getName().str();
+
+    // If it is a data entry operation, get name via getVarName
+    if (isa<ACC_DATA_ENTRY_OPS>(definingOp))
+      if (auto name = acc::getVarName(definingOp))
+        return name->str();
+
+    // If it's a view operation, continue to the source
+    if (auto viewOp = dyn_cast<ViewLikeOpInterface>(definingOp)) {
+      current = viewOp.getViewSource();
+      continue;
+    }
+
+    break;
+  }
+
+  return "";
 }

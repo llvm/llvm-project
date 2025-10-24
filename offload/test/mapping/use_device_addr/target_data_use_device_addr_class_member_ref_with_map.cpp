@@ -16,7 +16,7 @@ struct ST {
   int m = 0;
 
   void f6() {
-    uintptr_t offset = (uintptr_t)&d - n;
+    ptrdiff_t offset = (char *)&d - ((char *)(uintptr_t)n);
 #pragma omp target data map(to : m, d)
     {
       void *mapped_ptr = omp_get_mapped_ptr(&d, omp_get_default_device());
@@ -34,11 +34,15 @@ struct ST {
         // ref/attach modifiers:
         //  &ref_ptee(this[0].[d])), &ref_ptee(this[0].d), TO | FROM
         //  &ref_ptr(this[0].d), &ref_ptee(this[0].d), 4, ATTACH
-        // EXPECTED: 1 0
-        // CHECK:    0 1
-        printf("%d %d\n", &d == mapped_ptr,
-               (uintptr_t)&d == (uintptr_t)mapped_ptr - offset);
+        // EXPECTED:   1
+        // CHECK-NEXT: 0
+        printf("%d\n", &d == mapped_ptr);
+        ptrdiff_t offset_device = (char *)mapped_ptr - (char *)&d;
+        printf("offset = %td (%p), offset_device = %td (%p)\n", offset,
+               (void *)offset, offset_device, (void *)offset_device);
+        printf("mapped_ptr = %p, device_addr = %p, ", mapped_ptr, &d);
       }
+      printf("host_addr = %p\n", &d);
     }
   }
 };

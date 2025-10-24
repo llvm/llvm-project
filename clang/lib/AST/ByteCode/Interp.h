@@ -702,7 +702,7 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                  bool CanOverflow) {
+                  bool CanOverflow, UnsignedOrNone BitWidth = std::nullopt) {
   assert(!Ptr.isDummy());
 
   if (!S.inConstantContext()) {
@@ -725,12 +725,18 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if constexpr (Op == IncDecOp::Inc) {
     if (!T::increment(Value, &Result) || !CanOverflow) {
-      Ptr.deref<T>() = Result;
+      if (BitWidth)
+        Ptr.deref<T>() = Result.truncate(*BitWidth);
+      else
+        Ptr.deref<T>() = Result;
       return true;
     }
   } else {
     if (!T::decrement(Value, &Result) || !CanOverflow) {
-      Ptr.deref<T>() = Result;
+      if (BitWidth)
+        Ptr.deref<T>() = Result.truncate(*BitWidth);
+      else
+        Ptr.deref<T>() = Result;
       return true;
     }
   }
@@ -774,6 +780,17 @@ bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
                                                       CanOverflow);
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                 unsigned BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
+                                                      BitWidth);
+}
+
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value increased by one back to the pointer
@@ -787,12 +804,34 @@ bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreIncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
 }
 
 /// 1) Pops a pointer from the stack
@@ -808,6 +847,16 @@ bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
 }
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                 uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
+                                                      BitWidth);
+}
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
@@ -822,11 +871,32 @@ bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreDecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
 }
 
 template <IncDecOp Op, PushVal DoPush>

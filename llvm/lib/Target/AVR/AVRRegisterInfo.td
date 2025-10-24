@@ -211,6 +211,31 @@ def PTRDISPREGS : RegisterClass<"AVR", [i16], 8, (add R31R30, R29R28), ptr>;
 // model this using a register class containing only the Z register.
 def ZREG : RegisterClass<"AVR", [i16], 8, (add R31R30)>;
 
+// general registers excluding Z register lo/hi, these are the only
+// registers that are always safe for STDSPQr instructions
+def GPR8NOZ : RegisterClass<"AVR", [i8], 8,
+                         (// Return value and argument registers.
+                          add R24, R25, R18, R19, R20, R21, R22, R23,
+                          // Scratch registers.
+                          R26, R27,
+                          // Callee saved registers.
+                          R28, R29, R17, R16, R15, R14, R13, R12, R11, R10,
+                          R9, R8, R7, R6, R5, R4, R3, R2, R0, R1)>;
+
+// 16-bit pair register class excluding Z register lo/hi, these are the only
+// registers that are always safe for STDWSPQr instructions
+def DREGSNOZ : RegisterClass<"AVR", [i16], 8,
+                          (// Return value and arguments.
+                           add R25R24, R19R18, R21R20, R23R22,
+                           // Scratch registers.
+                           R27R26,
+                           // Callee saved registers.
+                           R29R28, R17R16, R15R14, R13R12, R11R10, R9R8,
+                           R7R6, R5R4, R3R2, R1R0,
+                           // Pseudo regs for unaligned 16-bits
+                           R26R25, R24R23, R22R21, R20R19, R18R17, R16R15,
+                           R14R13, R12R11, R10R9)>;
+
 // Register class used for the stack read pseudo instruction.
 def GPRSP : RegisterClass<"AVR", [i16], 8, (add SP)>;
 
