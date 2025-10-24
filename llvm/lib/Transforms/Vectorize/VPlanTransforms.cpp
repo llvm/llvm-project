@@ -4104,6 +4104,15 @@ static bool interleaveStoredValuesMatch(ArrayRef<VPValue *> StoredValues) {
         if (!IR->getInterleaveGroup()->isFull() ||
             !equal(DefI->definedValues(), Def0->definedValues()))
           return false;
+      } else if (Def0 != DefI) {
+        auto *SingleDef0 = dyn_cast<VPSingleDefRecipe>(Def0);
+        auto *SingleDefI = dyn_cast<VPSingleDefRecipe>(DefI);
+        if (!SingleDef0 || !SingleDefI)
+          return false;
+        auto Opc0 = getOpcodeOrIntrinsicID(SingleDef0);
+        auto OpcI = getOpcodeOrIntrinsicID(SingleDefI);
+        if (!Opc0 || Opc0 != OpcI)
+          return false;
       }
     }
   }
@@ -4260,11 +4269,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       NarrowedOps.insert(RepR);
       return RepR;
     }
-    auto *WideLoad = dyn_cast<VPWidenLoadRecipe>(R);
-    if (!WideLoad) {
+    if (isa<VPSingleDefRecipe>(R)) {
+      // Narrow any intervening single-def recipes.
       NarrowedOps.insert(V);
       return V;
     }
+    auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
     VPValue *PtrOp = WideLoad->getAddr();
     if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
