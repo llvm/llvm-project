@@ -1,4 +1,4 @@
-// Test that synthesized accessors get treated like regular method declarations/defeinitions.
+// Test that synthesized accessors get treated like regular method declarations/definitions.
 // I.e.:
 // 1. explicitly passed parameter are not marked artificial.
 // 2. Each property accessor has a method declaration and definition.
