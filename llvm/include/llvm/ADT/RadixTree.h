@@ -334,7 +334,7 @@ public:
   find_prefixes(const key_type &Key) const {
     return iterator_range<const_prefix_iterator>{
         const_prefix_iterator(
-            &Root, KeyConstIteratorRangeType{adl_begin(Key), adl_end(Key)}),
+            &Root, KeyConstIteratorRangeType(Key)),
         const_prefix_iterator{}};
   }
 };
