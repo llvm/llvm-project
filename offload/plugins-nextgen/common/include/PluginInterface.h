@@ -1295,7 +1295,10 @@ struct GenericPluginTy {
     return *Devices[DeviceId];
   }
   const GenericDeviceTy &getDevice(int32_t DeviceId) const {
-    return const_cast<GenericPluginTy *>(this)->getDevice(DeviceId);
+    assert(isValidDeviceId(DeviceId) && "Invalid device id");
+    assert(Devices[DeviceId] && "Device is uninitialized");
+
+    return *Devices[DeviceId];
   }
 
   /// Get the number of active devices.
