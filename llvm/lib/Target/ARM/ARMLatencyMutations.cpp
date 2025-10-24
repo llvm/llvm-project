@@ -114,7 +114,7 @@ InstructionInformation::InstructionInformation(const ARMBaseInstrInfo *TII) {
   std::initializer_list<unsigned> isInlineShiftALUList = {
       t2ADCrs,  t2ADDSrs, t2ADDrs,  t2BICrs, t2EORrs,
       t2ORNrs,  t2RSBSrs, t2RSBrs,  t2SBCrs, t2SUBrs,
-      t2SUBSrs, t2CMPrs,  t2CMNzrs, t2TEQrs, t2TSTrs,
+      t2SUBSrs, t2CMPrs,  t2CMNrs,  t2TEQrs, t2TSTrs,
   };
   for (auto op : isInlineShiftALUList) {
     Info[op].IsInlineShiftALU = true;

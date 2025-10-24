@@ -4683,6 +4683,29 @@ static bool isFloatingPointZero(SDValue Op) {
   return false;
 }
 
+static bool isSafeSignedCMN(SDValue Op, SelectionDAG &DAG) {
+  // 0 - INT_MIN sign wraps, so no signed wrap means cmn is safe.
+  if (Op->getFlags().hasNoSignedWrap())
+    return true;
+
+  // We can still figure out if the second operand is safe to use
+  // in a CMN instruction by checking if it is known to be not the minimum
+  // signed value. If it is not, then we can safely use CMN.
+  // Note: We can eventually remove this check and simply rely on
+  // Op->getFlags().hasNoSignedWrap() once SelectionDAG/ISelLowering
+  // consistently sets them appropriately when making said nodes.
+
+  KnownBits KnownSrc = DAG.computeKnownBits(Op.getOperand(1));
+  return !KnownSrc.getSignedMinValue().isMinSignedValue();
+}
+
+static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
+         (isIntEqualitySetCC(CC) ||
+          (isUnsignedIntSetCC(CC) && DAG.isKnownNeverZero(Op.getOperand(1))) ||
+          (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
+}
+
 /// Returns appropriate ARM CMP (cmp) and corresponding condition code for
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -4816,6 +4839,21 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     CompareType = ARMISD::CMPZ;
     break;
   }
+
+  // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
+  // the codebase.
+
+  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
+  // all the time, allow those cases to be cmn too no matter what.
+  if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    RHS = RHS.getOperand(1);
+  } else if (CompareType != ARMISD::CMPZ && isCMN(LHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    LHS = LHS.getOperand(1);
+    CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
+  }
+
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
   return DAG.getNode(CompareType, dl, FlagsVT, LHS, RHS);
 }
@@ -10532,34 +10570,12 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   // Optimization: if RHS is a subtraction against 0, use ADDC instead of SUBC
   unsigned Opcode = ARMISD::SUBC;
 
-  // Check if RHS is a subtraction against 0: (0 - X)
-  if (RHS.getOpcode() == ISD::SUB) {
-    SDValue SubLHS = RHS.getOperand(0);
-    SDValue SubRHS = RHS.getOperand(1);
-
-    // Check if it's 0 - X
-    if (isNullConstant(SubLHS)) {
-      bool CanUseAdd = false;
-      if (IsSigned) {
-        // For SCMP: only if X is known to never be INT_MIN (to avoid overflow)
-        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
-                                                      .getSignedMinValue()
-                                                      .isMinSignedValue()) {
-          CanUseAdd = true;
-        }
-      } else {
-        // For UCMP: only if X is known to never be zero
-        if (DAG.isKnownNeverZero(SubRHS)) {
-          CanUseAdd = true;
-        }
-      }
-
-      if (CanUseAdd) {
-        Opcode = ARMISD::ADDC;
-        RHS = SubRHS; // Replace RHS with X, so we do LHS + X instead of
-                      // LHS - (0 - X)
-      }
-    }
+  // Doesn't matter as it's a 3-way but let's just send in a signed comparison
+  // if signed or an unsigned comparison if unsigned.
+  ISD::CondCode CC = IsSigned ? ISD::SETGT : ISD::SETUGT;
+  if (isCMN(RHS, CC, DAG)) {
+    Opcode = ARMISD::ADDC;
+    RHS = RHS.getOperand(1);
   }
 
   // Generate the operation with flags
