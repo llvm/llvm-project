@@ -3290,30 +3290,68 @@ static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
   return TableEnd;
 }
 
-template <typename Ranges, typename PayloadEmitter>
-static void emitRangeList(
-    DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
-    const DwarfCompileUnit &CU, unsigned BaseAddressx, unsigned OffsetPair,
-    unsigned StartxLength, unsigned EndOfList,
-    StringRef (*StringifyEnum)(unsigned),
-    bool ShouldUseBaseAddress,
-    PayloadEmitter EmitPayload) {
+namespace {
+
+struct DebugLocSpanList {
+  MCSymbol *Label;
+  const DwarfCompileUnit *CU;
+  llvm::ArrayRef<llvm::DebugLocStream::Entry> Ranges;
+};
+
+template <typename DWARFSpanList> struct DwarfRangeListTraits {};
+
+template <> struct DwarfRangeListTraits<DebugLocSpanList> {
+  static constexpr unsigned BaseAddressx = dwarf::DW_LLE_base_addressx;
+  static constexpr unsigned OffsetPair = dwarf::DW_LLE_offset_pair;
+  static constexpr unsigned StartxLength = dwarf::DW_LLE_startx_length;
+  static constexpr unsigned EndOfList = dwarf::DW_LLE_end_of_list;
+
+  static StringRef StringifyRangeKind(unsigned Encoding) {
+    return llvm::dwarf::LocListEncodingString(Encoding);
+  }
+
+  static void EmitPayload(DwarfDebug &DD, const DwarfCompileUnit *CU,
+                          const llvm::DebugLocStream::Entry &E) {
+    DD.emitDebugLocEntryLocation(E, CU);
+  }
+};
+
+template <> struct DwarfRangeListTraits<RangeSpanList> {
+  static constexpr unsigned BaseAddressx = dwarf::DW_RLE_base_addressx;
+  static constexpr unsigned OffsetPair = dwarf::DW_RLE_offset_pair;
+  static constexpr unsigned StartxLength = dwarf::DW_RLE_startx_length;
+  static constexpr unsigned EndOfList = dwarf::DW_RLE_end_of_list;
+
+  static StringRef StringifyRangeKind(unsigned Encoding) {
+    return llvm::dwarf::RangeListEncodingString(Encoding);
+  }
+
+  static void EmitPayload(DwarfDebug &DD, const DwarfCompileUnit *CU,
+                          const RangeSpan &E) {}
+};
+
+} // namespace
+
+template <typename Ranges>
+static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, const Ranges &R,
+                          bool ShouldUseBaseAddress) {
 
   auto Size = Asm->MAI->getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
   // Emit our symbol so we can find the beginning of the range.
-  Asm->OutStreamer->emitLabel(Sym);
+  Asm->OutStreamer->emitLabel(R.Label);
 
   // Gather all the ranges that apply to the same section so they can share
   // a base address entry.
-  SmallMapVector<const MCSection *, std::vector<decltype(&*R.begin())>, 16>
+  SmallMapVector<const MCSection *, std::vector<decltype(&*R.Ranges.begin())>,
+                 16>
       SectionRanges;
 
-  for (const auto &Range : R)
+  for (const auto &Range : R.Ranges)
     SectionRanges[&Range.Begin->getSection()].push_back(&Range);
 
-  const MCSymbol *CUBase = CU.getBaseAddress();
+  const MCSymbol *CUBase = R.CU->getBaseAddress();
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     auto *Base = CUBase;
@@ -3342,8 +3380,10 @@ static void emitRangeList(
         //  * or, there's more than one entry to share the base address
         Base = NewBase;
         BaseIsSet = true;
-        Asm->OutStreamer->AddComment(StringifyEnum(BaseAddressx));
-        Asm->emitInt8(BaseAddressx);
+        Asm->OutStreamer->AddComment(
+            DwarfRangeListTraits<Ranges>::StringifyRangeKind(
+                DwarfRangeListTraits<Ranges>::BaseAddressx));
+        Asm->emitInt8(DwarfRangeListTraits<Ranges>::BaseAddressx);
         Asm->OutStreamer->AddComment("  base address index");
         Asm->emitULEB128(DD.getAddressPool().getIndex(Base));
       }
@@ -3362,8 +3402,10 @@ static void emitRangeList(
       if (Base) {
         if (UseDwarf5) {
           // Emit offset_pair when we have a base.
-          Asm->OutStreamer->AddComment(StringifyEnum(OffsetPair));
-          Asm->emitInt8(OffsetPair);
+          Asm->OutStreamer->AddComment(
+              DwarfRangeListTraits<Ranges>::StringifyRangeKind(
+                  DwarfRangeListTraits<Ranges>::OffsetPair));
+          Asm->emitInt8(DwarfRangeListTraits<Ranges>::OffsetPair);
           Asm->OutStreamer->AddComment("  starting offset");
           Asm->emitLabelDifferenceAsULEB128(Begin, Base);
           Asm->OutStreamer->AddComment("  ending offset");
@@ -3373,8 +3415,10 @@ static void emitRangeList(
           Asm->emitLabelDifference(End, Base, Size);
         }
       } else if (UseDwarf5) {
-        Asm->OutStreamer->AddComment(StringifyEnum(StartxLength));
-        Asm->emitInt8(StartxLength);
+        Asm->OutStreamer->AddComment(
+            DwarfRangeListTraits<Ranges>::StringifyRangeKind(
+                DwarfRangeListTraits<Ranges>::StartxLength));
+        Asm->emitInt8(DwarfRangeListTraits<Ranges>::StartxLength);
         Asm->OutStreamer->AddComment("  start index");
         Asm->emitULEB128(DD.getAddressPool().getIndex(Begin));
         Asm->OutStreamer->AddComment("  length");
@@ -3383,13 +3427,15 @@ static void emitRangeList(
         Asm->OutStreamer->emitSymbolValue(Begin, Size);
         Asm->OutStreamer->emitSymbolValue(End, Size);
       }
-      EmitPayload(*RS);
+      DwarfRangeListTraits<Ranges>::EmitPayload(DD, R.CU, *RS);
     }
   }
 
   if (UseDwarf5) {
-    Asm->OutStreamer->AddComment(StringifyEnum(EndOfList));
-    Asm->emitInt8(EndOfList);
+    Asm->OutStreamer->AddComment(
+        DwarfRangeListTraits<Ranges>::StringifyRangeKind(
+            DwarfRangeListTraits<Ranges>::EndOfList));
+    Asm->emitInt8(DwarfRangeListTraits<Ranges>::EndOfList);
   } else {
     // Terminate the list with two 0 values.
     Asm->OutStreamer->emitIntValue(0, Size);
@@ -3399,14 +3445,9 @@ static void emitRangeList(
 
 // Handles emission of both debug_loclist / debug_loclist.dwo
 static void emitLocList(DwarfDebug &DD, AsmPrinter *Asm, const DebugLocStream::List &List) {
-  emitRangeList(DD, Asm, List.Label, DD.getDebugLocs().getEntries(List),
-                *List.CU, dwarf::DW_LLE_base_addressx,
-                dwarf::DW_LLE_offset_pair, dwarf::DW_LLE_startx_length,
-                dwarf::DW_LLE_end_of_list, llvm::dwarf::LocListEncodingString,
-                /* ShouldUseBaseAddress */ true,
-                [&](const DebugLocStream::Entry &E) {
-                  DD.emitDebugLocEntryLocation(E, List.CU);
-                });
+  DebugLocSpanList Ranges = {List.Label, List.CU,
+                             DD.getDebugLocs().getEntries(List)};
+  emitRangeList(DD, Asm, Ranges, /* ShouldUseBaseAddress */ true);
 }
 
 void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
@@ -3428,10 +3469,9 @@ void DwarfDebug::emitDebugLocImpl(MCSection *Sec) {
 
 // Emit locations into the .debug_loc/.debug_loclists section.
 void DwarfDebug::emitDebugLoc() {
-  emitDebugLocImpl(
-      getDwarfVersion() >= 5
-          ? Asm->getObjFileLowering().getDwarfLoclistsSection()
-          : Asm->getObjFileLowering().getDwarfLocSection());
+  emitDebugLocImpl(getDwarfVersion() >= 5
+                       ? Asm->getObjFileLowering().getDwarfLoclistsSection()
+                       : Asm->getObjFileLowering().getDwarfLocSection());
 }
 
 // Emit locations into the .debug_loc.dwo/.debug_loclists.dwo section.
@@ -3626,13 +3666,9 @@ void DwarfDebug::emitDebugARanges() {
 /// Emit a single range list. We handle both DWARF v5 and earlier.
 static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
                           const RangeSpanList &List) {
-  emitRangeList(DD, Asm, List.Label, List.Ranges, *List.CU,
-                dwarf::DW_RLE_base_addressx, dwarf::DW_RLE_offset_pair,
-                dwarf::DW_RLE_startx_length, dwarf::DW_RLE_end_of_list,
-                llvm::dwarf::RangeListEncodingString,
-                List.CU->getCUNode()->getRangesBaseAddress() ||
-                    DD.getDwarfVersion() >= 5,
-                [](auto) {});
+  bool ShouldUseBaseAddress =
+      List.CU->getCUNode()->getRangesBaseAddress() || DD.getDwarfVersion() >= 5;
+  emitRangeList(DD, Asm, List, ShouldUseBaseAddress);
 }
 
 void DwarfDebug::emitDebugRangesImpl(const DwarfFile &Holder, MCSection *Section) {
