@@ -4261,6 +4261,14 @@ void Fortran::lower::materializeOpenMPDeclareMappers(
   if (!root.IsModule())
     return;
 
+  // Only materialize for modules coming from mod files to avoid duplicates.
+  if (const semantics::Symbol *modSym = root.symbol()) {
+    if (!modSym->test(semantics::Symbol::Flag::ModFile))
+      return;
+  } else {
+    return;
+  }
+
   // Scan symbols in this module scope for MapperDetails.
   for (auto &it : root) {
     const semantics::Symbol &sym = *it.second;
