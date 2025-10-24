@@ -323,9 +323,9 @@ exit:
   ret void
 }
 
-define void @const_fold_widegep(ptr noalias %A, ptr noalias %B) {
+define void @const_fold_widegep(ptr noalias %A, ptr noalias %B, i64 %d) {
 ; CHECK-LABEL: define void @const_fold_widegep(
-; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[D:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -342,23 +342,17 @@ define void @const_fold_widegep(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  br label %loop.header
+  br label %loop
 
-loop.header:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  br i1 true, label %loop.latch, label %else
-
-else:
-  br label %loop.latch
-
-loop.latch:
-  %const.0 = phi i64 [ 0, %loop.header ], [ %iv, %else ]
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %const.0 = xor i64 %d, %d
   %gep.A = getelementptr i64, ptr %A, i64 %const.0
   %gep.B = getelementptr i64, ptr %B, i64 %const.0
   store ptr %gep.A, ptr %gep.B
   %iv.next = add nuw nsw i64 %iv, 1
   %exit.cond = icmp ult i64 %iv.next, 100
-  br i1 %exit.cond, label %loop.header, label %exit
+  br i1 %exit.cond, label %loop, label %exit
 
 exit:
   ret void

@@ -967,24 +967,24 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 }
 
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
-/// non-nullptr Value for a handled opcode or intrinsic ID if corresponding \p
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
 /// Operands are foldable live-ins.
 static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
                                  ArrayRef<VPValue *> Operands,
                                  const DataLayout &DL,
                                  VPTypeAnalysis &TypeInfo) {
-  auto FoldToIRValue = [&]() -> Value * {
-    auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
-    if (!OpcodeOrIID)
+  auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
+  if (!OpcodeOrIID)
+    return nullptr;
+
+  SmallVector<Value *, 4> Ops;
+  for (VPValue *Op : Operands) {
+    if (!Op->isLiveIn() || !Op->getLiveInIRValue())
       return nullptr;
+    Ops.push_back(Op->getLiveInIRValue());
+  }
 
-    SmallVector<Value *, 4> Ops;
-    for (VPValue *Op : Operands) {
-      if (!Op->isLiveIn() || !Op->getLiveInIRValue())
-        return nullptr;
-      Ops.push_back(Op->getLiveInIRValue());
-    }
-
+  auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
       if (R.getNumOperands() != 2)
