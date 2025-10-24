@@ -2707,7 +2707,7 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
                    "mlir::ValueRange":$operands,
-                  CArg<"mlir::UnitAttr", "{}">:$exception), [{
+                   CArg<"mlir::UnitAttr", "{}">:$exception), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
