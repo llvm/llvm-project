@@ -265,7 +265,7 @@ class ClangFormatHelper(FormatHelper):
         proc = subprocess.run(cf_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         sys.stdout.write(proc.stderr.decode("utf-8"))
 
-        if proc.returncode != 0:
+        if proc.returncode    != 0:
             # formatting needed, or the command otherwise failed
             if args.verbose:
                 print(f"error: {self.name} exited with code {proc.returncode}")

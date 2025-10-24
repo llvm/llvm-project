@@ -70,7 +70,7 @@ class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
 public:
   AnalyzerDiagnosticConsumer(ClangTidyContext &Context) : Context(Context) {}
 
-  void FlushDiagnosticsImpl(std::vector<const ento::PathDiagnostic *> &Diags,
+  void FlushDiagnosticsImpl(  std::vector<const ento::PathDiagnostic *> &Diags,
                             FilesMade *FilesMade) override {
     for (const ento::PathDiagnostic *PD : Diags) {
       SmallString<64> CheckName(AnalyzerCheckNamePrefix);
