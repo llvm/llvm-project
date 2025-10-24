@@ -151,6 +151,9 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
       // For example, if the inst_data is [1, 1, 32]
       // it will pass [32] as the unroll/blocking size.
       // Skip it for xegpu nd ops since it will be 2D
+      // TODO: For vectors ops, experiment with the
+      // upstream vector remove leading unit dims patterns,
+      // populateCastAwayVectorLeadingOneDimPatterns.
       Operation *definingOp = value.getDefiningOp();
       bool skipLeadingUnitDimRemoval =
           definingOp &&
