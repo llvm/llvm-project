@@ -42,7 +42,7 @@ on the control flow of the function, an overload where all problematic
 
 This issue can also be resolved by adding ``[[clang::lifetimebound]]``. Clang
 enable ``-Wdangling`` warning by default which can detect mis-uses of the
-annotated function. See `lifetimebound attribute <https://clang.llvm.org/docs/AttributeReference.html#id11>`_
+annotated function. See `lifetimebound attribute <https://clang.llvm.org/docs/AttributeReference.html#lifetimebound>`_
 for details.
 
 .. code-block:: c++

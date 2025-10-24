@@ -266,7 +266,7 @@ func.func @bare_ptr_calling_conv(%arg0: memref<4x3xf32>, %arg1 : index, %arg2 : 
   // CHECK: %[[INSERT_STRIDE1:.*]] = llvm.insertvalue %[[C1]], %[[INSERT_DIM1]][4, 1]
 
   // CHECK: %[[ALIGNEDPTR:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
-  // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR]]
+  // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr inbounds|nuw %[[ALIGNEDPTR]]
   // CHECK: llvm.store %{{.*}}, %[[STOREPTR]]
   memref.store %arg3, %arg0[%arg1, %arg2] : memref<4x3xf32>
 
@@ -295,12 +295,12 @@ func.func @bare_ptr_calling_conv_multiresult(%arg0: memref<4x3xf32>, %arg1 : ind
   // CHECK: %[[INSERT_STRIDE1:.*]] = llvm.insertvalue %[[C1]], %[[INSERT_DIM1]][4, 1]
 
   // CHECK: %[[ALIGNEDPTR:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
-  // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR]]
+  // CHECK: %[[STOREPTR:.*]] = llvm.getelementptr inbounds|nuw %[[ALIGNEDPTR]]
   // CHECK: llvm.store %{{.*}}, %[[STOREPTR]]
   memref.store %arg3, %arg0[%arg1, %arg2] : memref<4x3xf32>
 
   // CHECK: %[[ALIGNEDPTR0:.*]] = llvm.extractvalue %[[INSERT_STRIDE1]][1]
-  // CHECK: %[[LOADPTR:.*]] = llvm.getelementptr %[[ALIGNEDPTR0]]
+  // CHECK: %[[LOADPTR:.*]] = llvm.getelementptr inbounds|nuw %[[ALIGNEDPTR0]]
   // CHECK: %[[RETURN0:.*]] = llvm.load %[[LOADPTR]]
   %0 = memref.load %arg0[%arg1, %arg2] : memref<4x3xf32>
 

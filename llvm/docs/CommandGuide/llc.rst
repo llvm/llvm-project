@@ -43,6 +43,11 @@ End-user Options
 
  Print a summary of command line options.
 
+.. option:: -M
+
+ Pass target-specific InstPrinter options.
+ Refer to the ``-M`` option of :manpage:`llvm-objdump(1)`.
+
 .. option:: -o <filename>
 
  Use ``<filename>`` as the output filename. See the summary above for more
@@ -119,13 +124,6 @@ End-user Options
 .. option:: --enable-no-trapping-fp-math
 
  Enable setting the FP exceptions build attribute not to use exceptions.
-
-.. option:: --enable-unsafe-fp-math
-
- Enable optimizations that make unsafe assumptions about IEEE math (e.g. that
- addition is associative) or may not work for all input ranges.  These
- optimizations allow the code generator to make use of some instructions which
- would otherwise not be usable (such as ``fsin`` on X86).
 
 .. option:: --stats
 

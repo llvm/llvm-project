@@ -174,4 +174,14 @@ const CoindexedNamedObject *GetCoindexedNamedObject(
       },
       allocateObject.u);
 }
+
+bool CheckForSingleVariableOnRHS(const AssignmentStmt &assignmentStmt) {
+  return Unwrap<Designator>(std::get<Expr>(assignmentStmt.t)) != nullptr;
+}
+
+const Name *GetDesignatorNameIfDataRef(const Designator &designator) {
+  const auto *dataRef{std::get_if<DataRef>(&designator.u)};
+  return dataRef ? std::get_if<Name>(&dataRef->u) : nullptr;
+}
+
 } // namespace Fortran::parser

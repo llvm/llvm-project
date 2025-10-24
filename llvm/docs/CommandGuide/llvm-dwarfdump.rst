@@ -83,7 +83,7 @@ OPTIONS
 .. option:: -n <name>, --name=<name>
 
             Find and print all debug info entries whose name
-            (`DW_AT_name` attribute) is <name>.
+            (`DW_AT_name`/`DW_AT_linkage_name` attribute) is <name>.
 
 .. option:: --lookup=<address>
 
@@ -162,7 +162,7 @@ OPTIONS
 
 .. option:: --verify-json=<path>
 
-            Output JSON-formatted error summary to the a file specfied by
+            Output JSON-formatted error summary to the file specified by
             <path>. Implies :option:`--verify`.  The output format is described
             in the section below (:ref:`verify-json-format`).
 

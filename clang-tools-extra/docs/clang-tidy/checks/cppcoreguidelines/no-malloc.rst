@@ -35,14 +35,14 @@ Options
 .. option:: Allocations
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
-   Defaults to ``::malloc;::calloc``.
+   Defaults to `::malloc;::calloc`.
 
 .. option:: Deallocations
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
-   Defaults to ``::free``.
+   Defaults to `::free`.
 
 .. option:: Reallocations
 
    Semicolon-separated list of fully qualified names of memory allocation functions.
-   Defaults to ``::realloc``.
+   Defaults to `::realloc`.

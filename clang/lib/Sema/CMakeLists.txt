@@ -47,6 +47,7 @@ add_clang_library(clangSema
   SemaConsumer.cpp
   SemaCoroutine.cpp
   SemaCUDA.cpp
+  SemaDirectX.cpp
   SemaDecl.cpp
   SemaDeclAttr.cpp
   SemaDeclCXX.cpp
@@ -74,6 +75,7 @@ add_clang_library(clangSema
   SemaOpenACC.cpp
   SemaOpenACCAtomic.cpp
   SemaOpenACCClause.cpp
+  SemaOpenACCClauseAppertainment.cpp
   SemaOpenCL.cpp
   SemaOpenMP.cpp
   SemaOverload.cpp
@@ -94,12 +96,14 @@ add_clang_library(clangSema
   SemaTemplateInstantiateDecl.cpp
   SemaTemplateVariadic.cpp
   SemaType.cpp
+  SemaTypeTraits.cpp
   SemaWasm.cpp
   SemaX86.cpp
   TypeLocBuilder.cpp
 
   DEPENDS
   ClangOpenCLBuiltinsImpl
+  acc_gen
   omp_gen
   ClangDriverOptions
 
@@ -107,6 +111,7 @@ add_clang_library(clangSema
   clangAPINotes
   clangAST
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangEdit
   clangLex

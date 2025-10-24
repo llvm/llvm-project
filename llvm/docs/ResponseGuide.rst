@@ -218,11 +218,13 @@ Appeal Process
 ===============
 
 Any individual(s) determined to have violated the CoC have the right to appeal
-a decision. An appeal can be made directly to the committee by sending an email
-to conduct@llvm.org with subject line Code of Conduct Incident Appeal.
+a resolution decision. An appeal can be made directly to the committee by sending an 
+email to conduct@llvm.org with subject line Code of Conduct Incident Appeal.
 
-The email should include documentation related to the incident to support the
-appeal. The said documentation may include, but does not have to be limited to:
+This process is intended to consider new or different evidence from the 
+initial incident investigation. The email should include documentation related 
+to the incident to support the appeal. The said documentation may include, 
+but does not have to be limited to:
 
 * Information from the reportee justifying reasoning for the appeal.
 * Statements from other individuals involved in the incident to support the
@@ -281,9 +283,7 @@ Transparency Reports
 Lack of transparency in the outcomes of our Code of Conduct incidents leaves
 our community without an understanding of how or if the organizers worked to
 resolve incidents. The CoC committee should aim to publish transparency
-reports, if reports are received, after major events (such as the LLVM
-Developers' meetings) and on the following dates: Jan 15, April 15, July 15,
-Oct 15. 
+reports, if reports are received, at least 2 times in a calendar year.
 
 A transparency report consists of 2 parts:
 

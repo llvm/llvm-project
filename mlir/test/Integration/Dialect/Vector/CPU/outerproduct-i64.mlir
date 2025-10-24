@@ -14,9 +14,9 @@
 !vector_type_R = vector<7xi64>
 
 func.func @vector_outerproduct_splat_8x8(%ia: i64, %ib: i64, %ic: i64) -> !vector_type_C {
-  %a = vector.splat %ia: !vector_type_A
-  %b = vector.splat %ib: !vector_type_B
-  %c = vector.splat %ic: !vector_type_C
+  %a = vector.broadcast %ia: i64 to !vector_type_A
+  %b = vector.broadcast %ib: i64 to !vector_type_B
+  %c = vector.broadcast %ic: i64 to !vector_type_C
   %d = vector.outerproduct %a, %b, %c : !vector_type_A, !vector_type_B
   return %d: !vector_type_C
 }

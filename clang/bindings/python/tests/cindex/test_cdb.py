@@ -21,13 +21,16 @@ class TestCDB(unittest.TestCase):
 
         # clang_CompilationDatabase_fromDirectory calls fprintf(stderr, ...)
         # Suppress its output.
-        stderr = os.dup(2)
-        with open(os.devnull, "wb") as null:
-            os.dup2(null.fileno(), 2)
-        with self.assertRaises(CompilationDatabaseError) as cm:
-            CompilationDatabase.fromDirectory(path)
-        os.dup2(stderr, 2)
-        os.close(stderr)
+        try:
+            stderr = os.dup(2)
+            with open(os.devnull, "wb") as null:
+                os.dup2(null.fileno(), 2)
+            with self.assertRaises(CompilationDatabaseError) as cm:
+                CompilationDatabase.fromDirectory(path)
+        # Ensures that stderr is reset even if the above code crashes
+        finally:
+            os.dup2(stderr, 2)
+            os.close(stderr)
 
         e = cm.exception
         self.assertEqual(e.cdb_error, CompilationDatabaseError.ERROR_CANNOTLOADDATABASE)

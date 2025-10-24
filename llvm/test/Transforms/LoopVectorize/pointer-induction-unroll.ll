@@ -25,7 +25,7 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:  entry:
 ; STRIDED-NEXT:    [[MUL:%.*]] = shl i32 [[TMP0:%.*]], 1
 ; STRIDED-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
-; STRIDED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; STRIDED-NEXT:    br label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
 ; STRIDED-NEXT:    [[TMP2:%.*]] = mul i64 4294967264, [[TMP1]]
 ; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
@@ -60,20 +60,18 @@ define void @non_constant_scalar_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4294967264
 ; STRIDED-NEXT:    br i1 [[TMP23]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; STRIDED:       middle.block:
-; STRIDED-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; STRIDED-NEXT:    br label [[SCALAR_PH:%.*]]
 ; STRIDED:       scalar.ph:
-; STRIDED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -2, [[MIDDLE_BLOCK]] ], [ 30, [[ENTRY:%.*]] ]
-; STRIDED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ null, [[ENTRY]] ]
 ; STRIDED-NEXT:    br label [[FOR_COND:%.*]]
 ; STRIDED:       for.cond:
-; STRIDED-NEXT:    [[TMP24:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]
-; STRIDED-NEXT:    [[P_0:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], [[FOR_COND]] ]
+; STRIDED-NEXT:    [[TMP24:%.*]] = phi i32 [ -2, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]
+; STRIDED-NEXT:    [[P_0:%.*]] = phi ptr [ [[IND_END]], [[SCALAR_PH]] ], [ [[ADD_PTR:%.*]], [[FOR_COND]] ]
 ; STRIDED-NEXT:    [[ADD_PTR]] = getelementptr i8, ptr [[P_0]], i32 [[MUL]]
 ; STRIDED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[TMP24]]
 ; STRIDED-NEXT:    store ptr [[P_0]], ptr [[ARRAYIDX]], align 4
 ; STRIDED-NEXT:    [[INC]] = add i32 [[TMP24]], 1
 ; STRIDED-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP24]], 0
-; STRIDED-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END]], label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+; STRIDED-NEXT:    br i1 [[TOBOOL_NOT]], label [[FOR_END:%.*]], label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
 ; STRIDED:       for.end:
 ; STRIDED-NEXT:    ret void
 ;

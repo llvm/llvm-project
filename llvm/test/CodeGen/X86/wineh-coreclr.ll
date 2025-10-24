@@ -38,6 +38,7 @@ entry:
 ; CHECK: [[test1_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f1:.+]]:
   invoke void @f(i32 1)
     to label %inner_try unwind label %finally
@@ -46,6 +47,7 @@ inner_try:
 ; CHECK: [[test1_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f2:.+]]:
   invoke void @f(i32 2)
     to label %finally.clone unwind label %exn.dispatch
@@ -69,6 +71,7 @@ catch1:
 ; CHECK: [[test1_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f3:.+]]:
   invoke void @f(i32 3) [ "funclet"(token %catch.pad1) ]
     to label %catch1.ret unwind label %finally
@@ -92,6 +95,7 @@ catch2:
 ; CHECK: [[test1_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f4:.+]]:
   invoke void @f(i32 4) [ "funclet"(token %catch.pad2) ]
     to label %try_in_catch unwind label %finally
@@ -100,6 +104,7 @@ try_in_catch:
 ; CHECK: [[test1_before_f5:.+]]:
 ; CHECK-NEXT: movl $5, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f5:.+]]:
   invoke void @f(i32 5) [ "funclet"(token %catch.pad2) ]
     to label %catch2.ret unwind label %fault
@@ -116,6 +121,7 @@ fault:
 ; CHECK: [[test1_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test1_after_f6:.+]]:
   invoke void @f(i32 6) [ "funclet"(token %fault.pad) ]
     to label %fault.ret unwind label %finally
@@ -166,9 +172,9 @@ tail:
 ; Clause 1: call f(2) is guarded by catch1
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test1_before_f2]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f2]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f2]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f2]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_catch1]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -179,9 +185,9 @@ tail:
 ; Clause 2: call f(2) is also guarded by catch2
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test1_before_f2]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f2]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f2]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f2]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_catch2]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -192,9 +198,9 @@ tail:
 ; Clause 3: calls f(1) and f(2) are guarded by finally
 ; CHECK-NEXT: .long 2
 ;                   ^ flags (2 => finally handler)
-; CHECK-NEXT: .long ([[test1_before_f1]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f1]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f2]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f2]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_finally]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -208,9 +214,9 @@ tail:
 ;           is the main function, not that funclet.
 ; CHECK-NEXT: .long 10
 ;                   ^ flags (2 => finally handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test1_before_f3]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f3]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f3]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f3]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_finally]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -221,9 +227,9 @@ tail:
 ; Clause 5: call f(5) is guarded by fault
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test1_before_f5]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f5]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f5]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f5]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_fault]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -237,9 +243,9 @@ tail:
 ;           is the main function, not that funclet.
 ; CHECK-NEXT: .long 10
 ;                   ^ flags (2 => finally handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test1_before_f4]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f4]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f5]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f5]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_finally]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -253,9 +259,9 @@ tail:
 ;           is the main function, not that funclet.
 ; CHECK-NEXT: .long 10
 ;                   ^ flags (2 => finally handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test1_before_f6]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_before_f6]]-[[test1_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test1_after_f6]]-[[test1_begin]])+1
+; CHECK-NEXT: .long [[test1_after_f6]]-[[test1_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test1_finally]]-[[test1_begin]]
 ;                   ^ offset of start of handler
@@ -312,6 +318,7 @@ unreachable:
 ; CHECK: [[test2_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test2_after_f1:.+]]:
 ; CHECK: .seh_proc [[test2_catch1:[^ ]+]]
 ; CHECK: .seh_proc [[test2_catch2:[^ ]+]]
@@ -320,6 +327,7 @@ unreachable:
 ; CHECK: [[test2_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test2_after_f2:.+]]:
 ; CHECK: int3
 ; CHECK: [[test2_end:.*func_end.*]]:
@@ -343,9 +351,9 @@ unreachable:
 ; Clause 1: call f(1) is guarded by fault
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test2_before_f1]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_before_f1]]-[[test2_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test2_after_f1]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_after_f1]]-[[test2_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
 ;                   ^ offset of start of handler
@@ -356,9 +364,9 @@ unreachable:
 ; Clause 2: call f(1) is also guarded by catch2
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test2_before_f1]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_before_f1]]-[[test2_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test2_after_f1]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_after_f1]]-[[test2_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_catch2]]-[[test2_begin]]
 ;                   ^ offset of start of handler
@@ -369,9 +377,9 @@ unreachable:
 ; Clause 3: calls f(2) is guarded by catch1
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test2_before_f2]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_before_f2]]-[[test2_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test2_after_f2]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_after_f2]]-[[test2_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_catch1]]-[[test2_begin]]
 ;                   ^ offset of start of handler
@@ -385,9 +393,9 @@ unreachable:
 ;           is the main function, not that funclet.
 ; CHECK-NEXT: .long 8
 ;                   ^ flags (0 => catch handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test2_before_f2]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_before_f2]]-[[test2_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test2_after_f2]]-[[test2_begin]])+1
+; CHECK-NEXT: .long [[test2_after_f2]]-[[test2_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_catch2]]-[[test2_begin]]
 ;                   ^ offset of start of handler
@@ -448,6 +456,7 @@ entry:
 ; CHECK: [[test3_before_f1:.+]]:
 ; CHECK-NEXT: movl $1, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f1:.+]]:
   invoke void @f(i32 1)
     to label %exit unwind label %fault1
@@ -474,6 +483,7 @@ fault4:
 ; CHECK: [[test3_before_f6:.+]]:
 ; CHECK-NEXT: movl $6, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f6:.+]]:
   invoke void @f(i32 6) ["funclet"(token %fault.pad4)]
     to label %fault4.cont unwind label %exn.dispatch1
@@ -482,6 +492,7 @@ fault4.cont:
 ; CHECK: [[test3_before_f7:.+]]:
 ; CHECK-NEXT: movl $7, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f7:.+]]:
   invoke void @f(i32 7) ["funclet"(token %fault.pad4)]
     to label %unreachable unwind label %fault5
@@ -512,6 +523,7 @@ unreachable:
 ; CHECK: [[test3_before_f4:.+]]:
 ; CHECK-NEXT: movl $4, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f4:.+]]:
 ; CHECK: int3
 ; CHECK: .seh_proc [[test3_fault2:[^ ]+]]
@@ -520,6 +532,7 @@ unreachable:
 ; CHECK: [[test3_before_f3:.+]]:
 ; CHECK-NEXT: movl $3, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f3:.+]]:
 ; CHECK: int3
 ; CHECK: .seh_proc [[test3_fault1:[^ ]+]]
@@ -528,6 +541,7 @@ unreachable:
 ; CHECK: [[test3_before_f2:.+]]:
 ; CHECK-NEXT: movl $2, %ecx
 ; CHECK-NEXT: callq f
+; CHECK-NEXT: nop
 ; CHECK-NEXT: [[test3_after_f2:.+]]:
 ; CHECK: int3
 ; CHECK: [[test3_end:.*func_end.*]]:
@@ -559,9 +573,9 @@ unreachable:
 ; Clause 1: call f(1) is guarded by fault1
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f1]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f1]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f1]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f1]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault1]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -572,9 +586,9 @@ unreachable:
 ; Clause 3: call f(6) is guarded by catch1
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test3_before_f6]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f6]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f6]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f6]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_catch1]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -585,9 +599,9 @@ unreachable:
 ; Clause 3: call f(6) is also guarded by catch2
 ; CHECK-NEXT: .long 0
 ;                   ^ flags (0 => catch handler)
-; CHECK-NEXT: .long ([[test3_before_f6]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f6]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f6]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f6]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_catch2]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -601,9 +615,9 @@ unreachable:
 ;           is fault1, not that funclet.
 ; CHECK-NEXT: .long 12
 ;                   ^ flags (4 => fault handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test3_before_f7]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f7]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f7]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f7]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault5]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -614,9 +628,9 @@ unreachable:
 ; Clause 5: call f(4) is guarded by fault4
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f4]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f4]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f4]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f4]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault4]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -630,9 +644,9 @@ unreachable:
 ;           is fault1, not that funclet.
 ; CHECK-NEXT: .long 12
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f4]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f4]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f4]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f4]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault5]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -643,9 +657,9 @@ unreachable:
 ; Clause 7: call f(3) is guarded by fault3
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f3]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f3]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f3]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f3]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault3]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -659,9 +673,9 @@ unreachable:
 ;           is fault1, not that funclet.
 ; CHECK-NEXT: .long 12
 ;                   ^ flags (4 => fault handler | 8 => duplicate)
-; CHECK-NEXT: .long ([[test3_before_f3]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f3]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f3]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f3]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault5]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -672,9 +686,9 @@ unreachable:
 ; Clause 9: call f(2) is guarded by fault2
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f2]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f2]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f2]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f2]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault2]]-[[test3_begin]]
 ;                   ^ offset of start of handler
@@ -685,9 +699,9 @@ unreachable:
 ; Clause 10: call f(2) is guarded by fault5
 ; CHECK-NEXT: .long 4
 ;                   ^ flags (4 => fault handler)
-; CHECK-NEXT: .long ([[test3_before_f2]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_before_f2]]-[[test3_begin]]+1
 ;                   ^ offset of start of clause
-; CHECK-NEXT: .long ([[test3_after_f2]]-[[test3_begin]])+1
+; CHECK-NEXT: .long [[test3_after_f2]]-[[test3_begin]]+1
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test3_fault5]]-[[test3_begin]]
 ;                   ^ offset of start of handler

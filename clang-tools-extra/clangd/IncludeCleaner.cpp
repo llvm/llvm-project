@@ -117,7 +117,9 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
 
 std::vector<Diag> generateMissingIncludeDiagnostics(
     ParsedAST &AST, llvm::ArrayRef<MissingIncludeDiagInfo> MissingIncludes,
-    llvm::StringRef Code, HeaderFilter IgnoreHeaders, const ThreadsafeFS &TFS) {
+    llvm::StringRef Code, HeaderFilter IgnoreHeaders,
+    HeaderFilter AngledHeaders, HeaderFilter QuotedHeaders,
+    const ThreadsafeFS &TFS) {
   std::vector<Diag> Result;
   const SourceManager &SM = AST.getSourceManager();
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
@@ -141,7 +143,18 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
          AST.getPreprocessor().getHeaderSearchInfo(), MainFile});
 
     llvm::StringRef HeaderRef{Spelling};
+
     bool Angled = HeaderRef.starts_with("<");
+    if (SymbolWithMissingInclude.Providers.front().kind() ==
+        include_cleaner::Header::Kind::Physical) {
+      for (auto &Filter : Angled ? QuotedHeaders : AngledHeaders) {
+        if (Filter(ResolvedPath)) {
+          Angled = !Angled;
+          break;
+        }
+      }
+    }
+
     // We might suggest insertion of an existing include in edge cases, e.g.,
     // include is present in a PP-disabled region, or spelling of the header
     // turns out to be the same as one of the unresolved includes in the
@@ -150,6 +163,11 @@ std::vector<Diag> generateMissingIncludeDiagnostics(
         HeaderRef.trim("\"<>"), Angled, tooling::IncludeDirective::Include);
     if (!Replacement.has_value())
       continue;
+
+    if (Angled != (Spelling.front() == '<')) {
+      Spelling.front() = Angled ? '<' : '"';
+      Spelling.back() = Angled ? '>' : '"';
+    }
 
     Diag &D = Result.emplace_back();
     D.Message =
@@ -345,8 +363,9 @@ include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
     // which is based on FileManager::getCanonicalName(ParentDir).
     auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
     if (!FE) {
-      elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
-           Inc.Resolved, FE.takeError());
+      elog("IncludeCleaner: Failed to get an entry for resolved path '{0}' "
+           "from include {1} : {2}",
+           Inc.Resolved, Inc.Written, FE.takeError());
       continue;
     }
     TransformedInc.Resolved = *FE;
@@ -480,18 +499,19 @@ bool isPreferredProvider(const Inclusion &Inc,
   return false; // no header provides the symbol
 }
 
-std::vector<Diag>
-issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
-                               const IncludeCleanerFindings &Findings,
-                               const ThreadsafeFS &TFS,
-                               HeaderFilter IgnoreHeaders) {
+std::vector<Diag> issueIncludeCleanerDiagnostics(
+    ParsedAST &AST, llvm::StringRef Code,
+    const IncludeCleanerFindings &Findings, const ThreadsafeFS &TFS,
+    HeaderFilter IgnoreHeaders, HeaderFilter AngledHeaders,
+    HeaderFilter QuotedHeaders) {
   trace::Span Tracer("IncludeCleaner::issueIncludeCleanerDiagnostics");
   std::vector<Diag> UnusedIncludes = generateUnusedIncludeDiagnostics(
       AST.tuPath(), Findings.UnusedIncludes, Code, IgnoreHeaders);
   std::optional<Fix> RemoveAllUnused = removeAllUnusedIncludes(UnusedIncludes);
 
   std::vector<Diag> MissingIncludeDiags = generateMissingIncludeDiagnostics(
-      AST, Findings.MissingIncludes, Code, IgnoreHeaders, TFS);
+      AST, Findings.MissingIncludes, Code, IgnoreHeaders, AngledHeaders,
+      QuotedHeaders, TFS);
   std::optional<Fix> AddAllMissing = addAllMissingIncludes(MissingIncludeDiags);
 
   std::optional<Fix> FixAll;

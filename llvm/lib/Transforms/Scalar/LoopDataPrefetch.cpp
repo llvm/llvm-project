@@ -304,7 +304,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
   if (!Metrics.NumInsts.isValid())
     return MadeChange;
 
-  unsigned LoopSize = *Metrics.NumInsts.getValue();
+  unsigned LoopSize = Metrics.NumInsts.getValue();
   if (!LoopSize)
     LoopSize = 1;
 

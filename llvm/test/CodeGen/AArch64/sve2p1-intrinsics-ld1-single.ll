@@ -33,8 +33,8 @@ define <vscale x 4 x i32> @test_svld1uwq_i32_si(<vscale x 1 x i1> %pred, ptr %ba
 define <vscale x 4 x i32> @test_svld1uwq_i32_out_of_bound(<vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svld1uwq_i32_out_of_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    addvl x8, x0, #2
-; CHECK-NEXT:    ld1w { z0.q }, p0/z, [x8]
+; CHECK-NEXT:    incb x0, all, mul #2
+; CHECK-NEXT:    ld1w { z0.q }, p0/z, [x0]
 ; CHECK-NEXT:    ret
   %gep = getelementptr inbounds <vscale x 1 x i32>, ptr %base, i64 8
   %res = call <vscale x 4 x i32> @llvm.aarch64.sve.ld1uwq.nxv4i32(<vscale x 1 x i1> %pred, ptr %gep)

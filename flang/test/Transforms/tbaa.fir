@@ -1,5 +1,6 @@
 // RUN: fir-opt --split-input-file --fir-add-alias-tags %s | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 // subroutine oneArg(a)
 //   integer :: a(:)
 //   a(1) = a(2)
@@ -37,9 +38,11 @@
 // CHECK:           fir.store %[[VAL_6]] to %[[VAL_7]] {tbaa = [#[[ONE_ARG_A_TAG]]]} : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 // subroutine twoArg(a, b)
 //   integer :: a(:), b(:)
 //   a(1) = b(1)
@@ -82,9 +85,11 @@
 // CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] {tbaa = [#[[TWO_ARG_A_TAG]]]} : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 // subroutine targetArg(a, b)
 //   integer, target :: a(:)
 //   integer :: b(:)
@@ -108,9 +113,10 @@
 // CHECK: #[[TARGET_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[TARGET_ROOT]], 0>}>
 // CHECK: #[[TARGET_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[TARGET_ANY_ACCESS]], 0>}>
 // CHECK: #[[TARGET_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[TARGET_ANY_DATA]], 0>}>
+// CHECK: #[[TARGET_TARGET_DATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[TARGET_ANY_DATA]], 0>}>
+// CHECK: #[[TARGET_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_TARGET_DATA]], access_type = #[[TARGET_TARGET_DATA]], offset = 0>
 // CHECK: #[[TARGET_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFtargetargEb", members = {<#[[TARGET_ANY_ARG]], 0>}>
 // CHECK: #[[TARGET_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[TARGET_B]], access_type = #[[TARGET_B]], offset = 0>
-// No entry for "dummy arg data/a" because that pointer should get "any data access" becase it has the TARGET attribute
 
 // CHECK-LABEL:   func.func @_QPtargetarg(
 // CHECK-SAME:                            %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a", fir.target},
@@ -124,13 +130,14 @@
 // CHECK:           %[[VAL_7:.*]] = fir.array_coor %[[VAL_6]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]] {tbaa = [#[[TARGET_B_TAG]]]} : !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.array_coor %[[VAL_4]] %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-// "any data access" tag is added by TBAABuilder during CodeGen
-// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] {tbaa = [#[[TARGET_A_TAG]]]} : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 // subroutine pointerArg(a, b)
 //   integer, pointer :: a(:)
 //   integer :: b(:)
@@ -157,9 +164,10 @@
 // CHECK: #[[POINTER_ANY_ACCESS:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[POINTER_ROOT]], 0>}>
 // CHECK: #[[POINTER_ANY_DATA:.+]] = #llvm.tbaa_type_desc<id = "any data access", members = {<#[[POINTER_ANY_ACCESS]], 0>}>
 // CHECK: #[[POINTER_ANY_ARG:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data", members = {<#[[POINTER_ANY_DATA]], 0>}>
+// CHECK: #[[POINTER_TARGET_DATA:.+]] = #llvm.tbaa_type_desc<id = "target data", members = {<#[[POINTER_ANY_DATA]], 0>}>
+// CHECK: #[[POINTER_A_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[POINTER_TARGET_DATA]], access_type = #[[POINTER_TARGET_DATA]], offset = 0>
 // CHECK: #[[POINTER_B:.+]] = #llvm.tbaa_type_desc<id = "dummy arg data/_QFpointerargEb", members = {<#[[POINTER_ANY_ARG]], 0>}>
 // CHECK: #[[POINTER_B_TAG:.+]] = #llvm.tbaa_tag<base_type = #[[POINTER_B]], access_type = #[[POINTER_B]], offset = 0>
-// No entry for "dummy arg data/a" because that pointer should get "any data access" becase it has the POINTER attribute
 
 // CHECK-LABEL:   func.func @_QPpointerarg(
 // CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "a"},
@@ -177,12 +185,14 @@
 // CHECK:           %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_11:.*]] = fir.shift %[[VAL_10]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[VAL_12:.*]] = fir.array_coor %[[VAL_9]](%[[VAL_11]]) %[[VAL_3]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
-// "any data access" tag is added by TBAABuilder during CodeGen
-// CHECK:           fir.store %[[VAL_8]] to %[[VAL_12]] : !fir.ref<i32>
+// CHECK:           fir.store %[[VAL_8]] to %[[VAL_12]] {tbaa = [#[[POINTER_A_TAG]]]} : !fir.ref<i32>
 // CHECK:           return
 // CHECK:         }
+}
 
 // -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 
 // Make sure we don't mistake other block arguments as dummy arguments:
 
@@ -217,4 +227,5 @@ func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
 fir.global internal @_QFEi : i32 {
   %c0_i32 = arith.constant 0 : i32
   fir.has_value %c0_i32 : i32
+}
 }

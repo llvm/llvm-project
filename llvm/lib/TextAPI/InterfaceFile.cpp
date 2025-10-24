@@ -13,8 +13,6 @@
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/RecordsSlice.h"
 #include "llvm/TextAPI/TextAPIError.h"
-#include <iomanip>
-#include <sstream>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -102,8 +100,7 @@ void InterfaceFile::inlineLibrary(std::shared_ptr<InterfaceFile> Library,
 
     if (Overwrite && It != Documents.end() &&
         Reexport->getInstallName() == (*It)->getInstallName()) {
-      std::replace(Documents.begin(), Documents.end(), *It,
-                   std::move(Reexport));
+      llvm::replace(Documents, *It, std::move(Reexport));
       return;
     }
 

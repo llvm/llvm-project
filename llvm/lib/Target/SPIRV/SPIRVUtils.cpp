@@ -80,6 +80,16 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
+std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
+  MachineInstr *Def = getVRegDef(MRI, Reg);
+  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
+         "Expected G_GLOBAL_VALUE");
+  const GlobalValue *GV = Def->getOperand(1).getGlobal();
+  Value *V = GV->getOperand(0);
+  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
+  return CDA->getAsCString().str();
+}
+
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
@@ -146,8 +156,32 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
   finishBuildOpDecorate(MIB, DecArgs, StrImm);
 }
 
+void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
+void buildOpMemberDecorate(Register Reg, MachineInstr &I,
+                           const SPIRVInstrInfo &TII,
+                           SPIRV::Decoration::Decoration Dec, uint32_t Member,
+                           const std::vector<uint32_t> &DecArgs,
+                           StringRef StrImm) {
+  MachineBasicBlock &MBB = *I.getParent();
+  auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
+                 .addUse(Reg)
+                 .addImm(Member)
+                 .addImm(static_cast<uint32_t>(Dec));
+  finishBuildOpDecorate(MIB, DecArgs, StrImm);
+}
+
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -159,6 +193,20 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     if (!DecorationId)
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
+
+    // The goal of `spirv.Decorations` metadata is to provide a way to
+    // represent SPIR-V entities that do not map to LLVM in an obvious way.
+    // FP flags do have obvious matches between LLVM IR and SPIR-V.
+    // Additionally, we have no guarantee at this point that the flags passed
+    // through the decoration are not violated already in the optimizer passes.
+    // Therefore, we simply ignore FP flags, including NoContraction, and
+    // FPFastMathMode.
+    if (DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction) ||
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
+      continue; // Ignored.
+    }
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                    .addUse(Reg)
                    .addImm(static_cast<uint32_t>(DecorationId->getZExtValue()));
@@ -236,6 +284,10 @@ addressSpaceToStorageClass(unsigned AddrSpace, const SPIRVSubtarget &STI) {
     return SPIRV::StorageClass::CodeSectionINTEL;
   case 10:
     return SPIRV::StorageClass::Private;
+  case 11:
+    return SPIRV::StorageClass::StorageBuffer;
+  case 12:
+    return SPIRV::StorageClass::Uniform;
   default:
     report_fatal_error("Unknown address space");
   }
@@ -333,6 +385,12 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
+int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
+  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
+  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
+  return MI->getOperand(1).getCImm()->getSExtValue();
+}
+
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {
   if (const auto *GI = dyn_cast<GIntrinsic>(&MI))
     return GI->is(IntrinsicID);
@@ -425,8 +483,10 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-      .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -689,8 +749,7 @@ bool sortBlocks(Function &F) {
   Order.reserve(F.size());
 
   ReversePostOrderTraversal<Function *> RPOT(&F);
-  for (BasicBlock *BB : RPOT)
-    Order.push_back(BB);
+  llvm::append_range(Order, RPOT);
 
   assert(&*F.begin() == Order[0]);
   BasicBlock *LastBlock = &*F.begin();
@@ -719,7 +778,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }
@@ -785,8 +844,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   SmallVector<Value *, 4> Args;
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
-  for (auto *Imm : Imms)
-    Args.push_back(Imm);
+  llvm::append_range(Args, Imms);
   return B.CreateIntrinsic(IntrID, {Types}, Args);
 }
 
@@ -852,6 +910,33 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
     Instructions.push_back(MIB.getInstr());
   }
   return Instructions;
+}
+
+SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L) {
+  unsigned LC = SPIRV::LoopControl::None;
+  // Currently used only to store PartialCount value. Later when other
+  // LoopControls are added - this map should be sorted before making
+  // them loop_merge operands to satisfy 3.23. Loop Control requirements.
+  std::vector<std::pair<unsigned, unsigned>> MaskToValueMap;
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.disable")) {
+    LC |= SPIRV::LoopControl::DontUnroll;
+  } else {
+    if (getBooleanLoopAttribute(L, "llvm.loop.unroll.enable") ||
+        getBooleanLoopAttribute(L, "llvm.loop.unroll.full")) {
+      LC |= SPIRV::LoopControl::Unroll;
+    }
+    std::optional<int> Count =
+        getOptionalIntLoopAttribute(L, "llvm.loop.unroll.count");
+    if (Count && Count != 1) {
+      LC |= SPIRV::LoopControl::PartialCount;
+      MaskToValueMap.emplace_back(
+          std::make_pair(SPIRV::LoopControl::PartialCount, *Count));
+    }
+  }
+  SmallVector<unsigned, 1> Result = {LC};
+  for (auto &[Mask, Val] : MaskToValueMap)
+    Result.push_back(Val);
+  return Result;
 }
 
 const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
@@ -930,6 +1015,44 @@ int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
 unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
                                 const MachineInstr *ResType) {
   return foldImm(ResType->getOperand(2), MRI);
+}
+
+MachineBasicBlock::iterator
+getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
+  // Find the position to insert the OpVariable instruction.
+  // We will insert it after the last OpFunctionParameter, if any, or
+  // after OpFunction otherwise.
+  MachineBasicBlock::iterator VarPos = BB.begin();
+  while (VarPos != BB.end() && VarPos->getOpcode() != SPIRV::OpFunction) {
+    ++VarPos;
+  }
+  // Advance VarPos to the next instruction after OpFunction, it will either
+  // be an OpFunctionParameter, so that we can start the next loop, or the
+  // position to insert the OpVariable instruction.
+  ++VarPos;
+  while (VarPos != BB.end() &&
+         VarPos->getOpcode() == SPIRV::OpFunctionParameter) {
+    ++VarPos;
+  }
+  // VarPos is now pointing at after the last OpFunctionParameter, if any,
+  // or after OpFunction, if no parameters.
+  return VarPos != BB.end() && VarPos->getOpcode() == SPIRV::OpLabel ? ++VarPos
+                                                                     : VarPos;
+}
+
+std::optional<SPIRV::LinkageType::LinkageType>
+getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
+    return std::nullopt;
+
+  if (GV.isDeclarationForLinker())
+    return SPIRV::LinkageType::Import;
+
+  if (GV.hasLinkOnceODRLinkage() &&
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))
+    return SPIRV::LinkageType::LinkOnceODR;
+
+  return SPIRV::LinkageType::Export;
 }
 
 } // namespace llvm

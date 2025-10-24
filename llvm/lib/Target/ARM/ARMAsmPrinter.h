@@ -29,7 +29,10 @@ namespace ARM {
 }
 
 class LLVM_LIBRARY_VISIBILITY ARMAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
 
+private:
   /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
   /// make the right decision when printing asm code for different targets.
   const ARMSubtarget *Subtarget;
@@ -72,6 +75,8 @@ public:
   StringRef getPassName() const override {
     return "ARM Assembly Printer";
   }
+
+  const ARMBaseTargetMachine &getTM() const;
 
   void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
 
@@ -118,8 +123,19 @@ public:
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
   void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
 
+  // KCFI check lowering
+  void LowerKCFI_CHECK(const MachineInstr &MI);
+
 private:
   void EmitSled(const MachineInstr &MI, SledKind Kind);
+
+  // KCFI check emission helpers
+  void EmitKCFI_CHECK_ARM32(Register AddrReg, int64_t Type,
+                            const MachineInstr &Call, int64_t PrefixNops);
+  void EmitKCFI_CHECK_Thumb2(Register AddrReg, int64_t Type,
+                             const MachineInstr &Call, int64_t PrefixNops);
+  void EmitKCFI_CHECK_Thumb1(Register AddrReg, int64_t Type,
+                             const MachineInstr &Call, int64_t PrefixNops);
 
   // Helpers for emitStartOfAsmFile() and emitEndOfAsmFile()
   void emitAttributes();
@@ -152,6 +168,7 @@ public:
   /// the .s file.
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
 };
+
 } // end namespace llvm
 
 #endif

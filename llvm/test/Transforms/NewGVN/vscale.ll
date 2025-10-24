@@ -579,7 +579,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: @bigexample(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REF_TMP:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[REF_TMP]])
 ; CHECK-NEXT:    [[A_ELT:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A:%.*]], 0
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT]], ptr [[REF_TMP]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -603,12 +603,12 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]], <vscale x 16 x i8> [[DOTUNPACK10]], 2
 ; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK5]], align 16
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP12]], <vscale x 16 x i8> [[DOTUNPACK12]], 3
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[REF_TMP]])
 ; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP15]]
 ;
 entry:
   %ref.tmp = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %ref.tmp)
   %a.elt = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 0
   store <vscale x 4 x i32> %a.elt, ptr %ref.tmp, align 16
   %0 = call i64 @llvm.vscale.i64()
@@ -643,7 +643,7 @@ entry:
   %.elt11 = getelementptr inbounds i8, ptr %ref.tmp, i64 %14
   %.unpack12 = load <vscale x 16 x i8>, ptr %.elt11, align 16
   %15 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %12, <vscale x 16 x i8> %.unpack12, 3
-  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %ref.tmp)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %15
 }
 

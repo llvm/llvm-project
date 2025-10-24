@@ -132,3 +132,11 @@
 #pragma OPENCL EXTENSION cl_khr_subgroups: enable
 // expected-warning@-1{{unsupported OpenCL extension 'cl_khr_subgroups' - ignoring}}
 
+#if (__OPENCL_C_VERSION__ >= 300)
+#ifndef __opencl_c_generic_address_space
+#error "Missing __opencl_c_generic_address_space define"
+#else
+#error "Incorrect __opencl_c_generic_address_space define"
+#endif
+#pragma OPENCL EXTENSION __opencl_c_generic_address_space: enable
+#endif

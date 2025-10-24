@@ -1,4 +1,4 @@
-//===---------- IncludeSorter.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,18 +15,17 @@
 namespace clang::tidy {
 namespace utils {
 
-namespace {
-
-StringRef removeFirstSuffix(StringRef Str, ArrayRef<const char *> Suffixes) {
+static StringRef removeFirstSuffix(StringRef Str,
+                                   ArrayRef<const char *> Suffixes) {
   for (StringRef Suffix : Suffixes) {
-    if (Str.ends_with(Suffix)) {
-      return Str.substr(0, Str.size() - Suffix.size());
-    }
+    if (Str.consume_back(Suffix))
+      return Str;
   }
   return Str;
 }
 
-StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
+static StringRef makeCanonicalName(StringRef Str,
+                                   IncludeSorter::IncludeStyle Style) {
   // The list of suffixes to remove from source file names to get the
   // "canonical" file names.
   // E.g. tools/sort_includes.cc and tools/sort_includes_test.cc
@@ -49,8 +48,7 @@ StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
     if (StartIndex == StringRef::npos) {
       StartIndex = 0;
     }
-    return Canonical.substr(
-        0, Canonical.find_first_of('+', StartIndex));
+    return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
       removeFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),
@@ -58,12 +56,12 @@ StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
 }
 
 // Scan to the end of the line and return the offset of the next line.
-size_t findNextLine(const char *Text) {
+static size_t findNextLine(const char *Text) {
   size_t EOLIndex = std::strcspn(Text, "\n");
   return Text[EOLIndex] == '\0' ? EOLIndex : EOLIndex + 1;
 }
 
-IncludeSorter::IncludeKinds
+static IncludeSorter::IncludeKinds
 determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
                      bool IsAngled, IncludeSorter::IncludeStyle Style) {
   // Compute the two "canonical" forms of the include's filename sans extension.
@@ -103,8 +101,8 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
   return IncludeSorter::IK_NonSystemInclude;
 }
 
-int compareHeaders(StringRef LHS, StringRef RHS,
-                   IncludeSorter::IncludeStyle Style) {
+static int compareHeaders(StringRef LHS, StringRef RHS,
+                          IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
         std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
@@ -119,8 +117,6 @@ int compareHeaders(StringRef LHS, StringRef RHS,
   }
   return LHS.compare(RHS);
 }
-
-} // namespace
 
 IncludeSorter::IncludeSorter(const SourceManager *SourceMgr,
                              const FileID FileID, StringRef FileName,

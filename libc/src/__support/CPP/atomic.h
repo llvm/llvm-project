@@ -28,7 +28,8 @@ enum class MemoryOrder : int {
   SEQ_CST = __ATOMIC_SEQ_CST
 };
 
-// These are a clang extension, see the clang documenation for more information:
+// These are a clang extension, see the clang documentation for more
+// information:
 // https://clang.llvm.org/docs/LanguageExtensions.html#scoped-atomic-builtins.
 enum class MemoryScope : int {
 #if defined(__MEMORY_SCOPE_SYSTEM) && defined(__MEMORY_SCOPE_DEVICE)
@@ -97,7 +98,7 @@ public:
 
   LIBC_INLINE constexpr Atomic() = default;
 
-  // Intializes the value without using atomic operations.
+  // Initializes the value without using atomic operations.
   LIBC_INLINE constexpr Atomic(value_type v) : val(v) {}
 
   LIBC_INLINE Atomic(const Atomic &) = delete;

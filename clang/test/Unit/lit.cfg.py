@@ -51,7 +51,7 @@ def find_shlibpath_var():
         yield "LD_LIBRARY_PATH"
     elif platform.system() == "Darwin":
         yield "DYLD_LIBRARY_PATH"
-    elif platform.system() == "Windows":
+    elif platform.system() == "Windows" or sys.platform == "cygwin":
         yield "PATH"
     elif platform.system() == "AIX":
         yield "LIBPATH"

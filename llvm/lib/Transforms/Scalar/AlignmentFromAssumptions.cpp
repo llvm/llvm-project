@@ -163,7 +163,7 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
                                                         const SCEV *&OffSCEV) {
   Type *Int64Ty = Type::getInt64Ty(I->getContext());
   OperandBundleUse AlignOB = I->getOperandBundleAt(Idx);
-  if (AlignOB.getTagName() != "align")
+  if (AlignOB.getTagID() != LLVMContext::OB_align)
     return false;
   assert(AlignOB.Inputs.size() >= 2);
   AAPtr = AlignOB.Inputs[0].get();

@@ -12,7 +12,7 @@ fixedStack:
 body:             |
   bb.1:
     ; GISEL-I686-LABEL: name: test_sqrt_f32
-    ; GISEL-I686: [[LD_Fp32m:%[0-9]+]]:rfp32 = LD_Fp32m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (invariant load (s32) from %fixed-stack.0, align 16)
+    ; GISEL-I686: [[LD_Fp32m:%[0-9]+]]:rfp32 = nofpexcept LD_Fp32m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s32) from %fixed-stack.0, align 16)
     ; GISEL-I686-NEXT: [[SQRT_Fp32_:%[0-9]+]]:rfp32 = nofpexcept SQRT_Fp32 [[LD_Fp32m]], implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-I686-NEXT: $fp0 = COPY [[SQRT_Fp32_]]
     ; GISEL-I686-NEXT: RET 0, implicit $fp0
@@ -55,7 +55,7 @@ fixedStack:
 body:             |
   bb.1:
     ; GISEL-I686-LABEL: name: test_sqrt_f80
-    ; GISEL-I686: [[LD_Fp80m:%[0-9]+]]:rfp80 = LD_Fp80m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def $fpsw, implicit $fpcw :: (invariant load (s80) from %fixed-stack.0, align 16)
+    ; GISEL-I686: [[LD_Fp80m:%[0-9]+]]:rfp80 = nofpexcept LD_Fp80m %fixed-stack.0, 1, $noreg, 0, $noreg, implicit-def dead $fpsw, implicit $fpcw :: (invariant load (s80) from %fixed-stack.0, align 16)
     ; GISEL-I686-NEXT: [[SQRT_Fp80_:%[0-9]+]]:rfp80 = nofpexcept SQRT_Fp80 [[LD_Fp80m]], implicit-def dead $fpsw, implicit $fpcw
     ; GISEL-I686-NEXT: $fp0 = COPY [[SQRT_Fp80_]]
     ; GISEL-I686-NEXT: RET 0, implicit $fp0

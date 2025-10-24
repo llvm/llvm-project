@@ -7,15 +7,15 @@ module m
 !        TYPE [[, type-attr-spec-list] ::] type-name [( type-param-name-list )]
 !  type-attr-spec values are:
 !    ABSTRACT, PUBLIC, PRIVATE, BIND(C), EXTENDS(parent-type-name)
-  !WARNING: Attribute 'ABSTRACT' cannot be used more than once
+  !WARNING: Attribute 'ABSTRACT' cannot be used more than once [-Wredundant-attribute]
   type, abstract, public, abstract :: derived1
   end type derived1
 
-  !WARNING: Attribute 'PUBLIC' cannot be used more than once
+  !WARNING: Attribute 'PUBLIC' cannot be used more than once [-Wredundant-attribute]
   type, public, abstract, public :: derived2
   end type derived2
 
-  !WARNING: Attribute 'PRIVATE' cannot be used more than once
+  !WARNING: Attribute 'PRIVATE' cannot be used more than once [-Wredundant-attribute]
   type, private, abstract, private :: derived3
   end type derived3
 
@@ -23,8 +23,8 @@ module m
   type, public, abstract, private :: derived4
   end type derived4
 
-  !WARNING: Attribute 'BIND(C)' cannot be used more than once
-  !WARNING: A derived type with the BIND attribute should not be empty
+  !WARNING: Attribute 'BIND(C)' cannot be used more than once [-Wredundant-attribute]
+  !WARNING: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
   type, bind(c), public, bind(c) :: derived5
   end type derived5
 

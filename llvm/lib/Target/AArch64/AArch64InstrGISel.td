@@ -179,36 +179,6 @@ def G_FCMGT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
-def G_FCMEQZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMGTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLEZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
-def G_FCMLTZ : AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src);
-  let hasSideEffects = 0;
-}
-
 def G_AARCH64_PREFETCH : AArch64GenericInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins type0:$imm, ptype0:$src1);
@@ -263,6 +233,12 @@ def G_SDOT : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_USDOT : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$src3);
+  let hasSideEffects = 0;
+}
+
 // Generic instruction for the BSP pseudo. It is expanded into BSP, which
 // expands into BSL/BIT/BIF after register allocation.
 def G_BSP : AArch64GenericInstruction {
@@ -295,12 +271,6 @@ def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
 def : GINodeEquiv<G_FCMGE, AArch64fcmge>;
 def : GINodeEquiv<G_FCMGT, AArch64fcmgt>;
 
-def : GINodeEquiv<G_FCMEQZ, AArch64fcmeqz>;
-def : GINodeEquiv<G_FCMGEZ, AArch64fcmgez>;
-def : GINodeEquiv<G_FCMGTZ, AArch64fcmgtz>;
-def : GINodeEquiv<G_FCMLEZ, AArch64fcmlez>;
-def : GINodeEquiv<G_FCMLTZ, AArch64fcmltz>;
-
 def : GINodeEquiv<G_BSP, AArch64bsp>;
 
 def : GINodeEquiv<G_UMULL, AArch64umull>;
@@ -314,6 +284,7 @@ def : GINodeEquiv<G_UADDLV, AArch64uaddlv>;
 
 def : GINodeEquiv<G_UDOT, AArch64udot>;
 def : GINodeEquiv<G_SDOT, AArch64sdot>;
+def : GINodeEquiv<G_USDOT, AArch64usdot>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
@@ -323,27 +294,6 @@ def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
 def : Pat<(f32 (fadd (vector_extract (v2f32 FPR64:$Rn), (i64 0)),
                      (vector_extract (v2f32 FPR64:$Rn), (i64 1)))),
            (f32 (FADDPv2i32p (v2f32 FPR64:$Rn)))>;
-
-let Predicates = [HasNEON] in {
-  def : Pat<(v2f64 (sint_to_fp v2i32:$src)),
-            (SCVTFv2f64 (SSHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f64 (uint_to_fp v2i32:$src)),
-            (UCVTFv2f64 (USHLLv2i32_shift V64:$src, 0))>;
-  def : Pat<(v2f32 (sint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (SCVTFv2f64 V128:$src))>;
-  def : Pat<(v2f32 (uint_to_fp v2i64:$src)),
-            (FCVTNv2i32 (UCVTFv2f64 V128:$src))>;
-
-  def : Pat<(v2i64 (fp_to_sint v2f32:$src)),
-            (FCVTZSv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i64 (fp_to_uint v2f32:$src)),
-            (FCVTZUv2f64 (FCVTLv2i32 V64:$src))>;
-  def : Pat<(v2i32 (fp_to_sint v2f64:$src)),
-            (XTNv2i32 (FCVTZSv2f64 V128:$src))>;
-  def : Pat<(v2i32 (fp_to_uint v2f64:$src)),
-            (XTNv2i32 (FCVTZUv2f64 V128:$src))>;
-
-}
 
 let Predicates = [HasNoLSE] in {
 def : Pat<(atomic_cmp_swap_i8 GPR64:$addr, GPR32:$desired, GPR32:$new),
@@ -557,7 +507,7 @@ let AddedComplexity = 19 in {
   defm : VecROStoreLane64_0Pat<ro32, store, v2i32, i32, ssub, STRSroW, STRSroX>;
 }
 
-def : Pat<(v8i8 (AArch64dup (i8 (load (am_indexed8 GPR64sp:$Rn))))),
+def : Pat<(v8i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv8b GPR64sp:$Rn)>;
 def : Pat<(v16i8 (AArch64dup (i8 (load GPR64sp:$Rn)))),
           (LD1Rv16b GPR64sp:$Rn)>;

@@ -748,6 +748,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   const char *ResultTokStrPtr = nullptr;
   SourceLocation StartLoc = LHSTok.getLocation();
   SourceLocation PasteOpLoc;
+  bool HasUCNs = false;
 
   auto IsAtEnd = [&TokenStream, &CurIdx] {
     return TokenStream.size() == CurIdx;
@@ -885,6 +886,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
     // Finally, replace LHS with the result, consume the RHS, and iterate.
     ++CurIdx;
+
+    // Set Token::HasUCN flag if LHS or RHS contains any UCNs.
+    HasUCNs = LHSTok.hasUCN() || RHS.hasUCN() || HasUCNs;
     LHSTok = Result;
   } while (!IsAtEnd() && TokenStream[CurIdx].is(tok::hashhash));
 
@@ -913,6 +917,13 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   // token pasting re-lexes the result token in raw mode, identifier information
   // isn't looked up.  As such, if the result is an identifier, look up id info.
   if (LHSTok.is(tok::raw_identifier)) {
+
+    // If there has any UNCs in concated token, we should mark this token
+    // with Token::HasUCN flag, then LookUpIdentifierInfo will expand UCNs in
+    // token.
+    if (HasUCNs)
+      LHSTok.setFlag(Token::HasUCN);
+
     // Look up the identifier info for the token.  We disabled identifier lookup
     // by saying we're skipping contents, so we need to do this manually.
     PP.LookUpIdentifierInfo(LHSTok);
@@ -921,13 +932,13 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 }
 
 /// isNextTokenLParen - If the next token lexed will pop this macro off the
-/// expansion stack, return 2.  If the next unexpanded token is a '(', return
-/// 1, otherwise return 0.
-unsigned TokenLexer::isNextTokenLParen() const {
+/// expansion stack, return std::nullopt, otherwise return the next unexpanded
+/// token.
+std::optional<Token> TokenLexer::peekNextPPToken() const {
   // Out of tokens?
   if (isAtEnd())
-    return 2;
-  return Tokens[CurTokenIdx].is(tok::l_paren);
+    return std::nullopt;
+  return Tokens[CurTokenIdx];
 }
 
 /// isParsingPreprocessorDirective - Return true if we are in the middle of a

@@ -66,7 +66,7 @@ class Clazz {
   const Klazz<const int>* const p5() const;
   // CHECK-FIXES: const Klazz<const int>* p5() const;
 
-  const Clazz operator++(int x) {  //  p12
+  const Clazz operator++(int x) {
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const Clazz' is 'const
   // CHECK-FIXES: Clazz operator++(int x) {
   }

@@ -37,7 +37,7 @@ class TestCase(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @skipIfEditlineSupportMissing
     def test_basic_completion(self):
         """Test that we can complete a simple multiline expression"""
@@ -59,7 +59,7 @@ class TestCase(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
     @skipIfEditlineSupportMissing
     def test_completion_with_space_only_line(self):
         """Test that we don't crash when completing lines with spaces only"""

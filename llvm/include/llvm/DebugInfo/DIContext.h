@@ -209,6 +209,7 @@ struct DIDumpOptions {
   bool IsEH = false;
   bool DumpNonSkeleton = false;
   bool ShowAggregateErrors = false;
+  bool PrintRegisterOnly = false;
   std::string JsonErrSummaryFile;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
@@ -238,7 +239,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF };
+  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF, CK_GSYM };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;

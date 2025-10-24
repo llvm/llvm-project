@@ -77,24 +77,24 @@ def fir_BoxType : FIR_Type<"Box", "box", [], "BaseBoxType"> {
     to) whether the entity is an array, its size, or what type it has.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-        "mlir::Type":$eleTy), [{
-      return Base::get(eleTy.getContext(), eleTy);
+        "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(eleTy.getContext(), eleTy, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
-
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_CharacterType : FIR_Type<"Character", "char"> {
@@ -146,16 +146,20 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
     is equivalent to a fir.box type with a dynamic type.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy), [{
-      return $_get(eleTy.getContext(), eleTy);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$eleTy, CArg<"bool", "false">:$isVolatile), [{
+      return $_get(eleTy.getContext(), eleTy, isVolatile);
     }]>
   ];
 
+  let extraClassDeclaration = [{
+    bool isVolatile() const { return getIsVolatile(); }
+  }];
+
   let genVerifyDecl = 1;
-  let assemblyFormat = "`<` $eleTy `>`";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def fir_FieldType : FIR_Type<"Field", "field"> {
@@ -326,7 +330,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let extraClassDeclaration = [{
     using TypePair = std::pair<std::string, mlir::Type>;
-    using TypeList = std::vector<TypePair>;
+    using TypeList = llvm::ArrayRef<TypePair>;
+    using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 
@@ -361,20 +366,26 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let description = [{
     The type of a reference to an entity in memory.
+
+    References can be volatile. Any ops taking an operand of a volatile
+    reference must set their memory effects appropriately. Accesses of
+    volatile references are currently modeled as read and write effects
+    to a specific memory resource.
   }];
 
-  let parameters = (ins "mlir::Type":$eleTy);
+  let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);
 
   let skipDefaultBuilders = 1;
 
   let builders = [
-    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType), [{
-      return Base::get(elementType.getContext(), elementType);
+    TypeBuilderWithInferredContext<(ins "mlir::Type":$elementType, CArg<"bool", "false">:$isVolatile), [{
+      return Base::get(elementType.getContext(), elementType, isVolatile);
     }]>,
   ];
 
   let extraClassDeclaration = [{
     mlir::Type getElementType() const { return getEleTy(); }
+    bool isVolatile() const { return getIsVolatile(); }
   }];
 
   let genVerifyDecl = 1;
@@ -599,9 +610,10 @@ def AnyCompositeLike : TypeConstraint<Or<[fir_RecordType.predicate,
     "any composite">;
 
 // Reference types
-def AnyReferenceLike : TypeConstraint<Or<[fir_ReferenceType.predicate,
-    fir_HeapType.predicate, fir_PointerType.predicate,
-    fir_LLVMPointerType.predicate]>, "any reference">;
+def AnyReferenceLike
+    : Type<Or<[fir_ReferenceType.predicate, fir_HeapType.predicate,
+               fir_PointerType.predicate, fir_LLVMPointerType.predicate]>,
+           "any reference">;
 
 def FuncType : TypeConstraint<FunctionType.predicate, "function type">;
 
@@ -615,8 +627,10 @@ def AnyBoxLike : TypeConstraint<Or<[fir_BoxType.predicate,
     fir_BoxCharType.predicate, fir_BoxProcType.predicate,
     fir_ClassType.predicate]>, "any box">;
 
-def BoxOrClassType : TypeConstraint<Or<[fir_BoxType.predicate,
-    fir_ClassType.predicate]>, "box or class">;
+def BoxOrClassLike
+    : TypeConstraint<Or<[fir_BoxType.predicate, fir_ClassType.predicate]>,
+                     "box or class">;
+def BoxOrClassType : Type<BoxOrClassLike.predicate, "box or class">;
 
 def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
     AnyBoxLike.predicate, FunctionType.predicate]>,

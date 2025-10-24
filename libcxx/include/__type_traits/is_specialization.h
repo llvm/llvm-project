@@ -30,15 +30,11 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
-
 template <class _Tp, template <class...> class _Template>
-inline constexpr bool __is_specialization_v = false; // true if and only if _Tp is a specialization of _Template
+inline const bool __is_specialization_v = false; // true if and only if _Tp is a specialization of _Template
 
 template <template <class...> class _Template, class... _Args>
-inline constexpr bool __is_specialization_v<_Template<_Args...>, _Template> = true;
-
-#endif // _LIBCPP_STD_VER >= 17
+inline const bool __is_specialization_v<_Template<_Args...>, _Template> = true;
 
 _LIBCPP_END_NAMESPACE_STD
 
