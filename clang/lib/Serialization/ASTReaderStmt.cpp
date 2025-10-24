@@ -530,7 +530,8 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 }
 
 void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  llvm_unreachable("unimplemented");
+  // TODO(Reflection): Implement this.
+  llvm_unreachable("not implemented yet");
 }
 
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {

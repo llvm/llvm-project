@@ -467,9 +467,8 @@ void ASTStmtWriter::VisitCoyieldExpr(CoyieldExpr *E) {
 }
 
 void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  VisitExpr(E);
-  Record.AddSourceLocation(E->getOperatorLoc());
-  Code = serialization::EXPR_REFLECT;
+  // TODO(Reflection): Implement this.
+  llvm_unreachable("not implemented yet");
 }
 
 void ASTStmtWriter::VisitDependentCoawaitExpr(DependentCoawaitExpr *E) {
