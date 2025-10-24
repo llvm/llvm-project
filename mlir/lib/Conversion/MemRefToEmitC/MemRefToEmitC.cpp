@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -133,8 +134,26 @@ createPointerFromEmitcArray(Location loc, OpBuilder &builder,
   llvm::SmallVector<mlir::Value> indices(arrayType.getRank(), zeroIndex);
   emitc::SubscriptOp subPtr =
       emitc::SubscriptOp::create(builder, loc, arrayValue, ValueRange(indices));
+
+  // Determine the pointer type
+  Type pointerElementType = arrayType.getElementType();
+
+  // Check if the array comes from a const global
+  if (auto getGlobalOp = arrayValue.getDefiningOp<emitc::GetGlobalOp>()) {
+    auto globalOp = SymbolTable::lookupNearestSymbolFrom<emitc::GlobalOp>(
+        getGlobalOp, getGlobalOp.getNameAttr());
+    if (globalOp && globalOp.getConstSpecifier()) {
+      // Create a const pointer type using opaque type
+      std::string cTypeString = emitc::getCTypeString(pointerElementType);
+      if (!cTypeString.empty()) {
+        pointerElementType = emitc::OpaqueType::get(builder.getContext(),
+                                                    "const " + cTypeString);
+      }
+    }
+  }
+
   emitc::ApplyOp ptr = emitc::ApplyOp::create(
-      builder, loc, emitc::PointerType::get(arrayType.getElementType()),
+      builder, loc, emitc::PointerType::get(pointerElementType),
       builder.getStringAttr("&"), subPtr);
 
   return ptr;
