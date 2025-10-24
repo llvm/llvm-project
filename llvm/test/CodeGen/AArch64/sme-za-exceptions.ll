@@ -829,7 +829,7 @@ define void @try_catch_agnostic_za_invoke() "aarch64_za_state_agnostic" personal
 ; CHECK-SDAG-NEXT:    bl __arm_sme_restore
 ; CHECK-SDAG-NEXT:    b .LBB5_1
 entry:
-  invoke void @agnostic_za_call()
+  invoke void @agnostic_za_call() "aarch64_za_state_agnostic"
           to label %exit unwind label %catch
 
 catch:
