@@ -2471,6 +2471,69 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure, SameOperandsAndResultShape,
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: cast_from_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastFromBlockScaledOp: Tosa_InferShapedTypeOp<"cast_from_block_scaled"> {
+  let summary = "Apply scales from a scale tensor to the values in a value tensor";
+
+  let description = [{
+    Apply the scales from a scale tensor to the values in a value tensor, casting
+    the result to the output type. The block dimension must be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_MXFPDataTensorAtLeast1D:$input_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$input_scale,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_TensorAtLeast1D: $output_data
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>,
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Operator: cast_to_block_scaled
+//===----------------------------------------------------------------------===//
+def Tosa_CastToBlockScaledOp : Tosa_InferShapedTypeOp<"cast_to_block_scaled"> {
+  let summary = "Calculate scale tensor values per block, output to separate scale and data tensors.";
+
+  let description = [{
+    Calculate a scale value per block of input values and use that to calculate
+    scaled data values from an input tensor. The output tensors are cast to the
+    specified scale and value types. The block dimension will be the last dimension
+    of the tensor.
+  }];
+
+  let arguments = (ins
+    Tosa_TensorAtLeast1D:$input_data,
+    Tosa_BlockSizeAttr:$block_size
+  );
+
+  let results = (outs
+    Tosa_MXFPDataTensorAtLeast1D:$output_data,
+    Tosa_MXFPScaleTensorAtLeast1D:$output_scale
+  );
+
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_FP]>,
+    Extension<[Tosa_EXT_BF16, Tosa_EXT_MXFP]>
+  ];
+
+  let hasVerifier = 1;
+  let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: rescale
 //===----------------------------------------------------------------------===//
 def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
