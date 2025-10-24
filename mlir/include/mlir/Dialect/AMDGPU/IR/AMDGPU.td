@@ -970,7 +970,6 @@ def AMDGPU_MFMAOp :
     Example:
     ```mlir
       %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
-        { abid = 0 : i32, cbsz = 0 : i32 }
         blgp = none : vector<4xf16>, vector<4xf16>, vector<4xf32>
 
       %1 = amdgpu.mfma 32x32x1 %matD * %matE + %matF
