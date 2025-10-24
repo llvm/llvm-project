@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
 
+#include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -27,6 +28,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/DebugLog.h"
 #include <optional>
 
@@ -625,6 +627,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   bool seenSideeffects = false;
   // Whether we have left a nesting scope (and hence are no longer innermost).
   bool leftNestingScope = false;
+  LocalAliasAnalysis aliasAnalysis;
+  llvm::DenseSet<Value> writtenBuffer;
   while (!worklist.empty()) {
     Operation *op = worklist.pop_back_val();
     // Now walk over the body and clone it.
@@ -635,8 +639,39 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     if (auto nestedParallel = dyn_cast<ParallelOp>(op)) {
       // Before entering a nested scope, make sure there have been no
       // sideeffects until now.
-      if (seenSideeffects)
-        return failure();
+      if (seenSideeffects) {
+        // Go through all operations in the nested parallel and check if any
+        // of the side-effecting operations access buffers that have been
+        // written to in the outer scope.
+        bool accessesWrittenBuffer = false;
+        nestedParallel.walk([&](Operation *nestedOp) {
+          if (accessesWrittenBuffer)
+            return;
+          if (isMemoryEffectFree(nestedOp))
+            return;
+
+          if (auto memEffectInterface =
+                  dyn_cast<MemoryEffectOpInterface>(nestedOp)) {
+            SmallVector<MemoryEffects::EffectInstance> effects;
+            memEffectInterface.getEffects(effects);
+            for (const auto &effect : effects) {
+              if (isa<MemoryEffects::Read>(effect.getEffect()) ||
+                  isa<MemoryEffects::Write>(effect.getEffect())) {
+                Value baseBuffer = effect.getValue();
+                for (auto val : writtenBuffer) {
+                  if (aliasAnalysis.alias(baseBuffer, val) !=
+                      AliasResult::NoAlias) {
+                    accessesWrittenBuffer = true;
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        });
+        if (accessesWrittenBuffer)
+          return failure();
+      }
       // A nested scf.parallel needs insertion of code to compute indices.
       // Insert that now. This will also update the worklist with the loops
       // body.
@@ -650,6 +685,7 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       rewriter.setInsertionPointAfter(parent);
       leftNestingScope = true;
       seenSideeffects = false;
+      writtenBuffer.clear();
     } else if (auto reduceOp = dyn_cast<scf::ReduceOp>(op)) {
       // Convert scf.reduction op
       auto parentLoop = op->getParentOfType<ParallelOp>();
@@ -682,6 +718,18 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
       Operation *clone = rewriter.clone(*op, cloningMap);
       cloningMap.map(op->getResults(), clone->getResults());
       // Check for side effects.
+      if (!isMemoryEffectFree(clone)) {
+        // Record the buffer accessed by the operations with write effects.
+        if (auto memEffectInterface =
+                dyn_cast<MemoryEffectOpInterface>(clone)) {
+          SmallVector<MemoryEffects::EffectInstance> effects;
+          memEffectInterface.getEffects(effects);
+          for (const auto &effect : effects) {
+            if (isa<MemoryEffects::Write>(effect.getEffect()))
+              writtenBuffer.insert(effect.getValue());
+          }
+        }
+      }
       // TODO: Handle region side effects properly.
       seenSideeffects |=
           !isMemoryEffectFree(clone) || clone->getNumRegions() != 0;
