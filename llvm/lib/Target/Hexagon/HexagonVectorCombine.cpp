@@ -2163,7 +2163,8 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
     // Our indexes are represented as a constant. We need it in a reg.
     AllocaInst *IndexesAlloca =
         Builder.CreateAlloca(HVC.getHvxTy(HVC.getIntTy(32), false));
-    auto *StoreIndexes = Builder.CreateStore(cstDataVector, IndexesAlloca);
+    [[maybe_unused]] auto *StoreIndexes =
+        Builder.CreateStore(cstDataVector, IndexesAlloca);
     LLVM_DEBUG(dbgs() << "  StoreIndexes     : " << *StoreIndexes << "\n");
     CastIndex = Builder.CreateLoad(IndexesAlloca->getAllocatedType(),
                                    IndexesAlloca, "reload_index");
