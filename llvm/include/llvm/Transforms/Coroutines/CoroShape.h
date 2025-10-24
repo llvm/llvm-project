@@ -135,7 +135,9 @@ struct Shape {
   struct RetconLoweringStorage {
     Function *ResumePrototype;
     Function *Alloc;
+    Function *AllocFrame;
     Function *Dealloc;
+    Function *DeallocFrame;
     Value *Allocator;
     BasicBlock *ReturnBlock;
     bool IsFrameInlineInStorage;
@@ -278,13 +280,13 @@ struct Shape {
   ///
   /// \param CG - if non-null, will be updated for the new call
   LLVM_ABI Value *emitAlloc(IRBuilder<> &Builder, Value *Size,
-                            CallGraph *CG) const;
+                            AnyCoroAllocaAllocInst *AI, CallGraph *CG) const;
 
   /// Deallocate memory according to the rules of the active lowering.
   ///
   /// \param CG - if non-null, will be updated for the new call
   LLVM_ABI void emitDealloc(IRBuilder<> &Builder, Value *Ptr,
-                            CallGraph *CG) const;
+                            AnyCoroAllocaAllocInst *AI, CallGraph *CG) const;
 
   Shape() = delete;
   explicit Shape(Function &F) {

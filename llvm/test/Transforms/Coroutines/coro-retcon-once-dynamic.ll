@@ -3,11 +3,13 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "arm64-apple-macos99.99"
 
+%coro_func_pointer = type <{ i32, i32 }>
+
 ; CHECK-LABEL: %func.Frame = type { ptr }
 ; CHECK-LABEL: %big_types.Frame = type { <32 x i8>, [16 x i8], i64, ptr, %Integer8 }
 
-; CHECK-LABEL: @func_cfp = constant <{ i32, i32 }> 
-; CHECK-SAME:  <{ 
+; CHECK-LABEL: @func_cfp = constant <{ i32, i32 }>
+; CHECK-SAME:  <{
 ; CHECK-SAME:    i32 trunc
 ; CHECK-SAME:    i32 16
 ; CHECK-SAME:  }>
@@ -79,14 +81,16 @@ target triple = "arm64-apple-macos99.99"
 define swiftcorocc {ptr, i32} @func(ptr %buffer, ptr %allocator, ptr %array) {
 entry:
   %id = call token @llvm.coro.id.retcon.once.dynamic(
-    i32 -1, 
-    i32 16, 
-    ptr @func_cfp, 
-    ptr %allocator, 
-    ptr %buffer, 
-    ptr @continuation_prototype, 
-    ptr @allocate, 
-    ptr @deallocate
+    i32 -1,
+    i32 16,
+    ptr @func_cfp,
+    ptr %allocator,
+    ptr %buffer,
+    ptr @continuation_prototype,
+    ptr nonnull @allocate,
+    ptr nonnull @deallocate,
+    ptr nonnull @allocate_frame,
+    ptr nonnull @deallocate_frame
   )
   %handle = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
@@ -110,8 +114,12 @@ cleanup:
 
 declare void @continuation_prototype(ptr, ptr)
 
-declare swiftcorocc noalias ptr @allocate(i32 %size)
-declare void @deallocate(ptr %ptr)
+declare swiftcorocc noalias ptr @allocate(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare void @deallocate(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
+declare swiftcorocc noalias ptr @allocate_frame(ptr %frame, ptr swiftcoro %cator, i32 %size)
+declare void @deallocate_frame(ptr %frame, ptr swiftcoro %cator, ptr %ptr)
+
+declare void @use(ptr %ptr)
 
 %Integer8 = type { i8 }
 
@@ -129,14 +137,16 @@ declare void @deallocate(ptr %ptr)
 define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %allocator, i64 %index, ptr nocapture swiftself dereferenceable(32) %vec_addr) {
   %element_addr = alloca %Integer8, align 1
   %id = tail call token @llvm.coro.id.retcon.once.dynamic(
-    i32 -1, 
-    i32 16, 
-    ptr nonnull @big_types_cfp, 
-    ptr %allocator, 
-    ptr %frame, 
-    ptr @continuation_prototype, 
-    ptr nonnull @allocate, 
-    ptr nonnull @deallocate
+    i32 -1,
+    i32 16,
+    ptr nonnull @big_types_cfp,
+    ptr %allocator,
+    ptr %frame,
+    ptr @continuation_prototype,
+    ptr nonnull @allocate,
+    ptr nonnull @deallocate,
+    ptr nonnull @allocate_frame,
+    ptr nonnull @deallocate_frame
   )
   %handle = tail call ptr @llvm.coro.begin(token %id, ptr null)
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %element_addr)
@@ -157,3 +167,94 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
   unreachable
 }
 
+declare i32 @getSize()
+@allocating_something_else_cfp = constant <{ i32, i32 }>
+  <{ i32 trunc ( ; offset to @func from @allocating_something_else_cfp
+       i64 sub (
+         i64 ptrtoint (ptr @allocating_something_else to i64),
+         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @allocating_something_else_cfp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 64 ; frame size
+}>
+declare { ptr, ptr } @allocating_something_else(ptr noalias %frame, ptr swiftcoro %allocator)
+
+; CHECK-LABEL: @allocating_something(
+; CHECK-SAME:    ptr noalias %frame
+; CHECK-SAME:    ptr swiftcoro %allocator
+; CHECK-SAME:  )
+; CHECK-SAME:  {
+; CHECK:         %size = call i32 @getSize()
+; CHECK:         call swiftcorocc ptr @allocate(
+; CHECK-SAME:      ptr %frame,
+; CHECK-SAME:      ptr swiftcoro %allocator,
+; CHECK-SAME:      i32 %size
+; CHECK-SAME:    )
+; CHECK:         call swiftcorocc ptr @allocate_frame(
+; CHECK-SAME:      ptr %frame,
+; CHECK-SAME:      ptr swiftcoro %allocator,
+; CHECK-SAME:      i32
+; CHECK-SAME:    )
+; CHECK-LABEL: @allocating_something.resume.0(
+; CHECK-SAME:    ptr %0,
+; CHECK-SAME:    ptr %1
+; CHECK-SAME:  )
+; CHECK-SAME:  {
+; CHECK:         call void @deallocate_frame(
+; CHECK-SAME:      ptr %0,
+; CHECK-SAME:      ptr swiftcoro %1,
+; CHECK-SAME:      ptr
+; CHECK-SAME:    )
+; CHECK:         call void @deallocate(
+; CHECK-SAME:      ptr %0,
+; CHECK-SAME:      ptr swiftcoro %1,
+; CHECK-SAME:      ptr
+; CHECK-SAME:    )
+@allocating_something_cfp = constant <{ i32, i32 }>
+  <{ i32 trunc ( ; offset to @func from @allocating_something_cfp
+       i64 sub (
+         i64 ptrtoint (ptr @allocating_something to i64),
+         i64 ptrtoint (ptr getelementptr inbounds (<{ i32, i32 }>, ptr @allocating_something_cfp, i32 0, i32 1) to i64)
+       )
+     to i32),
+     i32 64 ; frame size
+}>
+define { ptr, ptr } @allocating_something(ptr noalias %frame, ptr swiftcoro %allocator) {
+entry:
+  %id = tail call token @llvm.coro.id.retcon.once.dynamic(
+    i32 -1,
+    i32 16,
+    ptr nonnull @allocating_something_cfp,
+    ptr %allocator,
+    ptr %frame,
+    ptr @continuation_prototype,
+    ptr nonnull @allocate,
+    ptr nonnull @deallocate,
+    ptr nonnull @allocate_frame,
+    ptr nonnull @deallocate_frame
+  )
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
+  %size = call i32 @getSize()
+  %alloca = call token @llvm.coro.alloca.alloc.i64(i32 %size, i32 8)
+  %ptr = call ptr @llvm.coro.alloca.get(token %alloca)
+
+  %callee_frame_size = load i32, ptr getelementptr inbounds nuw (%coro_func_pointer, ptr @allocating_something_else_cfp, i32 0, i32 1), align 8
+  %callee_frame_size_64 = zext i32 %callee_frame_size to i64
+  %callee_frame_token = call token @llvm.coro.alloca.alloc.frame.i64(i64 %callee_frame_size_64, i32 16)
+  %callee_frame = call ptr @llvm.coro.alloca.get(token %callee_frame_token)
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %callee_frame)
+  %allocating_something_else = call ptr @llvm.coro.prepare.retcon(ptr @allocating_something_else)
+  %10 = call swiftcc { ptr, ptr } %allocating_something_else(ptr noalias %callee_frame, ptr swiftcoro %allocator)
+
+  call void @use(ptr %ptr)
+  call ptr (...) @llvm.coro.suspend.retcon.p0(ptr null)
+
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %callee_frame)
+  call void @llvm.coro.alloca.free.frame(token %callee_frame_token)
+
+
+  call void @use(ptr %ptr)
+  call void @llvm.coro.alloca.free(token %alloca)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  unreachable
+}

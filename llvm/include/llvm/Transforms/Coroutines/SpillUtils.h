@@ -35,7 +35,7 @@ void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
 void collectSpillsAndAllocasFromInsts(
     SpillInfo &Spills, SmallVector<AllocaInfo, 8> &Allocas,
     SmallVector<Instruction *, 4> &DeadInstructions,
-    SmallVector<CoroAllocaAllocInst *, 4> &LocalAllocas, Function &F,
+    SmallVector<AnyCoroAllocaAllocInst *, 4> &LocalAllocas, Function &F,
     const SuspendCrossingInfo &Checker, const DominatorTree &DT,
     const coro::Shape &Shape);
 void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,

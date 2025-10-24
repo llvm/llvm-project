@@ -24,7 +24,7 @@ target triple = "arm64-apple-macos99.99"
 declare swiftcorocc void @func_continuation_prototype(ptr noalias, ptr)
 
 ; CHECK-LABEL: @func.resume.0(
-; CHECK-SAME:      ptr noalias %0, 
+; CHECK-SAME:      ptr noalias %0,
 ; CHECK-SAME:      ptr %1
 ; CHECK-SAME:  ) {
 ; CHECK:       coro.return.popless:
@@ -36,14 +36,16 @@ declare swiftcorocc void @func_continuation_prototype(ptr noalias, ptr)
 define swiftcorocc { ptr, ptr } @func(ptr noalias %buffer, ptr %allocator, ptr nocapture swiftself dereferenceable(16) %2) {
 entry:
   %3 = call token @llvm.coro.id.retcon.once.dynamic(
-    i32 -1, 
+    i32 -1,
     i32 16,
     ptr @func_cfp,
     ptr %allocator,
     ptr %buffer,
     ptr @func_continuation_prototype,
-    ptr @allocate, 
-    ptr @deallocate
+    ptr nonnull @allocate,
+    ptr nonnull @deallocate,
+    ptr nonnull @allocate_frame,
+    ptr nonnull @deallocate_frame
   )
   %handle = call ptr @llvm.coro.begin(token %3, ptr null)
   %yielded = getelementptr inbounds %func_self, ptr %2, i32 0, i32 0
@@ -63,3 +65,5 @@ coro.end:
 
 declare swiftcorocc noalias ptr @allocate(i32 %size)
 declare void @deallocate(ptr %ptr)
+declare swiftcorocc noalias ptr @allocate_frame(i32 %size)
+declare void @deallocate_frame(ptr %ptr)
