@@ -1,4 +1,4 @@
-; RUN: opt -S --dxil-prepare %s | FileCheck %s
+; RUN: opt -S --dxil-translate-metadata %s | FileCheck %s
 
 ; Test that only metadata nodes that are valid in DXIL are allowed through
 

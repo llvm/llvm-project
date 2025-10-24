@@ -226,6 +226,7 @@ static const Align kMinOriginAlignment = Align(4);
 static const Align kShadowTLSAlignment = Align(8);
 
 // These constants must be kept in sync with the ones in msan.h.
+// TODO: increase size to match SVE/SVE2/SME/SME2 limits
 static const unsigned kParamTLSSize = 800;
 static const unsigned kRetvalTLSSize = 800;
 
@@ -1544,6 +1545,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  static bool isAArch64SVCount(Type *Ty) {
+    if (TargetExtType *TTy = dyn_cast<TargetExtType>(Ty))
+      return TTy->getName() == "aarch64.svcount";
+    return false;
+  }
+
+  // This is intended to match the "AArch64 Predicate-as-Counter Type" (aka
+  // 'target("aarch64.svcount")', but not e.g., <vscale x 4 x i32>.
+  static bool isScalableNonVectorType(Type *Ty) {
+    if (!isAArch64SVCount(Ty))
+      LLVM_DEBUG(dbgs() << "isScalableNonVectorType: Unexpected type " << *Ty
+                        << "\n");
+
+    return Ty->isScalableTy() && !isa<VectorType>(Ty);
+  }
+
   void materializeChecks() {
 #ifndef NDEBUG
     // For assert below.
@@ -1672,6 +1689,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       LLVM_DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
       return Res;
     }
+    if (isScalableNonVectorType(OrigTy)) {
+      LLVM_DEBUG(dbgs() << "getShadowTy: Scalable non-vector type: " << *OrigTy
+                        << "\n");
+      return OrigTy;
+    }
+
     uint32_t TypeSize = DL.getTypeSizeInBits(OrigTy);
     return IntegerType::get(*MS.C, TypeSize);
   }
@@ -2185,8 +2208,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                         << *OrigIns << "\n");
       return;
     }
-#ifndef NDEBUG
+
     Type *ShadowTy = Shadow->getType();
+    if (isScalableNonVectorType(ShadowTy)) {
+      LLVM_DEBUG(dbgs() << "Skipping check of scalable non-vector " << *Shadow
+                        << " before " << *OrigIns << "\n");
+      return;
+    }
+#ifndef NDEBUG
     assert((isa<IntegerType>(ShadowTy) || isa<VectorType>(ShadowTy) ||
             isa<StructType>(ShadowTy) || isa<ArrayType>(ShadowTy)) &&
            "Can only insert checks for integer, vector, and aggregate shadow "
@@ -6972,6 +7001,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // an extra "select". This results in much more compact IR.
       // Sa = select Sb, poisoned, (select b, Sc, Sd)
       Sa1 = getPoisonedShadow(getShadowTy(I.getType()));
+    } else if (isScalableNonVectorType(I.getType())) {
+      // This is intended to handle target("aarch64.svcount"), which can't be
+      // handled in the else branch because of incompatibility with CreateXor
+      // ("The supported LLVM operations on this type are limited to load,
+      // store, phi, select and alloca instructions").
+
+      // TODO: this currently underapproximates. Use Arm SVE EOR in the else
+      //       branch as needed instead.
+      Sa1 = getCleanShadow(getShadowTy(I.getType()));
     } else {
       // Sa = select Sb, [ (c^d) | Sc | Sd ], [ b ? Sc : Sd ]
       // If Sb (condition is poisoned), look for bits in c and d that are equal

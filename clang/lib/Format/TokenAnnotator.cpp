@@ -3791,11 +3791,17 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   if (Current.is(TT_FunctionDeclarationName))
     return true;
 
-  if (Current.isNoneOf(tok::identifier, tok::kw_operator))
+  if (!Current.Tok.getIdentifierInfo())
     return false;
 
   const auto *Prev = Current.getPreviousNonComment();
   assert(Prev);
+
+  if (Prev->is(tok::coloncolon))
+    Prev = Prev->Previous;
+
+  if (!Prev)
+    return false;
 
   const auto &Previous = *Prev;
 
@@ -3845,8 +3851,6 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
-    if (Line.startsWith(tok::kw_friend))
-      return true;
     if (Previous.Tok.getIdentifierInfo() &&
         Previous.isNoneOf(tok::kw_return, tok::kw_co_return)) {
       return true;
