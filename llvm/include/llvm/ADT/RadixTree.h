@@ -64,8 +64,8 @@ namespace llvm {
 /// The `RadixTree` takes ownership of the `KeyType` and `T` objects
 /// inserted into it. When an element is removed or the tree is destroyed,
 /// these objects will be destructed.
-/// However, if `KeyType` is a reference-like type, e.g. StringRef or range,
-/// User must guarantee that destination has lifetime longer than the tree.
+/// However, if `KeyType` is a reference-like type, e.g., StringRef or range,
+/// the user must guarantee that destination has lifetime longer than the tree.
 template <typename KeyType, typename T> class RadixTree {
 public:
   using key_type = KeyType;
