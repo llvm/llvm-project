@@ -71,7 +71,7 @@ LIBC_INLINE static uint16_t test_except(uint16_t excepts) {
 }
 
 LIBC_INLINE static uint16_t get_except() {
-  uint32_t mxcsr = get_mxcsr();
+  uint32_t mxcsr = ~get_mxcsr();
   return static_cast<uint16_t>((mxcsr >> ExceptionFlags::MXCSR_EXCEPTION_MASK_BIT_POSITION) & ExceptionFlags::ALL_F);
 }
 

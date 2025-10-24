@@ -49,6 +49,8 @@ LIBC_INLINE static constexpr bool fenv_exceptions_match_x86() {
   return (FE_INVALID == ExceptionFlags::INVALID_F) &&
 #ifdef __FE_DENORM
          (__FE_DENORM == ExceptionFlags::DENORMAL_F) &&
+#elif defined(FE_DENORM)
+         (FE_DENORM == ExceptionFlags::DENORMAL_F) &&
 #endif // __FE_DENORM
          (FE_DIVBYZERO == ExceptionFlags::DIV_BY_ZERO_F) &&
          (FE_OVERFLOW == ExceptionFlags::OVERFLOW_F) &&
@@ -87,6 +89,8 @@ LIBC_INLINE static uint16_t get_status_value_from_except(int excepts) {
     return ((excepts & FE_INVALID) ? ExceptionFlags::INVALID_F : 0) |
 #ifdef __FE_DENORM
            ((excepts & __FE_DENORM) ? ExceptionFlags::DENORMAL_F : 0) |
+#elif defined(FE_DENORM)
+           ((excepts & FE_DENORM) ? ExceptionFlags::DENORMAL_F : 0) |
 #endif // __FE_DENORM
            ((excepts & FE_DIVBYZERO) ? ExceptionFlags::DIV_BY_ZERO_F : 0) |
            ((excepts & FE_OVERFLOW) ? ExceptionFlags::OVERFLOW_F : 0) |
@@ -102,6 +106,8 @@ LIBC_INLINE static int get_macro_from_exception_status(uint16_t status) {
     return ((status & ExceptionFlags::INVALID_F) ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
            ((status & ExceptionFlags::DENORMAL_F) ? __FE_DENORM : 0) |
+#elif defined(FE_DENORM)
+           ((status & ExceptionFlags::DENORMAL_F) ? FE_DENORM : 0) |
 #endif // __FE_DENORM
            ((status & ExceptionFlags::DIV_BY_ZERO_F) ? FE_DIVBYZERO : 0) |
            ((status & ExceptionFlags::OVERFLOW_F) ? FE_OVERFLOW : 0) |
