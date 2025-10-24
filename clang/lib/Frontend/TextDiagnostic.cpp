@@ -676,6 +676,8 @@ void TextDiagnostic::emitDiagnosticMessage(
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.getColumn() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors);
+
+  OS.flush();
 }
 
 /*static*/ void
@@ -744,7 +746,6 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   if (ShowColors)
     OS.resetColor();
   OS << '\n';
-  OS.flush();
 }
 
 void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
