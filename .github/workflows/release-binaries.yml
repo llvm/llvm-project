@@ -293,6 +293,7 @@ jobs:
     - name: Install libxml2
       run: |
         vcpkg install libxml2:x64-windows-static
+        Get-Content C:\vcpkg\packages\libxml2_x65-windows-static/lib/libxml2.lib -Encoding Byte -TotalCount 100 | Format-Hex
 
     - name: Configure
       id: build
