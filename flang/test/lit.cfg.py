@@ -165,11 +165,41 @@ if flang_intrinsics_dir := get_resource_module_intrinsic_dir():
 extra_intrinsics_search_args = []
 if config.flang_intrinsic_modules_dir:
     extra_intrinsics_search_args += [
-        f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}",
+        f"-fintrinsic-modules-path={config.flang_intrinsic_modules_dir}"
     ]
     lit_config.note(
         f"using extra module intrinsics: {config.flang_intrinsic_modules_dir}"
     )
+
+# If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
+config.available_features.add("module-independent")
+if config.have_flangrt_mod or config.flang_intrinsic_modules_dir:
+    config.available_features.add("flangrt-modules")
+else:
+    lit_config.warning(f"Intrinsic modules not available: disabling most tests")
+    config.limit_to_features.add("module-independent")
+
+
+
+# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
+openmp_flags_substitution = "-fopenmp"
+if not config.have_openmp_rtl:
+    lit_config.warning(f"OpenMP runtime library not available: OpenMP tests disabled")
+elif not config.openmp_module_dir:
+    lit_config.warning(f"OpenMP modules not available: OpenMP tests disabled")
+else:
+    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+    # project or runtime. If not in the compiler resources module directory like the other intrinsic modules, we must add it to the path.
+    config.available_features.add("openmp_runtime")
+    #openmp_flags_substitution += f" -fintrinsic-modules-path {config.openmp_module_dir}"
+    extra_intrinsics_search_args += [
+        f"-fintrinsic-modules-path={config.openmp_module_dir}"
+    ]
+    lit_config.note(f"using OpenMP modules: {config.openmp_module_dir}")
+
+
+
 
 # For each occurrence of a flang tool name, replace it with the full path to
 # the build directory holding that tool.
@@ -237,29 +267,6 @@ config.substitutions.append(("%flang_include", config.flang_headers_dir))
 result = lit_config.params.get("LIBPGMATH")
 if result:
     config.environment["LIBPGMATH"] = True
-
-# If intrinsic modules are not available, disable tests unless they are marked as 'module-independent'.
-config.available_features.add("module-independent")
-if config.have_flangrt_mod or config.flang_intrinsic_modules_dir:
-    config.available_features.add("flangrt-modules")
-else:
-    lit_config.warning(f"Intrinsic modules not available: disabling most tests")
-    config.limit_to_features.add("module-independent")
-
-# Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
-openmp_flags_substitution = "-fopenmp"
-if not config.have_openmp_rtl:
-  lit_config.warning(f"OpenMP runtime not available: tests disabled")
-elif not config.openmp_module_dir:
-  lit_config.warning(f"OpenMP modules not available: tests disabled")
-else:
-  # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-  # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
-  # project or runtime.
-  config.available_features.add("openmp_runtime")
-  openmp_flags_substitution += f" -J {config.openmp_module_dir}"
-  lit_config.note(f"Using OpenMP modules: {config.openmp_module_dir}")
-
 
 
 config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
