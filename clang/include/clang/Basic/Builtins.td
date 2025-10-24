@@ -5272,3 +5272,9 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+def StaticAnalysisAssume : Builtin {
+  let Spellings = ["__builtin_static_analysis_assume"];
+  let Attributes = [NoThrow, Const, Pure, UnevaluatedArguments];
+  let Prototype = "void(bool)";
+}
