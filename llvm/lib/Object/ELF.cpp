@@ -838,7 +838,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2 || Version > 4)
+    if (Version < 2 || Version > 5)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
     Feature = Data.getU8(Cur); // Feature byte
@@ -855,6 +855,11 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                          " feature = " + Twine(static_cast<int>(Feature)));
     if (FeatEnable.BBHash && Version < 4)
       return createError("version should be >= 4 for SHT_LLVM_BB_ADDR_MAP when "
+                         "basic block hash feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
+    if (FeatEnable.PropellerCfg && Version < 5)
+      return createError("version should be >= 5 for SHT_LLVM_BB_ADDR_MAP when "
                          "basic block hash feature is enabled: version = " +
                          Twine(static_cast<int>(Version)) +
                          " feature = " + Twine(static_cast<int>(Feature)));
@@ -946,6 +951,10 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         uint64_t BBF = FeatEnable.BBFreq
                            ? readULEB128As<uint64_t>(Data, Cur, ULEBSizeErr)
                            : 0;
+        uint32_t PropellerBBFreq =
+            FeatEnable.PropellerCfg
+                ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                : 0;
 
         // Branch probability
         llvm::SmallVector<PGOAnalysisMap::PGOBBEntry::SuccessorEntry, 2>
@@ -955,13 +964,20 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           for (uint64_t I = 0; I < SuccCount; ++I) {
             uint32_t BBID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
             uint32_t BrProb = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            uint32_t PropellerFreq =
+                FeatEnable.PropellerCfg
+                    ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
+                    : 0;
+
             if (PGOAnalyses)
-              Successors.push_back({BBID, BranchProbability::getRaw(BrProb)});
+              Successors.push_back(
+                  {BBID, BranchProbability::getRaw(BrProb), PropellerFreq});
           }
         }
 
         if (PGOAnalyses)
-          PGOBBEntries.push_back({BlockFrequency(BBF), std::move(Successors)});
+          PGOBBEntries.push_back(
+              {BlockFrequency(BBF), PropellerBBFreq, std::move(Successors)});
       }
 
       if (PGOAnalyses)
