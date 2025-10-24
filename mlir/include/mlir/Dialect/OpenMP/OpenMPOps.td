@@ -2244,10 +2244,13 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
     the original variable.
   }];
 
-  let arguments = (ins OpenMP_PointerLikeType:$sym_addr);
+  let arguments = (ins
+    OpenMP_PointerLikeType:$sym_addr,
+    OptionalAttr<DeclareTargetDeviceTypeAttr>:$device_type
+  );
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
-    $sym_addr `:` type($sym_addr) `->` type($gp_addr) attr-dict
+    $sym_addr `:` type($sym_addr) ( `,` `device_type` $device_type^ )? `->` type($gp_addr) attr-dict
   }];
 }
 

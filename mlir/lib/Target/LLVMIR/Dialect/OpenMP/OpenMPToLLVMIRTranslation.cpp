@@ -6137,6 +6137,28 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (failed(checkImplementationStatus(opInst)))
     return failure();
+  
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+  auto deviceType = groupprivateOp.getDeviceType();
+  
+  // skip allocation based on device_type
+  bool shouldAllocate = true;
+  if (deviceType.has_value()) {    
+    switch (*deviceType) {
+    case mlir::omp::DeclareTargetDeviceType::host:
+      // Only allocate on host
+      shouldAllocate = !isTargetDevice;
+      break;
+    case mlir::omp::DeclareTargetDeviceType::nohost:
+      // Only allocate on device
+      shouldAllocate = isTargetDevice;
+      break;
+    case mlir::omp::DeclareTargetDeviceType::any:
+      // Allocate on both
+      shouldAllocate = true;
+      break;
+    }
+  }
 
   Value symAddr = groupprivateOp.getSymAddr();
   auto *symOp = symAddr.getDefiningOp();
@@ -6151,21 +6173,32 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
   LLVM::GlobalOp global =
       addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
+  llvm::Value *resultPtr;
 
-  // Get the size of the variable
-  llvm::Type *varType = globalValue->getValueType();
-  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  llvm::DataLayout DL = llvmModule->getDataLayout();
-  uint64_t typeSize = DL.getTypeAllocSize(varType);
-  // Call omp_alloc_shared to allocate memory for groupprivate variable.
-  llvm::FunctionCallee allocSharedFn = ompBuilder->getOrCreateRuntimeFunction(
-      *llvmModule, llvm::omp::OMPRTL___kmpc_alloc_shared);
-  // Call runtime to allocate shared memory for this group
-  llvm::Value *groupPrivatePtr =
-      builder.CreateCall(allocSharedFn, {builder.getInt64(typeSize)});
-  groupPrivatePtr =
-      builder.CreateBitCast(groupPrivatePtr, globalValue->getType());
-  moduleTranslation.mapValue(opInst.getResult(0), groupPrivatePtr);
+  if (shouldAllocate) {
+    // Get the size of the variable
+    llvm::Type *varType = globalValue->getValueType();
+    llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+    llvm::DataLayout DL = llvmModule->getDataLayout();
+    uint64_t typeSize = DL.getTypeAllocSize(varType);
+    // Call omp_alloc_shared to allocate memory for groupprivate variable.
+    llvm::FunctionCallee allocSharedFn = ompBuilder->getOrCreateRuntimeFunction(
+        *llvmModule, llvm::omp::OMPRTL___kmpc_alloc_shared);
+    // Call runtime to allocate shared memory for this group
+    llvm::Value *groupPrivatePtr =
+        builder.CreateCall(allocSharedFn, {builder.getInt64(typeSize)});
+    resultPtr =
+        builder.CreateBitCast(groupPrivatePtr, globalValue->getType());
+  }
+  else {
+    // Use original global address when not allocating group-private storage
+    resultPtr = moduleTranslation.lookupValue(symAddr);
+    if (!resultPtr) {
+      // Fallback: create address-of for the global
+      resultPtr = builder.CreateBitCast(globalValue, globalValue->getType());
+    }
+  }
+  moduleTranslation.mapValue(opInst.getResult(0), resultPtr);
   return success();
 }
 
