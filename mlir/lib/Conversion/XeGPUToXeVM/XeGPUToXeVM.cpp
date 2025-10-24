@@ -193,6 +193,9 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     auto tdVal = op.getTensorDesc();
     xegpu::CreateNdDescOp descOp =
         tdVal.template getDefiningOp<xegpu::CreateNdDescOp>();
+    if (!descOp)
+      return rewriter.notifyMatchFailure(
+          op, "Expected tensor descriptor to be created by CreateNdDescOp.");
     auto mixedStrides = descOp.getMixedStrides();
     auto mixedOffsets = op.getMixedOffsets();
     auto mixedSizes = descOp.getMixedSizes();
