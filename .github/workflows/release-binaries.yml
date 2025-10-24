@@ -298,10 +298,10 @@ jobs:
       id: build
       shell: bash
       run: |
-        #ls -l /c/vcpkg/packages/libxml2_x64-windows/
-        #ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
-        #ls -l /c/vcpkg/packages/libxml2_x64-windows/include/
-        #ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/
+        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake  -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
