@@ -113,8 +113,8 @@ LIBC_INLINE static uint16_t test_except(uint16_t excepts) {
 }
 
 LIBC_INLINE static uint16_t get_except() {
-  uint16_t x87_status = get_x87_control_word();
-  return static_cast<uint16_t>(x87_status & ExceptionFlags::ALL_F);
+  uint16_t x87_control = get_x87_control_word();
+  return static_cast<uint16_t>((~x87_control) & ExceptionFlags::ALL_F);
 }
 
 LIBC_INLINE static void set_except(uint16_t excepts) {
