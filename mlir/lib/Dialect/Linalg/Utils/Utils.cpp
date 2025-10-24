@@ -265,7 +265,7 @@ static bool bodyMatcherForMaxSignedPoolOps(Value yieldVal, Block *body) {
 
 // max_unsigned ops should not allow float data type.
 // TODO: Retire OPDSL logic. Refer to :
-// https://github.com/llvm/llvm-project/pull/163724#discussion_r2438940337
+//       https://github.com/llvm/llvm-project/issues/164800
 static bool bodyMatcherForMaxUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MaximumFOp, arith::MaxUIOp>(yieldVal,
                                                                   body);
@@ -278,7 +278,7 @@ static bool bodyMatcherForMinSignedPoolOps(Value yieldVal, Block *body) {
 
 // min_unsigned ops should not allow float data type.
 // TODO: Retire OPDSL logic. Refer to :
-// https://github.com/llvm/llvm-project/pull/163724#discussion_r2438940337
+//       https://github.com/llvm/llvm-project/issues/164800
 static bool bodyMatcherForMinUnsignedPoolOps(Value yieldVal, Block *body) {
   return bodyMatcherForPoolOps<arith::MinimumFOp, arith::MinUIOp>(yieldVal,
                                                                   body);
@@ -407,6 +407,9 @@ static bool updateConvDilationsAndStrides(SmallVector<int64_t> *dilations,
   return true;
 }
 
+// ---------------------------------------------
+// Matchers for specific convolution operation.
+//----------------------------------------------
 template <>
 bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
     LinalgOp op, SmallVector<int64_t> *dilations,
@@ -414,8 +417,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv1DNwcWcOp>(
   if (isa<linalg::DepthwiseConv1DNwcWcOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {3, 2, 3}))
@@ -446,8 +449,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv2DNchwChwOp>(
   if (isa<linalg::DepthwiseConv2DNchwChwOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 3, 4}))
@@ -481,8 +484,8 @@ bool isaConvolutionOpOfType<linalg::DepthwiseConv3DNdhwcDhwcmOp>(
   if (isa<linalg::DepthwiseConv3DNdhwcDhwcmOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {5, 5, 6}))
@@ -523,8 +526,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxOp>(
   if (isa<linalg::PoolingNhwcMaxOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
@@ -561,8 +564,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinOp>(
   if (isa<linalg::PoolingNhwcMinOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
@@ -599,8 +602,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcSumOp>(
   if (isa<linalg::PoolingNhwcSumOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
@@ -637,8 +640,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMaxUnsignedOp>(
   if (isa<linalg::PoolingNhwcMaxUnsignedOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
@@ -675,8 +678,8 @@ bool isaConvolutionOpOfType<linalg::PoolingNhwcMinUnsignedOp>(
   if (isa<linalg::PoolingNhwcMinUnsignedOp>(op))
     return true;
 
-  if (!isaConvolutionOpInterface(op))
-    return false;
+  assert(isaConvolutionOpInterface(op) &&
+         "expected linalgOp to implement ConvolutionOpInterface");
 
   ArrayAttr indexingMaps = op.getIndexingMaps();
   if (!verifyConvIndexingMapSizes(indexingMaps, {4, 2, 4}))
