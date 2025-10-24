@@ -82,7 +82,8 @@ private:
 
   /// Represents an internal node in the Radix Tree.
   struct Node {
-    KeyConstIteratorRangeType Key{};
+    KeyConstIteratorRangeType Key{KeyConstIteratorType{},
+                                  KeyConstIteratorType{}};
     std::vector<Node> Children;
 
     /// An iterator to the value associated with this node.
@@ -209,7 +210,8 @@ private:
       : public iterator_facade_base<IteratorImpl<MappedType>,
                                     std::forward_iterator_tag, MappedType> {
     const Node *Curr = nullptr;
-    KeyConstIteratorRangeType Query{};
+    KeyConstIteratorRangeType Query{KeyConstIteratorType{},
+                                    KeyConstIteratorType{}};
 
     void findNextValid() {
       while (Curr && Curr->Value == typename ContainerType::iterator())
