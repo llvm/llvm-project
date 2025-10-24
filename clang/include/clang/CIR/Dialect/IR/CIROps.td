@@ -2685,24 +2685,36 @@ def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
     empty. The first operand of this operation must be a pointer to the callee
     function. The rest operands are arguments to the callee function.
 
+    If the `cir.call` has the `exception` keyword, the call can throw.
+
     Example:
 
     ```mlir
+    // Direct call
     %0 = cir.call @foo()
+
+    // Indirect call
+    %20 = cir.call %18(%17)
+
+    // Call that might throw
+    cir.call exception @foo_that_might_throw() -> ()
     ```
   }];
 
   let results = (outs Optional<CIR_AnyType>:$result);
-  let arguments = commonArgs;
+  let arguments = !con((ins UnitAttr:$exception), commonArgs);
 
   let builders = [
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands), [{
+                   "mlir::ValueRange":$operands,
+                  CArg<"mlir::UnitAttr", "{}">:$exception), [{
       $_state.addOperands(operands);
       if (callee)
         $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
+      if (exception)
+        $_state.addAttribute("exception", exception);
     }]>
   ];
 }

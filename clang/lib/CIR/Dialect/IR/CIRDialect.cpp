@@ -708,6 +708,12 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   mlir::FlatSymbolRefAttr calleeAttr;
   llvm::ArrayRef<mlir::Type> allResultTypes;
 
+  bool hasExceptions = false;
+  if (mlir::succeeded(parser.parseOptionalKeyword("exception"))) {
+    result.addAttribute("exception", parser.getBuilder().getUnitAttr());
+    hasExceptions = true;
+  }
+
   // If we cannot parse a string callee, it means this is an indirect call.
   if (!parser
            .parseOptionalAttribute(calleeAttr, CIRDialect::getCalleeAttrName(),
@@ -729,9 +735,15 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   if (parser.parseRParen())
     return mlir::failure();
 
-  if (parser.parseOptionalKeyword("nothrow").succeeded())
+  llvm::SMLoc optionalNothrowLoc = parser.getCurrentLocation();
+  if (parser.parseOptionalKeyword("nothrow").succeeded()) {
+    if (hasExceptions)
+      return parser.emitError(
+          optionalNothrowLoc,
+          "should have either `exception` or `nothrow`, but not both");
     result.addAttribute(CIRDialect::getNoThrowAttrName(),
                         mlir::UnitAttr::get(parser.getContext()));
+  }
 
   if (parser.parseOptionalKeyword("side_effect").succeeded()) {
     if (parser.parseLParen().failed())
@@ -767,12 +779,15 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
 static void printCallCommon(mlir::Operation *op,
                             mlir::FlatSymbolRefAttr calleeSym,
                             mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect) {
+                            mlir::OpAsmPrinter &printer, bool exception,
+                            bool isNothrow, cir::SideEffect sideEffect) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
   auto ops = callLikeOp.getArgOperands();
+
+  if (exception)
+    printer << "exception ";
 
   if (calleeSym) {
     // Direct calls
@@ -793,10 +808,10 @@ static void printCallCommon(mlir::Operation *op,
     printer << ")";
   }
 
-  printer.printOptionalAttrDict(op->getAttrs(),
-                                {CIRDialect::getCalleeAttrName(),
-                                 CIRDialect::getNoThrowAttrName(),
-                                 CIRDialect::getSideEffectAttrName()});
+  llvm::SmallVector<::llvm::StringRef, 4> elidedAttrs = {
+      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getSideEffectAttrName(), CIRDialect::getExceptionAttrName()};
+  printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 
   printer << " : ";
   printer.printFunctionalType(op->getOperands().getTypes(),
@@ -811,8 +826,8 @@ mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
 void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
-  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+  printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getException(),
+                  getNothrow(), sideEffect);
 }
 
 static LogicalResult

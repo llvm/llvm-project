@@ -80,3 +80,22 @@ cir.func @f13() {
   cir.call @f12(%0) : (!s32i) -> ()
   cir.return
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @division() -> !s32i
+
+cir.func dso_local @calling_division_inside_try_block() {
+  cir.scope {
+    cir.try {
+      // expected-error @below {{should have either `exception` or `nothrow`, but not both}}
+      %0 = cir.call exception @division() nothrow : () -> !s32i
+      cir.yield
+    } catch all {
+      cir.yield
+    }
+  }
+  cir.return
+}
