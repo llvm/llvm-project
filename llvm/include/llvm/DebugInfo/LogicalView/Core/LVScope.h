@@ -153,7 +153,7 @@ public:
   }
   LVScope(const LVScope &) = delete;
   LVScope &operator=(const LVScope &) = delete;
-  virtual ~LVScope() = default;
+  ~LVScope() override = default;
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SCOPE;
@@ -349,7 +349,7 @@ public:
   LVScopeAggregate() : LVScope() {}
   LVScopeAggregate(const LVScopeAggregate &) = delete;
   LVScopeAggregate &operator=(const LVScopeAggregate &) = delete;
-  ~LVScopeAggregate() = default;
+  ~LVScopeAggregate() override = default;
 
   // DW_AT_specification, DW_AT_abstract_origin.
   LVScope *getReference() const override { return Reference; }
@@ -387,7 +387,7 @@ public:
   }
   LVScopeAlias(const LVScopeAlias &) = delete;
   LVScopeAlias &operator=(const LVScopeAlias &) = delete;
-  ~LVScopeAlias() = default;
+  ~LVScopeAlias() override = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;
@@ -401,7 +401,7 @@ public:
   LVScopeArray() : LVScope() { setIsArray(); }
   LVScopeArray(const LVScopeArray &) = delete;
   LVScopeArray &operator=(const LVScopeArray &) = delete;
-  ~LVScopeArray() = default;
+  ~LVScopeArray() override = default;
 
   void resolveExtra() override;
 
@@ -513,7 +513,7 @@ public:
   }
   LVScopeCompileUnit(const LVScopeCompileUnit &) = delete;
   LVScopeCompileUnit &operator=(const LVScopeCompileUnit &) = delete;
-  ~LVScopeCompileUnit() = default;
+  ~LVScopeCompileUnit() override = default;
 
   LVScope *getCompileUnitParent() const override {
     return static_cast<LVScope *>(const_cast<LVScopeCompileUnit *>(this));
@@ -643,7 +643,7 @@ public:
   LVScopeEnumeration() : LVScope() { setIsEnumeration(); }
   LVScopeEnumeration(const LVScopeEnumeration &) = delete;
   LVScopeEnumeration &operator=(const LVScopeEnumeration &) = delete;
-  ~LVScopeEnumeration() = default;
+  ~LVScopeEnumeration() override = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;
@@ -658,7 +658,7 @@ public:
   LVScopeFormalPack() : LVScope() { setIsTemplatePack(); }
   LVScopeFormalPack(const LVScopeFormalPack &) = delete;
   LVScopeFormalPack &operator=(const LVScopeFormalPack &) = delete;
-  ~LVScopeFormalPack() = default;
+  ~LVScopeFormalPack() override = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;
@@ -676,7 +676,7 @@ public:
   LVScopeFunction() : LVScope() {}
   LVScopeFunction(const LVScopeFunction &) = delete;
   LVScopeFunction &operator=(const LVScopeFunction &) = delete;
-  virtual ~LVScopeFunction() = default;
+  ~LVScopeFunction() override = default;
 
   // DW_AT_specification, DW_AT_abstract_origin.
   LVScope *getReference() const override { return Reference; }
@@ -728,7 +728,7 @@ public:
   LVScopeFunctionInlined() : LVScopeFunction() { setIsInlinedFunction(); }
   LVScopeFunctionInlined(const LVScopeFunctionInlined &) = delete;
   LVScopeFunctionInlined &operator=(const LVScopeFunctionInlined &) = delete;
-  ~LVScopeFunctionInlined() = default;
+  ~LVScopeFunctionInlined() override = default;
 
   uint32_t getDiscriminator() const override { return Discriminator; }
   void setDiscriminator(uint32_t Value) override {
@@ -767,7 +767,7 @@ public:
   LVScopeFunctionType() : LVScopeFunction() { setIsFunctionType(); }
   LVScopeFunctionType(const LVScopeFunctionType &) = delete;
   LVScopeFunctionType &operator=(const LVScopeFunctionType &) = delete;
-  ~LVScopeFunctionType() = default;
+  ~LVScopeFunctionType() override = default;
 
   void resolveExtra() override;
 };
@@ -781,7 +781,7 @@ public:
   }
   LVScopeModule(const LVScopeModule &) = delete;
   LVScopeModule &operator=(const LVScopeModule &) = delete;
-  ~LVScopeModule() = default;
+  ~LVScopeModule() override = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;
@@ -797,7 +797,7 @@ public:
   LVScopeNamespace() : LVScope() { setIsNamespace(); }
   LVScopeNamespace(const LVScopeNamespace &) = delete;
   LVScopeNamespace &operator=(const LVScopeNamespace &) = delete;
-  ~LVScopeNamespace() = default;
+  ~LVScopeNamespace() override = default;
 
   // Access DW_AT_extension reference.
   LVScope *getReference() const override { return Reference; }
@@ -827,7 +827,7 @@ public:
   LVScopeRoot() : LVScope() { setIsRoot(); }
   LVScopeRoot(const LVScopeRoot &) = delete;
   LVScopeRoot &operator=(const LVScopeRoot &) = delete;
-  ~LVScopeRoot() = default;
+  ~LVScopeRoot() override = default;
 
   StringRef getFileFormatName() const {
     return getStringPool().getString(FileFormatNameIndex);
@@ -859,7 +859,7 @@ public:
   LVScopeTemplatePack() : LVScope() { setIsTemplatePack(); }
   LVScopeTemplatePack(const LVScopeTemplatePack &) = delete;
   LVScopeTemplatePack &operator=(const LVScopeTemplatePack &) = delete;
-  ~LVScopeTemplatePack() = default;
+  ~LVScopeTemplatePack() override = default;
 
   // Returns true if current scope is logically equal to the given 'Scope'.
   bool equals(const LVScope *Scope) const override;

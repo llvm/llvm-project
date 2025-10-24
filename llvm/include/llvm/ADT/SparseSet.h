@@ -59,22 +59,18 @@ template <typename ValueT> struct SparseSetValTraits {
   }
 };
 
-/// SparseSetValFunctor - Helper class for selecting SparseSetValTraits. The
-/// generic implementation handles ValueT classes which either provide
-/// getSparseSetIndex() or specialize SparseSetValTraits<>.
+/// SparseSetValFunctor - Helper class for getting a value's index.
 ///
+/// In the generic case, this is done via SparseSetValTraits. When the value
+/// type is the same as the key type, the KeyFunctor is used directly.
 template <typename KeyT, typename ValueT, typename KeyFunctorT>
 struct SparseSetValFunctor {
   unsigned operator()(const ValueT &Val) const {
-    return SparseSetValTraits<ValueT>::getValIndex(Val);
+    if constexpr (std::is_same_v<KeyT, ValueT>)
+      return KeyFunctorT()(Val);
+    else
+      return SparseSetValTraits<ValueT>::getValIndex(Val);
   }
-};
-
-/// SparseSetValFunctor<KeyT, KeyT> - Helper class for the common case of
-/// identity key/value sets.
-template <typename KeyT, typename KeyFunctorT>
-struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
-  unsigned operator()(const KeyT &Key) const { return KeyFunctorT()(Key); }
 };
 
 /// SparseSet - Fast set implementation for objects that can be identified by
@@ -117,7 +113,7 @@ struct SparseSetValFunctor<KeyT, KeyT, KeyFunctorT> {
 /// @tparam SparseT     An unsigned integer type. See above.
 ///
 template <typename ValueT, typename KeyT = unsigned,
-          typename KeyFunctorT = identity_cxx20, typename SparseT = uint8_t>
+          typename KeyFunctorT = identity, typename SparseT = uint8_t>
 class SparseSet {
   static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
