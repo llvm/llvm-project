@@ -1294,12 +1294,6 @@ struct GenericPluginTy {
 
     return *Devices[DeviceId];
   }
-  const GenericDeviceTy &getDevice(int32_t DeviceId) const {
-    assert(isValidDeviceId(DeviceId) && "Invalid device id");
-    assert(Devices[DeviceId] && "Device is uninitialized");
-
-    return *Devices[DeviceId];
-  }
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
@@ -1308,11 +1302,6 @@ struct GenericPluginTy {
   int32_t getUserId(int32_t DeviceId) const {
     assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
     return UserDeviceIds.at(DeviceId);
-  }
-
-  /// Get the UID for the given device.
-  const char *getDeviceUid(int32_t DeviceId) const {
-    return getDevice(DeviceId).getDeviceUid();
   }
 
   /// Get the UID for the host device.
