@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
-; RUN: opt -S --dxil-validate-metadata %t/count.ll | FileCheck %t/count.ll
-; RUN: opt -S --dxil-validate-metadata %t/disable.ll | FileCheck %t/disable.ll
-; RUN: opt -S --dxil-validate-metadata %t/full.ll | FileCheck %t/full.ll
+; RUN: opt -S --dxil-translate-metadata %t/count.ll | FileCheck %t/count.ll
+; RUN: opt -S --dxil-translate-metadata %t/disable.ll | FileCheck %t/disable.ll
+; RUN: opt -S --dxil-translate-metadata %t/full.ll | FileCheck %t/full.ll
 
 ;--- count.ll
 

@@ -37,6 +37,39 @@ using namespace llvm::dxil;
 
 namespace {
 
+/// A simple wrapper of DiagnosticInfo that generates module-level diagnostic
+/// for the DXILValidateMetadata pass
+class DiagnosticInfoValidateMD : public DiagnosticInfo {
+private:
+  const Twine &Msg;
+  const Module &Mod;
+
+public:
+  /// \p M is the module for which the diagnostic is being emitted. \p Msg is
+  /// the message to show. Note that this class does not copy this message, so
+  /// this reference must be valid for the whole life time of the diagnostic.
+  DiagnosticInfoValidateMD(const Module &M,
+                           const Twine &Msg LLVM_LIFETIME_BOUND,
+                           DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfo(DK_Unsupported, Severity), Msg(Msg), Mod(M) {}
+
+  void print(DiagnosticPrinter &DP) const override {
+    DP << Mod.getName() << ": " << Msg << '\n';
+  }
+};
+
+static bool reportError(Module &M, Twine Message,
+                        DiagnosticSeverity Severity = DS_Error) {
+  M.getContext().diagnose(DiagnosticInfoValidateMD(M, Message, Severity));
+  return true;
+}
+
+static bool reportLoopError(Module &M, Twine Message,
+                            DiagnosticSeverity Severity = DS_Error) {
+  return reportError(M, Twine("Invalid \"llvm.loop\" metadata: ") + Message,
+                     Severity);
+}
+
 enum class EntryPropsTag {
   ShaderFlags = 0,
   GSState,
@@ -294,6 +327,83 @@ static void translateBranchMetadata(Module &M, Instruction *BBTerminatorInst) {
   BBTerminatorInst->setMetadata("hlsl.controlflow.hint", nullptr);
 }
 
+static void translateLoopMetadata(Module &M, MDNode *LoopMD) {
+  // DXIL only accepts the following loop hints:
+  //   llvm.loop.unroll.disable, llvm.loop.unroll.full, llvm.loop.unroll.count
+  std::array<StringLiteral, 3> ValidHintNames = {"llvm.loop.unroll.count",
+                                                 "llvm.loop.unroll.disable",
+                                                 "llvm.loop.unroll.full"};
+
+  // llvm.loop metadata must have its first operand be a self-reference, so we
+  // require at least 1 operand.
+  //
+  // It only makes sense to specify up to 1 of the hints on a branch, so we can
+  // have at most 2 operands.
+
+  if (LoopMD->getNumOperands() != 1 && LoopMD->getNumOperands() != 2) {
+    reportLoopError(M, "Requires exactly 1 or 2 operands");
+    return;
+  }
+
+  if (LoopMD != LoopMD->getOperand(0)) {
+    reportLoopError(M, "First operand must be a self-reference");
+    return;
+  }
+
+  // A node only containing a self-reference is a valid use to denote a loop
+  if (LoopMD->getNumOperands() == 1)
+    return;
+
+  LoopMD = dyn_cast<MDNode>(LoopMD->getOperand(1));
+  if (!LoopMD) {
+    reportLoopError(M, "Second operand must be a metadata node");
+    return;
+  }
+
+  if (LoopMD->getNumOperands() != 1 && LoopMD->getNumOperands() != 2) {
+    reportLoopError(M, "Requires exactly 1 or 2 operands");
+    return;
+  }
+
+  // It is valid to have a chain of self-referential loop metadata nodes so if
+  // we have another self-reference, recurse.
+  //
+  // Eg:
+  // !0 = !{!0, !1}
+  // !1 = !{!1, !2}
+  // !2 = !{"llvm.loop.unroll.disable"}
+  if (LoopMD == LoopMD->getOperand(0))
+    return translateLoopMetadata(M, LoopMD);
+
+  // Otherwise, we are at our base hint metadata node
+  auto *HintStr = dyn_cast<MDString>(LoopMD->getOperand(0));
+  if (!HintStr || !llvm::is_contained(ValidHintNames, HintStr->getString())) {
+    reportLoopError(M,
+                    "First operand must be a valid \"llvm.loop.unroll\" hint");
+    return;
+  }
+
+  // Ensure count node is a constant integer value
+  auto ValidCountNode = [](MDNode *HintMD) -> bool {
+    if (HintMD->getNumOperands() == 2)
+      if (auto *CountMD = dyn_cast<ConstantAsMetadata>(HintMD->getOperand(1)))
+        if (isa<ConstantInt>(CountMD->getValue()))
+          return true;
+    return false;
+  };
+
+  if (HintStr->getString() == "llvm.loop.unroll.count") {
+    if (!ValidCountNode(LoopMD)) {
+      reportLoopError(M, "Second operand of \"llvm.loop.unroll.count\" "
+                         "must be a constant integer");
+      return;
+    }
+  } else if (LoopMD->getNumOperands() != 1) {
+    reportLoopError(M, "Can't have a second operand");
+    return;
+  }
+}
+
 using InstructionMDList = std::array<unsigned, 7>;
 
 static InstructionMDList getCompatibleInstructionMDs(llvm::Module &M) {
@@ -307,6 +417,7 @@ static InstructionMDList getCompatibleInstructionMDs(llvm::Module &M) {
 static void translateInstructionMetadata(Module &M) {
   // construct allowlist of valid metadata node kinds
   InstructionMDList DXILCompatibleMDs = getCompatibleInstructionMDs(M);
+  unsigned char MDLoopKind = M.getContext().getMDKindID("llvm.loop");
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
@@ -316,6 +427,10 @@ static void translateInstructionMetadata(Module &M) {
         translateBranchMetadata(M, I);
 
       for (auto &I : make_early_inc_range(BB)) {
+        if (isa<BranchInst>(I)) {
+          if (MDNode *LoopMD = I.getMetadata(MDLoopKind))
+            translateLoopMetadata(M, LoopMD);
+        }
         I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
       }
     }
@@ -372,17 +487,24 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
     uint64_t CombinedMask = ShaderFlags.getCombinedFlags();
     EntryFnMDNodes.emplace_back(
         emitTopLevelLibraryNode(M, ResourceMD, CombinedMask));
-  }
+  } else if (1 < MMDI.EntryPropertyVec.size())
+    reportError(M, "Non-library shader: One and only one entry expected");
 
   for (const EntryProperties &EntryProp : MMDI.EntryPropertyVec) {
-    const ComputedShaderFlags &EntrySFMask =
-        ShaderFlags.getFunctionFlags(EntryProp.Entry);
+    uint64_t EntryShaderFlags = 0;
+    if (MMDI.ShaderProfile != Triple::EnvironmentType::Library) {
+      EntryShaderFlags = ShaderFlags.getFunctionFlags(EntryProp.Entry);
+      if (EntryProp.ShaderStage != MMDI.ShaderProfile)
+        reportError(
+            M,
+            "Shader stage '" +
+                Twine(Twine(getShortShaderStage(EntryProp.ShaderStage)) +
+                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
+                      "' different from specified target profile '" +
+                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
+                            "'")));
+    }
 
-    // If ShaderProfile is Library, mask is already consolidated in the
-    // top-level library node. Hence it is not emitted.
-    uint64_t EntryShaderFlags =
-        MMDI.ShaderProfile == Triple::EnvironmentType::Library ? 0
-                                                               : EntrySFMask;
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
                                             EntryShaderFlags,
                                             MMDI.ShaderProfile));
