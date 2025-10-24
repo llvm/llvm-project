@@ -20017,8 +20017,12 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Op : Ptr->users()) {
+  for (SDUse &U : Ptr->uses()) {
+    if (U.getResNo() != Ptr.getResNo())
+      continue;
+
     // Check for #1.
+    SDNode *Op = U.getUser();
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
       continue;
 

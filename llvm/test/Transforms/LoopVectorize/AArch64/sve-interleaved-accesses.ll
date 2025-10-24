@@ -1630,4 +1630,4 @@ for.body:                                         ; preds = %for.body, %entry
 
 }
 attributes #1 = { "target-features"="+sve" vscale_range(1, 16) }
-attributes #0 = { "unsafe-fp-math"="true" "target-features"="+sve" vscale_range(1, 16) }
+attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }

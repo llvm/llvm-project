@@ -1,0 +1,61 @@
+# REQUIRES: x86_64-linux
+# RUN: llvm-ir2vec triplets --mode=mir %s -o 2>&1 %t1.log
+# RUN: diff %S/output/reference_triplets.txt %t1.log
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local noundef i32 @add_function(i32 noundef %a, i32 noundef %b) {
+  entry:
+    %sum = add nsw i32 %a, %b
+    ret i32 %sum
+  }
+  
+  define dso_local noundef i32 @mul_function(i32 noundef %x, i32 noundef %y) {
+  entry:
+    %product = mul nsw i32 %x, %y
+    ret i32 %product
+  }
+...
+---
+name:            add_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw ADD32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
+
+---
+name:            mul_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+  - { id: 1, class: gr32 }
+  - { id: 2, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$esi', virtual-reg: '%1' }
+body:             |
+  bb.0.entry:
+    liveins: $edi, $esi
+  
+    %1:gr32 = COPY $esi
+    %0:gr32 = COPY $edi
+    %2:gr32 = nsw IMUL32rr %0, %1, implicit-def dead $eflags
+    $eax = COPY %2
+    RET 0, $eax
