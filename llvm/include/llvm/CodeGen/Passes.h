@@ -69,6 +69,9 @@ LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
 
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
+
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
 LLVM_ABI MachineFunctionPass *createMachineFunctionSplitterPass();
@@ -92,6 +95,10 @@ createMachineFunctionPrinterPass(raw_ostream &OS,
 /// contents to the given stream as a debugging tool.
 LLVM_ABI MachineFunctionPass *
 createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS);
+
+/// MIR2VecPrinter pass - This pass prints out the MIR2Vec embeddings for
+/// machine functions, basic blocks and instructions.
+LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
 /// StackFramePrinter pass - This pass prints out the machine function's
 /// stack frame to the given stream as a debugging tool.

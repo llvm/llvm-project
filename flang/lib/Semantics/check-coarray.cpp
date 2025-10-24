@@ -112,7 +112,7 @@ static void CheckTeamType(
 
 static void CheckTeamStat(
     SemanticsContext &context, const parser::ImageSelectorSpec::Stat &stat) {
-  const parser::Variable &var{stat.v.thing.thing.value()};
+  const auto &var{parser::UnwrapRef<parser::Variable>(stat)};
   if (parser::GetCoindexedNamedObject(var)) {
     context.Say(parser::FindSourceLocation(var), // C931
         "Image selector STAT variable must not be a coindexed "
@@ -147,7 +147,8 @@ static void CheckSyncStat(SemanticsContext &context,
           },
           [&](const parser::MsgVariable &var) {
             WarnOnDeferredLengthCharacterScalar(context, GetExpr(context, var),
-                var.v.thing.thing.GetSource(), "ERRMSG=");
+                parser::UnwrapRef<parser::Variable>(var).GetSource(),
+                "ERRMSG=");
             if (gotMsg) {
               context.Say( // C1172
                   "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
@@ -260,7 +261,9 @@ static void CheckEventWaitSpecList(SemanticsContext &context,
                       [&](const parser::MsgVariable &var) {
                         WarnOnDeferredLengthCharacterScalar(context,
                             GetExpr(context, var),
-                            var.v.thing.thing.GetSource(), "ERRMSG=");
+                            parser::UnwrapRef<parser::Variable>(var)
+                                .GetSource(),
+                            "ERRMSG=");
                         if (gotMsg) {
                           context.Say( // C1178
                               "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);

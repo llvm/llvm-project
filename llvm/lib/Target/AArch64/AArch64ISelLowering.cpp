@@ -1561,6 +1561,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
       setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_MUL, VT, Custom);
       setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
@@ -1717,6 +1718,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
@@ -7775,6 +7777,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
     return LowerVECREDUCE(Op, DAG);
+  case ISD::VECREDUCE_MUL:
+  case ISD::VECREDUCE_FMUL:
+    return LowerVECREDUCE_MUL(Op, DAG);
   case ISD::ATOMIC_LOAD_AND:
     return LowerATOMIC_LOAD_AND(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
@@ -16254,7 +16259,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
       SplatVal > 1) {
     SDValue Pg = getPredicateForScalableVector(DAG, DL, VT);
     SDValue Res =
-        DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, DL, VT, Pg, Op->getOperand(0),
+        DAG.getNode(AArch64ISD::ASRD_MERGE_OP1, DL, VT, Pg, Op->getOperand(0),
                     DAG.getTargetConstant(Log2_64(SplatVal), DL, MVT::i32));
     if (Negated)
       Res = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Res);
@@ -16792,6 +16797,33 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
   default:
     llvm_unreachable("Unhandled reduction");
   }
+}
+
+SDValue AArch64TargetLowering::LowerVECREDUCE_MUL(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  assert(SrcVT.isScalableVector() && "Unexpected operand type!");
+
+  SDVTList SrcVTs = DAG.getVTList(SrcVT, SrcVT);
+  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
+  SDValue Identity = DAG.getNeutralElement(BaseOpc, DL, SrcVT, Op->getFlags());
+
+  // Whilst we don't know the size of the vector we do know the maximum size so
+  // can perform a tree reduction with an identity vector, which means once we
+  // arrive at the result the remaining stages (when the vector is smaller than
+  // the maximum) have no affect.
+
+  unsigned Segments = AArch64::SVEMaxBitsPerVector / AArch64::SVEBitsPerBlock;
+  unsigned Stages = llvm::Log2_32(Segments * SrcVT.getVectorMinNumElements());
+
+  for (unsigned I = 0; I < Stages; ++I) {
+    Src = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, SrcVTs, Src, Identity);
+    Src = DAG.getNode(BaseOpc, DL, SrcVT, Src.getValue(0), Src.getValue(1));
+  }
+
+  return DAG.getExtractVectorElt(DL, Op.getValueType(), Src, 0);
 }
 
 SDValue AArch64TargetLowering::LowerATOMIC_LOAD_AND(SDValue Op,
@@ -18144,8 +18176,8 @@ bool AArch64TargetLowering::lowerInterleavedStore(Instruction *Store,
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     Instruction *Load, Value *Mask, IntrinsicInst *DI) const {
   const unsigned Factor = getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
-  if (Factor != 2 && Factor != 4) {
-    LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
+  if (Factor != 2 && Factor != 3 && Factor != 4) {
+    LLVM_DEBUG(dbgs() << "Matching ld2, ld3 and ld4 patterns failed\n");
     return false;
   }
   auto *LI = dyn_cast<LoadInst>(Load);
@@ -18223,8 +18255,8 @@ bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     Instruction *Store, Value *Mask,
     ArrayRef<Value *> InterleavedValues) const {
   unsigned Factor = InterleavedValues.size();
-  if (Factor != 2 && Factor != 4) {
-    LLVM_DEBUG(dbgs() << "Matching st2 and st4 patterns failed\n");
+  if (Factor != 2 && Factor != 3 && Factor != 4) {
+    LLVM_DEBUG(dbgs() << "Matching st2, st3 and st4 patterns failed\n");
     return false;
   }
   StoreInst *SI = dyn_cast<StoreInst>(Store);
@@ -22942,7 +22974,7 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return DAG.getNode(ISD::USUBSAT, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_asrd:
-    return DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(AArch64ISD::ASRD_MERGE_OP1, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmphs:
     if (!N->getOperand(2).getValueType().isFloatingPoint())
@@ -27570,6 +27602,15 @@ static SDValue performPTestFirstCombine(SDNode *N,
 static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
+  SDLoc DL(N);
+
+  // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
+  if (DCI.isAfterLegalizeDAG()) {
+    if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
+                                             N->getOperand(0)))
+      return SDValue(LN, 0);
+  }
+
   // Let's do below transform.
   //
   //         t34: v4i32 = AArch64ISD::UADDLV t2
@@ -27606,7 +27647,6 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   // Let's generate new sequence with AArch64ISD::NVCAST.
-  SDLoc DL(N);
   SDValue EXTRACT_SUBVEC =
       DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, UADDLV,
                   DAG.getConstant(0, DL, MVT::i64));
@@ -30047,7 +30087,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
 
     SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
     SDValue Res =
-        DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, DL, ContainerVT, Pg, Op1, Op2);
+        DAG.getNode(AArch64ISD::ASRD_MERGE_OP1, DL, ContainerVT, Pg, Op1, Op2);
     if (Negated)
       Res = DAG.getNode(ISD::SUB, DL, ContainerVT,
                         DAG.getConstant(0, DL, ContainerVT), Res);

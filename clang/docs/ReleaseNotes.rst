@@ -128,6 +128,17 @@ AST Dumping Potentially Breaking Changes
 
 - Default arguments of template template parameters are pretty-printed now.
 
+- Pretty-printing of ``asm`` attributes are now always the first attribute
+  on the right side of the declaration.  Before we had, e.g.:
+
+    ``__attribute__(("visibility")) asm("string")``
+
+  Now we have:
+
+    ``asm("string") __attribute__(("visibility"))``
+
+  Which is accepted by both clang and gcc parsers.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -271,12 +282,14 @@ Non-comprehensive list of changes in this release
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
 
+- Clang now rejects the invalid use of ``constexpr`` with ``auto`` and an explicit type in C. (#GH163090)
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-debug-trap-reasons`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New option ``-fsanitize-debug-trap-reasons=`` added to control emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 - New options for enabling allocation token instrumentation: ``-fsanitize=alloc-token``, ``-falloc-token-max=``, ``-fsanitize-alloc-token-fast-abi``, ``-fsanitize-alloc-token-extended``.
-
+- The ``-resource-dir`` option is now displayed in the list of options shown by ``--help``.
 
 Lanai Support
 ^^^^^^^^^^^^^^
@@ -304,6 +317,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Diagnostics messages now refer to ``structured binding`` instead of ``decomposition``,
+  to align with `P0615R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0615r0.html>`_ changing the term. (#GH157880)
 - Added a separate diagnostic group ``-Wfunction-effect-redeclarations``, for the more pedantic
   diagnostics for function effects (``[[clang::nonblocking]]`` and ``[[clang::nonallocating]]``).
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
@@ -413,6 +428,7 @@ Bug Fixes in This Version
   (#GH159080)
 - Fixed a failed assertion with empty filename arguments in ``__has_embed``. (#GH159898)
 - Fixed a failed assertion with empty filename in ``#embed`` directive. (#GH162951)
+- Fixed a crash triggered by unterminated ``__has_embed``. (#GH162953)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -426,10 +442,12 @@ Bug Fixes to Attribute Support
   (#GH141504) and on types returned from indirect calls (#GH142453).
 - Fixes some late parsed attributes, when applied to function definitions, not being parsed
   in function try blocks, and some situations where parsing of the function body
-  is skipped, such as error recovery and code completion. (#GH153551)
+  is skipped, such as error recovery, code completion, and msvc-compatible delayed
+  template parsing. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
+- Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -472,6 +490,7 @@ Bug Fixes to C++ Support
 - Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
+- Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 
 Bug Fixes to AST Handling
@@ -516,6 +535,7 @@ X86 Support
 - Remove `[no-]evex512` feature request from intrinsics and builtins.
 - Change features `avx10.x-[256,512]` to `avx10.x`.
 - `-march=wildcatlake` is now supported.
+- `-march=novalake` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

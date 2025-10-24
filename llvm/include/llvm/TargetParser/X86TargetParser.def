@@ -108,6 +108,7 @@ X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE_S,    "arrowlake-s")
 X86_CPU_SUBTYPE(INTEL_COREI7_PANTHERLAKE,    "pantherlake")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
+X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")

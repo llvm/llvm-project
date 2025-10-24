@@ -337,6 +337,7 @@ using IntConstantExpr = Integer<ConstantExpr>; // R1031
 using ScalarLogicalExpr = Scalar<LogicalExpr>;
 using ScalarIntExpr = Scalar<IntExpr>;
 using ScalarIntConstantExpr = Scalar<IntConstantExpr>;
+using ScalarLogicalConstantExpr = Scalar<Logical<ConstantExpr>>;
 using ScalarDefaultCharExpr = Scalar<DefaultCharExpr>;
 // R1030 default-char-constant-expr is used in the Standard only as part of
 // scalar-default-char-constant-expr.
@@ -3501,6 +3502,16 @@ struct OmpDirectiveName {
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
 
+// type-name list item
+struct OmpTypeName {
+  UNION_CLASS_BOILERPLATE(OmpTypeName);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3538,21 +3549,12 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
+struct OmpCombinerExpression {
+  UNION_CLASS_BOILERPLATE(OmpCombinerExpression);
   std::variant<AssignmentStmt, FunctionReference> u;
 };
 
 inline namespace arguments {
-struct OmpTypeSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
-  std::variant<TypeSpec, DeclarationTypeSpec> u;
-};
-
-struct OmpTypeNameList {
-  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeSpecifier>);
-};
-
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
@@ -3595,7 +3597,7 @@ struct OmpMapperSpecifier {
 struct OmpReductionSpecifier {
   TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
   std::tuple<OmpReductionIdentifier, OmpTypeNameList,
-      std::optional<OmpReductionCombiner>>
+      std::optional<OmpCombinerExpression>>
       t;
 };
 
@@ -3811,6 +3813,18 @@ struct OmpAllocatorComplexModifier {
 struct OmpAlwaysModifier {
   ENUM_CLASS(Value, Always)
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
+};
+
+// Ref: [coming in 6.1]
+//
+// attach-modifier ->
+//    ATTACH(attachment-mode)                       // since 6.1
+//
+// attachment-mode ->
+//    ALWAYS | AUTO | NEVER
+struct OmpAttachModifier {
+  ENUM_CLASS(Value, Always, Never, Auto)
+  WRAPPER_CLASS_BOILERPLATE(OmpAttachModifier, Value);
 };
 
 // Ref: [6.0:289-290]
@@ -4189,7 +4203,7 @@ struct OmpAffinityClause {
 
 // Ref: 5.2: [174]
 struct OmpAlignClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntExpr);
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntConstantExpr);
 };
 
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
@@ -4405,6 +4419,14 @@ struct OmpDeviceClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [6.0:356-362]
+//
+// device-safesync-clause ->
+//    DEVICE_SAFESYNC [(scalar-logical-const-expr)] // since 6.0
+struct OmpDeviceSafesyncClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceSafesyncClause, ScalarLogicalConstantExpr);
+};
+
 // Ref: [5.0:180-185], [5.1:210-216], [5.2:275]
 //
 // device-type-clause ->
@@ -4412,6 +4434,16 @@ struct OmpDeviceClause {
 struct OmpDeviceTypeClause {
   ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// dynamic-allocators-clause ->
+//    DYNAMIC_ALLOCATORS                            // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpDynamicAllocatorsClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDynamicAllocatorsClause, ScalarLogicalConstantExpr);
 };
 
 struct OmpDynGroupprivateClause {
@@ -4575,6 +4607,7 @@ struct OmpLoopRangeClause {
 // modifier ->
 //    map-type-modifier [replaced] |                // since 4.5, until 5.2
 //    always-modifier |                             // since 6.0
+//    attach-modifier |                             // since 6.1
 //    close-modifier |                              // since 6.0
 //    delete-modifier |                             // since 6.0
 //    present-modifier |                            // since 6.0
@@ -4589,9 +4622,9 @@ struct OmpLoopRangeClause {
 // and delete-modifier has been split from map-type.
 struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
-  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpCloseModifier, OmpDeleteModifier,
-      OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier, OmpSelfModifier,
-      OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
+  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpAttachModifier, OmpCloseModifier,
+      OmpDeleteModifier, OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier,
+      OmpSelfModifier, OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
@@ -4690,7 +4723,16 @@ struct OmpReductionClause {
 // replayable-clause ->
 //    REPLAYABLE[(replayable-expression)]           // since 6.0
 struct OmpReplayableClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpReplayableClause, Scalar<Logical<ConstantExpr>>);
+  WRAPPER_CLASS_BOILERPLATE(OmpReplayableClause, ScalarLogicalConstantExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// reverse-offload-clause ->
+//    REVERSE_OFFLOAD                               // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpReverseOffloadClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpReverseOffloadClause, ScalarLogicalConstantExpr);
 };
 
 // Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
@@ -4706,6 +4748,14 @@ struct OmpScheduleClause {
   ENUM_CLASS(Kind, Static, Dynamic, Guided, Auto, Runtime)
   MODIFIER_BOILERPLATE(OmpOrderingModifier, OmpChunkModifier);
   std::tuple<MODIFIERS(), Kind, std::optional<ScalarIntExpr>> t;
+};
+
+// ref: [6.0:361-362]
+//
+// self-maps-clause ->
+//    SELF_MAPS [(scalar-logical-const-expr)]       // since 6.0
+struct OmpSelfMapsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpSelfMapsClause, ScalarLogicalConstantExpr);
 };
 
 // REF: [5.2:217]
@@ -4748,6 +4798,25 @@ struct OmpToClause {
 //    TRANSPARENT[(impex-type)]                     // since 6.0
 struct OmpTransparentClause {
   WRAPPER_CLASS_BOILERPLATE(OmpTransparentClause, ScalarIntExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// unified-address-clause ->
+//    UNIFIED_ADDRESS                               // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpUnifiedAddressClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpUnifiedAddressClause, ScalarLogicalConstantExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// unified-shared-memory-clause ->
+//    UNIFIED_SHARED_MEMORY                         // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpUnifiedSharedMemoryClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpUnifiedSharedMemoryClause, ScalarLogicalConstantExpr);
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]

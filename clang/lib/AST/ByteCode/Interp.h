@@ -22,6 +22,7 @@
 #include "Function.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
@@ -43,27 +44,9 @@ using FixedPointSemantics = llvm::FixedPointSemantics;
 /// Checks if the variable has externally defined storage.
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-/// Checks if the array is offsetable.
-bool CheckArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
-
-/// Checks if a pointer is live and accessible.
-bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-               AccessKinds AK);
-
-/// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
-
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK);
-
-/// Checks if a pointer is in range.
-bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK);
-
-/// Checks if a field from which a pointer is going to be derived is valid.
-bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                CheckSubobjectKind CSK);
 
 /// Checks if Ptr is a one-past-the-end pointer.
 bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -80,12 +63,6 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 /// Checks if the Descriptor is of a constexpr or const global variable.
 bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
 
-/// Checks if a pointer points to a mutable field.
-bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
-
-/// Checks if a value can be loaded from a block.
-bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-               AccessKinds AK = AK_Read);
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -110,12 +87,6 @@ bool CheckThis(InterpState &S, CodePtr OpPC);
 /// language mode.
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
-/// Diagnose mismatched new[]/delete or new/delete[] pairs.
-bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
-                         DynamicAllocator::Form AllocForm,
-                         DynamicAllocator::Form DeleteForm, const Descriptor *D,
-                         const Expr *NewExpr);
-
 /// Check the source of the pointer passed to delete/delete[] has actually
 /// been heap allocated by us.
 bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
@@ -128,9 +99,6 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 /// a std::{weak,partial,strong}_ordering type.
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, const APSInt &IntValue);
-
-/// Copy the contents of Src into Dest.
-bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize);
@@ -149,18 +117,10 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
 bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-template <typename T>
-static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
-  const Expr *E = S.Current->getExpr(OpPC);
-  S.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << E->getType();
-  return S.noteUndefinedBehavior();
-}
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
 bool isConstexprUnknown(const Pointer &P);
-
-inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems);
 
 enum class ShiftDir { Left, Right };
 
@@ -241,43 +201,6 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-template <typename SizeT>
-bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT *NumElements,
-                    unsigned ElemSize, bool IsNoThrow) {
-  // FIXME: Both the SizeT::from() as well as the
-  // NumElements.toAPSInt() in this function are rather expensive.
-
-  // Can't be too many elements if the bitwidth of NumElements is lower than
-  // that of Descriptor::MaxArrayElemBytes.
-  if ((NumElements->bitWidth() - NumElements->isSigned()) <
-      (sizeof(Descriptor::MaxArrayElemBytes) * 8))
-    return true;
-
-  // FIXME: GH63562
-  // APValue stores array extents as unsigned,
-  // so anything that is greater that unsigned would overflow when
-  // constructing the array, we catch this here.
-  SizeT MaxElements = SizeT::from(Descriptor::MaxArrayElemBytes / ElemSize);
-  assert(MaxElements.isPositive());
-  if (NumElements->toAPSInt().getActiveBits() >
-          ConstantArrayType::getMaxSizeBits(S.getASTContext()) ||
-      *NumElements > MaxElements) {
-    if (!IsNoThrow) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-
-      if (NumElements->isSigned() && NumElements->isNegative()) {
-        S.FFDiag(Loc, diag::note_constexpr_new_negative)
-            << NumElements->toDiagnosticString(S.getASTContext());
-      } else {
-        S.FFDiag(Loc, diag::note_constexpr_new_too_large)
-            << NumElements->toDiagnosticString(S.getASTContext());
-      }
-    }
-    return false;
-  }
-  return true;
-}
-
 /// Checks if the result of a floating-point operation is valid
 /// in the current context.
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
@@ -285,19 +208,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
-
-/// Interpreter entry point.
-bool Interpret(InterpState &S);
-
-/// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
-                      uint32_t BuiltinID);
-
-/// Interpret an offsetof operation.
-bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       ArrayRef<int64_t> ArrayIndices, int64_t &Result);
-
-inline bool Invalid(InterpState &S, CodePtr OpPC);
 
 enum class ArithOp { Add, Sub };
 
@@ -401,13 +311,6 @@ bool Add(InterpState &S, CodePtr OpPC) {
   const unsigned Bits = RHS.bitWidth() + 1;
 
   return AddSubMulHelper<T, T::add, std::plus>(S, OpPC, Bits, LHS, RHS);
-}
-
-static inline llvm::RoundingMode getRoundingMode(FPOptions FPO) {
-  auto RM = FPO.getRoundingMode();
-  if (RM == llvm::RoundingMode::Dynamic)
-    return llvm::RoundingMode::NearestTiesToEven;
-  return RM;
 }
 
 inline bool Addf(InterpState &S, CodePtr OpPC, uint32_t FPOI) {
@@ -799,7 +702,7 @@ enum class IncDecOp {
 
 template <typename T, IncDecOp Op, PushVal DoPush>
 bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                  bool CanOverflow) {
+                  bool CanOverflow, UnsignedOrNone BitWidth = std::nullopt) {
   assert(!Ptr.isDummy());
 
   if (!S.inConstantContext()) {
@@ -822,12 +725,18 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if constexpr (Op == IncDecOp::Inc) {
     if (!T::increment(Value, &Result) || !CanOverflow) {
-      Ptr.deref<T>() = Result;
+      if (BitWidth)
+        Ptr.deref<T>() = Result.truncate(*BitWidth);
+      else
+        Ptr.deref<T>() = Result;
       return true;
     }
   } else {
     if (!T::decrement(Value, &Result) || !CanOverflow) {
-      Ptr.deref<T>() = Result;
+      if (BitWidth)
+        Ptr.deref<T>() = Result.truncate(*BitWidth);
+      else
+        Ptr.deref<T>() = Result;
       return true;
     }
   }
@@ -871,6 +780,17 @@ bool Inc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
                                                       CanOverflow);
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                 unsigned BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
+                                                      BitWidth);
+}
+
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
 /// 3) Writes the value increased by one back to the pointer
@@ -884,12 +804,34 @@ bool IncPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool PreInc(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
     return false;
 
   return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreIncBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Increment))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
 }
 
 /// 1) Pops a pointer from the stack
@@ -905,6 +847,16 @@ bool Dec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr,
                                                       CanOverflow);
 }
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                 uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr, CanOverflow,
+                                                      BitWidth);
+}
 
 /// 1) Pops a pointer from the stack
 /// 2) Load the value from the pointer
@@ -919,11 +871,32 @@ bool DecPop(InterpState &S, CodePtr OpPC, bool CanOverflow) {
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecPopBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool PreDec(InterpState &S, CodePtr OpPC, bool CanOverflow) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
     return false;
   return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool PreDecBitfield(InterpState &S, CodePtr OpPC, bool CanOverflow,
+                    uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.peek<Pointer>();
+  if (!CheckLoad(S, OpPC, Ptr, AK_Decrement))
+    return false;
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr, CanOverflow,
+                                                     BitWidth);
 }
 
 template <IncDecOp Op, PushVal DoPush>
@@ -2258,6 +2231,8 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
       S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
           << N << /*non-array*/ true << 0;
     return Pointer(Ptr.asFunctionPointer().getFunction(), N);
+  } else if (!Ptr.isBlockPointer()) {
+    return std::nullopt;
   }
 
   assert(Ptr.isBlockPointer());
@@ -3096,7 +3071,8 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
-    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+    if (const Descriptor *Desc = Ptr.getFieldDesc();
+        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
@@ -3126,7 +3102,8 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
   }
 
   if (Offset.isZero()) {
-    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+    if (const Descriptor *Desc = Ptr.getFieldDesc();
+        Desc && Desc->isArray() && Ptr.getIndex() == 0) {
       S.Stk.push<Pointer>(Ptr.atIndex(0).narrow());
       return true;
     }
@@ -3260,12 +3237,6 @@ inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
 
 /// Just emit a diagnostic. The expression that caused emission of this
 /// op is not valid in a constant context.
-inline bool Invalid(InterpState &S, CodePtr OpPC) {
-  const SourceLocation &Loc = S.Current->getLocation(OpPC);
-  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
-      << S.Current->getRange(OpPC);
-  return false;
-}
 
 inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
@@ -3695,17 +3666,6 @@ bool DiagTypeid(InterpState &S, CodePtr OpPC);
 inline bool CheckDestruction(InterpState &S, CodePtr OpPC) {
   const auto &Ptr = S.Stk.peek<Pointer>();
   return CheckDestructor(S, OpPC, Ptr);
-}
-
-inline bool CheckArraySize(InterpState &S, CodePtr OpPC, uint64_t NumElems) {
-  uint64_t Limit = S.getLangOpts().ConstexprStepLimit;
-  if (Limit != 0 && NumElems > Limit) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_new_exceeds_limits)
-        << NumElems << Limit;
-    return false;
-  }
-  return true;
 }
 
 //===----------------------------------------------------------------------===//

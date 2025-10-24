@@ -1358,9 +1358,6 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
 
 void diagnoseEnumValue(InterpState &S, CodePtr OpPC, const EnumDecl *ED,
                        const APSInt &Value) {
-  if (S.EvaluatingDecl && !S.EvaluatingDecl->isConstexpr())
-    return;
-
   llvm::APInt Min;
   llvm::APInt Max;
   ED->getValueRange(Max, Min);
@@ -1906,12 +1903,19 @@ bool CheckNewTypeMismatch(InterpState &S, CodePtr OpPC, const Expr *E,
   if (Ptr.inUnion() && Ptr.getBase().getRecord()->isUnion())
     Ptr.activate();
 
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Construct;
+    return false;
+  }
+
   if (!Ptr.isBlockPointer())
     return false;
 
+  startLifetimeRecurse(Ptr);
+
   // Similar to CheckStore(), but with the additional CheckTemporary() call and
   // the AccessKinds are different.
-
   if (!Ptr.block()->isAccessible()) {
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
