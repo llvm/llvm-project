@@ -4769,6 +4769,8 @@ private:
   // linkage or not.
   static bool mightHaveNonExternalLinkage(const DeclaratorDecl *FD);
 
+#include "clang/Sema/AttrIsTypeDependent.inc"
+
   ///@}
 
   //

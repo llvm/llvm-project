@@ -82,6 +82,8 @@ void EmitClangAttrParsedAttrImpl(const llvm::RecordKeeper &Records,
                                  llvm::raw_ostream &OS);
 void EmitClangAttrParsedAttrKinds(const llvm::RecordKeeper &Records,
                                   llvm::raw_ostream &OS);
+void EmitClangAttrIsTypeDependent(const llvm::RecordKeeper &Records,
+                                  llvm::raw_ostream &OS);
 void EmitClangAttrTextNodeDump(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrNodeTraverse(const llvm::RecordKeeper &Records,
