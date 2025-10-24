@@ -33,10 +33,10 @@ Options
 
 .. option:: AllowedDecls
 
-  A semicolon-separated list of names of declarations included variables and
-  functions to ignore when the parenthese around it.
+  A semicolon-separated list of names of declarations to ignore when the
+  parentheses are around. Declarations can include variables or functions.
   The default is an `std::max;std::min`.
   
-  Some std library functions may have the same name as widely used function-like
-  macro. For example, ``std::max`` and ``max`` macro. A work around to distinguish
-  them is adding parenthese around functions to prevent function-like macro.
+  Some STL library functions may have the same name as widely used function-like
+  macro. For example, ``std::max`` and ``max`` macro. A workaround to distinguish
+  them is adding parentheses around functions to prevent function-like macro.
