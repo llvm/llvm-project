@@ -1346,10 +1346,10 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
-  /// Sends a breakpoint notification event if any listener is registered.
+  /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
                                lldb::BreakpointEventType event_kind);
-  /// Sends a breakpoint notification event if any listener is registered.
+  /// Sends a breakpoint notification event.
   void NotifyBreakpointChanged(Breakpoint &bp,
                                const lldb::EventDataSP &breakpoint_data_sp);
 
