@@ -1582,6 +1582,23 @@ static const SCEV *minusSCEVNoSignedOverflow(const SCEV *A, const SCEV *B,
   return nullptr;
 }
 
+/// Returns the absolute value of \p A. In the context of dependence analysis,
+/// we need an absolute value in a mathematical sense. If \p A is the signed
+/// minimum value, we cannot represent it unless extending the original type.
+/// Thus if we cannot prove that \p A is not the signed minimum value, returns
+/// nullptr.
+static const SCEV *absSCEVNoSignedOverflow(const SCEV *A, ScalarEvolution &SE) {
+  IntegerType *Ty = cast<IntegerType>(A->getType());
+  if (!Ty)
+    return nullptr;
+
+  const SCEV *SMin =
+      SE.getConstant(APInt::getSignedMinValue(Ty->getBitWidth()));
+  if (!SE.isKnownPredicate(CmpInst::ICMP_NE, A, SMin))
+    return nullptr;
+  return SE.getAbsExpr(A, /*IsNSW=*/true);
+}
+
 /// Returns true iff \p Test is enabled.
 static bool isDependenceTestEnabled(DependenceTestType Test) {
   if (EnableDependenceTest == DependenceTestType::All)
@@ -1669,21 +1686,25 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   LLVM_DEBUG(dbgs() << ", " << *Delta->getType() << "\n");
 
   // check that |Delta| < iteration count
-  if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+  bool IsDeltaLarge = [&] {
+    const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
+    if (!UpperBound)
+      return false;
+
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-    const SCEV *AbsDelta =
-        SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
-    const SCEV *AbsCoeff =
-        SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
+    const SCEV *AbsDelta = absSCEVNoSignedOverflow(Delta, *SE);
+    const SCEV *AbsCoeff = absSCEVNoSignedOverflow(Coeff, *SE);
+    if (!AbsDelta || !AbsCoeff)
+      return false;
     const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
-    if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
-      // Distance greater than trip count - no dependence
-      ++StrongSIVindependence;
-      ++StrongSIVsuccesses;
-      return true;
-    }
+    return isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product);
+  }();
+  if (IsDeltaLarge) {
+    // Distance greater than trip count - no dependence
+    ++StrongSIVindependence;
+    ++StrongSIVsuccesses;
+    return true;
   }
 
   // Can we compute distance?
@@ -2259,6 +2280,9 @@ bool DependenceInfo::weakZeroSrcSIVtest(
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
+
+  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
+  // TODO: Bail out if it's a signed minimum value.
   const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
                              ? SE->getNegativeSCEV(ConstCoeff)
                              : ConstCoeff;
@@ -2369,6 +2393,9 @@ bool DependenceInfo::weakZeroDstSIVtest(
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
+
+  // Since ConstCoeff is constant, !isKnownNegative means it's non-negative.
+  // TODO: Bail out if it's a signed minimum value.
   const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
                              ? SE->getNegativeSCEV(ConstCoeff)
                              : ConstCoeff;
