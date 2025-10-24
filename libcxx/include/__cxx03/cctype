@@ -36,9 +36,9 @@ int toupper(int c);
 
 #include <__cxx03/__config>
 
-#include <__cxx03/ctype.h>
+#include <ctype.h>
 
-#ifndef _LIBCPP___CXX03_CTYPE_H
+#ifndef _LIBCPP_CTYPE_H
 #   error <cctype> tried including <ctype.h> but didn't find libc++'s <ctype.h> header. \
           This usually means that your header search paths are not configured properly.  \
           The header search paths should contain the C++ Standard Library headers before \

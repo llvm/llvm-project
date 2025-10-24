@@ -36,6 +36,11 @@ bool operator==(const Work &Expected, const Work &Observed) {
          isSameTaskData && isSameCount;
 }
 
+bool operator==(const Dispatch &Expected, const Dispatch &Observed) {
+  bool isSameKind = (Expected.Kind == Observed.Kind);
+  return isSameKind;
+}
+
 bool operator==(const ImplicitTask &Expected, const ImplicitTask &Observed) {
   bool isSameEndpoint = (Expected.Endpoint == Observed.Endpoint);
   bool isSameActualParallelism =

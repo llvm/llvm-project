@@ -10,6 +10,7 @@ add_clang_library(clangTidyFuchsiaModule STATIC
   MultipleInheritanceCheck.cpp
   OverloadedOperatorCheck.cpp
   StaticallyConstructedObjectsCheck.cpp
+  TemporaryObjectsCheck.cpp
   TrailingReturnCheck.cpp
   VirtualInheritanceCheck.cpp
 

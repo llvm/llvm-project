@@ -57,7 +57,9 @@ static lto::Config createConfig() {
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.AlwaysEmitRegularLTOObj = !ctx.arg.ltoObjPath.empty();
 
-  if (ctx.arg.relocatable)
+  if (auto relocModel = getRelocModelFromCMModel())
+    c.RelocModel = *relocModel;
+  else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
   else if (ctx.isPic)
     c.RelocModel = Reloc::PIC_;

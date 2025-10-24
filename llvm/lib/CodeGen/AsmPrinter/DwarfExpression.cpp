@@ -566,31 +566,55 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_LLVM_extract_bits_zext: {
       unsigned SizeInBits = Op->getArg(1);
       unsigned BitOffset = Op->getArg(0);
+      unsigned DerefSize = 0;
+      //  Operations are done in the DWARF "generic type" whose size
+      // is the size of a pointer.
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the
       // object.
       if (isMemoryLocation()) {
-        emitOp(dwarf::DW_OP_deref_size);
-        emitUnsigned(alignTo(BitOffset + SizeInBits, 8) / 8);
+        DerefSize = alignTo(BitOffset + SizeInBits, 8) / 8;
+        if (DerefSize == PtrSizeInBytes) {
+          emitOp(dwarf::DW_OP_deref);
+        } else {
+          emitOp(dwarf::DW_OP_deref_size);
+          emitUnsigned(DerefSize);
+        }
       }
 
-      // Extract the bits by a shift left (to shift out the bits after what we
-      // want to extract) followed by shift right (to shift the bits to position
-      // 0 and also sign/zero extend). These operations are done in the DWARF
-      // "generic type" whose size is the size of a pointer.
-      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
-      unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
-      unsigned RightShift = LeftShift + BitOffset;
-      if (LeftShift) {
-        emitOp(dwarf::DW_OP_constu);
-        emitUnsigned(LeftShift);
-        emitOp(dwarf::DW_OP_shl);
+      // If a dereference was emitted for an unsigned value, and
+      // there's no bit offset, then a bit of optimization is
+      // possible.
+      if (OpNum == dwarf::DW_OP_LLVM_extract_bits_zext && BitOffset == 0) {
+        if (8 * DerefSize == SizeInBits) {
+          // The correct value is already on the stack.
+        } else {
+          // No need to shift, we can just mask off the desired bits.
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned((1u << SizeInBits) - 1);
+          emitOp(dwarf::DW_OP_and);
+        }
+      } else {
+        // Extract the bits by a shift left (to shift out the bits after what we
+        // want to extract) followed by shift right (to shift the bits to
+        // position 0 and also sign/zero extend).
+        unsigned LeftShift = PtrSizeInBytes * 8 - (SizeInBits + BitOffset);
+        unsigned RightShift = LeftShift + BitOffset;
+        if (LeftShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(LeftShift);
+          emitOp(dwarf::DW_OP_shl);
+        }
+        if (RightShift) {
+          emitOp(dwarf::DW_OP_constu);
+          emitUnsigned(RightShift);
+          emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext
+                     ? dwarf::DW_OP_shra
+                     : dwarf::DW_OP_shr);
+        }
       }
-      emitOp(dwarf::DW_OP_constu);
-      emitUnsigned(RightShift);
-      emitOp(OpNum == dwarf::DW_OP_LLVM_extract_bits_sext ? dwarf::DW_OP_shra
-                                                          : dwarf::DW_OP_shr);
 
       // The value is now at the top of the stack, so set the location to
       // implicit so that we get a stack_value at the end.
@@ -618,12 +642,15 @@ bool DwarfExpression::addExpression(
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
     case dwarf::DW_OP_gt:
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       emitOp(OpNum);
       break;
     case dwarf::DW_OP_deref:

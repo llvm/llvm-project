@@ -1150,7 +1150,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     case XcodeSDK::Type::XRSimulator:
     case XcodeSDK::Type::XROS:
       // FIXME: Pass the right argument once it exists.
-    case XcodeSDK::Type::bridgeOS:
+    case XcodeSDK::Type::BridgeOS:
     case XcodeSDK::Type::Linux:
     case XcodeSDK::Type::unknown:
       if (Log *log = GetLog(LLDBLog::Host)) {

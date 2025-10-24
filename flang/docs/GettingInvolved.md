@@ -41,30 +41,21 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Slack Workspace
 
 -   There is a Slack workspace dedicated to Flang.
--   There are a number of topic-oriented channels available (e.g., #driver, #f18-semantics, #fir).
+-   There are a number of topic-oriented channels available (e.g., #driver, #fir).
 -   Add yourself via the *[invitation link](https://join.slack.com/t/flang-compiler/shared_invite/zt-2pcn51lh-VrRQL_YUOkxA_1CEfMGQhw "title")*
 
 ## Calls
 
-### Flang Community Biweekly Call
+### Flang Biweekly Call
 
--   General updates on the Flang project.
--   Join [Flang Community Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
-    - If you prefer to join using a meeting number and password, those can be 
-      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available.
--   Time: Wednesdays, 8:30 a.m. Pacific Time, on the weeks alternating with regular Flang Community Technical Biweekly Call.
+-   Technical discussions as well as general updates on the Flang project.
+-   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
+    - If you prefer to join using a meeting number and password, those can be
+      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available there.
+-   Time: Every other Wednesday, 8:30 a.m. Pacific Time
 -   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
 -   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/edit).
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
-
-### Flang Community Technical Biweekly Call
-
--   Technical topics call.
--   Join [Flang Community Technical Biweekly Call](https://teams.microsoft.com/l/meetup-join/19%3ameeting_YWU1NzU4ZjQtOTljOS00NWU1LTg5NjktYTUzOTU3MGEwMzAx%40thread.v2/0?context=%7b%22Tid%22%3a%22f34e5979-57d9-4aaa-ad4d-b122a662184d%22%2c%22Oid%22%3a%223641875c-ef5b-4767-8105-0787a195852f%22%7d)
-    - If you prefer to join using a meeting ID and passcode, those can be 
-      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available.
--   Time: Mondays, 8:30 a.m. Pacific Time, on the weeks alternating with regular Flang Community Biweekly Call.
--   The agenda is in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/).
 
 ### LLVM Alias Analysis Technical Call
 

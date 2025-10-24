@@ -29,7 +29,7 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # Ensure partial messages are still sent.
-        output = self.collect_stdout(timeout=1.0, pattern="abcdef")
+        output = self.collect_stdout(pattern="abcdef")
         self.assertTrue(output and len(output) > 0, "expect program stdout")
 
         self.continue_to_exit()

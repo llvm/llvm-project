@@ -164,6 +164,8 @@ Predefined Macros
      - Represents wavefront memory scope in HIP (value is 2).
    * - ``__HIP_MEMORY_SCOPE_WORKGROUP``
      - Represents workgroup memory scope in HIP (value is 3).
+   * - ``__HIP_MEMORY_SCOPE_CLUSTER``
+     - Represents cluster memory scope in HIP (value is 6).
    * - ``__HIP_MEMORY_SCOPE_AGENT``
      - Represents agent memory scope in HIP (value is 4).
    * - ``__HIP_MEMORY_SCOPE_SYSTEM``
