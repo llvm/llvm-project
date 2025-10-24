@@ -1291,31 +1291,36 @@ Sections:
         {{0, 0x0, 0x3, {false, true, true, false, false}, {}, 0},
          {1, 0x3, 0x3, {false, false, true, false, false}, {}, 0},
          {2, 0x6, 0x3, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P3 = {{},
-                       {{{}, 0,
-                         {{1, BranchProbability::getRaw(0x1111'1111), 0},
-                          {2, BranchProbability::getRaw(0xeeee'eeee), 0}}},
-                        {{}, 0, {{2, BranchProbability::getRaw(0xffff'ffff), 0}}},
-                        {{}, 0, {}}},
-                       {false, false, true, false, false, false, false, false}};
+  PGOAnalysisMap P3 = {
+      {},
+      {{{},
+        0,
+        {{1, BranchProbability::getRaw(0x1111'1111), 0},
+         {2, BranchProbability::getRaw(0xeeee'eeee), 0}}},
+       {{}, 0, {{2, BranchProbability::getRaw(0xffff'ffff), 0}}},
+       {{}, 0, {}}},
+      {false, false, true, false, false, false, false, false}};
   BBAddrMap E4 = {
       {{0x44444,
         {{0, 0x0, 0x4, {false, false, false, true, true}, {}, 0},
          {1, 0x4, 0x4, {false, false, false, false, false}, {}, 0},
          {2, 0x8, 0x4, {false, false, false, false, false}, {}, 0},
          {3, 0xc, 0x4, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P4 = {
-      1000,
-      {{BlockFrequency(1000), 50,
-        {{1, BranchProbability::getRaw(0x2222'2222), 0},
-         {2, BranchProbability::getRaw(0x3333'3333), 0},
-         {3, BranchProbability::getRaw(0xaaaa'aaaa), 0}}},
-       {BlockFrequency(133), 0,
-        {{2, BranchProbability::getRaw(0x1111'1111), 0},
-         {3, BranchProbability::getRaw(0xeeee'eeee), 0}}},
-       {BlockFrequency(18), 0, {{3, BranchProbability::getRaw(0xffff'ffff), 0}}},
-       {BlockFrequency(1000), 0, {}}},
-      {true, true, true, false, false, false, false, true}};
+  PGOAnalysisMap P4 = {1000,
+                       {{BlockFrequency(1000),
+                         50,
+                         {{1, BranchProbability::getRaw(0x2222'2222), 0},
+                          {2, BranchProbability::getRaw(0x3333'3333), 0},
+                          {3, BranchProbability::getRaw(0xaaaa'aaaa), 0}}},
+                        {BlockFrequency(133),
+                         0,
+                         {{2, BranchProbability::getRaw(0x1111'1111), 0},
+                          {3, BranchProbability::getRaw(0xeeee'eeee), 0}}},
+                        {BlockFrequency(18),
+                         0,
+                         {{3, BranchProbability::getRaw(0xffff'ffff), 0}}},
+                        {BlockFrequency(1000), 0, {}}},
+                       {true, true, true, false, false, false, false, true}};
   BBAddrMap E5 = {
       {{0x55555, {{2, 0x0, 0x2, {false, false, true, false, false}, {}, 0}}}}};
   PGOAnalysisMap P5 = {
@@ -1326,13 +1331,15 @@ Sections:
          {1, 0x6, 0x6, {false, false, true, false, false}, {}, 0}}},
        {0x666661,
         {{2, 0x0, 0x6, {false, false, false, false, false}, {}, 0}}}}};
-  PGOAnalysisMap P6 = {{},
-                       {{{}, 0,
-                         {{1, BranchProbability::getRaw(0x2222'2222), 7},
-                          {2, BranchProbability::getRaw(0xcccc'cccc), 0}}},
-                        {{}, 0, {{2, BranchProbability::getRaw(0x8888'8888), 0}}},
-                        {{}, 0, {}}},
-                       {false, false, true, true, false, false, false, true}};
+  PGOAnalysisMap P6 = {
+      {},
+      {{{},
+        0,
+        {{1, BranchProbability::getRaw(0x2222'2222), 7},
+         {2, BranchProbability::getRaw(0xcccc'cccc), 0}}},
+       {{}, 0, {{2, BranchProbability::getRaw(0x8888'8888), 0}}},
+       {{}, 0, {}}},
+      {false, false, true, true, false, false, false, true}};
 
   std::vector<BBAddrMap> Section0BBAddrMaps = {E4, E5, E6};
   std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
