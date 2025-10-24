@@ -2117,7 +2117,9 @@ defvar MSP430DefaultOptOut = [
   __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
   __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
   __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
-  __floatundidf
+  __floatundidf, __gtdf2, __eqdf2, __gedf2, __ltdf2, __ledf2,
+  __adddf3, __divdf3, __divdi3, __moddi3,
+  __muldf3, __subdf3, __udivdi3, __umoddi3
 ];
 
 // EABI Libcalls - EABI Section 6.2

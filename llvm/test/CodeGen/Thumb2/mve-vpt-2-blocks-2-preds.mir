@@ -16,7 +16,7 @@
 
   declare <4 x float> @llvm.arm.mve.vminnm.m.v4f32.v4f32.v4f32.v4f32.i32(<4 x float>, <4 x float>, <4 x float>, i32) #1
 
-  attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "frame-pointer"="none" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+hwdiv,+mve.fp,+ras,+thumb-mode" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #0 = { nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "denormal-fp-math"="preserve-sign" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="128" "frame-pointer"="none" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+hwdiv,+mve.fp,+ras,+thumb-mode" "use-soft-float"="false" }
   attributes #1 = { nounwind readnone }
   attributes #2 = { nounwind }
 
