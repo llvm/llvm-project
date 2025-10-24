@@ -1674,9 +1674,9 @@ void ObjectFileMachO::ProcessSegmentCommand(
   uint32_t segment_sect_idx;
   const lldb::user_id_t first_segment_sectID = context.NextSectionIdx + 1;
 
-  // dSYM files can create sections whose data exceeds the 4GB barrier, but
-  // mach-o sections only have 32 bit offsets. So keep track of when we
-  // overflow and fix the sections offsets as we iterate.
+  // 64 bit mach-o files have sections with 32 bit file offsets. If any section
+  // data end will exceed UINT32_MAX, then we need to do some bookkeeping to
+  // ensure we can access this data correctly.
   uint64_t section_offset_adjust = 0;
   const uint32_t num_u32s = load_cmd.cmd == LC_SEGMENT ? 7 : 8;
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
@@ -1701,14 +1701,15 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // isn't stored in the abstracted Sections.
     m_mach_sections.push_back(sect64);
 
-    // Make sure we can load dSYM files whose __DWARF sections exceed the 4GB
-    // barrier. llvm::MachO::section_64 have only 32 bit file offsets for the
-    // section contents.
+    // Make sure we can load sections in mach-o files where some sections cross
+    // a 4GB boundary. llvm::MachO::section_64 have only 32 bit file offsets
+    // for the file offset of the section contents, so we need to track and
+    // sections that overflow and adjust the offsets accordingly.
     const uint64_t section_file_offset = sect64.offset + section_offset_adjust;
-    // If this section overflows a 4GB barrier, then we need to adjust any
-    // subsequent the section offsets.
-    if (is_dsym && ((uint64_t)sect64.offset + sect64.size) >= UINT32_MAX)
-      section_offset_adjust += 0x100000000ull;
+    const uint64_t end_section_offset = (uint64_t)sect64.offset + sect64.size;
+    if (end_section_offset >= UINT32_MAX)
+      section_offset_adjust += end_section_offset & 0xFFFFFFFF00000000ull;
+
     if (add_section) {
       ConstString section_name(
           sect64.sectname, strnlen(sect64.sectname, sizeof(sect64.sectname)));
