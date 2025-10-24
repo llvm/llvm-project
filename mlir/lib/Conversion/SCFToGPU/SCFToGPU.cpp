@@ -633,16 +633,14 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
     Operation *op = worklist.pop_back_val();
     // Now walk over the body and clone it.
     // TODO: This is only correct if there either is no further scf.parallel
-    //       nested or this code is side-effect free. Otherwise we might need
-    //       predication. We are overly conservative for now and only allow
-    //       side-effects in the innermost scope.
+    //       nested or this code has side-effect but the memory buffer is not
+    //       alias to inner loop access buffer. Otherwise we might need
+    //       predication.
     if (auto nestedParallel = dyn_cast<ParallelOp>(op)) {
       // Before entering a nested scope, make sure there have been no
-      // sideeffects until now.
+      // sideeffects until now or the nested operations do not access the
+      // buffer written by outer scope.
       if (seenSideeffects) {
-        // Go through all operations in the nested parallel and check if any
-        // of the side-effecting operations access buffers that have been
-        // written to in the outer scope.
         bool accessesWrittenBuffer = false;
         nestedParallel.walk([&](Operation *nestedOp) {
           if (accessesWrittenBuffer)
