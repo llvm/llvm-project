@@ -14,8 +14,8 @@ def int_dummy_foo_bar : DefaultAttrsIntrinsic<
      llvm_i32_ty],     // stride
     [IntrNoMem,
      ImmArg<ArgIndex<1>>,
-     ArgInfo<ArgIndex<1>, "mode", "printDummyMode">,
-     ArgInfo<ArgIndex<2>, "stride">]>;
+     ArgInfo<ArgIndex<1>, [ArgName<"mode">, ImmArgPrinter<"printDummyMode">]>,
+     ArgInfo<ArgIndex<2>, [ArgName<"stride">]>]>;
 
 // A custom floating point add with rounding and sat mode.
 def int_my_fadd_f32 : DefaultAttrsIntrinsic<
@@ -27,8 +27,8 @@ def int_my_fadd_f32 : DefaultAttrsIntrinsic<
     [IntrNoMem,
      ImmArg<ArgIndex<2>>,
      ImmArg<ArgIndex<3>>,
-     ArgInfo<ArgIndex<2>, "rounding_mode", "printRoundingMode">,
-     ArgInfo<ArgIndex<3>, "saturation_mode">]>;
+     ArgInfo<ArgIndex<2>, [ArgName<"rounding_mode">, ImmArgPrinter<"printRoundingMode">]>,
+     ArgInfo<ArgIndex<3>, [ArgName<"saturation_mode">]>]>;
 
 // CHECK: #ifdef GET_INTRINSIC_PRETTY_PRINT_TABLE
 // CHECK-NEXT: static constexpr uint8_t PPTable[] = {

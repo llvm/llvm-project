@@ -87,14 +87,6 @@ class NoUndef<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
-// ArgInfo - The specified argument has an argument name and an optional argument printing
-// function for diagnostic output.
-class ArgInfo<AttrIndex idx, string argname, string funcname = ""> : IntrinsicProperty {
-  int ArgNo = idx.Value;
-  string ArgName = argname;
-  string FunctionName = funcname;
-}
-
 // NonNull - The return value or specified argument is not null.
 class NonNull<AttrIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
@@ -148,6 +140,25 @@ class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
   int ArgNo = idx.Value;
   int Lower = lower;
   int Upper = upper;
+}
+
+// ArgProperty - Base class for argument properties that can be specified in ArgInfo.
+class ArgProperty;
+
+// ArgName - Specifies the name of an argument for pretty-printing.
+class ArgName<string name> : ArgProperty {
+  string Name = name;
+}
+
+// ImmArgPrinter - Specifies a custom printer function for immediate arguments.
+class ImmArgPrinter<string funcname> : ArgProperty {
+  string FuncName = funcname;
+}
+
+// ArgInfo - The specified argument has properties defined by a list of ArgProperty objects.
+class ArgInfo<AttrIndex idx, list<ArgProperty> arg_properties> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+  list<ArgProperty> Properties = arg_properties;
 }
 
 def IntrNoReturn : IntrinsicProperty;
