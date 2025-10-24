@@ -651,6 +651,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "sub_command_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/SubCommandOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/SubCommandOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "automata_gen",
     strip_include_prefix = "TableGen",
     tbl_outs = {
@@ -671,6 +680,7 @@ cc_test(
     ),
     deps = [
         ":option_tests_gen",
+        ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
         "//third-party/unittest:gtest",

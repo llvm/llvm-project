@@ -947,9 +947,8 @@ LazyValueInfoImpl::solveBlockValueSelect(SelectInst *SI, BasicBlock *BB) {
                                                   /*UseBlockValue*/ false));
   }
 
-  ValueLatticeElement Result = TrueVal;
-  Result.mergeIn(FalseVal);
-  return Result;
+  TrueVal.mergeIn(FalseVal);
+  return TrueVal;
 }
 
 std::optional<ConstantRange>
@@ -1632,19 +1631,25 @@ LazyValueInfoImpl::getEdgeValueLocal(Value *Val, BasicBlock *BBFrom,
                 *getValueFromCondition(Usr->getOperand(0), Condition,
                                        isTrueDest, /*UseBlockValue*/ false);
 
-            if (!OpLatticeVal.isConstantRange())
-              return OpLatticeVal;
+            if (OpLatticeVal.isConstantRange()) {
+              const unsigned ResultBitWidth =
+                  Usr->getType()->getScalarSizeInBits();
+              if (auto *Trunc = dyn_cast<TruncInst>(Usr))
+                return ValueLatticeElement::getRange(
+                    OpLatticeVal.getConstantRange().truncate(
+                        ResultBitWidth, Trunc->getNoWrapKind()));
 
-            const unsigned ResultBitWidth =
-                Usr->getType()->getScalarSizeInBits();
-            if (auto *Trunc = dyn_cast<TruncInst>(Usr))
               return ValueLatticeElement::getRange(
-                  OpLatticeVal.getConstantRange().truncate(
-                      ResultBitWidth, Trunc->getNoWrapKind()));
-
-            return ValueLatticeElement::getRange(
-                OpLatticeVal.getConstantRange().castOp(
-                    cast<CastInst>(Usr)->getOpcode(), ResultBitWidth));
+                  OpLatticeVal.getConstantRange().castOp(
+                      cast<CastInst>(Usr)->getOpcode(), ResultBitWidth));
+            }
+            if (OpLatticeVal.isConstant()) {
+              Constant *C = OpLatticeVal.getConstant();
+              if (auto *CastC = ConstantFoldCastOperand(
+                      cast<CastInst>(Usr)->getOpcode(), C, Usr->getType(), DL))
+                return ValueLatticeElement::get(CastC);
+            }
+            return ValueLatticeElement::getOverdefined();
           } else {
             // If one of Val's operand has an inferred value, we may be able to
             // infer the value of Val.
@@ -1772,9 +1777,8 @@ ValueLatticeElement LazyValueInfoImpl::getValueInBlock(Value *V, BasicBlock *BB,
     assert(OptResult && "Value not available after solving");
   }
 
-  ValueLatticeElement Result = *OptResult;
-  LLVM_DEBUG(dbgs() << "  Result = " << Result << "\n");
-  return Result;
+  LLVM_DEBUG(dbgs() << "  Result = " << *OptResult << "\n");
+  return *OptResult;
 }
 
 ValueLatticeElement LazyValueInfoImpl::getValueAt(Value *V, Instruction *CxtI) {

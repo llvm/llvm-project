@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir -triple x86_64-linux-pc %s -o - | FileCheck %s
 
 struct NoCopyConstruct {};
 
@@ -26,26 +26,26 @@ struct NoCopyConstruct {};
 // int[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_i : !cir.ptr<!cir.array<!s32i x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!s32i x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// TODO: Add Init here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // float[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_f : !cir.ptr<!cir.array<!cir.float x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!cir.float x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// TODO: Add Init here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!cir.float x 5>, !cir.ptr<!cir.array<!cir.float x 5>>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
 // NoCopyConstruct[5] with 1 'bound'
 // CHECK-NEXT: acc.private.recipe @privatization__Bcnt1__ZTSA5_15NoCopyConstruct : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty {{.*}}):
-// TODO: Add Init here.
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_NoCopyConstruct x 5>, !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>, ["openacc.private.init"]
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 
 void acc_compute() {
-  // CHECK: cir.func{{.*}} @acc_compute() {
+  // CHECK: cir.func{{.*}} @acc_compute()
 
   int someInt;
   // CHECK-NEXT: %[[SOMEINT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["someInt"]

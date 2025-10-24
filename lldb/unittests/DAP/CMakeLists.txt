@@ -12,6 +12,8 @@ add_lldb_unittest(DAPTests
   TestBase.cpp
   VariablesTest.cpp
 
+  SBAPITEST
+
   LINK_COMPONENTS
     Support
   LINK_LIBS

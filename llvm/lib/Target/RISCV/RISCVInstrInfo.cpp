@@ -1364,7 +1364,7 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
       RS->scavengeRegisterBackwards(RISCV::GPRRegClass, MI.getIterator(),
                                     /*RestoreAfter=*/false, /*SpAdj=*/0,
                                     /*AllowSpill=*/false);
-  if (TmpGPR != RISCV::NoRegister)
+  if (TmpGPR.isValid())
     RS->setRegUsed(TmpGPR);
   else {
     // The case when there is no scavenged register needs special handling.
@@ -1689,42 +1689,44 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 // instruction opcode. Otherwise, return RISCV::INSTRUCTION_LIST_END.
 // TODO: Support more operations.
 unsigned getPredicatedOpcode(unsigned Opcode) {
+  // clang-format off
   switch (Opcode) {
-  case RISCV::ADD:   return RISCV::PseudoCCADD;   break;
-  case RISCV::SUB:   return RISCV::PseudoCCSUB;   break;
-  case RISCV::SLL:   return RISCV::PseudoCCSLL;   break;
-  case RISCV::SRL:   return RISCV::PseudoCCSRL;   break;
-  case RISCV::SRA:   return RISCV::PseudoCCSRA;   break;
-  case RISCV::AND:   return RISCV::PseudoCCAND;   break;
-  case RISCV::OR:    return RISCV::PseudoCCOR;    break;
-  case RISCV::XOR:   return RISCV::PseudoCCXOR;   break;
+  case RISCV::ADD:   return RISCV::PseudoCCADD;
+  case RISCV::SUB:   return RISCV::PseudoCCSUB;
+  case RISCV::SLL:   return RISCV::PseudoCCSLL;
+  case RISCV::SRL:   return RISCV::PseudoCCSRL;
+  case RISCV::SRA:   return RISCV::PseudoCCSRA;
+  case RISCV::AND:   return RISCV::PseudoCCAND;
+  case RISCV::OR:    return RISCV::PseudoCCOR;
+  case RISCV::XOR:   return RISCV::PseudoCCXOR;
 
-  case RISCV::ADDI:  return RISCV::PseudoCCADDI;  break;
-  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;  break;
-  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;  break;
-  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;  break;
-  case RISCV::ANDI:  return RISCV::PseudoCCANDI;  break;
-  case RISCV::ORI:   return RISCV::PseudoCCORI;   break;
-  case RISCV::XORI:  return RISCV::PseudoCCXORI;  break;
+  case RISCV::ADDI:  return RISCV::PseudoCCADDI;
+  case RISCV::SLLI:  return RISCV::PseudoCCSLLI;
+  case RISCV::SRLI:  return RISCV::PseudoCCSRLI;
+  case RISCV::SRAI:  return RISCV::PseudoCCSRAI;
+  case RISCV::ANDI:  return RISCV::PseudoCCANDI;
+  case RISCV::ORI:   return RISCV::PseudoCCORI;
+  case RISCV::XORI:  return RISCV::PseudoCCXORI;
 
-  case RISCV::ADDW:  return RISCV::PseudoCCADDW;  break;
-  case RISCV::SUBW:  return RISCV::PseudoCCSUBW;  break;
-  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;  break;
-  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;  break;
-  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;  break;
+  case RISCV::ADDW:  return RISCV::PseudoCCADDW;
+  case RISCV::SUBW:  return RISCV::PseudoCCSUBW;
+  case RISCV::SLLW:  return RISCV::PseudoCCSLLW;
+  case RISCV::SRLW:  return RISCV::PseudoCCSRLW;
+  case RISCV::SRAW:  return RISCV::PseudoCCSRAW;
 
-  case RISCV::ADDIW: return RISCV::PseudoCCADDIW; break;
-  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW; break;
-  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW; break;
-  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW; break;
+  case RISCV::ADDIW: return RISCV::PseudoCCADDIW;
+  case RISCV::SLLIW: return RISCV::PseudoCCSLLIW;
+  case RISCV::SRLIW: return RISCV::PseudoCCSRLIW;
+  case RISCV::SRAIW: return RISCV::PseudoCCSRAIW;
 
-  case RISCV::ANDN:  return RISCV::PseudoCCANDN;  break;
-  case RISCV::ORN:   return RISCV::PseudoCCORN;   break;
-  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;  break;
+  case RISCV::ANDN:  return RISCV::PseudoCCANDN;
+  case RISCV::ORN:   return RISCV::PseudoCCORN;
+  case RISCV::XNOR:  return RISCV::PseudoCCXNOR;
 
-  case RISCV::NDS_BFOS:  return RISCV::PseudoCCNDS_BFOS;  break;
-  case RISCV::NDS_BFOZ:  return RISCV::PseudoCCNDS_BFOZ;  break;
+  case RISCV::NDS_BFOS:  return RISCV::PseudoCCNDS_BFOS;
+  case RISCV::NDS_BFOZ:  return RISCV::PseudoCCNDS_BFOZ;
   }
+  // clang-format on
 
   return RISCV::INSTRUCTION_LIST_END;
 }
@@ -3005,6 +3007,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           else
             Ok = RISCVFPRndMode::isValidRoundingMode(Imm);
           break;
+        case RISCVOp::OPERAND_XSFMM_VTYPE:
+          Ok = RISCVVType::isValidXSfmmVType(Imm);
+          break;
         }
         if (!Ok) {
           ErrInfo = "Invalid immediate";
@@ -3021,7 +3026,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "Invalid operand type for VL operand";
       return false;
     }
-    if (Op.isReg() && Op.getReg() != RISCV::NoRegister) {
+    if (Op.isReg() && Op.getReg().isValid()) {
       const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
       auto *RC = MRI.getRegClass(Op.getReg());
       if (!RISCV::GPRRegClass.hasSubClassEq(RC)) {
@@ -3670,6 +3675,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
     RISCVVType::printVType(Imm, OS);
     break;
   }
+  case RISCVOp::OPERAND_XSFMM_VTYPE: {
+    unsigned Imm = Op.getImm();
+    RISCVVType::printXSfmmVType(Imm, OS);
+    break;
+  }
   case RISCVOp::OPERAND_SEW:
   case RISCVOp::OPERAND_SEW_MASK: {
     unsigned Log2SEW = Op.getImm();
@@ -3767,11 +3777,13 @@ std::string RISCVInstrInfo::createMIROperandComment(
 
 #define CASE_VFMA_OPCODE_VV(OP)                                                \
   CASE_VFMA_OPCODE_LMULS_MF4(OP, VV, E16):                                     \
+  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VV, E16):                          \
   case CASE_VFMA_OPCODE_LMULS_MF2(OP, VV, E32):                                \
   case CASE_VFMA_OPCODE_LMULS_M1(OP, VV, E64)
 
 #define CASE_VFMA_SPLATS(OP)                                                   \
   CASE_VFMA_OPCODE_LMULS_MF4(OP, VFPR16, E16):                                 \
+  case CASE_VFMA_OPCODE_LMULS_MF4(OP##_ALT, VFPR16, E16):                      \
   case CASE_VFMA_OPCODE_LMULS_MF2(OP, VFPR32, E32):                            \
   case CASE_VFMA_OPCODE_LMULS_M1(OP, VFPR64, E64)
 // clang-format on
@@ -3792,6 +3804,11 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     if (MI.getOperand(2).getReg() == RISCV::X0)
       return false;
     // Operands 1 and 2 are commutable, if we switch the opcode.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
@@ -3990,11 +4007,13 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
 
 #define CASE_VFMA_CHANGE_OPCODE_VV(OLDOP, NEWOP)                               \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VV, E16)                     \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VV, E16)         \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VV, E32)                     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VV, E64)
 
 #define CASE_VFMA_CHANGE_OPCODE_SPLATS(OLDOP, NEWOP)                           \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP, NEWOP, VFPR16, E16)                 \
+  CASE_VFMA_CHANGE_OPCODE_LMULS_MF4(OLDOP##_ALT, NEWOP##_ALT, VFPR16, E16)     \
   CASE_VFMA_CHANGE_OPCODE_LMULS_MF2(OLDOP, NEWOP, VFPR32, E32)                 \
   CASE_VFMA_CHANGE_OPCODE_LMULS_M1(OLDOP, NEWOP, VFPR64, E64)
 // clang-format on
@@ -4018,6 +4037,11 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, false, OpIdx1,
                                                    OpIdx2);
   }
+  case RISCV::QC_SELECTIEQ:
+  case RISCV::QC_SELECTINE:
+  case RISCV::QC_SELECTIIEQ:
+  case RISCV::QC_SELECTIINE:
+    return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   case RISCV::QC_MVEQ:
   case RISCV::QC_MVNE:
   case RISCV::QC_MVLT:
@@ -4451,6 +4475,20 @@ bool RISCVInstrInfo::simplifyInstruction(MachineInstr &MI) const {
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E32)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)                             \
   CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E32)                             \
+
+#define CASE_FP_WIDEOP_OPCODE_LMULS_ALT(OP)                                    \
+  CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF4, E16):                                  \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, MF2, E16):                             \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M1, E16):                              \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M2, E16):                              \
+  case CASE_FP_WIDEOP_OPCODE_COMMON(OP, M4, E16)
+
+#define CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(OP)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF4, E16)                            \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, MF2, E16)                            \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M1, E16)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M2, E16)                             \
+  CASE_FP_WIDEOP_CHANGE_OPCODE_COMMON(OP, M4, E16)
 // clang-format on
 
 MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
@@ -4460,6 +4498,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   switch (MI.getOpcode()) {
   default:
     return nullptr;
+  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWADD_ALT_WV):
+  case CASE_FP_WIDEOP_OPCODE_LMULS_ALT(FWSUB_ALT_WV):
   case CASE_FP_WIDEOP_OPCODE_LMULS(FWADD_WV):
   case CASE_FP_WIDEOP_OPCODE_LMULS(FWSUB_WV): {
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
@@ -4476,6 +4516,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
       llvm_unreachable("Unexpected opcode");
     CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWADD_WV)
     CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS(FWSUB_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWADD_ALT_WV)
+    CASE_FP_WIDEOP_CHANGE_OPCODE_LMULS_ALT(FWSUB_ALT_WV)
     }
     // clang-format on
 
@@ -4576,24 +4618,23 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addImm(ShiftAmount)
         .setMIFlag(Flag);
-  } else if (STI.hasShlAdd(3) &&
-             ((Amount % 3 == 0 && isPowerOf2_64(Amount / 3)) ||
-              (Amount % 5 == 0 && isPowerOf2_64(Amount / 5)) ||
-              (Amount % 9 == 0 && isPowerOf2_64(Amount / 9)))) {
+  } else if (int ShXAmount, ShiftAmount;
+             STI.hasShlAdd(3) &&
+             (ShXAmount = isShifted359(Amount, ShiftAmount)) != 0) {
     // We can use Zba SHXADD+SLLI instructions for multiply in some cases.
     unsigned Opc;
-    uint32_t ShiftAmount;
-    if (Amount % 9 == 0) {
-      Opc = RISCV::SH3ADD;
-      ShiftAmount = Log2_64(Amount / 9);
-    } else if (Amount % 5 == 0) {
-      Opc = RISCV::SH2ADD;
-      ShiftAmount = Log2_64(Amount / 5);
-    } else if (Amount % 3 == 0) {
+    switch (ShXAmount) {
+    case 1:
       Opc = RISCV::SH1ADD;
-      ShiftAmount = Log2_64(Amount / 3);
-    } else {
-      llvm_unreachable("implied by if-clause");
+      break;
+    case 2:
+      Opc = RISCV::SH2ADD;
+      break;
+    case 3:
+      Opc = RISCV::SH3ADD;
+      break;
+    default:
+      llvm_unreachable("unexpected result of isShifted359");
     }
     if (ShiftAmount)
       BuildMI(MBB, II, DL, get(RISCV::SLLI), DestReg)

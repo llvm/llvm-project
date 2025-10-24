@@ -21,7 +21,7 @@ void test_sized_delete(SizedDelete *x) {
 
 // CIR: cir.func dso_local @_Z17test_sized_deleteP11SizedDelete
 // CIR:   %[[X:.*]] = cir.load{{.*}} %{{.*}}
-// CIR:   %[[X_CAST:.*]] = cir.cast(bitcast, %[[X]] : !cir.ptr<!rec_SizedDelete>), !cir.ptr<!void>
+// CIR:   %[[X_CAST:.*]] = cir.cast bitcast %[[X]] : !cir.ptr<!rec_SizedDelete> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   cir.call @_ZN11SizedDeletedlEPvm(%[[X_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
 
@@ -62,7 +62,7 @@ Container::~Container() { delete contents; }
 // CIR:   %[[CONTENTS_PTR_ADDR:.*]] = cir.get_member %[[THIS]][0] {name = "contents"} : !cir.ptr<!rec_Container> -> !cir.ptr<!cir.ptr<!rec_Contents>>
 // CIR:   %[[CONTENTS_PTR:.*]] = cir.load{{.*}} %[[CONTENTS_PTR_ADDR]]
 // CIR:   cir.call @_ZN8ContentsD2Ev(%[[CONTENTS_PTR]]) nothrow : (!cir.ptr<!rec_Contents>) -> ()
-// CIR:   %[[CONTENTS_CAST:.*]] = cir.cast(bitcast, %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents>), !cir.ptr<!void>
+// CIR:   %[[CONTENTS_CAST:.*]] = cir.cast bitcast %[[CONTENTS_PTR]] : !cir.ptr<!rec_Contents> -> !cir.ptr<!void>
 // CIR:   %[[OBJ_SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:   cir.call @_ZdlPvm(%[[CONTENTS_CAST]], %[[OBJ_SIZE]]) nothrow : (!cir.ptr<!void>, !u64i) -> ()
 

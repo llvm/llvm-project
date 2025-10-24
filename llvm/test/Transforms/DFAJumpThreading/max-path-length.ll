@@ -9,9 +9,9 @@
 ; too long so that it is not jump-threaded.
 define i32 @max_path_length(i32 %num) {
 ; CHECK-NOT: 3, case1
-; CHECK: < case2 for.inc for.body > [ 1, for.inc ]
-; CHECK-NEXT: < for.inc for.body > [ 1, for.inc ]
-; CHECK-NEXT: < case2 sel.si.unfold.false for.inc for.body > [ 2, sel.si.unfold.false ]
+; CHECK: < case2, for.inc, for.body > [ 1, for.inc ]
+; CHECK-NEXT: < for.inc, for.body > [ 1, for.inc ]
+; CHECK-NEXT: < case2, sel.si.unfold.false, for.inc, for.body > [ 2, sel.si.unfold.false ]
 ; CHECK-NEXT: DFA-JT: Renaming non-local uses of: 
 entry:
   br label %for.body

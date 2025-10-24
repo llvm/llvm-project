@@ -471,6 +471,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(TANH_F);
   case TargetOpcode::G_FSINCOS:
     RTLIBCASE(SINCOS_F);
+  case TargetOpcode::G_FMODF:
+    RTLIBCASE(MODF_F);
   case TargetOpcode::G_FLOG10:
     RTLIBCASE(LOG10_F);
   case TargetOpcode::G_FLOG:
@@ -697,6 +699,46 @@ LegalizerHelper::LegalizeResult LegalizerHelper::emitSincosLibcall(
 
   MIRBuilder.buildLoad(DstSin, StackPtrSin, *LoadMMOSin);
   MIRBuilder.buildLoad(DstCos, StackPtrCos, *LoadMMOCos);
+  MI.eraseFromParent();
+
+  return LegalizerHelper::Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::emitModfLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                                 unsigned Size, Type *OpType,
+                                 LostDebugLocObserver &LocObserver) {
+  MachineFunction &MF = MIRBuilder.getMF();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register DstFrac = MI.getOperand(0).getReg();
+  Register DstInt = MI.getOperand(1).getReg();
+  Register Src = MI.getOperand(2).getReg();
+  LLT DstTy = MRI.getType(DstFrac);
+
+  int MemSize = DstTy.getSizeInBytes();
+  Align Alignment = getStackTemporaryAlignment(DstTy);
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  unsigned AddrSpace = DL.getAllocaAddrSpace();
+  MachinePointerInfo PtrInfo;
+
+  Register StackPtrInt =
+      createStackTemporary(TypeSize::getFixed(MemSize), Alignment, PtrInfo)
+          .getReg(0);
+
+  auto &Ctx = MF.getFunction().getContext();
+  auto LibcallResult = createLibcall(
+      MIRBuilder, getRTLibDesc(MI.getOpcode(), Size), {DstFrac, OpType, 0},
+      {{Src, OpType, 0}, {StackPtrInt, PointerType::get(Ctx, AddrSpace), 1}},
+      LocObserver, &MI);
+
+  if (LibcallResult != LegalizeResult::Legalized)
+    return LegalizerHelper::UnableToLegalize;
+
+  MachineMemOperand *LoadMMOInt = MF.getMachineMemOperand(
+      PtrInfo, MachineMemOperand::MOLoad, MemSize, Alignment);
+
+  MIRBuilder.buildLoad(DstInt, StackPtrInt, *LoadMMOInt);
   MI.eraseFromParent();
 
   return LegalizerHelper::Legalized;
@@ -1340,6 +1382,16 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
       return UnableToLegalize;
     }
     return emitSincosLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
+  }
+  case TargetOpcode::G_FMODF: {
+    LLT LLTy = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = LLTy.getSizeInBits();
+    Type *HLTy = getFloatTypeForLLT(Ctx, LLTy);
+    if (!HLTy || (Size != 32 && Size != 64 && Size != 80 && Size != 128)) {
+      LLVM_DEBUG(dbgs() << "No libcall available for type " << LLTy << ".\n");
+      return UnableToLegalize;
+    }
+    return emitModfLibcall(MI, MIRBuilder, Size, HLTy, LocObserver);
   }
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
@@ -3240,8 +3292,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     if (TypeIdx != 2)
       return UnableToLegalize;
     Observer.changingInstr(MI);
-    // TODO: Probably should be zext
-    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ZEXT);
     Observer.changedInstr(MI);
     return Legalized;
   }
@@ -3273,8 +3324,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     if (TypeIdx == 2) {
       Observer.changingInstr(MI);
-      // TODO: Probably should be zext
-      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_SEXT);
+      widenScalarSrc(MI, WideTy, 3, TargetOpcode::G_ZEXT);
       Observer.changedInstr(MI);
       return Legalized;
     }
@@ -3333,6 +3383,16 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_FMODF: {
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
+
+    widenScalarDst(MI, WideTy, 1, TargetOpcode::G_FPTRUNC);
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), --MIRBuilder.getInsertPt());
+    widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_FPOWI:
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_STRICT_FLDEXP: {
@@ -5472,6 +5532,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_LROUND:
   case G_LLROUND:
   case G_INTRINSIC_TRUNC:
+  case G_FMODF:
   case G_FCOS:
   case G_FSIN:
   case G_FTAN:
@@ -5758,6 +5819,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
     } else if (InputUsed[0] == -1U) {
       // No input vectors were used! The result is undefined.
       Output = MIRBuilder.buildUndef(NarrowTy).getReg(0);
+    } else if (NewElts == 1) {
+      Output = MIRBuilder.buildCopy(NarrowTy, Inputs[InputUsed[0]]).getReg(0);
     } else {
       Register Op0 = Inputs[InputUsed[0]];
       // If only one input was used, use an undefined vector for the other.
@@ -8955,22 +9018,18 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
       continue;
     }
 
-    if (Src0Ty.isScalar()) {
-      BuildVec.push_back(Idx == 0 ? Src0Reg : Src1Reg);
-    } else {
-      int NumElts = Src0Ty.getNumElements();
-      Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
-      int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
-      auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
-      auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
-      BuildVec.push_back(Extract.getReg(0));
-    }
+    assert(!Src0Ty.isScalar() && "Unexpected scalar G_SHUFFLE_VECTOR");
+
+    int NumElts = Src0Ty.getNumElements();
+    Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
+    int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
+    auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
+    auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
+    BuildVec.push_back(Extract.getReg(0));
   }
 
-  if (DstTy.isVector())
-    MIRBuilder.buildBuildVector(DstReg, BuildVec);
-  else
-    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
+  assert(DstTy.isVector() && "Unexpected scalar G_SHUFFLE_VECTOR");
+  MIRBuilder.buildBuildVector(DstReg, BuildVec);
   MI.eraseFromParent();
   return Legalized;
 }

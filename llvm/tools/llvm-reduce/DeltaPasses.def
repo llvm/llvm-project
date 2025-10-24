@@ -58,7 +58,7 @@ DELTA_PASS_IR("volatile", reduceVolatileInstructionsDeltaPass, "Reducing Volatil
 DELTA_PASS_IR("atomic-ordering", reduceAtomicOrderingDeltaPass, "Reducing Atomic Ordering")
 DELTA_PASS_IR("syncscopes", reduceAtomicSyncScopesDeltaPass, "Reducing Atomic Sync Scopes")
 DELTA_PASS_IR("instruction-flags", reduceInstructionFlagsDeltaPass, "Reducing Instruction Flags")
-
+DELTA_PASS_IR("inline-call-sites", reduceInlineCallSitesDeltaPass, "Inlining callsites")
 
 #ifndef DELTA_PASS_MIR
 #define DELTA_PASS_MIR(NAME, FUNC, DESC)

@@ -2788,6 +2788,9 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
 
+  if (ShufMask.size() < 2)
+    return error("shufflemask should have > 1 element");
+
   ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
   Dest = MachineOperand::CreateShuffleMask(MaskAlloc);
   return false;

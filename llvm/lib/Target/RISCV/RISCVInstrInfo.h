@@ -25,6 +25,25 @@
 
 namespace llvm {
 
+// If Value is of the form C1<<C2, where C1 = 3, 5 or 9,
+// returns log2(C1 - 1) and assigns Shift = C2.
+// Otherwise, returns 0.
+template <typename T> int isShifted359(T Value, int &Shift) {
+  if (Value == 0)
+    return 0;
+  Shift = llvm::countr_zero(Value);
+  switch (Value >> Shift) {
+  case 3:
+    return 1;
+  case 5:
+    return 2;
+  case 9:
+    return 3;
+  default:
+    return 0;
+  }
+}
+
 class RISCVSubtarget;
 
 static const MachineMemOperand::Flags MONontemporalBit0 =

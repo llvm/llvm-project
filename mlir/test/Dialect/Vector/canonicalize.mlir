@@ -837,7 +837,7 @@ func.func @fold_extract_splatlike(%a : f32, %idx0 : index, %idx1 : index, %idx2 
 // CHECK-LABEL: fold_extract_vector_from_splat
 //       CHECK: vector.broadcast {{.*}} f32 to vector<4xf32>
 func.func @fold_extract_vector_from_splat(%a : f32, %idx0 : index, %idx1 : index) -> vector<4xf32> {
-  %b = vector.splat %a : vector<1x2x4xf32>
+  %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
   %r = vector.extract %b[%idx0, %idx1] : vector<4xf32> from vector<1x2x4xf32>
   return %r : vector<4xf32>
 }
@@ -3236,23 +3236,19 @@ func.func @rank_1_shuffle_to_interleave(%arg0: vector<6xi32>, %arg1: vector<6xi3
 
 // -----
 
-// CHECK-LABEL: func @extract_from_0d_splatlike_broadcast_regression(
+// CHECK-LABEL: func @extract_from_splatlike_broadcast(
 //  CHECK-SAME:     %[[A:.*]]: f32, %[[B:.*]]: vector<f32>, %[[C:.*]]: vector<2xf32>)
-func.func @extract_from_0d_splatlike_broadcast_regression(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
-  // Splat/broadcast scalar to 0D and extract scalar.
+func.func @extract_from_splatlike_broadcast(%a: f32, %b: vector<f32>, %c: vector<2xf32>) -> (f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>) {
+  // Broadcast scalar to 0D and extract scalar.
   %0 = vector.broadcast %a : f32 to vector<f32>
   %1 = vector.extract %0[] : f32 from vector<f32>
-
-  // Broadcast scalar to 0D and extract scalar.
-  %2 = vector.broadcast %a : f32 to vector<f32>
-  %3 = vector.extract %2[] : f32 from vector<f32>
 
   // Broadcast 0D to 3D and extract scalar.
   // CHECK: %[[EXTRACT1:.*]] = vector.extract %[[B]][] : f32 from vector<f32>
   %4 = vector.broadcast %b : vector<f32> to vector<1x2x4xf32>
   %5 = vector.extract %4[0, 0, 1] : f32 from vector<1x2x4xf32>
 
-  // Splat/broadcast scalar to 2D and extract scalar.
+  // Broadcast scalar to 2D and extract scalar.
   %6 = vector.broadcast %a : f32 to vector<2x3xf32>
   %7 = vector.extract %6[0, 1] : f32 from vector<2x3xf32>
 
@@ -3268,8 +3264,8 @@ func.func @extract_from_0d_splatlike_broadcast_regression(%a: f32, %b: vector<f3
   // CHECK: %[[EXTRACT3:.*]] = vector.broadcast %[[A]] : f32 to vector<3xf32>
   %11 = vector.extract %6[1] : vector<3xf32> from vector<2x3xf32>
 
-  // CHECK:   return %[[A]], %[[A]], %[[EXTRACT1]], %[[A]], %[[A]], %[[EXTRACT2]], %[[EXTRACT3]]
-  return %1, %3, %5, %7, %9, %10, %11 : f32, f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>
+  // CHECK:   return %[[A]], %[[EXTRACT1]], %[[A]], %[[A]], %[[EXTRACT2]], %[[EXTRACT3]]
+  return %1, %5, %7, %9, %10, %11 : f32, f32, f32, f32, vector<6x7xf32>, vector<3xf32>
 }
 
 // -----
@@ -3326,6 +3322,46 @@ func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2x
 
 // -----
 
+// CHECK-LABEL: func @to_elements_of_scalar_broadcast_folds
+// CHECK-SAME: (%[[S:.*]]: f32) -> (f32, f32, f32, f32)
+func.func @to_elements_of_scalar_broadcast_folds(%s: f32) -> (f32, f32, f32, f32) {
+  %v = vector.broadcast %s : f32 to vector<4xf32>
+  %e:4 = vector.to_elements %v : vector<4xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK-NOT: vector.to_elements
+  // CHECK: return %[[S]], %[[S]], %[[S]], %[[S]]
+  return %e#0, %e#1, %e#2, %e#3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @to_elements_of_vector_broadcast
+// CHECK-SAME: (%[[VEC:.*]]: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32)
+func.func @to_elements_of_vector_broadcast(%vec: vector<2xf32>) -> (f32, f32, f32, f32, f32, f32) {
+  %v = vector.broadcast %vec : vector<2xf32> to vector<3x2xf32>
+  %e:6 = vector.to_elements %v : vector<3x2xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK: %[[SRC_ELEMS:.*]]:2 = vector.to_elements %[[VEC]]
+  // CHECK: return %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1, %[[SRC_ELEMS]]#0, %[[SRC_ELEMS]]#1
+  return %e#0, %e#1, %e#2, %e#3, %e#4, %e#5 : f32, f32, f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @to_elements_of_vector_broadcast_inner_dim
+// CHECK-SAME: (%[[V:.*]]: vector<2x1x2xf32>) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32)
+func.func @to_elements_of_vector_broadcast_inner_dim(%v: vector<2x1x2xf32>) -> (f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32) {
+  %b = vector.broadcast %v : vector<2x1x2xf32> to vector<2x3x2xf32>
+  %e:12 = vector.to_elements %b : vector<2x3x2xf32>
+  // CHECK-NOT: vector.broadcast
+  // CHECK: %[[SRC:.*]]:4 = vector.to_elements %[[V]] : vector<2x1x2xf32>
+  // CHECK: return %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#0, %[[SRC]]#1, %[[SRC]]#2, %[[SRC]]#3, %[[SRC]]#2, %[[SRC]]#3, %[[SRC]]#2, %[[SRC]]#3
+  return %e#0, %e#1, %e#2, %e#3, %e#4, %e#5, %e#6, %e#7, %e#8, %e#9, %e#10, %e#11 :
+    f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32, f32
+}
+
+// -----
+
 // +---------------------------------------------------------------------------
 // Tests for foldFromElementsToConstant
 // +---------------------------------------------------------------------------
@@ -3377,6 +3413,9 @@ func.func @negative_from_elements_to_constant() -> vector<1x!llvm.ptr> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xf32>
 //       CHECK:   return %[[VAL]] : vector<2xf32>
@@ -3388,6 +3427,9 @@ func.func @negative_from_elements_poison_f32() -> vector<2xf32> {
 
 // -----
 
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
+
 // CHECK-LABEL: @negative_from_elements_poison_i32
 //       CHECK:   %[[VAL:.*]] = ub.poison : vector<2xi32>
 //       CHECK:   return %[[VAL]] : vector<2xi32>
@@ -3398,6 +3440,9 @@ func.func @negative_from_elements_poison_i32() -> vector<2xi32> {
 }
 
 // -----
+
+// `foldFromElementsToConstant` does not support `ub.poison`, so it bails out.
+// Instead, other folders apply here (e.g. `rewriteFromElementsAsBroadcast`).
 
 // CHECK-LABEL: @negative_from_elements_poison_constant_mix
 //       CHECK:   %[[POISON:.*]] = ub.poison : f32
@@ -3481,6 +3526,62 @@ func.func @from_elements_index_to_i64_conversion() -> vector<3xi64> {
 
 // +---------------------------------------------------------------------------
 // End of  Tests for foldFromElementsToConstant
+// +---------------------------------------------------------------------------
+
+// -----
+
+// +---------------------------------------------------------------------------
+// Tests for FoldTransposeFromElements
+// +---------------------------------------------------------------------------
+
+// CHECK-LABEL: transpose_from_elements_1d
+// CHECK-SAME:  %[[EL_0:.*]]: i32, %[[EL_1:.*]]: i32 
+func.func @transpose_from_elements_1d(%el_0: i32, %el_1: i32) -> vector<2xi32> {
+  %v = vector.from_elements %el_0, %el_1 : vector<2xi32>
+  %t = vector.transpose %v, [0] : vector<2xi32> to vector<2xi32>
+  return %t : vector<2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0]], %[[EL_1]] : vector<2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_2d
+// CHECK-SAME:  %[[EL_0_0:.*]]: i32, %[[EL_0_1:.*]]: i32, %[[EL_0_2:.*]]: i32, %[[EL_1_0:.*]]: i32, %[[EL_1_1:.*]]: i32, %[[EL_1_2:.*]]: i32 
+func.func @transpose_from_elements_2d(
+  %el_0_0: i32, %el_0_1: i32, %el_0_2: i32,
+  %el_1_0: i32, %el_1_1: i32, %el_1_2: i32
+) -> vector<3x2xi32> {
+  %v = vector.from_elements %el_0_0, %el_0_1, %el_0_2, %el_1_0, %el_1_1, %el_1_2 : vector<2x3xi32>
+  %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to vector<3x2xi32>
+  return %t : vector<3x2xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0:.*]], %[[EL_1_0:.*]], %[[EL_0_1:.*]], %[[EL_1_1:.*]], %[[EL_0_2:.*]], %[[EL_1_2:.*]] : vector<3x2xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// CHECK-LABEL: transpose_from_elements_3d
+// CHECK-SAME:  %[[EL_0_0_0:.*]]: i32, %[[EL_0_0_1:.*]]: i32, %[[EL_0_1_0:.*]]: i32, %[[EL_0_1_1:.*]]: i32, %[[EL_0_2_0:.*]]: i32, %[[EL_0_2_1:.*]]: i32, %[[EL_1_0_0:.*]]: i32, %[[EL_1_0_1:.*]]: i32, %[[EL_1_1_0:.*]]: i32, %[[EL_1_1_1:.*]]: i32, %[[EL_1_2_0:.*]]: i32, %[[EL_1_2_1:.*]]: i32 
+func.func @transpose_from_elements_3d(
+  %el_0_0_0: i32, %el_0_0_1: i32, %el_0_1_0: i32, %el_0_1_1: i32, %el_0_2_0: i32, %el_0_2_1: i32,
+  %el_1_0_0: i32, %el_1_0_1: i32, %el_1_1_0: i32, %el_1_1_1: i32, %el_1_2_0: i32, %el_1_2_1: i32
+) -> vector<2x2x3xi32> {
+  %v = vector.from_elements
+    %el_0_0_0, %el_0_0_1,
+    %el_0_1_0, %el_0_1_1,
+    %el_0_2_0, %el_0_2_1,
+    %el_1_0_0, %el_1_0_1,
+    %el_1_1_0, %el_1_1_1,
+    %el_1_2_0, %el_1_2_1
+    : vector<2x3x2xi32>
+  %t = vector.transpose %v, [0, 2, 1] : vector<2x3x2xi32> to vector<2x2x3xi32>
+  return %t : vector<2x2x3xi32>
+  // CHECK: %[[R:.*]] = vector.from_elements %[[EL_0_0_0:.*]], %[[EL_0_1_0:.*]], %[[EL_0_2_0:.*]], %[[EL_0_0_1:.*]], %[[EL_0_1_1:.*]], %[[EL_0_2_1:.*]], %[[EL_1_0_0:.*]], %[[EL_1_1_0:.*]], %[[EL_1_2_0:.*]], %[[EL_1_0_1:.*]], %[[EL_1_1_1:.*]], %[[EL_1_2_1:.*]] : vector<2x2x3xi32>
+  // CHECK-NOT: vector.transpose
+  // CHECK: return %[[R]]
+}
+
+// +---------------------------------------------------------------------------
+// End of  Tests for FoldTransposeFromElements
 // +---------------------------------------------------------------------------
 
 // -----
