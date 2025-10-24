@@ -90,12 +90,6 @@ void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 /// Pass to emit metadata for DXIL.
 ModulePass *createDXILTranslateMetadataLegacyPass();
 
-/// Initializer for DXILValidateMetadata.
-void initializeDXILValidateMetadataLegacyPass(PassRegistry &);
-
-/// Pass to validate metadata for DXIL.
-ModulePass *createDXILValidateMetadataLegacyPass();
-
 /// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 

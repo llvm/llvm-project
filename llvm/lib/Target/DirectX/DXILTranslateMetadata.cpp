@@ -504,13 +504,12 @@ static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
       EntryShaderFlags = ShaderFlags.getFunctionFlags(EntryProp.Entry);
       if (EntryProp.ShaderStage != MMDI.ShaderProfile)
         reportError(
-            M,
-            "Shader stage '" +
-                Twine(Twine(getShortShaderStage(EntryProp.ShaderStage)) +
-                      "' for entry '" + Twine(EntryProp.Entry->getName()) +
-                      "' different from specified target profile '" +
-                      Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
-                            "'")));
+            M, "Shader stage '" +
+                   Twine(getShortShaderStage(EntryProp.ShaderStage)) +
+                   "' for entry '" + Twine(EntryProp.Entry->getName()) +
+                   "' different from specified target profile '" +
+                   Twine(Triple::getEnvironmentTypeName(MMDI.ShaderProfile) +
+                         "'"));
     }
 
     EntryFnMDNodes.emplace_back(emitEntryMD(EntryProp, Signatures, ResourceMD,
