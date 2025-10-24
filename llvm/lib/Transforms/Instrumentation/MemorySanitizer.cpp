@@ -1549,7 +1549,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!isa<TargetExtType>(Ty))
       return false;
 
-    TargetExtType* TTy = cast<TargetExtType>(Ty);
+    TargetExtType *TTy = cast<TargetExtType>(Ty);
     return TTy->getName() == "aarch64.svcount";
   }
 
@@ -1557,7 +1557,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // 'target("aarch64.svcount")', but not e.g., <vscale x 4 x i32>.
   static bool isScalableNonVectorType(Type *Ty) {
     if (!isAArch64SVCount(Ty))
-      LLVM_DEBUG(dbgs() << "isScalableNonVectorType: Unexpected type " << *Ty << "\n");
+      LLVM_DEBUG(dbgs() << "isScalableNonVectorType: Unexpected type " << *Ty
+                        << "\n");
 
     return Ty->isScalableTy() && !isa<VectorType>(Ty);
   }
@@ -1694,8 +1695,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       LLVM_DEBUG(dbgs() << "getShadowTy: " << *ST << " ===> " << *Res << "\n");
       return Res;
     }
-    if (isScalableNonVectorType(OrigTy)){
-      LLVM_DEBUG(dbgs() << "getShadowTy: Scalable non-vector type: " << *OrigTy << "\n");
+    if (isScalableNonVectorType(OrigTy)) {
+      LLVM_DEBUG(dbgs() << "getShadowTy: Scalable non-vector type: " << *OrigTy
+                        << "\n");
       return OrigTy;
     }
 
