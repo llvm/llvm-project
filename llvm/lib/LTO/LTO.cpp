@@ -1086,15 +1086,15 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing)
-        ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
+        ThinLTO.setPrevailingModuleForGUID(GUID, BM.getModuleIdentifier());
     }
   }
 
   if (Error Err =
           BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
                          [&](GlobalValue::GUID GUID) {
-                           return ThinLTO.PrevailingModuleForGUID[GUID] ==
-                                  BM.getModuleIdentifier();
+                           return ThinLTO.isPrevailingModuleForGUID(
+                               GUID, BM.getModuleIdentifier());
                          }))
     return Err;
   LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
@@ -1108,8 +1108,8 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing) {
-        assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
-               BM.getModuleIdentifier());
+        assert(
+            ThinLTO.isPrevailingModuleForGUID(GUID, BM.getModuleIdentifier()));
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
@@ -1988,7 +1988,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                                LocalWPDTargetsMap);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
-    return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
+    return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
   };
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
