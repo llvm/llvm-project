@@ -12,6 +12,8 @@
 // RUN:   | sed 's:\\\\\?:/:g' \
 // RUN:   | FileCheck -DPREFIX=%/t --check-prefixes=CHECK %s
 
+// CHECK:      clang: remark: standard modules manifest file not found; import of standard library modules not supported [-Rmodules-driver]
+
 // CHECK:      clang: remark: printing module dependency graph [-Rmodules-driver]
 // CHECK-NEXT: digraph "Module Dependency Graph" {
 // CHECK-NEXT:         label="Module Dependency Graph";
