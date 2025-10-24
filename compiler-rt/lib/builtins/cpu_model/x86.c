@@ -36,14 +36,14 @@ enum VendorSignatures {
   SIG_AMD = 0x68747541,   // Auth
 };
 
-enum ProcessorVendors : unsigned int {
+enum ProcessorVendors {
   VENDOR_INTEL = 1,
   VENDOR_AMD,
   VENDOR_OTHER,
   VENDOR_MAX
 };
 
-enum ProcessorTypes : unsigned int {
+enum ProcessorTypes {
   INTEL_BONNELL = 1,
   INTEL_CORE2,
   INTEL_COREI7,
