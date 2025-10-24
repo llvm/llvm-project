@@ -1838,8 +1838,5 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
-let Predicates = [HasStdExtZvfofp4min] in
-  defm VFEXT_VF2 : VALU_MV_VS2<"vfext.vf2", 0b010010, 0b10110>;
-
 include "RISCVInstrInfoVPseudos.td"
 include "RISCVInstrInfoZvfbf.td"

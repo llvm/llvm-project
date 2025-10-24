@@ -19,12 +19,12 @@
 
 # CHECK-INST: vfext.vf2 v8, v4
 # CHECK-ENCODING: [0x57,0x24,0x4b,0x4a]
-# CHECK-ERROR: instruction requires the following: 'Zvfofp4min' (OFP4 conversion extension Zvfofp4min){{$}}
+# CHECK-ERROR: instruction requires the following: 'Zvfofp4min' (Vector OFP4 Converts){{$}}
 # CHECK-UNKNOWN: 4a4b2457 <unknown>
 vfext.vf2 v8, v4
 
 # CHECK-INST: vfext.vf2 v8, v4, v0.t
 # CHECK-ENCODING: [0x57,0x24,0x4b,0x48]
-# CHECK-ERROR: instruction requires the following: 'Zvfofp4min' (OFP4 conversion extension Zvfofp4min){{$}}
+# CHECK-ERROR: instruction requires the following: 'Zvfofp4min' (Vector OFP4 Converts){{$}}
 # CHECK-UNKNOWN: 484b2457 <unknown>
 vfext.vf2 v8, v4, v0.t
