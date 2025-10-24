@@ -2065,9 +2065,9 @@ The following type trait primitives are supported by Clang. Those traits marked
     Returns true if a reference ``T`` can be copy-initialized from a temporary of type
     a non-cv-qualified ``U``.
 * ``__underlying_type`` (C++, GNU, Microsoft)
-* ``__builtin_lt_synthesises_from_spaceship``, ``__builtin_gt_synthesises_from_spaceship``,
-  ``__builtin_le_synthesises_from_spaceship``, ``__builtin_ge_synthesises_from_spaceship`` (Clang):
-  These builtins can be used to determine whether the corresponding operator is synthesised from a spaceship operator.
+* ``__builtin_lt_synthesizes_from_spaceship``, ``__builtin_gt_synthesizes_from_spaceship``,
+  ``__builtin_le_synthesizes_from_spaceship``, ``__builtin_ge_synthesizes_from_spaceship`` (Clang):
+  These builtins can be used to determine whether the corresponding operator is synthesized from a spaceship operator.
 
 In addition, the following expression traits are supported:
 
@@ -4846,6 +4846,7 @@ currently supported:
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``
 * ``__MEMORY_SCOPE_WRKGRP``
+* ``__MEMORY_SCOPE_CLUSTR``
 * ``__MEMORY_SCOPE_WVFRNT``
 * ``__MEMORY_SCOPE_SINGLE``
 

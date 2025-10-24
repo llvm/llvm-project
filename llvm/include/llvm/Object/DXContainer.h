@@ -228,11 +228,11 @@ private:
   uint32_t Flags;
   ViewArray<dxbc::RTS0::v1::RootParameterHeader> ParametersHeaders;
   StringRef PartData;
-  ViewArray<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
+  ViewArray<dxbc::RTS0::v3::StaticSampler> StaticSamplers;
 
   using param_header_iterator =
       ViewArray<dxbc::RTS0::v1::RootParameterHeader>::iterator;
-  using samplers_iterator = ViewArray<dxbc::RTS0::v1::StaticSampler>::iterator;
+  using samplers_iterator = ViewArray<dxbc::RTS0::v3::StaticSampler>::iterator;
 
 public:
   RootSignature(StringRef PD) : PartData(PD) {}

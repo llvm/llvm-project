@@ -1484,6 +1484,13 @@ void Sema::ActOnEndOfTranslationUnit() {
       Consumer.CompleteTentativeDefinition(VD);
   }
 
+  // In incremental mode, tentative definitions belong to the current
+  // partial translation unit (PTU). Once they have been completed and
+  // emitted to codegen, drop them to prevent re-emission in future PTUs.
+  if (PP.isIncrementalProcessingEnabled())
+    TentativeDefinitions.erase(TentativeDefinitions.begin(ExternalSource.get()),
+                               TentativeDefinitions.end());
+
   for (auto *D : ExternalDeclarations) {
     if (!D || D->isInvalidDecl() || D->getPreviousDecl() || !D->isUsed())
       continue;
@@ -2214,9 +2221,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << false /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty
+                        << false /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }
@@ -2233,9 +2240,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       else
         PD << "expression";
 
-      if (Diag(Loc, PD, FD)
-          << false /*show bit size*/ << 0 << Ty << true /*return*/
-          << TI.getTriple().str()) {
+      if (Diag(Loc, PD) << false /*show bit size*/ << 0 << Ty << true /*return*/
+                        << TI.getTriple().str()) {
         if (D)
           D->setInvalidDecl();
       }

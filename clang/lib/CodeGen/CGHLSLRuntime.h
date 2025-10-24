@@ -135,6 +135,7 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(BufferUpdateCounter, resource_updatecounter)
   GENERATE_HLSL_INTRINSIC_FUNCTION(GroupMemoryBarrierWithGroupSync,
                                    group_memory_barrier_with_group_sync)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(GetDimensionsX, resource_getdimensions_x)
 
   //===----------------------------------------------------------------------===//
   // End of reserved area for HLSL intrinsic getters.
@@ -200,11 +201,7 @@ private:
   void emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
                                     llvm::GlobalVariable *BufGV);
   void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLVkBindingAttr *VkBinding);
-  void initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
-                                   llvm::GlobalVariable *GV,
-                                   HLSLResourceBindingAttr *RBA);
+                                   llvm::GlobalVariable *GV);
   llvm::Triple::ArchType getArch();
 
   llvm::DenseMap<const clang::RecordType *, llvm::TargetExtType *> LayoutTypes;

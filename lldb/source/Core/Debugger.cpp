@@ -2066,19 +2066,23 @@ void Debugger::CancelForwardEvents(const ListenerSP &listener_sp) {
   m_forward_listener_sp.reset();
 }
 
+bool Debugger::IsEscapeCodeCapableTTY() {
+  if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+    File &file = stream_sp->GetUnlockedFile();
+    return file.GetIsInteractive() && file.GetIsRealTerminal() &&
+           file.GetIsTerminalWithColors();
+  }
+  return false;
+}
+
 bool Debugger::StatuslineSupported() {
 // We have trouble with the contol codes on Windows, see
 // https://github.com/llvm/llvm-project/issues/134846.
 #ifndef _WIN32
-  if (GetShowStatusline()) {
-    if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
-      File &file = stream_sp->GetUnlockedFile();
-      return file.GetIsInteractive() && file.GetIsRealTerminal() &&
-             file.GetIsTerminalWithColors();
-    }
-  }
-#endif
+  return GetShowStatusline() && IsEscapeCodeCapableTTY();
+#else
   return false;
+#endif
 }
 
 static bool RequiresFollowChildWorkaround(const Process &process) {
@@ -2271,10 +2275,11 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
   ProgressReport progress_report{data->GetID(), data->GetCompleted(),
                                  data->GetTotal(), data->GetMessage()};
 
-  // Do some bookkeeping regardless of whether we're going to display
-  // progress reports.
   {
     std::lock_guard<std::mutex> guard(m_progress_reports_mutex);
+
+    // Do some bookkeeping regardless of whether we're going to display
+    // progress reports.
     auto it = llvm::find_if(m_progress_reports, [&](const auto &report) {
       return report.id == progress_report.id;
     });
@@ -2286,6 +2291,30 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
         *it = progress_report;
     } else {
       m_progress_reports.push_back(progress_report);
+    }
+
+    // Show progress using Operating System Command (OSC) sequences.
+    if (GetShowProgress() && IsEscapeCodeCapableTTY()) {
+      if (lldb::LockableStreamFileSP stream_sp = GetOutputStreamSP()) {
+
+        // Clear progress if this was the last progress event.
+        if (m_progress_reports.empty()) {
+          stream_sp->Lock() << OSC_PROGRESS_REMOVE;
+          return;
+        }
+
+        const ProgressReport &report = m_progress_reports.back();
+
+        // Show indeterminate progress.
+        if (report.total == UINT64_MAX) {
+          stream_sp->Lock() << OSC_PROGRESS_INDETERMINATE;
+          return;
+        }
+
+        // Compute and show the progress value (0-100).
+        const unsigned value = (report.completed / report.total) * 100;
+        stream_sp->Lock().Printf(OSC_PROGRESS_SHOW, value);
+      }
     }
   }
 }

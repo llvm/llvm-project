@@ -1083,14 +1083,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS) {
     std::string RCName = Order.empty() ? "nullptr" : RC.getName();
     std::string RCBitsName = Order.empty() ? "nullptr" : RC.getName() + "Bits";
     std::string RCBitsSize = Order.empty() ? "0" : "sizeof(" + RCBitsName + ")";
-    assert(isInt<8>(RC.CopyCost) && "Copy cost too large.");
     uint32_t RegSize = 0;
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
        << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
-       << RegSize << ", " << RC.CopyCost << ", "
+       << RegSize << ", " << static_cast<unsigned>(RC.CopyCost) << ", "
        << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }

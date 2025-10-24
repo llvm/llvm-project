@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1090,7 +1089,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+      TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -1353,6 +1352,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG, MVT::f16, Promote);
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
+    setOperationAction(ISD::LRINT, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
@@ -13816,7 +13817,7 @@ bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
 }
 
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -13826,7 +13827,8 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   if (!Subtarget->isThumb1Only())
     return true;
 
-  if (Level == BeforeLegalizeTypes)
+  EVT VT = N->getValueType(0);
+  if (VT.getScalarSizeInBits() > 32)
     return true;
 
   return false;
@@ -20573,7 +20575,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
           Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-          Subtarget->isTargetWindows()) &&
+          Subtarget->isTargetFuchsia() || Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
@@ -21286,21 +21288,28 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
 }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+  // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall == RTLIB::Unsupported)
-    return TargetLowering::insertSSPDeclarations(M);
 
-  // MSVC CRT has a global variable holding security cookie.
-  M.getOrInsertGlobal("__security_cookie",
-                      PointerType::getUnqual(M.getContext()));
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT has a global variable holding security cookie.
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
+                        PointerType::getUnqual(M.getContext()));
 
-  // MSVC CRT has a function to validate security cookie.
-  FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-      getLibcallImplName(SecurityCheckCookieLibcall),
-      Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
-  if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
-    F->addParamAttr(0, Attribute::AttrKind::InReg);
+    // MSVC CRT has a function to validate security cookie.
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+    if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
+      F->addParamAttr(0, Attribute::AttrKind::InReg);
+  }
+
+  TargetLowering::insertSSPDeclarations(M);
 }
 
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {

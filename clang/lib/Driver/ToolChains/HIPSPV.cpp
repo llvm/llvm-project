@@ -22,17 +22,6 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-// Convenience function for creating temporary file for both modes of
-// isSaveTempsEnabled().
-static const char *getTempFile(Compilation &C, StringRef Prefix,
-                               StringRef Extension) {
-  if (C.getDriver().isSaveTempsEnabled()) {
-    return C.getArgs().MakeArgString(Prefix + "." + Extension);
-  }
-  auto TmpFile = C.getDriver().GetTemporaryPath(Prefix, Extension);
-  return C.addTempFile(C.getArgs().MakeArgString(TmpFile));
-}
-
 // Locates HIP pass plugin.
 static std::string findPassPlugin(const Driver &D,
                                   const llvm::opt::ArgList &Args) {
@@ -65,7 +54,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
 
   assert(!Inputs.empty() && "Must have at least one input.");
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
-  const char *TempFile = getTempFile(C, Name + "-link", "bc");
+  const char *TempFile = HIP::getTempFile(C, Name + "-link", "bc");
 
   // Link LLVM bitcode.
   ArgStringList LinkArgs{};
@@ -93,7 +82,7 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
   auto PassPluginPath = findPassPlugin(C.getDriver(), Args);
   if (!PassPluginPath.empty()) {
     const char *PassPathCStr = C.getArgs().MakeArgString(PassPluginPath);
-    const char *OptOutput = getTempFile(C, Name + "-lower", "bc");
+    const char *OptOutput = HIP::getTempFile(C, Name + "-lower", "bc");
     ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
                           PassPathCStr, "-passes=hip-post-link-passes",
                           "-o",         OptOutput};

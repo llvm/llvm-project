@@ -31,12 +31,12 @@ defm constexpr_body_multiple_return : CXX14Compat<
 defm variable_template : CXX14Compat<"variable templates are">;
 
 // C++17 compatibility with C++14 and earlier.
-defm decomp_decl : CXX17Compat<"decomposition declarations are">;
+defm decomp_decl : CXX17Compat<"structured binding declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
 
 // C++20 compatibility with C++17 and earlier.
 defm decomp_decl_spec
-    : CXX20Compat<"decomposition declaration declared '%0' is">;
+    : CXX20Compat<"structured binding declaration declared '%0' is">;
 defm constexpr_local_var_no_init : CXX20Compat<
   "uninitialized variable in a constexpr %select{function|constructor}0 is">;
 defm constexpr_function_try_block : CXX20Compat<
@@ -591,58 +591,58 @@ def warn_modifying_shadowing_decl :
 
 // C++ decomposition declarations
 def err_decomp_decl_context : Error<
-  "decomposition declaration not permitted in this context">;
+  "structured binding declaration not permitted in this context">;
 def err_decomp_decl_spec
-    : Error<"decomposition declaration cannot be declared '%0'">;
+    : Error<"structured binding declaration cannot be declared '%0'">;
 def err_decomp_decl_type : Error<
-  "decomposition declaration cannot be declared with type %0; "
+  "structured binding declaration cannot be declared with type %0; "
   "declared type must be 'auto' or reference to 'auto'">;
 def err_decomp_decl_constraint : Error<
-  "decomposition declaration cannot be declared with constrained 'auto'">;
+  "structured binding declaration cannot be declared with constrained 'auto'">;
 def err_decomp_decl_parens : Error<
-  "decomposition declaration cannot be declared with parentheses">;
+  "structured binding declaration cannot be declared with parentheses">;
 def err_decomp_decl_template : Error<
-  "decomposition declaration cannot be a template">;
+  "structured binding declaration cannot be a template">;
 def err_decomp_decl_not_alone : Error<
-  "decomposition declaration must be the only declaration in its group">;
+  "structured binding declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
-  "decomposition declaration %0 requires an initializer">;
+  "structured binding declaration %0 requires an initializer">;
 def err_decomp_decl_wrong_number_bindings : Error<
-  "type %0 decomposes into %3 %plural{1:element|:elements}2, but "
+  "type %0 binds to %3 %plural{1:element|:elements}2, but "
   "%select{%plural{0:no|:only %1}1|%1}4 "
   "%plural{1:name was|:names were}1 provided">;
 def err_decomp_decl_unbindable_type : Error<
-  "cannot decompose %select{union|non-class, non-array}1 type %2">;
+  "cannot bind %select{union|non-class, non-array}1 type %2">;
 def err_decomp_decl_multiple_bases_with_members : Error<
-  "cannot decompose class type %1: "
+  "cannot bind class type %1: "
   "%select{its base classes %2 and|both it and its base class}0 %3 "
   "have non-static data members">;
 def err_decomp_decl_ambiguous_base : Error<
-  "cannot decompose members of ambiguous base class %1 of %0:%2">;
+  "cannot bind members of ambiguous base class %1 of %0:%2">;
 def err_decomp_decl_inaccessible_base : Error<
-  "cannot decompose members of inaccessible base class %1 of %0">,
+  "cannot bind members of inaccessible base class %1 of %0">,
   AccessControl;
 def err_decomp_decl_inaccessible_field : Error<
-  "cannot decompose %select{private|protected}0 member %1 of %3">,
+  "cannot bind %select{private|protected}0 member %1 of %3">,
   AccessControl;
 def err_decomp_decl_lambda : Error<
-  "cannot decompose lambda closure type">;
+  "cannot bind lambda closure type">;
 def err_decomp_decl_anon_union_member : Error<
-  "cannot decompose class type %0 because it has an anonymous "
+  "cannot bind class type %0 because it has an anonymous "
   "%select{struct|union}1 member">;
 def err_decomp_decl_std_tuple_element_not_specialized : Error<
-  "cannot decompose this type; 'std::tuple_element<%0>::type' "
+  "cannot bind this type; 'std::tuple_element<%0>::type' "
   "does not name a type">;
 def err_decomp_decl_std_tuple_size_not_constant : Error<
-  "cannot decompose this type; 'std::tuple_size<%0>::value' "
+  "cannot bind this type; 'std::tuple_size<%0>::value' "
   "is not a valid integral constant expression">;
 def err_decomp_decl_std_tuple_size_invalid
-    : Error<"cannot decompose this type; 'std::tuple_size<%0>::value' "
+    : Error<"cannot bind this type; 'std::tuple_size<%0>::value' "
             "is not a valid size: %1">;
 def note_in_binding_decl_init : Note<
   "in implicit initialization of binding declaration %0">;
 def err_arg_is_not_destructurable : Error<
-  "type %0 cannot be decomposed">;
+  "type %0 cannot be bound">;
 
 def err_std_type_trait_not_class_template : Error<
   "unsupported standard library implementation: "
@@ -2620,7 +2620,7 @@ def err_auto_variable_cannot_appear_in_own_initializer
           "declared with deduced type %2 cannot appear in its own initializer">;
 def err_binding_cannot_appear_in_own_initializer : Error<
   "binding %0 cannot appear in the initializer of its own "
-  "decomposition declaration">;
+  "structured binding declaration">;
 def err_new_array_of_auto : Error<
   "cannot allocate array of 'auto'">;
 def err_auto_not_allowed : Error<
@@ -4125,6 +4125,9 @@ def note_availability_invalid_os_version_adjusted: Note<"implicitly treating ver
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
   InGroup<DiagGroup<"ignored-availability-without-sdk-settings">>;
+
+def err_hidden_device_kernel
+    : Error<"%0 is specified as a device kernel but it is not externally visible">;
 
 // Thread Safety Attributes
 def warn_thread_attribute_ignored : Warning<
@@ -5770,8 +5773,10 @@ def err_template_recursion_depth_exceeded : Error<
 def err_constraint_depends_on_self
     : Error<"satisfaction of constraint %0 depends on itself">,
       NoSFINAE;
-def note_template_recursion_depth : Note<
-  "use -ftemplate-depth=N to increase recursive template instantiation depth">;
+def note_template_recursion_depth
+    : Note<"use -ftemplate-depth=N to increase recursive template "
+           "instantiation depth">,
+      NoSFINAE;
 
 def err_template_instantiate_within_definition : Error<
   "%select{implicit|explicit}0 instantiation of template %1 within its"
@@ -6324,11 +6329,14 @@ def warn_internal_linkage_local_storage : Warning<
   InGroup<IgnoredAttributes>;
 
 def ext_internal_in_extern_inline : ExtWarn<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is a C2y extension">, InGroup<StaticInInline>;
 def ext_internal_in_extern_inline_quiet : Extension<
-  "static %select{function|variable}0 %1 is used in an inline function with "
-  "external linkage">, InGroup<StaticInInline>;
+  ext_internal_in_extern_inline.Summary>, InGroup<StaticInInline>;
+def warn_c2y_compat_internal_in_extern_inline : Warning<
+  "using static %select{function|variable}0 %1 in an inline function with "
+  "external linkage is incompatible with standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def warn_static_local_in_extern_inline : Warning<
   "non-constant static local variable in inline function may be different "
   "in different files">, InGroup<StaticLocalInInline>;
@@ -11761,6 +11769,18 @@ def note_omp_implicit_dsa : Note<
   "implicitly determined as %0">;
 def err_omp_loop_var_dsa : Error<
   "loop iteration variable in the associated loop of 'omp %1' directive may not be %0, predetermined as %2">;
+def err_omp_not_a_loop_sequence
+    : Error<"statement after '#pragma omp %0' must be a loop sequence "
+            "containing canonical loops or loop-generating constructs">;
+def err_omp_empty_loop_sequence
+    : Error<"loop sequence after '#pragma omp %0' must contain at least 1 "
+            "canonical loop or loop-generating construct">;
+def err_omp_invalid_looprange
+    : Error<"looprange clause selects loops from %1 to %2 but this exceeds the "
+            "number of loops (%3) in the loop sequence">;
+def warn_omp_redundant_fusion : Warning<"looprange clause selects a single "
+                                        "loop, resulting in redundant fusion">,
+                                InGroup<OpenMPClauses>;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
@@ -13053,6 +13073,12 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
+def err_cluster_attr_not_supported : Error<
+  "%0 is not supported for this GPU architecture">;
+
+def err_cluster_dims_too_large : Error<
+  "cluster does not support more than %0 thread blocks; %1 provided">;
+
 // VTable pointer authentication errors
 def err_non_polymorphic_vtable_pointer_auth : Error<
   "cannot set vtable pointer authentication on monomorphic type %0">;
@@ -13281,6 +13307,8 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 def warn_unsafe_buffer_usage_in_container : Warning<
   "the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information">,
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
+def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
@@ -13646,6 +13674,14 @@ def warn_acc_var_referenced_lacks_op
               "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
+def err_acc_reduction_recipe_no_op
+    : Error<"variable of type %0 referenced in OpenACC 'reduction' clause does "
+            "not have a valid operation available">;
+def note_acc_reduction_recipe_noop_field
+    : Note<"while forming combiner for compound type %0">;
+def note_acc_reduction_combiner_forming
+    : Note<"while forming %select{|binary operator '%1'|conditional "
+           "operator|final assignment operator}0">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

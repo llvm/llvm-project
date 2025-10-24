@@ -192,7 +192,7 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK:       LV(REG): VF = 16
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 9 registers
-; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 24 registers
+; CHECK-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 12 registers
 ; CHECK-NEXT:  LV(REG): Found invariant usage: 1 item
 entry:
   br label %for.body

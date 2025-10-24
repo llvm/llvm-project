@@ -844,7 +844,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
                                &Function, std::placeholders::_1);
     assert(llvm::all_of(JT->Parents, isSibling) &&
-           "cannot re-use jump table of a different function");
+           "cannot reuse jump table of a different function");
     (void)isSibling;
     if (opts::Verbosity > 2) {
       this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
@@ -860,7 +860,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     return JT->getFirstLabel();
   }
 
-  // Re-use the existing symbol if possible.
+  // Reuse the existing symbol if possible.
   MCSymbol *JTLabel = nullptr;
   if (BinaryData *Object = getBinaryDataAtAddress(Address)) {
     if (!isInternalSymbolName(Object->getSymbol()->getName()))
@@ -1337,8 +1337,17 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress())
-        TargetFunction->addEntryPointAtOffset(Offset);
+      if (uint64_t Offset = Address - TargetFunction->getAddress()) {
+        if (!TargetFunction->isInConstantIsland(Address)) {
+          TargetFunction->addEntryPointAtOffset(Offset);
+        } else {
+          TargetFunction->setIgnored();
+          this->outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
+                       << Twine::utohexstr(Address)
+                       << " in constant island of function " << *TargetFunction
+                       << '\n';
+        }
+      }
 
       continue;
     }
@@ -1662,7 +1671,7 @@ void BinaryContext::preprocessDWODebugInfo() {
                "files.\n";
       }
       // Prevent failures when DWOName is already an absolute path.
-      sys::fs::make_absolute(DWOCompDir, AbsolutePath);
+      sys::path::make_absolute(DWOCompDir, AbsolutePath);
       DWARFUnit *DWOCU =
           DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
@@ -1904,6 +1913,9 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
     break;
   case MCCFIInstruction::OpGnuArgsSize:
     OS << "OpGnuArgsSize";
+    break;
+  case MCCFIInstruction::OpNegateRAState:
+    OS << "OpNegateRAState";
     break;
   default:
     OS << "Op#" << Operation;

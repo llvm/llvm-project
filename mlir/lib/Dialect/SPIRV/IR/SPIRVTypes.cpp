@@ -57,7 +57,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+        .DefaultUnreachable("Unhandled type");
   }
 
   void add(Type type) { add(cast<SPIRVType>(type)); }
@@ -107,7 +107,7 @@ public:
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
-        .Default([](SPIRVType) { llvm_unreachable("Unhandled type"); });
+        .DefaultUnreachable("Unhandled type");
   }
 
   void add(Type type) { add(cast<SPIRVType>(type)); }
@@ -198,8 +198,7 @@ Type CompositeType::getElementType(unsigned index) const {
       .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
       .Case<StructType>(
           [index](StructType type) { return type.getElementType(index); })
-      .Default(
-          [](Type) -> Type { llvm_unreachable("invalid composite type"); });
+      .DefaultUnreachable("Invalid composite type");
 }
 
 unsigned CompositeType::getNumElements() const {
@@ -207,9 +206,7 @@ unsigned CompositeType::getNumElements() const {
       .Case<ArrayType, StructType, TensorArmType, VectorType>(
           [](auto type) { return type.getNumElements(); })
       .Case<MatrixType>([](MatrixType type) { return type.getNumColumns(); })
-      .Default([](SPIRVType) -> unsigned {
-        llvm_unreachable("Invalid type for number of elements query");
-      });
+      .DefaultUnreachable("Invalid type for number of elements query");
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {

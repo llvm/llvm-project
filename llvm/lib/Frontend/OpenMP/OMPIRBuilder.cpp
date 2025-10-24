@@ -3623,7 +3623,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
   auto Size = ReductionInfos.size();
-  Type *PtrTy = PointerType::getUnqual(Ctx);
+  Type *PtrTy = PointerType::get(Ctx, Config.getDefaultTargetAS());
+  Type *FuncPtrTy =
+      Builder.getPtrTy(M.getDataLayout().getProgramAddressSpace());
   Type *RedArrayTy = ArrayType::get(PtrTy, Size);
   CodeGenIP = Builder.saveIP();
   Builder.restoreIP(AllocaIP);
@@ -3667,9 +3669,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
       Builder.getInt64(MaxDataSize * ReductionInfos.size());
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(SarFunc, FuncPtrTy);
     Value *WcFuncCast =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, PtrTy);
+        Builder.CreatePointerBitCastOrAddrSpaceCast(WcFunc, FuncPtrTy);
     Value *Args[] = {SrcLocInfo, ReductionDataSize, RL, SarFuncCast,
                      WcFuncCast};
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
@@ -10072,13 +10074,14 @@ void OpenMPIRBuilder::initializeTypes(Module &M) {
   LLVMContext &Ctx = M.getContext();
   StructType *T;
   unsigned DefaultTargetAS = Config.getDefaultTargetAS();
+  unsigned ProgramAS = M.getDataLayout().getProgramAddressSpace();
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
 #define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
   VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
   VarName##PtrTy = PointerType::get(Ctx, DefaultTargetAS);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
-  VarName##Ptr = PointerType::get(Ctx, DefaultTargetAS);
+  VarName##Ptr = PointerType::get(Ctx, ProgramAS);
 #define OMP_STRUCT_TYPE(VarName, StructName, Packed, ...)                      \
   T = StructType::getTypeByName(Ctx, StructName);                              \
   if (!T)                                                                      \
@@ -10313,17 +10316,19 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
+                                          vfs::FileSystem &VFS,
                                           StringRef ParentName) {
   sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
-  std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
-  // If the inode ID could not be determined, create a hash value
-  // the current file name and use that as an ID.
-  if (EC)
+  if (ErrorOr<vfs::Status> Status = VFS.status(std::get<0>(FileIDInfo))) {
+    ID = Status->getUniqueID();
+    FileID = Status->getUniqueID().getFile();
+  } else {
+    // If the inode ID could not be determined, create a hash value
+    // the current file name and use that as an ID.
     FileID = hash_value(std::get<0>(FileIDInfo));
-  else
-    FileID = ID.getFile();
+  }
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), FileID,
                                std::get<1>(FileIDInfo));

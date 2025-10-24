@@ -3580,9 +3580,8 @@ static bool CheckNonNullExpr(Sema &S, const Expr *Expr) {
   // As a special case, transparent unions initialized with zero are
   // considered null for the purposes of the nonnull attribute.
   if (const RecordType *UT = Expr->getType()->getAsUnionType();
-      UT && UT->getOriginalDecl()
-                ->getMostRecentDecl()
-                ->hasAttr<TransparentUnionAttr>()) {
+      UT &&
+      UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>()) {
     if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(Expr))
       if (const auto *ILE = dyn_cast<InitListExpr>(CLE->getInitializer()))
         Expr = ILE->getInit(0);
@@ -5954,6 +5953,9 @@ bool Sema::BuiltinAssumeAligned(CallExpr *TheCall) {
     if (Result > Sema::MaximumAlignment)
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
           << SecondArg->getSourceRange() << Sema::MaximumAlignment;
+
+    TheCall->setArg(1,
+                    ConstantExpr::Create(Context, SecondArg, APValue(Result)));
   }
 
   if (NumArgs > 2) {
@@ -6924,13 +6926,13 @@ StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
 
 FormatStringType Sema::GetFormatStringType(StringRef Flavor) {
   return llvm::StringSwitch<FormatStringType>(Flavor)
-      .Cases("gnu_scanf", "scanf", FormatStringType::Scanf)
-      .Cases("gnu_printf", "printf", "printf0", "syslog",
+      .Cases({"gnu_scanf", "scanf"}, FormatStringType::Scanf)
+      .Cases({"gnu_printf", "printf", "printf0", "syslog"},
              FormatStringType::Printf)
-      .Cases("NSString", "CFString", FormatStringType::NSString)
-      .Cases("gnu_strftime", "strftime", FormatStringType::Strftime)
-      .Cases("gnu_strfmon", "strfmon", FormatStringType::Strfmon)
-      .Cases("kprintf", "cmn_err", "vcmn_err", "zcmn_err",
+      .Cases({"NSString", "CFString"}, FormatStringType::NSString)
+      .Cases({"gnu_strftime", "strftime"}, FormatStringType::Strftime)
+      .Cases({"gnu_strfmon", "strfmon"}, FormatStringType::Strfmon)
+      .Cases({"kprintf", "cmn_err", "vcmn_err", "zcmn_err"},
              FormatStringType::Kprintf)
       .Case("freebsd_kprintf", FormatStringType::FreeBSDKPrintf)
       .Case("os_trace", FormatStringType::OSLog)
@@ -8808,8 +8810,10 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       case ArgType::Match:
       case ArgType::MatchPromotion:
       case ArgType::NoMatchPromotionTypeConfusion:
-      case ArgType::NoMatchSignedness:
         llvm_unreachable("expected non-matching");
+      case ArgType::NoMatchSignedness:
+        Diag = diag::warn_format_conversion_argument_type_mismatch_signedness;
+        break;
       case ArgType::NoMatchPedantic:
         Diag = diag::warn_format_conversion_argument_type_mismatch_pedantic;
         break;
@@ -12305,13 +12309,20 @@ static void DiagnoseMixedUnicodeImplicitConversion(Sema &S, const Type *Source,
                                                    SourceLocation CC) {
   assert(Source->isUnicodeCharacterType() && Target->isUnicodeCharacterType() &&
          Source != Target);
+
+  // Lone surrogates have a distinct representation in UTF-32.
+  // Converting between UTF-16 and UTF-32 codepoints seems very widespread,
+  // so don't warn on such conversion.
+  if (Source->isChar16Type() && Target->isChar32Type())
+    return;
+
   Expr::EvalResult Result;
   if (E->EvaluateAsInt(Result, S.getASTContext(), Expr::SE_AllowSideEffects,
                        S.isConstantEvaluatedContext())) {
     llvm::APSInt Value(32);
     Value = Result.Val.getInt();
     bool IsASCII = Value <= 0x7F;
-    bool IsBMP = Value <= 0xD7FF || (Value >= 0xE000 && Value <= 0xFFFF);
+    bool IsBMP = Value <= 0xDFFF || (Value >= 0xE000 && Value <= 0xFFFF);
     bool ConversionPreservesSemantics =
         IsASCII || (!Source->isChar8Type() && !Target->isChar8Type() && IsBMP);
 
@@ -12874,8 +12885,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
 
   if (const EnumType *SourceEnum = Source->getAsCanonical<EnumType>())
     if (const EnumType *TargetEnum = Target->getAsCanonical<EnumType>())
-      if (SourceEnum->getOriginalDecl()->hasNameForLinkage() &&
-          TargetEnum->getOriginalDecl()->hasNameForLinkage() &&
+      if (SourceEnum->getDecl()->hasNameForLinkage() &&
+          TargetEnum->getDecl()->hasNameForLinkage() &&
           SourceEnum != TargetEnum) {
         if (SourceMgr.isInSystemMacro(CC))
           return;
@@ -14881,13 +14892,11 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
       // Diag message shows element size in bits and in "bytes" (platform-
       // dependent CharUnits)
       DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
-                          PDiag(DiagID)
-                              << toString(index, 10, true) << AddrBits
-                              << (unsigned)ASTC.toBits(*ElemCharUnits)
-                              << toString(ElemBytes, 10, false)
-                              << toString(MaxElems, 10, false)
-                              << (unsigned)MaxElems.getLimitedValue(~0U)
-                              << IndexExpr->getSourceRange());
+                          PDiag(DiagID) << index << AddrBits
+                                        << (unsigned)ASTC.toBits(*ElemCharUnits)
+                                        << ElemBytes << MaxElems
+                                        << MaxElems.getZExtValue()
+                                        << IndexExpr->getSourceRange());
 
       const NamedDecl *ND = nullptr;
       // Try harder to find a NamedDecl to point at in the note.
@@ -14970,10 +14979,10 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     unsigned CastMsg = (!ASE || BaseType == EffectiveType) ? 0 : 1;
     QualType CastMsgTy = ASE ? ASE->getLHS()->getType() : QualType();
 
-    DiagRuntimeBehavior(
-        BaseExpr->getBeginLoc(), BaseExpr,
-        PDiag(DiagID) << toString(index, 10, true) << ArrayTy->desugar()
-                      << CastMsg << CastMsgTy << IndexExpr->getSourceRange());
+    DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
+                        PDiag(DiagID)
+                            << index << ArrayTy->desugar() << CastMsg
+                            << CastMsgTy << IndexExpr->getSourceRange());
   } else {
     unsigned DiagID = diag::warn_array_index_precedes_bounds;
     if (!ASE) {
@@ -14982,8 +14991,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     }
 
     DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
-                        PDiag(DiagID) << toString(index, 10, true)
-                                      << IndexExpr->getSourceRange());
+                        PDiag(DiagID) << index << IndexExpr->getSourceRange());
   }
 
   const NamedDecl *ND = nullptr;
@@ -15946,7 +15954,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   }
 
   // Check if the synthesized offset fulfills the alignment.
-  if (Offset % ExpectedAlignment != 0 ||
+  if (!Offset.isMultipleOf(ExpectedAlignment) ||
       // It may fulfill the offset it but the effective alignment may still be
       // lower than the expected expression alignment.
       CompleteObjectAlignment < ExpectedAlignment) {
@@ -16238,9 +16246,9 @@ getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
     return {};
   }
   uint64_t Dim = Value->getZExtValue();
-  if (!ConstantMatrixType::isDimensionValid(Dim)) {
+  if (Dim == 0 || Dim > S.Context.getLangOpts().MaxMatrixDimension) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_invalid_dimension)
-        << Name << ConstantMatrixType::getMaxElementsPerDimension();
+        << Name << S.Context.getLangOpts().MaxMatrixDimension;
     return {};
   }
   return Dim;

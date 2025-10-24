@@ -495,18 +495,7 @@ define void @test_first_order_recurrence_tried_to_scalarized(ptr %dst, i1 %c, i3
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
-; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
-; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ 4, [[SCALAR_PH]] ], [ [[IV]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 10, [[FOR]]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[SUB]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

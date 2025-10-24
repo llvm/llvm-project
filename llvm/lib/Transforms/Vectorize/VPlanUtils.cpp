@@ -8,11 +8,13 @@
 
 #include "VPlanUtils.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 
 using namespace llvm;
+using namespace llvm::VPlanPatternMatch;
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
   return all_of(Def->users(),
@@ -52,7 +54,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   return Expanded;
 }
 
-bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
+bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
 
@@ -63,16 +65,17 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
   };
 
   VPValue *A, *B;
-  using namespace VPlanPatternMatch;
 
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()), m_One(),
-                                     m_Specific(&Plan.getVF()))) ||
+           (match(A,
+                  m_ScalarIVSteps(
+                      m_Specific(Plan.getVectorLoopRegion()->getCanonicalIV()),
+                      m_One(), m_Specific(&Plan.getVF()))) ||
             IsWideCanonicalIV(A));
 
-  return match(V, m_Binary<Instruction::ICmp>(m_VPValue(A), m_VPValue(B))) &&
-         IsWideCanonicalIV(A) && B == Plan.getOrCreateBackedgeTakenCount();
+  return match(V, m_ICmp(m_VPValue(A), m_VPValue(B))) && IsWideCanonicalIV(A) &&
+         B == Plan.getBackedgeTakenCount();
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
@@ -90,7 +93,6 @@ const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
-  using namespace VPlanPatternMatch;
   // Live-ins are uniform.
   if (V->isLiveIn())
     return true;
@@ -103,7 +105,8 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV = R->getParent()->getPlan()->getCanonicalIV();
+  auto *CanonicalIV =
+      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
   // Canonical IV chain is uniform.
   if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
     return true;
@@ -111,12 +114,12 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case<VPDerivedIVRecipe>([](const auto *R) { return true; })
       .Case<VPReplicateRecipe>([](const auto *R) {
-        // Loads and stores that are uniform across VF lanes are handled by
-        // VPReplicateRecipe.IsUniform. They are also uniform across UF parts if
-        // all their operands are invariant.
-        // TODO: Further relax the restrictions.
+        // Be conservative about side-effects, except for the
+        // known-side-effecting assumes and stores, which we know will be
+        // uniform.
         return R->isSingleScalar() &&
-               (isa<LoadInst, StoreInst>(R->getUnderlyingValue())) &&
+               (!R->mayHaveSideEffects() ||
+                isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
       .Case<VPInstruction>([](const auto *VPI) {
@@ -159,7 +162,6 @@ std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(VPlan &Plan,
                                       SmallVectorImpl<VPRecipeBase *> &Recipes,
                                       SmallVectorImpl<VPRecipeBase *> &GEPs) {
-  using namespace llvm::VPlanPatternMatch;
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison
@@ -251,4 +253,30 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   }
 
   return UncountableCondition;
+}
+
+bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
+                            const VPDominatorTree &VPDT) {
+  auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
+  if (!VPBB)
+    return false;
+
+  // If VPBB is in a region R, VPBB is a loop header if R is a loop region with
+  // VPBB as its entry, i.e., free of predecessors.
+  if (auto *R = VPBB->getParent())
+    return !R->isReplicator() && !VPBB->hasPredecessors();
+
+  // A header dominates its second predecessor (the latch), with the other
+  // predecessor being the preheader
+  return VPB->getPredecessors().size() == 2 &&
+         VPDT.dominates(VPB, VPB->getPredecessors()[1]);
+}
+
+bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
+                           const VPDominatorTree &VPDT) {
+  // A latch has a header as its second successor, with its other successor
+  // leaving the loop. A preheader OTOH has a header as its first (and only)
+  // successor.
+  return VPB->getNumSuccessors() == 2 &&
+         VPBlockUtils::isHeader(VPB->getSuccessors()[1], VPDT);
 }

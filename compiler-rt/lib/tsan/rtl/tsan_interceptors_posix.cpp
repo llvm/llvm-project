@@ -31,6 +31,9 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
+#if SANITIZER_APPLE && !SANITIZER_GO
+#  include "tsan_flags.h"
+#endif
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
@@ -1130,6 +1133,22 @@ TSAN_INTERCEPTOR(int, pthread_create,
 
 TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
   SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
+#if SANITIZER_ANDROID
+  {
+    // In Bionic, if the target thread has already exited when pthread_detach is
+    // called, pthread_detach will call pthread_join internally to clean it up.
+    // In that case, the thread has already been consumed by the pthread_detach
+    // interceptor.
+    Tid tid = ctx->thread_registry.FindThread(
+        [](ThreadContextBase* tctx, void* arg) {
+          return tctx->user_id == (uptr)arg;
+        },
+        th);
+    if (tid == kInvalidTid) {
+      return REAL(pthread_join)(th, ret);
+    }
+  }
+#endif
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_join)(th, ret);
@@ -1649,6 +1668,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   SCOPED_INTERCEPTOR_RAW(pthread_once, o, f);
+#if SANITIZER_APPLE && !SANITIZER_GO
+  if (flags()->lock_during_write != kLockDuringAllWrites &&
+      cur_thread_init()->in_internal_write_call) {
+    // This is needed to make it through process launch without hanging
+    f();
+    return 0;
+  }
+#endif
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;
@@ -2412,7 +2439,11 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+// Bionic's pthread_create internally calls clone. When the CLONE_THREAD flag is
+// set, clone does not create a new process but a new thread. This is a
+// workaround for Android. Disabling the interception of clone solves the
+// problem in most scenarios.
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -3135,7 +3166,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID

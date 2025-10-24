@@ -429,7 +429,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Atomic0(AtomicSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Atomic1(AtomicSDNode *N) {
-  SDValue Op2 = GetPromotedInteger(N->getOperand(2));
+  SDValue Op2 = N->getOperand(2);
+  switch (TLI.getExtendForAtomicRMWArg(N->getOpcode())) {
+  case ISD::SIGN_EXTEND:
+    Op2 = SExtPromotedInteger(Op2);
+    break;
+  case ISD::ZERO_EXTEND:
+    Op2 = ZExtPromotedInteger(Op2);
+    break;
+  case ISD::ANY_EXTEND:
+    Op2 = GetPromotedInteger(Op2);
+    break;
+  default:
+    llvm_unreachable("Invalid atomic op extension");
+  }
   SDValue Res = DAG.getAtomic(N->getOpcode(), SDLoc(N),
                               N->getMemoryVT(),
                               N->getChain(), N->getBasePtr(),

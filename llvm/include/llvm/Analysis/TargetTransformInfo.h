@@ -1551,12 +1551,6 @@ public:
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
       const Instruction *I = nullptr) const;
 
-  /// \return The cost of VP Load and Store instructions.
-  LLVM_ABI InstructionCost getVPMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
   /// \return The cost of masked Load and Store instructions.
   LLVM_ABI InstructionCost getMaskedMemoryOpCost(
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
@@ -1618,11 +1612,6 @@ public:
       Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       bool UseMaskForCond = false, bool UseMaskForGaps = false) const;
-
-  /// \return The cost of vp intrinsic vp.load.ff.
-  LLVM_ABI InstructionCost getFirstFaultLoadCost(
-      Type *DataTy, Align Alignment,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// A helper function to determine the type of reduction algorithm used
   /// for a given \p Opcode and set of FastMathFlags \p FMF.

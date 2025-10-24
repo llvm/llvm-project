@@ -60,11 +60,13 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
+#include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Instrumentation/AllocToken.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -231,6 +233,17 @@ public:
                     BackendConsumer *BC);
 };
 } // namespace
+
+static AllocTokenOptions getAllocTokenOptions(const LangOptions &LangOpts,
+                                              const CodeGenOptions &CGOpts) {
+  AllocTokenOptions Opts;
+  if (LangOpts.AllocTokenMode)
+    Opts.Mode = *LangOpts.AllocTokenMode;
+  Opts.MaxTokens = LangOpts.AllocTokenMax;
+  Opts.Extended = CGOpts.SanitizeAllocTokenExtended;
+  Opts.FastABI = CGOpts.SanitizeAllocTokenFastABI;
+  return Opts;
+}
 
 static SanitizerCoverageOptions
 getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
@@ -420,12 +433,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.NoInfsFPMath = LangOpts.NoHonorInfs;
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
-  Options.UnsafeFPMath = LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-                         LangOpts.NoSignedZero && LangOpts.ApproxFunc &&
-                         (LangOpts.getDefaultFPContractMode() ==
-                              LangOptions::FPModeKind::FPM_Fast ||
-                          LangOpts.getDefaultFPContractMode() ==
-                              LangOptions::FPModeKind::FPM_FastHonorPragmas);
 
   Options.BBAddrMap = CodeGenOpts.BBAddrMap;
   Options.BBSections =
@@ -463,6 +470,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.StackUsageOutput = CodeGenOpts.StackUsageOutput;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
+  Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
   Options.EnableAIXExtendedAltivecABI = LangOpts.EnableAIXExtendedAltivecABI;
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
@@ -789,6 +797,16 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles,
                                         PB.getVirtualFileSystemPtr()));
     }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::AllocToken)) {
+      if (Level == OptimizationLevel::O0) {
+        // The default pass builder only infers libcall function attrs when
+        // optimizing, so we insert it here because we need it for accurate
+        // memory allocation function detection.
+        MPM.addPass(InferFunctionAttrsPass());
+      }
+      MPM.addPass(AllocTokenPass(getAllocTokenOptions(LangOpts, CodeGenOpts)));
+    }
   };
   if (ClSanitizeOnOptimizerEarlyEP) {
     PB.registerOptimizerEarlyEPCallback(
@@ -1090,8 +1108,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (std::optional<GCOVOptions> Options =
             getGCOVOptions(CodeGenOpts, LangOpts))
       PB.registerPipelineStartEPCallback(
-          [Options](ModulePassManager &MPM, OptimizationLevel Level) {
-            MPM.addPass(GCOVProfilerPass(*Options));
+          [this, Options](ModulePassManager &MPM, OptimizationLevel Level) {
+            MPM.addPass(
+                GCOVProfilerPass(*Options, CI.getVirtualFileSystemPtr()));
           });
     if (std::optional<InstrProfOptions> Options =
             getInstrProfOptions(CodeGenOpts, LangOpts))
@@ -1178,7 +1197,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       }
     }
 
-    if (shouldEmitUnifiedLTOModueFlag())
+    if (shouldEmitUnifiedLTOModueFlag() &&
+        !TheModule->getModuleFlag("UnifiedLTO"))
       TheModule->addModuleFlag(llvm::Module::Error, "UnifiedLTO", uint32_t(1));
   }
 
@@ -1476,13 +1496,13 @@ void clang::EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
 }
 
 void clang::EmbedObject(llvm::Module *M, const CodeGenOptions &CGOpts,
-                        DiagnosticsEngine &Diags) {
+                        llvm::vfs::FileSystem &VFS, DiagnosticsEngine &Diags) {
   if (CGOpts.OffloadObjects.empty())
     return;
 
   for (StringRef OffloadObject : CGOpts.OffloadObjects) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> ObjectOrErr =
-        llvm::MemoryBuffer::getFileOrSTDIN(OffloadObject);
+        VFS.getBufferForFile(OffloadObject);
     if (ObjectOrErr.getError()) {
       auto DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
                                           "could not open '%0' for embedding");

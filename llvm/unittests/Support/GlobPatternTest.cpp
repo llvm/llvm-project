@@ -257,6 +257,78 @@ TEST_F(GlobPatternTest, NUL) {
   }
 }
 
+TEST_F(GlobPatternTest, PrefixSuffix) {
+  auto Pat = GlobPattern::create("");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("abcd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("*abcd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("abcd", Pat->suffix());
+
+  Pat = GlobPattern::create("abcd*");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("abcd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("ab*cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab?cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab[n]cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab{}cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab{cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+
+  Pat = GlobPattern::create("ab]cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab]cd", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+
+  Pat = GlobPattern::create("ab\\\\cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("d", Pat->suffix());
+
+  Pat = GlobPattern::create("ab?cd?");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("ab", Pat->prefix());
+  EXPECT_EQ("", Pat->suffix());
+
+  Pat = GlobPattern::create("?ab?cd");
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_EQ("", Pat->prefix());
+  EXPECT_EQ("cd", Pat->suffix());
+}
+
 TEST_F(GlobPatternTest, Pathological) {
   std::string P, S(40, 'a');
   StringRef Pieces[] = {"a*", "[ba]*", "{b*,a*}*"};

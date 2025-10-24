@@ -1406,7 +1406,7 @@ public:
   /// any.
   LLVM_ABI static TargetRegionEntryInfo
   getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
-                           StringRef ParentName = "");
+                           vfs::FileSystem &VFS, StringRef ParentName = "");
 
   /// Enum class for the RedctionGen CallBack type to be used.
   enum class ReductionGenCBKind { Clang, MLIR };
@@ -4001,15 +4001,17 @@ public:
 
   /// Keeps track of value of iteration variable for input/scan loop to be
   /// used for Scan directive lowering
-  llvm::Value *IV;
+  llvm::Value *IV = nullptr;
 
   /// Stores the span of canonical loop being lowered to be used for temporary
   /// buffer allocation or Finalization.
-  llvm::Value *Span;
+  llvm::Value *Span = nullptr;
 
   ScanInfo() {
     ScanBuffPtrs = new llvm::SmallDenseMap<llvm::Value *, llvm::Value *>();
   }
+  ScanInfo(ScanInfo &) = delete;
+  ScanInfo &operator=(const ScanInfo &) = delete;
 
   ~ScanInfo() { delete (ScanBuffPtrs); }
 };

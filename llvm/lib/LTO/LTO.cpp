@@ -75,9 +75,10 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 
+namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
-
 extern cl::opt<bool> ForceImportAll;
+} // end namespace llvm
 
 namespace llvm {
 /// Enable global value internalization in LTO.
@@ -456,7 +457,7 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+    for (auto &S : I.second.getSummaryList())
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
@@ -475,6 +476,10 @@ static void thinLTOInternalizeAndPromoteGUID(
                      [](const std::unique_ptr<GlobalValueSummary> &Summary) {
                        return !GlobalValue::isLocalLinkage(Summary->linkage());
                      });
+
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
 
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
@@ -550,9 +555,11 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  assert(!Index.withInternalizeAndPromote());
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
                                      isPrevailing);
+  Index.setWithInternalizeAndPromote();
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -1181,7 +1188,7 @@ Error LTO::checkPartiallySplit() {
   // Otherwise check if there are any recorded in the combined summary from the
   // ThinLTO modules.
   for (auto &P : ThinLTO.CombinedIndex) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;
@@ -1256,38 +1263,6 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   return Result;
 }
 
-void lto::updateMemProfAttributes(Module &Mod,
-                                  const ModuleSummaryIndex &Index) {
-  llvm::TimeTraceScope timeScope("LTO update memprof attributes");
-  if (Index.withSupportsHotColdNew())
-    return;
-
-  // The profile matcher applies hotness attributes directly for allocations,
-  // and those will cause us to generate calls to the hot/cold interfaces
-  // unconditionally. If supports-hot-cold-new was not enabled in the LTO
-  // link then assume we don't want these calls (e.g. not linking with
-  // the appropriate library, or otherwise trying to disable this behavior).
-  for (auto &F : Mod) {
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        auto *CI = dyn_cast<CallBase>(&I);
-        if (!CI)
-          continue;
-        if (CI->hasFnAttr("memprof"))
-          CI->removeFnAttr("memprof");
-        // Strip off all memprof metadata as it is no longer needed.
-        // Importantly, this avoids the addition of new memprof attributes
-        // after inlining propagation.
-        // TODO: If we support additional types of MemProf metadata beyond hot
-        // and cold, we will need to update the metadata based on the allocator
-        // APIs supported instead of completely stripping all.
-        CI->setMetadata(LLVMContext::MD_memprof, nullptr);
-        CI->setMetadata(LLVMContext::MD_callsite, nullptr);
-      }
-    }
-  }
-}
-
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
   LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
@@ -1344,8 +1319,6 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       GV->setName(I.first);
     }
   }
-
-  updateMemProfAttributes(*RegularLTO.CombinedModule, ThinLTO.CombinedIndex);
 
   bool WholeProgramVisibilityEnabledInLTO =
       Conf.HasWholeProgramVisibility &&

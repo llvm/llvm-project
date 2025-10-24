@@ -147,11 +147,11 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP]], i64 1
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[NEXT_GEP]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; CHECK-NEXT:    store <4 x i8> [[TMP6]], ptr [[TMP4]], align 1
@@ -551,12 +551,12 @@ define i64 @ivopt_widen_ptr_indvar_2(ptr noalias %a, i64 %stride, i64 %n) {
 ; STRIDED-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; STRIDED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP21]], align 8
 ; STRIDED-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 0
-; STRIDED-NEXT:    store i64 [[TMP23]], ptr [[NEXT_GEP]], align 8
 ; STRIDED-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 1
-; STRIDED-NEXT:    store i64 [[TMP24]], ptr [[NEXT_GEP1]], align 8
 ; STRIDED-NEXT:    [[TMP16:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 2
-; STRIDED-NEXT:    store i64 [[TMP16]], ptr [[NEXT_GEP2]], align 8
 ; STRIDED-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i32 3
+; STRIDED-NEXT:    store i64 [[TMP23]], ptr [[NEXT_GEP]], align 8
+; STRIDED-NEXT:    store i64 [[TMP24]], ptr [[NEXT_GEP1]], align 8
+; STRIDED-NEXT:    store i64 [[TMP16]], ptr [[NEXT_GEP2]], align 8
 ; STRIDED-NEXT:    store i64 [[TMP25]], ptr [[NEXT_GEP3]], align 8
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; STRIDED-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
