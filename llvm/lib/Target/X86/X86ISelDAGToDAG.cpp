@@ -4737,20 +4737,27 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
     return SDValue();
   };
 
+  SDValue N0, N1, A, FoldableOp;
+
   // Identify and (optionally) peel an outer NOT that wraps a pure logic tree
   auto tryPeelOuterNotWrappingLogic = [&](SDNode *Op) {
     if (Op->getOpcode() == ISD::XOR && Op->hasOneUse() &&
         ISD::isBuildVectorAllOnes(Op->getOperand(1).getNode())) {
       SDValue InnerOp = Op->getOperand(0);
 
-      if (!getFoldableLogicOp(InnerOp)) {
+      if (!getFoldableLogicOp(InnerOp))
         return SDValue();
-      }
 
-      SDValue InnerN0 = InnerOp.getOperand(0);
-      SDValue InnerN1 = InnerOp.getOperand(1);
-      if (getFoldableLogicOp(InnerN1) || getFoldableLogicOp(InnerN0))
+      N0 = InnerOp.getOperand(0);
+      N1 = InnerOp.getOperand(1);
+      if ((FoldableOp = getFoldableLogicOp(N1))) {
+        A = N0;
         return InnerOp;
+      }
+      if ((FoldableOp = getFoldableLogicOp(N0))) {
+        A = N1;
+        return InnerOp;
+      }
     }
     return SDValue();
   };
@@ -4760,18 +4767,17 @@ bool X86DAGToDAGISel::tryVPTERNLOG(SDNode *N) {
   if (SDValue InnerOp = tryPeelOuterNotWrappingLogic(N)) {
     PeeledOuterNot = true;
     N = InnerOp.getNode();
+  } else {
+    N0 = N->getOperand(0);
+    N1 = N->getOperand(1);
+
+    if ((FoldableOp = getFoldableLogicOp(N1)))
+      A = N0;
+    else if ((FoldableOp = getFoldableLogicOp(N0)))
+      A = N1;
+    else
+      return false;
   }
-
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  SDValue A, FoldableOp;
-  if ((FoldableOp = getFoldableLogicOp(N1))) {
-    A = N0;
-  } else if ((FoldableOp = getFoldableLogicOp(N0))) {
-    A = N1;
-  } else
-    return false;
 
   SDValue B = FoldableOp.getOperand(0);
   SDValue C = FoldableOp.getOperand(1);
