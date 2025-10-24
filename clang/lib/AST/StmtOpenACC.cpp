@@ -387,9 +387,6 @@ OpenACCAtomicConstruct::getAssociatedStmtInfo() const {
   case OpenACCAtomicKind::None:
   case OpenACCAtomicKind::Update: {
     std::pair<bool, const Expr *> UnaryArgs = getUnaryOpArgs(AssocStmt);
-
-    // TODO: ERICH: Figure out what we are going to do to figure out this is an
-    // inc/dec?
     if (UnaryArgs.first)
       return {/*v=*/nullptr, UnaryArgs.second->IgnoreImpCasts(),
               /*expr=*/nullptr};
