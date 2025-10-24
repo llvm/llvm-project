@@ -85,23 +85,6 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   if (!m_show_inlined_frames)
     return;
 
-  GetFramesUpTo(0, DoNotAllowInterruption);
-  if (m_frames.empty())
-    return;
-  if (!m_frames[0]->IsInlined()) {
-    m_current_inlined_depth = UINT32_MAX;
-    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-    Log *log = GetLog(LLDBLog::Step);
-    if (log && log->GetVerbose())
-      LLDB_LOGF(
-          log,
-          "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
-    return;
-  }
-
-  m_current_inlined_pc = LLDB_INVALID_ADDRESS;
-  m_current_inlined_depth = UINT32_MAX;
-
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   if (!stop_info_sp)
     return;
@@ -111,6 +94,7 @@ void StackFrameList::ResetCurrentInlinedDepth() {
   // We're only adjusting the inlined stack here.
   Log *log = GetLog(LLDBLog::Step);
   if (inline_depth) {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
     m_current_inlined_depth = *inline_depth;
     m_current_inlined_pc = m_thread.GetRegisterContext()->GetPC();
 
@@ -120,6 +104,9 @@ void StackFrameList::ResetCurrentInlinedDepth() {
                 "depth: %d 0x%" PRIx64 ".\n",
                 m_current_inlined_depth, m_current_inlined_pc);
   } else {
+    std::lock_guard<std::mutex> guard(m_inlined_depth_mutex);
+    m_current_inlined_pc = LLDB_INVALID_ADDRESS;
+    m_current_inlined_depth = UINT32_MAX;    
     if (log && log->GetVerbose())
       LLDB_LOGF(
           log,
@@ -689,6 +676,13 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   return frame_sp;
 }
 
+static bool CompareStackID(const StackFrameSP &stack_sp,
+                           const StackID &stack_id) {
+  ProcessSP process_sp = stack_sp->CalculateProcess();
+  assert(process_sp && "StackFrames must have a process");
+  return StackID::IsYounger(stack_sp->GetStackID(), stack_id, *(process_sp.get()));
+}
+
 StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
   StackFrameSP frame_sp;
 
@@ -698,17 +692,11 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
       std::shared_lock<std::shared_mutex> guard(m_list_mutex);
-      // Do a search in case the stack frame is already in our cache.
-      collection::const_iterator begin = m_frames.begin();
-      collection::const_iterator end = m_frames.end();
-      if (begin != end) {
-        collection::const_iterator pos =
-            std::find_if(begin, end, [&](StackFrameSP frame_sp) {
-              return frame_sp->GetStackID() == stack_id;
-            });
-        if (pos != end)
-          return *pos;
-      } 
+      // Do a binary search in case the stack frame is already in our cache
+      collection::const_iterator pos =
+          llvm::lower_bound(m_frames, stack_id, CompareStackID);
+      if (pos != m_frames.end() && (*pos)->GetStackID() == stack_id)
+        return *pos;
     }
     // If we needed to add more frames, we would get to here.
     do {
@@ -762,7 +750,7 @@ void StackFrameList::SelectMostRelevantFrame() {
   }
   LLDB_LOG(log, "Frame #0 not recognized");
 
-  // If this thread has a non-trivial StopInof, then let it suggest
+  // If this thread has a non-trivial StopInfo, then let it suggest
   // a most relevant frame:
   StopInfoSP stop_info_sp = m_thread.GetStopInfo();
   uint32_t stack_idx = 0;
