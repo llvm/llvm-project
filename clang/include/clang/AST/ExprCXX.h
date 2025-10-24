@@ -5501,8 +5501,8 @@ public:
   }
 };
 
-/// Represents a C++26 reflect expression [expr.reflect]. The operand of of the expression
-/// is either a:
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of of the
+/// expression is either a:
 ///  - :: (global namespace)
 ///  - a reflection-name
 ///  - a type-id
