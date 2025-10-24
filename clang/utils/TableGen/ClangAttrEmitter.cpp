@@ -5050,20 +5050,14 @@ void EmitClangAttrIsTypeDependent(const RecordKeeper &Records,
                                   raw_ostream &OS) {
   emitSourceFileHeader("Attribute is type dependent", OS, Records);
 
-  std::set<StringRef> Seen;
-  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
-    const Record &Attr = *A;
-    if (Attr.getValueAsBit("IsTypeDependent")) {
-      Seen.insert(Attr.getName());
-    }
-  }
-
   OS << "void checkAttrIsTypeDependent(Expr *E, Decl *D, const Attr *A) {\n";
   OS << "  switch (A->getKind()) {\n";
-  for (const StringRef &SeenAttr : Seen) {
-    OS << "  case attr::" << SeenAttr << ":\n";
-    OS << "    ActOn" << SeenAttr << "Attr(E, D, A);\n";
-    OS << "    break;\n";
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    if (A->getValueAsBit("IsTypeDependent")) {
+      OS << "  case attr::" << A->getName() << ":\n";
+      OS << "    ActOn" << A->getName() << "Attr(E, D, A);\n";
+      OS << "    break;\n";
+    }
   }
   OS << "  default:\n";
   OS << "    break;\n";
