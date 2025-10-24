@@ -238,7 +238,11 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
 }
 
 class GPRRegisterClass<dag regList>
-    : RISCVRegisterClass<[XLenVT, XLenFVT], 32, regList> {
+    : RISCVRegisterClass<[XLenVT, XLenFVT,
+                          // P extension packed vector types:
+                          // RV32: v2i16, v4i8
+                          // RV64: v2i32, v4i16, v8i8
+                          v2i16, v4i8, v2i32, v4i16, v8i8], 32, regList> {
   let RegInfos = XLenRI;
 }
 
