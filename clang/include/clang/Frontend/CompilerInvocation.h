@@ -434,7 +434,8 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS = nullptr);
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createVFSFromOverlayFiles(ArrayRef<std::string> VFSOverlayFiles,

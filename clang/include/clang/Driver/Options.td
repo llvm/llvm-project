@@ -3439,7 +3439,8 @@ defm declspec : BoolOption<"f", "declspec",
 def fmodules_cache_path : Joined<["-"], "fmodules-cache-path=">, Group<i_Group>,
   Flags<[]>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<directory>">,
-  HelpText<"Specify the module cache path">;
+  HelpText<"Specify the module cache path">,
+  MarshallingInfoString<HeaderSearchOpts<"ModuleCachePath">>;
 def fmodules_user_build_path : Separate<["-"], "fmodules-user-build-path">, Group<i_Group>,
   Flags<[]>, Visibility<[ClangOption, CC1Option]>,
   MetaVarName<"<directory>">,
@@ -8123,6 +8124,11 @@ def fprofile_instrument_path_EQ : Joined<["-"], "fprofile-instrument-path=">,
     HelpText<"Generate instrumented code to collect execution counts into "
              "<file> (overridden by LLVM_PROFILE_FILE env var)">,
     MarshallingInfoString<CodeGenOpts<"InstrProfileOutput">>;
+def fprofile_instrument_use_EQ : Joined<["-"], "fprofile-instrument-use=">,
+    HelpText<"Enable PGO use instrumentation">, Values<"none,clang,llvm,csllvm,sample-coldcov">,
+    NormalizedValuesScope<"llvm::driver::ProfileInstrKind">,
+    NormalizedValues<["ProfileNone", "ProfileClangInstr", "ProfileIRInstr", "ProfileCSIRInstr", "ProfileIRSampleColdCov"]>,
+    MarshallingInfoEnum<CodeGenOpts<"ProfileUse">, "ProfileNone">;
 def fprofile_instrument_use_path_EQ :
     Joined<["-"], "fprofile-instrument-use-path=">,
     HelpText<"Specify the profile path in PGO use compilation">,
@@ -8926,7 +8932,8 @@ def fopenmp_is_target_device : Flag<["-"], "fopenmp-is-target-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
 def : Flag<["-"], "fopenmp-is-device">, Alias<fopenmp_is_target_device>;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
-  HelpText<"Path to the IR file produced by the frontend for the host.">;
+  HelpText<"Path to the IR file produced by the frontend for the host.">,
+  MarshallingInfoString<LangOpts<"OMPHostIRFile">>;
 
 } // let Visibility = [CC1Option, FC1Option]
 

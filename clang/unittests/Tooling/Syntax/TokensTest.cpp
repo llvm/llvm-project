@@ -134,6 +134,7 @@ public:
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler(std::move(CI));
     Compiler.setDiagnostics(Diags.get());
+    Compiler.setVirtualFileSystem(FS);
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());
 

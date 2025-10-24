@@ -271,7 +271,7 @@ static std::string fixupRelativePath(const std::string &Path, FileManager &FM,
   // Apply "normal" working directory.
   if (!WorkingDir.empty()) {
     SmallString<128> Tmp(Path);
-    llvm::sys::fs::make_absolute(WorkingDir, Tmp);
+    llvm::sys::path::make_absolute(WorkingDir, Tmp);
     return std::string(Tmp);
   }
   return Path;
@@ -296,7 +296,7 @@ std::optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   if (!CacheCompileJob)
     return std::nullopt;
 
-  std::tie(CAS, Cache) = Clang.createCASDatabases();
+  std::tie(CAS, Cache) = Clang.getOrCreateCASDatabases();
   if (!CAS || !Cache)
     return 1; // Exit with error!
 
@@ -613,8 +613,8 @@ Expected<std::optional<int>> CompileJobCache::replayCachedResult(
     std::optional<llvm::cas::CASID> *OutMCOutputID) {
   CompilerInstance Clang(std::move(Invok));
   llvm::raw_svector_ostream DiagOS(DiagText);
+  Clang.createVirtualFileSystem(llvm::vfs::getRealFileSystem());
   Clang.createDiagnostics(
-      *llvm::vfs::getRealFileSystem(),
       new TextDiagnosticPrinter(DiagOS, Clang.getDiagnosticOpts()));
   Clang.setVerboseOutputStream(DiagOS);
 

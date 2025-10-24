@@ -36,10 +36,6 @@ class StringRef;
 class AAManager;
 class TargetMachine;
 class ModuleSummaryIndex;
-template <typename T> class IntrusiveRefCntPtr;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
@@ -113,6 +109,7 @@ class PassBuilder {
   PipelineTuningOptions PTO;
   std::optional<PGOOptions> PGOOpt;
   PassInstrumentationCallbacks *PIC;
+  IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -132,7 +129,8 @@ public:
       TargetMachine *TM = nullptr,
       PipelineTuningOptions PTO = PipelineTuningOptions(),
       std::optional<PGOOptions> PGOOpt = std::nullopt,
-      PassInstrumentationCallbacks *PIC = nullptr);
+      PassInstrumentationCallbacks *PIC = nullptr,
+      IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem());
 
   /// Cross register the analysis managers through their proxies.
   ///
@@ -634,13 +632,17 @@ public:
                                        bool RunProfileGen, bool IsCS,
                                        bool AtomicCounterUpdate,
                                        std::string ProfileFile,
-                                       std::string ProfileRemappingFile,
-                                       IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                                       std::string ProfileRemappingFile);
 
   /// Returns PIC. External libraries can use this to register pass
   /// instrumentation callbacks.
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
+  }
+
+  /// Returns the virtual file system.
+  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystemPtr() const {
+    return FS;
   }
 
   // Invoke the callbacks registered for the various extension points.
@@ -774,8 +776,7 @@ private:
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
-                         std::string ProfileRemappingFile,
-                         IntrusiveRefCntPtr<vfs::FileSystem> FS);
+                         std::string ProfileRemappingFile);
   void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
   bool isInstrumentedPGOUse() const;

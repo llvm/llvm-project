@@ -904,7 +904,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         InputFile, CI.getPCHContainerReader(), ASTUnit::LoadPreprocessorOnly,
-        nullptr, ASTDiags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts());
+        CI.getVirtualFileSystemPtr(), nullptr, ASTDiags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts());
     if (!AST)
       return false;
 
@@ -916,8 +917,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getFileManager().getVirtualFileSystemPtr());
     CI.setFileManager(&AST->getFileManager());
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
     // Preload all the module files loaded transitively by the AST unit. Also
@@ -970,9 +972,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     StringRef InputFile = Input.getFile();
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
-        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything, nullptr,
-        Diags, CI.getFileSystemOpts(), CI.getHeaderSearchOpts(),
-        &CI.getLangOpts());
+        InputFile, CI.getPCHContainerReader(), ASTUnit::LoadEverything,
+        CI.getVirtualFileSystemPtr(), nullptr, Diags, CI.getFileSystemOpts(),
+        CI.getHeaderSearchOpts(), &CI.getLangOpts());
 
     if (!AST)
       return false;
@@ -983,6 +985,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
+    CI.setVirtualFileSystem(AST->getVirtualFileSystemPtr());
     CI.setFileManager(&AST->getFileManager());
     CI.setSourceManager(&AST->getSourceManager());
     CI.setPreprocessor(AST->getPreprocessorPtr());
@@ -1006,14 +1009,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // Set up the file and source managers, if needed.
-  if (!CI.hasFileManager()) {
-    if (!CI.createFileManager()) {
-      return false;
-    }
-  }
+  // Set up the file system, file and source managers, if needed.
+  if (!CI.hasVirtualFileSystem())
+    CI.createVirtualFileSystem();
+  if (!CI.hasFileManager())
+    CI.createFileManager();
   if (!CI.hasSourceManager()) {
-    CI.createSourceManager(CI.getFileManager());
+    CI.createSourceManager();
     if (CI.getDiagnosticOpts().getFormat() == DiagnosticOptions::SARIF) {
       static_cast<SARIFDiagnosticPrinter *>(&CI.getDiagnosticClient())
           ->setSarifWriter(

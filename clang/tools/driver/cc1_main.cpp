@@ -275,8 +275,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     Clang->getHeaderSearchOpts().ResourceDir =
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
+  /// Create the actual file system.
+  Clang->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DiagsBuffer);
+
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
+  Clang->createDiagnostics();
   if (!Clang->hasDiagnostics())
     return 1;
 
@@ -347,8 +350,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     // options are stored in the compiler invocation and we can recreate the VFS
     // from the compiler invocation.
     if (!Clang->hasFileManager())
-      Clang->createFileManager(createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics()));
+      Clang->createFileManager();
 
     llvm::vfs::OnDiskOutputBackend Backend;
     if (std::optional<llvm::vfs::OutputFile> profilerOutput =

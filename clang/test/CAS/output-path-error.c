@@ -19,4 +19,4 @@
 // RUN: cat %t/output.txt | FileCheck %s --check-prefix=ERROR
 
 // CACHE-MISS: remark: compile job cache miss
-// ERROR: fatal error: CAS missing expected root-id
+// ERROR: fatal error: CAS filesystem cannot be initialized from root-id 'llvmcas://{{.*}}': cannot get reference to root FS

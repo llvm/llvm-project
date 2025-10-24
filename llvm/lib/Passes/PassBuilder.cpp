@@ -479,8 +479,9 @@ public:
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,
                          std::optional<PGOOptions> PGOOpt,
-                         PassInstrumentationCallbacks *PIC)
-    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC) {
+                         PassInstrumentationCallbacks *PIC,
+                         IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : TM(TM), PTO(PTO), PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);
   if (PIC) {

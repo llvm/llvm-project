@@ -1373,15 +1373,6 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
   if (AnOpts.ShouldTrackConditionsDebug && !AnOpts.ShouldTrackConditions)
     Diags->Report(diag::err_analyzer_config_invalid_input)
         << "track-conditions-debug" << "'track-conditions' to also be enabled";
-
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
-                                                           << "a filename";
-
-  if (!AnOpts.ModelPath.empty() &&
-      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
-    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
-                                                           << "a filename";
 }
 
 /// Generate a remark argument. This is an inverse of `ParseOptimizationRemark`.
@@ -1536,9 +1527,10 @@ static std::string serializeXRayInstrumentationBundle(const XRayInstrSet &S) {
 static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
              const CASOptions &CASOpts, DiagnosticsEngine &Diags,
+             IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
              std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
   if (FSOpts.CASFileSystemRootID.empty() && FEOpts.CASIncludeTreeID.empty())
-    return llvm::vfs::getRealFileSystem();
+    return BaseFS;
 
   // If no CAS was provided, create one with CASOptions.
   std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
@@ -1627,34 +1619,6 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
           << CWD;
 
   return FS;
-}
-
-// Set the profile kind using fprofile-instrument-use-path.
-static void setPGOUseInstrumentor(CodeGenOptions &Opts,
-                                  const Twine &ProfileName,
-                                  llvm::vfs::FileSystem &FS,
-                                  DiagnosticsEngine &Diags) {
-  auto ReaderOrErr = llvm::IndexedInstrProfReader::create(ProfileName, FS);
-  if (auto E = ReaderOrErr.takeError()) {
-    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "Error in reading profile %0: %1");
-    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-      Diags.Report(DiagID) << ProfileName.str() << EI.message();
-    });
-    return;
-  }
-  std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader =
-    std::move(ReaderOrErr.get());
-  // Currently memprof profiles are only added at the IR level. Mark the profile
-  // type as IR in that case as well and the subsequent matching needs to detect
-  // which is available (might be one or both).
-  if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
-    if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
-    else
-      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
-  } else
-    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
 }
 
 void CompilerInvocation::setDefaultPointerAuthOptions(
@@ -2220,11 +2184,6 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         StringRef(A->getValue()) == "simple"
             ? llvm::codegenoptions::DebugTemplateNamesKind::Simple
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
-  }
-
-  if (!Opts.ProfileInstrumentUsePath.empty()) {
-    auto FS = createBaseFS(FSOpts, FEOpts, CASOpts, Diags, nullptr);
-    setPGOUseInstrumentor(Opts, Opts.ProfileInstrumentUsePath, *FS, Diags);
   }
 
   if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
@@ -3604,9 +3563,6 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
   if (Opts.UseLibcxx)
     GenerateArg(Consumer, OPT_stdlib_EQ, "libc++");
 
-  if (!Opts.ModuleCachePath.empty())
-    GenerateArg(Consumer, OPT_fmodules_cache_path, Opts.ModuleCachePath);
-
   for (const auto &File : Opts.PrebuiltModuleFiles)
     GenerateArg(Consumer, OPT_fmodule_file, File.first + "=" + File.second);
 
@@ -3709,8 +3665,7 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
-                                  DiagnosticsEngine &Diags,
-                                  const std::string &WorkingDir) {
+                                  DiagnosticsEngine &Diags) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   HeaderSearchOptions *HeaderSearchOpts = &Opts;
@@ -3722,17 +3677,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   if (const Arg *A = Args.getLastArg(OPT_stdlib_EQ))
     Opts.UseLibcxx = (strcmp(A->getValue(), "libc++") == 0);
-
-  // Canonicalize -fmodules-cache-path before storing it.
-  SmallString<128> P(Args.getLastArgValue(OPT_fmodules_cache_path));
-  if (!(P.empty() || llvm::sys::path::is_absolute(P))) {
-    if (WorkingDir.empty())
-      llvm::sys::fs::make_absolute(P);
-    else
-      llvm::sys::fs::make_absolute(WorkingDir, P);
-  }
-  llvm::sys::path::remove_dots(P);
-  Opts.ModuleCachePath = std::string(P);
 
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
@@ -4290,9 +4234,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
         [&OS](const llvm::Triple &T) { OS << T.str(); }, ",");
     GenerateArg(Consumer, OPT_offload_targets_EQ, Targets);
   }
-
-  if (!Opts.OMPHostIRFile.empty())
-    GenerateArg(Consumer, OPT_fopenmp_host_ir_file_path, Opts.OMPHostIRFile);
 
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
@@ -4917,15 +4858,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       else
         Opts.OMPTargetTriples.push_back(TT);
     }
-  }
-
-  // Get OpenMP host file path if any and report if a non existent file is
-  // found
-  if (Arg *A = Args.getLastArg(options::OPT_fopenmp_host_ir_file_path)) {
-    Opts.OMPHostIRFile = A->getValue();
-    if (!llvm::sys::fs::exists(Opts.OMPHostIRFile))
-      Diags.Report(diag::err_drv_omp_host_ir_file_not_found)
-          << Opts.OMPHostIRFile;
   }
 
   // Set CUDA mode for OpenMP target NVPTX/AMDGCN if specified in options
@@ -5600,8 +5532,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
-  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
-                        Res.getFileSystemOpts().WorkingDir);
+  ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags);
   if (Res.getFrontendOpts().GenReducedBMI ||
       Res.getFrontendOpts().ProgramAction ==
           frontend::GenerateReducedModuleInterface ||
@@ -5696,6 +5627,11 @@ bool CompilerInvocation::CreateFromArgsImpl(
     Res.getCodeGenOpts().Argv0 = Argv0;
     append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
   }
+
+  if (!Res.getCodeGenOpts().ProfileInstrumentUsePath.empty() &&
+      Res.getCodeGenOpts().getProfileUse() ==
+          llvm::driver::ProfileInstrKind::ProfileNone)
+    Diags.Report(diag::err_drv_profile_instrument_use_path_with_no_kind);
 
   FixupInvocation(Res, Diags, Args, DashX);
 
@@ -5935,17 +5871,19 @@ clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
   return createVFSFromCompilerInvocation(
-      CI, Diags,
-      createBaseFS(CI.getFileSystemOpts(), CI.getFrontendOpts(),
-                   CI.getCASOpts(), Diags, std::move(OverrideCAS)));
+      CI, Diags, llvm::vfs::getRealFileSystem(), std::move(OverrideCAS));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  return createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
-                                   Diags, std::move(BaseFS));
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS) {
+  return createVFSFromOverlayFiles(
+      CI.getHeaderSearchOpts().VFSOverlayFiles, Diags,
+      createBaseFS(CI.getFileSystemOpts(), CI.getFrontendOpts(),
+                   CI.getCASOpts(), Diags, std::move(BaseFS),
+                   std::move(OverrideCAS)));
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(

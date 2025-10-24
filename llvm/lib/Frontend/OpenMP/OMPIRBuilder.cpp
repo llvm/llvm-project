@@ -51,6 +51,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -9848,17 +9849,19 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
+                                          vfs::FileSystem &VFS,
                                           StringRef ParentName) {
   sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
-  std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
-  // If the inode ID could not be determined, create a hash value
-  // the current file name and use that as an ID.
-  if (EC)
+  if (ErrorOr<vfs::Status> Status = VFS.status(std::get<0>(FileIDInfo))) {
+    ID = Status->getUniqueID();
+    FileID = Status->getUniqueID().getFile();
+  } else {
+    // If the inode ID could not be determined, create a hash value
+    // the current file name and use that as an ID.
     FileID = hash_value(std::get<0>(FileIDInfo));
-  else
-    FileID = ID.getFile();
+  }
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), FileID,
                                std::get<1>(FileIDInfo));
@@ -10083,11 +10086,12 @@ void OpenMPIRBuilder::loadOffloadInfoMetadata(Module &M) {
   }
 }
 
-void OpenMPIRBuilder::loadOffloadInfoMetadata(StringRef HostFilePath) {
+void OpenMPIRBuilder::loadOffloadInfoMetadata(vfs::FileSystem &VFS,
+                                              StringRef HostFilePath) {
   if (HostFilePath.empty())
     return;
 
-  auto Buf = MemoryBuffer::getFile(HostFilePath);
+  auto Buf = VFS.getBufferForFile(HostFilePath);
   if (std::error_code Err = Buf.getError()) {
     report_fatal_error(("error opening host file from host file path inside of "
                         "OpenMPIRBuilder: " +

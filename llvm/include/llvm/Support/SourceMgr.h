@@ -96,22 +96,25 @@ private:
   DiagHandlerTy DiagHandler = nullptr;
   void *DiagContext = nullptr;
 
-  // Filesystem for finding includes, if not the real FS.
+  // Optional file system for finding include files.
   IntrusiveRefCntPtr<vfs::FileSystem> FS;
 
   bool isValidBufferID(unsigned i) const { return i && i <= Buffers.size(); }
 
 public:
+  /// Create new source manager without support for include files.
   SourceMgr();
+  /// Create new source manager with the capability of finding include files
+  /// via the provided file system.
+  explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
   SourceMgr(const SourceMgr &) = delete;
   SourceMgr &operator=(const SourceMgr &) = delete;
   SourceMgr(SourceMgr &&);
   SourceMgr &operator=(SourceMgr &&);
   ~SourceMgr();
 
-  /// Specify a \a vfs::FileSystem for finding includes.
-  explicit SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS);
-  void setFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
+  IntrusiveRefCntPtr<vfs::FileSystem> getVirtualFileSystem() const;
+  void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   /// Return the include directories of this source manager.
   ArrayRef<std::string> getIncludeDirs() const { return IncludeDirectories; }
