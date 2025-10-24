@@ -110,7 +110,6 @@
 #include "llvm/Transforms/Scalar/LoopInstSimplify.h"
 #include "llvm/Transforms/Scalar/LoopInterchange.h"
 #include "llvm/Transforms/Scalar/LoopLoadElimination.h"
-#include "llvm/Transforms/Scalar/LoopNoOpElimination.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
@@ -216,11 +215,6 @@ static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
 static cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                        cl::Hidden,
                                        cl::desc("Enable the LoopFlatten Pass"));
-
-static cl::opt<bool>
-    EnableLoopNoOpElimination("enable-loop-noop-elimination", cl::init(false),
-                              cl::Hidden,
-                              cl::desc("Enable Loop no-op elimination pass"));
 
 // Experimentally allow loop header duplication. This should allow for better
 // optimization at Oz, since loop-idiom recognition can then recognize things
@@ -1312,9 +1306,6 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM, bool IsFullLTO) {
   FPM.addPass(LoopVectorizePass(
       LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
-
-  if (EnableLoopNoOpElimination)
-    FPM.addPass(LoopNoOpEliminationPass());
 
   FPM.addPass(InferAlignmentPass());
   if (IsFullLTO) {

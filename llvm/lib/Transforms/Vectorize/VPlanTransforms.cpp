@@ -4406,3 +4406,143 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     }
   }
 }
+
+// Use vector.check block to determine if we can eliminate a bounds check on
+// the IV if we know that we can only enter the vector block if the tripcount
+// is within certain bounds.
+static bool canElimAndMaskOnPHI(Instruction *I, VPIRBasicBlock *SCEVCheckBB,
+                                Value *SCEVCheckConditional) {
+
+  if (I->getOpcode() != Instruction::And)
+    return false;
+
+  Value *Op0 = I->getOperand(0);
+  Value *Op1 = I->getOperand(1);
+
+  PHINode *IndVar;
+  ConstantInt *Mask;
+
+  if (Mask = dyn_cast<ConstantInt>(Op0))
+    IndVar = dyn_cast<PHINode>(Op1);
+  else if (Mask = dyn_cast<ConstantInt>(Op1))
+    IndVar = dyn_cast<PHINode>(Op0);
+
+  if (!Mask || !IndVar)
+    return false;
+
+  if (auto *CmpI = dyn_cast<CmpInst>(SCEVCheckConditional)) {
+    // Check if the condition for the terminating instruction
+    // is doing some comparison with a constant integer. If not
+    // we can't elim our AND mask
+    Value *CmpOp0 = CmpI->getOperand(0);
+    Value *CmpOp1 = CmpI->getOperand(1);
+    auto *CmpConstant = (dyn_cast<ConstantInt>(CmpOp0))
+                            ? dyn_cast<ConstantInt>(CmpOp0)
+                            : dyn_cast<ConstantInt>(CmpOp1);
+    if (!CmpConstant)
+      return false;
+
+    unsigned CmpIOpcode = CmpI->getPredicate();
+    if (((CmpConstant == CmpOp1 && CmpIOpcode == CmpInst::ICMP_UGT) ||
+         (CmpConstant == CmpOp0 && CmpIOpcode == CmpInst::ICMP_ULT)) &&
+        (CmpConstant->uge(Mask->getZExtValue())))
+      return true;
+  }
+  return false;
+}
+
+// Check that there's a path from the src BB to the dest BB
+static bool CheckPathFromSrcBBToDestBB(VPBlockBase *Src, VPBlockBase *Dest) {
+  if (!Src || !Dest)
+    return false;
+
+  for (auto *VPBB : Src->getSuccessors()) {
+    if (VPBB == Dest) {
+      return true;
+    } else if (VPBB->getNumSuccessors() > 0 &&
+               CheckPathFromSrcBBToDestBB(VPBB, Dest))
+      return true;
+  }
+  return false;
+};
+
+// Attempt to spot and eliminate no-op AND operations in loop bodies.
+// For example loop Vectorization may create loops like the following.
+//
+// vector.scevcheck:
+//   %1 = add i64 %flatten.tripcount, -1
+//   %2 = icmp ugt i64 %1, 4294967295
+//   br i1 %2, label %scalar.ph, label %vector.ph
+// vector.ph:
+//    %iv = phi i64 [ 0, %vector.scevcheck], [ %iv.next, %vector.ph ]
+//    %m  = and i64 %iv, 4294967295 ; 0xffff_fffe  no op
+//    %p  = getelementptr inbounds <4 x i32>, ptr %A, i64 %m
+//    %load = load <4 x i32>, ptr %p, align 4
+//    %1 = add <4 x i32> %load,  %X
+//    store <4 x i32> %1, ptr %p, align 4
+//    %iv.next = add nuw i64 %iv, 4
+//    %c  = icmp ult i64 %iv.next, %N
+//    br i1 %c, label %vector.ph, label %exit
+//  exit:
+//    ret void
+//
+// The vectorizer creates the SCEV check block to perform
+// runtime IV checks. This block can be used to determine true
+// range of the the IV as entry into the vector loop is only possible
+// for certain tripcount values.
+//
+void VPlanTransforms::removeRedundantAndMasks(VPlan &Plan) {
+  auto FindSCEVCheckBlock = [&]() -> VPIRBasicBlock * {
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_deep(Plan.getEntry()))) {
+      if (auto *IRBB = dyn_cast<VPIRBasicBlock>(VPBB))
+        if (IRBB->getIRBasicBlock()->getName() == "vector.scevcheck")
+          return IRBB;
+    }
+    return nullptr;
+  };
+
+  auto FindPHIRecipeToReplaceAnd = [&](VPBasicBlock *VPBB,
+                                       VPSingleDefRecipe *ToReplace) -> void {
+    VPRecipeBase *PredRecipe = nullptr;
+    for (auto &PHI : VPBB->phis()) {
+      if (auto *VPI = dyn_cast<VPSingleDefRecipe>(&PHI))
+        if (ToReplace->getOperand(0) == VPI ||
+            ToReplace->getOperand(1) == VPI) {
+          ToReplace->replaceAllUsesWith(VPI);
+          return;
+        }
+    }
+  };
+
+  if (VPIRBasicBlock *SCEVCheckBB = FindSCEVCheckBlock()) {
+    VPBasicBlock *VPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+
+    // Determine if the SCEV check BB branches to the loop preheader
+    // or header
+    if (!CheckPathFromSrcBBToDestBB(SCEVCheckBB, Plan.getVectorPreheader()) &&
+        !CheckPathFromSrcBBToDestBB(SCEVCheckBB, Plan.getVectorLoopRegion()))
+      return;
+
+    if (auto *SCEVCheckTerminatorRecipe =
+            dyn_cast<VPInstruction>(SCEVCheckBB->getTerminator())) {
+      if (SCEVCheckTerminatorRecipe->getOpcode() != VPInstruction::BranchOnCond)
+        return;
+
+      VPValue *SCEVCheckCondRecipe = SCEVCheckTerminatorRecipe->getOperand(0);
+
+      for (auto &R : VPBB->getRecipeList()) {
+        if (auto *VPI = dyn_cast<VPSingleDefRecipe>(&R)) {
+          Value *V = VPI->getUnderlyingValue();
+          if (!V)
+            continue;
+
+          if (Instruction *I = dyn_cast<Instruction>(V))
+            if (canElimAndMaskOnPHI(I, SCEVCheckBB,
+                                    SCEVCheckCondRecipe->getLiveInIRValue()))
+              return FindPHIRecipeToReplaceAnd(VPBB, VPI);
+        }
+      }
+    }
+  }
+}
