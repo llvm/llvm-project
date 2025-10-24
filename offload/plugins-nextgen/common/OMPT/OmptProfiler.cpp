@@ -93,6 +93,11 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
   if (!isProfilingEnabled())
     return;
 
+  /// Empty data means no tracing in OMPT
+  /// offload/include/OpenMP/OMPT/Interface.h line 492
+  if (!Data)
+    return;
+
   DP("OMPT-Async: Time kernel for asynchronous execution (Plugin): Start %lu "
      "End %lu\n",
      StartNanos, EndNanos);
@@ -113,6 +118,11 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleDataTransfer(
     uint64_t StartNanos, uint64_t EndNanos, void *Data) {
 
   if (!isProfilingEnabled())
+    return;
+
+  /// Empty data means no tracing in OMPT
+  /// offload/include/OpenMP/OMPT/Interface.h line 492
+  if (!Data)
     return;
 
   auto OmptEventInfo = reinterpret_cast<ompt::OmptEventInfoTy *>(Data);
