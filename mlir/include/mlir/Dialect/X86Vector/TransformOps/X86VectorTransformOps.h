@@ -1,4 +1,4 @@
-//===- VectorTransformOps.h - Vector transform ops --------------*- C++ -*-===//
+//===- X86VectorTransformOps.h - X86Vector transform ops --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,13 +12,8 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
 
-namespace mlir {
-namespace x86vector {
-} // namespace vector
-} // namespace mlir
-
 //===----------------------------------------------------------------------===//
-// Vector Transform Operations
+// X86Vector Transform Operations
 //===----------------------------------------------------------------------===//
 
 #define GET_OP_CLASSES
@@ -30,7 +25,7 @@ class DialectRegistry;
 namespace x86vector {
 void registerTransformDialectExtension(DialectRegistry &registry);
 
-} // namespace vector
+} // namespace x86vector
 } // namespace mlir
 
 #endif // MLIR_DIALECT_X86VECTOR_TRANSFORMOPS_X86VECTORTRANSFORMOPS_H

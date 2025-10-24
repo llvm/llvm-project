@@ -1,4 +1,5 @@
-//===- X86VectorTransformOps.cpp - Implementation of Vector transform ops --===//
+//===- X86VectorTransformOps.cpp - Implementation of Vector transform ops
+//--===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,31 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-
+#include "mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
-
-#include "mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h"
+#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
-
-#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 
 using namespace mlir;
 using namespace mlir::x86vector;
 using namespace mlir::transform;
 
-
-
-void mlir::transform::ApplyVectorContractNanokernelLoweringPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  x86vector::populateVectorContractNanokernelLoweringPatterns(patterns);//,
-                                                 //getVectorSize());
+void mlir::transform::ApplyVectorContractNanokernelLoweringPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  x86vector::populateVectorContractNanokernelLoweringPatterns(patterns,
+                                                              getVectorSize());
 }
 
 //===----------------------------------------------------------------------===//
@@ -42,7 +38,8 @@ class X86VectorTransformDialectExtension
     : public transform::TransformDialectExtension<
           X86VectorTransformDialectExtension> {
 public:
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(X86VectorTransformDialectExtension)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      X86VectorTransformDialectExtension)
 
   X86VectorTransformDialectExtension() {
     declareGeneratedDialect<x86vector::X86VectorDialect>();

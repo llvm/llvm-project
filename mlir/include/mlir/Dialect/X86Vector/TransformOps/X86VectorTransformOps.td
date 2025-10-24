@@ -25,13 +25,12 @@ def ApplyVectorContractNanokernelLoweringPatternsOp : Op<Transform_Dialect,
     specific nanokernels.
   }];
 
-  //let arguments = (ins DefaultValuedAttr<I64Attr, "8">:$vector_size);
+  let arguments = (ins DefaultValuedAttr<I64Attr, "8">:$vector_size);
 
-  //let assemblyFormat = [{
-    //(`vector_size` `=` $vector_size^)? attr-dict
-  //}];
+  let assemblyFormat = [{
+    (`vector_size` `=` $vector_size^)? attr-dict
+  }];
 
-  let assemblyFormat = "attr-dict";
 }
 
 
