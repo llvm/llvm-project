@@ -2452,6 +2452,11 @@ def _aullrem : RuntimeLibcallImpl<UREM_I64>;
 def _allmul : RuntimeLibcallImpl<MUL_I64>;
 }
 
+// FIXME: Should have utility function to filter by known provider.
+defvar WindowsDivRemMulLibcallOverrides = [
+  __divdi3, __udivdi3, __moddi3, __umoddi3, __muldi3
+];
+
 //===----------------------------------------------------------------------===//
 // X86 Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2473,7 +2478,7 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar X86CommonLibcalls =
-  (add WinDefaultLibcallImpls,
+  (add (sub WinDefaultLibcallImpls, WindowsDivRemMulLibcallOverrides),
        DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
@@ -2496,10 +2501,15 @@ defvar Windows32DivRemMulCalls =
   LibcallsWithCC<(add WindowsDivRemMulLibcalls), X86_STDCALL,
   RuntimeLibcallPredicate<"TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()">>;
 
+defvar NotWindows32DivRemMulCalls =
+  LibcallImpls<(add WindowsDivRemMulLibcallOverrides),
+    RuntimeLibcallPredicate<"!TT.isWindowsMSVCEnvironment() && !TT.isWindowsItaniumEnvironment()">>;
+
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
-           Windows32DivRemMulCalls)>;
+             NotWindows32DivRemMulCalls,
+             Windows32DivRemMulCalls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
