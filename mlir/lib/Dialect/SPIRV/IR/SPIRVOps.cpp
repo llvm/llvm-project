@@ -1278,10 +1278,10 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
-    if (!initOp || !isa<spirv::GlobalVariableOp, spirv::SpecConstantOp,
-                        spirv::SpecConstantCompositeOp>(initOp)) {
+    if (!initOp ||
+        !isa<spirv::SpecConstantOp, spirv::SpecConstantCompositeOp>(initOp)) {
       return emitOpError("initializer must be result of a "
-                         "spirv.SpecConstant or spirv.GlobalVariable or "
+                         "spirv.SpecConstant or "
                          "spirv.SpecConstantCompositeOp op");
     }
   }
