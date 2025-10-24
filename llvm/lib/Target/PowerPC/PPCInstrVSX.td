@@ -5144,3 +5144,7 @@ def : InstAlias<"mtvrwz $XT, $rA",
                 (MTVRWZ vrrc:$XT, gprc:$rA), 0>;
 def : InstAlias<"mtfprwz $dst, $rA",
                 (MTVSRWZ f8rc:$dst, gprc:$rA)>;
+
+// XOR-NOT to XXLEQV optimization patterns (VSX) (moved to end of file)
+def : Pat<(xor (vnot v4i32:$A), v4i32:$B), (XXLEQV v4i32:$A, v4i32:$B)>;
+def : Pat<(xor v4i32:$A, (vnot v4i32:$B)), (XXLEQV v4i32:$A, v4i32:$B)>;
