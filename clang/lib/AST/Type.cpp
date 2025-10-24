@@ -2558,9 +2558,6 @@ bool Type::isWebAssemblyTableType() const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType().isWebAssemblyReferenceType();
 
-  if (const auto *PTy = dyn_cast<PointerType>(this))
-    return PTy->getPointeeType().isWebAssemblyReferenceType();
-
   return false;
 }
 

@@ -434,6 +434,7 @@ void printTraceSymbol(Symbol *sym) {
 
 const char *defaultModule = "env";
 const char *functionTableName = "__indirect_function_table";
+const char *externrefTableName = "__externref_table";
 const char *memoryName = "memory";
 
 } // namespace wasm
