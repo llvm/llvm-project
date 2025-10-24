@@ -12,7 +12,7 @@ define <vscale x 1 x double> @test_intrinsic_sf_vfexpa_v_nxv1f64(<vscale x 1 x d
 ; CHECK-NEXT:    ret
 entry:
     %f = call <vscale x 1 x double> @llvm.riscv.sf.vfexpa.nxv1f64(
-      <vscale x 1 x double> undef,
+      <vscale x 1 x double> poison,
       <vscale x 1 x double> %0,
       iXLen %1)
     ret <vscale x 1 x double> %f
@@ -26,7 +26,7 @@ define <vscale x 2 x double> @test_intrinsic_sf_vfexpa_v_nxv2f64(<vscale x 2 x d
 ; CHECK-NEXT:    ret
 entry:
     %f = call <vscale x 2 x double> @llvm.riscv.sf.vfexpa.nxv2f64(
-      <vscale x 2 x double> undef,
+      <vscale x 2 x double> poison,
       <vscale x 2 x double> %0,
       iXLen %1)
     ret <vscale x 2 x double> %f
@@ -40,7 +40,7 @@ define <vscale x 4 x double> @test_intrinsic_sf_vfexpa_v_nxv4f64(<vscale x 4 x d
 ; CHECK-NEXT:    ret
 entry:
     %f = call <vscale x 4 x double> @llvm.riscv.sf.vfexpa.nxv4f64(
-      <vscale x 4 x double> undef,
+      <vscale x 4 x double> poison,
       <vscale x 4 x double> %0,
       iXLen %1)
     ret <vscale x 4 x double> %f
@@ -54,7 +54,7 @@ define <vscale x 8 x double> @test_intrinsic_sf_vfexpa_v_nxv8f64(<vscale x 8 x d
 ; CHECK-NEXT:    ret
 entry:
     %f = call <vscale x 8 x double> @llvm.riscv.sf.vfexpa.nxv8f64(
-      <vscale x 8 x double> undef,
+      <vscale x 8 x double> poison,
       <vscale x 8 x double> %0,
       iXLen %1)
     ret <vscale x 8 x double> %f

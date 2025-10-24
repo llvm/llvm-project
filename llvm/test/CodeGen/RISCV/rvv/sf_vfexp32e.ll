@@ -12,7 +12,7 @@ define <vscale x 1 x float>  @intrinsic_sf_vfexp_v_nxv1f32(<vscale x 1 x float> 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x float> @llvm.riscv.sf.vfexp.nxv1f32(
-    <vscale x 1 x float> undef,
+    <vscale x 1 x float> poison,
     <vscale x 1 x float> %0,
     iXLen %1)
 
@@ -27,7 +27,7 @@ define <vscale x 2 x float>  @intrinsic_sf_vfexp_v_nxv2f32(<vscale x 2 x float> 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x float> @llvm.riscv.sf.vfexp.nxv2f32(
-    <vscale x 2 x float> undef,
+    <vscale x 2 x float> poison,
     <vscale x 2 x float> %0,
     iXLen %1)
 
@@ -42,7 +42,7 @@ define <vscale x 4 x float>  @intrinsic_sf_vfexp_v_nxv4f32(<vscale x 4 x float> 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x float> @llvm.riscv.sf.vfexp.nxv4f32(
-    <vscale x 4 x float> undef,
+    <vscale x 4 x float> poison,
     <vscale x 4 x float> %0,
     iXLen %1)
 
@@ -57,7 +57,7 @@ define <vscale x 8 x float>  @intrinsic_sf_vfexp_v_nxv8f32(<vscale x 8 x float> 
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x float> @llvm.riscv.sf.vfexp.nxv8f32(
-    <vscale x 8 x float> undef,
+    <vscale x 8 x float> poison,
     <vscale x 8 x float> %0,
     iXLen %1)
 
@@ -72,7 +72,7 @@ define <vscale x 16 x float>  @intrinsic_sf_vfexp_v_nxv16f32(<vscale x 16 x floa
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x float> @llvm.riscv.sf.vfexp.nxv16f32(
-    <vscale x 16 x float> undef,
+    <vscale x 16 x float> poison,
     <vscale x 16 x float> %0,
     iXLen %1)
 
