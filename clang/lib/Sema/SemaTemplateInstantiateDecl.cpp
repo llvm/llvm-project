@@ -2076,10 +2076,6 @@ Decl *TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD
       Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));
   SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldESD, NewESD);
 
-  // Enter the scope of this instantiation. We don't use
-  // PushDeclContext because we don't have a scope.
-  Sema::ContextRAII Context(SemaRef, NewESD, /*NewThis=*/false);
-
   // If this was already expanded, only instantiate the expansion and
   // don't touch the unexpanded expansion statement.
   if (CXXExpansionInstantiationStmt *OldInst = OldESD->getInstantiations()) {
@@ -2091,6 +2087,11 @@ Decl *TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD
     NewESD->setExpansionPattern(OldESD->getExpansionPattern());
     return NewESD;
   }
+
+  // Enter the scope of this expansion statement; don't do this if we've
+  // already expanded it, as in that case we no longer want to treat its
+  // content as dependent.
+  Sema::ContextRAII Context(SemaRef, NewESD, /*NewThis=*/false);
 
   StmtResult Expansion =
       SemaRef.SubstStmt(OldESD->getExpansionPattern(), TemplateArgs);
@@ -7094,6 +7095,12 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     // anonymous unions in class templates).
   }
 
+  if (CurrentInstantiationScope) {
+    if (auto Found = CurrentInstantiationScope->getInstantiationOfIfExists(D))
+      if (auto *FD = dyn_cast<NamedDecl>(cast<Decl*>(*Found)))
+        return FD;
+  }
+
   if (!ParentDependsOnArgs)
     return D;
 
@@ -7187,14 +7194,6 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     }
 
     D = Result;
-  } else if (CurrentInstantiationScope && ParentDC->isExpansionStmt()) {
-    // If this is the expansion variable of an expansion statement, then it will
-    // have been instantiated as part of expanding the statement; this doesn't
-    // involve instantiating the parent decl context (only the body and
-    // expansion variable are instantiated; not the entire expansion statement).
-    assert(isa<VarDecl>(D));
-    return cast<NamedDecl>(
-        cast<Decl*>(*CurrentInstantiationScope->findInstantiationOf(D)));
   }
 
   return D;

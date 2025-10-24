@@ -1585,6 +1585,7 @@ void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
      else
       ContinueDest = getJumpDestInCurrentScope("expand.next");
 
+    LexicalScope ExpansionScope(*this, S.getSourceRange());
     BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
     EmitStmt(Inst);
     BreakContinueStack.pop_back();

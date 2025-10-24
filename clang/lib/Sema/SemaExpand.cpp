@@ -389,6 +389,8 @@ StmtResult Sema::FinishCXXExpansionStmt(Stmt* Exp, Stmt *Body) {
   SmallVector<Stmt *, 4> Instantiations;
   ExpansionStmtDecl *ESD = Expansion->getDecl();
   for (size_t I = 0; I < NumInstantiations; ++I) {
+    // Now that we're expanding this, exit the context of the expansion stmt
+    // so that we no longer treat this as dependent.
     ContextRAII CtxGuard(*this,
                          CurContext->getEnclosingNonExpansionStatementContext(),
                          /*NewThis=*/false);
