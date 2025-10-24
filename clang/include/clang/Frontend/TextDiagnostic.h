@@ -16,9 +16,11 @@
 #define LLVM_CLANG_FRONTEND_TEXTDIAGNOSTIC_H
 
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace clang {
+
+using formatted_raw_ostream = llvm::formatted_raw_ostream;
 
 /// Class to encapsulate the logic for formatting and printing a textual
 /// diagnostic message.
@@ -33,11 +35,11 @@ namespace clang {
 /// DiagnosticClient is implemented through this class as is diagnostic
 /// printing coming out of libclang.
 class TextDiagnostic : public DiagnosticRenderer {
-  raw_ostream &OS;
+  formatted_raw_ostream &OS;
   const Preprocessor *PP;
 
 public:
-  TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
+  TextDiagnostic(formatted_raw_ostream &OS, const LangOptions &LangOpts,
                  DiagnosticOptions &DiagOpts, const Preprocessor *PP = nullptr);
 
   ~TextDiagnostic() override;
@@ -45,23 +47,24 @@ public:
   struct StyleRange {
     unsigned Start;
     unsigned End;
-    enum llvm::raw_ostream::Colors Color;
-    StyleRange(unsigned S, unsigned E, enum llvm::raw_ostream::Colors C)
-        : Start(S), End(E), Color(C){};
+    enum llvm::formatted_raw_ostream::Colors Color;
+    StyleRange(unsigned S, unsigned E,
+               enum llvm::formatted_raw_ostream::Colors C)
+        : Start(S), End(E), Color(C) {};
   };
 
-  /// Print the diagonstic level to a raw_ostream.
+  /// Print the diagonstic level to a formatted_raw_ostream.
   ///
   /// This is a static helper that handles colorizing the level and formatting
   /// it into an arbitrary output stream. This is used internally by the
   /// TextDiagnostic emission code, but it can also be used directly by
   /// consumers that don't have a source manager or other state that the full
   /// TextDiagnostic logic requires.
-  static void printDiagnosticLevel(raw_ostream &OS,
+  static void printDiagnosticLevel(formatted_raw_ostream &OS,
                                    DiagnosticsEngine::Level Level,
                                    bool ShowColors);
 
-  /// Pretty-print a diagnostic message to a raw_ostream.
+  /// Pretty-print a diagnostic message to a formatted_raw_ostream.
   ///
   /// This is a static helper to handle the line wrapping, colorizing, and
   /// rendering of a diagnostic message to a particular ostream. It is
@@ -77,9 +80,10 @@ public:
   /// \param Columns The number of columns to use in line-wrapping, 0 disables
   ///                all line-wrapping.
   /// \param ShowColors Enable colorizing of the message.
-  static void printDiagnosticMessage(raw_ostream &OS, bool IsSupplemental,
-                                     StringRef Message, unsigned CurrentColumn,
-                                     unsigned Columns, bool ShowColors);
+  static void printDiagnosticMessage(formatted_raw_ostream &OS,
+                                     bool IsSupplemental, StringRef Message,
+                                     unsigned CurrentColumn, unsigned Columns,
+                                     bool ShowColors);
 
 protected:
   void emitDiagnosticMessage(FullSourceLoc Loc, PresumedLoc PLoc,

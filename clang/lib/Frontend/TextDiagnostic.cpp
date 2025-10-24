@@ -17,7 +17,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
 
@@ -49,7 +48,7 @@ static constexpr raw_ostream::Colors LiteralColor = raw_ostream::GREEN;
 static constexpr raw_ostream::Colors KeywordColor = raw_ostream::BLUE;
 
 /// Add highlights to differences in template strings.
-static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
+static void applyTemplateHighlighting(formatted_raw_ostream &OS, StringRef Str,
                                       bool &Normal, bool Bold) {
   while (true) {
     size_t Pos = Str.find(ToggleHighlight);
@@ -59,11 +58,11 @@ static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
 
     Str = Str.substr(Pos + 1);
     if (Normal)
-      OS.changeColor(templateColor, true);
+      OS.changeColor(templateColor, true, false);
     else {
       OS.resetColor();
       if (Bold)
-        OS.changeColor(savedColor, true);
+        OS.changeColor(savedColor, true, false);
     }
     Normal = !Normal;
   }
@@ -603,8 +602,8 @@ static unsigned findEndOfWord(unsigned Start, StringRef Str,
 /// \param Bold if the current text should be bold
 /// \returns true if word-wrapping was required, or false if the
 /// string fit on the first line.
-static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
-                             unsigned Column, bool Bold) {
+static bool printWordWrapped(formatted_raw_ostream &OS, StringRef Str,
+                             unsigned Columns, unsigned Column, bool Bold) {
   const unsigned Length = std::min(Str.find('\n'), Str.size());
   bool TextNormal = true;
 
@@ -651,7 +650,8 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
   return Wrapped;
 }
 
-TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
+TextDiagnostic::TextDiagnostic(formatted_raw_ostream &OS,
+                               const LangOptions &LangOpts,
                                DiagnosticOptions &DiagOpts,
                                const Preprocessor *PP)
     : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS), PP(PP) {}
@@ -662,7 +662,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
-  uint64_t StartOfLocationInfo = OS.tell();
+  uint64_t StartOfLocationInfo = OS.getColumn();
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
@@ -675,12 +675,12 @@ void TextDiagnostic::emitDiagnosticMessage(
     printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
-                         Message, OS.tell() - StartOfLocationInfo,
+                         Message, OS.getColumn() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors);
 }
 
 /*static*/ void
-TextDiagnostic::printDiagnosticLevel(raw_ostream &OS,
+TextDiagnostic::printDiagnosticLevel(formatted_raw_ostream &OS,
                                      DiagnosticsEngine::Level Level,
                                      bool ShowColors) {
   if (ShowColors) {
@@ -688,11 +688,21 @@ TextDiagnostic::printDiagnosticLevel(raw_ostream &OS,
     switch (Level) {
     case DiagnosticsEngine::Ignored:
       llvm_unreachable("Invalid diagnostic type");
-    case DiagnosticsEngine::Note:    OS.changeColor(noteColor, true); break;
-    case DiagnosticsEngine::Remark:  OS.changeColor(remarkColor, true); break;
-    case DiagnosticsEngine::Warning: OS.changeColor(warningColor, true); break;
-    case DiagnosticsEngine::Error:   OS.changeColor(errorColor, true); break;
-    case DiagnosticsEngine::Fatal:   OS.changeColor(fatalColor, true); break;
+    case DiagnosticsEngine::Note:
+      OS.changeColor(noteColor, true, false);
+      break;
+    case DiagnosticsEngine::Remark:
+      OS.changeColor(remarkColor, true, false);
+      break;
+    case DiagnosticsEngine::Warning:
+      OS.changeColor(warningColor, true, false);
+      break;
+    case DiagnosticsEngine::Error:
+      OS.changeColor(errorColor, true, false);
+      break;
+    case DiagnosticsEngine::Fatal:
+      OS.changeColor(fatalColor, true, false);
+      break;
     }
   }
 
@@ -711,7 +721,7 @@ TextDiagnostic::printDiagnosticLevel(raw_ostream &OS,
 }
 
 /*static*/
-void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
+void TextDiagnostic::printDiagnosticMessage(formatted_raw_ostream &OS,
                                             bool IsSupplemental,
                                             StringRef Message,
                                             unsigned CurrentColumn,
@@ -720,7 +730,7 @@ void TextDiagnostic::printDiagnosticMessage(raw_ostream &OS,
   if (ShowColors && !IsSupplemental) {
     // Print primary diagnostic messages in bold and without color, to visually
     // indicate the transition from continuation notes and other output.
-    OS.changeColor(savedColor, true);
+    OS.changeColor(savedColor, true, false);
     Bold = true;
   }
 
@@ -798,7 +808,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     return;
 
   if (DiagOpts.ShowColors)
-    OS.changeColor(savedColor, true);
+    OS.changeColor(savedColor, true, false);
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
   switch (DiagOpts.getFormat()) {
@@ -1423,7 +1433,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     if (!CaretLine.empty()) {
       indentForLineNumbers();
       if (DiagOpts.ShowColors)
-        OS.changeColor(caretColor, true);
+        OS.changeColor(caretColor, true, false);
       OS << CaretLine << '\n';
       if (DiagOpts.ShowColors)
         OS.resetColor();
@@ -1433,7 +1443,7 @@ void TextDiagnostic::emitSnippetAndCaret(
       indentForLineNumbers();
       if (DiagOpts.ShowColors)
         // Print fixit line in color
-        OS.changeColor(fixitColor, false);
+        OS.changeColor(fixitColor, false, false);
       if (DiagOpts.ShowSourceRanges)
         OS << ' ';
       OS << FixItInsertionLine << '\n';
@@ -1459,7 +1469,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
 
   // Print the source line one character at a time.
   bool PrintReversed = false;
-  std::optional<llvm::raw_ostream::Colors> CurrentColor;
+  std::optional<llvm::formatted_raw_ostream::Colors> CurrentColor;
   size_t I = 0;
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
@@ -1485,7 +1495,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
       if (CharStyle != Styles.end()) {
         if (!CurrentColor ||
             (CurrentColor && *CurrentColor != CharStyle->Color)) {
-          OS.changeColor(CharStyle->Color, false);
+          OS.changeColor(CharStyle->Color, false, false);
           CurrentColor = CharStyle->Color;
         }
       } else if (CurrentColor) {
