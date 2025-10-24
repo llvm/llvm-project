@@ -26,7 +26,7 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
 
-namespace mlir {
+namespace mlir::amdgpu {
 /// Parser for the `custom<MNKDimensionList>` custom assembly format used by
 /// WMMAOp.
 ParseResult parseMNKDimensionList(OpAsmParser &parser, IntegerAttr &m,
@@ -47,7 +47,7 @@ inline void printMNKDimensionList(OpAsmPrinter &printer, Operation *,
                                   IntegerAttr m, IntegerAttr n, IntegerAttr k) {
   printMNKDimensionList(printer, m, n, k);
 }
-} // namespace mlir
+} // namespace mlir::amdgpu
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.h.inc"

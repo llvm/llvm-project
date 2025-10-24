@@ -361,8 +361,9 @@ LogicalResult ScaledExtPacked816Op::verify() {
 // WMMAOp
 //===----------------------------------------------------------------------===//
 
-ParseResult mlir::parseMNKDimensionList(OpAsmParser &parser, IntegerAttr &m,
-                                        IntegerAttr &n, IntegerAttr &k) {
+ParseResult mlir::amdgpu::parseMNKDimensionList(OpAsmParser &parser,
+                                                IntegerAttr &m, IntegerAttr &n,
+                                                IntegerAttr &k) {
   SmallVector<int64_t, 3> dimensions;
   if (parser.parseDimensionList(dimensions, false, false))
     return failure();
