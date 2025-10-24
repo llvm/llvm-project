@@ -4032,6 +4032,29 @@ callee is unavailable or if the callee has the ``noinline`` attribute.
   }];
 }
 
+def FlattenDeepDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``flatten_deep`` attribute causes calls within the attributed function and
+their transitive callees to be inlined up to a specified depth, unless it is
+impossible to do so (for example if the body of the callee is unavailable or if
+the callee has the ``noinline`` attribute).
+
+This attribute takes a single unsigned integer argument representing the maximum
+depth of the call tree to inline. For example, ``__attribute__((flatten_deep(3)))``
+will inline all calls within the function, then inline all calls within those
+inlined functions (depth 2), and then inline all calls within those functions
+(depth 3).
+
+.. code-block:: c++
+
+  __attribute__((flatten_deep(3)))
+  void process_data() {
+    // All calls up to 3 levels deep in the call tree will be inlined
+  }
+  }];
+}
+
 def FormatDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

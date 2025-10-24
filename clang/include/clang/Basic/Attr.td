@@ -1984,6 +1984,13 @@ def Flatten : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def FlattenDeep : InheritableAttr {
+  let Spellings = [Clang<"flatten_deep">];
+  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Args = [UnsignedArgument<"MaxDepth">];
+  let Documentation = [FlattenDeepDocs];
+}
+
 def Format : InheritableAttr {
   let Spellings = [GCC<"format">];
   let Args = [IdentifierArgument<"Type">, IntArgument<"FormatIdx">,
