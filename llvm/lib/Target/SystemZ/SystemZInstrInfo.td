@@ -523,12 +523,11 @@ let SimpleBDXStore = 1, mayStore = 1 in {
 }
 
 let hasNoSchedulingInfo = 1, usesCustomInserter = 1, mayLoad = 1 in {
-  let mayStore = 1 in
-    def MOVE_STACK_GUARD : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
-  let Defs = [CC] in
-    def COMPARE_STACK_GUARD : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
+  let mayStore = 1 in def MOVE_STACK_GUARD
+      : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
+  let Defs = [CC] in def COMPARE_STACK_GUARD
+      : Pseudo<(outs), (ins bdaddr12only:$grdloc), []>;
 }
-
 
 def STRL  : StoreRILPC<"strl", 0xC4F, aligned_store, GR32>;
 def STGRL : StoreRILPC<"stgrl", 0xC4B, aligned_store, GR64>;

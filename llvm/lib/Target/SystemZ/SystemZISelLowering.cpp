@@ -32,8 +32,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -8187,12 +8187,17 @@ SDValue SystemZTargetLowering::combineSTORE(
   }
 
   // combine STORE (LOAD_STACK_GUARD) into MOVE_STACK_GUARD
-  if (Op1->isMachineOpcode() && (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
-    // If so, create a MOVE_STACK_GUARD node to subsume the LOAD_STACK_GUARD, Store sequence.
+  if (Op1->isMachineOpcode() &&
+      (Op1->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)) {
+    // If so, create a MOVE_STACK_GUARD node to subsume the LOAD_STACK_GUARD,
+    // Store sequence.
     int FI = cast<FrameIndexSDNode>(SN->getOperand(2))->getIndex();
     // Dummy Register, FrameIndex, Dummy Displacement
-    SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64), DAG.getTargetConstant(0, SDLoc(SN), MVT::i64), SN->getChain()};
-    MachineSDNode* Move = DAG.getMachineNode(SystemZ::MOVE_STACK_GUARD, SDLoc(SN), MVT::Other, Ops);
+    SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
+                     DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
+                     SN->getChain()};
+    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACK_GUARD,
+                                             SDLoc(SN), MVT::Other, Ops);
 
     return SDValue(Move, 0);
   }
@@ -9133,27 +9138,30 @@ SDValue SystemZTargetLowering::combineICMP(SDNode *N,
 
   // Combine icmp (load fi, LOAD_STACK_GUARD) into COMPARE_STACK_GUARD.
 
-  const SDValue & LHS = N->getOperand(0);
-  const SDValue & RHS = N->getOperand(1);
+  const SDValue &LHS = N->getOperand(0);
+  const SDValue &RHS = N->getOperand(1);
 
-  if (!ISD::isNormalLoad(RHS.getNode()) || !(LHS.isMachineOpcode() && (LHS->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)))
+  if (!ISD::isNormalLoad(RHS.getNode()) ||
+      !(LHS.isMachineOpcode() &&
+        (LHS->getMachineOpcode() == SystemZ::LOAD_STACK_GUARD)))
     return SDValue();
 
-  auto const * StackLoad = cast<LoadSDNode>(RHS.getNode());
+  auto const *StackLoad = cast<LoadSDNode>(RHS.getNode());
 
   // The StackLoad will have an outgoing chain that needs to be redirected.
   SDValue InChain = StackLoad->getChain();
-  SDValue OutChain = SDValue(const_cast<LoadSDNode*>(StackLoad), 1);
+  SDValue OutChain = SDValue(const_cast<LoadSDNode *>(StackLoad), 1);
   DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
 
   int FI = cast<FrameIndexSDNode>(StackLoad->getOperand(1))->getIndex();
 
   // Now, create a COMPARE_STACK_GUARD node to subsume the
   // LoadFI, LOAD_STACK_GUARD, Compare sequence.
-  // Operands are the FrameIndex where the stackguard is stored, and the input chain.
-  SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64), InChain };
-  MachineSDNode *Move = DAG.getMachineNode(SystemZ::COMPARE_STACK_GUARD,
-                                            DL, MVT::i32, Ops);
+  // Operands are the FrameIndex where the stackguard is stored, and the input
+  // chain.
+  SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64), InChain};
+  MachineSDNode *Move =
+      DAG.getMachineNode(SystemZ::COMPARE_STACK_GUARD, DL, MVT::i32, Ops);
 
   return SDValue(Move, 0);
 }
@@ -9472,7 +9480,8 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
-  case SystemZISD::ICMP:        return combineICMP(N, DCI);
+  case SystemZISD::ICMP:
+    return combineICMP(N, DCI);
   case ISD::SRL:
   case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
   case ISD::MUL:                return combineMUL(N, DCI);
@@ -11142,43 +11151,44 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
 }
 
 namespace {
-  // The custom inserters for MOVE_STACK_GUARD and COMPARE_STACK_GUARD both
-  // need to load the address of the stack guard. This function enables that.
-  Register emitLoadStackGuard(MachineInstr& MI, MachineBasicBlock* MBB) {
-    MachineFunction &MF = *MBB->getParent();
-    auto *II = MF.getTarget().getMCInstrInfo();
-    const Register AddrReg =
-        MF.getRegInfo().createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-    
+// The custom inserters for MOVE_STACK_GUARD and COMPARE_STACK_GUARD both
+// need to load the address of the stack guard. This function enables that.
+Register emitLoadStackGuard(MachineInstr &MI, MachineBasicBlock *MBB) {
+  MachineFunction &MF = *MBB->getParent();
+  auto *II = MF.getTarget().getMCInstrInfo();
+  const Register AddrReg =
+      MF.getRegInfo().createVirtualRegister(&SystemZ::ADDR64BitRegClass);
 
-    Module *M = MF.getFunction().getParent();
-    StringRef GuardType = M->getStackProtectorGuard();
+  Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
 
-    if (GuardType.empty() || (GuardType == "tls")) {
-      // TLS-based stack guard loading will be emitted post RA.
-      // This is so we can more easily guarantee the ear, sllg, ear, load sequence.
-      BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(TargetOpcode::LOAD_STACK_GUARD), AddrReg);
-      
-    } else if (GuardType == "global") {
-      // Obtain the global value.
-      const GlobalValue *GV = M->getOrInsertGlobal(
-          "__stack_chk_guard", PointerType::getUnqual(M->getContext()));
-      // Emit the move.
-      if (M->getPICLevel() == PICLevel::NotPIC) {
-        BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(SystemZ::LARL), AddrReg)
-            .addGlobalAddress(GV);
-      } else {
-        BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(SystemZ::LGRL), AddrReg)
-            .addGlobalAddress(GV);
-      }
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // TLS-based stack guard loading will be emitted post RA.
+    // This is so we can more easily guarantee the ear, sllg, ear, load
+    // sequence.
+    BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(TargetOpcode::LOAD_STACK_GUARD),
+            AddrReg);
+
+  } else if (GuardType == "global") {
+    // Obtain the global value.
+    const GlobalValue *GV = M->getOrInsertGlobal(
+        "__stack_chk_guard", PointerType::getUnqual(M->getContext()));
+    // Emit the move.
+    if (M->getPICLevel() == PICLevel::NotPIC) {
+      BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(SystemZ::LARL), AddrReg)
+          .addGlobalAddress(GV);
     } else {
-      llvm_unreachable(
-          (Twine("Unknown stack protector type \"") + GuardType + "\"")
-              .str()
-              .c_str());
+      BuildMI(*MBB, MI, MI.getDebugLoc(), II->get(SystemZ::LGRL), AddrReg)
+          .addGlobalAddress(GV);
     }
-    return AddrReg;
+  } else {
+    llvm_unreachable(
+        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+            .str()
+            .c_str());
   }
+  return AddrReg;
+}
 } // namespace
 
 // Custom Inserter for MOVE_STACK_GUARD. Loads the address of the stack guard,
@@ -11203,11 +11213,11 @@ SystemZTargetLowering::emitMoveStackGuard(MachineInstr &MI,
   return MBB;
 }
 
-// Custom Inserter for COMPARE_STACK_GUARD. Loads the address of the stack guard,
-// then inserts a CLC.
+// Custom Inserter for COMPARE_STACK_GUARD. Loads the address of the stack
+// guard, then inserts a CLC.
 MachineBasicBlock *
 SystemZTargetLowering::emitCompareStackGuard(MachineInstr &MI,
-                                          MachineBasicBlock *MBB) const {
+                                             MachineBasicBlock *MBB) const {
   MachineOperand &FI = MI.getOperand(0);
   auto *II = MBB->getParent()->getTarget().getMCInstrInfo();
   Register AddrReg = emitLoadStackGuard(MI, MBB);

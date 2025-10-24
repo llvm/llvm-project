@@ -1818,7 +1818,8 @@ void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
     MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
   } else if (GuardType == "global") {
     // Expanding the load of a global stack guard post-RA is an error.
-    llvm_unreachable("global stack guard expansion should have happened during isel.");
+    llvm_unreachable(
+        "global stack guard expansion should have happened during isel.");
   } else {
     llvm_unreachable(
         (Twine("Unknown stack protector type \"") + GuardType + "\"")
@@ -1826,7 +1827,6 @@ void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
             .c_str());
   }
 }
-
 
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isInlineAsm()) {

@@ -852,8 +852,10 @@ private:
                                          unsigned Opcode) const;
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitMoveStackGuard(MachineInstr &MI, MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitCompareStackGuard(MachineInstr &MI, MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitMoveStackGuard(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+  MachineBasicBlock *emitCompareStackGuard(MachineInstr &MI,
+                                           MachineBasicBlock *MBB) const;
 
   SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
 
