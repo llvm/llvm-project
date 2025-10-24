@@ -16,6 +16,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -72,6 +73,13 @@ struct clang::CodeGen::CGCoroData {
   // all coro.frame intrinsics with direct SSA value of coro.begin that returns
   // the address of the coroutine frame of the current coroutine.
   llvm::CallInst *CoroBegin = nullptr;
+
+  // Stores the cloned cleanup block.
+  BasicBlock *RampCleanupBB = nullptr;
+
+  // Stores the llvm.coro.end that identifies if the coroutine exit without
+  // suspend.
+  llvm::CallInst *InRamp = nullptr;
 
   // Stores the last emitted coro.free for the deallocate expressions, we use it
   // to wrap dealloc code with if(auto mem = coro.free) dealloc(mem).
@@ -597,7 +605,7 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
 namespace {
 // Make sure to call coro.delete on scope exit.
 struct CallCoroDelete final : public EHScopeStack::Cleanup {
-  Stmt *Deallocate;
+  const CoroutineBodyStmt *S;
 
   // Emit "if (coro.free(CoroId, CoroBegin)) Deallocate;"
 
@@ -607,16 +615,53 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
   // builds a single call to a deallocation function which is safe to emit
   // multiple times.
   void Emit(CodeGenFunction &CGF, Flags) override {
+    bool FirstEmit = CGF.CurCoro.Data->InRamp == nullptr;
+    if (FirstEmit)
+      splitCleanupBB(CGF);
+    EmitCoroFree(CGF);
+  }
+
+  // Clone the cleanup block for ramp function if the coroutine completes
+  // without suspending
+  void splitCleanupBB(CodeGenFunction &CGF) {
+    auto &Builder = CGF.Builder;
+    auto &CoroData = *CGF.CurCoro.Data;
+    auto *SaveInsertPt = Builder.GetInsertBlock();
+    auto *PreCleanupBB = SaveInsertPt->getSinglePredecessor();
+
+    auto *CleanupBB =
+        PreCleanupBB->splitBasicBlock(PreCleanupBB->begin(), "coro.cleanup");
+
+    PreCleanupBB->getTerminator()->eraseFromParent();
+    Builder.SetInsertPoint(PreCleanupBB);
+
+    llvm::Function *CoroInRamp =
+        CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_is_in_ramp);
+    CoroData.InRamp = Builder.CreateCall(CoroInRamp, {}, "InRamp");
+
+    BasicBlock *EndBB = CoroData.CleanupJD.getBlock();
+    Builder.CreateCondBr(CoroData.InRamp, EndBB, CleanupBB);
+    Builder.SetInsertPoint(SaveInsertPt);
+
+    if (S->getReturnStmt()) {
+      // Clone cleanup block before EmitCoroFree()
+      llvm::ValueToValueMapTy VMap{};
+      CoroData.RampCleanupBB = llvm::CloneBasicBlock(CleanupBB, VMap, ".ramp");
+    }
+  }
+
+  void EmitCoroFree(CodeGenFunction &CGF, const Twine &NameSuffix = "") {
     // Remember the current point, as we are going to emit deallocation code
     // first to get to coro.free instruction that is an argument to a delete
     // call.
     BasicBlock *SaveInsertBlock = CGF.Builder.GetInsertBlock();
 
-    auto *FreeBB = CGF.createBasicBlock("coro.free");
+    Stmt *Deallocate = S->getDeallocate();
+    auto *FreeBB = CGF.createBasicBlock("coro.free" + NameSuffix);
     CGF.EmitBlock(FreeBB);
     CGF.EmitStmt(Deallocate);
 
-    auto *AfterFreeBB = CGF.createBasicBlock("after.coro.free");
+    auto *AfterFreeBB = CGF.createBasicBlock("after.coro.free" + NameSuffix);
     CGF.EmitBlock(AfterFreeBB);
 
     // We should have captured coro.free from the emission of deallocate.
@@ -641,7 +686,7 @@ struct CallCoroDelete final : public EHScopeStack::Cleanup {
     InsertPt->eraseFromParent();
     CGF.Builder.SetInsertPoint(AfterFreeBB);
   }
-  explicit CallCoroDelete(Stmt *DeallocStmt) : Deallocate(DeallocStmt) {}
+  explicit CallCoroDelete(const CoroutineBodyStmt *S) : S(S) {}
 };
 }
 
@@ -789,13 +834,13 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *AllocBB = createBasicBlock("coro.alloc");
   auto *InitBB = createBasicBlock("coro.init");
   auto *FinalBB = createBasicBlock("coro.final");
-  auto *RetBB = createBasicBlock("coro.ret");
+  auto *EndBB = createBasicBlock("coro.end");
 
   auto *CoroId = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_id),
       {Builder.getInt32(NewAlign), NullPtr, NullPtr, NullPtr});
   createCoroData(*this, CurCoro, CoroId);
-  CurCoro.Data->SuspendBB = RetBB;
+  CurCoro.Data->SuspendBB = EndBB;
   assert(ShouldEmitLifetimeMarkers &&
          "Must emit lifetime intrinsics for coroutines");
 
@@ -831,23 +876,25 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
 
   EmitBlock(InitBB);
 
-  // Pass the result of the allocation to coro.begin.
-  auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
-  Phi->addIncoming(NullPtr, EntryBB);
-  Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
-  auto *CoroBegin = Builder.CreateCall(
-      CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
-  CurCoro.Data->CoroBegin = CoroBegin;
+  {
+    // Pass the result of the allocation to coro.begin.
+    auto *Phi = Builder.CreatePHI(VoidPtrTy, 2);
+    Phi->addIncoming(NullPtr, EntryBB);
+    Phi->addIncoming(AllocateCall, AllocOrInvokeContBB);
+    auto *CoroBegin = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
+    CurCoro.Data->CoroBegin = CoroBegin;
+  }
 
   GetReturnObjectManager GroManager(*this, S);
   GroManager.EmitGroAlloca();
 
-  CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(RetBB);
+  CurCoro.Data->CleanupJD = getJumpDestInCurrentScope(EndBB);
   {
     CGDebugInfo *DI = getDebugInfo();
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);
     CodeGenFunction::RunCleanupsScope ResumeScope(*this);
-    EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, S.getDeallocate());
+    EHStack.pushCleanup<CallCoroDelete>(NormalAndEHCleanup, &S);
 
     // Create mapping between parameters and copy-params for coroutine function.
     llvm::ArrayRef<const Stmt *> ParamMoves = S.getParamMoves();
@@ -952,7 +999,14 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     }
   }
 
-  EmitBlock(RetBB);
+  EmitBlock(EndBB);
+  auto *Phi = Builder.CreatePHI(Builder.getInt1Ty(), llvm::pred_size(EndBB),
+                                "never.suspend");
+  BasicBlock *CleanupBB = CurCoro.Data->InRamp->getParent();
+  for (auto *Pred : llvm::predecessors(EndBB)) {
+    auto *V = (Pred == CleanupBB) ? Builder.getTrue() : Builder.getFalse();
+    Phi->addIncoming(V, Pred);
+  }
   // Emit coro.end before getReturnStmt (and parameter destructors), since
   // resume and destroy parts of the coroutine should not include them.
   llvm::Function *CoroEnd = CGM.getIntrinsic(llvm::Intrinsic::coro_end);
@@ -973,7 +1027,21 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     // shouldn't change the AST.
     if (PreviousRetValue)
       cast<ReturnStmt>(Ret)->setRetValue(PreviousRetValue);
-  }
+
+    // Emit cleanup for ramp function
+    auto *RampCleanupBB = CurCoro.Data->RampCleanupBB;
+    auto *RetBB = EndBB->splitBasicBlock(EndBB->getTerminator(), "coro.ret");
+    EndBB->getTerminator()->eraseFromParent();
+
+    Builder.SetInsertPoint(EndBB);
+    Builder.CreateCondBr(Phi, RampCleanupBB, RetBB);
+
+    EmitBlock(RampCleanupBB);
+    CallCoroDelete(&S).EmitCoroFree(*this, ".ramp");
+    Builder.CreateBr(RetBB);
+    Builder.ClearInsertionPoint();
+  } else
+    EndBB->setName("coro.ret");
 
   // LLVM require the frontend to mark the coroutine.
   CurFn->setPresplitCoroutine();

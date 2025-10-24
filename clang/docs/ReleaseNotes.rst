@@ -181,6 +181,9 @@ C++20 Feature Support
   As a result, Clang no longer incorrectly diagnoses substitution failures in template arguments only
   used in concept-ids, and produces better diagnostics for satisfaction failure. (#GH61811) (#GH135190)
 
+- Fixed premature coroutine promise destruction when the coroutine completes
+  without suspending, as part of CWG2563. (#GH120200)
+
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
