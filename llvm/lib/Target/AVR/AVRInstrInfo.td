@@ -1504,14 +1504,26 @@ let Defs = [SREG], hasSideEffects = 0 in
 def FRMIDX : Pseudo<(outs DLDREGS:$dst), (ins DLDREGS:$src, i16imm:$src2),
                     "frmidx\t$dst, $src, $src2", []>;
 
+// The instructions STDSPQRr and STDWSPQRr are used to store to the stack
+// frame. The most accurate implementation would be to load the SP into
+// a temporary pointer variable and then STDPtrQRr. However for efficiency,
+// we assume that R29R28 contains the current call frame pointer.
+// However in the PEI pass we sometimes rewrite a ADJCALLSTACKDOWN pseudo,
+// plus one or more STDSPQRr/STDWSPQRr pseudo instructions to use Z for a
+// stack adjustment then as a base pointer. To avoid corruption, we thus
+// specify special classes of registers, like GPR8 and DREGS, but with
+// the Z register removed, as the source/input to these instructions.
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDSPQRr : StorePseudo<(outs), (ins memspi:$dst, GPR8:$src),
+let Defs = [SP], Uses = [SP], hasSideEffects = 0 in
+def STDSPQRr : StorePseudo<(outs), (ins memspi:$dst, GPR8NOZ:$src),
                            "stdstk\t$dst, $src", [(store i8:$src, addr:$dst)]>;
 
+// See the comment on STDSPQRr.
 // This pseudo is either converted to a regular store or a push which clobbers
 // SP.
-def STDWSPQRr : StorePseudo<(outs), (ins memspi:$dt, DREGS:$src),
+let Defs = [SP], Uses = [SP], hasSideEffects = 0 in
+def STDWSPQRr : StorePseudo<(outs), (ins memspi:$dt, DREGSNOZ:$src),
                             "stdwstk\t$dt, $src", [(store i16:$src, addr:$dt)]>;
 
 // SP read/write pseudos.
