@@ -310,7 +310,7 @@ const VarDecl *getLValueDecl(const Expr *e) {
 
   e = e->IgnoreImpCasts();
 
-  const auto *dre = cast<DeclRefExpr>(E);
+  const auto *dre = cast<DeclRefExpr>(e);
   return cast<VarDecl>(dre->getDecl());
 }
 
