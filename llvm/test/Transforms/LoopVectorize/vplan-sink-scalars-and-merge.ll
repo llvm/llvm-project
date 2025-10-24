@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -force-widen-divrem-via-safe-divisor=0 -debug -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -40,10 +40,8 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     REPLICATE ir<%gep.b> = getelementptr inbounds ir<@b>, ir<0>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE ir<%lv.b> = load ir<%gep.b>
-; CHECK-NEXT:     REPLICATE ir<%add> = add ir<%lv.b>, ir<10>
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr inbounds ir<@a>, ir<0>, vp<[[STEPS]]
-; CHECK-NEXT:     REPLICATE ir<%mul> = mul ir<2>, ir<%add>
-; CHECK-NEXT:     REPLICATE store ir<%mul>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE store ir<%lv.b>, ir<%gep.a>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 
 ; CHECK:      pred.store.continue:
@@ -64,10 +62,8 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %gep.b = getelementptr inbounds [2048 x i32], ptr @b, i32 0, i32 %iv
   %lv.b  = load i32, ptr %gep.b, align 4
-  %add = add i32 %lv.b, 10
-  %mul = mul i32 2, %add
   %gep.a = getelementptr inbounds [2048 x i32], ptr @a, i32 0, i32 %iv
-  store i32 %mul, ptr %gep.a, align 4
+  store i32 %lv.b, ptr %gep.a, align 4
   %iv.next = add i32 %iv, 1
   %large = icmp sge i32 %iv, 8
   %exitcond = icmp eq i32 %iv, %k
