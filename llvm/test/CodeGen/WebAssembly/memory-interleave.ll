@@ -1720,42 +1720,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_bytes_same_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: v128.store64_lane
+; CHECK-NOT: f32x4
 define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp22.not = icmp eq i32 %N, 0
@@ -1788,42 +1753,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_bytes_vary_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: f32x4.add
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: f32x4.sub
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: v128.store64_lane
+; CHECK-NOT: f32x4
 define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp21.not = icmp eq i32 %N, 0
@@ -1966,42 +1896,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_shorts_same_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @two_floats_two_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp22.not = icmp eq i32 %N, 0
@@ -2034,42 +1929,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: two_floats_two_shorts_vary_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK: f32x4.add
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK: f32x4.sub
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @two_floats_two_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp21.not = icmp eq i32 %N, 0
@@ -2407,92 +2267,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: four_floats_four_bytes_same_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp48.not = icmp eq i32 %N, 0
@@ -2541,92 +2316,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: four_floats_four_bytes_vary_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.add
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.div
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.sub
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i8x16.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0
@@ -2873,93 +2563,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: four_floats_four_shorts_same_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp48.not = icmp eq i32 %N, 0
@@ -3008,93 +2612,7 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: four_floats_four_shorts_vary_op:
-; CHECK: loop
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 16, 17, 18, 19, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: v128.load
-; CHECK: v128.load
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 16, 17, 18, 19
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.mul
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 4, 5, 6, 7, 20, 21, 22, 23, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6, 7, 20, 21, 22, 23
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.add
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 8, 9, 10, 11, 24, 25, 26, 27, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 8, 9, 10, 11, 24, 25, 26, 27
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.div
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 12, 13, 14, 15, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 0, 1, 2, 3, 12, 13, 14, 15, 28, 29, 30, 31
-; CHECK: i8x16.shuffle {{.*}} 0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31
-; CHECK: f32x4.sub
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.splat
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: f32x4.extract_lane
-; CHECK: i32.trunc_sat_f32_s
-; CHECK: i16x8.replace_lane
-; CHECK: v128.store
+; CHECK-NOT: f32x4
 define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
   %cmp45.not = icmp eq i32 %N, 0
