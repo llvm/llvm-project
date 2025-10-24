@@ -292,17 +292,17 @@ jobs:
 
     - name: Install libxml2
       run: |
-        vcpkg install libxml2:x64-windows-static
+        vcpkg install libxml2:x64-windows-static-rel
 
     - name: Configure
       id: build
       shell: bash
       run: |
-        ls -l /c/vcpkg/packages/libxml2_x64-windows/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2
-        ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2/libxml
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows/lib/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows/include/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows/include/libxml2/libxml
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake  --debug-trycompile -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
