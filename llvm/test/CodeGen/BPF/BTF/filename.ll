@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
 ; Function Attrs: norecurse nounwind readnone uwtable
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test() local_unnamed_addr !dbg !7 {
   ret i32 0, !dbg !11
 }
 

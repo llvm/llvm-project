@@ -22,17 +22,17 @@ target triple = "bpf"
 %struct.t = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !14 {
 entry:
   %param = alloca [1 x i64], align 8
   call void @llvm.dbg.value(metadata ptr %arg, metadata !22, metadata !DIExpression()), !dbg !27
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %param) #5, !dbg !28
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %param), !dbg !28
   call void @llvm.dbg.declare(metadata ptr %param, metadata !23, metadata !DIExpression()), !dbg !29
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr elementtype(%struct.t) %arg, i32 0, i32 0), !dbg !30, !llvm.preserve.access.index !18
   %1 = ptrtoint ptr %0 to i64, !dbg !31
   store i64 %1, ptr %param, align 8, !dbg !33, !tbaa !34
-  %call = call i32 @foo(ptr nonnull %param) #5, !dbg !38
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %param) #5, !dbg !39
+  %call = call i32 @foo(ptr nonnull %param), !dbg !38
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %param), !dbg !39
   ret i32 %call, !dbg !40
 }
 
@@ -41,21 +41,21 @@ entry:
 ; CHECK:  *(u64 *)(r10 - 8) = r1
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32, i32) #3
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32, i32)
 
-declare !dbg !5 dso_local i32 @foo(ptr) local_unnamed_addr #4
+declare !dbg !5 dso_local i32 @foo(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!10, !11, !12}

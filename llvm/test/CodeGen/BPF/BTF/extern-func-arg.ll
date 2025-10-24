@@ -8,9 +8,9 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test() local_unnamed_addr !dbg !13 {
 entry:
-  %call = tail call i32 @global_func(i8 signext 0) #2, !dbg !16
+  %call = tail call i32 @global_func(i8 signext 0), !dbg !16
   ret i32 %call, !dbg !17
 }
 
@@ -49,7 +49,7 @@ entry:
 ; CHECK:             .ascii  "char"                  # string offset=55
 ; CHECK:             .ascii  "global_func"           # string offset=60
 
-declare !dbg !4 dso_local i32 @global_func(i8 signext) local_unnamed_addr #1
+declare !dbg !4 dso_local i32 @global_func(i8 signext) local_unnamed_addr
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

@@ -15,7 +15,7 @@
 @sv = internal global { i32, i32, [10 x i8] } { i32 3, i32 4, [10 x i8] c"abcdefghi\00" }, align 4, !dbg !0
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !21 {
+define dso_local i32 @test() local_unnamed_addr !dbg !21 {
   %1 = load volatile i32, ptr @sv, align 4, !dbg !24, !tbaa !25
   ret i32 %1, !dbg !29
 }

@@ -10,7 +10,7 @@
 ; correct reference to the lines in the string table.
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local void @f() local_unnamed_addr #0 !dbg !7 {
+define dso_local void @f() local_unnamed_addr !dbg !7 {
 entry:
   ret void, !dbg !10
 }

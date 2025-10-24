@@ -15,12 +15,12 @@
 ;   clang -target bpf -O2 -S -emit-llvm -Xclang -disable-llvm-passes test.c
 
 ; Function Attrs: nounwind
-define dso_local ptr @test(ptr %p) #0 {
+define dso_local ptr @test(ptr %p) {
 entry:
   %p.addr = alloca ptr, align 8
   %ret = alloca i32, align 4
   store ptr %p, ptr %p.addr, align 8, !tbaa !2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ret) #3
+  call void @llvm.lifetime.start.p0(i64 4, ptr %ret)
   %call = call i32 @foo()
   store i32 %call, ptr %ret, align 4, !tbaa !6
   %0 = load i32, ptr %ret, align 4, !tbaa !6
@@ -37,7 +37,7 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.then, %entry
   %3 = load ptr, ptr %p.addr, align 8, !tbaa !2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ret) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr %ret)
   ret ptr %3
 }
 
@@ -66,12 +66,12 @@ if.end:                                           ; preds = %if.then, %entry
 ; CHECK-COMMON:  exit
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-declare dso_local i32 @foo(...) #2
+declare dso_local i32 @foo(...)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

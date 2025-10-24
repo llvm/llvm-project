@@ -10,7 +10,7 @@ target triple = "bpf"
 @testprog.myvar_c = internal unnamed_addr global i32 0, align 4, !dbg !0
 
 ; Function Attrs: nounwind
-define i32 @testprog(i32, i32) local_unnamed_addr #0 !dbg !2 {
+define i32 @testprog(i32, i32) local_unnamed_addr !dbg !2 {
   tail call void @llvm.dbg.value(metadata i32 %0, i64 0, metadata !11, metadata !16), !dbg !17
   tail call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !12, metadata !16), !dbg !18
   %3 = load i32, ptr @testprog.myvar_c, align 4, !dbg !19, !tbaa !20
@@ -21,7 +21,7 @@ define i32 @testprog(i32, i32) local_unnamed_addr #0 !dbg !2 {
 }
 
 ; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!7}
 !llvm.module.flags = !{!13, !14}

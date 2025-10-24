@@ -3,9 +3,9 @@
 ;   int test(int (*f)(void)) { return f(); }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr nocapture %f) local_unnamed_addr #0 {
+define dso_local i32 @test(ptr nocapture %f) local_unnamed_addr {
 entry:
-  %call = tail call i32 %f() #1
+  %call = tail call i32 %f()
 ; CHECK: callx r{{[0-9]+}}
   ret i32 %call
 }

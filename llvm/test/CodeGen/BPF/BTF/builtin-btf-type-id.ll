@@ -24,7 +24,7 @@
 @bpf_log = internal global ptr inttoptr (i64 999 to ptr), align 8, !dbg !17
 
 ; Function Attrs: nounwind
-define dso_local void @prog1() #0 !dbg !28 {
+define dso_local void @prog1() !dbg !28 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !31, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 0, i64 0), !dbg !36, !llvm.preserve.access.index !7
@@ -33,10 +33,10 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.bpf.btf.type.id(i32, i64) #1
+declare i64 @llvm.bpf.btf.type.id(i32, i64)
 
 ; Function Attrs: nounwind
-define dso_local void @prog2() #0 !dbg !38 {
+define dso_local void @prog2() !dbg !38 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !39, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 1, i64 0), !dbg !40, !llvm.preserve.access.index !6
@@ -45,7 +45,7 @@ entry:
 }
 
 ; Function Attrs: nounwind
-define dso_local void @prog3() #0 !dbg !42 {
+define dso_local void @prog3() !dbg !42 {
 entry:
   %0 = load ptr, ptr @bpf_log, align 8, !dbg !43, !tbaa !32
   %1 = call i64 @llvm.bpf.btf.type.id(i32 2, i64 1), !dbg !44, !llvm.preserve.access.index !11

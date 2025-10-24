@@ -21,7 +21,7 @@ target triple = "bpf"
 %struct.v1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !24 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !24 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !34, metadata !DIExpression()), !dbg !35
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.v3) %arg, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !28
@@ -31,7 +31,7 @@ entry:
   %4 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x [4 x %struct.v1]]) %3, i32 1, i32 2), !dbg !36, !llvm.preserve.access.index !5
   %5 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([4 x %struct.v1]) %4, i32 1, i32 3), !dbg !36, !llvm.preserve.access.index !18
   %6 = tail call ptr @llvm.preserve.struct.access.index.p0.p0(ptr elementtype(%struct.v1) %5, i32 1, i32 1), !dbg !36, !llvm.preserve.access.index !8
-  %call = tail call i32 @get_value(ptr %6) #4, !dbg !37
+  %call = tail call i32 @get_value(ptr %6), !dbg !37
   ret i32 %call, !dbg !38
 }
 
@@ -62,13 +62,13 @@ entry:
 ; CHECK-NEXT:         .long   107
 ; CHECK-NEXT:         .long   0
 
-declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0(ptr, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32, i32) #2
+declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32, i32)
 
 ; Function Attrs: nounwind readnone
 
@@ -79,7 +79,7 @@ declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32, i32) #2
 ; Function Attrs: nounwind readnone
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20, !21, !22}

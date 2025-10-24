@@ -13,7 +13,7 @@
 %struct.s1 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @foo(ptr %arg) #0 !dbg !7 {
+define dso_local i32 @foo(ptr %arg) !dbg !7 {
 entry:
   %arg.addr = alloca ptr, align 8
   store ptr %arg, ptr %arg.addr, align 8, !tbaa !18
@@ -25,13 +25,13 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind
-define dso_local i32 @bar(ptr %arg) #0 !dbg !29 {
+define dso_local i32 @bar(ptr %arg) !dbg !29 {
 entry:
   %arg.addr = alloca ptr, align 8
   store ptr %arg, ptr %arg.addr, align 8, !tbaa !18

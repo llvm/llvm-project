@@ -11,7 +11,7 @@
 
 @g = weak dso_local local_unnamed_addr global i8 0, align 1, !dbg !0
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !11 {
+define dso_local i32 @test() local_unnamed_addr !dbg !11 {
 entry:
   %0 = load i8, ptr @g, align 1, !dbg !15, !tbaa !16
   %conv = sext i8 %0 to i32, !dbg !15

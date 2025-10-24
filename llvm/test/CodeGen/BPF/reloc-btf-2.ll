@@ -14,7 +14,7 @@
 @s = internal global i32 0, align 4, !dbg !6
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @test() local_unnamed_addr !dbg !14 {
   %1 = load i32, ptr @g, align 4, !dbg !17, !tbaa !18
   %2 = load volatile i32, ptr @s, align 4, !dbg !22, !tbaa !18
   %3 = add nsw i32 %2, %1, !dbg !23

@@ -10,12 +10,12 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test() local_unnamed_addr !dbg !13 {
 entry:
-  %call = tail call i32 @global_func(i8 signext 0) #2, !dbg !16
+  %call = tail call i32 @global_func(i8 signext 0), !dbg !16
   ret i32 %call, !dbg !17
 }
-declare !dbg !4 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed_addr #1 section "abc"
+declare !dbg !4 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed_addr section "abc"
 
 ; CHECK:             .section        .BTF,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f

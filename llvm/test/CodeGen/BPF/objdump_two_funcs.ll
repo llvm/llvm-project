@@ -14,7 +14,7 @@
 ;   clang -target bpf -S -gdwarf-5 -gembed-source -emit-llvm -g -O2 bug.c
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @func1(i32 %a) local_unnamed_addr #0 section "s1" !dbg !7 {
+define dso_local i32 @func1(i32 %a) local_unnamed_addr section "s1" !dbg !7 {
 entry:
 ; CHECK: <func1>:
   call void @llvm.dbg.value(metadata i32 %a, metadata !12, metadata !DIExpression()), !dbg !13
@@ -24,7 +24,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @func2(i32 %a) local_unnamed_addr #0 section "s2" !dbg !16 {
+define dso_local i32 @func2(i32 %a) local_unnamed_addr section "s2" !dbg !16 {
 entry:
 ; CHECK: <func2>:
   call void @llvm.dbg.value(metadata i32 %a, metadata !18, metadata !DIExpression()), !dbg !19
@@ -35,7 +35,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

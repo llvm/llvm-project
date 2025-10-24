@@ -9,18 +9,18 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind
-define dso_local i32 @test2() local_unnamed_addr #0 !dbg !12 {
+define dso_local i32 @test2() local_unnamed_addr !dbg !12 {
 entry:
   %call = tail call fastcc i32 @test1(), !dbg !13
   ret i32 %call, !dbg !14
 }
 ; Function Attrs: noinline nounwind
-define internal fastcc i32 @test1() unnamed_addr #1 !dbg !15 {
+define internal fastcc i32 @test1() unnamed_addr !dbg !15 {
 entry:
-  %call = tail call i32 @foo() #3, !dbg !16
+  %call = tail call i32 @foo(), !dbg !16
   ret i32 %call, !dbg !17
 }
-declare !dbg !4 dso_local i32 @foo() local_unnamed_addr #2
+declare !dbg !4 dso_local i32 @foo() local_unnamed_addr
 
 ; CHECK:             .section        .BTF,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f

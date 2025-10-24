@@ -14,7 +14,7 @@
 @a = internal constant i8 0, section "maps", align 1, !dbg !10
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
+define dso_local i32 @foo() local_unnamed_addr !dbg !2 {
   %1 = load volatile i8, ptr @a, align 1, !dbg !22, !tbaa !23
   %2 = sext i8 %1 to i32, !dbg !22
   %3 = load volatile i16, ptr @foo.b, align 2, !dbg !26, !tbaa !27

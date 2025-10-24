@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm t.c
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @f1(i32 returned) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @f1(i32 returned) local_unnamed_addr !dbg !7 {
   call void @llvm.dbg.value(metadata i32 %0, metadata !12, metadata !DIExpression()), !dbg !13
   ret i32 %0, !dbg !14
 }
@@ -73,7 +73,7 @@ define dso_local i32 @f1(i32 returned) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   1042                    # Line 1 Col 18
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

@@ -10,7 +10,7 @@
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
 ; Function Attrs: nounwind readonly
-define dso_local i64 @test(ptr readonly %skb) local_unnamed_addr #0 !dbg !13 {
+define dso_local i64 @test(ptr readonly %skb) local_unnamed_addr !dbg !13 {
 entry:
   call void @llvm.dbg.value(metadata ptr %skb, metadata !17, metadata !DIExpression()), !dbg !18
   %call = tail call i64 @llvm.bpf.load.byte(ptr %skb, i64 10), !dbg !19
@@ -54,9 +54,9 @@ entry:
 ; CHECK-NEXT:        .byte   0
 
 ; Function Attrs: nounwind readonly
-declare !dbg !4 i64 @llvm.bpf.load.byte(ptr, i64) #1
+declare !dbg !4 i64 @llvm.bpf.load.byte(ptr, i64)
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10, !11}

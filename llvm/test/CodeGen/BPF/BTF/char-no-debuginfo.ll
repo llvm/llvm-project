@@ -10,7 +10,7 @@
 @g = dso_local local_unnamed_addr global i32 5, section "maps", align 4
 
 ; Function Attrs: norecurse nounwind readonly
-define dso_local i32 @test() local_unnamed_addr #0 {
+define dso_local i32 @test() local_unnamed_addr {
   %1 = load i32, ptr @g, align 4, !tbaa !2
   ret i32 %1
 }

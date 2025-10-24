@@ -7,7 +7,7 @@
 ;   clang -target bpf -O2 -emit-llvm -S test.c
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @test(i64 %x, i64 %y) local_unnamed_addr #0 {
+define dso_local i32 @test(i64 %x, i64 %y) local_unnamed_addr {
 entry:
   %and = and i64 %y, %x
   %conv = trunc i64 %and to i32

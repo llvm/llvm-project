@@ -19,14 +19,14 @@
 @__const.test.val = private unnamed_addr constant %struct.anon { [4 x i32] [i32 2, i32 3, i32 4, i32 5], i8 4 }, align 4
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test() local_unnamed_addr !dbg !7 {
 entry:
   %val = alloca %struct.anon, align 4
-  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %val) #4, !dbg !23
+  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %val), !dbg !23
   call void @llvm.dbg.declare(metadata ptr %val, metadata !12, metadata !DIExpression()), !dbg !24
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(20) %val, ptr nonnull align 4 dereferenceable(20) @__const.test.val, i64 20, i1 false), !dbg !24
-  call void @foo(ptr nonnull %val) #4, !dbg !25
-  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %val) #4, !dbg !26
+  call void @foo(ptr nonnull %val), !dbg !25
+  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %val), !dbg !26
   ret i32 0, !dbg !27
 }
 
@@ -38,18 +38,18 @@ entry:
 ; CHECK:             .ascii  ".rodata"                       # string offset=42
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
-declare !dbg !28 dso_local void @foo(ptr) local_unnamed_addr #3
+declare !dbg !28 dso_local void @foo(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

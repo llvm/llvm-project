@@ -19,11 +19,11 @@ target triple = "bpf"
 @g = dso_local local_unnamed_addr global ptr null, section "stats", align 8, !dbg !0
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !17 {
+define dso_local i32 @test() local_unnamed_addr !dbg !17 {
 entry:
   %0 = load ptr, ptr @g, align 8, !dbg !20, !tbaa !21
   %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !20, !llvm.preserve.access.index !8
-  %call = tail call i32 @get_value(ptr %1) #3, !dbg !25
+  %call = tail call i32 @get_value(ptr %1), !dbg !25
   ret i32 %call, !dbg !26
 }
 
@@ -45,10 +45,10 @@ entry:
 ; CHECK-NEXT:         .long   23
 ; CHECK-NEXT:         .long   0
 
-declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr, i32, i32)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!13, !14, !15}

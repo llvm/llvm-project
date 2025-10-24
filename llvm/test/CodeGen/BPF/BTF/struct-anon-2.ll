@@ -15,7 +15,7 @@
 %struct.anon.0 = type { i64 }
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @f1(ptr nocapture readnone %s1) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @f1(ptr nocapture readnone %s1) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %s1, metadata !25, metadata !DIExpression()), !dbg !26
   ret i32 0, !dbg !27
@@ -66,7 +66,7 @@ entry:
 ; CHECK:             .ascii  "long int"              # string offset=20
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

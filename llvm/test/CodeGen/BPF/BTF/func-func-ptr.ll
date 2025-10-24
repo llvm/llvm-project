@@ -14,7 +14,7 @@
 @b1 = common dso_local local_unnamed_addr global %struct.t1 zeroinitializer, align 8, !dbg !6
 
 ; Function Attrs: nounwind readnone
-define dso_local void @f1(i32 %p2) local_unnamed_addr #0 !dbg !19 {
+define dso_local void @f1(i32 %p2) local_unnamed_addr !dbg !19 {
 entry:
   call void @llvm.dbg.value(metadata i32 %p2, metadata !21, metadata !DIExpression()), !dbg !22
   ret void, !dbg !23
@@ -95,7 +95,7 @@ entry:
 ; CHECK-NEXT:        .long   3091                    # Line 3 Col 19
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!15, !16, !17}

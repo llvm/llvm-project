@@ -15,11 +15,11 @@ target triple = "bpf"
 %union.u = type { i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !17, metadata !DIExpression()), !dbg !18
   %0 = tail call ptr @llvm.preserve.union.access.index.p0.us.p0.us(ptr %arg, i32 1), !dbg !19, !llvm.preserve.access.index !12
-  %call = tail call i32 @get_value(ptr %0) #4, !dbg !20
+  %call = tail call i32 @get_value(ptr %0), !dbg !20
   ret i32 %call, !dbg !21
 }
 ; CHECK-LABEL: test
@@ -38,13 +38,13 @@ entry:
 ; CHECK-NEXT: .long   26
 ; CHECK-NEXT: .long   0
 
-declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.union.access.index.p0.us.p0.us(ptr, i32 immarg) #2
+declare ptr @llvm.preserve.union.access.index.p0.us.p0.us(ptr, i32 immarg)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

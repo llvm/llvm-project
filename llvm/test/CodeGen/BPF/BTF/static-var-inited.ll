@@ -14,7 +14,7 @@
 @a = internal global i8 3, align 1, !dbg !10
 
 ; Function Attrs: norecurse nounwind
-define dso_local i32 @foo() local_unnamed_addr #0 !dbg !2 {
+define dso_local i32 @foo() local_unnamed_addr !dbg !2 {
   %1 = load volatile i8, ptr @a, align 1, !dbg !20, !tbaa !21
   %2 = sext i8 %1 to i32, !dbg !20
   %3 = load volatile i16, ptr @foo.b, align 2, !dbg !24, !tbaa !25

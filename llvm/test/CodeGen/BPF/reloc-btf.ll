@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=bpfel -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test() local_unnamed_addr !dbg !7 {
 entry:
   ret i32 0, !dbg !11
 }

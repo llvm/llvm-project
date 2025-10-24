@@ -20,12 +20,12 @@ target triple = "bpf"
 %struct.__s = type { [7 x i32] }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg, metadata !24, metadata !DIExpression()), !dbg !25
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.__ss(ptr elementtype(%struct.__s) %arg, i32 0, i32 0), !dbg !26, !llvm.preserve.access.index !13
   %1 = tail call ptr @llvm.preserve.array.access.index.p0.p0(ptr elementtype([7 x i32]) %0, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !19
-  %call = tail call i32 @get_value(ptr %1) #4, !dbg !27
+  %call = tail call i32 @get_value(ptr %1), !dbg !27
   ret i32 %call, !dbg !28
 }
 
@@ -48,16 +48,16 @@ entry:
 ; CHECK-NEXT:    .long   [[ACCESS_STR]]
 ; CHECK-NEXT:    .long   0
 
-declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.__ss(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.__ss(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.array.access.index.p0.p0(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

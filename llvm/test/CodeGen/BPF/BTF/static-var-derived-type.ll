@@ -17,7 +17,7 @@
 @v4 = internal constant ptr null, align 8, !dbg !19
 
 ; Function Attrs: norecurse nounwind
-define dso_local i64 @foo() local_unnamed_addr #0 !dbg !27 {
+define dso_local i64 @foo() local_unnamed_addr !dbg !27 {
   %1 = load volatile ptr, ptr @v1, align 8, !dbg !29, !tbaa !30
   %2 = load volatile ptr, ptr @v2, align 8, !dbg !34, !tbaa !30
   %3 = ptrtoint ptr %1 to i64, !dbg !35
