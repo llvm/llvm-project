@@ -257,15 +257,6 @@ jobs:
         fi
         echo "build-prefix=$build_prefix" >> $GITHUB_OUTPUT
 
-    # We will use Wix to generate the installer on Windows, because this
-    # reportedly works better with larger installers, though, I haven't actually
-    # seen an installer > 2GB, which is the limit for default installer
-    # generator.
-    - name: Install Wix
-      if: runner.os == 'Windows'
-      run: |
-        dotnet tool install --global wix
-
     - name: Install libxml2 for Windows
       if: runner.os == 'Windows'
       run: |
@@ -320,12 +311,6 @@ jobs:
         ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
         release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
         mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
-
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-      if: always()
-      with:
-        name: debug
-        path: build/
 
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
