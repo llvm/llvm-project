@@ -691,20 +691,15 @@ TEST_F(LibraryResolverIT, PathResolverFollowsSymlinks) {
   std::string linkName = BaseDir + withext("/link_to_C");
   std::string target = lib("C");
 
-  if (::symlink(target.c_str(), linkName.c_str()) != 0) {
-    perror("symlink failed");
-    FAIL() << "Failed to create symlink: " << strerror(errno);
-  }
+  if (::symlink(target.c_str(), linkName.c_str()) != 0)
+    GTEST_SKIP() << "Failed to create symlink: " << strerror(errno);
 
   auto resolved = PResolver->resolve(linkName, EC);
   ASSERT_TRUE(resolved.has_value());
   EXPECT_FALSE(EC);
   EXPECT_EQ(*resolved, target);
 
-  if (::unlink(linkName.c_str()) != 0) {
-    perror("unlink failed");
-    FAIL() << "Failed to remove symlink: " << strerror(errno);
-  }
+  (void)::unlink(linkName.c_str());
 }
 
 TEST_F(LibraryResolverIT, PathResolverCachesResults) {
