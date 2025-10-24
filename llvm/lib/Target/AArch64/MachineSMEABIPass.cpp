@@ -989,10 +989,10 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
 
   if (OptLevel != CodeGenOptLevel::None) {
-    // Propagate desired states forwards then backwards. We propagate forwards
-    // first as this propagates desired states from inner to outer loops.
-    // Backwards propagation is then used to fill in any gaps. Note: Doing both
-    // in one step can give poor results. For example:
+    // Propagate desired states forward, then backwards. Most of the propagation
+    // should be done in the forward step, and backwards propagation is then
+    // used to fill in the gaps. Note: Doing both in one step can give poor
+    // results. For example, consider this subgraph:
     //
     //    ┌─────┐
     //  ┌─┤ BB0 ◄───┐
