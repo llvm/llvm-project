@@ -2807,6 +2807,12 @@ static void writeAsOperandInternal(raw_ostream &Out, const Metadata *MD,
         writeDILocation(Out, Loc, WriterCtx);
         return;
       }
+      if (N->getNumOperands() == 1) {
+        if (const auto *CAM = dyn_cast<ConstantAsMetadata>(N->getOperand(0))) {
+          writeConstantInternal(Out, CAM->getValue(), WriterCtx);
+          return;
+        }
+      }
       // Give the pointer value instead of "badref", since this comes up all
       // the time when debugging.
       Out << "<" << N << ">";
