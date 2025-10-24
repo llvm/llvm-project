@@ -834,8 +834,8 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
   unsigned VecRegBytes = TTI.getLoadStoreVecRegBitWidth(AS) / 8;
 
   // For compile time reasons, we cache whether or not the superset
-  // of all candidate chains contains any extra stores from earlier gap
   // of all candidate chains contains any extra loads/stores from earlier gap
+  // filling.
   bool CandidateChainsMayContainExtraLoadsStores = any_of(
       C, [this](const ChainElem &E) { return ExtraElements.contains(E.Inst); });
 
@@ -913,6 +913,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
         }
       }
 
+      // Attempt to extend non-power-of-2 chains to the next power of 2.
       Chain ExtendingLoadsStores;
       if (NumVecElems < TargetVF && NumVecElems % 2 != 0 && VecElemBits >= 8) {
         // TargetVF may be a lot higher than NumVecElems,
@@ -928,18 +929,17 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                           << NumVecElems << " "
                           << (IsLoadChain ? "loads" : "stores") << " to "
                           << NewNumVecElems << " elements\n");
-        // Do not artificially increase the chain if it becomes misaligned,
-        // otherwise we may unnecessary split the chain when the target actually
-        // supports non-pow2 VF.
+        // Do not artificially increase the chain if it becomes misaligned or if
+        // the associated masked load/store is not legal, otherwise we may
+        // unnecessarily split the chain when the target actually supports
+        // non-pow2 VF.
         if (accessIsAllowedAndFast(NewSizeBytes, AS, Alignment, VecElemBits) &&
-            ((IsLoadChain &&
-              TTI.isLegalMaskedLoad(
-                  FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
-                  AS, TTI::MaskKind::ConstantMask)) ||
-             (!IsLoadChain &&
-              TTI.isLegalMaskedStore(
-                  FixedVectorType::get(VecElemTy, NewNumVecElems), Alignment,
-                  AS, TTI::MaskKind::ConstantMask)))) {
+            (IsLoadChain ? TTI.isLegalMaskedLoad(
+                               FixedVectorType::get(VecElemTy, NewNumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask)
+                         : TTI.isLegalMaskedStore(
+                               FixedVectorType::get(VecElemTy, NewNumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: extending " << (IsLoadChain ? "load" : "store")
                      << " chain of " << NumVecElems << " "
@@ -950,13 +950,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                      << " with total byte size of " << NewSizeBytes
                      << ", TargetVF=" << TargetVF << " \n");
 
+          // Create (NewNumVecElems - NumVecElems) extra elements.
           unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
           ChainElem Prev = C[CEnd];
-          for (unsigned i = 0; i < (NewNumVecElems - NumVecElems); i++) {
+          for (unsigned I = (NewNumVecElems - NumVecElems); I != 0; --I) {
             ChainElem NewElem = createExtraElementAfter(
                 Prev, APInt(ASPtrBits, VecElemBytes), "Extend");
             ExtendingLoadsStores.push_back(NewElem);
-            Prev = ExtendingLoadsStores.back();
+            Prev = NewElem;
           }
 
           // Update the size and number of elements for upcoming checks.
@@ -984,30 +985,28 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
       }
 
       if (CandidateChainsMayContainExtraLoadsStores) {
-        // The legality of adding extra loads/stores to ExtendingLoadsStores has
-        // already been checked, but if the candidate chain contains extra
-        // loads/stores from an earlier optimization, confirm legality now.
-        // This filter is essential because, when filling gaps in
-        // splitChainByContinuity, we queried the API to check that (for a given
-        // element type and address space) there *may* be a legal masked
-        // load/store we can aspire to create. Now, we need to check if the
-        // actual chain we ended up with is legal to turn into a masked
-        // load/store. This is relevant for NVPTX, for example, where a masked
-        // store is only legal if we have ended up with a 256-bit vector.
-        bool CandidateChainContainsExtraLoadsStores = llvm::any_of(
+        // If the candidate chain contains extra loads/stores from an earlier
+        // optimization, confirm legality now. This filter is essential because
+        // when filling gaps in splitChainByContiguity, we queried the API to
+        // check that (for a given element type and address space) there *may*
+        // have been a legal masked load/store we could possibly create. Now, we
+        // need to check if the actual chain we ended up with is legal to turn
+        // into a masked load/store. This is relevant for NVPTX, for example,
+        // where a masked store is only legal if we have ended up with a 256-bit
+        // vector.
+        bool CurrCandContainsExtraLoadsStores = llvm::any_of(
             ArrayRef<ChainElem>(C).slice(CBegin, CEnd - CBegin + 1),
             [this](const ChainElem &E) {
               return ExtraElements.contains(E.Inst);
             });
 
-        if (CandidateChainContainsExtraLoadsStores &&
-            ((IsLoadChain && !TTI.isLegalMaskedLoad(
-                                 FixedVectorType::get(VecElemTy, NumVecElems),
-                                 Alignment, AS, TTI::MaskKind::ConstantMask)) ||
-             (!IsLoadChain &&
-              !TTI.isLegalMaskedStore(
-                  FixedVectorType::get(VecElemTy, NumVecElems), Alignment, AS,
-                  TTI::MaskKind::ConstantMask)))) {
+        if (CurrCandContainsExtraLoadsStores &&
+            (IsLoadChain ? !TTI.isLegalMaskedLoad(
+                               FixedVectorType::get(VecElemTy, NumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask)
+                         : !TTI.isLegalMaskedStore(
+                               FixedVectorType::get(VecElemTy, NumVecElems),
+                               Alignment, AS, TTI::MaskKind::ConstantMask))) {
           LLVM_DEBUG(dbgs()
                      << "LSV: splitChainByAlignment discarding candidate chain "
                         "because it contains extra loads/stores that we cannot "
