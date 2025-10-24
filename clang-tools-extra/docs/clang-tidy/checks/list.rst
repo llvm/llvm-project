@@ -103,6 +103,7 @@ Clang-Tidy Checks
    :doc:`bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result>`, "Yes"
    :doc:`bugprone-inaccurate-erase <bugprone/inaccurate-erase>`, "Yes"
    :doc:`bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions>`,
+   :doc:`bugprone-inconsistent-ifelse-braces <bugprone/inconsistent-ifelse-braces>`,
    :doc:`bugprone-incorrect-enable-if <bugprone/incorrect-enable-if>`, "Yes"
    :doc:`bugprone-incorrect-enable-shared-from-this <bugprone/incorrect-enable-shared-from-this>`, "Yes"
    :doc:`bugprone-incorrect-roundings <bugprone/incorrect-roundings>`,
@@ -256,7 +257,7 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
-   :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-ranges <llvm/use-ranges>`,
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"

@@ -184,6 +184,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-inconsistent-ifelse-braces
+  <clang-tidy/checks/bugprone/inconsistent-ifelse-braces>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 
