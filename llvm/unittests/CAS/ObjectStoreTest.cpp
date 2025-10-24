@@ -1,4 +1,4 @@
-//===- ObjectStoreTest.cpp ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,7 +76,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 
   // Run validation on all CASIDs.
   for (int I = 0, E = IDs.size(); I != E; ++I)
-    ASSERT_THAT_ERROR(CAS1->validate(IDs[I]), Succeeded());
+    ASSERT_THAT_ERROR(CAS1->validateObject(IDs[I]), Succeeded());
 
   // Check that the blobs can be retrieved multiple times.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
@@ -120,15 +120,15 @@ TEST_P(CASTest, BlobsBig) {
     std::optional<CASID> ID2;
     ASSERT_THAT_ERROR(CAS->createProxy({}, String1).moveInto(ID1), Succeeded());
     ASSERT_THAT_ERROR(CAS->createProxy({}, String1).moveInto(ID2), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
 
     String1.append(String2);
     ASSERT_THAT_ERROR(CAS->createProxy({}, String2).moveInto(ID1), Succeeded());
     ASSERT_THAT_ERROR(CAS->createProxy({}, String2).moveInto(ID2), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID1), Succeeded());
-    ASSERT_THAT_ERROR(CAS->validate(*ID2), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(*ID2), Succeeded());
     ASSERT_EQ(ID1, ID2);
     String2.append(String1);
   }
@@ -176,10 +176,11 @@ multiline text multiline text multiline text multiline text multiline text)",
 
     // Check basic printing of IDs.
     IDs.push_back(CAS1->getID(*Node));
-    auto ID = CAS1->getID(Nodes.back());
-    EXPECT_EQ(ID.toString(), IDs.back().toString());
-    EXPECT_EQ(*Node, Nodes.back());
-    EXPECT_EQ(ID, IDs.back());
+    EXPECT_EQ(IDs.back().toString(), IDs.back().toString());
+    EXPECT_EQ(Nodes.front(), Nodes.front());
+    EXPECT_EQ(Nodes.back(), Nodes.back());
+    EXPECT_EQ(IDs.front(), IDs.front());
+    EXPECT_EQ(IDs.back(), IDs.back());
     if (Nodes.size() <= 1)
       continue;
     EXPECT_NE(Nodes.front(), Nodes.back());
@@ -266,7 +267,7 @@ TEST_P(CASTest, NodesBig) {
   }
 
   for (auto ID : CreatedNodes)
-    ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
+    ASSERT_THAT_ERROR(CAS->validateObject(CAS->getID(ID)), Succeeded());
 }
 
 #if LLVM_ENABLE_THREADS
@@ -332,17 +333,124 @@ static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
 }
 
 TEST_P(CASTest, BlobsParallel) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   uint64_t Size = 1ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
 
 #ifdef EXPENSIVE_CHECKS
 TEST_P(CASTest, BlobsBigParallel) {
-  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   // 100k is large enough to be standalone files in our on-disk cas.
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
 #endif // EXPENSIVE_CHECKS
+
+#ifndef _WIN32 // create_link won't work for directories on Windows
+TEST_F(OnDiskCASTest, OnDiskCASBlobsParallelMultiCAS) {
+  // This test intentionally uses symlinked paths to the same CAS to subvert the
+  // shared memory mappings that would normally be created within a single
+  // process. This breaks the lock file guarantees, so we must be careful not
+  // to create or destroy the CAS objects concurrently, which is when the locks
+  // are normally important.
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+  ASSERT_EQ(sys::fs::create_directory(Temp.path("real_cas")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas1")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas2")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas3")),
+            std::error_code());
+
+  std::unique_ptr<ObjectStore> CAS1, CAS2, CAS3, CAS4;
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("real_cas")).moveInto(CAS1),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas1")).moveInto(CAS2),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas2")).moveInto(CAS3),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas3")).moveInto(CAS4),
+                    Succeeded());
+
+  uint64_t Size = 1ULL * 1024;
+  ASSERT_NO_FATAL_FAILURE(testBlobsParallel(*CAS1, *CAS2, *CAS3, *CAS4, Size));
+}
+
+TEST_F(OnDiskCASTest, OnDiskCASBlobsBigParallelMultiCAS) {
+  // See comment in BlobsParallelMultiCAS.
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+  ASSERT_EQ(sys::fs::create_directory(Temp.path("real_cas")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas1")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas2")),
+            std::error_code());
+  ASSERT_EQ(sys::fs::create_link("real_cas", Temp.path("sym_cas3")),
+            std::error_code());
+
+  std::unique_ptr<ObjectStore> CAS1, CAS2, CAS3, CAS4;
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("real_cas")).moveInto(CAS1),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas1")).moveInto(CAS2),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas2")).moveInto(CAS3),
+                    Succeeded());
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path("sym_cas3")).moveInto(CAS4),
+                    Succeeded());
+
+  // 100k is large enough to be standalone files in our on-disk cas.
+  uint64_t Size = 100ULL * 1024;
+  ASSERT_NO_FATAL_FAILURE(testBlobsParallel(*CAS1, *CAS2, *CAS3, *CAS4, Size));
+}
+#endif // _WIN32
 #endif // LLVM_ENABLE_THREADS
+
+TEST_F(OnDiskCASTest, OnDiskCASDiskSize) {
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+  std::unique_ptr<ObjectStore> CAS;
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
+
+  uint64_t MaxSize = 100 * 1024 * 1024;
+
+  // Check that we map the files to the correct size.
+  auto CheckFileSizes = [&](bool Mapped) {
+    bool FoundIndex = false, FoundData = false;
+    std::error_code EC;
+    for (sys::fs::directory_iterator I(Temp.path(), EC), E; I != E && !EC;
+         I.increment(EC)) {
+      StringRef Filename = sys::path::filename(I->path());
+      if (Filename.starts_with("index.") && !Filename.ends_with(".shared")) {
+        FoundIndex = true;
+        ASSERT_TRUE(I->status());
+        if (Mapped)
+          EXPECT_EQ(I->status()->getSize(), MaxSize);
+        else
+          EXPECT_LT(I->status()->getSize(), MaxSize);
+      }
+      if (Filename.starts_with("data.") && !Filename.ends_with(".shared")) {
+        FoundData = true;
+        ASSERT_TRUE(I->status());
+        if (Mapped)
+          EXPECT_EQ(I->status()->getSize(), MaxSize);
+        else
+          EXPECT_LT(I->status()->getSize(), MaxSize);
+      }
+    }
+    ASSERT_TRUE(FoundIndex);
+    ASSERT_TRUE(FoundData);
+  };
+
+  // Check that we have the full mapping size when the CAS is open.
+  CheckFileSizes(/*Mapped=*/true);
+  CAS.reset();
+  // Check that the CAS is shrunk to a smaller size.
+  CheckFileSizes(/*Mapped=*/false);
+
+  // Repeat the checks when starting from an existing CAS.
+  ASSERT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
+  CheckFileSizes(/*Mapped=*/true);
+  CAS.reset();
+  CheckFileSizes(/*Mapped=*/false);
+}
