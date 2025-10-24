@@ -49,16 +49,15 @@ namespace llvm {
 ///   Tree.emplace("grape", 3);
 ///
 ///   // Find prefixes
-///   for (const auto &pair : Tree.find_prefixes("grapefruit juice")) {
+///   for (const auto &[Key, Value] : Tree.find_prefixes("grapefruit juice")) {
 ///     // pair will be {"grape", 3}
 ///     // pair will be {"grapefruit", 2}
-///     llvm::outs() << pair.first << ": " << pair.second << "\n";
+///     llvm::outs() << Key << ": " << Value << "\n";
 ///   }
 ///
 ///   // Iterate over all elements
-///   for (const auto &pair : Tree) {
-///     llvm::outs() << pair.first << ": " << pair.second << "\n";
-///   }
+///   for (const auto &[Key, Value] : Tree)
+///     llvm::outs() << Key << ": " << Value << "\n";
 /// \endcode
 ///
 /// \note
@@ -112,7 +111,7 @@ private:
     const Node *findChild(const KeyConstIteratorRangeType &Key) const {
       if (Key.empty())
         return nullptr;
-      for (const auto &Child : Children) {
+      for (const Node &Child : Children) {
         assert(!Child.Key.empty()); // Only root can be empty.
         if (Child.KeyFront == *Key.begin())
           return &Child;
@@ -153,8 +152,10 @@ private:
     }
   };
 
-  Node Root; // Root is always for empty range.
-  ContainerType Values;
+  /// Root always corresponds to the empty key, which is the shortest possible
+  /// prefix for everything.
+  Node Root;
+  ContainerType KeyValuePairs;
 
   /// Finds or creates a new tail or leaf node corresponding to the `Key`.
   Node &findOrCreate(KeyConstIteratorRangeType Key) {
@@ -172,7 +173,7 @@ private:
         // current and its children.
         Curr->split(I2);
 
-        // Split was caused by mismatch, so `findChild` will fail.
+        // Split was caused by mismatch, so `findChild` would fail.
         break;
       }
 
@@ -189,9 +190,9 @@ private:
       return *Curr;
     }
 
-    // `Key` a suffix of original `Key` unmatched by path from the `Root` to the
-    // `Curr`, and we have no candidate in the children to match more. Create a
-    // new one.
+    // `Key` is a suffix of original `Key` unmatched by path from the `Root` to
+    // the `Curr`, and we have no candidate in the children to match more.
+    // Create a new one.
     return Curr->Children.emplace_back(Key);
   }
 
@@ -209,7 +210,7 @@ private:
       : public iterator_facade_base<IteratorImpl<MappedType>,
                                     std::forward_iterator_tag, MappedType> {
     const Node *Curr = nullptr;
-    KeyConstIteratorRangeType Query;
+    KeyConstIteratorRangeType Query{};
 
     void findNextValid() {
       while (Curr && Curr->Value == typename ContainerType::iterator())
@@ -271,10 +272,10 @@ public:
   using const_iterator = typename ContainerType::const_iterator;
 
   /// Returns true if the tree is empty.
-  bool empty() const { return Values.empty(); }
+  bool empty() const { return KeyValuePairs.empty(); }
 
   /// Returns the number of elements in the tree.
-  size_t size() const { return Values.size(); }
+  size_t size() const { return KeyValuePairs.size(); }
 
   /// Returns the number of nodes in the tree.
   ///
@@ -283,16 +284,16 @@ public:
   size_t countNodes() const { return Root.countNodes(); }
 
   /// Returns an iterator to the first element.
-  iterator begin() { return Values.begin(); }
-  const_iterator begin() const { return Values.begin(); }
+  iterator begin() { return KeyValuePairs.begin(); }
+  const_iterator begin() const { return KeyValuePairs.begin(); }
 
   /// Returns an iterator to the end of the tree.
-  iterator end() { return Values.end(); }
-  const_iterator end() const { return Values.end(); }
+  iterator end() { return KeyValuePairs.end(); }
+  const_iterator end() const { return KeyValuePairs.end(); }
 
   /// Constructs and inserts a new element into the tree.
   ///
-  /// This function constructs an element in-place within the tree. If an
+  /// This function constructs an element in place within the tree. If an
   /// element with the same key already exists, the insertion fails and the
   /// function returns an iterator to the existing element along with `false`.
   /// Otherwise, the new element is inserted and the function returns an
@@ -306,13 +307,13 @@ public:
   template <typename... Ts>
   std::pair<iterator, bool> emplace(key_type &&Key, Ts &&...Args) {
     const value_type &NewValue =
-        Values.emplace_front(std::move(Key), T(std::move(Args)...));
+        KeyValuePairs.emplace_front(std::move(Key), T(std::move(Args)...));
     Node &Node = findOrCreate(NewValue.first);
     bool HasValue = Node.Value != typename ContainerType::iterator();
     if (!HasValue) {
-      Node.Value = Values.begin();
+      Node.Value = KeyValuePairs.begin();
     } else {
-      Values.pop_front();
+      KeyValuePairs.pop_front();
     }
     return std::make_pair(Node.Value, !HasValue);
   }
@@ -334,8 +335,7 @@ public:
   iterator_range<const_prefix_iterator>
   find_prefixes(const key_type &Key) const {
     return iterator_range<const_prefix_iterator>{
-        const_prefix_iterator(
-            &Root, KeyConstIteratorRangeType{adl_begin(Key), adl_end(Key)}),
+        const_prefix_iterator(&Root, KeyConstIteratorRangeType(Key)),
         const_prefix_iterator{}};
   }
 };

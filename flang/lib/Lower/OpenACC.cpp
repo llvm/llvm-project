@@ -816,8 +816,9 @@ static void genDeclareDataOperandOperations(
         Fortran::semantics::FindCommonBlockContaining(symbol)) {
       emitCommonGlobal(
           converter, builder, accObject, dataClause,
-          [&](mlir::OpBuilder &modBuilder, mlir::Location loc,
-              fir::GlobalOp globalOp, mlir::acc::DataClause clause,
+          [&](mlir::OpBuilder &modBuilder, [[maybe_unused]] mlir::Location loc,
+              [[maybe_unused]] fir::GlobalOp globalOp,
+              [[maybe_unused]] mlir::acc::DataClause clause,
               std::stringstream &asFortranStr, const std::string &ctorName) {
             if constexpr (std::is_same_v<EntryOp, mlir::acc::DeclareLinkOp>) {
               createDeclareGlobalOp<
