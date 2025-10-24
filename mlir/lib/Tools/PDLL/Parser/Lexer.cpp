@@ -132,26 +132,19 @@ Token Lexer::emitError(const char *loc, const Twine &msg) {
 }
 
 int Lexer::getNextChar() {
+  if (curPtr == curBuffer.end())
+    return EOF;
   char curChar = *curPtr++;
   switch (curChar) {
   default:
     return static_cast<unsigned char>(curChar);
-  case 0: {
-    // A nul character in the stream is either the end of the current buffer
-    // or a random nul in the file. Disambiguate that here.
-    if (curPtr - 1 != curBuffer.end())
-      return 0;
-
-    // Otherwise, return end of file.
-    --curPtr;
-    return EOF;
-  }
   case '\n':
   case '\r':
     // Handle the newline character by ignoring it and incrementing the line
     // count. However, be careful about 'dos style' files with \n\r in them.
     // Only treat a \n\r or \r\n as a single line.
-    if ((*curPtr == '\n' || (*curPtr == '\r')) && *curPtr != curChar)
+    if (curPtr != curBuffer.end() && (*curPtr == '\n' || (*curPtr == '\r')) &&
+        *curPtr != curChar)
       ++curPtr;
     return '\n';
   }
