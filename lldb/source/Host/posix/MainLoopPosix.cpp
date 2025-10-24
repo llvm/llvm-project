@@ -387,10 +387,13 @@ void MainLoopPosix::ProcessSignal(int signo) {
   }
 }
 
-void MainLoopPosix::Interrupt() {
+bool MainLoopPosix::Interrupt() {
   if (m_interrupting.exchange(true))
-    return;
+    return true;
 
   char c = '.';
-  cantFail(m_interrupt_pipe.Write(&c, 1));
+  llvm::Expected<size_t> result = m_interrupt_pipe.Write(&c, 1);
+  if (result && *result != 0)
+    return true;
+  return false;
 }
