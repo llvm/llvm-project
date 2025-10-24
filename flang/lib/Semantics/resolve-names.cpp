@@ -1441,6 +1441,30 @@ public:
   void Post(const parser::AccBeginLoopDirective &x) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
+  bool Pre(const parser::OpenACCStandaloneConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCCacheConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCWaitConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCAtomicConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCEndConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
+  bool Pre(const parser::OpenACCDeclarativeConstruct &x) {
+    currScope().AddSourceRange(x.source);
+    return true;
+  }
 
   void CopySymbolWithDevice(const parser::Name *name);
 
@@ -1480,7 +1504,8 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
   // symbols are created for the one appearing in the use_device
   // clause. These new symbols have the CUDA Fortran device
   // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+      name->symbol) {
     name->symbol = currScope().CopySymbol(*name->symbol);
     if (auto *object{name->symbol->detailsIf<ObjectEntityDetails>()}) {
       object->set_cudaDataAttr(common::CUDADataAttr::Device);
@@ -1490,15 +1515,12 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
   for (const auto &accObject : x.v.v) {
+    Walk(accObject);
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
               if (const auto *name{
                       parser::GetDesignatorNameIfDataRef(designator)}) {
-                Symbol *prev{currScope().FindSymbol(name->source)};
-                if (prev != name->symbol) {
-                  name->symbol = prev;
-                }
                 CopySymbolWithDevice(name);
               } else {
                 if (const auto *dataRef{
@@ -1507,13 +1529,8 @@ bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
                       common::Indirection<parser::ArrayElement>;
                   if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
                     const parser::ArrayElement &arrayElement{ind->value()};
-                    Walk(arrayElement.subscripts);
                     const parser::DataRef &base{arrayElement.base};
                     if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                      Symbol *prev{currScope().FindSymbol(name->source)};
-                      if (prev != name->symbol) {
-                        name->symbol = prev;
-                      }
                       CopySymbolWithDevice(name);
                     }
                   }
@@ -1537,6 +1554,7 @@ void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
 
 bool AccVisitor::Pre(const parser::OpenACCCombinedConstruct &x) {
   PushScope(Scope::Kind::OpenACCConstruct, nullptr);
+  currScope().AddSourceRange(x.source);
   return true;
 }
 
@@ -1754,11 +1772,11 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeSpecifier &x) {
+  bool Pre(const parser::OmpTypeName &x) {
     BeginDeclTypeSpec();
     return true;
   }
-  void Post(const parser::OmpTypeSpecifier &x) { //
+  void Post(const parser::OmpTypeName &x) { //
     EndDeclTypeSpec();
   }
 
@@ -1989,7 +2007,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       }
     }
     EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
     Walk(clauses);
     PopScope();
   }
@@ -3626,6 +3644,20 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
         }
       }
     }
+  }
+  // Go through the list of COMMON block symbols in the module scope and add
+  // their USE association to the current scope's USE-associated COMMON blocks.
+  for (const auto &[name, symbol] : useModuleScope_->commonBlocks()) {
+    if (!currScope().FindCommonBlockInVisibleScopes(name)) {
+      currScope().AddCommonBlockUse(
+          name, symbol->attrs(), symbol->GetUltimate());
+    }
+  }
+  // Go through the list of USE-associated COMMON block symbols in the module
+  // scope and add USE associations to their ultimate symbols to the current
+  // scope's USE-associated COMMON blocks.
+  for (const auto &[name, symbol] : useModuleScope_->commonBlockUses()) {
+    currScope().AddCommonBlockUse(name, symbol->attrs(), symbol->GetUltimate());
   }
   useModuleScope_ = nullptr;
 }
@@ -5433,7 +5465,8 @@ void SubprogramVisitor::PushBlockDataScope(const parser::Name &name) {
   }
 }
 
-// If name is a generic, return specific subprogram with the same name.
+// If name is a generic in the same scope, return its specific subprogram with
+// the same name, if any.
 Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
   // Search for the name but don't resolve it
   if (auto *symbol{currScope().FindSymbol(name.source)}) {
@@ -5443,6 +5476,9 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
         // symbol doesn't inherit it and ruin the ability to check it.
         symbol->attrs().reset(Attr::MODULE);
       }
+    } else if (&symbol->owner() != &currScope() && inInterfaceBlock() &&
+        !isGeneric()) {
+      // non-generic interface shadows outer definition
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};

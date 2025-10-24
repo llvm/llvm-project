@@ -124,6 +124,8 @@ public:
   virtual void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) = 0;
   virtual void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) = 0;
 
+  virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
+
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
 
@@ -302,8 +304,28 @@ public:
   ///   - non-array allocations never need a cookie
   ///   - calls to \::operator new(size_t, void*) never need a cookie
   ///
-  /// \param E - the new-expression being allocated.
+  /// \param e - the new-expression being allocated.
   virtual CharUnits getArrayCookieSize(const CXXNewExpr *e);
+
+  /// Initialize the array cookie for the given allocation.
+  ///
+  /// \param newPtr - a char* which is the presumed-non-null
+  ///   return value of the allocation function
+  /// \param numElements - the computed number of elements,
+  ///   potentially collapsed from the multidimensional array case;
+  ///   always a size_t
+  /// \param elementType - the base element allocated type,
+  ///   i.e. the allocated type after stripping all array types
+  virtual Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
+                                        mlir::Value numElements,
+                                        const CXXNewExpr *e,
+                                        QualType elementType) = 0;
+
+protected:
+  /// Returns the extra size required in order to store the array
+  /// cookie for the given type.  Assumes that an array cookie is
+  /// required.
+  virtual CharUnits getArrayCookieSizeImpl(QualType elementType) = 0;
 };
 
 /// Creates and Itanium-family ABI

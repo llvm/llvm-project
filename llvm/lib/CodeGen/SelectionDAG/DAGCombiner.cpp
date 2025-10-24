@@ -2476,16 +2476,17 @@ static bool canFoldInAddressingMode(SDNode *N, SDNode *Use, SelectionDAG &DAG,
 /// masked vector operation if the target supports it.
 static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
                                               bool ShouldCommuteOperands) {
-  // Match a select as operand 1. The identity constant that we are looking for
-  // is only valid as operand 1 of a non-commutative binop.
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Match a select as operand 1. The identity constant that we are looking for
+  // is only valid as operand 1 of a non-commutative binop.
   if (ShouldCommuteOperands)
     std::swap(N0, N1);
 
-  unsigned SelOpcode = N1.getOpcode();
-  if ((SelOpcode != ISD::VSELECT && SelOpcode != ISD::SELECT) ||
-      !N1.hasOneUse())
+  SDValue Cond, TVal, FVal;
+  if (!sd_match(N1, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(TVal),
+                                          m_Value(FVal)))))
     return SDValue();
 
   // We can't hoist all instructions because of immediate UB (not speculatable).
@@ -2493,11 +2494,9 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   if (!DAG.isSafeToSpeculativelyExecuteNode(N))
     return SDValue();
 
+  unsigned SelOpcode = N1.getOpcode();
   unsigned Opcode = N->getOpcode();
   EVT VT = N->getValueType(0);
-  SDValue Cond = N1.getOperand(0);
-  SDValue TVal = N1.getOperand(1);
-  SDValue FVal = N1.getOperand(2);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // This transform increases uses of N0, so freeze it to be safe.
@@ -13856,12 +13855,11 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
           Opcode == ISD::ANY_EXTEND) &&
          "Expected EXTEND dag node in input!");
 
-  if (!(N0->getOpcode() == ISD::SELECT || N0->getOpcode() == ISD::VSELECT) ||
-      !N0.hasOneUse())
+  SDValue Cond, Op1, Op2;
+  if (!sd_match(N0, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(Op1),
+                                          m_Value(Op2)))))
     return SDValue();
 
-  SDValue Op1 = N0->getOperand(1);
-  SDValue Op2 = N0->getOperand(2);
   if (!isCompatibleLoad(Op1, Opcode) || !isCompatibleLoad(Op2, Opcode))
     return SDValue();
 
@@ -13883,7 +13881,7 @@ static SDValue tryToFoldExtendSelectLoad(SDNode *N, const TargetLowering &TLI,
 
   SDValue Ext1 = DAG.getNode(Opcode, DL, VT, Op1);
   SDValue Ext2 = DAG.getNode(Opcode, DL, VT, Op2);
-  return DAG.getSelect(DL, VT, N0->getOperand(0), Ext1, Ext2);
+  return DAG.getSelect(DL, VT, Cond, Ext1, Ext2);
 }
 
 /// Try to fold a sext/zext/aext dag node into a ConstantSDNode or
@@ -17462,8 +17460,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   // fold (fsub (fpext (fneg (fmul, x, y))), z)
   //   -> (fneg (fma (fpext x), (fpext y), z))
   // Note: This could be removed with appropriate canonicalization of the
-  // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However, the
-  // orthogonal flags -fp-contract=fast and -enable-unsafe-fp-math prevent
+  // input expression into (fneg (fadd (fpext (fmul, x, y)), z)). However, the
+  // command line flag -fp-contract=fast and fast-math flag contract prevent
   // from implementing the canonicalization in visitFSUB.
   if (matcher.match(N0, ISD::FP_EXTEND)) {
     SDValue N00 = N0.getOperand(0);
@@ -17487,7 +17485,7 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   //   -> (fneg (fma (fpext x)), (fpext y), z)
   // Note: This could be removed with appropriate canonicalization of the
   // input expression into (fneg (fadd (fpext (fmul, x, y)), z). However, the
-  // orthogonal flags -fp-contract=fast and -enable-unsafe-fp-math prevent
+  // command line flag -fp-contract=fast and fast-math flag contract prevent
   // from implementing the canonicalization in visitFSUB.
   if (matcher.match(N0, ISD::FNEG)) {
     SDValue N00 = N0.getOperand(0);
@@ -19995,8 +19993,12 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
   //    nor a successor of N. Otherwise, if Op is folded that would
   //    create a cycle.
   unsigned MaxSteps = SelectionDAG::getHasPredecessorMaxSteps();
-  for (SDNode *Op : Ptr->users()) {
+  for (SDUse &U : Ptr->uses()) {
+    if (U.getResNo() != Ptr.getResNo())
+      continue;
+
     // Check for #1.
+    SDNode *Op = U.getUser();
     if (!shouldCombineToPostInc(N, Ptr, Op, BasePtr, Offset, AM, DAG, TLI))
       continue;
 
@@ -29620,13 +29622,14 @@ static SDValue takeInexpensiveLog2(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   }
 
   // c ? X : Y -> c ? Log2(X) : Log2(Y)
-  if ((Op.getOpcode() == ISD::SELECT || Op.getOpcode() == ISD::VSELECT) &&
-      Op.hasOneUse()) {
-    if (SDValue LogX = takeInexpensiveLog2(DAG, DL, VT, Op.getOperand(1),
-                                           Depth + 1, AssumeNonZero))
-      if (SDValue LogY = takeInexpensiveLog2(DAG, DL, VT, Op.getOperand(2),
-                                             Depth + 1, AssumeNonZero))
-        return DAG.getSelect(DL, VT, Op.getOperand(0), LogX, LogY);
+  SDValue Cond, TVal, FVal;
+  if (sd_match(Op, m_OneUse(m_SelectLike(m_Value(Cond), m_Value(TVal),
+                                         m_Value(FVal))))) {
+    if (SDValue LogX =
+            takeInexpensiveLog2(DAG, DL, VT, TVal, Depth + 1, AssumeNonZero))
+      if (SDValue LogY =
+              takeInexpensiveLog2(DAG, DL, VT, FVal, Depth + 1, AssumeNonZero))
+        return DAG.getSelect(DL, VT, Cond, LogX, LogY);
   }
 
   // log2(umin(X, Y)) -> umin(log2(X), log2(Y))

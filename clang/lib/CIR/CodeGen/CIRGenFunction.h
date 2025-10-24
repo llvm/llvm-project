@@ -60,10 +60,43 @@ private:
   /// is where the next operations will be introduced.
   CIRGenBuilderTy &builder;
 
+  /// A jump destination is an abstract label, branching to which may
+  /// require a jump out through normal cleanups.
+  struct JumpDest {
+    JumpDest() = default;
+    JumpDest(mlir::Block *block, EHScopeStack::stable_iterator depth = {},
+             unsigned index = 0)
+        : block(block) {}
+
+    bool isValid() const { return block != nullptr; }
+    mlir::Block *getBlock() const { return block; }
+    EHScopeStack::stable_iterator getScopeDepth() const { return scopeDepth; }
+    unsigned getDestIndex() const { return index; }
+
+    // This should be used cautiously.
+    void setScopeDepth(EHScopeStack::stable_iterator depth) {
+      scopeDepth = depth;
+    }
+
+  private:
+    mlir::Block *block = nullptr;
+    EHScopeStack::stable_iterator scopeDepth;
+    unsigned index;
+  };
+
 public:
   /// The GlobalDecl for the current function being compiled or the global
   /// variable currently being initialized.
   clang::GlobalDecl curGD;
+
+  /// Unified return block.
+  /// In CIR this is a function because each scope might have
+  /// its associated return block.
+  JumpDest returnBlock(mlir::Block *retBlock) {
+    return getJumpDestInCurrentScope(retBlock);
+  }
+
+  unsigned nextCleanupDestIndex = 1;
 
   /// The compiler-generated variable that holds the return value.
   std::optional<mlir::Value> fnRetAlloca;
@@ -573,6 +606,16 @@ public:
       return Address::invalid();
     }
   };
+
+  /// The given basic block lies in the current EH scope, but may be a
+  /// target of a potentially scope-crossing jump; get a stable handle
+  /// to which we can perform this jump later.
+  /// CIRGen: this mostly tracks state for figuring out the proper scope
+  /// information, no actual branches are emitted.
+  JumpDest getJumpDestInCurrentScope(mlir::Block *target) {
+    return JumpDest(target, ehStack.getInnermostNormalCleanup(),
+                    nextCleanupDestIndex++);
+  }
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
@@ -1221,6 +1264,8 @@ public:
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
+  cir::BrOp emitBranchThroughCleanup(mlir::Location loc, JumpDest dest);
+
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
 
   RValue emitBuiltinExpr(const clang::GlobalDecl &gd, unsigned builtinID,
@@ -1415,6 +1460,9 @@ public:
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
 
   void emitReturnOfRValue(mlir::Location loc, RValue rv, QualType ty);
+
+  mlir::Value emitRuntimeCall(mlir::Location loc, cir::FuncOp callee,
+                              llvm::ArrayRef<mlir::Value> args = {});
 
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
@@ -1614,6 +1662,10 @@ public:
                                      bool buildingTopLevelCase);
   mlir::LogicalResult emitSwitchStmt(const clang::SwitchStmt &s);
 
+  mlir::Value emitTargetBuiltinExpr(unsigned builtinID,
+                                    const clang::CallExpr *e,
+                                    ReturnValueSlot &returnValue);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -1651,6 +1703,8 @@ public:
   void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  mlir::Value emitX86BuiltinExpr(unsigned builtinID, const CallExpr *e);
 
   /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
   /// nonnull, if 1\p LHS is marked _Nonnull.

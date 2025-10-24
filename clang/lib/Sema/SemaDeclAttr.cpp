@@ -5206,16 +5206,36 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleDeviceKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
   bool IsFunctionTemplate = FD && FD->getDescribedFunctionTemplate();
-  if (S.getASTContext().getTargetInfo().getTriple().isNVPTX()) {
+  llvm::Triple Triple = S.getASTContext().getTargetInfo().getTriple();
+  const LangOptions &LangOpts = S.getLangOpts();
+  // OpenCL has its own error messages.
+  if (!LangOpts.OpenCL && FD && !FD->isExternallyVisible()) {
+    S.Diag(AL.getLoc(), diag::err_hidden_device_kernel) << FD;
+    AL.setInvalid();
+    return;
+  }
+  if (Triple.isNVPTX()) {
     handleGlobalAttr(S, D, AL);
   } else {
     // OpenCL C++ will throw a more specific error.
-    if (!S.getLangOpts().OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
+    if (!LangOpts.OpenCLCPlusPlus && (!FD || IsFunctionTemplate)) {
       S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
           << AL << AL.isRegularKeywordAttribute() << "functions";
+      AL.setInvalid();
+      return;
     }
     handleSimpleAttribute<DeviceKernelAttr>(S, D, AL);
   }
+  // TODO: isGPU() should probably return true for SPIR.
+  bool TargetDeviceEnvironment = Triple.isGPU() || Triple.isSPIR() ||
+                                 LangOpts.isTargetDevice() || LangOpts.OpenCL;
+  if (!TargetDeviceEnvironment) {
+    S.Diag(AL.getLoc(), diag::warn_cconv_unsupported)
+        << AL << (int)Sema::CallingConventionIgnoredReason::ForThisTarget;
+    AL.setInvalid();
+    return;
+  }
+
   // Make sure we validate the CC with the target
   // and warn/error if necessary.
   handleCallConvAttr(S, D, AL);

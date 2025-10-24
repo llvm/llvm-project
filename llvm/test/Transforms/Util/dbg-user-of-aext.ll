@@ -27,7 +27,7 @@
 %struct.foo = type { i8, i64 }
 
 ; Function Attrs: noinline nounwind uwtable
-define void @_Z1fbb3foo(i1 zeroext %b, i1 zeroext %frag, i8 %g.coerce0, i64 %g.coerce1) #0 !dbg !6 {
+define void @_Z1fbb3foo(i1 zeroext %b, i1 zeroext %frag, i8 %g.coerce0, i64 %g.coerce1) !dbg !6 {
 entry:
   %g = alloca %struct.foo, align 8
   %b.addr = alloca i8, align 1
@@ -51,10 +51,7 @@ entry:
 ; CHECK: ![[VAR_FRAG]] = !DILocalVariable(name: "frag"
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
