@@ -401,7 +401,7 @@ def ReifyRankedShapedTypeOpInterface :
         ReifiedRankedShapedTypeDims reifiedShapes;
         if (failed(cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyResultShapes(builder, reifiedShapes)))
           return failure();
-        if (resultIndex < 0 || resultIndex >= (int)(reifiedShapes.size()))
+        if (resultIndex < 0 || resultIndex >= static_cast<int>(reifiedShapes.size()))
           return $_op.emitOpError("invalid result index");
         return reifiedShapes[resultIndex];
       }]
@@ -427,7 +427,7 @@ def ReifyRankedShapedTypeOpInterface :
         auto shapes = cast<ReifyRankedShapedTypeOpInterface>($_op.getOperation()).reifyShapeOfResult(builder, resultIndex);
         if (failed(shapes))
           return failure();
-        if (dim < 0 || dim >= (int)((*shapes).size()))
+        if (dim < 0 || dim >= static_cast<int>((*shapes).size()))
           return $_op.emitOpError("invalid dimension");
         return (*shapes)[dim];
       }]

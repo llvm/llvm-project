@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(resolve-shaped-type-result-dims{error-on-pattern-iteration-limit=false}))" -split-input-file | FileCheck %s
+// See %test_unreifiable_result_shape below for why `error-on-partition-iteration-limit` is set to false.
 
 func.func @result_shape(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
     -> (index, index, index, index, index) {
@@ -113,6 +114,13 @@ func.func @reify_shaped_type_using_reify_dim_of_result(%arg0 : tensor<2x3x?xf32>
 //       CHECK:   return %[[D0]], %[[C5]], %[[C2]], %[[C3]], %[[D1]]
 
 // -----
+
+// This tests also indicates a problem with the approach of just using `reifyShapes`
+// without being specific about {result, dim} that needs to be resolved. The
+// `reifyShapes` implementations introduces `dim` operations that are effectively
+// dead, but it creates an infinite loop on pattern application (which eventually
+// bails on hitting the iteration limit). This is the pitfall of this legacy
+// mechanism.
 
 func.func @test_unreifiable_result_shapes(%arg0 : tensor<?x?xf32>)
     -> (index, index) {
