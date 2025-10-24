@@ -2429,6 +2429,45 @@ uint64_t Process::ReadUnsignedIntegerFromMemory(lldb::addr_t vm_addr,
   return fail_value;
 }
 
+llvm::SmallVector<std::optional<uint64_t>>
+Process::ReadUnsignedIntegersFromMemory(llvm::ArrayRef<addr_t> addresses,
+                                        unsigned integer_byte_size) {
+  if (addresses.empty())
+    return {};
+  // Like ReadUnsignedIntegerFromMemory, this only supports a handful
+  // of widths.
+  if (!llvm::is_contained({1u, 2u, 4u, 8u}, integer_byte_size))
+    return llvm::SmallVector<std::optional<uint64_t>>(addresses.size(),
+                                                      std::nullopt);
+
+  llvm::SmallVector<Range<addr_t, size_t>> ranges{
+      llvm::map_range(addresses, [=](addr_t ptr) {
+        return Range<addr_t, size_t>(ptr, integer_byte_size);
+      })};
+
+  std::vector<uint8_t> buffer(integer_byte_size * addresses.size(), 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory =
+      ReadMemoryRanges(ranges, buffer);
+
+  llvm::SmallVector<std::optional<uint64_t>> result;
+  result.reserve(addresses.size());
+  const uint32_t addr_size = GetAddressByteSize();
+  const ByteOrder byte_order = GetByteOrder();
+
+  for (llvm::MutableArrayRef<uint8_t> range : memory) {
+    if (range.size() != integer_byte_size) {
+      result.push_back(std::nullopt);
+      continue;
+    }
+
+    DataExtractor data(range.data(), integer_byte_size, byte_order, addr_size);
+    offset_t offset = 0;
+    result.push_back(data.GetMaxU64(&offset, integer_byte_size));
+    assert(offset == integer_byte_size);
+  }
+  return result;
+}
+
 int64_t Process::ReadSignedIntegerFromMemory(lldb::addr_t vm_addr,
                                              size_t integer_byte_size,
                                              int64_t fail_value,
@@ -2446,6 +2485,12 @@ addr_t Process::ReadPointerFromMemory(lldb::addr_t vm_addr, Status &error) {
                                   error))
     return scalar.ULongLong(LLDB_INVALID_ADDRESS);
   return LLDB_INVALID_ADDRESS;
+}
+
+llvm::SmallVector<std::optional<addr_t>>
+Process::ReadPointersFromMemory(llvm::ArrayRef<addr_t> ptr_locs) {
+  const size_t ptr_size = GetAddressByteSize();
+  return ReadUnsignedIntegersFromMemory(ptr_locs, ptr_size);
 }
 
 bool Process::WritePointerToMemory(lldb::addr_t vm_addr, lldb::addr_t ptr_value,
