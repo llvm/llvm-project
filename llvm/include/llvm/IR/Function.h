@@ -144,7 +144,7 @@ private:
 
   void clearArguments();
 
-  void deleteBodyImpl(bool ShouldDrop);
+  void deleteBodyImpl(bool ShouldDrop, bool PreserveMetadata);
 
   /// Function ctor - If the (optional) Module argument is specified, the
   /// function is automatically inserted into the end of the function list for
@@ -727,8 +727,8 @@ public:
   /// deleteBody - This method deletes the body of the function, and converts
   /// the linkage to external.
   ///
-  void deleteBody() {
-    deleteBodyImpl(/*ShouldDrop=*/false);
+  void deleteBody(bool PreserveMetadata = false) {
+    deleteBodyImpl(/*ShouldDrop=*/false, PreserveMetadata);
     setLinkage(ExternalLinkage);
   }
 
@@ -982,7 +982,7 @@ public:
   /// including any contained basic blocks.
   ///
   void dropAllReferences() {
-    deleteBodyImpl(/*ShouldDrop=*/true);
+    deleteBodyImpl(/*ShouldDrop=*/true, /*PreserveMetadata=*/false);
   }
 
   /// hasAddressTaken - returns true if there are any uses of this function

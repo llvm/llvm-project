@@ -600,7 +600,7 @@ void Function::stealArgumentListFrom(Function &Src) {
   Src.setValueSubclassData(Src.getSubclassDataFromValue() | (1 << 0));
 }
 
-void Function::deleteBodyImpl(bool ShouldDrop) {
+void Function::deleteBodyImpl(bool ShouldDrop, bool PreserveMetadata) {
   setIsMaterializable(false);
 
   for (BasicBlock &BB : *this)
@@ -627,7 +627,8 @@ void Function::deleteBodyImpl(bool ShouldDrop) {
   }
 
   // Metadata is stored in a side-table.
-  clearMetadata();
+  if (!PreserveMetadata)
+    clearMetadata();
 }
 
 void Function::addAttributeAtIndex(unsigned i, Attribute Attr) {
