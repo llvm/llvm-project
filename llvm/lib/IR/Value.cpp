@@ -356,6 +356,16 @@ void Value::setNameImpl(const Twine &NewName) {
   if (getSymTab(this, ST))
     return;  // Cannot set a name on this value (e.g. constant).
 
+  // Copy NewName forcely if the memory overlaps.
+  if (!NameRef.empty()) {
+    StringRef OldNameRef = getName();
+    if ((OldNameRef.bytes_begin() < NameRef.bytes_end()) &&
+        (NameRef.bytes_begin() < OldNameRef.bytes_end())) {
+      NewName.toVector(NameData);
+      NameRef = StringRef(NameData.data(), NameData.size());
+    }
+  }
+
   if (!ST) { // No symbol table to update?  Just do the change.
     // NOTE: Could optimize for the case the name is shrinking to not deallocate
     // then reallocated.
