@@ -112,7 +112,7 @@ private:
     const Node *findChild(const KeyConstIteratorRangeType &Key) const {
       if (Key.empty())
         return nullptr;
-      for (const auto &Child : Children) {
+      for (const Node &Child : Children) {
         assert(!Child.Key.empty()); // Only root can be empty.
         if (Child.KeyFront == *Key.begin())
           return &Child;
