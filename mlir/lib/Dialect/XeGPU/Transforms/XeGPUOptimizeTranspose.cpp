@@ -9,18 +9,23 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 #include <optional>
 
 namespace mlir {
@@ -35,12 +40,14 @@ namespace xegpu {
 
 using namespace mlir;
 
-struct TransposableBlockRange {
-  int minWidth, maxWidth, minHeight, maxHeight;
+namespace {
+
+struct Allowed2DShapeRange {
+  int64_t minWidth, maxWidth, minHeight, maxHeight;
 };
 
 // TODO: Use uArch to get supported block ranges.
-static TransposableBlockRange getBlockRange(int bitWidth) {
+static Allowed2DShapeRange getTransposableBlockRange(int bitWidth) {
   switch (bitWidth) {
   case 32:
     return {/**min width**/ 1, /**max width**/ 8, /**min height**/ 1,
@@ -50,10 +57,8 @@ static TransposableBlockRange getBlockRange(int bitWidth) {
   }
 }
 
-namespace {
-
 static std::optional<SmallVector<int64_t>>
-get2DLaneData(xegpu::TensorDescType tdescType) {
+getMaybeLaneData(xegpu::TensorDescType tdescType) {
   auto layout = tdescType.getLayoutAttr();
   if (!layout)
     return std::nullopt;
@@ -63,44 +68,131 @@ get2DLaneData(xegpu::TensorDescType tdescType) {
   return laneData;
 }
 
+static std::optional<SmallVector<int64_t>>
+getMaybeLaneLayout(xegpu::TensorDescType tdescType) {
+  auto layout = tdescType.getLayoutAttr();
+  if (!layout)
+    return std::nullopt;
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  if (laneLayout.size() != 2)
+    return std::nullopt;
+  return laneLayout;
+}
+
+// A transpose layout is invalid if lane layout is transposed (lane[0] != 1 &&
+// lane[1] == 1), but inner lane data is not equal to [1, 1].
+static bool hasInvalidTranposeLayout(xegpu::TensorDescType tdescType) {
+  // If the dtype is greater or equal to 32 bits, layout must be valid.
+  int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
+  if (elementTyBitwidth >= 32)
+    return false;
+  auto maybeLaneLayout = getMaybeLaneLayout(tdescType);
+  auto maybeLaneData = getMaybeLaneData(tdescType);
+  if (!maybeLaneData || !maybeLaneLayout)
+    return false;
+  auto laneData = maybeLaneData.value();
+  auto laneLayout = maybeLaneLayout.value();
+  if (laneLayout[0] == 1 || laneLayout[1] != 1)
+    return false;
+  if (laneData[0] != 1 || laneData[1] == 1)
+    return false;
+  return true;
+}
+
 static xegpu::TensorDescType
-getModifiedTensorDescType(xegpu::TensorDescType tdescType) {
-  auto optionalLaneData = get2DLaneData(tdescType);
-  if (!optionalLaneData)
+tryConvertToTransposable(xegpu::TensorDescType tdescType) {
+  if (!hasInvalidTranposeLayout(tdescType))
     return tdescType;
-  auto laneData = optionalLaneData.value();
+  auto laneData = getMaybeLaneData(tdescType).value();
   int64_t innerLaneData = laneData[1];
-  if (laneData[0] == 1 && innerLaneData != 1) {
-    int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
-    assert(elementTyBitwidth < 32 &&
-           "Expected element type bitwidth < 32 with laneData[1] != 1");
-    SmallVector<int64_t> newShape(tdescType.getShape());
-    newShape.back() = newShape.back() / innerLaneData;
-    Type newElemTy = IntegerType::get(tdescType.getContext(),
-                                      elementTyBitwidth * innerLaneData);
-    xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-        tdescType.getContext(),
-        tdescType.getLayoutAttr().getLaneLayout().asArrayRef(), {1, 1});
-    return xegpu::TensorDescType::get(
-        newShape, newElemTy, tdescType.getArrayLength(),
-        tdescType.getBoundaryCheck(), tdescType.getMemorySpace(), newLayout);
-  }
-  return tdescType;
+  int elementTyBitwidth = tdescType.getElementType().getIntOrFloatBitWidth();
+  // Required shape is total shape of the vector result that this tensor desc
+  // must eventually load after adjusting for the new bitwidth and array
+  // length.
+  SmallVector<int64_t> requiredShape(tdescType.getShape());
+  requiredShape.back() =
+      requiredShape.back() * tdescType.getArrayLength() / innerLaneData;
+  int newBitWidth = elementTyBitwidth * innerLaneData;
+  Type newElemTy = IntegerType::get(tdescType.getContext(), newBitWidth);
+  // Supported shape is the max transpose shape that can be supported by
+  // hardware that is less than or equal to required shape.
+  auto supportedHeight = std::min(
+      requiredShape[0], getTransposableBlockRange(newBitWidth).maxHeight);
+  auto supportedWidth = std::min(
+      requiredShape[1], getTransposableBlockRange(newBitWidth).maxWidth);
+  SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
+
+  // Required shape must be multiple of supported shape. Otherwise, we can not
+  // optimize it.
+  // TODO: Supported shape can be adjusted to handle non-multiple cases.
+  if (requiredShape[0] % supportedShape[0] != 0 ||
+      requiredShape[1] % supportedShape[1] != 0)
+    return tdescType;
+
+  xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
+      tdescType.getContext(),
+      tdescType.getLayoutAttr().getLaneLayout().asArrayRef(), {1, 1});
+  // Array length can not be larger than 1 for transpose case.
+  return xegpu::TensorDescType::get(
+      supportedShape, newElemTy, /**array length**/ 1,
+      tdescType.getBoundaryCheck(), tdescType.getMemorySpace(), newLayout);
+}
+
+static Value createConstantIndex(ConversionPatternRewriter &rewriter,
+                                 Location loc, int64_t value) {
+  return arith::ConstantIndexOp::create(rewriter, loc, value).getResult();
 }
 
 static Value convertToValue(ConversionPatternRewriter &rewriter, Location loc,
                             OpFoldResult ofr) {
   std::optional<int64_t> mayBeInt = getConstantIntValue(ofr);
   if (mayBeInt)
-    return arith::ConstantIndexOp::create(rewriter, loc, *mayBeInt);
+    return createConstantIndex(rewriter, loc, *mayBeInt);
   return llvm::cast<Value>(ofr);
 }
 
 static Value divideByConstant(ConversionPatternRewriter &rewriter, Location loc,
                               Value val, int64_t constant) {
-  auto constantOp = arith::ConstantIndexOp::create(rewriter, loc, constant);
-  return arith::DivUIOp::create(rewriter, loc, val, constantOp.getResult())
-      .getResult();
+  auto constantOp = createConstantIndex(rewriter, loc, constant);
+  return arith::DivUIOp::create(rewriter, loc, val, constantOp).getResult();
+}
+
+static Value generateLoads(ConversionPatternRewriter &rewriter,
+                           TypedValue<VectorType> data,
+                           SmallVector<int64_t> &shapeRatio,
+                           SmallVector<OpFoldResult> offsets,
+                           SmallVector<int64_t> &supportedShape,
+                           TypedValue<xegpu::TensorDescType> newTensorDesc,
+                           xegpu::LoadNdOp origLoadOp) {
+  Location loc = data.getLoc();
+  assert(offsets.size() >= 2 && "Expecting at least 2 offsets for 2D LoadNdOp");
+  Value offsetX = convertToValue(rewriter, loc, offsets[offsets.size() - 2]);
+  Value offsetY = convertToValue(rewriter, loc, offsets[offsets.size() - 1]);
+  for (int64_t h = 0; h < shapeRatio[0]; ++h) {
+    for (int64_t w = 0; w < shapeRatio[1]; ++w) {
+      int64_t localOffsetX = h * supportedShape[0];
+      int64_t localOffsetY = w * supportedShape[1];
+      Value loadOffsetX = arith::AddIOp::create(
+          rewriter, loc, offsetX,
+          createConstantIndex(rewriter, loc, localOffsetX));
+      Value loadOffsetY = arith::AddIOp::create(
+          rewriter, loc, offsetY,
+          createConstantIndex(rewriter, loc, localOffsetY));
+      auto loadOp = xegpu::LoadNdOp::create(
+          rewriter, loc,
+          VectorType::get(supportedShape, data.getType().getElementType()),
+          newTensorDesc, ArrayRef<OpFoldResult>{loadOffsetX, loadOffsetY},
+          origLoadOp.getPackedAttr(), origLoadOp.getTransposeAttr(),
+          origLoadOp.getL1HintAttr(), origLoadOp.getL2HintAttr(),
+          origLoadOp.getL3HintAttr());
+      // Insert the loaded block into the right position in data.
+      data = vector::InsertStridedSliceOp::create(
+          rewriter, loc, loadOp.getResult(), data,
+          ArrayRef<int64_t>{localOffsetX, localOffsetY},
+          ArrayRef<int64_t>{1, 1});
+    }
+  }
+  return data;
 }
 
 class XeGPUCreateNdDescOpPattern final
@@ -111,7 +203,7 @@ public:
   matchAndRewrite(xegpu::CreateNdDescOp createNdOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto tdescTy = createNdOp.getType();
-    auto convertType = getModifiedTensorDescType(tdescTy);
+    auto convertType = tryConvertToTransposable(tdescTy);
     if (convertType == tdescTy)
       return failure();
     auto strides = createNdOp.getMixedStrides();
@@ -120,7 +212,7 @@ public:
     if (!maybeConstInnerStride || *maybeConstInnerStride != 1)
       return failure();
     Value source = createNdOp.getSource();
-    auto optionalLaneData = get2DLaneData(tdescTy);
+    auto optionalLaneData = getMaybeLaneData(tdescTy);
     assert(optionalLaneData && "Expected 2D lane data");
     auto laneData = optionalLaneData.value();
     int64_t innerLaneData = laneData[1];
@@ -160,7 +252,6 @@ public:
     return success();
   }
 };
-} // namespace
 
 class XeGPULoadNdDescOpPattern final
     : public OpConversionPattern<xegpu::LoadNdOp> {
@@ -175,9 +266,8 @@ public:
     if (adaptorType == origTensorDescType)
       return failure();
     // Offsets must be adjusted based on innerLaneData.
-    auto optionalLaneData = get2DLaneData(loadNdOp.getTensorDescType());
-    assert(optionalLaneData && "Expected 2D lane data");
-    int64_t innerLaneData = optionalLaneData.value()[1];
+    auto laneData = getMaybeLaneData(loadNdOp.getTensorDescType()).value();
+    int64_t innerLaneData = laneData[1];
     auto offsets = loadNdOp.getMixedOffsets();
     if (offsets.empty())
       return rewriter.notifyMatchFailure(loadNdOp,
@@ -187,25 +277,82 @@ public:
         rewriter, loadNdOp.getLoc(),
         convertToValue(rewriter, loadNdOp.getLoc(), modifiedOffsets.back()),
         innerLaneData);
-    VectorType modifiedType =
-        VectorType::get(adaptorType.getShape(), adaptorType.getElementType());
-    // Create a new LoadNdOp with modified offsets and type.
-    auto newLoadNdOp = xegpu::LoadNdOp::create(
-        rewriter, loadNdOp->getLoc(), modifiedType, adaptor.getTensorDesc(),
-        modifiedOffsets, loadNdOp.getPackedAttr(), loadNdOp.getTransposeAttr(),
-        loadNdOp.getL1HintAttr(), loadNdOp.getL2HintAttr(),
-        loadNdOp.getL3HintAttr());
-    // Bitcast back to the original type.
+    // Get the 2D data shape of this loadNdOp in its original type including
+    // array length.
+    SmallVector<int64_t> origDataShape(origTensorDescType.getShape());
+    // origDataShape.back() *= origTensorDescType.getArrayLength();
+    // Adjust the data shape based on innerLaneData.
+    origDataShape.back() /= innerLaneData;
+    // HW supported shape is the new tensor desc shape after conversion.
+    SmallVector<int64_t> hwSupportedShape(adaptorType.getShape());
+    // Shape ratio is 2D and, it describes how many blocks need to be loaded in
+    // HW supported shape to cover the original shape.
+    auto ratio = computeShapeRatio(origDataShape, hwSupportedShape)
+                     .value(); // ratio must be defined if we reach here.
+    // Create a zero-initialized vector to hold all loaded blocks.
+    // TypedAttr zeroAttr = rewriter.getZeroAttr(adaptorType.getElementType());
+    VectorType origVectorType =
+        VectorType::get(origDataShape, adaptorType.getElementType());
+    Value data;
+    // Orig data shape is 3D for the array length case.
+    if (origTensorDescType.getArrayLength() > 1) {
+      SmallVector<int64_t> arrayLenDataShape(origDataShape);
+      arrayLenDataShape.insert(arrayLenDataShape.begin(),
+                               origTensorDescType.getArrayLength());
+      auto arrayLenVecType =
+          VectorType::get(arrayLenDataShape, adaptorType.getElementType());
+      data = arith::ConstantOp::create(rewriter, loadNdOp->getLoc(),
+                                       arrayLenVecType,
+                                       rewriter.getZeroAttr(arrayLenVecType));
+      for (int64_t i = 0; i < origTensorDescType.getArrayLength(); ++i) {
+        Value slice = arith::ConstantOp::create(
+            rewriter, loadNdOp->getLoc(),
+            VectorType::get(origDataShape, adaptorType.getElementType()),
+            rewriter.getZeroAttr(origVectorType));
+        // Increse the Y offset for each array slice.
+        Value offsetY = convertToValue(rewriter, loadNdOp->getLoc(),
+                                       modifiedOffsets.back());
+        modifiedOffsets.back() =
+            arith::AddIOp::create(rewriter, loadNdOp->getLoc(), offsetY,
+                                  createConstantIndex(rewriter,
+                                                      loadNdOp->getLoc(),
+                                                      i * origDataShape[1]))
+                .getResult();
+        slice = generateLoads(
+            rewriter, cast<TypedValue<VectorType>>(slice), ratio,
+            modifiedOffsets, hwSupportedShape,
+            cast<TypedValue<xegpu::TensorDescType>>(adaptor.getTensorDesc()),
+            loadNdOp);
+        // Insert slice to data.
+        data = vector::InsertOp::create(rewriter, loadNdOp->getLoc(), slice,
+                                        data, ArrayRef<int64_t>{i});
+      }
+      // Cast back to the original type and replace all uses.
+      data = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
+                                       loadNdOp.getType(), data);
+      rewriter.replaceOp(loadNdOp, data);
+      return success();
+    }
+    data = arith::ConstantOp::create(
+        rewriter, loadNdOp->getLoc(),
+        VectorType::get(origDataShape, adaptorType.getElementType()),
+        rewriter.getZeroAttr(origVectorType));
+    data = generateLoads(
+        rewriter, cast<TypedValue<VectorType>>(data), ratio, modifiedOffsets,
+        hwSupportedShape,
+        cast<TypedValue<xegpu::TensorDescType>>(adaptor.getTensorDesc()),
+        loadNdOp);
     auto castOp = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
-                                            loadNdOp.getType(), newLoadNdOp);
-    // Cast op must have the same layout as the original LoadNdOp result.
-    xegpu::setDistributeLayoutAttr(
-        castOp->getOpResult(0),
-        xegpu::getDistributeLayoutAttr(loadNdOp.getResult()));
-    rewriter.replaceOp(loadNdOp, castOp.getResult());
+                                            loadNdOp.getType(), data);
+    // // Cast op must have the same layout as the original LoadNdOp result.
+    // xegpu::setDistributeLayoutAttr(
+    //     castOp->getOpResult(0),
+    //     xegpu::getDistributeLayoutAttr(loadNdOp.getResult()));
+    rewriter.replaceOp(loadNdOp, castOp);
     return success();
   }
 };
+} // namespace
 
 void xegpu::populateXeGPUOptimizeTransposePatterns(
     RewritePatternSet &patterns) {
@@ -224,23 +371,15 @@ struct XeGPUOptimizeTransposePass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    auto checkValidInnerLaneData =
-        [](std::optional<SmallVector<int64_t>> optionalLaneData) -> bool {
-      if (!optionalLaneData)
-        return true;
-      auto laneData = optionalLaneData.value();
-      return laneData[0] != 1 || laneData[1] == 1;
-    };
-
+    // CreateNdDescOp and LoadNdOp with invalid transpose layout must be
+    // converted.
     target.addDynamicallyLegalOp<xegpu::CreateNdDescOp>(
         [&](xegpu::CreateNdDescOp createNdOp) {
-          auto optionalLaneData = get2DLaneData(createNdOp.getType());
-          return checkValidInnerLaneData(optionalLaneData);
+          return !hasInvalidTranposeLayout(createNdOp.getType());
         });
     target.addDynamicallyLegalOp<xegpu::LoadNdOp>(
         [&](xegpu::LoadNdOp loadNdOp) {
-          auto optionalLaneData = get2DLaneData(loadNdOp.getTensorDescType());
-          return checkValidInnerLaneData(optionalLaneData);
+          return !hasInvalidTranposeLayout(loadNdOp.getTensorDescType());
         });
     converter.addConversion([](Type type) { return type; });
 
