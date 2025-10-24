@@ -72,9 +72,9 @@ public:
     for (Trigram T : TrigramScratch)
       TrigramDocs[T].push_back(D);
     ScopeDocs[Sym.Scope].push_back(D);
-    if (!llvm::StringRef(Sym.CanonicalDeclaration.FileURI).empty())
+    if (!llvm::StringRef(Sym.CanonicalDeclaration.fileURI()).empty())
       for (const auto &ProximityURI :
-           generateProximityURIs(Sym.CanonicalDeclaration.FileURI))
+           generateProximityURIs(Sym.CanonicalDeclaration.fileURI()))
         ProximityDocs[ProximityURI].push_back(D);
     if (Sym.Flags & Symbol::IndexedForCodeCompletion)
       RestrictedCCDocs.push_back(D);
