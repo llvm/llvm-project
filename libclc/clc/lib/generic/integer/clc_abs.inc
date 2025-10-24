@@ -14,8 +14,6 @@ _CLC_OVERLOAD _CLC_DEF __CLC_U_GENTYPE __clc_abs(__CLC_GENTYPE x) {
 
 #else
 
-_CLC_OVERLOAD _CLC_DEF __CLC_U_GENTYPE __clc_abs(__CLC_GENTYPE x) {
-  return x;
-}
+_CLC_OVERLOAD _CLC_DEF __CLC_U_GENTYPE __clc_abs(__CLC_GENTYPE x) { return x; }
 
 #endif
