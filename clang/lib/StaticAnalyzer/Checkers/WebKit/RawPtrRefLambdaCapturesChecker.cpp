@@ -229,24 +229,8 @@ public:
           return true;
         checkCalleeLambda(CE);
         if (auto *Callee = CE->getDirectCallee()) {
-          if (auto *Ns = Callee->getParent()) {
-            auto NsName = safeGetName(Ns);
-            bool IsVisitFn = safeGetName(Callee) == "visit";
-            bool ArgCnt = CE->getNumArgs();
-            if (IsVisitFn && ArgCnt && (NsName == "WTF" || NsName == "std")) {
-              if (auto *Arg = CE->getArg(0)) {
-                Arg = Arg->IgnoreParenCasts();
-                if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
-                  if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-                    if (LambdaOwnerMap.contains(VD)) {
-                      DeclRefExprsToIgnore.insert(DRE);
-                      return true;
-                    }
-                  }
-                }
-              }
-            }
-          }
+          if (isVisitFunction(CE, Callee))
+            return true;
           checkParameters(CE, Callee);
         } else if (auto *CalleeE = CE->getCallee()) {
           if (auto *DRE = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
@@ -254,6 +238,34 @@ public:
               checkParameters(CE, Callee);
           }
         }
+        return true;
+      }
+
+      bool isVisitFunction(CallExpr *CallExpr, FunctionDecl *FnDecl) {
+        bool IsVisitFn = safeGetName(FnDecl) == "visit";
+        if (!IsVisitFn)
+          return false;
+        bool ArgCnt = CallExpr->getNumArgs();
+        if (!ArgCnt)
+          return false;
+        auto *Ns = FnDecl->getParent();
+        if (!Ns)
+          return false;
+        auto NsName = safeGetName(Ns);
+        if (NsName != "WTF" && NsName != "std")
+          return false;
+        auto *Arg = CallExpr->getArg(0);
+        if (!Arg)
+          return false;
+        auto *DRE = dyn_cast<DeclRefExpr>(Arg->IgnoreParenCasts());
+        if (!DRE)
+          return false;
+        auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+        if (!VD)
+          return false;
+        if (!LambdaOwnerMap.contains(VD))
+          return false;
+        DeclRefExprsToIgnore.insert(DRE);
         return true;
       }
 
