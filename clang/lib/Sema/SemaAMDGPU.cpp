@@ -174,6 +174,7 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_1darray_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f16_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_sample_l_2d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_l_2darray_v4f16_f32:
