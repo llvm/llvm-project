@@ -70,3 +70,15 @@
 # UMOVvi16_idx0_throughput-NEXT:   instructions:
 # UMOVvi16_idx0_throughput-NEXT:     UMOVvi16_idx0 [[REG1:W[0-9]+|LR]] [[REG2:Q[0-9]+|LR]] i_0x0
 # UMOVvi16_idx0_throughput: ...
+
+
+// Test for Load instruction execution by --execution-mode=subprocess pathway
+// LD1B: ld1b { Zt.b }, Pg/z, [Xn, Xm]
+# RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --execution-mode=subprocess --benchmark-phase=prepare-and-assemble-snippet --opcode-name=LD1B --mode=inverse_throughput  2>&1 | FileCheck %s --check-prefix=LD1B_throughput
+
+# LD1B_throughput: ---
+# LD1B_throughput-NEXT: mode: inverse_throughput
+# LD1B_throughput-NEXT: key:
+# LD1B_throughput-NEXT:   instructions:
+# LD1B_throughput-NEXT:     - 'LD1B [[ZREG:Z[0-9]+|LR]] [[PREG:P[0-9]+|LR]] [[XREG1:X[0-9]+|LR]] [[XREG2:X[0-9]+|LR]]'
+# LD1B_throughput-NOT: error:           'snippet crashed while running: Segmentation fault'
