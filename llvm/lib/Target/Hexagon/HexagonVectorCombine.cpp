@@ -2249,9 +2249,11 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
 }
 
 Value *HvxIdioms::processVGather(Instruction &In) const {
-  [[maybe_unused]] auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
+  [[maybe_unused]] auto *InpTy =
+      dyn_cast<VectorType>(In.getOperand(0)->getType());
   assert(InpTy && "Cannot handle no vector type for llvm.gather");
-  [[maybe_unused]] auto *ElemTy = dyn_cast<PointerType>(InpTy->getElementType());
+  [[maybe_unused]] auto *ElemTy =
+      dyn_cast<PointerType>(InpTy->getElementType());
   assert(ElemTy && "llvm.gather needs vector of ptr argument");
   auto *F = In.getFunction();
   LLVMContext &Ctx = F->getContext();
