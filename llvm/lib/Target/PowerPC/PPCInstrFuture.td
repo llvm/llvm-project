@@ -192,8 +192,10 @@ class XForm_RBS5<bits<6> opCode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
 
   let Inst{6...10} = RS;
+  let Inst{11...15} = 0;
   let Inst{16...20} = RB;
   let Inst{21...30} = xo;
+  let Inst{31} = 0;
 }
 
 class XX3Form_XTAB6_S<bits<5> xo, dag OOL, dag IOL, string asmstr,
