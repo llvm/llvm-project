@@ -5819,6 +5819,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
     } else if (InputUsed[0] == -1U) {
       // No input vectors were used! The result is undefined.
       Output = MIRBuilder.buildUndef(NarrowTy).getReg(0);
+    } else if (NewElts == 1) {
+      Output = MIRBuilder.buildCopy(NarrowTy, Inputs[InputUsed[0]]).getReg(0);
     } else {
       Register Op0 = Inputs[InputUsed[0]];
       // If only one input was used, use an undefined vector for the other.
@@ -9016,22 +9018,18 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
       continue;
     }
 
-    if (Src0Ty.isScalar()) {
-      BuildVec.push_back(Idx == 0 ? Src0Reg : Src1Reg);
-    } else {
-      int NumElts = Src0Ty.getNumElements();
-      Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
-      int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
-      auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
-      auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
-      BuildVec.push_back(Extract.getReg(0));
-    }
+    assert(!Src0Ty.isScalar() && "Unexpected scalar G_SHUFFLE_VECTOR");
+
+    int NumElts = Src0Ty.getNumElements();
+    Register SrcVec = Idx < NumElts ? Src0Reg : Src1Reg;
+    int ExtractIdx = Idx < NumElts ? Idx : Idx - NumElts;
+    auto IdxK = MIRBuilder.buildConstant(IdxTy, ExtractIdx);
+    auto Extract = MIRBuilder.buildExtractVectorElement(EltTy, SrcVec, IdxK);
+    BuildVec.push_back(Extract.getReg(0));
   }
 
-  if (DstTy.isVector())
-    MIRBuilder.buildBuildVector(DstReg, BuildVec);
-  else
-    MIRBuilder.buildCopy(DstReg, BuildVec[0]);
+  assert(DstTy.isVector() && "Unexpected scalar G_SHUFFLE_VECTOR");
+  MIRBuilder.buildBuildVector(DstReg, BuildVec);
   MI.eraseFromParent();
   return Legalized;
 }

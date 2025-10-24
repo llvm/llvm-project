@@ -602,6 +602,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
                          Depth + 1);
     computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
                          Depth + 1);
+    OffsetKnown = OffsetKnown.sext(BitWidth);
+    WidthKnown = WidthKnown.sext(BitWidth);
     Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
     // Sign extend the extracted value using shift left and arithmetic shift
     // right.
