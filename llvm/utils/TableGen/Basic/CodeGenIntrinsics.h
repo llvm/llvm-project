@@ -167,6 +167,8 @@ struct CodeGenIntrinsic {
 
   bool isParamImmArg(unsigned ParamIdx) const;
 
+  llvm::IRMemLocation getValueAsIRMemLocation(const Record *R) const;
+
   CodeGenIntrinsic(const Record *R, const CodeGenIntrinsicContext &Ctx);
 };
 

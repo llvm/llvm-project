@@ -66,10 +66,15 @@ enum class IRMemLocation {
   ErrnoMem = 2,
   /// Any other memory.
   Other = 3,
+  /// Represents target specific state.
+  TargetMem0 = 4,
+  TargetMem1 = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  Last = Other,
+  FirstTarget = TargetMem0,
+  // TargetMem IDs must be at the end of the list.
+  Last = TargetMem1,
 };
 
 template <typename LocationEnum> class MemoryEffectsBase {
@@ -232,7 +237,10 @@ public:
 
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
-    return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+    return getWithoutLoc(Location::InaccessibleMem)
+        .getWithoutLoc(IRMemLocation::TargetMem0)
+        .getWithoutLoc(IRMemLocation::TargetMem1)
+        .doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses errno memory.
@@ -245,6 +253,8 @@ public:
   bool onlyAccessesInaccessibleOrArgMem() const {
     return getWithoutLoc(Location::InaccessibleMem)
         .getWithoutLoc(Location::ArgMem)
+        .getWithoutLoc(Location::TargetMem0)
+        .getWithoutLoc(Location::TargetMem1)
         .doesNotAccessMemory();
   }
 
