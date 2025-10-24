@@ -303,12 +303,9 @@ StandaloneFixIt::StandaloneFixIt(const SourceManager &SrcMgr,
 static std::string canonicalizeFilename(const SourceManager &SrcMgr,
                                         StringRef Filename) {
   SmallString<256> Abs(Filename);
-  if (!llvm::sys::path::is_absolute(Abs)) {
-    if (const auto &CWD =
-            SrcMgr.getFileManager().getFileSystemOpts().WorkingDir;
-        !CWD.empty())
-      llvm::sys::fs::make_absolute(CWD, Abs);
-  }
+  if (const auto &CWD = SrcMgr.getFileManager().getFileSystemOpts().WorkingDir;
+      !CWD.empty())
+    llvm::sys::path::make_absolute(CWD, Abs);
   return std::string(Abs.str());
 }
 
