@@ -112,10 +112,6 @@ OptionalDiagnostic State::diag(SourceLocation Loc, diag::kind DiagId,
   return OptionalDiagnostic();
 }
 
-const LangOptions &State::getLangOpts() const {
-  return getASTContext().getLangOpts();
-}
-
 void State::addCallStack(unsigned Limit) {
   // Determine which calls to skip, if any.
   unsigned ActiveCalls = getCallStackDepth() - 1;

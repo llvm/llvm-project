@@ -25,7 +25,7 @@
 ; CHECK: define void @f(
 define void @f(ptr %dst) {
 entry:
-  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 272, 288, 320)) %CB.cb_h.i.i, ptr @CB.cb, align 4
 
   %a1.copy = alloca [3 x float], align 4
@@ -74,7 +74,7 @@ entry:
 ; CHECK:    [[UPTO1:%.*]] = insertelement <3 x double> [[UPTO0]], double [[Y]], i32 1
 ; CHECK:    [[UPTO2:%.*]] = insertelement <3 x double> [[UPTO1]], double [[Z]], i32 2
 ; CHECK:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[A2_COPY:%.*]], i32 0
-; CHECK:    store <3 x double> [[UPTO2]], ptr [[DEST]], align 32
+; CHECK:    store <3 x double> [[UPTO2]], ptr [[DEST]], align 8
 ; CHECK:    [[LOAD:%.*]] = call { double, double } @llvm.dx.resource.load.cbufferrow.2.{{.*}}(target("dx.CBuffer", {{.*}})) [[CB]], i32 5)
 ; CHECK:    [[X:%.*]] = extractvalue { double, double } [[LOAD]], 0
 ; CHECK:    [[Y:%.*]] = extractvalue { double, double } [[LOAD]], 1
@@ -83,9 +83,9 @@ entry:
 ; CHECK:    [[UPTO0:%.*]] = insertelement <3 x double> poison, double [[X]], i32 0
 ; CHECK:    [[UPTO1:%.*]] = insertelement <3 x double> [[UPTO0]], double [[Y]], i32 1
 ; CHECK:    [[UPTO2:%.*]] = insertelement <3 x double> [[UPTO1]], double [[Z]], i32 2
-; CHECK:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[A2_COPY]], i32 32
-; CHECK:    store <3 x double> [[UPTO2]], ptr [[DEST]], align 32
-  call void @llvm.memcpy.p0.p2.i32(ptr align 32 %a2.copy, ptr addrspace(2) align 32 @a2, i32 64, i1 false)
+; CHECK:    [[DEST:%.*]] = getelementptr inbounds i8, ptr [[A2_COPY]], i32 24
+; CHECK:    store <3 x double> [[UPTO2]], ptr [[DEST]], align 8
+  call void @llvm.memcpy.p0.p2.i32(ptr align 32 %a2.copy, ptr addrspace(2) align 32 @a2, i32 48, i1 false)
 
 ; CHECK:    [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb, align 4
 ; CHECK:    [[LOAD:%.*]] = call { half, half, half, half, half, half, half, half } @llvm.dx.resource.load.cbufferrow.8.{{.*}}(target("dx.CBuffer", {{.*}})) [[CB]], i32 7)

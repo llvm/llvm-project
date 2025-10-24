@@ -50,8 +50,7 @@ define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 ; GFX908-NEXT:    v_mov_b32_e32 v1, 2
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_mfma_i32_32x32x8i8 a[0:15], v0, v1, a[0:15] cbsz:1 abid:2 blgp:3
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 7
+; GFX908-NEXT:    s_nop 15
 ; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v15, a15
 ; GFX908-NEXT:    v_accvgpr_read_b32 v14, a14
@@ -103,8 +102,7 @@ define amdgpu_kernel void @test_mfma_i32_32x32x8i8(ptr addrspace(1) %arg) #0 {
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_i32_32x32x8i8 a[0:15], v0, v1, a[0:15] cbsz:1 abid:2 blgp:3
 ; GFX90A-NEXT:    v_mov_b32_e32 v0, 0
-; GFX90A-NEXT:    s_nop 7
-; GFX90A-NEXT:    s_nop 7
+; GFX90A-NEXT:    s_nop 15
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GFX90A-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
@@ -138,8 +136,7 @@ define amdgpu_kernel void @test_mfma_i32_16x16x16i8(ptr addrspace(1) %arg) #0 {
 ; GFX908-NEXT:    v_accvgpr_write_b32 a3, v5
 ; GFX908-NEXT:    s_nop 0
 ; GFX908-NEXT:    v_mfma_i32_16x16x16i8 a[0:3], v0, v1, a[0:3] cbsz:1 abid:2 blgp:3
-; GFX908-NEXT:    s_nop 7
-; GFX908-NEXT:    s_nop 1
+; GFX908-NEXT:    s_nop 9
 ; GFX908-NEXT:    v_accvgpr_read_b32 v0, a0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v1, a1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v2, a2
@@ -163,8 +160,7 @@ define amdgpu_kernel void @test_mfma_i32_16x16x16i8(ptr addrspace(1) %arg) #0 {
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a3, s3
 ; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_i32_16x16x16i8 a[0:3], v0, v2, a[0:3] cbsz:1 abid:2 blgp:3
-; GFX90A-NEXT:    s_nop 7
-; GFX90A-NEXT:    s_nop 2
+; GFX90A-NEXT:    s_nop 10
 ; GFX90A-NEXT:    global_store_dwordx4 v1, a[0:3], s[6:7]
 ; GFX90A-NEXT:    s_endpgm
 bb:

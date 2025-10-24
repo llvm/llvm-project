@@ -34,4 +34,5 @@ add_llvm_target_unittest(AArch64Tests
   AArch64SVESchedPseudoTest.cpp
   AArch64SelectionDAGTest.cpp
   Immediates.cpp
+  MCInstrAnalysisTest.cpp
   )

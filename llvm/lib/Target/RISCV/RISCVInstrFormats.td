@@ -177,13 +177,20 @@ def EltDepsVL        : EltDeps<vl=1, mask=0>;
 def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
-class EEW <bits<2> val> {
+class EEW<bits<2> val> {
   bits<2> Value = val;
 }
 def EEW1     : EEW<0>;
 def EEWSEWx1 : EEW<1>;
 def EEWSEWx2 : EEW<2>;
 def EEWSEWx4 : EEW<3>;
+
+class AltFmtType<bits<2> val> {
+  bits<2> Value = val;
+}
+def DONT_CARE_ALTFMT : AltFmtType<0>;
+def IS_NOT_ALTFMT    : AltFmtType<1>;
+def IS_ALTFMT        : AltFmtType<2>;
 
 class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
                    list<dag> pattern, InstFormat format> : Instruction {
@@ -267,6 +274,22 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // operands' VLs.
   bit ReadsPastVL = 0;
   let TSFlags{26} = ReadsPastVL;
+
+  // 0 -> Don't care about altfmt bit in VTYPE.
+  // 1 -> Is not altfmt.
+  // 2 -> Is altfmt(BF16).
+  AltFmtType AltFmtType = DONT_CARE_ALTFMT;
+  let TSFlags{28-27} = AltFmtType.Value;
+
+  // XSfmmbase
+  bit HasTWidenOp = 0;
+  let TSFlags{29} = HasTWidenOp;
+
+  bit HasTmOp = 0;
+  let TSFlags{30} = HasTmOp;
+
+  bit HasTkOp = 0;
+  let TSFlags{31} = HasTkOp;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
@@ -491,6 +514,22 @@ class RVInstB<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{31} = imm12{11};
   let Inst{30-25} = imm12{9-4};
   let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = funct3;
+  let Inst{11-8} = imm12{3-0};
+  let Inst{7} = imm12{10};
+  let Inst{6-0} = opcode.Value;
+}
+
+class RVInstBIMM<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
+                 string opcodestr, string argstr>
+    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatB> {
+  bits<12> imm12;
+  bits<5> cimm;
+  bits<5> rs1;
+  let Inst{31} = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = cimm;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-8} = imm12{3-0};

@@ -154,8 +154,8 @@ public:
   bool isFrameOffsetLegal(const MachineInstr *MI, Register BaseReg,
                           int64_t Offset) const override;
 
-  const TargetRegisterClass *getPointerRegClass(
-    const MachineFunction &MF, unsigned Kind = 0) const override;
+  const TargetRegisterClass *
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// Returns a legal register class to copy a register in the specified class
   /// to or from. If it is possible to copy the register directly without using
@@ -200,12 +200,13 @@ public:
   StringRef getRegAsmName(MCRegister Reg) const override;
 
   // Pseudo regs are not allowed
-  unsigned getHWRegIndex(MCRegister Reg) const {
-    return getEncodingValue(Reg) & 0xff;
-  }
+  unsigned getHWRegIndex(MCRegister Reg) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getVGPRClassForBitWidth(unsigned BitWidth) const;
+
+  LLVM_READONLY const TargetRegisterClass *
+  getAlignedLo256VGPRClassForBitWidth(unsigned BitWidth) const;
 
   LLVM_READONLY
   const TargetRegisterClass *getAGPRClassForBitWidth(unsigned BitWidth) const;

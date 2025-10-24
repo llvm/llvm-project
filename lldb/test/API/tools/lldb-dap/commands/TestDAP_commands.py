@@ -23,7 +23,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             exitCommands=["?" + command_quiet, command_not_quiet],
         )
         full_output = self.collect_console(
-            timeout=1.0,
             pattern=command_not_quiet,
         )
         self.assertNotIn(command_quiet, full_output)
@@ -51,7 +50,6 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
             expectFailure=True,
         )
         full_output = self.collect_console(
-            timeout=1.0,
             pattern=command_abort_on_error,
         )
         self.assertNotIn(command_quiet, full_output)

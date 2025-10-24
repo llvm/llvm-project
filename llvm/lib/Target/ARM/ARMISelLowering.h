@@ -447,6 +447,12 @@ class VectorType;
     void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                        SDNode *Node) const override;
 
+    bool supportKCFIBundles() const override;
+
+    MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                                MachineBasicBlock::instr_iterator &MBBI,
+                                const TargetInstrInfo *TII) const override;
+
     SDValue PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const;
     SDValue PerformCMOVToBFICombine(SDNode *N, SelectionDAG &DAG) const;
@@ -534,8 +540,6 @@ class VectorType;
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
 
-    bool ExpandInlineAsm(CallInst *CI) const override;
-
     ConstraintType getConstraintType(StringRef Constraint) const override;
 
     /// Examine constraint string and operand type and determine a weight value.
@@ -607,7 +611,7 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
-    bool shouldExpandCmpUsingSelects(EVT VT) const override;
+    bool preferSelectsOverBooleanArithmetic(EVT VT) const override;
 
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
@@ -688,8 +692,8 @@ class VectorType;
                               ArrayRef<unsigned> Indices, unsigned Factor,
                               const APInt &GapMask) const override;
     bool lowerInterleavedStore(Instruction *Store, Value *Mask,
-                               ShuffleVectorInst *SVI,
-                               unsigned Factor) const override;
+                               ShuffleVectorInst *SVI, unsigned Factor,
+                               const APInt &GapMask) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
     TargetLoweringBase::AtomicExpansionKind
@@ -704,11 +708,14 @@ class VectorType;
     bool useLoadStackGuardNode(const Module &M) const override;
 
     void insertSSPDeclarations(Module &M) const override;
-    Value *getSDagStackGuard(const Module &M) const override;
     Function *getSSPStackGuardCheck(const Module &M) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
+
+    bool canCreateUndefOrPoisonForTargetNode(
+        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
@@ -771,8 +778,17 @@ class VectorType;
 
     bool isDesirableToCommuteXorWithShift(const SDNode *N) const override;
 
-    bool shouldFoldConstantShiftPairToMask(const SDNode *N,
-                                           CombineLevel Level) const override;
+    bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
+
+    /// Return true if it is profitable to fold a pair of shifts into a mask.
+    bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override {
+      EVT VT = Y.getValueType();
+
+      if (VT.isVector())
+        return false;
+
+      return VT.getScalarSizeInBits() <= 32;
+    }
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                               unsigned SelectOpcode, SDValue X,
@@ -907,6 +923,7 @@ class VectorType;
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

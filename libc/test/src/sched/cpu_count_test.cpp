@@ -7,18 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
-#include "src/__support/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
 #include "hdr/sched_macros.h"
 #include "hdr/types/cpu_set_t.h"
 #include "hdr/types/pid_t.h"
 
-TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
+using LlvmLibcSchedCpuCountTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
-  libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));

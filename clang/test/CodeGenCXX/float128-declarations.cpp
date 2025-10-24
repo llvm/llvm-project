@@ -6,6 +6,10 @@
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-linux-gnu -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
+// RUN: %clang_cc1 -emit-llvm -triple i386-unknown-hurd-gnu -std=c++11 \
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-hurd-gnu -std=c++11 \
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 // RUN: %clang_cc1 -emit-llvm -triple i386-unknown-freebsd -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 // RUN: %clang_cc1 -emit-llvm -triple amd64-unknown-freebsd -std=c++11 \

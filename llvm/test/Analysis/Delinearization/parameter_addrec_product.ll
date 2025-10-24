@@ -11,19 +11,16 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @foo(ptr %A, ptr %p) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: %pval = load i64, ptr %p, align 8
-; CHECK-NEXT:  In Loop with Header: bb4
 ; CHECK-NEXT:  AccessFunction: 0
 ; CHECK-NEXT:  failed to delinearize
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: %tmp11 = load float, ptr %tmp10, align 4
-; CHECK-NEXT:  In Loop with Header: bb4
 ; CHECK-NEXT:  AccessFunction: (4 * (({0,+,1}<nuw><nsw><%bb2> * %pval)<nsw> + {0,+,1}<nuw><nsw><%bb4>)<nsw>)<nsw>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%pval] with elements of 4 bytes.
 ; CHECK-NEXT:  ArrayRef[{0,+,1}<nuw><nsw><%bb2>][{0,+,1}<nuw><nsw><%bb4>]
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Inst: store float %tmp12, ptr %tmp10, align 4
-; CHECK-NEXT:  In Loop with Header: bb4
 ; CHECK-NEXT:  AccessFunction: (4 * (({0,+,1}<nuw><nsw><%bb2> * %pval)<nsw> + {0,+,1}<nuw><nsw><%bb4>)<nsw>)<nsw>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%pval] with elements of 4 bytes.

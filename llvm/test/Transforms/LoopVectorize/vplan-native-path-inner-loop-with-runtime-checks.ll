@@ -31,14 +31,12 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP3]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 0, [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult ptr [[TMP10]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[MUL2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP3]])
 ; CHECK-NEXT:    [[MUL_RESULT3:%.*]] = extractvalue { i64, i1 } [[MUL2]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW4:%.*]] = extractvalue { i64, i1 } [[MUL2]], 1
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 0, [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[MUL_RESULT3]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ult ptr [[TMP14]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[MUL_OVERFLOW4]]
@@ -63,29 +61,29 @@ define void @expand(ptr %src, ptr %dst, i64 %0) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[SRC]], align 8, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl <4 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP20]], i32 0
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP20]], i32 1
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x i64> [[TMP20]], i32 2
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP20]], i32 3
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP22]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP24]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP31]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP26]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP33]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double [[TMP19]], ptr [[TMP28]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = or disjoint <4 x i64> [[TMP20]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i64> [[TMP29]], i32 0
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i64> [[TMP29]], i32 1
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i64> [[TMP29]], i32 2
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i64> [[TMP29]], i32 3
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP30]]
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP32]]
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP34]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP36]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP31]], align 8, !alias.scope [[META3]]
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP33]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP41]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP35]], align 8, !alias.scope [[META3]]
+; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP42]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP37]], align 8, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)

@@ -1,4 +1,4 @@
-//===-- SimplifyBooleanExprCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,19 +21,16 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
-namespace {
-
-StringRef getText(const ASTContext &Context, SourceRange Range) {
+static StringRef getText(const ASTContext &Context, SourceRange Range) {
   return Lexer::getSourceText(CharSourceRange::getTokenRange(Range),
                               Context.getSourceManager(),
                               Context.getLangOpts());
 }
 
-template <typename T> StringRef getText(const ASTContext &Context, T &Node) {
+template <typename T>
+static StringRef getText(const ASTContext &Context, T &Node) {
   return getText(Context, Node.getSourceRange());
 }
-
-} // namespace
 
 static constexpr char SimplifyOperatorDiagnostic[] =
     "redundant boolean literal supplied to boolean operator";

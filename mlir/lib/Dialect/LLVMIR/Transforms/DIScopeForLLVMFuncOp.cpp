@@ -77,7 +77,7 @@ static void addScopeToFunction(LLVM::LLVMFuncOp llvmFunc,
   auto subprogramFlags = LLVM::DISubprogramFlags::Optimized;
   if (!llvmFunc.isExternal()) {
     id = DistinctAttr::create(UnitAttr::get(context));
-    subprogramFlags = subprogramFlags | LLVM::DISubprogramFlags::Definition;
+    subprogramFlags |= LLVM::DISubprogramFlags::Definition;
   } else {
     compileUnitAttr = {};
   }
