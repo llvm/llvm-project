@@ -3101,8 +3101,7 @@ static bool interp__builtin_vec_set(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-static bool evalICmpImm(uint8_t Imm, APSInt A, APSInt B,
-                        bool IsUnsigned) {
+static bool evalICmpImm(uint8_t Imm, APSInt A, APSInt B, bool IsUnsigned) {
   switch (Imm & 0x7) {
   case 0x00: // _MM_CMPINT_EQ
     return (A == B);
@@ -3126,8 +3125,8 @@ static bool evalICmpImm(uint8_t Imm, APSInt A, APSInt B,
 }
 
 static bool interp__builtin_ia32_cmp_mask(InterpState &S, CodePtr OpPC,
-                                     const CallExpr *Call, unsigned ID,
-                                     bool IsUnsigned) {
+                                          const CallExpr *Call, unsigned ID,
+                                          bool IsUnsigned) {
   assert(Call->getNumArgs() == 4);
 
   APSInt Mask = popToAPSInt(S, Call->getArg(3));
@@ -4208,7 +4207,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cmpd512_mask:
   case X86::BI__builtin_ia32_cmpq512_mask:
     return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
-                                    /*IsUnsigned=*/false);
+                                         /*IsUnsigned=*/false);
 
   case X86::BI__builtin_ia32_ucmpb128_mask:
   case X86::BI__builtin_ia32_ucmpw128_mask:
@@ -4223,7 +4222,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_ucmpd512_mask:
   case X86::BI__builtin_ia32_ucmpq512_mask:
     return interp__builtin_ia32_cmp_mask(S, OpPC, Call, BuiltinID,
-                                    /*IsUnsigned=*/true);
+                                         /*IsUnsigned=*/true);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
