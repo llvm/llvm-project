@@ -29488,15 +29488,6 @@ void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   TargetLowering::insertSSPDeclarations(M);
 }
 
-Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
-  // MSVC CRT has a function to validate security cookie.
-  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
-    return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
-  return TargetLowering::getSSPStackGuardCheck(M);
-}
-
 Value *
 AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the

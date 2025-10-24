@@ -2127,7 +2127,7 @@ public:
   /// performs validation and error handling, returns the function. Otherwise,
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
-  virtual Function *getSSPStackGuardCheck(const Module &M) const;
+  Function *getSSPStackGuardCheck(const Module &M) const;
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,

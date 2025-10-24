@@ -976,9 +976,25 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
+  auto &MinNumMaxNumIeee =
+      getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
+
+  if (ST.hasVOP3PInsts()) {
+    MinNumMaxNumIeee.legalFor(FPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+  } else if (ST.has16BitInsts()) {
+    MinNumMaxNumIeee.legalFor(FPTypes16).clampScalar(0, S16, S64).scalarize(0);
+  } else {
+    MinNumMaxNumIeee.legalFor(FPTypesBase)
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
+  }
+
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
-      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM, G_FMINNUM_IEEE,
-       G_FMAXNUM_IEEE});
+      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
@@ -2136,9 +2152,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .legalFor(FPTypesPK16)
         .clampMaxNumElements(0, S16, 2)
         .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .lowerFor({V2S16})
+        .clampMaxNumElementsStrict(0, S16, 2)
+        .scalarize(0)
+        .lower();
   } else {
-    // TODO: Implement
-    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .scalarize(0)
+        .clampScalar(0, S32, S64)
+        .lower();
   }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
@@ -2195,8 +2219,6 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINIMUMNUM:
   case TargetOpcode::G_FMAXIMUMNUM:
-  case TargetOpcode::G_FMINNUM_IEEE:
-  case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
@@ -2817,23 +2839,8 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
   MachineFunction &MF = Helper.MIRBuilder.getMF();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  const bool IsIEEEOp = MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE ||
-                        MI.getOpcode() == AMDGPU::G_FMAXNUM_IEEE;
-
-  // With ieee_mode disabled, the instructions have the correct behavior
-  // already for G_FMINIMUMNUM/G_FMAXIMUMNUM.
-  //
-  // FIXME: G_FMINNUM/G_FMAXNUM should match the behavior with ieee_mode
-  // enabled.
-  if (!MFI->getMode().IEEE) {
-    if (MI.getOpcode() == AMDGPU::G_FMINIMUMNUM ||
-        MI.getOpcode() == AMDGPU::G_FMAXIMUMNUM)
-      return true;
-
-    return !IsIEEEOp;
-  }
-
-  if (IsIEEEOp)
+  // With ieee_mode disabled, the instructions have the correct behavior.
+  if (!MFI->getMode().IEEE)
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;

@@ -1,3 +1,4 @@
+# REQUIRES: riscv
 # RUN: llvm-mc -triple riscv32 %s -filetype=obj -o %t.o
 # RUN: not ld.lld -pie %t.o -o /dev/null 2>&1 | FileCheck %s
 

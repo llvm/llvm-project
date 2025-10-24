@@ -4748,6 +4748,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FMINIMUMNUM:
   case G_FMAXIMUMNUM:
     return lowerFMinNumMaxNum(MI);
+  case G_FMINIMUM:
+  case G_FMAXIMUM:
+    return lowerFMinimumMaximum(MI);
   case G_MERGE_VALUES:
     return lowerMergeValues(MI);
   case G_UNMERGE_VALUES:
@@ -8773,6 +8776,77 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
   // If there are no nans, it's safe to simply replace this with the non-IEEE
   // version.
   MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  auto [Dst, Src0, Src1] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Dst);
+  LLT CmpTy = Ty.changeElementSize(1);
+
+  bool IsMax = (Opc == TargetOpcode::G_FMAXIMUM);
+  unsigned OpcIeee =
+      IsMax ? TargetOpcode::G_FMAXNUM_IEEE : TargetOpcode::G_FMINNUM_IEEE;
+  unsigned OpcNonIeee =
+      IsMax ? TargetOpcode::G_FMAXNUM : TargetOpcode::G_FMINNUM;
+  bool MinMaxMustRespectOrderedZero = false;
+  Register Res;
+
+  // IEEE variants don't need canonicalization
+  if (LI.isLegalOrCustom({OpcIeee, Ty})) {
+    Res = MIRBuilder.buildInstr(OpcIeee, {Ty}, {Src0, Src1}).getReg(0);
+    MinMaxMustRespectOrderedZero = true;
+  } else if (LI.isLegalOrCustom({OpcNonIeee, Ty})) {
+    Res = MIRBuilder.buildInstr(OpcNonIeee, {Ty}, {Src0, Src1}).getReg(0);
+  } else {
+    auto Compare = MIRBuilder.buildFCmp(
+        IsMax ? CmpInst::FCMP_OGT : CmpInst::FCMP_OLT, CmpTy, Src0, Src1);
+    Res = MIRBuilder.buildSelect(Ty, Compare, Src0, Src1).getReg(0);
+  }
+
+  // Propagate any NaN of both operands
+  if (!MI.getFlag(MachineInstr::FmNoNans) &&
+      (!isKnownNeverNaN(Src0, MRI) || isKnownNeverNaN(Src1, MRI))) {
+    auto IsOrdered = MIRBuilder.buildFCmp(CmpInst::FCMP_ORD, CmpTy, Src0, Src1);
+
+    LLT ElementTy = Ty.isScalar() ? Ty : Ty.getElementType();
+    APFloat NaNValue = APFloat::getNaN(getFltSemanticForLLT(ElementTy));
+    Register NaN = MIRBuilder.buildFConstant(ElementTy, NaNValue).getReg(0);
+    if (Ty.isVector())
+      NaN = MIRBuilder.buildSplatBuildVector(Ty, NaN).getReg(0);
+
+    Res = MIRBuilder.buildSelect(Ty, IsOrdered, Res, NaN).getReg(0);
+  }
+
+  // fminimum/fmaximum requires -0.0 less than +0.0
+  if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz)) {
+    GISelValueTracking VT(MIRBuilder.getMF());
+    KnownFPClass Src0Info = VT.computeKnownFPClass(Src0, fcZero);
+    KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
+
+    if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+      const unsigned Flags = MI.getFlags();
+      Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
+      auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);
+
+      unsigned TestClass = IsMax ? fcPosZero : fcNegZero;
+
+      auto LHSTestZero = MIRBuilder.buildIsFPClass(CmpTy, Src0, TestClass);
+      auto LHSSelect =
+          MIRBuilder.buildSelect(Ty, LHSTestZero, Src0, Res, Flags);
+
+      auto RHSTestZero = MIRBuilder.buildIsFPClass(CmpTy, Src1, TestClass);
+      auto RHSSelect =
+          MIRBuilder.buildSelect(Ty, RHSTestZero, Src1, LHSSelect, Flags);
+
+      Res = MIRBuilder.buildSelect(Ty, IsZero, RHSSelect, Res, Flags).getReg(0);
+    }
+  }
+
+  MIRBuilder.buildCopy(Dst, Res);
   MI.eraseFromParent();
   return Legalized;
 }

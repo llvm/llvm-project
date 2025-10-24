@@ -42,3 +42,19 @@ func.func @test_const_i64(%arg0 : index) -> tensor<4xi64> {
     %0 = "tosa.const"() {values = dense<[3, 0, 1, 2]> : tensor<4xi64>} : () -> tensor<4xi64>
     return %0 : tensor<4xi64>
 }
+
+// -----
+
+// CHECK-LABEL: test_const_fp6e3m2
+func.func @test_const_fp6e3m2(%arg0 : index) -> tensor<4xf6E3M2FN> {
+    %0 = "tosa.const"() {values = dense<[0.0, 0.0, 0.0, 0.0]> : tensor<4xf6E3M2FN>} : () -> tensor<4xf6E3M2FN>
+    return %0 : tensor<4xf6E3M2FN>
+}
+
+// -----
+
+// CHECK-LABEL: test_cast_f4e2m1
+func.func @test_cast_f4e2m1(%arg0: tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16> {
+  %0 = tosa.cast %arg0 : (tensor<13x21x3xf4E2M1FN>) -> tensor<13x21x3xbf16>
+  return %0 : tensor<13x21x3xbf16>
+}
