@@ -626,7 +626,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
-  const MCRegisterInfo *MCRI = MF.getContext().getRegisterInfo();
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
@@ -656,7 +655,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createUndefined(
-                 nullptr, MCRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
+                 nullptr, TRI->getDwarfRegNum(AMDGPU::PC_REG, false)));
   }
 
   Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
