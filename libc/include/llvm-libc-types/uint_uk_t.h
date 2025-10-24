@@ -1,4 +1,4 @@
-//===-- Unittests for bitsuk ----------------------------------------------===//
+//===-- LLVM LIBC TYPES --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BitsFxTest.h"
+#ifndef LLVM_LIBC_TYPES_UINT_UK_T_H
+#define LLVM_LIBC_TYPES_UINT_UK_T_H
 
-#include "llvm-libc-types/uint_uk_t.h" // uint_uk_t
-#include "src/stdfix/bitsuk.h"
+typedef unsigned int uint_uk_t;
 
-LIST_BITSFX_TESTS(uk, unsigned accum, uint_uk_t, LIBC_NAMESPACE::bitsuk);
+#endif // LLVM_LIBC_TYPES_UINT_UK_T_H
