@@ -18559,6 +18559,11 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "#define bbbb 4\n"
                "#define ccc       (5)",
                Style);
+
+  Style.ColumnLimit = 30;
+  verifyFormat("#define MY_FUNC(x) callMe(X)\n"
+               "#define MY_LONG_CONSTANT 17",
+               Style);
 }
 
 TEST_F(FormatTest, AlignConsecutiveAssignmentsAcrossEmptyLines) {
@@ -20772,6 +20777,30 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyleWithColumns(70);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(Context       *context,\n"
+      "                        ALongTypeName *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(B<int>          *context,\n"
+      "                        decltype(AFunc) *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  Style.ColumnLimit = 15;
+  verifyFormat("int i1 = 1;\n"
+               "k      = bar(\n"
+               "    argument1,\n"
+               "    argument2);",
+               Style);
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {

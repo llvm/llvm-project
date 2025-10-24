@@ -22,9 +22,9 @@ subroutine reduce_1 ( n, tts )
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=tt(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=tt(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv=tt(x=0_4,y=0_4)'
 
   !$omp declare reduction(+ : tt :  omp_out = tt(omp_out%x - omp_in%x , omp_out%y - omp_in%y)) initializer(omp_priv = tt(0,0))
@@ -36,9 +36,9 @@ subroutine reduce_1 ( n, tts )
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
-!PARSE-TREE: | | OmpTypeNameList -> OmpTypeSpecifier -> TypeSpec -> DerivedTypeSpec
+!PARSE-TREE: | | OmpTypeNameList -> OmpTypeName -> TypeSpec -> DerivedTypeSpec
 !PARSE-TREE: | | | Name = 'tt2'
-!PARSE-TREE: | | OmpReductionCombiner -> AssignmentStmt = 'omp_out=tt2(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)'
+!PARSE-TREE: | | OmpCombinerExpression -> AssignmentStmt = 'omp_out=tt2(x=omp_out%x-omp_in%x,y=omp_out%y-omp_in%y)'
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Initializer -> OmpInitializerClause -> AssignmentStmt = 'omp_priv=tt2(x=0._8,y=0._8)'
 
   !$omp declare reduction(+ :tt2 :  omp_out = tt2(omp_out%x - omp_in%x , omp_out%y - omp_in%y)) initializer(omp_priv = tt2(0,0))
