@@ -275,4 +275,4 @@ define <2 x double> @fmul2_negated_vec(<2 x double> %a, <2 x double> %b, <2 x do
   ret <2 x double> %sub
 }
 
-attributes #0 = { "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" }

@@ -1511,16 +1511,16 @@ def GIShiftMask32 :
     GIComplexOperandMatcher<s64, "selectShiftMask32">,
     GIComplexPatternEquiv<shiftMask32>;
 
-class shiftop<SDPatternOperator operator>
-    : PatFrag<(ops node:$val, node:$count),
-              (operator node:$val, (XLenVT (shiftMaskXLen node:$count)))>;
-class shiftopw<SDPatternOperator operator>
-    : PatFrag<(ops node:$val, node:$count),
-              (operator node:$val, (i64 (shiftMask32 node:$count)))>;
+class PatGprShiftMaskXLen<SDPatternOperator OpNode, RVInst Inst>
+    : Pat<(OpNode GPR:$rs1, shiftMaskXLen:$rs2),
+          (Inst GPR:$rs1, shiftMaskXLen:$rs2)>;
+class PatGprShiftMask32<SDPatternOperator OpNode, RVInst Inst>
+    : Pat<(OpNode GPR:$rs1, shiftMask32:$rs2),
+          (Inst GPR:$rs1, shiftMask32:$rs2)>;
 
-def : PatGprGpr<shiftop<shl>, SLL>;
-def : PatGprGpr<shiftop<srl>, SRL>;
-def : PatGprGpr<shiftop<sra>, SRA>;
+def : PatGprShiftMaskXLen<shl, SLL>;
+def : PatGprShiftMaskXLen<srl, SRL>;
+def : PatGprShiftMaskXLen<sra, SRA>;
 
 // This is a special case of the ADD instruction used to facilitate the use of a
 // fourth operand to emit a relocation on a symbol relating to this instruction.
@@ -2203,9 +2203,9 @@ def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 def : Pat<(i64 (sra (shl GPR:$rs1, (i64 32)), uimm6gt32:$shamt)),
           (SRAIW GPR:$rs1, (ImmSub32 uimm6gt32:$shamt))>;
 
-def : PatGprGpr<shiftopw<riscv_sllw>, SLLW>;
-def : PatGprGpr<shiftopw<riscv_srlw>, SRLW>;
-def : PatGprGpr<shiftopw<riscv_sraw>, SRAW>;
+def : PatGprShiftMask32<riscv_sllw, SLLW>;
+def : PatGprShiftMask32<riscv_srlw, SRLW>;
+def : PatGprShiftMask32<riscv_sraw, SRAW>;
 
 // Select W instructions if only the lower 32 bits of the result are used.
 def : PatGprGpr<binop_allwusers<add>, ADDW>;

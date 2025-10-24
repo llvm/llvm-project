@@ -16,8 +16,6 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
-
 #include <list>
 #include <optional>
 #include <tuple>
@@ -738,6 +736,18 @@ Device make(const parser::OmpClause::Device &inp,
   auto &t1 = std::get<parser::ScalarIntExpr>(inp.v.t);
   return Device{{/*DeviceModifier=*/maybeApplyToV(convert, m0),
                  /*DeviceDescription=*/makeExpr(t1, semaCtx)}};
+}
+
+DeviceSafesync make(const parser::OmpClause::DeviceSafesync &inp,
+                    semantics::SemanticsContext &semaCtx) {
+  // inp.v -> std::optional<parser::OmpDeviceSafesyncClause>
+  auto &&maybeRequired = maybeApply(
+      [&](const parser::OmpDeviceSafesyncClause &c) {
+        return makeExpr(c.v, semaCtx);
+      },
+      inp.v);
+
+  return DeviceSafesync{/*Required=*/std::move(maybeRequired)};
 }
 
 DeviceType make(const parser::OmpClause::DeviceType &inp,
