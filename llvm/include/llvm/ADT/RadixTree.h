@@ -209,7 +209,7 @@ private:
       : public iterator_facade_base<IteratorImpl<MappedType>,
                                     std::forward_iterator_tag, MappedType> {
     const Node *Curr = nullptr;
-    KeyConstIteratorRangeType Query;
+    KeyConstIteratorRangeType Query{};
 
     void findNextValid() {
       while (Curr && Curr->Value == typename ContainerType::iterator())
