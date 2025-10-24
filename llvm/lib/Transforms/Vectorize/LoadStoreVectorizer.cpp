@@ -354,11 +354,6 @@ private:
   bool accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS, Align Alignment,
                               unsigned VecElemBits) const;
 
-  /// Before attempting to fill gaps, check if the chain is a candidate for
-  /// a masked load/store, to save compile time if it is not possible for the
-  /// address space and element type.
-  bool shouldAttemptMaskedLoadStore(const ArrayRef<ChainElem> C) const;
-
   /// Create a new GEP and a new Load/Store instruction such that the GEP
   /// is pointing at PrevElem + Offset. In the case of stores, store poison.
   /// Extra elements will either be combined into a masked load/store or
@@ -665,14 +660,27 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
 
   // If the chain is not contiguous, we try to fill the gap with "extra"
   // elements to artificially make it contiguous, to try to enable
-  // vectorization. We only fill gaps if there is a potentially legal masked
-  // load/store for the target. If later on, we don't end up with a chain that
-  // could be vectorized into a legal masked load/store, the chains with extra
-  // elements will be filtered out in splitChainByAlignment.
-  bool TryFillGaps = shouldAttemptMaskedLoadStore(C);
+  // vectorization. We only fill gaps if there is potential to end up with a
+  // legal masked load/store given the target, address space, and element type.
+  // At this point, when querying the TTI, optimistically assume max alignment
+  // and max vector size, as splitChainByAlignment will ensure the final vector
+  // shape passes the legalization check.
+  unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
+  Type *ElementType = getLoadStoreType(C[0].Inst)->getScalarType();
+  unsigned MaxVecRegBits = TTI.getLoadStoreVecRegBitWidth(AS);
+  Align OptimisticAlign = Align(MaxVecRegBits / 8);
+  unsigned int MaxVectorNumElems =
+      MaxVecRegBits / DL.getTypeSizeInBits(ElementType);
+  FixedVectorType *OptimisticVectorType =
+      FixedVectorType::get(ElementType, MaxVectorNumElems);
+  bool TryFillGaps =
+      isa<LoadInst>(C[0].Inst)
+          ? TTI.isLegalMaskedLoad(OptimisticVectorType, OptimisticAlign, AS,
+                                  TTI::MaskKind::ConstantMask)
+          : TTI.isLegalMaskedStore(OptimisticVectorType, OptimisticAlign, AS,
+                                   TTI::MaskKind::ConstantMask);
 
-  unsigned ASPtrBits =
-      DL.getIndexSizeInBits(getLoadStoreAddressSpace(C[0].Inst));
+  unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
 
   // Compute the alignment of the leader of the chain (which every stored offset
   // is based on) using the current first element of the chain. This is
@@ -1859,40 +1867,6 @@ bool Vectorizer::accessIsAllowedAndFast(unsigned SizeBytes, unsigned AS,
     return false;
   }
   return true;
-}
-
-bool Vectorizer::shouldAttemptMaskedLoadStore(
-    const ArrayRef<ChainElem> C) const {
-  bool IsLoadChain = isa<LoadInst>(C[0].Inst);
-
-  unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
-  Type *ElementType = getLoadStoreType(C[0].Inst)->getScalarType();
-  unsigned VecRegBits = TTI.getLoadStoreVecRegBitWidth(AS);
-  // Assume max alignment, splitChainByAlignment will legalize it later if the
-  // necessary alignment is not reached.
-  Align OptimisticAlign = Align(VecRegBits / 8);
-  unsigned int MaxVectorNumElems =
-      VecRegBits / DL.getTypeSizeInBits(ElementType);
-
-  // Attempt to find the smallest power-of-two number of elements that, if
-  // well aligned, could be represented as a legal masked load/store.
-  // If one exists for a given element type and address space, it is worth
-  // attempting to fill gaps as we may be able to create a legal masked
-  // load/store. If we do not end up with a legal masked load/store, chains with
-  // extra elements will be discarded.
-  const unsigned MinMaskedStoreNumElems = 4;
-  for (unsigned NumElems = MinMaskedStoreNumElems;
-       NumElems <= MaxVectorNumElems; NumElems *= 2) {
-    FixedVectorType *VectorType = FixedVectorType::get(ElementType, NumElems);
-    bool IsLegalMaskedInstruction =
-        IsLoadChain ? TTI.isLegalMaskedLoad(VectorType, OptimisticAlign, AS,
-                                            TTI::MaskKind::ConstantMask)
-                    : TTI.isLegalMaskedStore(VectorType, OptimisticAlign, AS,
-                                             TTI::MaskKind::ConstantMask);
-    if (IsLegalMaskedInstruction)
-      return true;
-  }
-  return false;
 }
 
 ChainElem Vectorizer::createExtraElementAfter(const ChainElem &Prev,
