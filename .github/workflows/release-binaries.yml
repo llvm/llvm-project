@@ -157,8 +157,8 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.Cab.Interop.NativeMethods.CreateCabFinish(IntPtr contextHandle, IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
-          libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
-          #libxml2_prefix="/s/libxml-install/"
+          #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
+          libxml2_prefix="/s/libxml-install/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
           target_cmake_flags="$target_cmake_flags -DLLVM_ENABLE_LIBXML2=FORCE_ON"
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LLVM_ENABLE_LIBXML2=FORCE_ON"
@@ -291,9 +291,10 @@ jobs:
         ninja -v -C libxml-build install
 
     - name: Install libxml2
+      if: false
       shell: bash
       env:
-        VCPKG_CMAKE_CONFIGURE_OPTIONS: "-DBUILD_SHARED_LIBS=OFF"
+        VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
       run: |
         vcpkg install libxml2:x64-windows-static
 
@@ -301,11 +302,11 @@ jobs:
       id: build
       shell: bash
       run: |
-        ls -l /c/vcpkg/packages/libxml2_x64-windows-static/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows-static/lib/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/
-        ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2
-        ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2/libxml
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/lib/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2
+        #ls -l /c/vcpkg/packages/libxml2_x64-windows-static/include/libxml2/libxml
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
         cmake  --debug-trycompile -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
