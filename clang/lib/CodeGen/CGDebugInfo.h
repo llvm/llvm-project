@@ -68,7 +68,7 @@ class CGDebugInfo {
   llvm::DICompileUnit *TheCU = nullptr;
   ModuleMap *ClangModuleMap = nullptr;
   ASTSourceDescriptor PCHDescriptor;
-  SourceLocation CurLoc;
+  PresumedLoc CurPLoc;
   llvm::MDNode *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
@@ -346,18 +346,18 @@ private:
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
-                                SourceLocation loc, AccessSpecifier AS,
+                                const PresumedLoc &PLoc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,
                                 llvm::DIFile *tunit, llvm::DIScope *scope,
                                 const RecordDecl *RD = nullptr,
                                 llvm::DINodeArray Annotations = nullptr);
 
   llvm::DIType *createFieldType(StringRef name, QualType type,
-                                SourceLocation loc, AccessSpecifier AS,
+                                const PresumedLoc &PLoc, AccessSpecifier AS,
                                 uint64_t offsetInBits, llvm::DIFile *tunit,
                                 llvm::DIScope *scope,
                                 const RecordDecl *RD = nullptr) {
-    return createFieldType(name, type, loc, AS, offsetInBits, 0, tunit, scope,
+    return createFieldType(name, type, PLoc, AS, offsetInBits, 0, tunit, scope,
                            RD);
   }
 
@@ -406,7 +406,10 @@ private:
   /// @}
 
   /// Create a new lexical block node and push it on the stack.
-  void CreateLexicalBlock(SourceLocation Loc);
+  void CreateLexicalBlock(const PresumedLoc &PLoc);
+
+  /// Returns the presumed location for given SourceLocation.
+  PresumedLoc getPresumedLoc(SourceLocation Loc) const;
 
   /// If target-specific LLVM \p AddressSpace directly maps to target-specific
   /// DWARF address space, appends extended dereferencing mechanism to complex
@@ -429,9 +432,9 @@ private:
   /// A helper function to collect debug info for the default fields of a
   /// block.
   void collectDefaultFieldsForBlockLiteralDeclare(
-      const CGBlockInfo &Block, const ASTContext &Context, SourceLocation Loc,
-      const llvm::StructLayout &BlockLayout, llvm::DIFile *Unit,
-      SmallVectorImpl<llvm::Metadata *> &Fields);
+      const CGBlockInfo &Block, const ASTContext &Context,
+      const PresumedLoc &PLoc, const llvm::StructLayout &BlockLayout,
+      llvm::DIFile *Unit, SmallVectorImpl<llvm::Metadata *> &Fields);
 
 public:
   CGDebugInfo(CodeGenModule &CGM);
@@ -465,11 +468,11 @@ public:
 
   /// Update the current source location. If \arg loc is invalid it is
   /// ignored.
-  void setLocation(SourceLocation Loc);
+  void setLocation(const PresumedLoc &PLoc);
 
   /// Return the current source location. This does not necessarily correspond
   /// to the IRBuilder's current DebugLoc.
-  SourceLocation getLocation() const { return CurLoc; }
+  const PresumedLoc &getLocation() const { return CurPLoc; }
 
   /// Update the current inline scope. All subsequent calls to \p EmitLocation
   /// will create a location with this inlinedAt field.
@@ -485,6 +488,11 @@ public:
   /// the source file. If the location is invalid, the previous
   /// location will be reused.
   void EmitLocation(CGBuilderTy &Builder, SourceLocation Loc);
+
+  /// Emit metadata to indicate a change in line/column information in
+  /// the source file. If the location is invalid, the previous
+  /// location will be reused.
+  void EmitLocation(CGBuilderTy &Builder, const PresumedLoc &Loc);
 
   QualType getFunctionType(const FunctionDecl *FD, QualType RetTy,
                            const SmallVectorImpl<const VarDecl *> &Args);
@@ -743,7 +751,7 @@ private:
 
   /// Convenience function to get the file debug info descriptor for the input
   /// location.
-  llvm::DIFile *getOrCreateFile(SourceLocation Loc);
+  llvm::DIFile *getOrCreateFile(const PresumedLoc &PLoc);
 
   /// Create a file debug info descriptor for a source file.
   llvm::DIFile *
@@ -862,12 +870,12 @@ private:
 
   /// Get line number for the location. If location is invalid
   /// then use current location.
-  unsigned getLineNumber(SourceLocation Loc);
+  unsigned getLineNumber(const PresumedLoc &PLoc) const;
 
   /// Get column number for the location. If location is
   /// invalid then use current location.
   /// \param Force  Assume DebugColumnInfo option is true.
-  unsigned getColumnNumber(SourceLocation Loc, bool Force = false);
+  unsigned getColumnNumber(const PresumedLoc &PLoc, bool Force = false) const;
 
   /// Collect various properties of a FunctionDecl.
   /// \param GD  A GlobalDecl whose getDecl() must return a FunctionDecl.
@@ -910,9 +918,9 @@ private:
 /// location or preferred location of the specified Expr.
 class ApplyDebugLocation {
 private:
-  void init(SourceLocation TemporaryLocation, bool DefaultToEmpty = false);
+  void init(const PresumedLoc &TemporaryLocation, bool DefaultToEmpty = false);
   ApplyDebugLocation(CodeGenFunction &CGF, bool DefaultToEmpty,
-                     SourceLocation TemporaryLocation);
+                     const PresumedLoc &TemporaryLocation);
 
   llvm::DebugLoc OriginalLocation;
   CodeGenFunction *CGF;
@@ -949,7 +957,7 @@ public:
   /// SourceLocation to CGDebugInfo::setLocation() will result in the
   /// last valid location being reused.
   static ApplyDebugLocation CreateArtificial(CodeGenFunction &CGF) {
-    return ApplyDebugLocation(CGF, false, SourceLocation());
+    return ApplyDebugLocation(CGF, false, PresumedLoc());
   }
   /// Apply TemporaryLocation if it is valid. Otherwise switch
   /// to an artificial debug location that has a valid scope, but no
@@ -957,7 +965,7 @@ public:
   static ApplyDebugLocation
   CreateDefaultArtificial(CodeGenFunction &CGF,
                           SourceLocation TemporaryLocation) {
-    return ApplyDebugLocation(CGF, false, TemporaryLocation);
+    return ApplyDebugLocation(CGF, TemporaryLocation);
   }
 
   /// Set the IRBuilder to not attach debug locations.  Note that
@@ -966,13 +974,13 @@ public:
   /// all instructions that do not have a location at the beginning of
   /// a function are counted towards to function prologue.
   static ApplyDebugLocation CreateEmpty(CodeGenFunction &CGF) {
-    return ApplyDebugLocation(CGF, true, SourceLocation());
+    return ApplyDebugLocation(CGF, true, PresumedLoc());
   }
 };
 
 /// A scoped helper to set the current debug location to an inlined location.
 class ApplyInlineDebugLocation {
-  SourceLocation SavedLocation;
+  PresumedLoc SavedLocation;
   CodeGenFunction *CGF;
 
 public:
