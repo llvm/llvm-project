@@ -244,7 +244,7 @@ private:
     }
 
   public:
-    IteratorImpl() : Query{{}, {}} {}
+    IteratorImpl() = default;
 
     MappedType &operator*() const { return *Curr->Value; }
 
