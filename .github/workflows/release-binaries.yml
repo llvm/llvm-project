@@ -292,7 +292,7 @@ jobs:
 
     - name: Install libxml2
       run: |
-        vcpkg install libxml2
+        vcpkg install libxml2:x64-windows-static
 
     - name: Configure
       id: build
