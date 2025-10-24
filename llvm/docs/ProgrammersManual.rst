@@ -2166,7 +2166,7 @@ pointers).  Note that ``DenseSet`` has the same requirements for the value type 
 llvm/ADT/RadixTree.h
 ^^^^^^^^^^^^^^^^^^^^
 
-``RadixTree`` is a trie-based data structure that stores range like keys and
+``RadixTree`` is a trie-based data structure that stores range-like keys and
 their associated values. It is particularly efficient for storing keys that
 share common prefixes, as it can compress these prefixes to save memory. It
 supports efficient search of matching prefixes.

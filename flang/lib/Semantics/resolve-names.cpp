@@ -1772,11 +1772,11 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
-  bool Pre(const parser::OmpTypeSpecifier &x) {
+  bool Pre(const parser::OmpTypeName &x) {
     BeginDeclTypeSpec();
     return true;
   }
-  void Post(const parser::OmpTypeSpecifier &x) { //
+  void Post(const parser::OmpTypeName &x) { //
     EndDeclTypeSpec();
   }
 
@@ -2007,7 +2007,7 @@ void OmpVisitor::ProcessReductionSpecifier(
       }
     }
     EndDeclTypeSpec();
-    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
     Walk(clauses);
     PopScope();
   }
