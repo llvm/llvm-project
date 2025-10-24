@@ -176,6 +176,8 @@ define i128 @sub_zext_ptrtoint_ptrtoaddr_addrsize(ptr addrspace(1) %p, i32 %offs
   ret i128 %sub
 }
 
+; The uses in icmp, ptrtoint, ptrtoaddr should be replaced. The one in the
+; return value should not, as the provenance differs.
 define ptr @gep_sub_ptrtoaddr_different_obj(ptr %p, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: define ptr @gep_sub_ptrtoaddr_different_obj(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]]) {
@@ -204,6 +206,9 @@ define ptr @gep_sub_ptrtoaddr_different_obj(ptr %p, ptr %p2, ptr %p3) {
   ret ptr %gep
 }
 
+; The use in ptrtoaddr should be replaced. The uses in ptrtoint and icmp should
+; not be replaced, as the non-address bits differ. The use in the return value
+; should not be replaced as the provenace differs.
 define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(ptr addrspace(1) %p, ptr addrspace(1) %p2, ptr addrspace(1) %p3) {
 ; CHECK-LABEL: define ptr addrspace(1) @gep_sub_ptrtoaddr_different_obj_addrsize(
 ; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[P2:%.*]], ptr addrspace(1) [[P3:%.*]]) {
