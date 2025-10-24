@@ -994,10 +994,12 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
           S.checkingPotentialConstantExpression())
         return false;
 
-      // If the declaration is defined, declared 'constexpr' _and_ has a body,
-      // the below diagnostic doesn't add anything useful.
+      // If the declaration is defined, declared 'constexpr' _and_
+      // has (or will have) a body, the below diagnostic doesn't add anything
+      // useful.
       if (DiagDecl->isDefined() && DiagDecl->isConstexpr() &&
-          DiagDecl->hasBody())
+          (DiagDecl->doesThisDeclarationHaveABody() ||
+           DiagDecl->willHaveBody()))
         return false;
 
       S.FFDiag(S.Current->getLocation(OpPC),

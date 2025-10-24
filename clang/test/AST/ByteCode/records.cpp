@@ -1861,3 +1861,12 @@ namespace PrimitiveInitializedByInitList {
   } c{ 17 };
   static_assert(c.b == 17, "");
 }
+
+namespace MethodWillHaveBody {
+  class A {
+  public:
+    static constexpr int get_value2() { return 1 + get_value(); }
+    static constexpr int get_value() { return 1; }
+  };
+  static_assert(A::get_value2() == 2, "");
+}
