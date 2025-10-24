@@ -455,16 +455,16 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     const ListInit *Properties = R->getValueAsListInit("Properties");
     StringRef ArgName;
     StringRef FuncName;
-    
+
     for (const Init *PropInit : Properties->getElements()) {
       if (const DefInit *PropDef = dyn_cast<DefInit>(PropInit)) {
         const Record *PropRec = PropDef->getDef();
-        
-        if (PropRec->isSubClassOf("ArgName")) 
+
+        if (PropRec->isSubClassOf("ArgName"))
           ArgName = PropRec->getValueAsString("Name");
-        else if (PropRec->isSubClassOf("ImmArgPrinter")) 
+        else if (PropRec->isSubClassOf("ImmArgPrinter"))
           FuncName = PropRec->getValueAsString("FuncName");
-        else 
+        else
           PrintFatalError(PropRec->getLoc(),
                           "Unknown ArgProperty type: " + PropRec->getName());
       }
