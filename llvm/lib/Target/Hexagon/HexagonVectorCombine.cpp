@@ -2113,17 +2113,18 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
   auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
   assert(InpTy && "Cannot handle no vector type for llvm.scatter/gather");
   unsigned InpSize = HVC.getSizeOf(InpTy);
-  unsigned Elements = HVC.length(InpTy);
+  auto *F = In.getFunction();
+  LLVMContext &Ctx = F->getContext();
   auto *ElemTy = dyn_cast<IntegerType>(InpTy->getElementType());
   assert(ElemTy && "llvm.scatter needs integer type argument");
   unsigned ElemWidth = HVC.DL.getTypeAllocSize(ElemTy);
-  auto *F = In.getFunction();
-  LLVMContext &Ctx = F->getContext();
-  LLVM_DEBUG(dbgs() << "\n[Process scatter](" << In << ")\n"
-                    << *In.getParent() << "\n");
-  LLVM_DEBUG(dbgs() << "  Input type(" << *InpTy << ") elements(" << Elements
-                    << ") VecLen(" << InpSize << ") type(" << *ElemTy
-                    << ") ElemWidth(" << ElemWidth << ")\n");
+  LLVM_DEBUG({
+    unsigned Elements = HVC.length(InpTy);
+    dbgs() << "\n[Process scatter](" << In << ")\n" << *In.getParent() << "\n";
+    dbgs() << "  Input type(" << *InpTy << ") elements(" << Elements
+           << ") VecLen(" << InpSize << ") type(" << *ElemTy << ") ElemWidth("
+           << ElemWidth << ")\n";
+  });
 
   IRBuilder Builder(In.getParent(), In.getIterator(),
                     InstSimplifyFolder(HVC.DL));
@@ -2190,9 +2191,9 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
 
     auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
     auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
-    Value *IndexHi =
+    [[maybe_unused]] Value *IndexHi =
         HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
-    Value *IndexLo =
+    [[maybe_unused]] Value *IndexLo =
         HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedIndexes);
     LLVM_DEBUG(dbgs() << "  UnpackedIndHi    : " << *IndexHi << ")\n");
     LLVM_DEBUG(dbgs() << "  UnpackedIndLo    : " << *IndexLo << ")\n");
@@ -2205,9 +2206,9 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
     LLVM_DEBUG(dbgs() << "  UnpackedValToScat: " << *UnpackedValueToScatter
                       << ")\n");
 
-    Value *UVSHi =
+    [[maybe_unused]] Value *UVSHi =
         HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedValueToScatter);
-    Value *UVSLo =
+    [[maybe_unused]] Value *UVSLo =
         HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedValueToScatter);
     LLVM_DEBUG(dbgs() << "  UVSHi            : " << *UVSHi << ")\n");
     LLVM_DEBUG(dbgs() << "  UVSLo            : " << *UVSLo << ")\n");
@@ -2215,8 +2216,7 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
     // Create the mask for individual bytes
     auto *QByteMask = get_i32_Mask(HVC, Builder, Ctx, 0x00ff00ff);
     LLVM_DEBUG(dbgs() << "  QByteMask        : " << *QByteMask << "\n");
-
-    auto *ResHi = Builder.CreateIntrinsic(
+    [[maybe_unused]] auto *ResHi = Builder.CreateIntrinsic(
         Type::getVoidTy(Ctx), Intrinsic::hexagon_V6_vscattermhq_128B,
         {QByteMask, CastedDst, HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE),
          IndexHi, UVSHi},
@@ -2249,9 +2249,9 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
 }
 
 Value *HvxIdioms::processVGather(Instruction &In) const {
-  auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
+  [[maybe_unused]] auto *InpTy = dyn_cast<VectorType>(In.getOperand(0)->getType());
   assert(InpTy && "Cannot handle no vector type for llvm.gather");
-  auto *ElemTy = dyn_cast<PointerType>(InpTy->getElementType());
+  [[maybe_unused]] auto *ElemTy = dyn_cast<PointerType>(InpTy->getElementType());
   assert(ElemTy && "llvm.gather needs vector of ptr argument");
   auto *F = In.getFunction();
   LLVMContext &Ctx = F->getContext();
@@ -2264,8 +2264,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
                     << ElemTy->getAddressSpace() << ")\n");
 
   // TODO: Handle masking of elements.
-  auto *MaskTy = dyn_cast<VectorType>(In.getOperand(2)->getType());
-  assert(MaskTy && "llvm.gather needs vector for mask");
+  assert(dyn_cast<VectorType>(In.getOperand(2)->getType()) &&
+         "llvm.gather needs vector for mask");
   IRBuilder Builder(In.getParent(), In.getIterator(),
                     InstSimplifyFolder(HVC.DL));
 
@@ -2353,9 +2353,9 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
 
         auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
         auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
-        Value *IndexHi =
+        [[maybe_unused]] Value *IndexHi =
             HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
-        Value *IndexLo =
+        [[maybe_unused]] Value *IndexLo =
             HVC.createHvxIntrinsic(Builder, V6_lo, NT, UnpackedIndexes);
         LLVM_DEBUG(dbgs() << "  UnpackedIndHi   : " << *IndexHi << ")\n");
         LLVM_DEBUG(dbgs() << "  UnpackedIndLo   : " << *IndexLo << ")\n");
@@ -2365,14 +2365,14 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // We use our destination allocation as a temp storage
         // This is unlikely to work properly for masked gather.
         auto V6_vgather = HVC.HST.getIntrinsicId(Hexagon::V6_vgathermhq);
-        auto GatherHi = Builder.CreateIntrinsic(
+        [[maybe_unused]] auto GatherHi = Builder.CreateIntrinsic(
             Type::getVoidTy(Ctx), V6_vgather,
             {Ptr, QByteMask, CastedPtr,
              HVC.getConstInt(DEFAULT_HVX_VTCM_PAGE_SIZE), IndexHi},
             nullptr);
         LLVM_DEBUG(dbgs() << "  GatherHi        : " << *GatherHi << ")\n");
         // Rematerialize the result
-        Value *LoadedResultHi = Builder.CreateLoad(
+        [[maybe_unused]] Value *LoadedResultHi = Builder.CreateLoad(
             HVC.getHvxTy(HVC.getIntTy(32), false), Ptr, "temp_result_hi");
         LLVM_DEBUG(dbgs() << "  LoadedResultHi : " << *LoadedResultHi << "\n");
         // Same for the low part. Here we use Gather to return non-NULL result
@@ -2392,10 +2392,10 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // B . b . A . a . c . a . A . b . B . c . f . F . g . G . h . H
         // Use vpack to gather them
         auto V6_vpackeb = HVC.HST.getIntrinsicId(Hexagon::V6_vpackeb);
-        auto Res = Builder.CreateIntrinsic(
+        [[maybe_unused]] auto Res = Builder.CreateIntrinsic(
             NT, V6_vpackeb, {LoadedResultHi, LoadedResultLo}, nullptr);
         LLVM_DEBUG(dbgs() << "  ScaledRes      : " << *Res << "\n");
-        auto *StoreRes = Builder.CreateStore(Res, Ptr);
+        [[maybe_unused]] auto *StoreRes = Builder.CreateStore(Res, Ptr);
         LLVM_DEBUG(dbgs() << "  StoreRes       : " << *StoreRes << "\n");
       } else if (ElemWidth == 2) {
         // v32i16
@@ -2473,18 +2473,19 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     Dst->eraseFromParent();
   } else if (Qual == HvxIdioms::LLVM_Scatter) {
     // Gather feeds directly into scatter.
-    auto *DstInpTy = cast<VectorType>(Dst->getOperand(1)->getType());
-    assert(DstInpTy && "Cannot handle no vector type for llvm.scatter");
-    unsigned DstInpSize = HVC.getSizeOf(DstInpTy);
-    unsigned DstElements = HVC.length(DstInpTy);
-    auto *DstElemTy = cast<PointerType>(DstInpTy->getElementType());
-    assert(DstElemTy && "llvm.scatter needs vector of ptr argument");
-    LLVM_DEBUG(dbgs() << "  Gather feeds into scatter\n  Values to scatter : "
-                      << *Dst->getOperand(0) << "\n");
-    LLVM_DEBUG(dbgs() << "  Dst type(" << *DstInpTy << ") elements("
-                      << DstElements << ") VecLen(" << DstInpSize << ") type("
-                      << *DstElemTy << ") Access alignment("
-                      << *Dst->getOperand(2) << ")\n");
+    LLVM_DEBUG({
+      auto *DstInpTy = cast<VectorType>(Dst->getOperand(1)->getType());
+      assert(DstInpTy && "Cannot handle no vector type for llvm.scatter");
+      unsigned DstInpSize = HVC.getSizeOf(DstInpTy);
+      unsigned DstElements = HVC.length(DstInpTy);
+      auto *DstElemTy = cast<PointerType>(DstInpTy->getElementType());
+      assert(DstElemTy && "llvm.scatter needs vector of ptr argument");
+      dbgs() << "  Gather feeds into scatter\n  Values to scatter : "
+             << *Dst->getOperand(0) << "\n";
+      dbgs() << "  Dst type(" << *DstInpTy << ") elements(" << DstElements
+             << ") VecLen(" << DstInpSize << ") type(" << *DstElemTy
+             << ") Access alignment(" << *Dst->getOperand(2) << ")\n";
+    });
     // Address of source
     auto *Src = getPointer(IndexLoad);
     if (!Src)
@@ -2539,7 +2540,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // This most likely will not work properly since alloca gives us DDR
         // stack location. This will be fixed once we teach compiler about VTCM.
         AllocaInst *IndexesAlloca = Builder.CreateAlloca(NT);
-        auto *StoreIndexes = Builder.CreateStore(cstDataVector, IndexesAlloca);
+        [[maybe_unused]] auto *StoreIndexes =
+            Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
         Value *LoadedIndex = Builder.CreateLoad(
             IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
@@ -2619,7 +2621,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // Our indexes are represented as a constant. We need it in a reg.
         AllocaInst *IndexesAlloca = Builder.CreateAlloca(NT);
 
-        auto *StoreIndexes = Builder.CreateStore(cstDataVector, IndexesAlloca);
+        [[maybe_unused]] auto *StoreIndexes =
+            Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
         Value *LoadedIndex = Builder.CreateLoad(
             IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
