@@ -6,7 +6,7 @@ TODO
 ## Getting dev shell
 * Install `nix`:
 ```
-$ sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --no-daemon
+sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install) --no-daemon
 ```
 * Enable flakes experimental feature:
 ```
@@ -19,3 +19,11 @@ nix develop
 ```
 * (Optional) Setup [direnv](https://github.com/direnv/direnv) to enter into nix shell automatically
 
+
+## Building
+
+Inside nix shell:
+```
+cmake $cmakeFlags -S llvm -B build
+ninja -C build
+```
