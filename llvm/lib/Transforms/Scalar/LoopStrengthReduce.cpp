@@ -2181,8 +2181,8 @@ class LSRInstance {
   SmallSetVector<Instruction *, 4> InsertedNonLCSSAInsts;
 
   void OptimizeShadowIV();
-  bool FindIVUserForCond(ICmpInst *Cond, IVStrideUse *&CondUse);
-  ICmpInst *OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse);
+  bool FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse);
+  Instruction *OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse);
   void OptimizeLoopTermCond();
 
   void ChainInstruction(Instruction *UserInst, Instruction *IVOper,
@@ -2416,7 +2416,7 @@ void LSRInstance::OptimizeShadowIV() {
 
 /// If Cond has an operand that is an expression of an IV, set the IV user and
 /// stride information and return true, otherwise return false.
-bool LSRInstance::FindIVUserForCond(ICmpInst *Cond, IVStrideUse *&CondUse) {
+bool LSRInstance::FindIVUserForCond(Instruction *Cond, IVStrideUse *&CondUse) {
   for (IVStrideUse &U : IU)
     if (U.getUser() == Cond) {
       // NOTE: we could handle setcc instructions with multiple uses here, but
@@ -2476,7 +2476,7 @@ bool LSRInstance::FindIVUserForCond(ICmpInst *Cond, IVStrideUse *&CondUse) {
 /// This function solves this problem by detecting this type of loop and
 /// rewriting their conditions from ICMP_NE back to ICMP_SLT, and deleting
 /// the instructions for the maximum computation.
-ICmpInst *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse* &CondUse) {
+Instruction *LSRInstance::OptimizeMax(ICmpInst *Cond, IVStrideUse *&CondUse) {
   // Check that the loop matches the pattern we're looking for.
   if (Cond->getPredicate() != CmpInst::ICMP_EQ &&
       Cond->getPredicate() != CmpInst::ICMP_NE)
@@ -2620,15 +2620,34 @@ LSRInstance::OptimizeLoopTermCond() {
     // one register value.
 
     BranchInst *TermBr = dyn_cast<BranchInst>(ExitingBlock->getTerminator());
-    if (!TermBr)
+    if (!TermBr || TermBr->isUnconditional())
       continue;
-    // FIXME: Overly conservative, termination condition could be an 'or' etc..
-    if (TermBr->isUnconditional() || !isa<ICmpInst>(TermBr->getCondition()))
+
+    Instruction *Cond = dyn_cast<Instruction>(TermBr->getCondition());
+    bool CondImmediatelyBeforeTerm = Cond && Cond->getNextNode() == TermBr;
+    // If the argument to TermBr is an extractelement, then the source of that
+    // instruction is what's generated the condition.
+    auto *Extract = dyn_cast_or_null<ExtractElementInst>(Cond);
+    if (Extract) {
+      Cond = dyn_cast<Instruction>(Extract->getVectorOperand());
+      if (Cond && CondImmediatelyBeforeTerm)
+        CondImmediatelyBeforeTerm = Cond->getNextNode() == Extract;
+    }
+    // FIXME: We could do more here, like handling logical operations where one
+    // side is a cmp that uses an induction variable.
+    if (!Cond)
+      continue;
+
+    // If the condition instruction isn't immediately before TermBr then it has
+    // to either be a CmpInst, or be immediately before an extract that's
+    // immediately before TermBr, as currently we can only move or clone a
+    // CmpInst.
+    // FIXME: We should be able to do this when it's safe to do so.
+    if ((!isa<CmpInst>(Cond) || Extract) && !CondImmediatelyBeforeTerm)
       continue;
 
     // Search IVUsesByStride to find Cond's IVUse if there is one.
     IVStrideUse *CondUse = nullptr;
-    ICmpInst *Cond = cast<ICmpInst>(TermBr->getCondition());
     if (!FindIVUserForCond(Cond, CondUse))
       continue;
 
@@ -2638,7 +2657,8 @@ LSRInstance::OptimizeLoopTermCond() {
     // One consequence of doing this now is that it disrupts the count-down
     // optimization. That's not always a bad thing though, because in such
     // cases it may still be worthwhile to avoid a max.
-    Cond = OptimizeMax(Cond, CondUse);
+    if (auto *Cmp = dyn_cast<ICmpInst>(Cond))
+      Cond = OptimizeMax(Cmp, CondUse);
 
     // If this exiting block dominates the latch block, it may also use
     // the post-inc value if it won't be shared with other uses.
@@ -2703,13 +2723,13 @@ LSRInstance::OptimizeLoopTermCond() {
     // It's possible for the setcc instruction to be anywhere in the loop, and
     // possible for it to have multiple users.  If it is not immediately before
     // the exiting block branch, move it.
-    if (Cond->getNextNode() != TermBr) {
+    if (!CondImmediatelyBeforeTerm) {
       if (Cond->hasOneUse()) {
         Cond->moveBefore(TermBr->getIterator());
       } else {
         // Clone the terminating condition and insert into the loopend.
-        ICmpInst *OldCond = Cond;
-        Cond = cast<ICmpInst>(Cond->clone());
+        Instruction *OldCond = Cond;
+        Cond = Cond->clone();
         Cond->setName(L->getHeader()->getName() + ".termcond");
         Cond->insertInto(ExitingBlock, TermBr->getIterator());
 

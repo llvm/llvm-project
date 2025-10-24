@@ -16,13 +16,12 @@ define void @lane_mask(ptr %dst, i64 %n) #0 {
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[ENTRY]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IV]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    tail call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> splat (i32 1), ptr align 4 [[SCEVGEP]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[VSCALEX4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[VSCALEX4]], [[IV]]
+; CHECK-NEXT:    [[TMP1]] = add i64 [[IV]], [[VSCALEX4]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 [[TMP1]], i64 [[N]])
 ; CHECK-NEXT:    [[COND:%.*]] = extractelement <vscale x 4 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -102,12 +101,12 @@ define void @uses_cmp_fn(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP:%.*]], %[[LOOP]] ], [ [[DST]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    store i32 0, ptr [[LSR_IV1]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @cmp_fn(i64 [[LSR_IV]])
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i64 4
+; CHECK-NEXT:    [[COND:%.*]] = tail call i1 @cmp_fn(i64 [[LSR_IV_NEXT]])
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
