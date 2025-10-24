@@ -516,7 +516,6 @@ set(files
   __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
   __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
@@ -528,6 +527,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/ibm.h
   __locale_dir/support/linux.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
@@ -753,7 +753,6 @@ set(files
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
   __support/ibm/gettod_zos.h
-  __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
