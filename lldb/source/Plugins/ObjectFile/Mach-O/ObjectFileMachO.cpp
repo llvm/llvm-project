@@ -1782,7 +1782,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // other sections.
               sect64.addr, // File VM address == addresses as they are
               // found in the object file
-              sect64.size,   // VM size in bytes of this section
+              sect64.size,         // VM size in bytes of this section
               section_file_offset, // Offset to the data for this section in
               // the file
               section_file_offset ? sect64.size : 0, // Size in bytes of
