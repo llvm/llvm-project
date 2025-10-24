@@ -3647,16 +3647,16 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        cadd	z31.d, z31.d, z31.d, #270
 # CHECK-NEXT:  1      2     0.50                        cadd	z31.h, z31.h, z31.h, #270
 # CHECK-NEXT:  1      2     0.50                        cadd	z31.s, z31.s, z31.s, #270
-# CHECK-NEXT:  1      4     1.00                        cdot	z0.d, z1.h, z15.h[1], #0
-# CHECK-NEXT:  1      4     1.00                        cdot	z0.d, z1.h, z31.h, #0
-# CHECK-NEXT:  1      4     1.00                        cdot	z0.d, z1.h, z31.h, #180
-# CHECK-NEXT:  1      4     1.00                        cdot	z0.d, z1.h, z31.h, #270
-# CHECK-NEXT:  1      4     1.00                        cdot	z0.d, z1.h, z31.h, #90
+# CHECK-NEXT:  1      3     1.00                        cdot	z0.d, z1.h, z15.h[1], #0
+# CHECK-NEXT:  1      3     1.00                        cdot	z0.d, z1.h, z31.h, #0
+# CHECK-NEXT:  1      3     1.00                        cdot	z0.d, z1.h, z31.h, #180
+# CHECK-NEXT:  1      3     1.00                        cdot	z0.d, z1.h, z31.h, #270
+# CHECK-NEXT:  1      3     1.00                        cdot	z0.d, z1.h, z31.h, #90
 # CHECK-NEXT:  1      3     0.50                        cdot	z0.s, z1.b, z31.b, #0
 # CHECK-NEXT:  1      3     0.50                        cdot	z0.s, z1.b, z7.b[3], #0
-# CHECK-NEXT:  1      4     1.00                        cdot	z29.d, z30.h, z0.h[0], #180
-# CHECK-NEXT:  1      4     1.00                        cdot	z31.d, z30.h, z7.h[1], #270
-# CHECK-NEXT:  1      4     1.00                        cdot	z5.d, z6.h, z3.h[0], #90
+# CHECK-NEXT:  1      3     1.00                        cdot	z29.d, z30.h, z0.h[0], #180
+# CHECK-NEXT:  1      3     1.00                        cdot	z31.d, z30.h, z7.h[1], #270
+# CHECK-NEXT:  1      3     1.00                        cdot	z5.d, z6.h, z3.h[0], #90
 # CHECK-NEXT:  1      3     1.00                        clasta	b0, p7, b0, z31.b
 # CHECK-NEXT:  1      3     1.00                        clasta	d0, p7, d0, z31.d
 # CHECK-NEXT:  1      3     1.00                        clasta	h0, p7, h0, z31.h
@@ -4942,28 +4942,28 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     1.00                        lsrr	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT:  1      2     1.00                        lsrr	z0.h, p0/m, z0.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        lsrr	z0.s, p0/m, z0.s, z0.s
-# CHECK-NEXT:  1      4     2.00                        mad	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  1      4     1.00                        mad	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      5     2.00                        mad	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  1      4     2.00                        mad	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  1      4     2.00                        mad	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  1      4     1.00                        mad	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        mad	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  2      3     1.00                        match	p0.b, p0/z, z0.b, z0.b
 # CHECK-NEXT:  2      3     1.00                        match	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  2      2     1.00                        match	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  2      2     1.00                        match	p15.h, p7/z, z30.h, z31.h
-# CHECK-NEXT:  1      4     2.00                        mla	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  1      4     1.00                        mla	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      5     2.00                        mla	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      5     2.00                        mla	z0.d, z1.d, z7.d[1]
-# CHECK-NEXT:  1      4     2.00                        mla	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  1      4     2.00                        mla	z0.h, z1.h, z7.h[7]
-# CHECK-NEXT:  1      4     2.00                        mla	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  1      4     2.00                        mla	z0.s, z1.s, z7.s[3]
-# CHECK-NEXT:  1      4     2.00                        mls	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  1      4     1.00                        mla	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        mla	z0.h, z1.h, z7.h[7]
+# CHECK-NEXT:  1      4     1.00                        mla	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  1      4     1.00                        mla	z0.s, z1.s, z7.s[3]
+# CHECK-NEXT:  1      4     1.00                        mls	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      5     2.00                        mls	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  1      5     2.00                        mls	z0.d, z1.d, z7.d[1]
-# CHECK-NEXT:  1      4     2.00                        mls	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  1      4     2.00                        mls	z0.h, z1.h, z7.h[7]
-# CHECK-NEXT:  1      4     2.00                        mls	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  1      4     2.00                        mls	z0.s, z1.s, z7.s[3]
+# CHECK-NEXT:  1      4     1.00                        mls	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        mls	z0.h, z1.h, z7.h[7]
+# CHECK-NEXT:  1      4     1.00                        mls	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  1      4     1.00                        mls	z0.s, z1.s, z7.s[3]
 # CHECK-NEXT:  1      2     0.50                        mov	p0.b, p0.b
 # CHECK-NEXT:  1      1     0.50                        mov	p0.b, p0/m, p0.b
 # CHECK-NEXT:  1      2     0.50                        mov	p0.b, p0/z, p0.b
@@ -5076,10 +5076,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL12
 # CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL2
 # CHECK-NEXT:  1      1     0.10                  U     mrs	x3, ZCR_EL3
-# CHECK-NEXT:  1      4     2.00                        msb	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  1      4     1.00                        msb	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  1      5     2.00                        msb	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  1      4     2.00                        msb	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  1      4     2.00                        msb	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  1      4     1.00                        msb	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  1      4     1.00                        msb	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL1, x3
 # CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL12, x3
 # CHECK-NEXT:  1      1     0.10                  U     msr	ZCR_EL2, x3
@@ -5320,45 +5320,45 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, vl64
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, vl7
 # CHECK-NEXT:  1      2     0.50                        ptrue	p7.s, vl8
-# CHECK-NEXT:  2      2     1.00                        ptrues	p0.b, pow2
-# CHECK-NEXT:  2      2     1.00                        ptrues	p0.d, pow2
-# CHECK-NEXT:  2      2     1.00                        ptrues	p0.h, pow2
-# CHECK-NEXT:  2      2     1.00                        ptrues	p0.s, pow2
-# CHECK-NEXT:  2      2     1.00                        ptrues	p15.b
-# CHECK-NEXT:  2      2     1.00                        ptrues	p15.d
-# CHECK-NEXT:  2      2     1.00                        ptrues	p15.h
-# CHECK-NEXT:  2      2     1.00                        ptrues	p15.s
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #14
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #15
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #16
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #17
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #18
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #19
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #20
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #21
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #22
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #23
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #24
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #25
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #26
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #27
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, #28
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, mul3
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, mul4
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl1
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl128
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl16
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl2
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl256
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl3
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl32
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl4
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl5
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl6
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl64
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl7
-# CHECK-NEXT:  2      2     1.00                        ptrues	p7.s, vl8
+# CHECK-NEXT:  1      2     0.50                        ptrues	p0.b, pow2
+# CHECK-NEXT:  1      2     0.50                        ptrues	p0.d, pow2
+# CHECK-NEXT:  1      2     0.50                        ptrues	p0.h, pow2
+# CHECK-NEXT:  1      2     0.50                        ptrues	p0.s, pow2
+# CHECK-NEXT:  1      2     0.50                        ptrues	p15.b
+# CHECK-NEXT:  1      2     0.50                        ptrues	p15.d
+# CHECK-NEXT:  1      2     0.50                        ptrues	p15.h
+# CHECK-NEXT:  1      2     0.50                        ptrues	p15.s
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #14
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #15
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #16
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #17
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #18
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #19
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #20
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #21
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #22
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #23
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #24
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #25
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #26
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #27
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, #28
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, mul3
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, mul4
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl1
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl128
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl16
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl2
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl256
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl3
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl32
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl4
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl5
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl6
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl64
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl7
+# CHECK-NEXT:  1      2     0.50                        ptrues	p7.s, vl8
 # CHECK-NEXT:  1      2     0.50                        punpkhi	p0.h, p0.b
 # CHECK-NEXT:  1      2     0.50                        punpkhi	p15.h, p15.b
 # CHECK-NEXT:  1      2     0.50                        punpklo	p0.h, p0.b
@@ -5472,8 +5472,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    11.00                       sdiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    20.00                       sdivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    11.00                       sdivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     1.00                        sdot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     1.00                        sdot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      3     1.00                        sdot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      3     1.00                        sdot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  1      3     0.50                        sdot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  1      3     0.50                        sdot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      1     0.50                        sel	p0.b, p1, p2.b, p3.b
@@ -6381,8 +6381,8 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      12    11.00                       udiv	z0.s, p7/m, z0.s, z31.s
 # CHECK-NEXT:  1      20    20.00                       udivr	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      12    11.00                       udivr	z0.s, p7/m, z0.s, z31.s
-# CHECK-NEXT:  1      4     1.00                        udot	z0.d, z1.h, z15.h[1]
-# CHECK-NEXT:  1      4     1.00                        udot	z0.d, z1.h, z31.h
+# CHECK-NEXT:  1      3     1.00                        udot	z0.d, z1.h, z15.h[1]
+# CHECK-NEXT:  1      3     1.00                        udot	z0.d, z1.h, z31.h
 # CHECK-NEXT:  1      3     0.50                        udot	z0.s, z1.b, z31.b
 # CHECK-NEXT:  1      3     0.50                        udot	z0.s, z1.b, z7.b[3]
 # CHECK-NEXT:  1      2     0.50                        uhadd	z0.b, p0/m, z0.b, z1.b
@@ -6867,7 +6867,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 420.38 323.38 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2392.50 1905.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 400.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2376.50 1905.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -8388,28 +8388,28 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   lsrr	z0.d, p0/m, z0.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   lsrr	z0.h, p0/m, z0.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   lsrr	z0.s, p0/m, z0.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mad	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mad	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mad	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mad	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mad	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mad	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mad	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     1.00    -     match	p0.b, p0/z, z0.b, z0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     1.00    -     match	p0.h, p0/z, z0.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     1.00    -     match	p15.b, p7/z, z30.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     1.00    -     match	p15.h, p7/z, z30.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mla	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.d, z1.d, z7.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.h, z1.h, z7.h[7]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mla	z0.s, z1.s, z7.s[3]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mla	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mla	z0.h, z1.h, z7.h[7]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mla	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mla	z0.s, z1.s, z7.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mls	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.d, p7/m, z1.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.d, z1.d, z7.d[1]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.h, z1.h, z7.h[7]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.s, p7/m, z1.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     mls	z0.s, z1.s, z7.s[3]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mls	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mls	z0.h, z1.h, z7.h[7]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mls	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     mls	z0.s, z1.s, z7.s[3]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     mov	p0.b, p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     mov	p0.b, p0/m, p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     mov	p0.b, p0/z, p0.b
@@ -8522,10 +8522,10 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mrs	x3, ZCR_EL3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     msb	z0.b, p7/m, z1.b, z31.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     msb	z0.b, p7/m, z1.b, z31.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     msb	z0.d, p7/m, z1.d, z31.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     msb	z0.h, p7/m, z1.h, z31.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00    -     msb	z0.s, p7/m, z1.s, z31.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     msb	z0.h, p7/m, z1.h, z31.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     msb	z0.s, p7/m, z1.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL1, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL12, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     msr	ZCR_EL2, x3
@@ -8766,45 +8766,45 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrue	p7.s, vl64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrue	p7.s, vl7
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrue	p7.s, vl8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p0.b, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p0.d, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p0.h, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p0.s, pow2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p15.b
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p15.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p15.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p15.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #14
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #15
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #17
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #18
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #19
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #20
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #21
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #22
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #23
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #24
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #25
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #26
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #27
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #28
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, mul3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, mul4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl128
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl256
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl32
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl64
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p0.b, pow2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p0.d, pow2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p0.h, pow2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p0.s, pow2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p15.b
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p15.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p15.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p15.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #17
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #18
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #19
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #20
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #22
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #23
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #25
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #26
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #27
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, #28
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, mul3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, mul4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl128
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl256
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl64
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     ptrues	p7.s, vl8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     punpkhi	p0.h, p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     punpkhi	p15.h, p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     punpklo	p0.h, p0.b

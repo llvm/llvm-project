@@ -166,11 +166,6 @@ def V3AEWrite_1c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
   let NumMicroOps = 2;
 }
 
-def V3AEWrite_2c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
-  let Latency     = 2;
-  let NumMicroOps = 2;
-}
-
 def V3AEWrite_3c_2M : SchedWriteRes<[V3AEUnitM, V3AEUnitM]> {
   let Latency     = 3;
   let NumMicroOps = 2;
@@ -899,8 +894,8 @@ def V3AERd_ZSA : SchedReadAdvance<3, [V3AEWr_ZSA]>;
 
 def V3AEWr_ZDOTB : SchedWriteRes<[V3AEUnitV]>   { let Latency = 3; }
 def V3AERd_ZDOTB : SchedReadAdvance<2, [V3AEWr_ZDOTB]>;
-def V3AEWr_ZDOTH : SchedWriteRes<[V3AEUnitV0]> { let Latency = 4; }
-def V3AERd_ZDOTH : SchedReadAdvance<3, [V3AEWr_ZDOTH]>;
+def V3AEWr_ZDOTH : SchedWriteRes<[V3AEUnitV0]> { let Latency = 3; }
+def V3AERd_ZDOTH : SchedReadAdvance<2, [V3AEWr_ZDOTH]>;
 
 // NOTE: SOG p. 43: Complex multiply-add B, H, S element size: How to reduce
 // throughput to 1 in case of forwarding?
@@ -912,7 +907,7 @@ def V3AERd_ZCMAD   : SchedReadAdvance<2, [V3AEWr_ZCMAD]>;
 def V3AEWr_ZMMA : SchedWriteRes<[V3AEUnitV]> { let Latency = 3; }
 def V3AERd_ZMMA : SchedReadAdvance<2, [V3AEWr_ZMMA]>;
 
-def V3AEWr_ZMABHS : SchedWriteRes<[V3AEUnitV0, V3AEUnitV0]> { let Latency = 4; }
+def V3AEWr_ZMABHS : SchedWriteRes<[V3AEUnitV0]> { let Latency = 4; }
 def V3AERd_ZMABHS : SchedReadAdvance<3, [V3AEWr_ZMABHS]>;
 def V3AEWr_ZMAD  : SchedWriteRes<[V3AEUnitV0, V3AEUnitV0]> { let Latency = 5; }
 def V3AERd_ZMAD  : SchedReadAdvance<2, [V3AEWr_ZMAD]>;
@@ -1944,7 +1939,7 @@ def : InstRW<[V3AEWrite_1c_1M], (instrs SEL_PPPP)>;
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[V3AEWrite_2c_2M], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[V3AEWrite_2c_1M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
 def : InstRW<[V3AEWrite_2c_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;

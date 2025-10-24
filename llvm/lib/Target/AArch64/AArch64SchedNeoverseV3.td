@@ -178,11 +178,6 @@ def V3Write_1c_2M : SchedWriteRes<[V3UnitM, V3UnitM]> {
   let NumMicroOps = 2;
 }
 
-def V3Write_2c_2M : SchedWriteRes<[V3UnitM, V3UnitM]> {
-  let Latency     = 2;
-  let NumMicroOps = 2;
-}
-
 def V3Write_3c_2M : SchedWriteRes<[V3UnitM, V3UnitM]> {
   let Latency     = 3;
   let NumMicroOps = 2;
@@ -659,13 +654,6 @@ def V3Write_2c_4SA_4V01 : SchedWriteRes<[V3UnitSA, V3UnitSA, V3UnitSA,
   let NumMicroOps = 8;
 }
 
-def V3Write_4c_4SA_4V01 : SchedWriteRes<[V3UnitSA, V3UnitSA, V3UnitSA,
-                                         V3UnitSA, V3UnitV01, V3UnitV01,
-                                         V3UnitV01, V3UnitV01]> {
-  let Latency     = 4;
-  let NumMicroOps = 8;
-}
-
 def V3Write_6c_2SA_6V01 : SchedWriteRes<[V3UnitSA, V3UnitSA, V3UnitV01,
                                          V3UnitV01, V3UnitV01, V3UnitV01,
                                          V3UnitV01, V3UnitV01]> {
@@ -737,6 +725,14 @@ def V3Write_10c_4L_8V : SchedWriteRes<[V3UnitL, V3UnitL, V3UnitL,
                                        V3UnitV, V3UnitV, V3UnitV,
                                        V3UnitV, V3UnitV, V3UnitV]> {
   let Latency     = 10;
+  let NumMicroOps = 12;
+}
+
+def V3Write_4c_6SA_6V01 : SchedWriteRes<[V3UnitSA, V3UnitSA, V3UnitSA,
+                                         V3UnitSA, V3UnitSA, V3UnitSA,
+                                         V3UnitV01, V3UnitV01, V3UnitV01,
+                                         V3UnitV01, V3UnitV01, V3UnitV01]> {
+  let Latency     = 4;
   let NumMicroOps = 12;
 }
 
@@ -970,8 +966,8 @@ def V3Rd_ZSA : SchedReadAdvance<3, [V3Wr_ZSA]>;
 
 def V3Wr_ZDOTB : SchedWriteRes<[V3UnitV]>   { let Latency = 3; }
 def V3Rd_ZDOTB : SchedReadAdvance<2, [V3Wr_ZDOTB]>;
-def V3Wr_ZDOTH : SchedWriteRes<[V3UnitV02]> { let Latency = 4; }
-def V3Rd_ZDOTH : SchedReadAdvance<3, [V3Wr_ZDOTH]>;
+def V3Wr_ZDOTH : SchedWriteRes<[V3UnitV02]> { let Latency = 3; }
+def V3Rd_ZDOTH : SchedReadAdvance<2, [V3Wr_ZDOTH]>;
 
 // NOTE: SOG p. 43: Complex multiply-add B, H, S element size: How to reduce
 // throughput to 1 in case of forwarding?
@@ -983,7 +979,7 @@ def V3Rd_ZCMAD   : SchedReadAdvance<2, [V3Wr_ZCMAD]>;
 def V3Wr_ZMMA : SchedWriteRes<[V3UnitV]> { let Latency = 3; }
 def V3Rd_ZMMA : SchedReadAdvance<2, [V3Wr_ZMMA]>;
 
-def V3Wr_ZMABHS : SchedWriteRes<[V3UnitV02, V3UnitV02]> { let Latency = 4; }
+def V3Wr_ZMABHS : SchedWriteRes<[V3UnitV02]> { let Latency = 4; }
 def V3Rd_ZMABHS : SchedReadAdvance<3, [V3Wr_ZMABHS]>;
 def V3Wr_ZMAD  : SchedWriteRes<[V3UnitV02, V3UnitV02]> { let Latency = 5; }
 def V3Rd_ZMAD  : SchedReadAdvance<2, [V3Wr_ZMAD]>;
@@ -2015,7 +2011,7 @@ def : InstRW<[V3Write_1c_1M], (instrs SEL_PPPP)>;
 def : InstRW<[V3Write_2c_1M], (instregex "^PFALSE", "^PTRUE_[BHSD]")>;
 
 // Predicate set/initialize, set flags
-def : InstRW<[V3Write_2c_2M], (instregex "^PTRUES_[BHSD]")>;
+def : InstRW<[V3Write_2c_1M], (instregex "^PTRUES_[BHSD]")>;
 
 // Predicate find first/next
 def : InstRW<[V3Write_2c_1M], (instregex "^PFIRST_B", "^PNEXT_[BHSD]")>;
@@ -2706,41 +2702,41 @@ def : InstRW<[V3Write_2c_1SA_1I_1V01], (instrs STNT1H_ZRR)>;
 def : InstRW<[V3Write_2c_1SA_1V01], (instregex "^STNT1[BWD]_ZRR$")>;
 
 // Scatter non temporal store, vector + scalar 32-bit element size
-def : InstRW<[V3Write_4c_4SA_4V01], (instregex "^STNT1[BHW]_ZZR_S")>;
+def : InstRW<[V3Write_4c_6SA_6V01], (instregex "^STNT1[BHW]_ZZR_S")>;
 
 // Scatter non temporal store, vector + scalar 64-bit element size
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^STNT1[BHWD]_ZZR_D")>;
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^STNT1[BHWD]_ZZR_D")>;
 
 // Scatter store vector + imm 32-bit element size
-def : InstRW<[V3Write_4c_4SA_4V01], (instregex "^SST1[BH]_S_IMM$",
+def : InstRW<[V3Write_4c_6SA_6V01], (instregex "^SST1[BH]_S_IMM$",
                                                 "^SST1W_IMM$")>;
 
 // Scatter store vector + imm 64-bit element size
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^SST1[BHW]_D_IMM$",
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^SST1[BHW]_D_IMM$",
                                                 "^SST1D_IMM$")>;
 
 // Scatter store, 32-bit scaled offset
-def : InstRW<[V3Write_4c_4SA_4V01],
+def : InstRW<[V3Write_4c_6SA_6V01],
              (instregex "^SST1(H_S|W)_[SU]XTW_SCALED$")>;
 
 // Scatter store, 32-bit unpacked unscaled offset
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^SST1[BHW]_D_[SU]XTW$",
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^SST1[BHW]_D_[SU]XTW$",
                                                 "^SST1D_[SU]XTW$")>;
 
 // Scatter store, 32-bit unpacked scaled offset
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^SST1[HW]_D_[SU]XTW_SCALED$",
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^SST1[HW]_D_[SU]XTW_SCALED$",
                                                 "^SST1D_[SU]XTW_SCALED$")>;
 
 // Scatter store, 32-bit unscaled offset
-def : InstRW<[V3Write_4c_4SA_4V01], (instregex "^SST1[BH]_S_[SU]XTW$",
+def : InstRW<[V3Write_4c_6SA_6V01], (instregex "^SST1[BH]_S_[SU]XTW$",
                                                 "^SST1W_[SU]XTW$")>;
 
 // Scatter store, 64-bit scaled offset
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^SST1[HW]_D_SCALED$",
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^SST1[HW]_D_SCALED$",
                                                 "^SST1D_SCALED$")>;
 
 // Scatter store, 64-bit unscaled offset
-def : InstRW<[V3Write_2c_2SA_2V01], (instregex "^SST1[BHW]_D$",
+def : InstRW<[V3Write_2c_3SA_3V01], (instregex "^SST1[BHW]_D$",
                                                 "^SST1D$")>;
 
 // §3.30 SVE Miscellaneous instructions
