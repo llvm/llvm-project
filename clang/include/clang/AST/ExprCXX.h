@@ -5501,6 +5501,60 @@ public:
   }
 };
 
+/// Represents a C++26 reflect expression [expr.reflect]. The operand of of the expression
+/// is either a:
+///  - :: (global namespace)
+///  - a reflection-name
+///  - a type-id
+///  - id-expression.
+class CXXReflectExpr : public Expr {
+
+  // Source locations.
+  SourceLocation OperatorLoc;
+  SourceRange OperandRange;
+
+  CXXReflectExpr(const ASTContext &C, QualType T, QualType Ty);
+  CXXReflectExpr(const ASTContext &C, QualType T, Decl *Arg);
+  CXXReflectExpr(EmptyShell Empty);
+
+public:
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                SourceLocation ArgLoc, QualType Operand);
+
+  static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
+                                SourceLocation OperandLoc, Decl *Operand);
+
+  static CXXReflectExpr *CreateEmpty(ASTContext &C);
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return OperatorLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return OperandRange.getEnd();
+  }
+  SourceRange getSourceRange() const {
+    return SourceRange(getBeginLoc(), getEndLoc());
+  }
+
+  /// Returns location of the '^^'-operator.
+  SourceLocation getOperatorLoc() const { return OperatorLoc; }
+  SourceRange getOperandRange() const { return OperandRange; }
+
+  /// Sets the location of the '^^'-operator.
+  void setOperatorLoc(SourceLocation L) { OperatorLoc = L; }
+  void setOperandRange(SourceRange R) { OperandRange = R; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXReflectExprClass;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

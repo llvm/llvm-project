@@ -12938,6 +12938,12 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
       E->getLocation(), E->getLParenLocation(), E->getRParenLocation(), NewT);
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
+  // No subexpressions to recurse over in PR1.
+  return E;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformPredefinedExpr(PredefinedExpr *E) {

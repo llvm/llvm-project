@@ -17783,6 +17783,27 @@ void Sema::PushExpressionEvaluationContextForFunction(
   }
 }
 
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
+                                     TypeSourceInfo *TSI) {
+  return BuildCXXReflectExpr(OpLoc, TSI->getTypeLoc().getBeginLoc(),
+                             TSI->getType());
+}
+
+ExprResult Sema::ActOnCXXReflectExpr(SourceLocation OpLoc,
+                                     SourceLocation ArgLoc, Decl *D) {
+  return BuildCXXReflectExpr(OpLoc, ArgLoc, D);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                     SourceLocation OperandLoc, QualType T) {
+  return CXXReflectExpr::Create(Context, OperatorLoc, OperandLoc, T);
+}
+
+ExprResult Sema::BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                     SourceLocation OperandLoc, Decl *D) {
+  return CXXReflectExpr::Create(Context, OperatorLoc, OperandLoc, D);
+}
+
 namespace {
 
 const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {

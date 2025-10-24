@@ -3689,6 +3689,11 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
+defm reflection : BoolFOption<"reflection",
+  LangOpts<"Reflection">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable C++26 reflection">,
+  NegFlag<SetFalse>>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,

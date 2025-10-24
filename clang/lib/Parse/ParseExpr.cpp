@@ -1208,6 +1208,13 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     AllowSuffix = false;
     Res = ParseUnaryExprOrTypeTraitExpression();
     break;
+  case tok::caretcaret: {
+    if (getLangOpts().Reflection) {
+      SourceLocation DoubleCaret = ConsumeToken();
+      Res = ParseCXXReflectExpression(/*OpLoc=*/DoubleCaret);
+    }
+    break;
+  }
   case tok::ampamp: {      // unary-expression: '&&' identifier
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
@@ -2248,6 +2255,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     Diag(OpTok, diag::warn_c23_compat_keyword) << OpTok.getName();
   else if (getLangOpts().C2y && OpTok.is(tok::kw__Countof))
     Diag(OpTok, diag::warn_c2y_compat_keyword) << OpTok.getName();
+
+  if (OpTok.is(tok::caretcaret))
+    return ParseCXXReflectExpression(OpTok.getLocation());
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,

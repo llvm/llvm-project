@@ -14757,6 +14757,16 @@ public:
   ///@{
 
 public:
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, TypeSourceInfo *T);
+  ExprResult ActOnCXXReflectExpr(SourceLocation OpLoc, SourceLocation ArgLoc,
+                                 Decl *D);
+
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                 SourceLocation OperandLoc, QualType T);
+  ExprResult BuildCXXReflectExpr(SourceLocation OperatorLoc,
+                                 SourceLocation OperandLoc, Decl *D);
+
+public:
   void PushSatisfactionStackEntry(const NamedDecl *D,
                                   const llvm::FoldingSetNodeID &ID) {
     const NamedDecl *Can = cast<NamedDecl>(D->getCanonicalDecl());

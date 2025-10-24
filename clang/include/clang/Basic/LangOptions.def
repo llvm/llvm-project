@@ -499,6 +499,7 @@ LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
+LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

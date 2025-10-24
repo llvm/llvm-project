@@ -150,6 +150,7 @@ enum class TentativeCXXTypeIdContext {
   AsTemplateArgument,
   InTrailingReturnType,
   AsGenericSelectionArgument,
+  AsReflectionOperand
 };
 
 /// The kind of attribute specifier we have found.
@@ -5167,6 +5168,10 @@ private:
   /// Implementations are in ParseHLSL.cpp
   ///@{
 
+  //===--------------------------------------------------------------------===//
+  // Parses the operand of reflection operator
+  ExprResult ParseCXXReflectExpression(SourceLocation OpLoc);
+
 private:
   bool MaybeParseHLSLAnnotations(Declarator &D,
                                  SourceLocation *EndLoc = nullptr,
@@ -7677,7 +7682,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 
