@@ -28,7 +28,7 @@
 ### Recommended development practices
 
 It is recommended to use a Python virtual environment. Many ways exist for this,
-but the following is the simplest:
+but one of the following is generally recommended:
 
 ```shell
 # Make sure your 'python' is what you expect. Note that on multi-python
@@ -37,7 +37,22 @@ but the following is the simplest:
 which python
 python -m venv ~/.venv/mlirdev
 source ~/.venv/mlirdev/bin/activate
+```
 
+Or, if you have uv installed on your system, you can also use the following commands
+to create the same environment (targeting a Python 3.12 toolchain in this example):
+
+```shell
+uv venv ~/.venv/mlirdev --seed -p 3.12
+source ~/.venv/mlirdev/bin/activate
+```
+
+You can change the Python version (`-p` flag) as needed - if you request any Python interpreter
+not present on your system, uv will attempt to download it, unless the `--no-python-downloads` option is given.
+For information on how to install uv, refer to the official documentation at
+https://docs.astral.sh/uv/getting-started/installation/
+
+```shell
 # Note that many LTS distros will bundle a version of pip itself that is too
 # old to download all of the latest binaries for certain platforms.
 # The pip version can be obtained with `python -m pip --version`, and for
@@ -46,10 +61,12 @@ source ~/.venv/mlirdev/bin/activate
 # It is recommended to upgrade pip:
 python -m pip install --upgrade pip
 
-
 # Now the `python` command will resolve to your virtual environment and
 # packages will be installed there.
 python -m pip install -r mlir/python/requirements.txt
+
+# In a uv-generated virtual environment, you can instead run:
+uv pip install -r mlir/python/requirements.txt
 
 # Now run your build command with `cmake`, `ninja`, et al.
 
@@ -228,7 +245,8 @@ For example if `py_op1` and `py_op2` wrap the same operation under a root `py_op
 transformed such that the operation referenced (by `py_op1`, `py_op2`) is erased. Then `py_op1`, `py_op2`
 become "undefined" in a sense; manipulating them in any way is "formally forbidden". Note, this also applies to
 `SymbolTable` mutation, which is considered a transformation of the root `SymbolTable`-supporting operation for the
-purposes of the discussion here. Metaphorically, one can think of this similarly to how STL container iterators are invalidated once the container itself is changed. The "best practices" recommendation is to structure your code such that
+purposes of the discussion here. Metaphorically, one can think of this similarly to how STL container iterators are invalidated
+once the container itself is changed. The "best practices" recommendation is to structure your code such that
 
 1. First, query/manipulate various Python wrapper objects `py_op1`, `py_op2`, `py_op3`, etc.;
 2. Second, transform the AST/erase operations/etc. via a single root object;
