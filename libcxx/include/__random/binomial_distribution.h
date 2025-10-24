@@ -10,6 +10,7 @@
 #define _LIBCPP___RANDOM_BINOMIAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/gamma.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
 #include <cmath>
@@ -97,39 +98,14 @@ public:
   }
 };
 
-// Some libc declares the math functions to be `noexcept`.
-#if defined(_LIBCPP_GLIBC_PREREQ)
-#  if _LIBCPP_GLIBC_PREREQ(2, 8)
-#    define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
-#  else
-#    define _LIBCPP_LGAMMA_R_NOEXCEPT
-#  endif
-#elif defined(__LLVM_LIBC__)
-#  define _LIBCPP_LGAMMA_R_NOEXCEPT _NOEXCEPT
-#else
-#  define _LIBCPP_LGAMMA_R_NOEXCEPT
-#endif
-
-#if !defined(_LIBCPP_MSVCRT_LIKE)
-extern "C" double lgamma_r(double, int*) _LIBCPP_LGAMMA_R_NOEXCEPT;
-#endif
-
-inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
-#if defined(_LIBCPP_MSVCRT_LIKE)
-  return lgamma(__d);
-#else
-  int __sign;
-  return lgamma_r(__d, &__sign);
-#endif
-}
-
 template <class _IntType>
 binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p) : __t_(__t), __p_(__p) {
   if (0 < __p_ && __p_ < 1) {
     __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-    __pr_ = std::exp(
-        std::__libcpp_lgamma(__t_ + 1.) - std::__libcpp_lgamma(__r0_ + 1.) - std::__libcpp_lgamma(__t_ - __r0_ + 1.) +
-        __r0_ * std::log(__p_) + (__t_ - __r0_) * std::log(1 - __p_));
+    __pr_ =
+        std::exp(__math::__lgamma_thread_safe(__t_ + 1.).__result - __math::__lgamma_thread_safe(__r0_ + 1.).__result -
+                 __math::__lgamma_thread_safe(__t_ - __r0_ + 1.).__result + __r0_ * std::log(__p_) +
+                 (__t_ - __r0_) * std::log(1 - __p_));
     __odds_ratio_ = __p_ / (1 - __p_);
   }
 }
