@@ -5191,20 +5191,32 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver, false) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+
+    bool IsEmitLLVM = Args.hasArg(options::OPT_emit_llvm);
+    bool IsSYCL = TargetDeviceOffloadKind == Action::OFK_SYCL;
+
+    bool IsAMDGPU = Input->getOffloadingToolChain() &&
+                    Input->getOffloadingToolChain()->getTriple().isAMDGPU();
+    bool IsRDC =
+        Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+    bool HasNewOffloadDriver =
+        Args.hasFlag(options::OPT_offload_new_driver,
+                     options::OPT_no_offload_new_driver, false);
+    bool IsHIP = TargetDeviceOffloadKind == Action::OFK_HIP;
+    bool IsSPIRV = Input->getOffloadingToolChain() &&
+                   Input->getOffloadingToolChain()->getTriple().isSPIRV();
+    bool IsAMDGPUOrHIP = IsAMDGPU || IsHIP;
+    bool IsHIPToSPIRV = IsHIP && IsSPIRV;
+    bool IsOpenMP = TargetDeviceOffloadKind == Action::OFK_OpenMP;
+
+    bool IsLLVMBitcodeOutput =
+        IsEmitLLVM || IsSYCL ||
+        (IsAMDGPUOrHIP &&
+         ((IsRDC ||
+           (HasNewOffloadDriver && (!offloadDeviceOnly() || IsHIPToSPIRV))) ||
+          IsOpenMP));
+
+    if (IsLLVMBitcodeOutput) {
       types::ID Output =
           Args.hasArg(options::OPT_S) &&
                   (TargetDeviceOffloadKind == Action::OFK_None ||
