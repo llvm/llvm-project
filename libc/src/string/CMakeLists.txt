@@ -1,8 +1,5 @@
 add_subdirectory(memory_utils)
 
-if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
-  list(APPEND string_config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
-endif()
 if(string_config_options)
   list(PREPEND string_config_options "COMPILE_OPTIONS")
 endif()
