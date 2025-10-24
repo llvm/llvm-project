@@ -88,5 +88,8 @@ int main() {
   res = prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &pr);
   assert(res == -1);
 
+  unsigned long name = reinterpret_cast<unsigned long>(nullptr);
+  prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, 0, nullptr, name);
+
   return 0;
 }

@@ -11,11 +11,12 @@ define void @foo(ptr %c, ptr %d) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw <4 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <4 x i32> [[TMP2]], <i32 2, i32 2, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 1, i32 2, i32 7, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> undef, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <4 x i32> [[TMP6]] to <4 x float>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <4 x float> [[TMP7]], undef
-; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[ADD_PTR53]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    store <4 x float> [[TMP9]], ptr [[ADD_PTR53]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -521,6 +521,9 @@ void PointerTypeNode::outputPre(OutputBuffer &OB, OutputFlags Flags) const {
     assert(false);
   }
   outputQualifiers(OB, Quals, false, false);
+
+  if (PointerAuthQualifier)
+    PointerAuthQualifier->output(OB, Flags);
 }
 
 void PointerTypeNode::outputPost(OutputBuffer &OB, OutputFlags Flags) const {
@@ -589,6 +592,13 @@ void FunctionSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   outputSpaceIfNecessary(OB);
   Name->output(OB, Flags);
   Signature->outputPost(OB, Flags);
+}
+
+void PointerAuthQualifierNode::output(OutputBuffer &OB,
+                                      OutputFlags Flags) const {
+  OB << "__ptrauth(";
+  Components->output(OB, Flags);
+  OB << ")";
 }
 
 void VariableSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {

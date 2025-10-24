@@ -258,3 +258,28 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end teams
 end subroutine distribute_simd
+
+! BOTH-LABEL: func.func @_QPloop
+subroutine loop()
+  ! BOTH: omp.target
+  
+  ! HOST-SAME: host_eval(%{{.*}} -> %[[LB:.*]], %{{.*}} -> %[[UB:.*]], %{{.*}} -> %[[STEP:.*]] : i32, i32, i32)
+  
+  ! DEVICE-NOT: host_eval({{.*}})
+  ! DEVICE-SAME: {
+
+  ! BOTH: omp.teams
+  !$omp target teams
+
+  ! BOTH: omp.parallel
+
+  ! BOTH: omp.distribute
+  ! BOTH-NEXT: omp.wsloop
+  ! BOTH-NEXT: omp.loop_nest
+
+  ! HOST-SAME: (%{{.*}}) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
+  !$omp loop
+  do i=1,10
+  end do
+  !$omp end target teams
+end subroutine loop

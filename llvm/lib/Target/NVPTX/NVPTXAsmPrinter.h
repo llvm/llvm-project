@@ -111,27 +111,23 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
     // Copy Num bytes from Ptr.
     // if Bytes > Num, zero fill up to Bytes.
-    unsigned addBytes(unsigned char *Ptr, int Num, int Bytes) {
-      assert((curpos + Num) <= size);
-      assert((curpos + Bytes) <= size);
-      for (int i = 0; i < Num; ++i) {
-        buffer[curpos] = Ptr[i];
-        curpos++;
-      }
-      for (int i = Num; i < Bytes; ++i) {
-        buffer[curpos] = 0;
-        curpos++;
-      }
-      return curpos;
+    void addBytes(const unsigned char *Ptr, unsigned Num, unsigned Bytes) {
+      for (unsigned I : llvm::seq(Num))
+        addByte(Ptr[I]);
+      if (Bytes > Num)
+        addZeros(Bytes - Num);
     }
 
-    unsigned addZeros(int Num) {
-      assert((curpos + Num) <= size);
-      for (int i = 0; i < Num; ++i) {
-        buffer[curpos] = 0;
-        curpos++;
+    void addByte(uint8_t Byte) {
+      assert(curpos < size);
+      buffer[curpos] = Byte;
+      curpos++;
+    }
+
+    void addZeros(unsigned Num) {
+      for ([[maybe_unused]] unsigned _ : llvm::seq(Num)) {
+        addByte(0);
       }
-      return curpos;
     }
 
     void addSymbol(const Value *GVar, const Value *GVarBeforeStripping) {
@@ -149,9 +145,12 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
 
   friend class AggBuffer;
 
-private:
+public:
+  static char ID;
+
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 
+private:
   const Function *F;
 
   void emitStartOfAsmFile(Module &M) override;
@@ -243,7 +242,7 @@ private:
 
 public:
   NVPTXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)),
+      : AsmPrinter(TM, std::move(Streamer), ID),
         EmitGeneric(static_cast<NVPTXTargetMachine &>(TM).getDrvInterface() ==
                     NVPTX::CUDA) {}
 

@@ -1,13 +1,10 @@
 ; RUN: opt %loadPolly -polly-print-ast -polly-parallel -polly-parallel-force -disable-output < %s | FileCheck %s
-; RUN: opt %loadPolly -print-polyhedral-info -polly-check-parallel -disable-output < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;       void jd(int *A) {
 ; CHECK:  #pragma omp parallel for
-; PINFO:  for.cond2: Loop is parallel.
 ;         for (int i = 0; i < 1024; i++)
 ;           A[i] = 1;
 ; CHECK:  #pragma omp parallel for
-; PINFO:  for.cond: Loop is parallel.
 ;         for (int i = 0; i < 1024; i++)
 ;           A[i] = A[i] * 2;
 ;       }

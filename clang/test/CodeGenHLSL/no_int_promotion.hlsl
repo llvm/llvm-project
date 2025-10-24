@@ -10,37 +10,37 @@
 int16_t add(int16_t a, int16_t b) {
   return a + b;
 }
-// CHECK: define noundef <2 x i16> @
+// CHECK: define hidden noundef <2 x i16> @
 // CHECK: add <2 x i16>
 int16_t2 add(int16_t2 a, int16_t2 b) {
   return a + b;
 }
-// CHECK: define noundef <3 x i16> @
+// CHECK: define hidden noundef <3 x i16> @
 // CHECK: add <3 x i16>
 int16_t3 add(int16_t3 a, int16_t3 b) {
   return a + b;
 }
-// CHECK: define noundef <4 x i16> @
+// CHECK: define hidden noundef <4 x i16> @
 // CHECK: add <4 x i16>
 int16_t4 add(int16_t4 a, int16_t4 b) {
   return a + b;
 }
-// CHECK: define noundef i16 @
+// CHECK: define hidden noundef i16 @
 // CHECK: add i16 %
 uint16_t add(uint16_t a, uint16_t b) {
   return a + b;
 }
-// CHECK: define noundef <2 x i16> @
+// CHECK: define hidden noundef <2 x i16> @
 // CHECK: add <2 x i16>
 uint16_t2 add(uint16_t2 a, uint16_t2 b) {
   return a + b;
 }
-// CHECK: define noundef <3 x i16> @
+// CHECK: define hidden noundef <3 x i16> @
 // CHECK: add <3 x i16>
 uint16_t3 add(uint16_t3 a, uint16_t3 b) {
   return a + b;
 }
-// CHECK: define noundef <4 x i16> @
+// CHECK: define hidden noundef <4 x i16> @
 // CHECK: add <4 x i16>
 uint16_t4 add(uint16_t4 a, uint16_t4 b) {
   return a + b;

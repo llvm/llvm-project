@@ -62,6 +62,10 @@
 #include <unistd.h>      // For syscall()
 #endif
 
+#if defined(__CYGWIN__)
+#include <sys/cpuset.h>
+#endif
+
 #if defined(__HAIKU__)
 #include <OS.h> // For B_OS_NAME_LENGTH
 #endif
@@ -142,6 +146,8 @@ uint64_t llvm::get_threadid() {
   return uint64_t(gettid());
 #elif defined(__linux__)
   return uint64_t(syscall(__NR_gettid));
+#elif defined(_AIX)
+  return uint64_t(thread_self());
 #else
   return uint64_t(pthread_self());
 #endif
@@ -163,6 +169,8 @@ static constexpr uint32_t get_max_thread_name_length_impl() {
   return 16;
 #elif defined(__OpenBSD__)
   return 24;
+#elif defined(__CYGWIN__)
+  return 16;
 #else
   return 0;
 #endif
@@ -186,9 +194,9 @@ void llvm::set_thread_name(const Twine &Name) {
   if (get_max_thread_name_length() > 0)
     NameStr = NameStr.take_back(get_max_thread_name_length() - 1);
   (void)NameStr;
-#if defined(HAVE_PTHREAD_SET_NAME_NP)
+#if defined(HAVE_PTHREAD_SET_NAME_NP) && HAVE_PTHREAD_SET_NAME_NP
   ::pthread_set_name_np(::pthread_self(), NameStr.data());
-#elif defined(HAVE_PTHREAD_SETNAME_NP)
+#elif defined(HAVE_PTHREAD_SETNAME_NP) && HAVE_PTHREAD_SETNAME_NP
 #if defined(__NetBSD__)
   ::pthread_setname_np(::pthread_self(), "%s",
                        const_cast<char *>(NameStr.data()));
@@ -239,7 +247,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   }
   free(kp);
   return;
-#elif defined(__linux__) && HAVE_PTHREAD_GETNAME_NP
+#elif (defined(__linux__) || defined(__CYGWIN__)) && HAVE_PTHREAD_GETNAME_NP
   constexpr uint32_t len = get_max_thread_name_length_impl();
   char Buffer[len] = {'\0'}; // FIXME: working around MSan false positive.
   if (0 == ::pthread_getname_np(::pthread_self(), Buffer, len))
@@ -261,7 +269,7 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
 }
 
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
-#if defined(__linux__) && defined(SCHED_IDLE)
+#if (defined(__linux__) || defined(__CYGWIN__)) && defined(SCHED_IDLE)
   // Some *really* old glibcs are missing SCHED_IDLE.
   // http://man7.org/linux/man-pages/man3/pthread_setschedparam.3.html
   // http://man7.org/linux/man-pages/man2/sched_setscheduler.2.html
@@ -314,8 +322,9 @@ static int computeHostNumHardwareThreads() {
   if (cpuset_getaffinity(CPU_LEVEL_WHICH, CPU_WHICH_TID, -1, sizeof(mask),
                          &mask) == 0)
     return CPU_COUNT(&mask);
-#elif defined(__linux__)
+#elif (defined(__linux__) || defined(__CYGWIN__))
   cpu_set_t Set;
+  CPU_ZERO(&Set);
   if (sched_getaffinity(0, sizeof(Set), &Set) == 0)
     return CPU_COUNT(&Set);
 #endif
@@ -335,7 +344,8 @@ llvm::BitVector llvm::get_thread_affinity_mask() {
 
 unsigned llvm::get_cpus() { return 1; }
 
-#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
+#if (defined(__linux__) || defined(__CYGWIN__)) &&                             \
+    (defined(__i386__) || defined(__x86_64__))
 // On Linux, the number of physical cores can be computed from /proc/cpuinfo,
 // using the number of unique physical/core id pairs. The following
 // implementation reads the /proc/cpuinfo format on an x86_64 system.

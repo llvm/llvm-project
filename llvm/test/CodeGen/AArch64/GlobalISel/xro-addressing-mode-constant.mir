@@ -16,10 +16,8 @@ body:             |
     liveins: $x0
     ; Check that we use the XRO addressing mode when the constant cannot be
     ; represented using an add + lsl.
-    ;
     ; cst = 0000000111000000
     ; cst & 000fffffff000000 != 0
-    ;
     ; CHECK-LABEL: name: use_xro_cannot_encode_add_lsl
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -45,11 +43,9 @@ body:             |
     liveins: $x0
     ; Check that we use the XRO addressing mode when the constant can be
     ; represented using a single movk.
-    ;
     ; cst = 000000000000f000
     ; cst & 000fffffff000000 == 0
     ; cst & ffffffffffff0fff != 0
-    ;
     ; CHECK-LABEL: name: use_xro_preferred_mov
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -75,7 +71,6 @@ body:             |
   bb.0:
     liveins: $x0
     ; Check that this works even if we have a negative immediate.
-    ;
     ; CHECK-LABEL: name: use_xro_negative_imm
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -100,7 +95,6 @@ body:             |
   bb.0:
     liveins: $x0
     ; Immediates that can be encoded in a LDRXui should be skipped.
-    ;
     ; CHECK-LABEL: name: dont_use_xro_selectable_imm
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -124,7 +118,6 @@ body:             |
   bb.0:
     liveins: $x0
     ; Immediates that can be encoded in a LDRXui should be skipped.
-    ;
     ; CHECK-LABEL: name: dont_use_xro_selectable_negative_imm
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -148,7 +141,6 @@ body:             |
   bb.0:
     liveins: $x0
     ; Immediates that can be encoded in a LDRXui should be skipped.
-    ;
     ; CHECK-LABEL: name: dont_use_xro_zero
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -173,7 +165,6 @@ body:             |
     liveins: $x0
     ; Check that we skip constants which can be encoded in an add.
     ; 17 is in [0x0, 0xfff]
-    ;
     ; CHECK-LABEL: name: dont_use_xro_in_range
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
@@ -198,12 +189,10 @@ body:             |
     liveins: $x0
     ; Check that we skip when we have an add with an lsl which cannot be
     ; represented as a movk.
-    ;
     ; cst = 0x0000000000111000
     ; cst & 000fffffff000000 = 0
     ; cst & ffffffffff00ffff != 0
     ; cst & ffffffffffff0fff != 0
-    ;
     ; CHECK-LABEL: name: dont_use_xro_add_lsl
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}

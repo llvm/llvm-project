@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 -enable-unsafe-fp-math \
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57 \
 # RUN:     -run-pass machine-combiner -machine-combiner-inc-threshold=0 \
 # RUN:     -machine-combiner-verify-pattern-order=true -verify-machineinstrs  -o - %s | FileCheck %s
 ---
@@ -36,8 +36,8 @@ body:             |
     %6 = ADDWrr %3, killed %5
     %7 = SCVTFUWDri killed %6, implicit $fpcr
     ; CHECK: FMADDDrrr %7, %7, %0, implicit $fpcr
-    %8 = FMULDrr %7, %7, implicit $fpcr
-    %9 = FADDDrr %0, killed %8, implicit $fpcr
+    %8 = contract FMULDrr %7, %7, implicit $fpcr
+    %9 = contract FADDDrr %0, killed %8, implicit $fpcr
     $d0 = COPY %9
     RET_ReallyLR implicit $d0
 

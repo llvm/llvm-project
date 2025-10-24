@@ -13,8 +13,8 @@
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
+#include "src/__support/libc_errno.h" // For error macros
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h" // For error macros
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -123,7 +123,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
 
     FileIOResult result =
         platform_write(this, remainder.data(), remainder.size());
-    size_t bytes_written = buf_result.value;
+    size_t bytes_written = result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.

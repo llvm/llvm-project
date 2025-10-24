@@ -50,7 +50,7 @@ define <4 x i1> @illegal_abs_unchanged2(<4 x i8> %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpabsb %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX512-NEXT:    retq
 ;
@@ -281,7 +281,7 @@ define <4 x i64> @illegal_abs_to_ne_and_sext(<4 x i64> %x) {
 ; AVX512-NEXT:    vpabsq %ymm0, %ymm0
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [129,129,129,129]
 ; AVX512-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: illegal_abs_to_ne_and_sext:
@@ -417,7 +417,7 @@ define <4 x i1> @legal_abs_ne_unchangedd(<4 x i32> %x) {
 ; AVX512-NEXT:    vpabsd %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [129,129,129,129]
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: legal_abs_ne_unchangedd:
@@ -458,7 +458,7 @@ define <4 x i32> @legal_abs_ne_unchangedd_sext(<4 x i32> %x) {
 ; AVX512-NEXT:    vpabsd %xmm0, %xmm0
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [129,129,129,129]
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: legal_abs_ne_unchangedd_sext:
@@ -696,7 +696,7 @@ define <4 x i64> @ne_and_to_abs_vec4x64_sext(<4 x i64> %x) {
 ; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [129,129,129,129]
 ; AVX512-NEXT:    vpabsq %ymm0, %ymm0
 ; AVX512-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ~ymm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_and_to_abs_vec4x64_sext:
@@ -842,7 +842,7 @@ define <4 x i1> @ne_and_to_abs_vec4x32(<4 x i32> %x) {
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX512-NEXT:    vpabsd %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_and_to_abs_vec4x32:
@@ -883,7 +883,7 @@ define <4 x i32> @ne_and_to_abs_vec4x32_sext(<4 x i32> %x) {
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
 ; AVX512-NEXT:    vpabsd %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    retq
 ;
 ; AVX2-LABEL: ne_and_to_abs_vec4x32_sext:
@@ -975,7 +975,7 @@ define <4 x i8> @eq_or_to_abs_vec4x8_sext(<4 x i8> %x) {
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1013,11 +1013,11 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ; AVX512-LABEL: ne_and_to_abs_vec4x8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX512-NEXT:    vpmovsxbd %xmm1, %zmm1
 ; AVX512-NEXT:    vptestmd %zmm1, %zmm1, %k0
 ; AVX512-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k1
@@ -1068,11 +1068,11 @@ define <4 x i16> @ne_and_to_abs_vec4x16_sext(<4 x i16> %x) {
 ; AVX512-LABEL: ne_and_to_abs_vec4x16_sext:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogq $15, %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = ~xmm1
 ; AVX512-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512-NEXT:    vptestmd %ymm1, %ymm1, %k0
 ; AVX512-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512-NEXT:    vpternlogq $15, %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    vptestmd %ymm0, %ymm0, %k1
 ; AVX512-NEXT:    kandw %k1, %k0, %k1

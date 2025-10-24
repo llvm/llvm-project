@@ -4,8 +4,7 @@
 
 include "APIDefs.td"
 
-def : Enum {
-  let name = "my_enum_t";
+def my_enum_t : Enum {
   let desc = "An example enum";
   let etors =[
     Etor<"VALUE_ONE", "The first enum value">,
@@ -15,7 +14,7 @@ def : Enum {
   ];
 }
 
-// CHECK: inline std::ostream &operator<<(std::ostream &os, enum my_enum_t value)
+// CHECK: inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, enum my_enum_t value)
 // CHECK: switch (value) {
 // CHECK: case MY_ENUM_VALUE_ONE:
 // CHECK:   os << "MY_ENUM_VALUE_ONE";

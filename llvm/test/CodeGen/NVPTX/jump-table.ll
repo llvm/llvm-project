@@ -10,11 +10,11 @@ define void @foo(i32 %i) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u32 %r2, [foo_param_0];
-; CHECK-NEXT:    setp.gt.u32 %p1, %r2, 3;
+; CHECK-NEXT:    ld.param.b32 %r1, [foo_param_0];
+; CHECK-NEXT:    setp.gt.u32 %p1, %r1, 3;
 ; CHECK-NEXT:    @%p1 bra $L__BB0_6;
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    $L_brx_0: .branchtargets
@@ -22,22 +22,18 @@ define void @foo(i32 %i) {
 ; CHECK-NEXT:     $L__BB0_3,
 ; CHECK-NEXT:     $L__BB0_4,
 ; CHECK-NEXT:     $L__BB0_5;
-; CHECK-NEXT:    brx.idx %r2, $L_brx_0;
+; CHECK-NEXT:    brx.idx %r1, $L_brx_0;
 ; CHECK-NEXT:  $L__BB0_2: // %case0
-; CHECK-NEXT:    mov.b32 %r6, 0;
-; CHECK-NEXT:    st.global.u32 [out], %r6;
+; CHECK-NEXT:    st.global.b32 [out], 0;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_4: // %case2
-; CHECK-NEXT:    mov.b32 %r4, 2;
-; CHECK-NEXT:    st.global.u32 [out], %r4;
+; CHECK-NEXT:    st.global.b32 [out], 2;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_5: // %case3
-; CHECK-NEXT:    mov.b32 %r3, 3;
-; CHECK-NEXT:    st.global.u32 [out], %r3;
+; CHECK-NEXT:    st.global.b32 [out], 3;
 ; CHECK-NEXT:    bra.uni $L__BB0_6;
 ; CHECK-NEXT:  $L__BB0_3: // %case1
-; CHECK-NEXT:    mov.b32 %r5, 1;
-; CHECK-NEXT:    st.global.u32 [out], %r5;
+; CHECK-NEXT:    st.global.b32 [out], 1;
 ; CHECK-NEXT:  $L__BB0_6: // %end
 ; CHECK-NEXT:    ret;
 entry:
@@ -73,10 +69,10 @@ define i32 @test2(i32 %tmp158) {
 ; CHECK-LABEL: test2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<6>;
-; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ld.param.u32 %r1, [test2_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [test2_param_0];
 ; CHECK-NEXT:    setp.gt.s32 %p1, %r1, 119;
 ; CHECK-NEXT:    @%p1 bra $L__BB1_4;
 ; CHECK-NEXT:  // %bb.1: // %entry
@@ -100,36 +96,29 @@ define i32 @test2(i32 %tmp158) {
 ; CHECK-NEXT:     $L__BB1_11;
 ; CHECK-NEXT:    brx.idx %r2, $L_brx_0;
 ; CHECK-NEXT:  $L__BB1_7: // %bb339
-; CHECK-NEXT:    mov.b32 %r7, 12;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 12;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_5: // %entry
-; CHECK-NEXT:    setp.eq.s32 %p3, %r1, 1024;
+; CHECK-NEXT:    setp.eq.b32 %p3, %r1, 1024;
 ; CHECK-NEXT:    @%p3 bra $L__BB1_3;
 ; CHECK-NEXT:    bra.uni $L__BB1_6;
 ; CHECK-NEXT:  $L__BB1_3: // %bb338
-; CHECK-NEXT:    mov.b32 %r8, 11;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 11;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_10: // %bb342
-; CHECK-NEXT:    mov.b32 %r4, 15;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 15;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_6: // %bb336
-; CHECK-NEXT:    mov.b32 %r9, 10;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 10;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_8: // %bb340
-; CHECK-NEXT:    mov.b32 %r6, 13;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 13;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_9: // %bb341
-; CHECK-NEXT:    mov.b32 %r5, 14;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 14;
 ; CHECK-NEXT:    ret;
 ; CHECK-NEXT:  $L__BB1_11: // %bb343
-; CHECK-NEXT:    mov.b32 %r3, 18;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 18;
 ; CHECK-NEXT:    ret;
 entry:
   switch i32 %tmp158, label %bb336 [

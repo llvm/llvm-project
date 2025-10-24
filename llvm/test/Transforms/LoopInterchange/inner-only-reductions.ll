@@ -74,7 +74,7 @@ for.end8:                                         ; preds = %for.cond1.for.inc6_
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            Dependence
+; CHECK-NEXT: Name:            UnsupportedPHIOuter
 ; CHECK-NEXT: Function:        reduction_03
 
 ; IR-LABEL: @reduction_03(

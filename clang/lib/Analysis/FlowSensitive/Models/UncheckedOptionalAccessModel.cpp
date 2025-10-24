@@ -31,12 +31,9 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
-#include <memory>
 #include <optional>
-#include <utility>
 
 namespace clang {
 namespace dataflow {
@@ -244,9 +241,9 @@ auto nulloptTypeDecl() {
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
 
 auto inPlaceClass() {
-  return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
-                               "base::in_place_t", "folly::in_place_t",
-                               "bsl::in_place_t"));
+  return namedDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
+                              "base::in_place_t", "folly::in_place_t",
+                              "bsl::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -984,6 +981,20 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           isOptionalMemberCallWithNameMatcher(hasName("isNull")),
           transferOptionalIsNullCall)
+
+      // NullableValue::makeValue, NullableValue::makeValueInplace
+      // Only NullableValue has these methods, but this
+      // will also pass for other types
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(
+              hasAnyName("makeValue", "makeValueInplace")),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
+             LatticeTransferState &State) {
+            if (RecordStorageLocation *Loc =
+                    getImplicitObjectLocation(*E, State.Env)) {
+              setHasValue(*Loc, State.Env.getBoolLiteralValue(true), State.Env);
+            }
+          })
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(

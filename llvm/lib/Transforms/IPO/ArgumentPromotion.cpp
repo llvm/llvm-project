@@ -179,7 +179,6 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                                   F->getName());
   NF->copyAttributesFrom(F);
   NF->copyMetadata(F, 0);
-  NF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // The new function will have the !dbg metadata copied from the original
   // function. The original function may not be deleted, and dbg metadata need
@@ -382,9 +381,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     // Cleanup the code from the dead instructions: GEPs and BitCasts in between
     // the original argument and its users: loads and stores. Retarget every
     // user to the new created alloca.
-    SmallVector<Value *, 16> Worklist;
+    SmallVector<Value *, 16> Worklist(Arg.users());
     SmallVector<Instruction *, 16> DeadInsts;
-    append_range(Worklist, Arg.users());
     while (!Worklist.empty()) {
       Value *V = Worklist.pop_back_val();
       if (isa<GetElementPtrInst>(V)) {

@@ -11,6 +11,7 @@ class TestUniquePtrDbgInfoContent(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=["<", "9.0"])
+    @skipIf(macos_version=["<", "15.0"])
     @skipIfLinux  # s.reset() causes link errors on ubuntu 18.04/Clang 9
     def test(self):
         self.build()

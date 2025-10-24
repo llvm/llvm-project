@@ -57,10 +57,38 @@ public:
       rewriteToWsloop(loopOp, rewriter);
       break;
     case GenericLoopCombinedInfo::TeamsLoop:
-      if (teamsLoopCanBeParallelFor(loopOp))
+      if (teamsLoopCanBeParallelFor(loopOp)) {
         rewriteToDistributeParallelDo(loopOp, rewriter);
-      else
+      } else {
+        auto teamsOp = llvm::cast<mlir::omp::TeamsOp>(loopOp->getParentOp());
+        auto teamsBlockArgIface =
+            llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*teamsOp);
+        auto loopBlockArgIface =
+            llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*loopOp);
+
+        for (unsigned i = 0; i < loopBlockArgIface.numReductionBlockArgs();
+             ++i) {
+          mlir::BlockArgument loopRedBlockArg =
+              loopBlockArgIface.getReductionBlockArgs()[i];
+          mlir::BlockArgument teamsRedBlockArg =
+              teamsBlockArgIface.getReductionBlockArgs()[i];
+          rewriter.replaceAllUsesWith(loopRedBlockArg, teamsRedBlockArg);
+        }
+
+        for (unsigned i = 0; i < loopBlockArgIface.numReductionBlockArgs();
+             ++i) {
+          loopOp.getRegion().eraseArgument(
+              loopBlockArgIface.getReductionBlockArgsStart());
+        }
+
+        loopOp.removeReductionModAttr();
+        loopOp.getReductionVarsMutable().clear();
+        loopOp.removeReductionByrefAttr();
+        loopOp.removeReductionSymsAttr();
+
         rewriteToDistribute(loopOp, rewriter);
+      }
+
       break;
     }
 
@@ -252,7 +280,7 @@ private:
       args.reduction.vars = clauseOps.reductionVars;
     }
 
-    auto wrapperOp = rewriter.create<OpTy>(loopOp.getLoc(), clauseOps);
+    auto wrapperOp = OpTy::create(rewriter, loopOp.getLoc(), clauseOps);
     mlir::Block *opBlock = genEntryBlock(rewriter, args, wrapperOp.getRegion());
 
     mlir::IRMapping mapper;
@@ -279,16 +307,16 @@ private:
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
     parallelArgs.priv.vars = parallelClauseOps.privateVars;
 
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loopOp.getLoc(),
-                                                             parallelClauseOps);
+    auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loopOp.getLoc(),
+                                                    parallelClauseOps);
     genEntryBlock(rewriter, parallelArgs, parallelOp.getRegion());
     parallelOp.setComposite(true);
     rewriter.setInsertionPoint(
-        rewriter.create<mlir::omp::TerminatorOp>(loopOp.getLoc()));
+        mlir::omp::TerminatorOp::create(rewriter, loopOp.getLoc()));
 
     mlir::omp::DistributeOperands distributeClauseOps;
-    auto distributeOp = rewriter.create<mlir::omp::DistributeOp>(
-        loopOp.getLoc(), distributeClauseOps);
+    auto distributeOp = mlir::omp::DistributeOp::create(
+        rewriter, loopOp.getLoc(), distributeClauseOps);
     distributeOp.setComposite(true);
     rewriter.createBlock(&distributeOp.getRegion());
 
@@ -298,7 +326,7 @@ private:
     wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
 
     auto wsloopOp =
-        rewriter.create<mlir::omp::WsloopOp>(loopOp.getLoc(), wsloopClauseOps);
+        mlir::omp::WsloopOp::create(rewriter, loopOp.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(true);
     genEntryBlock(rewriter, wsloopArgs, wsloopOp.getRegion());
 
@@ -490,8 +518,10 @@ public:
                   loopOp));
         });
 
+    mlir::ConversionConfig config;
+    config.allowPatternRollback = false;
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+                                               std::move(patterns), config))) {
       mlir::emitError(func.getLoc(), "error in converting `omp.loop` op");
       signalPassFailure();
     }

@@ -116,9 +116,7 @@ void RegionInfo::viewOnly() { viewRegionOnly(this); }
 // RegionInfoPass implementation
 //
 
-RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {
-  initializeRegionInfoPassPass(*PassRegistry::getPassRegistry());
-}
+RegionInfoPass::RegionInfoPass() : FunctionPass(ID) {}
 
 RegionInfoPass::~RegionInfoPass() = default;
 

@@ -1,4 +1,4 @@
-; RUN: opt %s --passes=inline -o - -S | FileCheck %s --implicit-check-not=dbg.value
+; RUN: opt %s --passes=inline -o - -S | FileCheck %s --implicit-check-not=dbg_value
 
 ;; The inliner, specially, hoists all alloca instructions into the entry block
 ;; of the calling function. Ensure that it doesn't accidentally transfer the

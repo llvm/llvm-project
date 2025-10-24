@@ -1,4 +1,4 @@
-//===--- SignalHandlerCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,9 @@ constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
 // mentioned POSIX specification was not updated after 'quick_exit' appeared
 // in the C11 standard.
 // Also, we want to keep the "minimal set" a subset of the "POSIX set".
-// The list is repeated in bugprone-signal-handler.rst and should be kept up to date.
+// The list is repeated in bugprone-signal-handler.rst and should be kept up to
+// date.
+// clang-format off
 constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
@@ -215,7 +217,9 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "wmemcpy",
     "wmemmove",
     "wmemset",
-    "write"};
+    "write"
+};
+// clang-format on
 
 using namespace clang::ast_matchers;
 
@@ -241,12 +245,10 @@ struct OptionEnumMapping<
 
 namespace bugprone {
 
-namespace {
-
 /// Returns if a function is declared inside a system header.
 /// These functions are considered to be "standard" (system-provided) library
 /// functions.
-bool isStandardFunction(const FunctionDecl *FD) {
+static bool isStandardFunction(const FunctionDecl *FD) {
   // Find a possible redeclaration in system header.
   // FIXME: Looking at the canonical declaration is not the most exact way
   // to do this.
@@ -280,7 +282,7 @@ bool isStandardFunction(const FunctionDecl *FD) {
 /// Check if a statement is "C++-only".
 /// This includes all statements that have a class name with "CXX" prefix
 /// and every other statement that is declared in file ExprCXX.h.
-bool isCXXOnlyStmt(const Stmt *S) {
+static bool isCXXOnlyStmt(const Stmt *S) {
   StringRef Name = S->getStmtClassName();
   if (Name.starts_with("CXX"))
     return true;
@@ -300,8 +302,9 @@ bool isCXXOnlyStmt(const Stmt *S) {
 /// called from \p Caller, get a \c CallExpr of the corresponding function call.
 /// It is unspecified which call is found if multiple calls exist, but the order
 /// should be deterministic (depend only on the AST).
-Expr *findCallExpr(const CallGraphNode *Caller, const CallGraphNode *Callee) {
-  auto FoundCallee = llvm::find_if(
+static Expr *findCallExpr(const CallGraphNode *Caller,
+                          const CallGraphNode *Callee) {
+  const auto *FoundCallee = llvm::find_if(
       Caller->callees(), [Callee](const CallGraphNode::CallRecord &Call) {
         return Call.Callee == Callee;
       });
@@ -310,7 +313,7 @@ Expr *findCallExpr(const CallGraphNode *Caller, const CallGraphNode *Callee) {
   return FoundCallee->CallExpr;
 }
 
-SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
+static SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   ParentMapContext &PM = Ctx.getParentMapContext();
   DynTypedNode P = DynTypedNode::create(*S);
   while (P.getSourceRange().isInvalid()) {
@@ -322,24 +325,21 @@ SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   return P.getSourceRange();
 }
 
-} // namespace
+namespace {
 
-AST_MATCHER(FunctionDecl, isStandardFunction) {
-  return isStandardFunction(&Node);
-}
+AST_MATCHER(FunctionDecl, isStandard) { return isStandardFunction(&Node); }
+
+} // namespace
 
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AsyncSafeFunctionSet(Options.get("AsyncSafeFunctionSet",
                                        AsyncSafeFunctionSetKind::POSIX)) {
-  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal) {
-    for (StringRef v : MinimalConformingFunctions)
-      ConformingFunctions.insert(v);
-  } else {
-    for (StringRef v : POSIXConformingFunctions)
-      ConformingFunctions.insert(v);
-  }
+  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal)
+    ConformingFunctions.insert_range(MinimalConformingFunctions);
+  else
+    ConformingFunctions.insert_range(POSIXConformingFunctions);
 }
 
 void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -353,7 +353,7 @@ bool SignalHandlerCheck::isLanguageVersionSupported(
 
 void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
   auto SignalFunction = functionDecl(hasAnyName("::signal", "::std::signal"),
-                                     parameterCountIs(2), isStandardFunction());
+                                     parameterCountIs(2), isStandard());
   auto HandlerExpr =
       declRefExpr(hasDeclaration(functionDecl().bind("handler_decl")),
                   unless(isExpandedFromMacro("SIG_IGN")),
@@ -524,7 +524,7 @@ bool SignalHandlerCheck::isStandardFunctionAsyncSafe(
   if (!FD->isInStdNamespace() && !FD->isGlobal())
     return false;
 
-  if (ConformingFunctions.count(II->getName()))
+  if (ConformingFunctions.contains(II->getName()))
     return true;
 
   return false;

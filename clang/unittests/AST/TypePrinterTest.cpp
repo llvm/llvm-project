@@ -60,7 +60,7 @@ TEST(TypePrinter, TemplateId) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
 
   ASSERT_TRUE(PrintedTypeMatches(
-      Code, {}, Matcher, "const Type<T> &",
+      Code, {}, Matcher, "const N::Type<T> &",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
@@ -76,7 +76,7 @@ TEST(TypePrinter, TemplateId2) {
   ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "<int>",
                                  [](PrintingPolicy &Policy) {
                                    Policy.FullyQualifiedName = true;
-                                   Policy.PrintCanonicalTypes = true;
+                                   Policy.PrintAsCanonical = true;
                                  }));
 }
 
@@ -97,7 +97,7 @@ TEST(TypePrinter, ParamsUglified) {
                                  "const f<Tp &> *", Clean));
 }
 
-TEST(TypePrinter, SuppressElaboration) {
+TEST(TypePrinter, TemplateSpecializationFullyQualified) {
   llvm::StringLiteral Code = R"cpp(
     namespace shared {
     namespace a {
@@ -115,13 +115,10 @@ TEST(TypePrinter, SuppressElaboration) {
                                  hasType(qualType().bind("id")));
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, Matcher, "a::S<b::Foo>",
+      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
+  ASSERT_TRUE(PrintedTypeMatches(
+      Code, {}, Matcher, "shared::a::S<shared::b::Foo>",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
-  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher,
-                                 "shared::a::S<shared::b::Foo>",
-                                 [](PrintingPolicy &Policy) {
-                                   Policy.SuppressElaboration = true;
-                                   Policy.FullyQualifiedName = true;
-                                 }));
 }
 
 TEST(TypePrinter, TemplateIdWithNTTP) {
@@ -257,7 +254,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     const int Result = 42;
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
     // Arg is instantiated with '40 + 2'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -273,7 +270,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '40 + 1'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has default expr of '42'
     auto const *Param = Params->getParam(1);
@@ -289,7 +286,7 @@ TEST(TypePrinter, TemplateArgumentsSubstitution_Expressions) {
     auto *ConstExpr = createBinOpExpr(LHS, RHS, Result);
 
     // Arg is instantiated with '4 + 0'
-    TemplateArgument Arg(ConstExpr);
+    TemplateArgument Arg(ConstExpr, /*IsCanonical=*/false);
 
     // Param has is value-dependent expression (i.e., sizeof(T))
     auto const *Param = Params->getParam(3);

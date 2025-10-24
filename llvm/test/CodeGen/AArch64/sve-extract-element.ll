@@ -523,7 +523,6 @@ define double @test_lanex_2xf64(<vscale x 2 x double> %a, i32 %x) #0 {
 define i32 @test_undef_lane_4xi32(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: test_undef_lane_4xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %b = extractelement <vscale x 4 x i32> %a, i32 poison
   ret i32 %b

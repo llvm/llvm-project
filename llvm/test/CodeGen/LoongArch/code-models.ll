@@ -14,7 +14,7 @@ define i32 @call_globaladdress(i32 %a) nounwind {
 ; SMALL:       # %bb.0:
 ; SMALL-NEXT:    addi.d $sp, $sp, -16
 ; SMALL-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; SMALL-NEXT:    bl %plt(callee)
+; SMALL-NEXT:    bl callee
 ; SMALL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; SMALL-NEXT:    addi.d $sp, $sp, 16
 ; SMALL-NEXT:    ret
@@ -55,7 +55,7 @@ define void @call_external_sym(ptr %dst) {
 ; SMALL-NEXT:    .cfi_offset 1, -8
 ; SMALL-NEXT:    ori $a2, $zero, 1000
 ; SMALL-NEXT:    move $a1, $zero
-; SMALL-NEXT:    bl %plt(memset)
+; SMALL-NEXT:    bl memset
 ; SMALL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; SMALL-NEXT:    addi.d $sp, $sp, 16
 ; SMALL-NEXT:    ret
@@ -101,7 +101,7 @@ declare i32 @callee_tail(i32 %i)
 define i32 @caller_tail(i32 %i) nounwind {
 ; SMALL-LABEL: caller_tail:
 ; SMALL:       # %bb.0: # %entry
-; SMALL-NEXT:    b %plt(callee_tail)
+; SMALL-NEXT:    b callee_tail
 ;
 ; MEDIUM-LABEL: caller_tail:
 ; MEDIUM:       # %bb.0: # %entry

@@ -39,13 +39,13 @@ void usage() {
   Foo(true);
   // expected-error@-1{{no matching function for call to 'Foo'}}
   // expected-note@#FOO{{candidate template ignored: constraints not satisfied [with T = bool]}}
-  // expected-note@#FOO_REQ{{because 'sizeof(_Bool) > 2' (1 > 2) evaluated to false}}
+  // expected-note@#FOO_REQ{{because 'sizeof(bool) > 2' (1 > 2) evaluated to false}}
   // expected-note@#FOO_REQ{{because substituted constraint expression is ill-formed: type 'bool' cannot be used prior to '::' because it has no members}}
 
   TrailingReturn(true);
   // expected-error@-1{{no matching function for call to 'TrailingReturn'}}
   // expected-note@#TRAILING{{candidate template ignored: constraints not satisfied [with T = bool]}}
-  // expected-note@#TRAILING_REQ{{because 'sizeof(_Bool) > 2' (1 > 2) evaluated to false}}
+  // expected-note@#TRAILING_REQ{{because 'sizeof(bool) > 2' (1 > 2) evaluated to false}}
   // expected-note@#TRAILING_REQ_VAL{{because substituted constraint expression is ill-formed: type 'bool' cannot be used prior to '::' because it has no members}}
 
   // Fails the 1st check, fails 2nd because ::value is false.

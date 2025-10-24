@@ -63,6 +63,34 @@ def test_insert_before_operation():
 run(test_insert_before_operation)
 
 
+# CHECK-LABEL: TEST: test_insert_after_operation
+def test_insert_after_operation():
+    ctx = Context()
+    ctx.allow_unregistered_dialects = True
+    with Location.unknown(ctx):
+        module = Module.parse(
+            r"""
+      func.func @foo() -> () {
+        "custom.op1"() : () -> ()
+        "custom.op2"() : () -> ()
+      }
+    """
+        )
+        entry_block = module.body.operations[0].regions[0].blocks[0]
+        custom_op1 = entry_block.operations[0]
+        custom_op2 = entry_block.operations[1]
+        InsertionPoint.after(custom_op1).insert(Operation.create("custom.op3"))
+        InsertionPoint.after(custom_op2).insert(Operation.create("custom.op4"))
+        # CHECK: "custom.op1"
+        # CHECK: "custom.op3"
+        # CHECK: "custom.op2"
+        # CHECK: "custom.op4"
+        module.operation.print()
+
+
+run(test_insert_after_operation)
+
+
 # CHECK-LABEL: TEST: test_insert_at_block_begin
 def test_insert_at_block_begin():
     ctx = Context()
@@ -111,13 +139,23 @@ def test_insert_at_terminator():
     """
         )
         entry_block = module.body.operations[0].regions[0].blocks[0]
+        return_op = entry_block.operations[1]
         ip = InsertionPoint.at_block_terminator(entry_block)
         assert ip.block == entry_block
-        assert ip.ref_operation == entry_block.operations[1]
-        ip.insert(Operation.create("custom.op2"))
+        assert ip.ref_operation == return_op
+        custom_op2 = Operation.create("custom.op2")
+        ip.insert(custom_op2)
+        InsertionPoint.after(custom_op2).insert(Operation.create("custom.op3"))
         # CHECK: "custom.op1"
         # CHECK: "custom.op2"
+        # CHECK: "custom.op3"
         module.operation.print()
+
+        try:
+            InsertionPoint.after(return_op).insert(Operation.create("custom.op4"))
+        except IndexError as e:
+            # CHECK: ERROR: Cannot insert operation at the end of a block that already has a terminator.
+            print(f"ERROR: {e}")
 
 
 run(test_insert_at_terminator)
@@ -187,10 +225,16 @@ def test_insertion_point_context():
         with InsertionPoint(entry_block):
             Operation.create("custom.op2")
             with InsertionPoint.at_block_begin(entry_block):
-                Operation.create("custom.opa")
+                custom_opa = Operation.create("custom.opa")
                 Operation.create("custom.opb")
             Operation.create("custom.op3")
+            with InsertionPoint.after(custom_opa):
+                Operation.create("custom.op4")
+                Operation.create("custom.op5")
+
         # CHECK: "custom.opa"
+        # CHECK: "custom.op4"
+        # CHECK: "custom.op5"
         # CHECK: "custom.opb"
         # CHECK: "custom.op1"
         # CHECK: "custom.op2"

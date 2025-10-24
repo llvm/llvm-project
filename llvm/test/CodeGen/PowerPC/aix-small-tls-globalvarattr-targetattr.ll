@@ -29,9 +29,9 @@ define i64 @StoreLargeAccess1() {
 ; COMMONCM-NEXT:                      stdx r5, r3, r4
 ; COMMONCM-NEXT:                      li r3, 55
 ; COMMONCM-NEXT:                      li r4, 64
-; COMMONCM-NEXT:                      std r3, (mySmallTLS2[TL]@le+696)-65536(r13)
+; COMMONCM-NEXT:                      std r3, mySmallTLS2[TL]@le+696-65536(r13)
 ; COMMONCM-NEXT:                      li r3, 142
-; COMMONCM-NEXT:                      std r4, (mySmallTLS3[TL]@le+20000)-131072(r13)
+; COMMONCM-NEXT:                      std r4, mySmallTLS3[TL]@le+20000-131072(r13)
 ; COMMONCM-NEXT:                      blr
 entry:
   %tls0 = tail call align 8 ptr @llvm.threadlocal.address.p0(ptr align 8 @mySmallTLS)

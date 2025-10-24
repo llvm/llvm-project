@@ -224,6 +224,9 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // Scan to see if we have this GEP available.
     Value *APHIOp = GEPOps[0];
+    if (isa<ConstantData>(APHIOp))
+      return nullptr;
+
     for (User *U : APHIOp->users()) {
       if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U))
         if (GEPI->getType() == GEP->getType() &&

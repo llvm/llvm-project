@@ -25,3 +25,9 @@ bool test_incorrect_type(int a)
     return TEST_FUNC(a, a);
   // expected-error@-1{{invalid operand of type 'int' where 'bool' or a vector of such type is required}}
 }
+
+bool test_mismatched_scalars(bool a, int b)
+{
+  return TEST_FUNC(a, b);
+  // expected-error@-1{{all arguments to}}{{_builtin_hlsl_or|_builtin_hlsl_and }}{{must have the same type}}
+}

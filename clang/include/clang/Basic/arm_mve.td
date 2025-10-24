@@ -710,7 +710,7 @@ defm vrndmq: vrnd<IRIntBase<"floor", [Vector]>, "m">;
 defm vrndpq: vrnd<IRIntBase<"ceil",  [Vector]>, "p">;
 defm vrndaq: vrnd<IRIntBase<"round", [Vector]>, "a">;
 defm vrndxq: vrnd<IRIntBase<"rint",  [Vector]>, "x">;
-defm vrndnq: vrnd<IRInt<"vrintn",    [Vector]>, "n">;
+defm vrndnq: vrnd<IRIntBase<"roundeven", [Vector]>, "n">;
 
 multiclass compare_with_pred<string condname, dag arguments,
                              dag cmp, string suffix> {
@@ -831,9 +831,8 @@ multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
          NameOverride<mnemonic>;
     def: Intrinsic<Vector, (args CPtr<CopyKind<same_size[0], Scalar>>:$addr,
                                  Predicate:$pred),
-                   (IRIntBase<"masked_load", [Vector, CPtr<Vector>]>
-                        (CPtr<Vector> $addr), !srl(memtype.size,3),
-                        $pred, (zeroinit Vector))>,
+                   (masked_load Vector, (CPtr<Vector> $addr),
+                       !srl(memtype.size,3), $pred, (zeroinit Vector))>,
          NameOverride<mnemonic # "_z">;
   }
 
@@ -846,9 +845,8 @@ multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
          NameOverride<"vld1q">;
     def: Intrinsic<Vector, (args CPtr<CopyKind<same_size[0], Scalar>>:$addr,
                                  Predicate:$pred),
-                   (IRIntBase<"masked_load", [Vector, CPtr<Vector>]>
-                        (CPtr<Vector> $addr), !srl(memtype.size,3),
-                        $pred, (zeroinit Vector))>,
+                   (masked_load Vector, (CPtr<Vector> $addr),
+                        !srl(memtype.size,3), $pred, (zeroinit Vector))>,
          NameOverride<"vld1q_z">;
   }
 
@@ -863,9 +861,7 @@ multiclass contiguous_load<string mnemonic, PrimitiveType memtype,
          NameOverride<mnemonic>;
     def: Intrinsic<Vector, (args CPtr<CopyKind<same_size[0], Scalar>>:$addr,
                                  Predicate:$pred),
-                   (extend (IRIntBase<"masked_load",
-                                      [NarrowedVecOf<memtype,Vector>,
-                                      CPtr<NarrowedVecOf<memtype,Vector>>]>
+                   (extend (masked_load NarrowedVecOf<memtype,Vector>,
                                 (CPtr<NarrowedVecOf<memtype,Vector>> $addr),
                                 !srl(memtype.size,3), $pred,
                                 (zeroinit NarrowedVecOf<memtype,Vector>)),
@@ -890,8 +886,7 @@ multiclass contiguous_store<string mnemonic, PrimitiveType memtype,
          NameOverride<mnemonic>;
     def: Intrinsic<Void, (args Ptr<CopyKind<same_size[0], Scalar>>:$addr,
                                Vector:$value, Predicate:$pred),
-                   (IRIntBase<"masked_store", [Vector, Ptr<Vector>]>
-                        $value, (Ptr<Vector> $addr),
+                   (masked_store $value, (Ptr<Vector> $addr),
                         !srl(memtype.size,3), $pred)>,
          NameOverride<mnemonic # "_p">;
   }
@@ -907,8 +902,7 @@ multiclass contiguous_store<string mnemonic, PrimitiveType memtype,
          NameOverride<"vst1q">;
     def: Intrinsic<Void, (args Ptr<CopyKind<same_size[0], Scalar>>:$addr,
                                Vector:$value, Predicate:$pred),
-                   (IRIntBase<"masked_store", [Vector, Ptr<Vector>]>
-                        $value, (Ptr<Vector> $addr),
+                   (masked_store $value, (Ptr<Vector> $addr),
                         !srl(memtype.size,3), $pred)>,
          NameOverride<"vst1q_p">;
   }
@@ -925,9 +919,7 @@ multiclass contiguous_store<string mnemonic, PrimitiveType memtype,
          NameOverride<mnemonic>;
     def: Intrinsic<Void, (args Ptr<CopyKind<same_size[0], Scalar>>:$addr,
                                Vector:$value, Predicate:$pred),
-                   (IRIntBase<"masked_store",
-                              [NarrowedVecOf<memtype,Vector>,
-                               Ptr<NarrowedVecOf<memtype,Vector>>]>
+                   (masked_store
                         (trunc $value, NarrowedVecOf<memtype,Vector>),
                         (Ptr<NarrowedVecOf<memtype,Vector>> $addr),
                         !srl(memtype.size,3), $pred)>,

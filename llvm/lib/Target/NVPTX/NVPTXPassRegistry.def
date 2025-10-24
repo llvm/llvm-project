@@ -18,6 +18,7 @@
 #endif
 MODULE_PASS("generic-to-nvvm", GenericToNVVMPass())
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
+MODULE_PASS("nvvm-reflect", NVVMReflectPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_ANALYSIS
@@ -36,7 +37,7 @@ FUNCTION_ALIAS_ANALYSIS("nvptx-aa", NVPTXAA())
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 FUNCTION_PASS("nvvm-intr-range", NVVMIntrRangePass())
-FUNCTION_PASS("nvvm-reflect", NVVMReflectPass())
 FUNCTION_PASS("nvptx-copy-byval-args", NVPTXCopyByValArgsPass())
-FUNCTION_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this));
+FUNCTION_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
+FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
 #undef FUNCTION_PASS

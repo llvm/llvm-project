@@ -44,10 +44,10 @@ void foo(){
   // AMDGCN: %[[block_invoke:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %[[block:.*]], i32 0, i32 2
   // AMDGCN: store ptr @__foo_block_invoke, ptr %[[block_invoke]]
   // AMDGCN: %[[block_captured:.*]] = getelementptr inbounds nuw <{ i32, i32, ptr, i32 }>, ptr %[[block]], i32 0, i32 3
-  // AMDGCN: %[[i_value:.*]] = load i32, ptr %i
+  // AMDGCN: %[[i_value:.*]] = load i32, ptr addrspace(5) %i
   // AMDGCN: store i32 %[[i_value]], ptr %[[block_captured]],
-  // AMDGCN: store ptr %[[block]], ptr %[[block_B:.*]],
-  // AMDGCN: %[[block_literal:.*]] = load ptr, ptr %[[block_B]]
+  // AMDGCN: store ptr %[[block]], ptr addrspace(5) %[[block_B:.*]],
+  // AMDGCN: %[[block_literal:.*]] = load ptr, ptr addrspace(5) %[[block_B]]
   // AMDGCN: call {{.*}}i32 @__foo_block_invoke(ptr noundef %[[block_literal]])
 
   int (^ block_B)(void) = ^{

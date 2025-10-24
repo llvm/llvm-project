@@ -192,6 +192,7 @@ const char *TargetThreadWindows::GetName() {
   if (SUCCEEDED(GetThreadDescription(
           m_host_thread.GetNativeThread().GetSystemHandle(), &pszThreadName))) {
     LLDB_LOGF(log, "GetThreadDescription: %ls", pszThreadName);
+    m_name.clear();
     llvm::convertUTF16ToUTF8String(
         llvm::ArrayRef(reinterpret_cast<char *>(pszThreadName),
                        wcslen(pszThreadName) * sizeof(wchar_t)),

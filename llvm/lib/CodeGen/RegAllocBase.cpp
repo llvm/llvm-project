@@ -178,10 +178,8 @@ void RegAllocBase::cleanupFailedVReg(Register FailedReg, MCRegister PhysReg,
     for (MCRegAliasIterator Aliases(PhysReg, TRI, true); Aliases.isValid();
          ++Aliases) {
       for (MachineOperand &MO : MRI->reg_operands(*Aliases)) {
-        if (MO.readsReg()) {
+        if (MO.readsReg())
           MO.setIsUndef(true);
-          LIS->removeAllRegUnitsForPhysReg(MO.getReg());
-        }
       }
     }
   }
@@ -216,10 +214,9 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
 
   // Avoid printing the error for every single instance of the register. It
   // would be better if this were per register class.
-  bool EmitError = !MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedRegAlloc);
+  bool EmitError = !MF.getProperties().hasFailedRegAlloc();
   if (EmitError)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedRegAlloc);
+    MF.getProperties().setFailedRegAlloc();
 
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();
