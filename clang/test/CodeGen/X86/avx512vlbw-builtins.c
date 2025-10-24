@@ -3009,6 +3009,11 @@ __mmask16 test_mm_movepi8_mask(__m128i __A) {
   return _mm_movepi8_mask(__A); 
 }
 
+TEST_CONSTEXPR(_mm_movepi8_mask(
+    ((__m128i)(__v16qi){0, 1, 2, 3, 4, 5, 6, 7,
+                        8, 9, 10, 11, 12, 13, 14, 15})
+) == (__mmask16)0x0000);
+
 __mmask32 test_mm256_movepi8_mask(__m256i __A) {
   // CHECK-LABEL: test_mm256_movepi8_mask
   // CHECK: [[CMP:%.*]] = icmp slt <32 x i8> %{{.*}}, zeroinitializer
