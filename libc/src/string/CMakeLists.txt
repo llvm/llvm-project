@@ -1,8 +1,5 @@
 add_subdirectory(memory_utils)
 
-if(LIBC_CONF_STRING_UNSAFE_WIDE_READ)
-  list(APPEND string_config_options "-DLIBC_COPT_STRING_UNSAFE_WIDE_READ")
-endif()
 if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
   list(APPEND string_config_options "-DLIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
 endif()
