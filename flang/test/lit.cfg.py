@@ -248,13 +248,20 @@ else:
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 openmp_flags_substitution = "-fopenmp"
-if config.have_openmp_rtl:
-    config.available_features.add("openmp_runtime")
-    # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
-    # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
-    # project or runtime.
-    if config.openmp_module_dir:
-        openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+if not config.have_openmp_rtl:
+  lit_config.warning(f"OpenMP runtime not available: tests disabled")
+elif not config.openmp_module_dir:
+  lit_config.warning(f"OpenMP modules not available: tests disabled")
+else:
+  # For the enabled OpenMP tests, add a substitution that is needed in the tests to find
+  # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
+  # project or runtime.
+  config.available_features.add("openmp_runtime")
+  openmp_flags_substitution += f" -J {config.openmp_module_dir}"
+  lit_config.note(f"Using OpenMP modules: {config.openmp_module_dir}")
+
+
+
 config.substitutions.append(("%openmp_flags", openmp_flags_substitution))
 
 # Add features and substitutions to test F128 math support.
