@@ -1887,7 +1887,11 @@ def : Pat<(loongarch_vreplvei v8f32:$xj, immZExt2:$ui2),
 def : Pat<(loongarch_vreplvei v4f64:$xj, immZExt1:$ui1),
         (XVREPL128VEI_D v4f64:$xj, immZExt1:$ui1)>;
 
-// XVPERMI_D
+// XVPERMI_{W/D}
+def : Pat<(loongarch_vpermi v8i32:$xj, v8i32:$xk, immZExt8:$ui8),
+          (XVPERMI_W v8i32:$xj, v8i32:$xk, immZExt8:$ui8)>;
+def : Pat<(loongarch_vpermi v8f32:$xj, v8f32:$xk, immZExt8:$ui8),
+          (XVPERMI_W v8f32:$xj, v8f32:$xk, immZExt8:$ui8)>;
 def : Pat<(loongarch_xvpermi v4i64:$xj, immZExt8: $ui8),
           (XVPERMI_D v4i64:$xj, immZExt8: $ui8)>;
 def : Pat<(loongarch_xvpermi v4f64:$xj, immZExt8: $ui8),

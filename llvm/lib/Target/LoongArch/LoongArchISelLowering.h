@@ -147,6 +147,7 @@ enum NodeType : unsigned {
   VSHUF4I,
   VREPLVEI,
   VREPLGR2VR,
+  VPERMI,
   XVPERMI,
   XVPERM,
   XVREPLVE0,

@@ -61,6 +61,7 @@ def loongarch_vshuf4i: SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV1RUimm>;
 def loongarch_vshuf4i_d : SDNode<"LoongArchISD::VSHUF4I", SDT_LoongArchV2RUimm>;
 def loongarch_vreplvei: SDNode<"LoongArchISD::VREPLVEI", SDT_LoongArchV1RUimm>;
 def loongarch_vreplgr2vr: SDNode<"LoongArchISD::VREPLGR2VR", SDT_LoongArchVreplgr2vr>;
+def loongarch_vpermi : SDNode<"LoongArchISD::VPERMI", SDT_LoongArchV2RUimm>;
 
 def loongarch_vfrecipe: SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchVFRECIPE>;
 def loongarch_vfrsqrte: SDNode<"LoongArchISD::FRSQRTE", SDT_LoongArchVFRSQRTE>;
@@ -2040,6 +2041,12 @@ def : Pat<(loongarch_vshuf4i_d v2i64:$vj, v2i64:$vk, immZExt8:$ui8),
           (VSHUF4I_D v2i64:$vj, v2i64:$vk, immZExt8:$ui8)>;
 def : Pat<(loongarch_vshuf4i_d v2f64:$vj, v2f64:$vk, immZExt8:$ui8),
           (VSHUF4I_D v2f64:$vj, v2f64:$vk, immZExt8:$ui8)>;
+
+// VPERMI_W
+def : Pat<(loongarch_vpermi v4i32:$vj, v4i32:$vk, immZExt8:$ui8),
+          (VPERMI_W v4i32:$vj, v4i32:$vk, immZExt8:$ui8)>;
+def : Pat<(loongarch_vpermi v4f32:$vj, v4f32:$vk, immZExt8:$ui8),
+          (VPERMI_W v4f32:$vj, v4f32:$vk, immZExt8:$ui8)>;
 
 // VREPLVEI_{B/H/W/D}
 def : Pat<(loongarch_vreplvei v16i8:$vj, immZExt4:$ui4),
