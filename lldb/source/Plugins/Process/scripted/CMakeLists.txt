@@ -1,7 +1,7 @@
 add_lldb_library(lldbPluginScriptedProcess PLUGIN
+  ScriptedFrame.cpp
   ScriptedProcess.cpp
   ScriptedThread.cpp
-  ScriptedFrame.cpp
 
   LINK_COMPONENTS
     BinaryFormat

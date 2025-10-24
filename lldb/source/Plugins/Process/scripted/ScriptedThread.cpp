@@ -232,7 +232,8 @@ bool ScriptedThread::LoadArtificialStackFrames() {
     }
 
     auto frame_or_error =
-        ScriptedFrame::Create(*this, nullptr, object_sp->GetAsGeneric());
+        ScriptedFrame::Create(this->shared_from_this(), GetInterface(), nullptr,
+                              object_sp->GetAsGeneric());
 
     if (!frame_or_error) {
       ScriptedInterface::ErrorWithMessage<bool>(

@@ -33,6 +33,7 @@ add_lldb_library(lldbTarget
   QueueItem.cpp
   QueueList.cpp
   RegisterContext.cpp
+  RegisterContextMemory.cpp
   RegisterContextUnwind.cpp
   RegisterFlags.cpp
   RegisterNumber.cpp
@@ -47,6 +48,7 @@ add_lldb_library(lldbTarget
   Statistics.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp
+  SyntheticFrameProvider.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp

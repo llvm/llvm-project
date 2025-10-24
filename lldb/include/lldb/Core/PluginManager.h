@@ -356,6 +356,17 @@ public:
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
 
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackAtIndex(uint32_t idx);
+
   // StructuredDataPlugin
 
   /// Register a StructuredDataPlugin class along with optional

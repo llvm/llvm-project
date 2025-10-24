@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextMemory.h"
+#include "lldb/Target/RegisterContextMemory.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"

@@ -268,6 +268,19 @@ enum StopReason {
   eStopReasonHistoryBoundary,
 };
 
+/// Scripted Frame Provider Merge Strategies.
+enum ScriptedFrameProviderMergeStrategy {
+  /// Replace the entire stack with scripted frames
+  eScriptedFrameProviderMergeStrategyReplace = 0,
+  /// Prepend scripted frames before real unwound frames
+  eScriptedFrameProviderMergeStrategyPrepend,
+  /// Append scripted frames after real unwound frames
+  eScriptedFrameProviderMergeStrategyAppend,
+  /// Replace specific frame indices with scripted frames, keeping other real
+  /// frames
+  eScriptedFrameProviderMergeStrategyReplaceByIndex,
+};
+
 /// Command Return Status Types.
 enum ReturnStatus {
   eReturnStatusInvalid,
