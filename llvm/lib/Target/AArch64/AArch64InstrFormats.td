@@ -5298,7 +5298,7 @@ multiclass FPToIntegerUnscaled<bits<2> rmode, bits<3> opcode, string asm,
 }
 
 multiclass FPToIntegerSIMDScalar<bits<2> rmode, bits<3> opcode, string asm, 
-                                 SDPatternOperator OpN = null_frag> {
+                                 SDPatternOperator OpN> {
   // double-precision to 32-bit SIMD/FPR
   def SDr :  BaseFPToIntegerUnscaled<0b01, rmode, opcode, FPR64, FPR32, asm,
              [(set FPR32:$Rd, (i32 (OpN (f64 FPR64:$Rn))))]> {

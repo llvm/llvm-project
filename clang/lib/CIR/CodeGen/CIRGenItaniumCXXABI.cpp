@@ -74,6 +74,9 @@ public:
                           QualType thisTy) override;
   void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
                           mlir::Value addr) override;
+  void emitVirtualObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
+                               Address ptr, QualType elementType,
+                               const CXXDestructorDecl *dtor) override;
 
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
@@ -2173,6 +2176,21 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
       emitDynamicCastInfo(cgf, loc, srcRecordTy, destRecordTy);
   return cgf.getBuilder().createDynCast(loc, src.getPointer(), destCIRTy,
                                         isRefCast, castInfo);
+}
+
+/// The Itanium ABI always places an offset to the complete object
+/// at entry -2 in the vtable.
+void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
+    CIRGenFunction &cgf, const CXXDeleteExpr *delExpr, Address ptr,
+    QualType elementType, const CXXDestructorDecl *dtor) {
+  bool useGlobalDelete = delExpr->isGlobalDelete();
+  if (useGlobalDelete) {
+    cgf.cgm.errorNYI(delExpr->getSourceRange(),
+                     "emitVirtualObjectDelete: global delete");
+  }
+
+  CXXDtorType dtorType = useGlobalDelete ? Dtor_Complete : Dtor_Deleting;
+  emitVirtualDestructorCall(cgf, dtor, dtorType, ptr, delExpr);
 }
 
 /************************** Array allocation cookies **************************/

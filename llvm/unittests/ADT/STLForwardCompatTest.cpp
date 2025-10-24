@@ -185,7 +185,7 @@ TEST(TransformTest, ToUnderlying) {
 }
 
 TEST(STLForwardCompatTest, IdentityCxx20) {
-  llvm::identity_cxx20 identity;
+  llvm::identity identity;
 
   // Test with an lvalue.
   int X = 42;

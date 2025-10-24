@@ -126,7 +126,7 @@ private:
 
     size_t countNodes() const {
       size_t R = 1;
-      for (const auto &C : Children)
+      for (const Node &C : Children)
         R += C.countNodes();
       return R;
     }
@@ -306,15 +306,18 @@ public:
   ///         indicating whether the insertion took place.
   template <typename... Ts>
   std::pair<iterator, bool> emplace(key_type &&Key, Ts &&...Args) {
+    // We want to make new `Node` to refer key in the container, not the one
+    // from the argument.
+    // FIXME: Determine that we need a new node, before expanding
+    // `KeyValuePairs`.
     const value_type &NewValue =
         KeyValuePairs.emplace_front(std::move(Key), T(std::move(Args)...));
     Node &Node = findOrCreate(NewValue.first);
     bool HasValue = Node.Value != typename ContainerType::iterator();
-    if (!HasValue) {
+    if (!HasValue)
       Node.Value = KeyValuePairs.begin();
-    } else {
+    else
       KeyValuePairs.pop_front();
-    }
     return std::make_pair(Node.Value, !HasValue);
   }
 

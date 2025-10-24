@@ -635,6 +635,8 @@ LogicalResult TosaValidation::levelCheckRanksAndSizes(Operation *op) {
   CHECK_RANKS_AND_SIZES(Transpose);
   // Type Conversion
   CHECK_RANKS_AND_SIZES(Cast);
+  CHECK_RANKS_AND_SIZES(CastFromBlockScaled);
+  CHECK_RANKS_AND_SIZES(CastToBlockScaled);
   CHECK_RANKS_AND_SIZES(Rescale);
   // Control Flow Operators
   CHECK_RANKS_AND_SIZES(If);
@@ -1204,6 +1206,7 @@ bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
       case 16:
       case 32:
       case 48:
+      case 64:
         return true;
       }
     } else if (allowUnsigned && intTy.isUnsigned()) {
