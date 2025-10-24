@@ -15021,12 +15021,9 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
       NewVT = MVT::v8i8;
-    Op0 =  DAG.getBitcast(MVT::i32, Op0);
-    Op0 = DAG.getSExtOrTrunc(Op0, DL, MVT::i64);
-    Op0 = DAG.getBitcast(NewVT, Op0);
-    Op1 =  DAG.getBitcast(MVT::i32, Op1);
-    Op1 = DAG.getSExtOrTrunc(Op1, DL, MVT::i64);
-    Op1 = DAG.getBitcast(NewVT, Op1);
+    SDValue Undef = DAG.getUNDEF(VT);
+    Op0 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op0, Undef});
+    Op1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, {Op1, Undef});
     Results.push_back(DAG.getNode(N->getOpcode(), DL, NewVT, {Op0, Op1}));
     return;
   }
