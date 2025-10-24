@@ -292,7 +292,7 @@ public:
 
   /// Constructs and inserts a new element into the tree.
   ///
-  /// This function constructs an element in-place within the tree. If an
+  /// This function constructs an element in place within the tree. If an
   /// element with the same key already exists, the insertion fails and the
   /// function returns an iterator to the existing element along with `false`.
   /// Otherwise, the new element is inserted and the function returns an
