@@ -59,7 +59,7 @@ int main(int, char**)
     {
       static constexpr X x{};
       constexpr optional<const X&> opt(x);
-      static_assert((*opt).test() == 3, "");
+      static_assert((*opt).test() == 3);
     }
 #endif
     {
