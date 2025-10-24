@@ -91,6 +91,15 @@ uint64_t BasicBlockSectionsProfileReader::getEdgeCount(
   return EdgeIt->second;
 }
 
+std::pair<bool, FunctionPathAndClusterInfo>
+BasicBlockSectionsProfileReader::getFunctionPathAndClusterInfo(
+    StringRef FuncName) const {
+  auto R = ProgramPathAndClusterInfo.find(getAliasName(FuncName));
+  return R != ProgramPathAndClusterInfo.end()
+             ? std::pair(true, R->second)
+             : std::pair(false, FunctionPathAndClusterInfo());
+}
+
 // Reads the version 1 basic block sections profile. Profile for each function
 // is encoded as follows:
 //   m <module_name>
@@ -284,6 +293,25 @@ Error BasicBlockSectionsProfileReader::ReadV1Profile() {
           }
           FI->second.EdgeCounts[SrcBBID][*BBID] = Count;
         }
+      }
+      continue;
+    }
+    case 'h': { // Basic block hash secifier.
+      // Skip the profile when we the profile iterator (FI) refers to the
+      // past-the-end element.
+      if (FI == ProgramPathAndClusterInfo.end())
+        continue;
+      for (auto BBIDHashStr : Values) {
+        auto [BBIDStr, HashStr] = BBIDHashStr.split(':');
+        unsigned long long BBID = 0, Hash = 0;
+        if (getAsUnsignedInteger(BBIDStr, 10, BBID))
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         BBIDStr + "'");
+        HashStr.consume_front("0x");
+        if (getAsUnsignedInteger(HashStr, 16, Hash))
+          return createProfileParseError(Twine("unsigned integer expected: '") +
+                                         HashStr + "'");
+        FI->second.BBHashes[BBID] = Hash;
       }
       continue;
     }
@@ -491,6 +519,12 @@ uint64_t BasicBlockSectionsProfileReaderWrapperPass::getEdgeCount(
     StringRef FuncName, const UniqueBBID &SrcBBID,
     const UniqueBBID &SinkBBID) const {
   return BBSPR.getEdgeCount(FuncName, SrcBBID, SinkBBID);
+}
+
+std::pair<bool, FunctionPathAndClusterInfo>
+BasicBlockSectionsProfileReaderWrapperPass::getFunctionPathAndClusterInfo(
+    StringRef FuncName) const {
+  return BBSPR.getFunctionPathAndClusterInfo(FuncName);
 }
 
 BasicBlockSectionsProfileReader &

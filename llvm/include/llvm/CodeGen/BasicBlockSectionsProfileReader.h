@@ -54,6 +54,8 @@ struct FunctionPathAndClusterInfo {
   DenseMap<UniqueBBID, uint64_t> NodeCounts;
   // Edge counts for each edge, stored as a nested map.
   DenseMap<UniqueBBID, DenseMap<UniqueBBID, uint64_t>> EdgeCounts;
+  // Hash for each basic block.
+  DenseMap<unsigned, uint64_t> BBHashes;
 };
 
 class BasicBlockSectionsProfileReader {
@@ -85,6 +87,10 @@ public:
   // function `FuncName` or zero if it does not exist.
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &SinkBBID) const;
+
+  // Return the complete function path and cluster info for the given function.
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
 private:
   StringRef getAliasName(StringRef FuncName) const {
@@ -194,6 +200,9 @@ public:
 
   uint64_t getEdgeCount(StringRef FuncName, const UniqueBBID &SrcBBID,
                         const UniqueBBID &DestBBID) const;
+
+  std::pair<bool, FunctionPathAndClusterInfo>
+  getFunctionPathAndClusterInfo(StringRef FuncName) const;
 
   // Initializes the FunctionNameToDIFilename map for the current module and
   // then reads the profile for the matching functions.
