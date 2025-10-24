@@ -8,9 +8,7 @@ define void @shufflevector_vpermi_v4i32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vbsrl.v $vr0, $vr0, 8
-; CHECK-NEXT:    vbsll.v $vr1, $vr1, 8
-; CHECK-NEXT:    vor.v $vr0, $vr1, $vr0
+; CHECK-NEXT:    vpermi.w $vr0, $vr1, 78
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -27,10 +25,8 @@ define void @shufflevector_vpermi_v4f32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    vshuf.w $vr2, $vr1, $vr0
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 141
+; CHECK-NEXT:    vst $vr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <4 x float>, ptr %a

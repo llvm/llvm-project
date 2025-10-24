@@ -35,12 +35,9 @@ define <16 x i16> @shufflevector_v16i16(<16 x i16> %a, <16 x i16> %b) {
 define <8 x i32> @shufflevector_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: shufflevector_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; CHECK-NEXT:    xvld $xr2, $a0, %pc_lo12(.LCPI2_0)
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 68
-; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 68
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvori.b $xr0, $xr2, 0
+; CHECK-NEXT:    xvpermi.d $xr2, $xr0, 68
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 68
+; CHECK-NEXT:    xvpermi.w $xr0, $xr2, 180
 ; CHECK-NEXT:    ret
     %c = shufflevector <8 x i32> %a, <8 x i32> %b, <8 x i32> <i32 8, i32 9, i32 3, i32 2, i32 8, i32 9, i32 3, i32 2>
     ret <8 x i32> %c

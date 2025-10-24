@@ -8,9 +8,7 @@ define void @shufflevector_xvpermi_v8i32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
-; CHECK-NEXT:    xvbsll.v $xr1, $xr1, 8
-; CHECK-NEXT:    xvor.v $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvpermi.w $xr0, $xr1, 78
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -27,10 +25,8 @@ define void @shufflevector_xvpermi_v8f32(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI1_0)
-; CHECK-NEXT:    xvld $xr2, $a1, %pc_lo12(.LCPI1_0)
-; CHECK-NEXT:    xvshuf.w $xr2, $xr1, $xr0
-; CHECK-NEXT:    xvst $xr2, $a0, 0
+; CHECK-NEXT:    xvpermi.w $xr1, $xr0, 141
+; CHECK-NEXT:    xvst $xr1, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %va = load <8 x float>, ptr %a
