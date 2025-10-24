@@ -3196,7 +3196,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
   for (auto &GlobalList : *TheIndex) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList)
+    for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 

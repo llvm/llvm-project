@@ -1445,21 +1445,21 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
 
   if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double) &&
       !FeatureMap.lookup("zve64d"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64d";
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64d";
   // (ELEN, LMUL) pairs of (8, mf8), (16, mf4), (32, mf2), (64, m1) requires at
   // least zve64x
   else if (((EltSize == 64 && Info.ElementType->isIntegerType()) ||
             MinElts == 1) &&
            !FeatureMap.lookup("zve64x"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve64x";
   else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
            !FeatureMap.lookup("zvfhmin") &&
            !FeatureMap.lookup("xandesvpackfph"))
     if (DeclareAndesVectorBuiltins) {
-      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+      Diag(Loc, diag::err_riscv_type_requires_extension)
           << Ty << "zvfh, zvfhmin or xandesvpackfph";
     } else {
-      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+      Diag(Loc, diag::err_riscv_type_requires_extension)
           << Ty << "zvfh or zvfhmin";
     }
   else if (Info.ElementType->isBFloat16Type() &&
@@ -1467,18 +1467,18 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
            !FeatureMap.lookup("xandesvbfhcvt") &&
            !FeatureMap.lookup("experimental-zvfbfa"))
     if (DeclareAndesVectorBuiltins) {
-      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+      Diag(Loc, diag::err_riscv_type_requires_extension)
           << Ty << "zvfbfmin or xandesvbfhcvt";
     } else {
-      Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
+      Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zvfbfmin";
     }
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !FeatureMap.lookup("zve32f"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32f";
   // Given that caller already checked isRVVType() before calling this function,
   // if we don't have at least zve32x supported, then we need to emit error.
   else if (!FeatureMap.lookup("zve32x"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32x";
+    Diag(Loc, diag::err_riscv_type_requires_extension) << Ty << "zve32x";
 }
 
 /// Are the two types RVV-bitcast-compatible types? I.e. is bitcasting from the

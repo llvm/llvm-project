@@ -380,6 +380,15 @@ public:
 
   clang::Qualifiers getQualifiers() const { return quals; }
 
+  bool isVolatile() const { return quals.hasVolatile(); }
+
+  void setVolatile(bool flag) {
+    if (flag)
+      quals.addVolatile();
+    else
+      quals.removeVolatile();
+  }
+
   Address getAddress() const { return addr; }
 
   bool isIgnored() const { return !addr.isValid(); }

@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Boolean.h"
 #include "ByteCodeEmitter.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
+#include "Integral.h"
 #include "InterpFrame.h"
+#include "InterpHelpers.h"
 #include "InterpStack.h"
+#include "Pointer.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "clang/AST/ASTLambda.h"

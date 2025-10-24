@@ -88,6 +88,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_4A:
   case ArchKind::ARMV9_5A:
   case ArchKind::ARMV9_6A:
+  case ArchKind::ARMV9_7A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -127,6 +128,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_4A:
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
+  case ARM::ArchKind::ARMV9_7A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:
@@ -567,8 +569,8 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
   default:
     if (TT.isOSNetBSD())
       return "apcs-gnu";
-    if (TT.isOSFreeBSD() || TT.isOSOpenBSD() || TT.isOSHaiku() ||
-        TT.isOHOSFamily())
+    if (TT.isOSFreeBSD() || TT.isOSFuchsia() || TT.isOSOpenBSD() ||
+        TT.isOSHaiku() || TT.isOHOSFamily())
       return "aapcs-linux";
     return "aapcs";
   }
@@ -648,6 +650,8 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     }
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
+  case llvm::Triple::Fuchsia:
+    return "cortex-a53";
   default:
     switch (Triple.getEnvironment()) {
     case llvm::Triple::EABIHF:

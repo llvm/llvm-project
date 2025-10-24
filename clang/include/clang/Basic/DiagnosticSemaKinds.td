@@ -4126,6 +4126,9 @@ def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
   InGroup<DiagGroup<"ignored-availability-without-sdk-settings">>;
 
+def err_hidden_device_kernel
+    : Error<"%0 is specified as a device kernel but it is not externally visible">;
+
 // Thread Safety Attributes
 def warn_thread_attribute_ignored : Warning<
   "ignoring %0 attribute because its argument is invalid">,
@@ -13170,6 +13173,7 @@ def err_hlsl_duplicate_parameter_modifier : Error<"duplicate parameter modifier 
 def err_hlsl_missing_semantic_annotation : Error<
   "semantic annotations must be present for all parameters of an entry "
   "function or patch constant function">;
+def note_hlsl_semantic_used_here : Note<"%0 used here">;
 def err_hlsl_unknown_semantic : Error<"unknown HLSL semantic %0">;
 def err_hlsl_semantic_output_not_supported
     : Error<"semantic %0 does not support output">;

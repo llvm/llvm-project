@@ -51,7 +51,7 @@ def riscv_zip     : RVSDNode<"ZIP",     SDTIntUnaryOp>;
 def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 
 // RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
-def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
+def riscv_negw_max : RVSDNode<"NEGW_MAX",    SDTIntUnaryOp>;
 
 // Scalar cryptography
 def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
@@ -527,8 +527,8 @@ def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
 let Predicates = [HasStdExtZbs] in {
 def : Pat<(XLenVT (and (not (shl 1, shiftMaskXLen:$rs2)), GPR:$rs1)),
           (BCLR GPR:$rs1, shiftMaskXLen:$rs2)>;
-def : Pat<(XLenVT (and (rotl -2, (XLenVT GPR:$rs2)), GPR:$rs1)),
-          (BCLR GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (and (rotl -2, shiftMaskXLen:$rs2), GPR:$rs1)),
+          (BCLR GPR:$rs1, shiftMaskXLen:$rs2)>;
 def : Pat<(XLenVT (or (shl 1, shiftMaskXLen:$rs2), GPR:$rs1)),
           (BSET GPR:$rs1, shiftMaskXLen:$rs2)>;
 def : Pat<(XLenVT (xor (shl 1, shiftMaskXLen:$rs2), GPR:$rs1)),
@@ -610,7 +610,7 @@ def : PatGpr<riscv_clzw, CLZW>;
 def : PatGpr<riscv_ctzw, CTZW>;
 def : Pat<(i64 (ctpop (i64 (zexti32 (i64 GPR:$rs1))))), (CPOPW GPR:$rs1)>;
 
-def : Pat<(i64 (riscv_absw GPR:$rs1)),
+def : Pat<(i64 (riscv_negw_max GPR:$rs1)),
           (MAX GPR:$rs1, (XLenVT (SUBW (XLenVT X0), GPR:$rs1)))>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 

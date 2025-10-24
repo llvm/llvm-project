@@ -1321,15 +1321,11 @@ public:
 
   /// Callback to the parser to parse templated functions when needed.
   typedef void LateTemplateParserCB(void *P, LateParsedTemplate &LPT);
-  typedef void LateTemplateParserCleanupCB(void *P);
   LateTemplateParserCB *LateTemplateParser;
-  LateTemplateParserCleanupCB *LateTemplateParserCleanup;
   void *OpaqueParser;
 
-  void SetLateTemplateParser(LateTemplateParserCB *LTP,
-                             LateTemplateParserCleanupCB *LTPCleanup, void *P) {
+  void SetLateTemplateParser(LateTemplateParserCB *LTP, void *P) {
     LateTemplateParser = LTP;
-    LateTemplateParserCleanup = LTPCleanup;
     OpaqueParser = P;
   }
 
@@ -10021,7 +10017,7 @@ public:
   public:
     DeferDiagsRAII(Sema &S, bool DeferDiags)
         : S(S), SavedDeferDiags(S.DeferDiags) {
-      S.DeferDiags = DeferDiags;
+      S.DeferDiags = SavedDeferDiags || DeferDiags;
     }
     ~DeferDiagsRAII() { S.DeferDiags = SavedDeferDiags; }
   };

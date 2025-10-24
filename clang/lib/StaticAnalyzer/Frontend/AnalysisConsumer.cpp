@@ -760,11 +760,11 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
     ++NumFunctionsAnalyzedSyntaxOnly;
     if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
-      llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
-      CheckerEndTime -= CheckerStartTime;
+      llvm::TimeRecord CheckerDuration =
+          SyntaxCheckTimer->getTotalTime() - CheckerStartTime;
       FunctionSummaries.findOrInsertSummary(D)->second.SyntaxRunningTime =
-          std::lround(CheckerEndTime.getWallTime() * 1000);
-      DisplayTime(CheckerEndTime);
+          std::lround(CheckerDuration.getWallTime() * 1000);
+      DisplayTime(CheckerDuration);
       if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
         AnalyzerTimers->clear();
       }
@@ -825,11 +825,11 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
                       Mgr->options.MaxNodesPerTopLevelFunction);
   if (ExprEngineTimer) {
     ExprEngineTimer->stopTimer();
-    llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
-    ExprEngineEndTime -= ExprEngineStartTime;
+    llvm::TimeRecord ExprEngineDuration =
+        ExprEngineTimer->getTotalTime() - ExprEngineStartTime;
     PathRunningTime.set(static_cast<unsigned>(
-        std::lround(ExprEngineEndTime.getWallTime() * 1000)));
-    DisplayTime(ExprEngineEndTime);
+        std::lround(ExprEngineDuration.getWallTime() * 1000)));
+    DisplayTime(ExprEngineDuration);
     if (AnalyzerTimers && ShouldClearTimersToPreventDisplayingThem) {
       AnalyzerTimers->clear();
     }

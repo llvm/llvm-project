@@ -2632,6 +2632,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationAction(Op, MVT::f32, Promote);
   }
 
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
+  setOperationPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::VECTOR_SHUFFLE,
                        ISD::SCALAR_TO_VECTOR,
@@ -20558,7 +20562,7 @@ static SDValue lowerUINT_TO_FP_vXi32(SDValue Op, const SDLoc &DL,
 
   //     float4 fhi = (float4) hi - (0x1.0p39f + 0x1.0p23f);
   // NOTE: By using fsub of a positive constant instead of fadd of a negative
-  // constant, we avoid reassociation in MachineCombiner when unsafe-fp-math is
+  // constant, we avoid reassociation in MachineCombiner when reassoc is
   // enabled. See PR24512.
   SDValue HighBitcast = DAG.getBitcast(VecFloatVT, High);
   // TODO: Are there any fast-math-flags to propagate here?
@@ -29516,11 +29520,8 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   if (IgnoreNaN || DAG.isKnownNeverNaN(IsNum ? NewY : NewX))
     return MinMax;
 
-  if (DAG.isKnownNeverNaN(NewX))
-    NewX = NewY;
-
-  SDValue IsNaN =
-      DAG.getSetCC(DL, SetCCType, NewX, NewX, IsNum ? ISD::SETO : ISD::SETUO);
+  SDValue NaNSrc = IsNum ? MinMax : NewX;
+  SDValue IsNaN = DAG.getSetCC(DL, SetCCType, NaNSrc, NaNSrc, ISD::SETUO);
 
   return DAG.getSelect(DL, VT, IsNaN, NewX, MinMax);
 }

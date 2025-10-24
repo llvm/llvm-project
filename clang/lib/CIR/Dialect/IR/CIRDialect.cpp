@@ -95,8 +95,8 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Attribute value,
                                                 mlir::Type type,
                                                 mlir::Location loc) {
-  return builder.create<cir::ConstantOp>(loc, type,
-                                         mlir::cast<mlir::TypedAttr>(value));
+  return cir::ConstantOp::create(builder, loc, type,
+                                 mlir::cast<mlir::TypedAttr>(value));
 }
 
 //===----------------------------------------------------------------------===//
@@ -184,7 +184,7 @@ static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
 
   // Terminator was omitted correctly: recreate it.
   builder.setInsertionPointToEnd(&block);
-  builder.create<cir::YieldOp>(eLoc);
+  cir::YieldOp::create(builder, eLoc);
   return success();
 }
 
@@ -977,7 +977,7 @@ void cir::IfOp::print(OpAsmPrinter &p) {
 /// Default callback for IfOp builders.
 void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
   // add cir.yield to end of the block
-  builder.create<cir::YieldOp>(loc);
+  cir::YieldOp::create(builder, loc);
 }
 
 /// Given the region at `index`, or the parent operation if `index` is None,
@@ -2938,6 +2938,21 @@ mlir::LogicalResult cir::ThrowOp::verify() {
   }
 
   return failure();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicFetchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::AtomicFetchOp::verify() {
+  if (getBinop() != cir::AtomicFetchKind::Add &&
+      getBinop() != cir::AtomicFetchKind::Sub &&
+      getBinop() != cir::AtomicFetchKind::Max &&
+      getBinop() != cir::AtomicFetchKind::Min &&
+      !mlir::isa<cir::IntType>(getVal().getType()))
+    return emitError("only atomic add, sub, max, and min operation could "
+                     "operate on floating-point values");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
