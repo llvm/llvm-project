@@ -401,23 +401,6 @@ entry:
 }
 
 define i8 @sub_if_uge_i8(i8 %x, i8 %y) {
-; RV64I-LABEL: sub_if_uge_i8:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    zext.b a2, a1
-; RV64I-NEXT:    zext.b a3, a0
-; RV64I-NEXT:    sltu a2, a3, a2
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a1, a2, a1
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_i8:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.b a2, a0
-; RV64ZBB-NEXT:    sub a0, a0, a1
-; RV64ZBB-NEXT:    zext.b a0, a0
-; RV64ZBB-NEXT:    minu a0, a2, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    zext.b a2, a0
@@ -432,25 +415,6 @@ define i8 @sub_if_uge_i8(i8 %x, i8 %y) {
 }
 
 define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
-; RV64I-LABEL: sub_if_uge_i16:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a3, a1, a2
-; RV64I-NEXT:    and a2, a0, a2
-; RV64I-NEXT:    sltu a2, a2, a3
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a1, a2, a1
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_i16:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a2, a0
-; RV64ZBB-NEXT:    sub a0, a0, a1
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    minu a0, a2, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 16
@@ -467,22 +431,6 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 }
 
 define i32 @sub_if_uge_i32(i32 %x, i32 %y) {
-; RV64I-LABEL: sub_if_uge_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a2, a1
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    sltu a2, a3, a2
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a1, a2, a1
-; RV64I-NEXT:    subw a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sext.w a2, a0
-; RV64ZBB-NEXT:    subw a0, a0, a1
-; RV64ZBB-NEXT:    minu a0, a2, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a2, a0
@@ -496,19 +444,6 @@ define i32 @sub_if_uge_i32(i32 %x, i32 %y) {
 }
 
 define i64 @sub_if_uge_i64(i64 %x, i64 %y) {
-; RV64I-LABEL: sub_if_uge_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sltu a2, a0, a1
-; RV64I-NEXT:    addi a2, a2, -1
-; RV64I-NEXT:    and a1, a2, a1
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_i64:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sub a1, a0, a1
-; RV64ZBB-NEXT:    minu a0, a0, a1
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sub a1, a0, a1
@@ -563,39 +498,6 @@ define i32 @sub_if_uge_multiuse_select_i32(i32 %x, i32 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
-; RV64I-LABEL: sub_if_uge_multiuse_cmp_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a2, a1
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    sltu a4, a3, a2
-; RV64I-NEXT:    addi a4, a4, -1
-; RV64I-NEXT:    and a1, a4, a1
-; RV64I-NEXT:    sub a0, a0, a1
-; RV64I-NEXT:    bltu a3, a2, .LBB68_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    li a1, 4
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB68_2:
-; RV64I-NEXT:    li a1, 2
-; RV64I-NEXT:    sllw a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_multiuse_cmp_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sext.w a2, a1
-; RV64ZBB-NEXT:    sext.w a3, a0
-; RV64ZBB-NEXT:    subw a0, a0, a1
-; RV64ZBB-NEXT:    minu a0, a3, a0
-; RV64ZBB-NEXT:    bltu a3, a2, .LBB68_2
-; RV64ZBB-NEXT:  # %bb.1:
-; RV64ZBB-NEXT:    li a1, 4
-; RV64ZBB-NEXT:    sllw a0, a0, a1
-; RV64ZBB-NEXT:    ret
-; RV64ZBB-NEXT:  .LBB68_2:
-; RV64ZBB-NEXT:    li a1, 2
-; RV64ZBB-NEXT:    sllw a0, a0, a1
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_multiuse_cmp_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sext.w a2, a1
@@ -620,24 +522,6 @@ define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 signext %x, i32 signext %y, ptr %z) {
-; RV64I-LABEL: sub_if_uge_multiuse_cmp_store_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sltu a3, a0, a1
-; RV64I-NEXT:    xori a4, a3, 1
-; RV64I-NEXT:    addi a3, a3, -1
-; RV64I-NEXT:    and a1, a3, a1
-; RV64I-NEXT:    subw a0, a0, a1
-; RV64I-NEXT:    sw a4, 0(a2)
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_multiuse_cmp_store_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sltu a3, a0, a1
-; RV64ZBB-NEXT:    subw a1, a0, a1
-; RV64ZBB-NEXT:    xori a3, a3, 1
-; RV64ZBB-NEXT:    minu a0, a0, a1
-; RV64ZBB-NEXT:    sw a3, 0(a2)
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_multiuse_cmp_store_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sltu a3, a0, a1
@@ -655,20 +539,6 @@ define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 signext %x, i32 signext %y, pt
 }
 
 define i8 @sub_if_uge_C_i8(i8 zeroext %x) {
-; RV64I-LABEL: sub_if_uge_C_i8:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sltiu a1, a0, 13
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    andi a1, a1, -13
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_i8:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a1, a0, -13
-; RV64ZBB-NEXT:    zext.b a1, a1
-; RV64ZBB-NEXT:    minu a0, a1, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, -13
@@ -682,20 +552,6 @@ define i8 @sub_if_uge_C_i8(i8 zeroext %x) {
 }
 
 define i16 @sub_if_uge_C_i16(i16 zeroext %x) {
-; RV64I-LABEL: sub_if_uge_C_i16:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    sltiu a1, a0, 251
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    andi a1, a1, -251
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_i16:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    addi a1, a0, -251
-; RV64ZBB-NEXT:    zext.h a1, a1
-; RV64ZBB-NEXT:    minu a0, a1, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, -251
@@ -710,25 +566,6 @@ define i16 @sub_if_uge_C_i16(i16 zeroext %x) {
 }
 
 define i32 @sub_if_uge_C_i32(i32 signext %x) {
-; RV64I-LABEL: sub_if_uge_C_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    lui a2, 1048560
-; RV64I-NEXT:    addi a1, a1, -16
-; RV64I-NEXT:    sltu a1, a1, a0
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    addi a2, a2, 15
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a1, 1048560
-; RV64ZBB-NEXT:    addi a1, a1, 15
-; RV64ZBB-NEXT:    addw a1, a0, a1
-; RV64ZBB-NEXT:    minu a0, a1, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 1048560
@@ -743,29 +580,6 @@ define i32 @sub_if_uge_C_i32(i32 signext %x) {
 }
 
 define i64 @sub_if_uge_C_i64(i64 %x) {
-; RV64I-LABEL: sub_if_uge_C_i64:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 298
-; RV64I-NEXT:    lui a2, 1046192
-; RV64I-NEXT:    addi a1, a1, 95
-; RV64I-NEXT:    addi a2, a2, -761
-; RV64I-NEXT:    slli a1, a1, 12
-; RV64I-NEXT:    addi a1, a1, 511
-; RV64I-NEXT:    sltu a1, a1, a0
-; RV64I-NEXT:    neg a1, a1
-; RV64I-NEXT:    slli a2, a2, 9
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_i64:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a1, 1046192
-; RV64ZBB-NEXT:    addi a1, a1, -761
-; RV64ZBB-NEXT:    slli a1, a1, 9
-; RV64ZBB-NEXT:    add a1, a0, a1
-; RV64ZBB-NEXT:    minu a0, a1, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 1046192
@@ -781,30 +595,6 @@ define i64 @sub_if_uge_C_i64(i64 %x) {
 }
 
 define i32 @sub_if_uge_C_multiuse_cmp_i32(i32 signext %x, ptr %z) {
-; RV64I-LABEL: sub_if_uge_C_multiuse_cmp_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    lui a3, 1048560
-; RV64I-NEXT:    addi a2, a2, -16
-; RV64I-NEXT:    sltu a2, a2, a0
-; RV64I-NEXT:    neg a4, a2
-; RV64I-NEXT:    addi a3, a3, 15
-; RV64I-NEXT:    and a3, a4, a3
-; RV64I-NEXT:    addw a0, a0, a3
-; RV64I-NEXT:    sw a2, 0(a1)
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_multiuse_cmp_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a2, 16
-; RV64ZBB-NEXT:    lui a3, 1048560
-; RV64ZBB-NEXT:    addi a2, a2, -16
-; RV64ZBB-NEXT:    addi a3, a3, 15
-; RV64ZBB-NEXT:    sltu a2, a2, a0
-; RV64ZBB-NEXT:    addw a3, a0, a3
-; RV64ZBB-NEXT:    minu a0, a3, a0
-; RV64ZBB-NEXT:    sw a2, 0(a1)
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_multiuse_cmp_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 16
@@ -825,29 +615,6 @@ define i32 @sub_if_uge_C_multiuse_cmp_i32(i32 signext %x, ptr %z) {
 }
 
 define i32 @sub_if_uge_C_multiuse_sub_i32(i32 signext %x, ptr %z) {
-; RV64I-LABEL: sub_if_uge_C_multiuse_sub_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 1048560
-; RV64I-NEXT:    lui a3, 16
-; RV64I-NEXT:    addi a2, a2, 15
-; RV64I-NEXT:    addw a2, a0, a2
-; RV64I-NEXT:    addi a3, a3, -16
-; RV64I-NEXT:    sw a2, 0(a1)
-; RV64I-NEXT:    bltu a3, a0, .LBB75_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a2, a0
-; RV64I-NEXT:  .LBB75_2:
-; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_multiuse_sub_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a2, 1048560
-; RV64ZBB-NEXT:    addi a2, a2, 15
-; RV64ZBB-NEXT:    addw a2, a0, a2
-; RV64ZBB-NEXT:    minu a0, a2, a0
-; RV64ZBB-NEXT:    sw a2, 0(a1)
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_multiuse_sub_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a2, 1048560
@@ -864,25 +631,6 @@ define i32 @sub_if_uge_C_multiuse_sub_i32(i32 signext %x, ptr %z) {
 }
 
 define i32 @sub_if_uge_C_swapped_i32(i32 signext %x) {
-; RV64I-LABEL: sub_if_uge_C_swapped_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    lui a2, 1048560
-; RV64I-NEXT:    addi a1, a1, -15
-; RV64I-NEXT:    sltu a1, a0, a1
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    addi a2, a2, 15
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_swapped_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a1, 1048560
-; RV64ZBB-NEXT:    addi a1, a1, 15
-; RV64ZBB-NEXT:    addw a1, a0, a1
-; RV64ZBB-NEXT:    minu a0, a0, a1
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_swapped_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, 1048560
@@ -897,24 +645,6 @@ define i32 @sub_if_uge_C_swapped_i32(i32 signext %x) {
 }
 
 define i7 @sub_if_uge_C_nsw_i7(i7 %a) {
-; RV64I-LABEL: sub_if_uge_C_nsw_i7:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    ori a0, a0, 51
-; RV64I-NEXT:    andi a1, a0, 127
-; RV64I-NEXT:    sltiu a1, a1, 111
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    andi a1, a1, 17
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_nsw_i7:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ori a0, a0, 51
-; RV64ZBB-NEXT:    andi a1, a0, 127
-; RV64ZBB-NEXT:    addi a0, a0, 17
-; RV64ZBB-NEXT:    andi a0, a0, 92
-; RV64ZBB-NEXT:    minu a0, a0, a1
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_nsw_i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori a0, a0, 51
@@ -931,24 +661,6 @@ define i7 @sub_if_uge_C_nsw_i7(i7 %a) {
 }
 
 define i7 @sub_if_uge_C_swapped_nsw_i7(i7 %a) {
-; RV64I-LABEL: sub_if_uge_C_swapped_nsw_i7:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    ori a0, a0, 51
-; RV64I-NEXT:    andi a1, a0, 127
-; RV64I-NEXT:    sltiu a1, a1, 111
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    andi a1, a1, 17
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: sub_if_uge_C_swapped_nsw_i7:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ori a0, a0, 51
-; RV64ZBB-NEXT:    andi a1, a0, 127
-; RV64ZBB-NEXT:    addi a0, a0, 17
-; RV64ZBB-NEXT:    andi a0, a0, 92
-; RV64ZBB-NEXT:    minu a0, a1, a0
-; RV64ZBB-NEXT:    ret
 ; CHECK-LABEL: sub_if_uge_C_swapped_nsw_i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ori a0, a0, 51
