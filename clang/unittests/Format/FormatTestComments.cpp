@@ -3880,11 +3880,11 @@ TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
 
 TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
   FormatStyle Style = getLLVMStyle();
-  constexpr StringRef NoTextInComment = " //       \n"
-                                        "\n"
-                                        "void foo() {// \n"
-                                        "// \n"
-                                        "}";
+  constexpr StringRef NoTextInComment(" //       \n"
+                                      "\n"
+                                      "void foo() {// \n"
+                                      "// \n"
+                                      "}");
 
   verifyFormat("//\n"
                "\n"
@@ -3912,7 +3912,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
                NoTextInComment, Style);
 
   Style = getLLVMStyle();
-  constexpr StringRef Code =
+  constexpr StringRef Code(
       "//Free comment without space\n"
       "\n"
       "//   Free comment with 3 spaces\n"
@@ -3982,9 +3982,9 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//} will not move\n"
       "\n"
       "//vv will only move\n"
-      "//} if the line above does";
+      "//} if the line above does");
 
-  constexpr StringRef Code2 =
+  constexpr StringRef Code2(
       "// Free comment without space\n"
       "\n"
       "//   Free comment with 3 spaces\n"
@@ -4054,9 +4054,9 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//} will not move\n"
       "\n"
       "// vv will only move\n"
-      "// } if the line above does";
+      "// } if the line above does");
 
-  constexpr StringRef Code3 =
+  constexpr StringRef Code3(
       "//Free comment without space\n"
       "\n"
       "//Free comment with 3 spaces\n"
@@ -4126,9 +4126,9 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//} will not move\n"
       "\n"
       "//vv will only move\n"
-      "//} if the line above does";
+      "//} if the line above does");
 
-  constexpr StringRef Code4 =
+  constexpr StringRef Code4(
       "//  Free comment without space\n"
       "\n"
       "//   Free comment with 3 spaces\n"
@@ -4198,7 +4198,7 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
       "//} will not move\n"
       "\n"
       "//  vv will only move\n"
-      "//  } if the line above does";
+      "//  } if the line above does");
 
   verifyFormat(Code2, Code, Style);
 
@@ -4479,14 +4479,14 @@ TEST_F(FormatTestComments, SpaceAtLineCommentBegin) {
 }
 
 TEST_F(FormatTestComments, SplitCommentIntroducers) {
-  verifyFormat(R"(//
-/\
-/
-)",
-               R"(//
-/\
-/ 
-  )",
+  verifyFormat("//\n"
+               "/\\\n"
+               "/\n"
+               "",
+               "//\n"
+               "/\\\n"
+               "/ \n"
+               "  ",
                getLLVMStyleWithColumns(10));
 }
 
