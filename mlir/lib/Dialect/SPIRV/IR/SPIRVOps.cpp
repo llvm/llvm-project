@@ -1276,8 +1276,15 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
         (*this)->getParentOp(), init.getAttr());
     // TODO: Currently only variable initialization with specialization
-    // constants and other variables is supported. They could be normal
-    // constants in the module scope as well.
+    // constants is supported. There could be normal constants in the module
+    // scope as well.
+    //
+    // In the current setup we also cannot initialize one global variable with
+    // another. The problem is that if we try to initialize pointer of type X
+    // with another pointer type, the validator fails because it expects the
+    // variable to be initialized to be type X, not pointer to X. Now
+    // `spirv.GlobalVariable` only allows pointer type, so in the current design
+    // we cannot initialize one `spirv.GlobalVariable` with another.
     if (!initOp ||
         !isa<spirv::SpecConstantOp, spirv::SpecConstantCompositeOp>(initOp)) {
       return emitOpError("initializer must be result of a "
