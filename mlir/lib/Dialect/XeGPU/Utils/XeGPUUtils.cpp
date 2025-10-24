@@ -265,7 +265,7 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
     // Reshape to remove leading unit dims if needed
     if (srcShapeRank > targetShapeRank) {
       auto targetTy = VectorType::get(shape, vecTy.getElementType());
-      slice = builder.create<vector::ShapeCastOp>(loc, targetTy, slice);
+      slice = vector::ShapeCastOp::create(builder, loc, targetTy, slice);
     }
     result.push_back(slice);
   }
