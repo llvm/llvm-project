@@ -13,6 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <list>
 #include <stdarg.h>
@@ -599,6 +600,15 @@ TYPED_TEST(SmallVectorTest, AssignSmallVector) {
   assertValuesInOrder(V, 2u, 7, 7);
 }
 
+TYPED_TEST(SmallVectorTest, AssignArrayRef) {
+  SCOPED_TRACE("AssignArrayRef");
+  auto &V = this->theVector;
+  Constructable Other[] = {7, 8, 9};
+  V.push_back(Constructable(1));
+  V.assign(ArrayRef(Other));
+  assertValuesInOrder(V, 3u, 7, 8, 9);
+}
+
 // Move-assign test
 TYPED_TEST(SmallVectorTest, MoveAssignTest) {
   SCOPED_TRACE("MoveAssignTest");
@@ -1147,6 +1157,17 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(ArrayRef(V2).equals({4, 5, 3, 2}));
 }
 
+namespace namespace_with_adl {
+struct MyVector {
+  std::vector<int> data;
+};
+
+std::vector<int>::const_iterator begin(const MyVector &V) {
+  return V.data.begin();
+}
+std::vector<int>::const_iterator end(const MyVector &V) { return V.data.end(); }
+} // namespace namespace_with_adl
+
 TEST(SmallVectorTest, ToVector) {
   {
     std::vector<char> v = {'a', 'b', 'c'};
@@ -1163,6 +1184,15 @@ TEST(SmallVectorTest, ToVector) {
     ASSERT_EQ(3u, Vector.size());
     for (size_t I = 0; I < v.size(); ++I)
       EXPECT_EQ(v[I], Vector[I]);
+  }
+  {
+    // Check that to_vector and to_vector_of work with types that require ADL
+    // for being/end iterators.
+    namespace_with_adl::MyVector V = {{1, 2, 3}};
+    auto IntVector = to_vector(V);
+    EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
+    IntVector = to_vector<3>(V);
+    EXPECT_THAT(IntVector, testing::ElementsAre(1, 2, 3));
   }
 }
 
@@ -1221,6 +1251,15 @@ TEST(SmallVectorTest, ToVectorOf) {
     static_assert(NumBuiltinElts(Vector) == 4u);
     for (size_t I = 0; I < StdVector.size(); ++I)
       EXPECT_EQ(StdVector[I], Vector[I]);
+  }
+  {
+    // Check that to_vector works with types that require ADL for being/end
+    // iterators.
+    namespace_with_adl::MyVector V = {{1, 2, 3}};
+    auto UnsignedVector = to_vector_of<unsigned>(V);
+    EXPECT_THAT(UnsignedVector, testing::ElementsAre(1u, 2u, 3u));
+    UnsignedVector = to_vector_of<unsigned, 3>(V);
+    EXPECT_THAT(UnsignedVector, testing::ElementsAre(1u, 2u, 3u));
   }
 }
 

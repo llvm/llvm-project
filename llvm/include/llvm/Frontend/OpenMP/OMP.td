@@ -163,6 +163,10 @@ def OMPC_Device : Clause<[Spelling<"device">]> {
   let clangClass = "OMPDeviceClause";
   let flangClass = "OmpDeviceClause";
 }
+def OMPC_DeviceSafesync : Clause<[Spelling<"device_safesync">]> {
+  let flangClass = "OmpDeviceSafesyncClause";
+  let isValueOptional = true;
+}
 def OMPC_DeviceType : Clause<[Spelling<"device_type">]> {
   let flangClass = "OmpDeviceTypeClause";
 }
@@ -1018,6 +1022,7 @@ def OMP_Requires : Directive<[Spelling<"requires">]> {
   let allowedOnceClauses = [
     VersionedClause<OMPC_UnifiedAddress>,
     VersionedClause<OMPC_UnifiedSharedMemory>,
+    VersionedClause<OMPC_DeviceSafesync, 60>,
     // OpenMP 5.2 Spec: If an implementation is not supporting a requirement
     // (reverse offload in this case) then it should give compile-time error
     // termination.

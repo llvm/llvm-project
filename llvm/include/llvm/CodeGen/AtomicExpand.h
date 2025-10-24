@@ -21,7 +21,7 @@ private:
   const TargetMachine *TM;
 
 public:
-  AtomicExpandPass(const TargetMachine *TM) : TM(TM) {}
+  AtomicExpandPass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 

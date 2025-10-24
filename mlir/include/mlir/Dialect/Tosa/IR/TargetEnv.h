@@ -54,6 +54,8 @@ TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 /// and provide utilities around the TOSA specification version.
 class TosaSpecificationVersion {
 public:
+  TosaSpecificationVersion() = default;
+
   TosaSpecificationVersion(uint32_t major, uint32_t minor)
       : majorVersion(major), minorVersion(minor) {}
   TosaSpecificationVersion(SpecificationVersion version)
@@ -83,6 +85,10 @@ private:
   }
 };
 
+TosaSpecificationVersion getMinVersion(const Profile &profile);
+TosaSpecificationVersion getMinVersion(const Extension &extension);
+TosaSpecificationVersion getMinVersion(const Level &level);
+
 llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version);
 
 /// This class represents the capability enabled in the target implementation
@@ -91,22 +97,19 @@ llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version);
 class TargetEnv {
 public:
   TargetEnv() {}
-  explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
-                     const ArrayRef<Profile> &profiles,
-                     const ArrayRef<Extension> &extensions)
-      : specificationVersion(specificationVersion), level(level) {
-    enabledProfiles.insert_range(profiles);
-    enabledExtensions.insert_range(extensions);
-  }
 
-  explicit TargetEnv(TargetEnvAttr targetAttr)
-      : TargetEnv(targetAttr.getSpecificationVersion(), targetAttr.getLevel(),
-                  targetAttr.getProfiles(), targetAttr.getExtensions()) {}
+  static FailureOr<TargetEnv>
+  createTargetEnvFromAttr(TargetEnvAttr targetAttr, Location targetEnvAttrLoc);
+
+  static LogicalResult verifyTargetInformation(TargetEnvAttr targetAttr,
+                                               Location targetAttrLoc);
 
   void addProfile(Profile p) { enabledProfiles.insert(p); }
   void addExtension(Extension e) { enabledExtensions.insert(e); }
 
-  SpecificationVersion getSpecVersion() const { return specificationVersion; }
+  TosaSpecificationVersion getSpecVersion() const {
+    return specificationVersion;
+  }
 
   TosaLevel getLevel() const {
     if (level == Level::eightK)
@@ -140,7 +143,17 @@ public:
   }
 
 private:
-  SpecificationVersion specificationVersion;
+  // Require target information is verified before constructing, via the use of
+  // `createTargetEnvFromAttr`.
+  explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
+                     const ArrayRef<Profile> &profiles,
+                     const ArrayRef<Extension> &extensions)
+      : specificationVersion(specificationVersion), level(level) {
+    enabledProfiles.insert_range(profiles);
+    enabledExtensions.insert_range(extensions);
+  }
+
+  TosaSpecificationVersion specificationVersion;
   Level level;
   llvm::SmallSet<Profile, 3> enabledProfiles;
   llvm::SmallSet<Extension, 13> enabledExtensions;
