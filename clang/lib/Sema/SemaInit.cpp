@@ -1911,7 +1911,10 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
     ++NumEltsInit;
   }
 
-  // HLSL requires exactly NumEltsInit to equal Max initializers.
+  // For HLSL The error for this case is handled in SemaHLSL's initializer
+  // list diagnostics, That means the execution should require NumEltsInit
+  // to equal Max initializers. In other words  execution should never
+  // reach this point if this condition is not true".
   assert(NumEltsInit == MaxElts && "NumEltsInit must equal MaxElts");
 }
 
