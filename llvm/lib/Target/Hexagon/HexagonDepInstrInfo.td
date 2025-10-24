@@ -39178,6 +39178,19 @@ let opNewValue = 0;
 let isCVI = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
+def V6_vsub_hf_mix : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.qf16 = vsub($Vu32.hf,$Vv32.qf16)",
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
+let Inst{7-5} = 0b100;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011010000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
 def V6_vsub_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
@@ -39264,6 +39277,19 @@ tc_d8287c14, TypeCVI_VX_DV>, Enc_71bb9b, Requires<[UseHVXV68,UseHVXIEEEFP]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isCVI = 1;
+let DecoderNamespace = "EXT_mmvec";
+}
+def V6_vsub_sf_mix : HInst<
+(outs HvxVR:$Vd32),
+(ins HvxVR:$Vu32, HvxVR:$Vv32),
+"$Vd32.qf32 = vsub($Vu32.sf,$Vv32.qf32)",
+tc_05ca8cfd, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b00011010000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
@@ -41112,6 +41138,17 @@ def Y2_tlbp : HInst<
 tc_6aa823ab, TypeCR>, Enc_5e2823 {
 let Inst{13-5} = 0b000000000;
 let Inst{31-21} = 0b01101100100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y2_tlbpp : HInst<
+(outs IntRegs:$Rd32),
+(ins DoubleRegs:$Rss32),
+"$Rd32 = tlbp($Rss32)",
+tc_6aa823ab, TypeCR>, Enc_90cd8b, Requires<[HasV81]> {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101100011;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isSolo = 1;

@@ -804,6 +804,11 @@ def IntPositivePowerOf2 : AllAttrOf<[IntPositive, IntPowerOf2]>;
 
 class IntValidAlignment<Attr attr>: ConfinedAttr<attr, [IntPositivePowerOf2]>;
 
+class IntIsOneOf<list<int> values> : AttrConstraint<
+    CPred<"::llvm::is_contained({" # !interleave(!foreach(val, values, val), ", ") #
+                                "}, ::llvm::cast<::mlir::IntegerAttr>($_self).getInt())">,
+    "whose value is one of {" # !interleave(!foreach(val, values, val), ", ") # "}">;
+
 class ArrayMaxCount<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::ArrayAttr>($_self).size() <= " # n>,
     "with at most " # n # " elements">;

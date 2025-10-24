@@ -481,9 +481,11 @@ SanitizerMask Fuchsia::getSupportedSanitizers() const {
   Res |= SanitizerKind::Fuzzer;
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::Leak;
-  Res |= SanitizerKind::SafeStack;
   Res |= SanitizerKind::Scudo;
   Res |= SanitizerKind::Thread;
+  if (getTriple().getArch() == llvm::Triple::x86_64) {
+    Res |= SanitizerKind::SafeStack;
+  }
   return Res;
 }
 

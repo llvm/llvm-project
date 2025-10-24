@@ -6832,3 +6832,17 @@ Hexagon_v32i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsub_hf_f8">;
 
 def int_hexagon_V6_vsub_hf_f8_128B :
 Hexagon_v64i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsub_hf_f8_128B">;
+
+// V81 HVX Instructions.
+
+def int_hexagon_V6_vsub_hf_mix :
+Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsub_hf_mix">;
+
+def int_hexagon_V6_vsub_hf_mix_128B :
+Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsub_hf_mix_128B">;
+
+def int_hexagon_V6_vsub_sf_mix :
+Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsub_sf_mix">;
+
+def int_hexagon_V6_vsub_sf_mix_128B :
+Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsub_sf_mix_128B">;

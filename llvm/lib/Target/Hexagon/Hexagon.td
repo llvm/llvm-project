@@ -79,6 +79,12 @@ def ExtensionHVXV79: SubtargetFeature<"hvxv79", "HexagonHVXVersion",
        ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
        ExtensionHVXV73, ExtensionHVXV75]>;
 
+def ExtensionHVXV81: SubtargetFeature<"hvxv81", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V81", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79]>;
+
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
@@ -151,6 +157,8 @@ def UseHVXV75          : Predicate<"HST->useHVXV75Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV75)>;
 def UseHVXV79          : Predicate<"HST->useHVXV79Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV79)>;
+def UseHVXV81          : Predicate<"HST->useHVXV81Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV81)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
                          AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
@@ -488,6 +496,11 @@ def : Proc<"hexagonv79", HexagonModelV79,
            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79,
            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv81", HexagonModelV81,
+           [ArchV65, ArchV66, ArchV67, ArchV68, ArchV69, ArchV71, ArchV73,
+            ArchV75, ArchV79, ArchV81,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
 // Need to update the correct features for tiny core.
 // Disable NewValueJumps since the packetizer is unable to handle a packet with
