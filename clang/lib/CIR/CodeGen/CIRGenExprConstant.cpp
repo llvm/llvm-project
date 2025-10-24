@@ -1085,6 +1085,11 @@ public:
       // to pass it to the constructor.
       if (auto const *mte = dyn_cast<MaterializeTemporaryExpr>(arg))
         return Visit(mte->getSubExpr(), ty);
+
+      // TODO: Investigate whether there are cases that can fall through to here
+      //       that need to be handled. This is missing in classic codegen also.
+      assert(!cir::MissingFeatures::ctorConstLvalueToRvalueConversion());
+
       // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
       return {};
     }
