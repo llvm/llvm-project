@@ -83,8 +83,24 @@ void MCSymbol::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << '"';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSymbol::dump() const {
-  dbgs() << *this;
+bool llvm::isRangeRelaxable(const MCSymbol *Begin, const MCSymbol *End) {
+  assert(Begin && "Range without a begin symbol?");
+  assert(End && "Range without an end symbol?");
+  llvm::SmallVector<const MCFragment *> RangeFragments{};
+  for (const auto *Fragment = Begin->getFragment();
+       Fragment != End->getFragment(); Fragment = Fragment->getNext()) {
+    assert(Fragment);
+    RangeFragments.push_back(Fragment);
+  }
+  assert(End->getFragment());
+  RangeFragments.push_back(End->getFragment());
+
+  bool IsRelaxableRange = llvm::any_of(RangeFragments, [](auto &&Fragment) {
+    return Fragment->isLinkerRelaxable();
+  });
+  return IsRelaxableRange;
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void MCSymbol::dump() const { dbgs() << *this; }
 #endif
