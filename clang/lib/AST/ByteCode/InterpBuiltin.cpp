@@ -3336,6 +3336,9 @@ static bool interp__builtin_ia32_cvt_mask(InterpState &S, CodePtr OpPC,
     RetMask.setBitVal(ElemNum, MSB);
   }
   pushInteger(S, RetMask, Call->getType());
+  return true;
+}
+
 static bool interp__builtin_x86_byteshift(
     InterpState &S, CodePtr OpPC, const CallExpr *Call, unsigned ID,
     llvm::function_ref<APInt(const Pointer &, unsigned Lane, unsigned I,
@@ -4514,6 +4517,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_cvtq2mask256:
   case X86::BI__builtin_ia32_cvtq2mask512:
     return interp__builtin_ia32_cvt_mask(S, OpPC, Call, BuiltinID);
+
   case X86::BI__builtin_ia32_pslldqi128_byteshift:
   case X86::BI__builtin_ia32_pslldqi256_byteshift:
   case X86::BI__builtin_ia32_pslldqi512_byteshift:
