@@ -119,6 +119,19 @@ public:
 #define KIND_3(ENUM, FIELD, F1, F2, F3)                                        \
   BOOL_BIT_3(Kinds, ENUM, FIELD, F1, F2, F3)
 
+const int DEC_WIDTH = 8;
+inline FormattedNumber decValue(uint64_t N, unsigned Width = DEC_WIDTH) {
+  return format_decimal(N, Width);
+}
+
+// Output the decimal representation of 'Value'.
+inline std::string decString(uint64_t Value, size_t Width = DEC_WIDTH) {
+  std::string String;
+  raw_string_ostream Stream(String);
+  Stream << decValue(Value, Width);
+  return Stream.str();
+}
+
 const int HEX_WIDTH = 12;
 inline FormattedNumber hexValue(uint64_t N, unsigned Width = HEX_WIDTH,
                                 bool Upper = false) {

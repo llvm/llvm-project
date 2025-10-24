@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
@@ -30,7 +31,9 @@ namespace logicalview {
 
 using LVReaders = std::vector<std::unique_ptr<LVReader>>;
 using ArgVector = std::vector<std::string>;
-using PdbOrObj = PointerUnion<object::ObjectFile *, pdb::PDBFile *>;
+using InputHandle =
+    PointerUnion<object::ObjectFile *, pdb::PDBFile *, object::IRObjectFile *,
+                 MemoryBufferRef *, StringRef *>;
 
 // This class performs the following tasks:
 // - Creates a logical reader for every binary file in the command line,
@@ -61,8 +64,10 @@ class LVReaderHandler {
                      object::Binary &Binary);
   Error handleObject(LVReaders &Readers, StringRef Filename, StringRef Buffer,
                      StringRef ExePath);
+  Error handleObject(LVReaders &Readers, StringRef Filename,
+                     MemoryBufferRef Buffer);
 
-  Error createReader(StringRef Filename, LVReaders &Readers, PdbOrObj &Input,
+  Error createReader(StringRef Filename, LVReaders &Readers, InputHandle &Input,
                      StringRef FileFormatName, StringRef ExePath = {});
 
 public:
