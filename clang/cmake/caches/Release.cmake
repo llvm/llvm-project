@@ -39,7 +39,7 @@ endif()
 # Don't build flang on Darwin due to:
 # https://github.com/llvm/llvm-project/issues/160546
 if (NOT ${CMAKE_HOST_SYSTEM_NAME} MATCHES "Darwin")
-  list(APPEND DEFAULT_PROJECT "flang")
+  list(APPEND DEFAULT_PROJECTS "flang")
 endif()
 
 set (DEFAULT_RUNTIMES "compiler-rt;libcxx")
