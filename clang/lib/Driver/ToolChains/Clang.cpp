@@ -1387,59 +1387,6 @@ void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
 }
 }
 
-// Each combination of options here forms a signing schema, and in most cases
-// each signing schema is its own incompatible ABI. The default values of the
-// options represent the default signing schema.
-static void handlePAuthABI(const ArgList &DriverArgs, ArgStringList &CC1Args) {
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_intrinsics,
-                         options::OPT_fno_ptrauth_intrinsics))
-    CC1Args.push_back("-fptrauth-intrinsics");
-
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_calls,
-                         options::OPT_fno_ptrauth_calls))
-    CC1Args.push_back("-fptrauth-calls");
-
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_returns,
-                         options::OPT_fno_ptrauth_returns))
-    CC1Args.push_back("-fptrauth-returns");
-
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_auth_traps,
-                         options::OPT_fno_ptrauth_auth_traps))
-    CC1Args.push_back("-fptrauth-auth-traps");
-
-  if (!DriverArgs.hasArg(
-          options::OPT_fptrauth_vtable_pointer_address_discrimination,
-          options::OPT_fno_ptrauth_vtable_pointer_address_discrimination))
-    CC1Args.push_back("-fptrauth-vtable-pointer-address-discrimination");
-
-  if (!DriverArgs.hasArg(
-          options::OPT_fptrauth_vtable_pointer_type_discrimination,
-          options::OPT_fno_ptrauth_vtable_pointer_type_discrimination))
-    CC1Args.push_back("-fptrauth-vtable-pointer-type-discrimination");
-
-  if (!DriverArgs.hasArg(
-          options::OPT_fptrauth_type_info_vtable_pointer_discrimination,
-          options::OPT_fno_ptrauth_type_info_vtable_pointer_discrimination))
-    CC1Args.push_back("-fptrauth-type-info-vtable-pointer-discrimination");
-
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_indirect_gotos,
-                         options::OPT_fno_ptrauth_indirect_gotos))
-    CC1Args.push_back("-fptrauth-indirect-gotos");
-
-  if (!DriverArgs.hasArg(options::OPT_fptrauth_init_fini,
-                         options::OPT_fno_ptrauth_init_fini))
-    CC1Args.push_back("-fptrauth-init-fini");
-
-  if (!DriverArgs.hasArg(
-          options::OPT_fptrauth_init_fini_address_discrimination,
-          options::OPT_fno_ptrauth_init_fini_address_discrimination))
-    CC1Args.push_back("-fptrauth-init-fini-address-discrimination");
-
-  if (!DriverArgs.hasArg(options::OPT_faarch64_jump_table_hardening,
-                         options::OPT_fno_aarch64_jump_table_hardening))
-    CC1Args.push_back("-faarch64-jump-table-hardening");
-}
-
 static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs, bool isAArch64) {
   const llvm::Triple &Triple = TC.getEffectiveTriple();
@@ -1677,7 +1624,9 @@ void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
     ABIName = A->getValue();
   else if (Triple.isOSDarwin())
     ABIName = "darwinpcs";
-  else if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+  // TODO: we probably want to have some target hook here.
+  else if (Triple.isOSLinux() &&
+           Triple.getEnvironment() == llvm::Triple::PAuthTest)
     ABIName = "pauthtest";
   else
     ABIName = "aapcs";
@@ -1797,8 +1746,6 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
                     options::OPT_fno_ptrauth_objc_interface_sel);
   Args.addOptInFlag(CmdArgs, options::OPT_fptrauth_objc_class_ro,
                     options::OPT_fno_ptrauth_objc_class_ro);
-  if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-    handlePAuthABI(Args, CmdArgs);
 
   // Enable/disable return address signing and indirect branch targets.
   CollectARMPACBTIOptions(getToolChain(), Args, CmdArgs, true /*isAArch64*/);

@@ -943,12 +943,40 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
   }
 }
 
+/// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+/// Returns an optional pair, where the first element indicates whether it is
+/// an intrinsic ID.
+static std::optional<std::pair<bool, unsigned>>
+getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  return TypeSwitch<const VPSingleDefRecipe *,
+                    std::optional<std::pair<bool, unsigned>>>(R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+            VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
+          [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+      .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+        return std::make_pair(true, I->getVectorIntrinsicID());
+      })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
+        // For recipes that do not directly map to LLVM IR instructions,
+        // assign opcodes after the last VPInstruction opcode (which is also
+        // after the last IR Instruction opcode), based on the VPDefID.
+        return std::make_pair(false,
+                              VPInstruction::OpsEnd + 1 + I->getVPDefID());
+      })
+      .Default([](auto *) { return std::nullopt; });
+}
+
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
-/// non-nullptr Value for a handled \p Opcode if corresponding \p Operands are
-/// foldable live-ins.
-static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
-                               ArrayRef<VPValue *> Operands,
-                               const DataLayout &DL, VPTypeAnalysis &TypeInfo) {
+/// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
+/// Operands are foldable live-ins.
+static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
+                                 ArrayRef<VPValue *> Operands,
+                                 const DataLayout &DL,
+                                 VPTypeAnalysis &TypeInfo) {
+  auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
+  if (!OpcodeOrIID)
+    return nullptr;
+
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
     if (!Op->isLiveIn() || !Op->getLiveInIRValue())
@@ -956,43 +984,57 @@ static Value *tryToFoldLiveIns(const VPRecipeBase &R, unsigned Opcode,
     Ops.push_back(Op->getLiveInIRValue());
   }
 
-  InstSimplifyFolder Folder(DL);
-  if (Instruction::isBinaryOp(Opcode))
-    return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode), Ops[0],
+  auto FoldToIRValue = [&]() -> Value * {
+    InstSimplifyFolder Folder(DL);
+    if (OpcodeOrIID->first) {
+      if (R.getNumOperands() != 2)
+        return nullptr;
+      unsigned ID = OpcodeOrIID->second;
+      return Folder.FoldBinaryIntrinsic(ID, Ops[0], Ops[1],
+                                        TypeInfo.inferScalarType(&R));
+    }
+    unsigned Opcode = OpcodeOrIID->second;
+    if (Instruction::isBinaryOp(Opcode))
+      return Folder.FoldBinOp(static_cast<Instruction::BinaryOps>(Opcode),
+                              Ops[0], Ops[1]);
+    if (Instruction::isCast(Opcode))
+      return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
+                             TypeInfo.inferScalarType(R.getVPSingleValue()));
+    switch (Opcode) {
+    case VPInstruction::LogicalAnd:
+      return Folder.FoldSelect(Ops[0], Ops[1],
+                               ConstantInt::getNullValue(Ops[1]->getType()));
+    case VPInstruction::Not:
+      return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
+                              Constant::getAllOnesValue(Ops[0]->getType()));
+    case Instruction::Select:
+      return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
+    case Instruction::ICmp:
+    case Instruction::FCmp:
+      return Folder.FoldCmp(cast<VPRecipeWithIRFlags>(R).getPredicate(), Ops[0],
                             Ops[1]);
-  if (Instruction::isCast(Opcode))
-    return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
-                           TypeInfo.inferScalarType(R.getVPSingleValue()));
-  switch (Opcode) {
-  case VPInstruction::LogicalAnd:
-    return Folder.FoldSelect(Ops[0], Ops[1],
-                             ConstantInt::getNullValue(Ops[1]->getType()));
-  case VPInstruction::Not:
-    return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
-                            Constant::getAllOnesValue(Ops[0]->getType()));
-  case Instruction::Select:
-    return Folder.FoldSelect(Ops[0], Ops[1], Ops[2]);
-  case Instruction::ICmp:
-  case Instruction::FCmp:
-    return Folder.FoldCmp(cast<VPRecipeWithIRFlags>(R).getPredicate(), Ops[0],
-                          Ops[1]);
-  case Instruction::GetElementPtr: {
-    auto &RFlags = cast<VPRecipeWithIRFlags>(R);
-    auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
-    return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0], drop_begin(Ops),
-                          RFlags.getGEPNoWrapFlags());
-  }
-  case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
-    return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()), Ops[0],
-                          Ops[1],
-                          cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
-  // An extract of a live-in is an extract of a broadcast, so return the
-  // broadcasted element.
-  case Instruction::ExtractElement:
-    assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
-    return Ops[0];
-  }
+    case Instruction::GetElementPtr: {
+      auto &RFlags = cast<VPRecipeWithIRFlags>(R);
+      auto *GEP = cast<GetElementPtrInst>(RFlags.getUnderlyingInstr());
+      return Folder.FoldGEP(GEP->getSourceElementType(), Ops[0],
+                            drop_begin(Ops), RFlags.getGEPNoWrapFlags());
+    }
+    case VPInstruction::PtrAdd:
+    case VPInstruction::WidePtrAdd:
+      return Folder.FoldGEP(IntegerType::getInt8Ty(TypeInfo.getContext()),
+                            Ops[0], Ops[1],
+                            cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
+    // An extract of a live-in is an extract of a broadcast, so return the
+    // broadcasted element.
+    case Instruction::ExtractElement:
+      assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
+      return Ops[0];
+    }
+    return nullptr;
+  };
+
+  if (Value *V = FoldToIRValue())
+    return R.getParent()->getPlan()->getOrAddLiveIn(V);
   return nullptr;
 }
 
@@ -1006,19 +1048,10 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
-  if (TypeSwitch<VPRecipeBase *, bool>(&R)
-          .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-                VPReplicateRecipe, VPWidenSelectRecipe>([&](auto *I) {
-            const DataLayout &DL =
-                Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
-            Value *V = tryToFoldLiveIns(*I, I->getOpcode(), I->operands(), DL,
-                                        TypeInfo);
-            if (V)
-              I->replaceAllUsesWith(Plan->getOrAddLiveIn(V));
-            return V;
-          })
-          .Default([](auto *) { return false; }))
-    return;
+  const DataLayout &DL =
+      Plan->getScalarHeader()->getIRBasicBlock()->getDataLayout();
+  if (VPValue *V = tryToFoldLiveIns(*Def, Def->operands(), DL, TypeInfo))
+    return Def->replaceAllUsesWith(V);
 
   // Fold PredPHI LiveIn -> LiveIn.
   if (auto *PredPHI = dyn_cast<VPPredInstPHIRecipe>(&R)) {
@@ -1994,29 +2027,6 @@ namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isSentinel(const VPSingleDefRecipe *Def) {
     return Def == getEmptyKey() || Def == getTombstoneKey();
-  }
-
-  /// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
-  /// Returns an optional pair, where the first element indicates whether it is
-  /// an intrinsic ID.
-  static std::optional<std::pair<bool, unsigned>>
-  getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
-    return TypeSwitch<const VPSingleDefRecipe *,
-                      std::optional<std::pair<bool, unsigned>>>(R)
-        .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-              VPWidenSelectRecipe, VPWidenGEPRecipe, VPReplicateRecipe>(
-            [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-        .Case<VPWidenIntrinsicRecipe>([](auto *I) {
-          return std::make_pair(true, I->getVectorIntrinsicID());
-        })
-        .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
-          // For recipes that do not directly map to LLVM IR instructions,
-          // assign opcodes after the last VPInstruction opcode (which is also
-          // after the last IR Instruction opcode), based on the VPDefID.
-          return std::make_pair(false,
-                                VPInstruction::OpsEnd + 1 + I->getVPDefID());
-        })
-        .Default([](auto *) { return std::nullopt; });
   }
 
   /// If recipe \p R will lower to a GEP with a non-i8 source element type,
