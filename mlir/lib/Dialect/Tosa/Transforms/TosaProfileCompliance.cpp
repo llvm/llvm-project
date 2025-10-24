@@ -19,6 +19,7 @@ TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
   const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
   const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
+  const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
   const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
   const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
   const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
