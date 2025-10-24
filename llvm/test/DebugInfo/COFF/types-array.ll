@@ -108,10 +108,10 @@ declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, 
 
 declare void @"\01?usevars@@YAXHZZ"(i32, ...) #3
 
-attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "frame-pointer"="all" "no-jump-tables"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { argmemonly nounwind }
-attributes #3 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { "frame-pointer"="all" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
