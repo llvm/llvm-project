@@ -2418,9 +2418,9 @@ def err_init_conversion_failed : Error<
   "cannot initialize %select{a variable|a parameter|template parameter|"
   "return object|statement expression result|an "
   "exception object|a member subobject|an array element|a new value|a value|a "
-  "base class|a constructor delegation|a vector element|a block element|a "
-  "block element|a complex element|a lambda capture|a compound literal "
-  "initializer|a related result|a parameter of CF audited function|a "
+  "base class|a constructor delegation|a vector element|a matrix element|a "
+  "block element|a block element|a complex element|a lambda capture|a compound"
+  " literal initializer|a related result|a parameter of CF audited function|a "
   "structured binding|a member subobject}0 "
   "%diff{of type $ with an %select{rvalue|lvalue}2 of type $|"
   "with an %select{rvalue|lvalue}2 of incompatible type}1,3"
@@ -6545,9 +6545,9 @@ def warn_extern_init : Warning<"'extern' variable has an initializer">,
 def err_variable_object_no_init : Error<
   "variable-sized object may not be initialized">;
 def err_excess_initializers : Error<
-  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">;
+  "excess elements in %select{array|vector|matrix|scalar|union|struct}0 initializer">;
 def ext_excess_initializers : ExtWarn<
-  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">,
+  "excess elements in %select{array|vector|matrix|scalar|union|struct}0 initializer">,
   InGroup<ExcessInitializers>;
 def err_excess_initializers_for_sizeless_type : Error<
   "excess elements in initializer for indivisible sizeless type %0">;
@@ -13148,6 +13148,7 @@ def err_riscv_attribute_interrupt_requires_extension : Error<
   "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
+def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
 
 def err_std_source_location_impl_not_found : Error<
   "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;

@@ -231,6 +231,7 @@ struct MissingFeatures {
   static bool coverageMapping() { return false; }
   static bool createInvariantGroup() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
+  static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool cxxRecordStaticMembers() { return false; }
@@ -240,6 +241,7 @@ struct MissingFeatures {
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
+  static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
