@@ -574,6 +574,15 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
   return error;
 }
 
+SBBreakpointLocation SBBreakpoint::AddFacadeLocation() {
+  BreakpointSP bkpt_sp = GetSP();
+  if (!bkpt_sp)
+    return {};
+
+  BreakpointLocationSP loc_sp = bkpt_sp->AddFacadeLocation();
+  return SBBreakpointLocation(loc_sp);
+}
+
 SBStructuredData SBBreakpoint::SerializeToStructuredData() {
   LLDB_INSTRUMENT_VA(this);
 

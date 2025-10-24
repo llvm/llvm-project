@@ -58,6 +58,13 @@ private:
 /// Create the `mlir.passmanager` here.
 void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
   //----------------------------------------------------------------------------
+  // Mapping of enumerated types
+  //----------------------------------------------------------------------------
+  nb::enum_<MlirPassDisplayMode>(m, "PassDisplayMode")
+      .value("LIST", MLIR_PASS_DISPLAY_MODE_LIST)
+      .value("PIPELINE", MLIR_PASS_DISPLAY_MODE_PIPELINE);
+
+  //----------------------------------------------------------------------------
   // Mapping of MlirExternalPass
   //----------------------------------------------------------------------------
   nb::class_<MlirExternalPass>(m, "ExternalPass")
@@ -139,6 +146,14 @@ void mlir::python::populatePassManagerSubmodule(nb::module_ &m) {
             mlirPassManagerEnableTiming(passManager.get());
           },
           "Enable pass timing.")
+      .def(
+          "enable_statistics",
+          [](PyPassManager &passManager, MlirPassDisplayMode displayMode) {
+            mlirPassManagerEnableStatistics(passManager.get(), displayMode);
+          },
+          "displayMode"_a =
+              MlirPassDisplayMode::MLIR_PASS_DISPLAY_MODE_PIPELINE,
+          "Enable pass statistics.")
       .def_static(
           "parse",
           [](const std::string &pipeline, DefaultingPyMlirContext context) {

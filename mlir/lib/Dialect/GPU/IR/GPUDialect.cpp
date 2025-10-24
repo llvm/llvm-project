@@ -2460,8 +2460,7 @@ static LogicalResult verifyDistributedType(Type expanded, Type distributed,
              << dDim << ")";
     scales[i] = eDim / dDim;
   }
-  if (std::accumulate(scales.begin(), scales.end(), 1,
-                      std::multiplies<int64_t>()) != warpSize)
+  if (llvm::product_of(scales) != warpSize)
     return op->emitOpError()
            << "incompatible distribution dimensions from " << expandedVecType
            << " to " << distributedVecType << " with warp size = " << warpSize;

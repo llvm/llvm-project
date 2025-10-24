@@ -71,7 +71,6 @@ def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       icmp_redundant_trunc,
                                       fold_global_offset,
-                                      shuffle_to_extract,
                                       ext_addv_to_udot_addv,
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
@@ -350,7 +349,7 @@ def AArch64PostLegalizerLowering
 // Post-legalization combines which are primarily optimizations.
 def AArch64PostLegalizerCombiner
     : GICombiner<"AArch64PostLegalizerCombinerImpl",
-                       [copy_prop, cast_of_cast_combines, 
+                       [copy_prop, cast_of_cast_combines, constant_fold_fp_ops, 
                         buildvector_of_truncate, integer_of_truncate,
                         mutate_anyext_to_zext, combines_for_extload, 
                         combine_indexed_load_store, sext_trunc_sextload,

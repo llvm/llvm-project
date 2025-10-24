@@ -72,7 +72,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_ForcedUnwind(e, stop, (void *)&foo);
 }
 
-__attribute__((section("main_func"))) int main() {
+__attribute__((section("main_func"))) int main(int, char **) {
   foo();
   return -2;
 }

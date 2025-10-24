@@ -42,7 +42,6 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
-#include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1090,7 +1089,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
   // Register based DivRem for AEABI (RTABI 4.2)
   if (TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-      TT.isTargetMuslAEABI() || TT.isOSWindows()) {
+      TT.isTargetMuslAEABI() || TT.isOSFuchsia() || TT.isOSWindows()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
     HasStandaloneRem = false;
@@ -1354,6 +1353,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG10, MVT::f16, Promote);
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
+    setOperationAction(ISD::LROUND, MVT::f16, Expand);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
     setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
@@ -2849,6 +2849,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (isTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(ARMISD::TC_RETURN, dl, MVT::Other, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
@@ -2856,6 +2858,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(CallOpc, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InGlue = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
@@ -12008,6 +12012,71 @@ static void genTPLoopBody(MachineBasicBlock *TpLoopBody,
       .add(predOps(ARMCC::AL));
 }
 
+bool ARMTargetLowering::supportKCFIBundles() const {
+  // KCFI is supported in all ARM/Thumb modes
+  return true;
+}
+
+MachineInstr *
+ARMTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::instr_iterator &MBBI,
+                                 const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  MachineOperand *TargetOp = nullptr;
+  switch (MBBI->getOpcode()) {
+  // ARM mode opcodes
+  case ARM::BLX:
+  case ARM::BLX_pred:
+  case ARM::BLX_noip:
+  case ARM::BLX_pred_noip:
+  case ARM::BX_CALL:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
+  case ARM::TAILJMPr:
+  case ARM::TAILJMPr4:
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  // Thumb mode opcodes (Thumb1 and Thumb2)
+  // Note: Most Thumb call instructions have predicate operands before the
+  // target register Format: tBLXr pred, predreg, target_register, ...
+  case ARM::tBLXr:      // Thumb1/Thumb2: BLX register (requires V5T)
+  case ARM::tBLXr_noip: // Thumb1/Thumb2: BLX register, no IP clobber
+  case ARM::tBX_CALL:   // Thumb1 only: BX call (push LR, BX)
+    TargetOp = &MBBI->getOperand(2);
+    break;
+  // Tail call instructions don't have predicates, target is operand 0
+  case ARM::tTAILJMPr: // Thumb1/Thumb2: Tail call via register
+    TargetOp = &MBBI->getOperand(0);
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  assert(TargetOp && TargetOp->isReg() && "Invalid target operand");
+  TargetOp->setIsRenamable(false);
+
+  // Select the appropriate KCFI_CHECK variant based on the instruction set
+  unsigned KCFICheckOpcode;
+  if (Subtarget->isThumb()) {
+    if (Subtarget->isThumb2()) {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb2;
+    } else {
+      KCFICheckOpcode = ARM::KCFI_CHECK_Thumb1;
+    }
+  } else {
+    KCFICheckOpcode = ARM::KCFI_CHECK_ARM;
+  }
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(KCFICheckOpcode))
+      .addReg(TargetOp->getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
 MachineBasicBlock *
 ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -13817,7 +13886,7 @@ bool ARMTargetLowering::isDesirableToCommuteXorWithShift(
 }
 
 bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
-    const SDNode *N, CombineLevel Level) const {
+    const SDNode *N) const {
   assert(((N->getOpcode() == ISD::SHL &&
            N->getOperand(0).getOpcode() == ISD::SRL) ||
           (N->getOpcode() == ISD::SRL &&
@@ -13827,7 +13896,8 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   if (!Subtarget->isThumb1Only())
     return true;
 
-  if (Level == BeforeLegalizeTypes)
+  EVT VT = N->getValueType(0);
+  if (VT.getScalarSizeInBits() > 32)
     return true;
 
   return false;
@@ -20574,7 +20644,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
 SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   assert((Subtarget->isTargetAEABI() || Subtarget->isTargetAndroid() ||
           Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI() ||
-          Subtarget->isTargetWindows()) &&
+          Subtarget->isTargetFuchsia() || Subtarget->isTargetWindows()) &&
          "Register-based DivRem lowering only");
   unsigned Opcode = Op->getOpcode();
   assert((Opcode == ISD::SDIVREM || Opcode == ISD::UDIVREM) &&
@@ -21287,21 +21357,28 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
 }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+  // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
       getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
-  if (SecurityCheckCookieLibcall == RTLIB::Unsupported)
-    return TargetLowering::insertSSPDeclarations(M);
 
-  // MSVC CRT has a global variable holding security cookie.
-  M.getOrInsertGlobal("__security_cookie",
-                      PointerType::getUnqual(M.getContext()));
+  RTLIB::LibcallImpl SecurityCookieVar =
+      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
+      SecurityCookieVar != RTLIB::Unsupported) {
+    // MSVC CRT has a global variable holding security cookie.
+    M.getOrInsertGlobal(getLibcallImplName(SecurityCookieVar),
+                        PointerType::getUnqual(M.getContext()));
 
-  // MSVC CRT has a function to validate security cookie.
-  FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-      getLibcallImplName(SecurityCheckCookieLibcall),
-      Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
-  if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
-    F->addParamAttr(0, Attribute::AttrKind::InReg);
+    // MSVC CRT has a function to validate security cookie.
+    FunctionCallee SecurityCheckCookie =
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
+                              Type::getVoidTy(M.getContext()),
+                              PointerType::getUnqual(M.getContext()));
+    if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
+      F->addParamAttr(0, Attribute::AttrKind::InReg);
+  }
+
+  TargetLowering::insertSSPDeclarations(M);
 }
 
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {

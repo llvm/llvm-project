@@ -3755,7 +3755,8 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_hlsl_entrypoint,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
-      options::OPT_fhlsl_spv_use_unknown_image_format};
+      options::OPT_fhlsl_spv_use_unknown_image_format,
+      options::OPT_fhlsl_spv_enable_maximal_reconvergence};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -6442,6 +6443,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back("-fexperimental-call-graph-section");
+
   Args.addOptInFlag(CmdArgs, options::OPT_fstack_size_section,
                     options::OPT_fno_stack_size_section);
 
@@ -9094,6 +9099,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
                            const ToolChain &TC) {
+    // CMake hack to avoid printing verbose informatoin for HIP non-RDC mode.
+    if (A->getOption().matches(OPT_v) && JA.getType() == types::TY_Object)
+      return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
              Set.contains(A->getOption().getGroup().getID()))) &&
@@ -9169,7 +9177,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back(
       Args.MakeArgString("--host-triple=" + getToolChain().getTripleString()));
-  if (Args.hasArg(options::OPT_v))
+
+  // CMake hack, suppress passing verbose arguments for the special-case HIP
+  // non-RDC mode compilation. This confuses default CMake implicit linker
+  // argument parsing when the language is set to HIP and the system linker is
+  // also `ld.lld`.
+  if (Args.hasArg(options::OPT_v) && JA.getType() != types::TY_Object)
     CmdArgs.push_back("--wrapper-verbose");
   if (Arg *A = Args.getLastArg(options::OPT_cuda_path_EQ))
     CmdArgs.push_back(
@@ -9210,8 +9223,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_nogpulibc)) {
     forAllAssociatedToolChains(C, JA, getToolChain(), [&](const ToolChain &TC) {
       // The device C library is only available for NVPTX and AMDGPU targets
-      // currently.
-      if (!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU())
+      // and we only link it by default for OpenMP currently.
+      if ((!TC.getTriple().isNVPTX() && !TC.getTriple().isAMDGPU()) ||
+          !JA.isHostOffloading(Action::OFK_OpenMP))
         return;
       bool HasLibC = TC.getStdlibIncludePath().has_value();
       if (HasLibC) {
