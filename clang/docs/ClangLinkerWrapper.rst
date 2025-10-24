@@ -14,10 +14,10 @@ This tool works as a wrapper of the normal host linking job. This tool is used
 to create linked device images for offloading and the necessary runtime calls to
 register them. It works by first scanning the linker's input for embedded device
 offloading data stored at the ``.llvm.offloading`` section. This section
-contains binary data created by the :doc:`ClangOffloadPackager`. The extracted
-device files will then be linked. The linked modules will then be wrapped into a
-new object file containing the code necessary to register it with the offloading
-runtime.
+contains binary data created by the ``llvm-offload-binary`` utility. The
+extracted device files will then be linked. The linked modules will then be
+wrapped into a new object file containing the code necessary to register it with
+the offloading runtime.
 
 Usage
 =====

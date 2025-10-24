@@ -2203,6 +2203,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeRealtime;
   case bitc::ATTR_KIND_SANITIZE_REALTIME_BLOCKING:
     return Attribute::SanitizeRealtimeBlocking;
+  case bitc::ATTR_KIND_SANITIZE_ALLOC_TOKEN:
+    return Attribute::SanitizeAllocToken;
   case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
     return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
@@ -7149,6 +7151,8 @@ Error BitcodeReader::materializeModule() {
 
   UpgradeARCRuntime(*TheModule);
 
+  copyModuleAttrToFunctions(*TheModule);
+
   return Error::success();
 }
 
@@ -8607,7 +8611,7 @@ getEnableSplitLTOUnitAndUnifiedFlag(BitstreamCursor &Stream,
     case bitc::FS_FLAGS: { // [flags]
       uint64_t Flags = Record[0];
       // Scan flags.
-      assert(Flags <= 0x2ff && "Unexpected bits in flag");
+      assert(Flags <= 0x7ff && "Unexpected bits in flag");
 
       bool EnableSplitLTOUnit = Flags & 0x8;
       bool UnifiedLTO = Flags & 0x200;

@@ -18,11 +18,22 @@ from lit.llvm.subst import FindTool
 # name: The name of this test suite.
 config.name = "Clang"
 
+# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
+# See https://github.com/llvm/llvm-project/issues/106636 for more details.
+#
+# We prefer the lit internal shell which provides a better user experience on failures
+# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
+# env var.
+use_lit_shell = True
+lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
+if lit_shell_env:
+    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
+
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and
 # the test runner updated.
-config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
+config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [
@@ -92,7 +103,7 @@ tools = [
     "clang-diff",
     "clang-format",
     "clang-repl",
-    "clang-offload-packager",
+    "llvm-offload-binary",
     "clang-tblgen",
     "clang-scan-deps",
     "clang-installapi",
@@ -145,7 +156,7 @@ def run_clang_repl(args):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
     if not clang_repl_exe:
-        return False
+        return ""
 
     try:
         clang_repl_cmd = subprocess.Popen(
@@ -153,7 +164,7 @@ def run_clang_repl(args):
         )
     except OSError:
         print("could not exec clang-repl")
-        return False
+        return ""
 
     clang_repl_out = clang_repl_cmd.stdout.read().decode("ascii")
     clang_repl_cmd.wait()

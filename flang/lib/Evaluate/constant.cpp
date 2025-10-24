@@ -9,6 +9,7 @@
 #include "flang/Evaluate/constant.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include <string>
 
@@ -389,38 +390,11 @@ std::size_t Constant<SomeDerived>::CopyFrom(const Constant<SomeDerived> &source,
   return Base::CopyFrom(source, count, resultSubscripts, dimOrder);
 }
 
-static std::optional<int> DerivedTypeDepth(const semantics::Scope &scope) {
-  if (scope.IsDerivedType()) {
-    for (auto iter{scope.cbegin()}; iter != scope.cend(); ++iter) {
-      const Symbol &symbol{*iter->second};
-      if (symbol.test(Symbol::Flag::ParentComp)) {
-        if (const semantics::DeclTypeSpec *type{symbol.GetType()}) {
-          if (const semantics::DerivedTypeSpec *derived{type->AsDerived()}) {
-            const semantics::Scope *parent{derived->scope()};
-            if (!parent) {
-              parent = derived->typeSymbol().scope();
-            }
-            if (parent) {
-              if (auto parentDepth{DerivedTypeDepth(*parent)}) {
-                return 1 + *parentDepth;
-              }
-            }
-          }
-        }
-        return std::nullopt; // error recovery
-      }
-    }
-    return 0;
-  } else {
-    return std::nullopt; // error recovery
-  }
-}
-
 bool ComponentCompare::operator()(SymbolRef x, SymbolRef y) const {
   if (&x->owner() != &y->owner()) {
     // Not components of the same derived type; put ancestors' components first.
-    if (auto xDepth{DerivedTypeDepth(x->owner())}) {
-      if (auto yDepth{DerivedTypeDepth(y->owner())}) {
+    if (auto xDepth{CountDerivedTypeAncestors(x->owner())}) {
+      if (auto yDepth{CountDerivedTypeAncestors(y->owner())}) {
         if (*xDepth != *yDepth) {
           return *xDepth < *yDepth;
         }

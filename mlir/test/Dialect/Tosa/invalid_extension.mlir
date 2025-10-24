@@ -2,7 +2,7 @@
 // Enable all supported profiles to focus the verification of expected extension requirement errors.
 //--------------------------------------------------------------------------------------------------
 
-// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-validate="profile=pro_int,pro_fp strict-op-spec-alignment"
+// RUN: mlir-opt %s -split-input-file -verify-diagnostics -tosa-attach-target="profiles=pro_int,pro_fp" -tosa-validate="strict-op-spec-alignment"
 
 // -----
 func.func @test_argmax(%arg0: tensor<14x19xbf16>) -> tensor<14xi32> {
@@ -310,21 +310,27 @@ func.func @test_identity(%arg0: tensor<13x21x3xi4>) -> tensor<13x21x3xi4> {
 }
 
 // -----
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
-  %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
-  return
+
+  func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_read' op illegal: requires [variable]}}
+    %0 = tosa.variable_read @stored_var : tensor<2x4x8xi8>
+    return
+  }
 }
 
 // -----
-func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
+module {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
   tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
-  // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
-  tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
-  return
+
+  func.func @test_variable_write_type(%arg0: tensor<2x4x8xi8>) -> () {
+    // expected-error@+1 {{'tosa.variable_write' op illegal: requires [variable]}}
+    tosa.variable_write @stored_var, %arg0 : tensor<2x4x8xi8>
+    return
+  }
 }
 
 // -----
@@ -531,4 +537,21 @@ func.func @test_avg_pool2d_non_const_output_zp(%arg0: tensor<1x32x32x8xf32>, %ou
   %0 = "tosa.avg_pool2d"(%arg0, %input_zp, %output_zp) {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, acc_type = f32} :
          (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x8xf32>
   return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_block_scaled(%arg0: tensor<4x8x32xf8E4M3FN>, %arg1: tensor<4x8x1xf8E8M0FNU>, %arg2: tensor<4x16x32xf8E4M3FN>, %arg3: tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32> {
+  // expected-error@+1 {{'tosa.matmul_t_block_scaled' op illegal: requires [mxfp] but not enabled in target}}
+  %0 = tosa.matmul_t_block_scaled %arg0, %arg1, %arg2, %arg3 {block_size = #tosa.block_size<BLOCK_SIZE_32>} : (tensor<4x8x32xf8E4M3FN>, tensor<4x8x1xf8E8M0FNU>, tensor<4x16x32xf8E4M3FN>, tensor<4x16x1xf8E8M0FNU>) -> tensor<4x8x16xf32>
+  return %0 : tensor<4x8x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_argmax_int64
+func.func @test_argmax_int64(%arg0: tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64> {
+  // expected-error@+1 {{'tosa.argmax' op illegal: requires [int64] but not enabled in target}}
+  %0 = tosa.argmax %arg0 {axis = 3 : i32} : (tensor<1x13x13x5xf32>) -> tensor<1x13x13xi64>
+  return %0 : tensor<1x13x13xi64>
 }

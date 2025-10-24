@@ -27,12 +27,13 @@ using namespace llvm;
 
 void MCAsmInfoELF::anchor() {}
 
-MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
+MCSection *MCAsmInfoELF::getStackSection(MCContext &Ctx, bool Exec) const {
   // Solaris doesn't know/doesn't care about .note.GNU-stack sections, so
   // don't emit them.
   if (Ctx.getTargetTriple().isOSSolaris())
     return nullptr;
-  return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0);
+  return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
+                           Exec ? ELF::SHF_EXECINSTR : 0U);
 }
 
 bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
@@ -196,6 +197,8 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
     OS << "llvm_jt_sizes";
   else if (Sec.Type == ELF::SHT_LLVM_CFI_JUMP_TABLE)
     OS << "llvm_cfi_jump_table";
+  else if (Sec.Type == ELF::SHT_LLVM_CALL_GRAPH)
+    OS << "llvm_call_graph";
   else
     OS << "0x" << Twine::utohexstr(Sec.Type);
 
