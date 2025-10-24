@@ -10,6 +10,7 @@ define float @sinf(float %x) {
   ret float %x
 }
 
-; CHECK: declare void @acosf(...)
+; CHECK: declare void @_Unwind_Resume(...)
 ; CHECK: declare void @__umodti3(...)
-
+; CHECK: declare void @acosf(...)
+; CHECK: declare void @truncl(...)
