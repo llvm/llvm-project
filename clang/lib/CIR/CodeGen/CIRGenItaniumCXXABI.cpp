@@ -2187,7 +2187,6 @@ void CIRGenItaniumCXXABI::emitVirtualObjectDelete(
   if (useGlobalDelete) {
     cgf.cgm.errorNYI(delExpr->getSourceRange(),
                      "emitVirtualObjectDelete: global delete");
-    return;
   }
 
   CXXDtorType dtorType = useGlobalDelete ? Dtor_Complete : Dtor_Deleting;
