@@ -980,6 +980,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(const TargetInfo &TI,
       } else {
         Diag(DRE->getBeginLoc(),
              diag::err_atomic_exclusive_builtin_pointer_size_none)
+            << ((IsDoubleWord && TI.getARMLDREXMask()) ? 1 : 0)
             << PointerArg->getSourceRange();
       }
     }
