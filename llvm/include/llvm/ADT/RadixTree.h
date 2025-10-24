@@ -85,7 +85,7 @@ private:
   struct Node {
     KeyConstIteratorRangeType Key = {KeyConstIteratorType{},
                                      KeyConstIteratorType{}};
-    std::vector<Node> Children;
+    SmallVector<Node, 0> Children;
 
     /// An iterator to the value associated with this node.
     ///
