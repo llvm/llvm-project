@@ -222,7 +222,7 @@ private:
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
-  bool selectWaveActiveMin(Register ResVReg, const SPIRVType *ResType,
+  bool selectWaveReduceMin(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
   bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
@@ -2459,7 +2459,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectWaveActiveMin(Register ResVReg,
+bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
                                                    bool IsUnsigned) const {
@@ -3464,9 +3464,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_max:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_umin:
-    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
+    return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_min:
-    return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ false);
+    return selectWaveReduceMin(ResVReg, ResType, I, /*IsUnsigned*/ false);
   case Intrinsic::spv_wave_reduce_sum:
     return selectWaveReduceSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_readlane:

@@ -1060,12 +1060,12 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
                  ]>,
     IntrinSelect<int_dx_wave_reduce_min,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
                    IntrinArgI8<SignedOpKind_Signed>
                  ]>,
     IntrinSelect<int_dx_wave_reduce_umin,
                  [
-                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Max>,
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Min>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
   ];
