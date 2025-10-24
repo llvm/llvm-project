@@ -128,6 +128,17 @@ AST Dumping Potentially Breaking Changes
 
 - Default arguments of template template parameters are pretty-printed now.
 
+- Pretty-printing of ``asm`` attributes are now always the first attribute
+  on the right side of the declaration.  Before we had, e.g.:
+
+    ``__attribute__(("visibility")) asm("string")``
+
+  Now we have:
+
+    ``asm("string") __attribute__(("visibility"))``
+
+  Which is accepted by both clang and gcc parsers.
+
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
@@ -436,6 +447,7 @@ Bug Fixes to Attribute Support
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 - Fix a crash when the function name is empty in the `swift_name` attribute. (#GH157075)
+- Fixes crashes or missing diagnostics with the `device_kernel` attribute. (#GH161905)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -478,6 +490,7 @@ Bug Fixes to C++ Support
 - Fix a crash when attempting to deduce a deduction guide from a non deducible template template parameter. (#130604)
 - Fix for clang incorrectly rejecting the default construction of a union with
   nontrivial member when another member has an initializer. (#GH81774)
+- Fixed a template depth issue when parsing lambdas inside a type constraint. (#GH162092)
 - Diagnose unresolved overload sets in non-dependent compound requirements. (#GH51246) (#GH97753)
 
 Bug Fixes to AST Handling

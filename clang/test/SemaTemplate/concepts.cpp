@@ -1441,6 +1441,24 @@ void main() { Feeder<int>{}.feed<Cat<int>>(); }
 
 }
 
+namespace case9 {
+
+template <typename>
+concept a = requires { requires true; };
+template <typename T>
+concept b = a<typename T::EntitySpec>;
+template <typename T>
+concept c = requires { b<T>; };
+template <typename T>
+  requires c<T>
+struct s;
+template <typename> constexpr bool f() { return true; }
+template <typename T> constexpr bool d = f<T>();
+struct s2;
+static_assert(d<s<s2>>);
+
+}
+
 }
 
 namespace GH162125 {
@@ -1514,6 +1532,31 @@ static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overl
 
 }
 
+namespace GH162092 {
+
+template <typename T>
+struct vector;
+
+template <typename T, typename U>
+concept C = __is_same_as(T, U);
+
+template<class T, auto Cpt>
+concept generic_range_value = requires {
+    Cpt.template operator()<int>();
+};
+
+
+template<generic_range_value<[]<
+   C<int>
+   >() {}> T>
+void x() {}
+
+void foo() {
+  x<vector<int>>();
+}
+
+}
+
 namespace GH162770 {
   enum e {};
   template<e> struct s {};
@@ -1530,3 +1573,62 @@ namespace GH162770 {
   template<typename... Ts> auto comma = (..., Ts());
   auto b = comma<check<e{}>>;
 } // namespace GH162770
+
+namespace GH164750 {
+
+template <typename>
+struct a;
+template <typename>
+struct b;
+
+template <template <typename> typename c, typename d, typename>
+concept e = !__is_convertible_to(c<d>*, b<d>*);
+
+template <typename...>
+struct f;
+template <typename g, typename... h>
+struct f<g, h...> {
+    g i;
+};
+
+template <typename, typename>
+struct u;
+template <typename j, template <typename> typename k, typename l>
+    requires e<k, j, l>
+struct u<const k<j>*, l> {
+    u(const a<j>*);
+};
+template <typename j, template <typename> typename k, typename l>
+struct u<const k<j>*, l> {
+    u(const b<j>*);
+};
+
+template <typename>
+struct m;
+template <typename n, typename... o>
+struct m<n (*)(o...)> {
+    template <template <typename> typename j>
+    using p = j<o...>;
+};
+
+template <typename q, typename r>
+struct s {
+    template <typename... p>
+    struct D {
+        using v = f<u<r, p>...>;
+    };
+    template <typename... t>
+    s(t... p1) : x(p1...) {}
+    m<q>::template p<D>::v x;
+};
+template <typename w, typename... t>
+void fn1(w, t... p2) {
+    s<w, t...>(p2...);
+}
+int* fn2(int) { return nullptr; }
+void fn3() {
+    fn1(fn2, static_cast<const a<int>*>(nullptr));
+    fn1(fn2, static_cast<const b<int>*>(nullptr));
+}
+
+}

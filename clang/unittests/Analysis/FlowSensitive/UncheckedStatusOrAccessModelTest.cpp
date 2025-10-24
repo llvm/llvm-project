@@ -15,19 +15,19 @@
 namespace clang::dataflow::statusor_model {
 namespace {
 
+auto Executor = std::make_unique<
+    UncheckedStatusOrAccessModelTestExecutor<UncheckedStatusOrAccessModel>>();
+
 INSTANTIATE_TEST_SUITE_P(
     UncheckedStatusOrAccessModelTest, UncheckedStatusOrAccessModelTest,
     testing::Values(
-        std::make_pair(new UncheckedStatusOrAccessModelTestExecutor<
-                           UncheckedStatusOrAccessModel>(),
+        std::make_pair(Executor.get(),
                        UncheckedStatusOrAccessModelTestAliasKind::kUnaliased),
         std::make_pair(
-            new UncheckedStatusOrAccessModelTestExecutor<
-                UncheckedStatusOrAccessModel>(),
+            Executor.get(),
             UncheckedStatusOrAccessModelTestAliasKind::kPartiallyAliased),
         std::make_pair(
-            new UncheckedStatusOrAccessModelTestExecutor<
-                UncheckedStatusOrAccessModel>(),
+            Executor.get(),
             UncheckedStatusOrAccessModelTestAliasKind::kFullyAliased)));
 } // namespace
 

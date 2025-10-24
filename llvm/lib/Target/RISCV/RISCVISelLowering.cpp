@@ -318,8 +318,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
 
-  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasVendorXTHeadBb() &&
-      !Subtarget.hasVendorXqcibm() && !Subtarget.hasVendorXAndesPerf() &&
+  if (!Subtarget.hasStdExtZbb() && !Subtarget.hasStdExtP() &&
+      !Subtarget.hasVendorXTHeadBb() && !Subtarget.hasVendorXqcibm() &&
+      !Subtarget.hasVendorXAndesPerf() &&
       !(Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()))
     setOperationAction(ISD::SIGN_EXTEND_INREG, {MVT::i8, MVT::i16}, Expand);
 
@@ -392,7 +393,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
   }
 
-  if (Subtarget.hasStdExtZbb() ||
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP() ||
       (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, XLenVT,
                        Legal);
@@ -403,6 +404,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTTZ, XLenVT, Expand);
+    // If have a CLZW, but not CTZW, custom promote i32.
+    if (Subtarget.hasStdExtP() && Subtarget.is64Bit())
+      setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
   }
 
   if (!Subtarget.hasCPOPLike()) {
@@ -419,13 +423,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
     // Use default promotion for i32 without Zbb.
-    if (Subtarget.is64Bit() && Subtarget.hasStdExtZbb())
+    if (Subtarget.is64Bit() &&
+        (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtP()))
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   } else {
     setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
-  if (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit()) {
+  if (Subtarget.hasStdExtP() ||
+      (Subtarget.hasVendorXCValu() && !Subtarget.is64Bit())) {
     setOperationAction(ISD::ABS, XLenVT, Legal);
   } else if (Subtarget.hasShortForwardBranchOpt()) {
     // We can use PseudoCCSUB to implement ABS.
@@ -688,7 +694,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   else if (Subtarget.hasStdExtZicbop())
     setOperationAction(ISD::PREFETCH, MVT::Other, Legal);
 
-  if (Subtarget.hasStdExtA()) {
+  if (Subtarget.hasStdExtZalrsc()) {
     setMaxAtomicSizeInBitsSupported(Subtarget.getXLen());
     if (Subtarget.hasStdExtZabha() && Subtarget.hasStdExtZacas())
       setMinCmpXchgSizeInBits(8);
@@ -1558,7 +1564,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasStdExtA())
+  if (Subtarget.hasStdExtZaamo())
     setOperationAction(ISD::ATOMIC_LOAD_SUB, XLenVT, Expand);
 
   if (Subtarget.hasForcedAtomics()) {
@@ -12649,10 +12655,7 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
       Lo = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
       Hi = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
       // Reassemble the low and high pieces reversed.
-      // FIXME: This is a CONCAT_VECTORS.
-      SDValue Res = DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), Hi, 0);
-      return DAG.getInsertSubvector(DL, Res, Lo,
-                                    LoVT.getVectorMinNumElements());
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Hi, Lo);
     }
 
     // Just promote the int type to i16 which will double the LMUL.
@@ -14672,6 +14675,25 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(0));
     bool IsCTZ =
         N->getOpcode() == ISD::CTTZ || N->getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+
+    // Without Zbb, lower as 32 - clzw(~X & (X-1))
+    if (IsCTZ && !Subtarget.hasStdExtZbb()) {
+      assert(Subtarget.hasStdExtP());
+
+      NewOp0 = DAG.getFreeze(NewOp0);
+      SDValue Not = DAG.getNOT(DL, NewOp0, MVT::i64);
+      SDValue Minus1 = DAG.getNode(ISD::SUB, DL, MVT::i64, NewOp0,
+                                   DAG.getConstant(1, DL, MVT::i64));
+      SDValue And = DAG.getNode(ISD::AND, DL, MVT::i64, Not, Minus1);
+      SDValue CLZW = DAG.getNode(RISCVISD::CLZW, DL, MVT::i64, And);
+      SDValue Sub = DAG.getNode(ISD::SUB, DL, MVT::i64,
+                                DAG.getConstant(32, DL, MVT::i64), CLZW);
+      SDValue Res = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Sub,
+                                DAG.getValueType(MVT::i32));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+
     unsigned Opc = IsCTZ ? RISCVISD::CTZW : RISCVISD::CLZW;
     SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
@@ -14800,7 +14822,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       // to NEGW+MAX here requires a Freeze which breaks ComputeNumSignBits.
       SDValue Src = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64,
                                 N->getOperand(0));
-      SDValue Abs = DAG.getNode(RISCVISD::ABSW, DL, MVT::i64, Src);
+      SDValue Abs = DAG.getNode(RISCVISD::NEGW_MAX, DL, MVT::i64, Src);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Abs));
       return;
     }
@@ -21816,7 +21838,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
     // Output is either all zero or operand 0. We can propagate sign bit count
     // from operand 0.
     return DAG.ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
-  case RISCVISD::ABSW: {
+  case RISCVISD::NEGW_MAX: {
     // We expand this at isel to negw+max. The result will have 33 sign bits
     // if the input has at least 33 sign bits.
     unsigned Tmp =
@@ -21878,7 +21900,7 @@ unsigned RISCVTargetLowering::ComputeNumSignBitsForTargetNode(
       // result is then sign extended to XLEN. With +A, the minimum width is
       // 32 for both 64 and 32.
       assert(getMinCmpXchgSizeInBits() == 32);
-      assert(Subtarget.hasStdExtA());
+      assert(Subtarget.hasStdExtZalrsc());
       return Op.getValueSizeInBits() - 31;
     }
     break;
@@ -24047,18 +24069,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     }
   }
 
-  std::pair<Register, const TargetRegisterClass *> Res =
-      TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
-
-  // If we picked one of the Zfinx register classes, remap it to the GPR class.
-  // FIXME: When Zfinx is supported in CodeGen this will need to take the
-  // Subtarget into account.
-  if (Res.second == &RISCV::GPRF16RegClass ||
-      Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRPairRegClass)
-    return std::make_pair(Res.first, &RISCV::GPRRegClass);
-
-  return Res;
+  return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
 InlineAsm::ConstraintCode
@@ -24483,6 +24494,25 @@ bool RISCVTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 ISD::NodeType RISCVTargetLowering::getExtendForAtomicCmpSwapArg() const {
   // Zacas will use amocas.w which does not require extension.
   return Subtarget.hasStdExtZacas() ? ISD::ANY_EXTEND : ISD::SIGN_EXTEND;
+}
+
+ISD::NodeType RISCVTargetLowering::getExtendForAtomicRMWArg(unsigned Op) const {
+  // Zaamo will use amo<op>.w which does not require extension.
+  if (Subtarget.hasStdExtZaamo() || Subtarget.hasForcedAtomics())
+    return ISD::ANY_EXTEND;
+
+  // Zalrsc pseudo expansions with comparison require sign-extension.
+  assert(Subtarget.hasStdExtZalrsc());
+  switch (Op) {
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+    return ISD::SIGN_EXTEND;
+  default:
+    break;
+  }
+  return ISD::ANY_EXTEND;
 }
 
 Register RISCVTargetLowering::getExceptionPointerRegister(

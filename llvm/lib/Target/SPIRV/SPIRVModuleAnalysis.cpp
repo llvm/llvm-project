@@ -547,9 +547,9 @@ void SPIRVModuleAnalysis::collectFuncNames(MachineInstr &MI,
   if (MI.getOpcode() == SPIRV::OpDecorate) {
     // If it's got Import linkage.
     auto Dec = MI.getOperand(1).getImm();
-    if (Dec == static_cast<unsigned>(SPIRV::Decoration::LinkageAttributes)) {
+    if (Dec == SPIRV::Decoration::LinkageAttributes) {
       auto Lnk = MI.getOperand(MI.getNumOperands() - 1).getImm();
-      if (Lnk == static_cast<unsigned>(SPIRV::LinkageType::Import)) {
+      if (Lnk == SPIRV::LinkageType::Import) {
         // Map imported function name to function ID register.
         const Function *ImportedFunc =
             F->getParent()->getFunction(getStringImm(MI, 2));
@@ -635,7 +635,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
   for (auto F = M.begin(), E = M.end(); F != E; ++F) {
-    if ((*F).isDeclaration())
+    if (F->isDeclaration())
       continue;
     MachineFunction *MF = MMI->getMachineFunction(*F);
     assert(MF);

@@ -32,6 +32,15 @@ def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
 def isNotOSLinuxAndNotOSOpenBSD : RuntimeLibcallPredicate<
   [{!TT.isOSLinux() && !TT.isOSOpenBSD()}]>;
 
+def isNotOSAIXAndNotOSOpenBSD : RuntimeLibcallPredicate<
+  [{!TT.isOSAIX() && !TT.isOSOpenBSD()}]>;
+
+// OpenBSD uses __guard_local. AIX uses __ssp_canary_word, MSVC/Windows
+// Itanium uses __security_cookie
+def hasStackChkFail : RuntimeLibcallPredicate<
+  [{ !TT.isOSOpenBSD() && !TT.isWindowsMSVCEnvironment() &&
+     !TT.isWindowsItaniumEnvironment()}]>;
+
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
 
@@ -1241,9 +1250,9 @@ defvar LibmHasLdexpF80 = LibcallImpls<(add ldexpl_f80), isNotOSWindowsOrIsCygwin
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexpl_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
-defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), hasStackChkFail>;
 defvar has__stack_chk_guard =
-    LibcallImpls<(add __stack_chk_guard), isNotOSOpenBSD>;
+    LibcallImpls<(add __stack_chk_guard), hasStackChkFail>;
 defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
 defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 
@@ -1396,8 +1405,8 @@ defvar ExceptionModelCallsArm64EC = (add
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
-                                arm64ec___stack_chk_fail,
-                                __stack_chk_guard,
+                                AvailableIf<arm64ec___stack_chk_fail, hasStackChkFail>,
+                                AvailableIf<__stack_chk_guard, hasStackChkFail>,
                                 LibcallImpls<(add __security_check_cookie_arm64ec,
                                                   __security_cookie),
                                               isWindowsMSVCEnvironment>,
@@ -2117,7 +2126,9 @@ defvar MSP430DefaultOptOut = [
   __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
   __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
   __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
-  __floatundidf
+  __floatundidf, __gtdf2, __eqdf2, __gedf2, __ltdf2, __ledf2,
+  __adddf3, __divdf3, __divdi3, __moddi3,
+  __muldf3, __subdf3, __udivdi3, __umoddi3
 ];
 
 // EABI Libcalls - EABI Section 6.2
@@ -2316,11 +2327,11 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           has__stack_chk_fail,
            has__stack_smash_handler,
            has___guard_local,
            AvailableIf<__ssp_canary_word, isAIX>,
-           AvailableIf<__stack_chk_guard, isNotAIX>)>;
+           AvailableIf<__stack_chk_fail, isNotOSOpenBSD>,
+           AvailableIf<__stack_chk_guard, isNotOSAIXAndNotOSOpenBSD>)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
