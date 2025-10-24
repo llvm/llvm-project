@@ -316,11 +316,11 @@ private:
 
 /// When the source code line we want to print is too long for
 /// the terminal, select the "interesting" region.
-static void selectInterestingSourceRegion(std::string &SourceLine,
-                                          std::string &CaretLine,
-                                          std::string &FixItInsertionLine,
-                                          unsigned Columns,
-                                          const SourceColumnMap &map) {
+static void selectInterestingSourceRegion(
+    std::string &SourceLine, std::string &CaretLine,
+    std::string &FixItInsertionLine, unsigned Columns,
+    const SourceColumnMap &map,
+    SmallVector<clang::TextDiagnostic::StyleRange> &Styles) {
   unsigned CaretColumns = CaretLine.size();
   unsigned FixItColumns = llvm::sys::locale::columnWidth(FixItInsertionLine);
   unsigned MaxColumns = std::max(static_cast<unsigned>(map.columns()),
@@ -409,10 +409,10 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
   if (TargetColumns > ellipses_space+CaretColumnsOutsideSource)
     TargetColumns -= ellipses_space+CaretColumnsOutsideSource;
 
-  while (SourceStart>0 || SourceEnd<SourceLine.size()) {
+  while (SourceStart > 0 || SourceEnd < SourceLine.size()) {
     bool ExpandedRegion = false;
 
-    if (SourceStart>0) {
+    if (SourceStart > 0) {
       unsigned NewStart = map.startOfPreviousColumn(SourceStart);
 
       // Skip over any whitespace we see here; we're looking for
@@ -487,8 +487,41 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
   if (BackColumnsRemoved > strlen(back_ellipse))
     SourceLine.replace(SourceEnd, std::string::npos, back_ellipse);
 
+  // Since we've modified the SourceLine, we also need to adjust the line's
+  // highlighting information. In particular, if we've removed
+  // from the front of the line, we need to move the style ranges to the
+  // left and remove unneeded ranges.
+  unsigned FrontDiff = FrontColumnsRemoved > strlen(front_ellipse)
+                           ? FrontColumnsRemoved - strlen(front_ellipse)
+                           : 0;
+  unsigned CodeStart =
+      FrontColumnsRemoved > strlen(front_ellipse) ? strlen(front_ellipse) : 0;
+  unsigned CodeEnd = CodeStart + ColumnsKept;
+  for (auto &R : Styles) {
+    // Style ranges too far left. Just move them where they don't bother.
+    if (R.End < FrontDiff) {
+      R.Start = R.End = std::numeric_limits<unsigned>::max();
+      continue;
+    }
+    // Move them left. (Note that this can wrap R.Start, but that doesn't
+    // matter).
+    R.Start -= FrontDiff;
+    R.End -= FrontDiff;
+
+    // Style ranges too far to the right.
+    if (R.Start >= (ColumnsKept + strlen(front_ellipse))) {
+      R.Start = R.End = std::numeric_limits<unsigned>::max();
+      continue;
+    }
+
+    // If the range overlaps the end of the code, don't leak into the back
+    // ellipse.
+    if (R.Start < CodeEnd && R.End > CodeEnd)
+      R.End = CodeEnd;
+  }
+
   // If that's enough then we're done
-  if (FrontColumnsRemoved+ColumnsKept <= Columns)
+  if (FrontColumnsRemoved + ColumnsKept <= Columns)
     return;
 
   // Otherwise remove the front as well
@@ -1355,6 +1388,11 @@ void TextDiagnostic::emitSnippetAndCaret(
       OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
 
+  unsigned Columns = DiagOpts.MessageLength;
+  // If we don't have enough columns available, just abort now.
+  if (Columns && Columns <= (MaxLineNoDisplayWidth + 4))
+    return;
+
   // Prepare source highlighting information for the lines we're about to
   // emit, starting from the first line.
   std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
@@ -1412,10 +1450,11 @@ void TextDiagnostic::emitSnippetAndCaret(
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.
-    unsigned Columns = DiagOpts.MessageLength;
     if (Columns)
       selectInterestingSourceRegion(SourceLine, CaretLine, FixItInsertionLine,
-                                    Columns, sourceColMap);
+                                    (Columns - (MaxLineNoDisplayWidth + 4)),
+                                    sourceColMap,
+                                    SourceStyles[LineNo - Lines.first]);
 
     // If we are in -fdiagnostics-print-source-range-info mode, we are trying
     // to produce easily machine parsable output.  Add a space before the

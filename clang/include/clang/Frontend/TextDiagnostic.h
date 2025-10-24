@@ -47,7 +47,7 @@ public:
   struct StyleRange {
     unsigned Start;
     unsigned End;
-    enum llvm::formatted_raw_ostream::Colors Color;
+    enum llvm::raw_ostream::Colors Color;
     StyleRange(unsigned S, unsigned E,
                enum llvm::formatted_raw_ostream::Colors C)
         : Start(S), End(E), Color(C) {};
