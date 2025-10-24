@@ -1,4 +1,0 @@
-ompd init
-b test_ompd_rel_display_control_vars.c:14
-c
-ompdtestapi ompd_rel_display_control_vars

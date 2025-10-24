@@ -1,5 +1,0 @@
-framework module SomeFramework {
-  umbrella header "public_header.h"
-  export *
-  module * { export * }
-}

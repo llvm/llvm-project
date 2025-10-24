@@ -1,3 +1,0 @@
-module C {
-  header "c.h"
-}

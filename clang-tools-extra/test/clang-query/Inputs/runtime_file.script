@@ -1,5 +1,0 @@
-set bind-root false
-
-l func functionDecl(hasName("bar"))
-m func.bind("f")
-m varDecl().bind("v")

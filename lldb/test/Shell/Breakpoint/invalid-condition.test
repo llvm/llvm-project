@@ -1,6 +1,0 @@
-# UNSUPPORTED: system-windows
-# RUN: %clang_host %p/Inputs/dummy-target.c -o %t.out
-# RUN: %lldb -b -o "br s -n main -c 'bogus'" -o "run" %t.out 2>&1 | FileCheck %s
-
-# CHECK: error: stopped due to an error evaluating condition of breakpoint 1.1: "bogus"
-# CHECK-NEXT: Couldn't parse conditional expression

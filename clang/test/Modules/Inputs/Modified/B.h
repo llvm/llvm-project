@@ -1,3 +1,0 @@
-@import ModA;
-
-int getB();

@@ -1,5 +1,0 @@
-module C {
-  header "../src/public-in-c.h"
-  private header "../src/public-in-b.h"
-  private header "../src/private-in-c.h"
-}

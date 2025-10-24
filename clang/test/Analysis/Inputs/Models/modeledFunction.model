@@ -1,3 +1,0 @@
-void modelled(intptr p) {
- ++*p;
-}

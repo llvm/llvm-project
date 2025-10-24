@@ -1,2 +1,0 @@
-junitparser==3.2.0
-google-cloud-storage==3.3.0

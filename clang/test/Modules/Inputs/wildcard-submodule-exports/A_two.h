@@ -1,1 +1,0 @@
-unsigned int *A2;

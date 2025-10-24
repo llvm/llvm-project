@@ -1,3 +1,0 @@
-CFLAGS_EXTRAS = -I$(BUILDDIR)
-USE_PRIVATE_MODULE_CACHE = YES
-include Makefile.rules

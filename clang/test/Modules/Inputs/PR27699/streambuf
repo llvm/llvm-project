@@ -1,7 +1,0 @@
- #ifndef STREAMBUF
- #define STREAMBUF
- template <typename> struct basic_streambuf {
-  basic_streambuf(const basic_streambuf &);
-  };
-template <typename T> basic_streambuf<T>::basic_streambuf(const basic_streambuf &) = default;
-#endif

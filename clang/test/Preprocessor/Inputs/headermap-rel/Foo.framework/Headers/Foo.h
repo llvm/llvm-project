@@ -1,2 +1,0 @@
-
-Foo.h is parsed

@@ -1,4 +1,0 @@
-framework module Foo_Private {
-  header "Foo_Priv.h"
-  export *
-}

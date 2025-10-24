@@ -1,9 +1,0 @@
-breakpoint set -p "Break here"
-r
-watchpoint set variable val
-watchpoint command add -s lua
-print("val=" .. tostring(frame:FindVariable("val"):GetValue()))
-quit
-c
-# CHECK: val=1
-# CHECK: val=2

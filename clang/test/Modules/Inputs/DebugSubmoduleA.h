@@ -1,3 +1,0 @@
-struct A {
-  int a;
-};

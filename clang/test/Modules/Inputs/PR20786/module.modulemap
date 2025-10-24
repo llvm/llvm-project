@@ -1,3 +1,0 @@
-module TMath { header "TMath.h" }
-module TFormula { header "TFormula.h" }
-module TBranchProxy { header "TBranchProxy.h" }

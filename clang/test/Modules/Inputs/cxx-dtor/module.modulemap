@@ -1,2 +1,0 @@
-module a { header "a.h" export * }
-module b { header "b.h" export * }

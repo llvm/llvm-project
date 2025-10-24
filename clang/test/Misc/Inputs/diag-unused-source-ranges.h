@@ -1,1 +1,0 @@
-static void thing(void) {}

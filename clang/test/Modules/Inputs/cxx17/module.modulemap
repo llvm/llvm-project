@@ -1,4 +1,0 @@
-module Decls {
-  header "decls.h"
-  explicit module Unimported { header "unimported.h" }
-}

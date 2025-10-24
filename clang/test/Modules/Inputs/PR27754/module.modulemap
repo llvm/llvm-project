@@ -1,3 +1,0 @@
-module "RConversionRuleParser.h" { header "RConversionRuleParser.h" }
-module "TMetaUtils.h" { header "TMetaUtils.h" }
-module "TSchemaType.h" { header "TSchemaType.h" }

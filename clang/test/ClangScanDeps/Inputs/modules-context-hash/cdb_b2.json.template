@@ -1,7 +1,0 @@
-[
-  {
-    "directory": "DIR",
-    "command": "clang -c DIR/tu.c -fmodules -fmodules-cache-path=DIR/cache -IDIR/b -o DIR/tu_b.o -fapplication-extension",
-    "file": "DIR/tu.c"
-  }
-]

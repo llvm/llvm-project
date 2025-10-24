@@ -1,9 +1,0 @@
-module public1 {
-  header "public1.h"
-}
-module public2 {
-  header "public2.h"
-  module public2sub {
-    header "public2sub.h"
-  }
-}

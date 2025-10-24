@@ -1,3 +1,0 @@
-# RUN: %lldb -b -s %s -c %p/Inputs/x86-64-netbsd.core | FileCheck %p/Inputs/x86-fp.check
-
-register read --all

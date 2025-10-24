@@ -1,7 +1,0 @@
-// RUN: %clang_cc1 -fmodules -fmodule-name=A -x c++-module-map %s -emit-module -o /dev/null -verify
-module A {
-  header "does not exist" { size 12345 } // ok, do not need mtime for explicit module build
-  header "also does not exist" { mtime 12345 }
-}
-#pragma clang module contents
-// expected-error@4 {{cannot emit module A: size must be explicitly specified for missing header file "also does not exist"}}

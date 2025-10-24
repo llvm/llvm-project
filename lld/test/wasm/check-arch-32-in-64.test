@@ -1,4 +1,0 @@
-RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/start.s -o %t.o
-RUN: not wasm-ld -mwasm64 %t.o -o %t.wasm 2>&1 | FileCheck %s
-
-CHECK: wasm32 object file can't be linked in wasm64 mode

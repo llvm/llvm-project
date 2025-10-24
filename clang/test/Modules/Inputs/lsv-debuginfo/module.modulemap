@@ -1,9 +1,0 @@
-module A {
-  umbrella "A" module * { export * }
-}
-module B {
-  umbrella "B" module * { export * }
-}
-module C {
-  umbrella "C" module * { export * }
-}

@@ -1,7 +1,0 @@
-[
-  {
-    "directory": "DIR",
-    "command": "clang -E DIR/header-search-pruning.cpp -Ibegin -I1 -Ia -I3 -I4 -I5 -I6 -Ib -I8 -Iend DEFINES -fmodules -fcxx-modules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fmodule-map-file=DIR/module.modulemap",
-    "file": "DIR/header-search-pruning.cpp"
-  }
-]

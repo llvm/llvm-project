@@ -1,1 +1,0 @@
-perl -S ccc-analyzer %*

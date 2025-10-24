@@ -1,1 +1,0 @@
-#define A 1

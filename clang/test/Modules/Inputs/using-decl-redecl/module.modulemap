@@ -1,4 +1,0 @@
-module a { header "a.h" }
-module b { header "b.h" export a }
-module c { header "c.h" export a export b }
-module d { header "d.h" }

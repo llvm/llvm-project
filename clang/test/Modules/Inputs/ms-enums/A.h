@@ -1,1 +1,0 @@
-enum fwd_enum;

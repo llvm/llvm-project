@@ -1,6 +1,0 @@
-module "test-base" {
-  export *
-  header "Inputs/dependency-gen-included.h"
-  use "test-base2"
-}
-extern module "test-base2" "Inputs/dependency-gen-base2.modulemap"

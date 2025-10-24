@@ -1,4 +1,0 @@
-# RUN: echo --help > %t.rsp
-
-# RUN: %lld @%t.rsp | FileCheck %s
-CHECK: OVERVIEW: LLVM Linker

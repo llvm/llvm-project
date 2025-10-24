@@ -1,8 +1,0 @@
-out
-node_modules
-.vscode-test
-*.vsix
-grammar.json
-tablegen-grammar.json
-
-!.vscode

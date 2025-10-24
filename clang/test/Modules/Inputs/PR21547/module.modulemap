@@ -1,4 +1,0 @@
-module M {
-  header "FirstHeader.h"
-  export *
-}

@@ -1,5 +1,0 @@
-framework module FrameworkWithWrongCase {
-  umbrella header "FrameworkWithWrongCase.h"
-  export *
-  module * { export * }
-}

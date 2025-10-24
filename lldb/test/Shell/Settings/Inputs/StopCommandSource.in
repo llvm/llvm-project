@@ -1,3 +1,0 @@
-settings set interpreter.stop-command-source-on-error true
-bogus
-expression 123400000 + 56789

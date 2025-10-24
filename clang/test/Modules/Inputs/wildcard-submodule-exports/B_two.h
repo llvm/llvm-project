@@ -1,1 +1,0 @@
-unsigned short *B2;

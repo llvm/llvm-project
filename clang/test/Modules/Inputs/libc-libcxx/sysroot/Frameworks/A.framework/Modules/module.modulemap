@@ -1,4 +1,0 @@
-framework module A [extern_c] {
-    umbrella header "A.h"
-    export *
-}

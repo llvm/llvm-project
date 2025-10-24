@@ -1,3 +1,0 @@
-# RUN: modularize %s -x c++
-
-Inputs/TemplateClasses.h

@@ -1,5 +1,0 @@
-# XFAIL: system-netbsd
-# RUN: %clang_host -x c %S/Inputs/val.c -g -o %t
-# RUN: %lldb -b -s %S/Inputs/watchpoint1.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint1.in
-# RUN: %lldb -b -s %S/Inputs/watchpoint2.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint2.in
-# RUN: %lldb -b -s %S/Inputs/watchpoint3.in --script-language lua %t 2>&1 | FileCheck %S/Inputs/watchpoint3.in

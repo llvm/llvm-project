@@ -1,3 +1,0 @@
-sink: "{ S[] -> a[] }"
-schedule:
-  domain: "{ S[] }"

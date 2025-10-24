@@ -1,9 +1,0 @@
-# RUN: env LINK=-help lld-link | FileCheck %s
-# RUN: env _LINK_=-help lld-link | FileCheck %s
-
-CHECK: OVERVIEW: LLVM Linker
-
-# RUN: env LLD_IN_TEST=1 LINK=-help not lld-link /lldignoreenv 2>&1 | \
-# RUN:     FileCheck --check-prefix=ERR %s
-
-ERR: error: no input files

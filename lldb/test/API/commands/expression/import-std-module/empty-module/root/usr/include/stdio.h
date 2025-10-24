@@ -1,1 +1,0 @@
-struct libc_struct {};

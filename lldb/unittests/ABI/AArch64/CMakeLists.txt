@@ -1,9 +1,0 @@
-add_lldb_unittest(ABIAArch64Tests
-  ABIAArch64Test.cpp
-  LINK_COMPONENTS
-    Support
-    AArch64
-  LINK_LIBS
-    lldbTarget
-    lldbPluginABIAArch64
-  )

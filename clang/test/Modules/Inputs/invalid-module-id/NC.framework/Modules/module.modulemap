@@ -1,6 +1,0 @@
-framework module NC {
-  umbrella header "NC.h"
-
-  export *
-  module * { export * }
-}

@@ -1,6 +1,0 @@
-module a { header "a.h" }
-module b { header "b.h" }
-module c {
-  module c1 { header "c1.h" }
-  module c2 { header "c2.h" }
-}

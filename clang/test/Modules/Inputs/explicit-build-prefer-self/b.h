@@ -1,2 +1,0 @@
-// b
-#include "x.h"

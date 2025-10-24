@@ -1,4 +1,0 @@
-framework module Base {
-  header "Base.h"
-  export *
-}

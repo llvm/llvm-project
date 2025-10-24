@@ -1,4 +1,0 @@
-framework module Unrelated {
-    umbrella header "Unrelated.h"
-    export *
-}

@@ -1,3 +1,0 @@
-module b {
-  header "DIR/b/b.h"
-}

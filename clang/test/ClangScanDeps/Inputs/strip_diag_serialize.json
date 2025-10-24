@@ -1,7 +1,0 @@
-[
-{
-  "directory": "DIR",
-  "command": "clang -E -fsyntax-only DIR/strip_diag_serialize_input.cpp --serialize-diagnostics /does/not/exist",
-  "file": "DIR/strip_diag_serialize_input.cpp"
-}
-]

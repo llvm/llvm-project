@@ -1,3 +1,0 @@
-module UIKit {
-  header "UIKit.h"
-}

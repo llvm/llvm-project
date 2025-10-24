@@ -1,4 +1,0 @@
-framework module IncludeExcluded {
-  header "IncludeExcluded.h"
-  exclude header "Excluded.h"
-}

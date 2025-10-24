@@ -1,9 +1,0 @@
-{
-  "mappings" :
-    {
-     "Foo/Foo.h" : "headers/foo/Foo.h",
-     "Bar.h" : "headers/foo/Bar.h",
-     "Foo/Bar.h" : "INPUTS_DIR/nonportable-hmaps/headers/foo/Bar.h",
-     "headers/Foo/Baz.h" : "/not/existing/absolute/path/Baz.h"
-    }
-}

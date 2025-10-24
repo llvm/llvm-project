@@ -1,1 +1,0 @@
-target stop-hook add -n b -o "expr ptr"

@@ -1,1 +1,0 @@
-#define WE_SUPPORT_DR302

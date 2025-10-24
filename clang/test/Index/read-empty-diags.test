@@ -1,2 +1,0 @@
-// RUN: not c-index-test -read-diagnostics %S/Inputs/empty.dia 2>&1 | FileCheck %s
-// CHECK: Trouble deserializing file (Invalid File): Invalid diagnostics signature

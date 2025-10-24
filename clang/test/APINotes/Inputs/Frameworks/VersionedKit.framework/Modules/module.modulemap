@@ -1,5 +1,0 @@
-framework module VersionedKit {
-  umbrella header "VersionedKit.h"
-  export *
-  module * { export * }
-}

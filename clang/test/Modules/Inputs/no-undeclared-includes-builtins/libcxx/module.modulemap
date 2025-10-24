@@ -1,5 +1,0 @@
-module libcxx [system] {
-  header "stddef.h"
-  header "stdio.h"
-  export *
-}

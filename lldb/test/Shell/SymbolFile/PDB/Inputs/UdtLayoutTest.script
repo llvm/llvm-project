@@ -1,5 +1,0 @@
-settings set target.max-children-depth 10
-breakpoint set --file UdtLayoutTest.cpp --line 60
-run
-target variable
-frame variable

@@ -1,2 +1,0 @@
-.functype foo () -> ()
-.weak foo

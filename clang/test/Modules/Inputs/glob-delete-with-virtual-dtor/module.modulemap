@@ -1,1 +1,0 @@
-module glob_delete_with_virtual_dtor { header "glob-delete-with-virtual-dtor.h" export * }

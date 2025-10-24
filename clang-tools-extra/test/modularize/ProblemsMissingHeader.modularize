@@ -1,3 +1,0 @@
-# RUN: not modularize %S/Inputs/MissingHeader/module.modulemap 2>&1 | FileCheck %s
-
-# CHECK: {{.*}}{{[/\\]}}Inputs/MissingHeader/module.modulemap:8:10: error : Header not found: Missing.h

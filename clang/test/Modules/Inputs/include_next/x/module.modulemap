@@ -1,2 +1,0 @@
-module xa { header "a.h" export * }
-module xb { header "subdir/b.h" export * }

@@ -1,9 +1,0 @@
-module malformed_a {
-  module a1 { header "a1.h" }
-  module a2 { header "a2.h" }
-}
-module malformed_b {
-  module b1 { header "b1.h" }
-  module b2 { header "b2.h" }
-}
-module c { header "c.h" }

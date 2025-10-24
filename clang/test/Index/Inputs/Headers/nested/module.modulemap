@@ -1,4 +1,0 @@
-module nested {
-  header "nested.h"
-}
-

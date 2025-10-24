@@ -1,7 +1,0 @@
-[{"Limit":100,"ProximityPaths":["/usr/home/user/clang-tools-extra/clangd/benchmarks/IndexBenchmark.cpp"],"Query":"OMP","RestrictForCodeCompletion":true,"Scopes":["clang::"], "AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"s","RestrictForCodeCompletion":true,"Scopes":["llvm::", ""], "AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"sy","RestrictForCodeCompletion":true,"Scopes":["llvm::", ""], "AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"sys","RestrictForCodeCompletion":true,"Scopes":["llvm::", ""], "AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"sys","RestrictForCodeCompletion":true,"Scopes":["llvm::", ""], "AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"Dex","RestrictForCodeCompletion":true,"Scopes":["clang::clangd::", "clang::", "clang::clangd::dex::"],"AnyScope":false, "PreferredTypes":[]},
-{"Limit":100,"ProximityPaths":[],"Query":"Variable","RestrictForCodeCompletion":true,"Scopes":[""], "AnyScope":false, "PreferredTypes":[]}]

@@ -1,8 +1,0 @@
-import lit
-lit_config.load_config(
-    config, os.path.join(lit_config.params.get('clang_lit_site_cfg')))
-config.name = 'update_cc_test_checks.py example'
-config.suffixes = ['.c', '.cpp']
-config.test_format = lit.formats.ShTest(execute_external=False)
-config.test_source_root = os.path.dirname(__file__)
-config.test_exec_root = os.path.dirname(__file__)

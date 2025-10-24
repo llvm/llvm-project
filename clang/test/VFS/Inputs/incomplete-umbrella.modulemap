@@ -1,5 +1,0 @@
-framework module Incomplete {
-  umbrella header "Incomplete.h"
-  export *
-  module * { export * }
-}

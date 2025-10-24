@@ -1,2 +1,0 @@
-int umbrella_sub;
-

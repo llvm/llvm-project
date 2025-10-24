@@ -1,4 +1,0 @@
-command script add my_cmd
-result.PutCString("My Command Result")
-result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
-DONE

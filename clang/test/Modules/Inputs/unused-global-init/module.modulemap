@@ -1,3 +1,0 @@
-module used { header "used.h" }
-module unused { header "unused.h" }
-module init { module a { header "init.h" } module b { header "other.h" } }

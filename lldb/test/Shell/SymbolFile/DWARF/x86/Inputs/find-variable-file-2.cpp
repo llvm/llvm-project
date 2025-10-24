@@ -1,3 +1,0 @@
-namespace two {
-int foo;
-}

@@ -1,4 +1,0 @@
-framework module ImportOnce {
-  umbrella header "ImportOnce.h"
-  export *
-}

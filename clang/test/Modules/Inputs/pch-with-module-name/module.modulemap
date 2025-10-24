@@ -1,9 +1,0 @@
-module CloudKit {
-  header "C.h"
-  export *
-}
-
-module Contacts {
-  header "D.h"
-  export *
-}

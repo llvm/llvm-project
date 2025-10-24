@@ -1,3 +1,0 @@
-module Umbrella2 {
-  umbrella header "Umbrella2.h"
-}

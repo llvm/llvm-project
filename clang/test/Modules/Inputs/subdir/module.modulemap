@@ -1,3 +1,0 @@
-module subdir {
-  header "subdir.h"
-}

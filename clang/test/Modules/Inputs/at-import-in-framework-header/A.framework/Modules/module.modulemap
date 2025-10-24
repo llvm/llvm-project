@@ -1,4 +1,0 @@
-// at-import-in-framework-header/A.framework/Modules/module.modulemap
-framework module A {
-  header "A.h"
-}

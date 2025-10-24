@@ -1,5 +1,0 @@
-framework module NameInDir2 {
-  umbrella header "NameInDir2.h"
-  export *
-  module * { export * }
-}

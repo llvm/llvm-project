@@ -1,1 +1,0 @@
-module B { header "b.h" use A }

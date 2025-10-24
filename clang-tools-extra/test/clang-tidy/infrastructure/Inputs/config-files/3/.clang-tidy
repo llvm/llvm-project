@@ -1,4 +1,0 @@
-InheritParentConfig: true
-Checks: 'from-child3'
-HeaderFilterRegex: 'child3'
-ExcludeHeaderFilterRegex: 'exc-child3'

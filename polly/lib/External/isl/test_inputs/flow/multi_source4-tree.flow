@@ -1,4 +1,0 @@
-must_dependence: "{  }"
-may_dependence: "{ T[] -> [S[] -> a[]]; V[] -> [S[] -> a[]] }"
-must_no_source: "{  }"
-may_no_source: "{  }"

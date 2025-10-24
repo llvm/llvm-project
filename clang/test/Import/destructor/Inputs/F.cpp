@@ -1,3 +1,0 @@
-struct B {
-  virtual ~B() {}
-};

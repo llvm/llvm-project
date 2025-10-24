@@ -1,2 +1,0 @@
-# RUN: %lldb --script-language lua -o 'script foo = 1010' -o 'script bar = 101' -o 'script print(foo+bar)' 2>&1 | FileCheck %s
-# CHECK: 1111

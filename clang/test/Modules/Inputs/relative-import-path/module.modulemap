@@ -1,3 +1,0 @@
-module A { header "A.h" }
-module B { header "B.h" }
-module C { header "C.h" }

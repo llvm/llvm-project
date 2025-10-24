@@ -1,8 +1,0 @@
-explicit framework module SomeKit.Private {
-  header "SomeKit_Private.h"
-  explicit NullAnnotation { header "SomeKit_PrivateForNullAnnotation.h" }
-  export *
-  module * { export * }
-syntax error
-
-}

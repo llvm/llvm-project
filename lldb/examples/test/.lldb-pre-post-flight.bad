@@ -1,8 +1,0 @@
-pre_flight = "I am not callable"
-
-def post_flight(test):
-    __import__("lldb")
-    __import__("lldbtest")
-    print "\nRunning post-flight function:"
-    print "for test case:", test
-

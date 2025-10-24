@@ -1,5 +1,0 @@
-module A {
-  header "foo.h" { size 13 }
-  header "bar.h" { size 1000 }
-  header "baz.h" { mtime 1 }
-}

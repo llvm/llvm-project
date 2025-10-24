@@ -1,5 +1,0 @@
-module ModuleInSubdir {
-header "h1.h"
-  export *
-}
-

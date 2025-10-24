@@ -1,9 +1,0 @@
-## Test that --plugin is ignored.
-
-# RUN: rm -f %t.a
-# RUN: touch %t.txt
-# RUN: llvm-ar rc %t.a %t.txt
-# RUN: llvm-ar --plugin ignore t %t.a | FileCheck %s
-# RUN: llvm-ar t --plugin=ignore %t.a | FileCheck %s
-
-# CHECK: {{.*}}.txt

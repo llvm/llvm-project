@@ -1,3 +1,0 @@
-struct SomeDecl {
-  int x;
-};

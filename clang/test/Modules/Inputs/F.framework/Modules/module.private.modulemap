@@ -1,7 +1,0 @@
-module F.Private [system] {
-  explicit module NS {
-      header "NS.h"
-      export *
-  }
-  export *
-}

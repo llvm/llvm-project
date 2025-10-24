@@ -1,7 +1,0 @@
-GitPython
-numpy
-pandas
-plotly
-statsmodels
-tabulate
-tqdm

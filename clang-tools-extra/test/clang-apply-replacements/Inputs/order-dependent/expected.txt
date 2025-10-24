@@ -1,3 +1,0 @@
-The new insertion has the same insert location as an existing replacement.
-New replacement: $(path)/order-dependent.cpp: 12:+0:"1"
-Existing replacement: $(path)/order-dependent.cpp: 12:+0:"0"

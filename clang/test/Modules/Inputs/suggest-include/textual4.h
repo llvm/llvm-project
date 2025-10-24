@@ -1,1 +1,0 @@
-extern int textual4;

@@ -1,3 +1,0 @@
-framework module System [system] {
-  umbrella header "System.h"
-}

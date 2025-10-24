@@ -1,3 +1,0 @@
-# ensures that we test parsing of stub libraries that contain
-# windows line endings
-libstub.so text eol=crlf

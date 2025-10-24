@@ -1,3 +1,0 @@
-module NCI {
-  explicit module A { header "a.h" }
-}

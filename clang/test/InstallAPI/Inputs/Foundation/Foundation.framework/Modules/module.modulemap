@@ -1,3 +1,0 @@
-framework module Foundation [system] {
-    umbrella header "Foundation.h"
-}

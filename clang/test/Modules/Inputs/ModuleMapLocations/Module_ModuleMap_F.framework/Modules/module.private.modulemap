@@ -1,3 +1,0 @@
-explicit framework module Module_ModuleMap_F.Private {
-  header "private.h"
-}

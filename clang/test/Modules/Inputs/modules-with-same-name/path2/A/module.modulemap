@@ -1,5 +1,0 @@
-// path2. This comment keeps this file from being identical to
-// path1/A/module.modulemap.
-module A {
-  header "a.h"
-}

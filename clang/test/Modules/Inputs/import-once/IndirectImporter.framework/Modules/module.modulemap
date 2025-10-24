@@ -1,4 +1,0 @@
-framework module IndirectImporter {
-    umbrella header "IndirectImporter.h"
-    export *
-}

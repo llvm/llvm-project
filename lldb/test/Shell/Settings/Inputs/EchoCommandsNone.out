@@ -1,4 +1,0 @@
-# CHECK: (lldb) command source -s {{.*\n}}
-# CHECK: (lldb) command source -s {{.*\n}}
-# CHECK-NEXT: Executing commands in {{.*\n}}
-# CHECK-NEXT: (int) $0 = 3

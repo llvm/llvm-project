@@ -1,3 +1,0 @@
-module Dylib {
-  header "dylib.h"
-}

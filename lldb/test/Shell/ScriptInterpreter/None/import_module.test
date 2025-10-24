@@ -1,2 +1,0 @@
-# RUN: %lldb --script-language none -o 'command script import %t' 2>&1 | FileCheck %s
-# CHECK: error: module importing failed: This script interpreter does not support importing modules.

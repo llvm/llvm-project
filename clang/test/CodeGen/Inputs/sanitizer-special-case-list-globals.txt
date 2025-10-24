@@ -1,9 +1,0 @@
-global:always_ignored
-[address]
-global:asan_ignored
-[hwaddress]
-global:hwasan_ignored
-[memtag]
-global:memtag_ignored
-[cfi-vcall|cfi-icall]
-src:*
