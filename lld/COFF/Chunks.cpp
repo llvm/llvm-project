@@ -777,7 +777,7 @@ uint32_t SectionChunk::getSectionNumber() const {
   return s.getIndex() + 1;
 }
 
-CommonChunk::CommonChunk(const COFFSymbolRef s) : sym(s) {
+CommonChunk::CommonChunk(const COFFSymbolRef s) : live(false), sym(s) {
   // The value of a common symbol is its size. Align all common symbols smaller
   // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
