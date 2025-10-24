@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-deallocate.h"
+#include "check-allocate.h"
 #include "definable.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Parser/message.h"
@@ -134,11 +135,11 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
         },
         allocateObject.u);
     if (const SomeExpr *allocObj{GetExpr(context_, allocateObject)}) {
-      if (statVar && *allocObj == *statVar) {
+      if (IsSameAllocation(allocObj, statVar)) {
         context_.Say(statSource.value_or(source),
             "STAT variable in DEALLOCATE must not be the variable being deallocated"_err_en_US);
       }
-      if (msgVar && *allocObj == *msgVar) {
+      if (IsSameAllocation(allocObj, msgVar)) {
         context_.Say(msgSource.value_or(source),
             "ERRMSG variable in DEALLOCATE must not be the variable being deallocated"_err_en_US);
       }

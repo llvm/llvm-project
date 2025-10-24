@@ -24,5 +24,6 @@ public:
 private:
   SemanticsContext &context_;
 };
+bool IsSameAllocation(const SomeExpr *root, const SomeExpr *path);
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_ALLOCATE_H_

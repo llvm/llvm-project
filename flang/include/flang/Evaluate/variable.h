@@ -289,7 +289,7 @@ struct DataRef {
   const Symbol &GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
-
+  bool IsPathFrom(const DataRef &) const;
   std::variant<SymbolRef, Component, ArrayRef, CoarrayRef> u;
 };
 
@@ -400,7 +400,7 @@ public:
   const Symbol *GetLastSymbol() const;
   std::optional<Expr<SubscriptInteger>> LEN() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &o) const;
-
+  bool IsPathFrom(const Designator<T> &) const;
   Variant u;
 };
 
