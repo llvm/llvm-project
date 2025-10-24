@@ -51,7 +51,7 @@ def riscv_zip     : RVSDNode<"ZIP",     SDTIntUnaryOp>;
 def riscv_unzip   : RVSDNode<"UNZIP",   SDTIntUnaryOp>;
 
 // RV64IZbb absolute value for i32. Expanded to (max (negw X), X) during isel.
-def riscv_absw    : RVSDNode<"ABSW",    SDTIntUnaryOp>;
+def riscv_negw_max : RVSDNode<"NEGW_MAX",    SDTIntUnaryOp>;
 
 // Scalar cryptography
 def riscv_clmul   : RVSDNode<"CLMUL",   SDTIntBinOp>;
@@ -610,7 +610,7 @@ def : PatGpr<riscv_clzw, CLZW>;
 def : PatGpr<riscv_ctzw, CTZW>;
 def : Pat<(i64 (ctpop (i64 (zexti32 (i64 GPR:$rs1))))), (CPOPW GPR:$rs1)>;
 
-def : Pat<(i64 (riscv_absw GPR:$rs1)),
+def : Pat<(i64 (riscv_negw_max GPR:$rs1)),
           (MAX GPR:$rs1, (XLenVT (SUBW (XLenVT X0), GPR:$rs1)))>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
