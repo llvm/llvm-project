@@ -2,7 +2,6 @@
 add_mlir_library(MLIRSCFTestPasses
   TestLoopParametricTiling.cpp
   TestLoopUnrolling.cpp
-  TestParallelLoopUnrolling.cpp
   TestSCFUtils.cpp
   TestSCFWrapInZeroTripCheck.cpp
   TestUpliftWhileToFor.cpp
