@@ -42,6 +42,9 @@ RUN apt-get update && \
 RUN useradd gha -u 1001 -m -s /bin/bash
 RUN adduser gha sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+# Don't set USER gha right away because we still need to install packages
+# as root in 'ci-container-code-format' and 'ci-container-code-lint' containers
+
 
 FROM base AS ci-container-code-format
 ARG LLVM_VERSION
