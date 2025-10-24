@@ -30,7 +30,8 @@ define <8 x i16> @shufflevector_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @shufflevector_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shufflevector_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermi.w $vr0, $vr1, 220
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 220
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
     %c = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 3, i32 5, i32 7>
     ret <4 x i32> %c
@@ -50,7 +51,8 @@ define <2 x i64> @shufflevector_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <4 x float> @shufflevector_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: shufflevector_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermi.w $vr0, $vr1, 220
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 220
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
     %c = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 3, i32 5, i32 7>
     ret <4 x float> %c
