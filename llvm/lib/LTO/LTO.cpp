@@ -475,7 +475,7 @@ static void thinLTOInternalizeAndPromoteGUID(
   // the local flag should be consistent with the summary list linkage types.
   VI.verifyLocal();
 
-  bool SingleExternallyVisibleCopy =
+  const bool SingleExternallyVisibleCopy =
       VI.getSummaryList().size() == 1 &&
       !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
