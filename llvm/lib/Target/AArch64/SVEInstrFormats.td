@@ -3787,7 +3787,7 @@ multiclass sve2p1_two_way_dot_vv<string mnemonic, bit u, SDPatternOperator intri
 // SVE Integer Dot Product Group - Indexed Group
 //===----------------------------------------------------------------------===//
 
-class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
+class sve_intx_dot_by_indexed_elem<bit U, string asm,
                                    ZPRRegOp zprty1, ZPRRegOp zprty2,
                                    ZPRRegOp zprty3, Operand itype>
 : I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty2:$Zn, zprty3:$Zm, itype:$iop),
@@ -3795,8 +3795,7 @@ class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
   "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
-  let Inst{31-23} = 0b010001001;
-  let Inst{22}    = sz;
+  let Inst{31-24} = 0b01000100;
   let Inst{21}    = 0b1;
   let Inst{15-11} = 0;
   let Inst{10}    = U;
@@ -3810,21 +3809,33 @@ class sve_intx_dot_by_indexed_elem<bit sz, bit U, string asm,
 
 multiclass sve_intx_dot_by_indexed_elem<bit opc, string asm,
                                         SDPatternOperator op> {
-  def _BtoS : sve_intx_dot_by_indexed_elem<0b0, opc, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS32b_timm> {
+  def _BtoS : sve_intx_dot_by_indexed_elem<opc, asm, ZPR32, ZPR8, ZPR3b8, VectorIndexS32b_timm> {
     bits<2> iop;
     bits<3> Zm;
+    let Inst{23-22} = 0b10;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _HtoD : sve_intx_dot_by_indexed_elem<0b1, opc, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD32b_timm> {
+  def _HtoD : sve_intx_dot_by_indexed_elem<opc, asm, ZPR64, ZPR16, ZPR4b16, VectorIndexD32b_timm> {
     bits<1> iop;
     bits<4> Zm;
-    let Inst{20} = iop;
+    let Inst{23-22} = 0b11;
+    let Inst{20}    = iop;
     let Inst{19-16} = Zm;
   }
 
   def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv16i8, nxv16i8, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _BtoS)>;
   def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv8i16, nxv8i16, i32, VectorIndexD32b_timm, !cast<Instruction>(NAME # _HtoD)>;
+}
+
+class sve_intx_dot_by_indexed_elem_x<bit opc, string asm>
+: sve_intx_dot_by_indexed_elem<opc, asm, ZPR16, ZPR8, ZPR3b8, VectorIndexH32b_timm> {
+ bits<3> iop;
+ bits<3> Zm;
+ let Inst{23}    = 0b0;
+ let Inst{22}    = iop{2};
+ let Inst{20-19} = iop{1-0};
+ let Inst{18-16} = Zm;
 }
 
 //===----------------------------------------------------------------------===//
@@ -9616,17 +9627,18 @@ multiclass sve_int_dot_mixed_indexed<bit U, string asm, SDPatternOperator op> {
 // SVE Floating Point Matrix Multiply Accumulate Group
 //===----------------------------------------------------------------------===//
 
-class sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty>
+class sve_fp_matrix_mla<bits<3> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty>
 : I<(outs zda_ty:$Zda), (ins zda_ty:$_Zda, reg_ty:$Zn, reg_ty:$Zm),
     asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
   bits<5> Zda;
   bits<5> Zn;
   bits<5> Zm;
   let Inst{31-24} = 0b01100100;
-  let Inst{23-22} = opc;
+  let Inst{23-22} = opc{2-1};
   let Inst{21}    = 1;
   let Inst{20-16} = Zm;
-  let Inst{15-10} = 0b111001;
+  let Inst{15-11} = 0b11100;
+  let Inst{10}    = opc{0};
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zda;
 
@@ -9636,10 +9648,12 @@ class sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_t
   let mayRaiseFPException = 1;
 }
 
-multiclass sve_fp_matrix_mla<bits<2> opc, string asm, ZPRRegOp zda_ty, ZPRRegOp reg_ty, SDPatternOperator op, ValueType zda_vt, ValueType reg_vt> {
+multiclass sve_fp_matrix_mla<bits<3> opc, string asm, ZPRRegOp zda_ty,
+                             ZPRRegOp reg_ty, SDPatternOperator op,
+                             ValueType zda_vt, ValueType reg_vt> {
   def NAME : sve_fp_matrix_mla<opc, asm, zda_ty, reg_ty>;
 
-  def : SVE_3_Op_Pat<zda_vt, op , zda_vt, reg_vt, reg_vt, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<zda_vt, op, zda_vt, reg_vt, reg_vt, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -10036,18 +10050,19 @@ multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatte
 }
 
 // SVE2 multi-vec shift narrow
-class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
-    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, vecshiftR16:$imm4),
-        mnemonic, "\t$Zd, $Zn, $imm4",
+class sve2p1_multi_vec_shift_narrow<string mnemonic, ZPRRegOp ZdRC, RegisterOperand ZSrcOp,
+                                    Operand immtype, bits<3> opc, bits<2> tsz>
+    : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn, immtype:$imm),
+        mnemonic, "\t$Zd, $Zn, $imm",
         "", []>, Sched<[]> {
   bits<5> Zd;
   bits<4> Zn;
-  bits<4> imm4;
+  bits<4> imm;
   let Inst{31-23} = 0b010001011;
   let Inst{22}    = tsz{1};
   let Inst{21}    = 0b1;
   let Inst{20}    = tsz{0};
-  let Inst{19-16} = imm4;
+  let Inst{18-16} = imm{2-0};  // imm3
   let Inst{15-14} = 0b00;
   let Inst{13-11} = opc;
   let Inst{10}    = 0b0;
@@ -10058,12 +10073,19 @@ class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
   let hasSideEffects = 0;
 }
 
-multiclass sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
-  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, opc, 0b01>;
+multiclass sve_multi_vec_shift_narrow<string mnemonic, bits<3> opc, SDPatternOperator intrinsic> {
+  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR16, ZZ_s_mul_r, vecshiftR16, opc, 0b01> {
+    let Inst{19} = imm{3}; // imm4
+  }
 
   def : SVE2p1_Sat_Shift_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32, vecshiftR16>;
 }
 
+multiclass sve_multi_vec_round_shift_narrow<string mnemonic, bits<3> opc> {
+  def NAME : sve2p1_multi_vec_shift_narrow<mnemonic, ZPR8, ZZ_h_mul_r, vecshiftR8, opc, 0b00> {
+    let Inst{19} = 0b1;    // always 1 for imm3 version
+  }
+}
 
 // SME2 multi-vec contiguous load (scalar plus scalar, two registers)
 class sve2p1_mem_cld_ss_2z<string mnemonic, bits<2> msz, bit n,
@@ -11170,7 +11192,7 @@ multiclass sve2_fp8_dot_indexed_s<string asm, SDPatternOperator op> {
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4f32, nxv16i8, nxv16i8, i32, !cast<Instruction>(NAME)>;
 }
 
-// FP8 Look up table
+// Look up table
 class sve2_lut_vector_index<ZPRRegOp zd_ty, RegisterOperand zn_ty,
                             Operand idx_ty, bits<4>opc, string mnemonic>
     : I<(outs zd_ty:$Zd), (ins zn_ty:$Zn, ZPRAny:$Zm, idx_ty:$idx),
@@ -11189,7 +11211,7 @@ class sve2_lut_vector_index<ZPRRegOp zd_ty, RegisterOperand zn_ty,
   let Inst{4-0}   = Zd;
 }
 
-// FP8 Look up table read with 2-bit indices
+// Look up table read with 2-bit indices
 multiclass sve2_luti2_vector_index<string mnemonic> {
   def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexS32b, {?, 0b100}, mnemonic> {
     bits<2> idx;
@@ -11211,7 +11233,7 @@ multiclass sve2_luti2_vector_index<string mnemonic> {
                          i32, timm32_0_7, !cast<Instruction>(NAME # _H)>;
 }
 
-// FP8 Look up table read with 4-bit indices
+// Look up table read with 4-bit indices
 multiclass sve2_luti4_vector_index<string mnemonic> {
   def _B : sve2_lut_vector_index<ZPR8, Z_b, VectorIndexD32b, 0b1001, mnemonic> {
     bit idx;
@@ -11232,7 +11254,7 @@ multiclass sve2_luti4_vector_index<string mnemonic> {
                          i32, timm32_0_3, !cast<Instruction>(NAME # _H)>;
 }
 
-// FP8 Look up table read with 4-bit indices (two contiguous registers)
+// Look up table read with 4-bit indices (two contiguous registers)
 multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
   def NAME : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexS32b, {?, 0b101}, mnemonic> {
     bits<2> idx;
@@ -11254,6 +11276,29 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
             (nxv8bf16 (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv8bf16:$Op1, zsub0,
                                                                     nxv8bf16:$Op2, zsub1),
                                                 nxv16i8:$Op3, timm32_0_3:$Op4))>;
+}
+
+// Look up table read with 6-bit indices
+multiclass sve2_luti6_vector_index<string mnemonic> {
+  def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexD32b, 0b1011, mnemonic> {
+    bit idx;
+    let Inst{23} = idx;
+  }
+}
+
+// Look up table
+class sve2_luti6_vector<string mnemonic>
+    : I<(outs ZPR8:$Zd), (ins ZZ_b:$Zn, ZPRAny:$Zm),
+      mnemonic, "\t$Zd, $Zn, $Zm",
+      "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-21} = 0b01000101001;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b101011;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
 }
 
 //===----------------------------------------------------------------------===//
@@ -11285,4 +11330,50 @@ class sve_int_mla_cpa<string asm>
   let Inst{15} = 0b1;
 
   let ElementSize = ZPR64.ElementSize;
+}
+
+//===----------------------------------------------------------------------===//
+// FP to Int down-converts
+//===----------------------------------------------------------------------===//
+class sve2_fp_to_int_downcvt<string asm, ZPRRegOp ZdRC, RegisterOperand ZSrcOp, bits<2> size, bit U>
+  : I<(outs ZdRC:$Zd), (ins ZSrcOp:$Zn),
+      asm, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = size;
+  let Inst{21-11} = 0b00110100110;
+  let Inst{10}    = U;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_fp_to_int_downcvt<string asm, bit U> {
+  def _HtoB : sve2_fp_to_int_downcvt<asm, ZPR8,  ZZ_h_mul_r, 0b01, U>;
+  def _StoH : sve2_fp_to_int_downcvt<asm, ZPR16, ZZ_s_mul_r, 0b10, U>;
+  def _DtoS : sve2_fp_to_int_downcvt<asm, ZPR32, ZZ_d_mul_r, 0b11, U>;
+}
+
+//===----------------------------------------------------------------------===//
+// Int to FP up-converts
+//===----------------------------------------------------------------------===//
+class sve2_int_to_fp_upcvt<string asm, ZPRRegOp ZdRC, ZPRRegOp ZnRC,
+                        bits<2> size, bits<2> U>
+  : I<(outs ZdRC:$Zd), (ins  ZnRC:$Zn),
+      asm, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-24} = 0b01100101;
+  let Inst{23-22} = size;
+  let Inst{21-12} = 0b0011000011;
+  let Inst{11-10} = U;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_int_to_fp_upcvt<string asm, bits<2> U> {
+  def _BtoH : sve2_int_to_fp_upcvt<asm, ZPR16, ZPR8,  0b01, U>;
+  def _HtoS : sve2_int_to_fp_upcvt<asm, ZPR32, ZPR16, 0b10, U>;
+  def _StoD : sve2_int_to_fp_upcvt<asm, ZPR64, ZPR32, 0b11, U>;
 }
