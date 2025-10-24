@@ -12940,8 +12940,8 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
-  // No subexpressions to recurse over in PR1.
-  return E;
+  // TODO(reflection): Implement its transform
+  llvm_unreachable("not implemeted yet");
 }
 
 template<typename Derived>
