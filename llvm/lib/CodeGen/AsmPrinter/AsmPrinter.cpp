@@ -1443,9 +1443,8 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           // Use static_cast to avoid breakage of tests on windows.
           static_cast<bool>(BBAddrMapSkipEmitBBEntries), HasCalls,
-          static_cast<bool>(EmitBBHash)};
-  false
-};
+          static_cast<bool>(EmitBBHash),
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
