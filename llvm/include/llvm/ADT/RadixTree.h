@@ -49,10 +49,10 @@ namespace llvm {
 ///   Tree.emplace("grape", 3);
 ///
 ///   // Find prefixes
-///   for (const auto &pair : Tree.find_prefixes("grapefruit juice")) {
+///   for (const auto &[Key, Value] : Tree.find_prefixes("grapefruit juice")) {
 ///     // pair will be {"grape", 3}
 ///     // pair will be {"grapefruit", 2}
-///     llvm::outs() << pair.first << ": " << pair.second << "\n";
+///     llvm::outs() << Key << ": " << Value << "\n";
 ///   }
 ///
 ///   // Iterate over all elements
