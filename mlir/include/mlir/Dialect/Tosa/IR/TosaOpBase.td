@@ -228,6 +228,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // FP  : Floating-Point Inference. Primarily FP16 and FP32 operations.
 //
 // Extension:
+// INT64        : 64-bit integer operations.
 // INT16        : 16-bit integer operations.
 // INT4         : 4-bit integer weights.
 // BF16         : BFloat16 operations.
@@ -282,7 +283,7 @@ def Tosa_ExtensionAttr
       Tosa_EXT_DYNAMIC, Tosa_EXT_MXFP, Tosa_EXT_INT64
     ]> {
   let extraClassDeclaration = [{
-    static llvm::SmallVector<Extension, 14> getAllValues() {
+    static llvm::SmallVector<Extension, 13> getAllValues() {
       return {
         Extension::int16, Extension::int4, Extension::bf16,
         Extension::fp8e4m3, Extension::fp8e5m2, Extension::fft,
