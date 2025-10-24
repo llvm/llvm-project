@@ -29,19 +29,19 @@ using ::testing::UnorderedElementsAre;
 TEST(RadixTreeTest, Empty) {
   RadixTree<StringRef, int> T;
   EXPECT_TRUE(T.empty());
-  EXPECT_EQ(0u, T.size());
+  EXPECT_EQ(T.size(), 0u);
 
   EXPECT_TRUE(T.find_prefixes("").empty());
   EXPECT_TRUE(T.find_prefixes("A").empty());
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
 }
 
 TEST(RadixTreeTest, InsertEmpty) {
   RadixTree<StringRef, int> T;
   auto [It, IsNew] = T.emplace("", 4);
   EXPECT_TRUE(!T.empty());
-  EXPECT_EQ(1u, T.size());
+  EXPECT_EQ(T.size(), 1u);
   EXPECT_TRUE(IsNew);
   const auto &[K, V] = *It;
   EXPECT_TRUE(K.empty());
@@ -53,27 +53,27 @@ TEST(RadixTreeTest, InsertEmpty) {
 
   EXPECT_THAT(T.find_prefixes("a"), ElementsAre(Pair("", 4)));
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
 }
 
 TEST(RadixTreeTest, Complex) {
   RadixTree<StringRef, int> T;
   T.emplace("abcd", 1);
-  EXPECT_EQ(2u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 2u);
   T.emplace("abklm", 2);
-  EXPECT_EQ(4u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 4u);
   T.emplace("123abklm", 3);
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
   T.emplace("123abklm", 4);
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
   T.emplace("ab", 5);
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
   T.emplace("1234567", 6);
-  EXPECT_EQ(7u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 7u);
   T.emplace("123456", 7);
-  EXPECT_EQ(8u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 8u);
   T.emplace("123456789", 8);
-  EXPECT_EQ(9u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 9u);
 
   EXPECT_THAT(T, UnorderedElementsAre(Pair("abcd", 1), Pair("abklm", 2),
                                       Pair("123abklm", 3), Pair("ab", 5),
@@ -90,7 +90,7 @@ TEST(RadixTreeTest, Complex) {
   EXPECT_THAT(T.find_prefixes("abcdefg"),
               UnorderedElementsAre(Pair("abcd", 1), Pair("ab", 5)));
 
-  EXPECT_EQ(9u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 9u);
 }
 
 // Test different types, less readable.
@@ -182,23 +182,23 @@ TYPED_TEST(RadixTreeTypeTest, Helpers) {
   for (size_t i = 0; i < 9; ++i) {
     auto R1 = this->make1(i);
     auto R2 = this->make2(i);
-    EXPECT_EQ(i, llvm::range_size(R1));
-    EXPECT_EQ(i, llvm::range_size(R2));
+    EXPECT_EQ(llvm::range_size(R1), i);
+    EXPECT_EQ(llvm::range_size(R2), i);
     auto [I1, I2] = llvm::mismatch(R1, R2);
     // Exactly 2 first elements of Data1 and Data2 must match.
-    EXPECT_EQ(std::min<int>(2, i), std::distance(R1.begin(), I1));
+    EXPECT_EQ(std::distance(R1.begin(), I1), std::min<int>(2, i));
   }
 }
 
 TYPED_TEST(RadixTreeTypeTest, Empty) {
   RadixTree<TypeParam, int> T;
   EXPECT_TRUE(T.empty());
-  EXPECT_EQ(0u, T.size());
+  EXPECT_EQ(T.size(), 0u);
 
   EXPECT_TRUE(T.find_prefixes(this->make1(0)).empty());
   EXPECT_TRUE(T.find_prefixes(this->make2(1)).empty());
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertEmpty) {
@@ -206,7 +206,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertEmpty) {
   TreeType T;
   auto [It, IsNew] = T.emplace(this->make1(0), 5);
   EXPECT_TRUE(!T.empty());
-  EXPECT_EQ(1u, T.size());
+  EXPECT_EQ(T.size(), 1u);
   EXPECT_TRUE(IsNew);
   const auto &[K, V] = *It;
   EXPECT_TRUE(K.empty());
@@ -220,7 +220,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertEmpty) {
 
   EXPECT_THAT(T, ElementsAre(Pair(ElementsAre(), 5)));
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertEmptyTwice) {
@@ -229,7 +229,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertEmptyTwice) {
   T.emplace(this->make1(0), 5);
   auto [It, IsNew] = T.emplace(this->make1(0), 6);
   EXPECT_TRUE(!T.empty());
-  EXPECT_EQ(1u, T.size());
+  EXPECT_EQ(T.size(), 1u);
   EXPECT_TRUE(!IsNew);
   const auto &[K, V] = *It;
   EXPECT_TRUE(K.empty());
@@ -243,7 +243,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertEmptyTwice) {
 
   EXPECT_THAT(T, ElementsAre(Pair(ElementsAre(), 5)));
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertOne) {
@@ -251,7 +251,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertOne) {
   TreeType T;
   auto [It, IsNew] = T.emplace(this->make1(1), 4);
   EXPECT_TRUE(!T.empty());
-  EXPECT_EQ(1u, T.size());
+  EXPECT_EQ(T.size(), 1u);
   EXPECT_TRUE(IsNew);
   const auto &[K, V] = *It;
   EXPECT_THAT(K, ElementsAreArray(this->make1(1)));
@@ -265,7 +265,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertOne) {
   EXPECT_THAT(T.find_prefixes(this->make1(2)),
               ElementsAre(Pair(ElementsAreArray(this->make1(1)), 4)));
 
-  EXPECT_EQ(2u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 2u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertOneTwice) {
@@ -274,11 +274,11 @@ TYPED_TEST(RadixTreeTypeTest, InsertOneTwice) {
   T.emplace(this->make1(1), 4);
   auto [It, IsNew] = T.emplace(this->make1(1), 4);
   EXPECT_TRUE(!T.empty());
-  EXPECT_EQ(1u, T.size());
+  EXPECT_EQ(T.size(), 1u);
   EXPECT_TRUE(!IsNew);
 
   EXPECT_THAT(T, ElementsAre(Pair(ElementsAreArray(this->make1(1)), 4)));
-  EXPECT_EQ(2u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 2u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertSuperStrings) {
@@ -309,7 +309,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertSuperStrings) {
                                    Pair(ElementsAreArray(this->make1(4)), 4),
                                    Pair(ElementsAreArray(this->make1(6)), 6)));
 
-  EXPECT_EQ(4u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 4u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertSubStrings) {
@@ -338,20 +338,20 @@ TYPED_TEST(RadixTreeTypeTest, InsertSubStrings) {
                                    Pair(ElementsAreArray(this->make1(3)), 3),
                                    Pair(ElementsAreArray(this->make1(5)), 5)));
 
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
 }
 
 TYPED_TEST(RadixTreeTypeTest, InsertVShape) {
   using TreeType = RadixTree<TypeParam, int>;
   TreeType T;
 
-  EXPECT_EQ(1u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 1u);
   T.emplace(this->make1(5), 15);
-  EXPECT_EQ(2u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 2u);
   T.emplace(this->make2(6), 26);
-  EXPECT_EQ(4u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 4u);
   T.emplace(this->make2(1), 21);
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
 
   EXPECT_THAT(T,
               UnorderedElementsAre(Pair(ElementsAreArray(this->make1(5)), 15),
@@ -366,7 +366,7 @@ TYPED_TEST(RadixTreeTypeTest, InsertVShape) {
               UnorderedElementsAre(Pair(ElementsAreArray(this->make2(1)), 21),
                                    Pair(ElementsAreArray(this->make2(6)), 26)));
 
-  EXPECT_EQ(5u, T.countNodes());
+  EXPECT_EQ(T.countNodes(), 5u);
 }
 
 } // namespace
