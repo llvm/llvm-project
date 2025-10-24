@@ -29521,11 +29521,6 @@ AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   if (Subtarget->isTargetAndroid())
     return UseTlsOffset(IRB, 0x48);
 
-  // Fuchsia is similar.
-  // <zircon/tls.h> defines ZX_TLS_UNSAFE_SP_OFFSET with this value.
-  if (Subtarget->isTargetFuchsia())
-    return UseTlsOffset(IRB, -0x8);
-
   return TargetLowering::getSafeStackPointerLocation(IRB);
 }
 
