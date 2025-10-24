@@ -16,8 +16,6 @@ namespace RTLIB {
 struct RuntimeLibcallsInfo;
 }
 
-class AArch64TargetLowering;
-
 class Function;
 class CallBase;
 class AttributeList;
