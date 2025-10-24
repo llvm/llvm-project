@@ -5501,6 +5501,109 @@ public:
   }
 };
 
+// Represents an expansion-init-list to be expanded over by an expansion
+// statement.
+class CXXExpansionInitListExpr final
+    : public Expr,
+      llvm::TrailingObjects<CXXExpansionInitListExpr, Expr *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  const unsigned NumExprs;
+  SourceLocation LBraceLoc;
+  SourceLocation RBraceLoc;
+
+  CXXExpansionInitListExpr(EmptyShell ES, unsigned NumExprs);
+  CXXExpansionInitListExpr(ArrayRef<Expr *> Exprs, SourceLocation LBraceLoc,
+                           SourceLocation RBraceLoc);
+
+public:
+  static CXXExpansionInitListExpr *Create(const ASTContext &C,
+                                          ArrayRef<Expr *> Exprs,
+                                          SourceLocation LBraceLoc,
+                                          SourceLocation RBraceLoc);
+
+  static CXXExpansionInitListExpr *
+  CreateEmpty(const ASTContext &C, EmptyShell Empty, unsigned NumExprs);
+
+  ArrayRef<Expr *> getExprs() const { return getTrailingObjects(NumExprs); }
+  MutableArrayRef<Expr *> getExprs() { return getTrailingObjects(NumExprs); }
+  unsigned getNumExprs() const { return NumExprs; }
+
+  SourceLocation getBeginLoc() const { return getLBraceLoc(); }
+  SourceLocation getEndLoc() const { return getRBraceLoc(); }
+
+  SourceLocation getLBraceLoc() const { return LBraceLoc; }
+  SourceLocation getRBraceLoc() const { return RBraceLoc; }
+
+  child_range children() {
+    const_child_range CCR =
+        const_cast<const CXXExpansionInitListExpr *>(this)->children();
+    return child_range(cast_away_const(CCR.begin()),
+                       cast_away_const(CCR.end()));
+  }
+
+  const_child_range children() const {
+    Stmt** Stmts = getTrailingStmts();
+    return const_child_range(Stmts, Stmts + NumExprs);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionInitListExprClass;
+  }
+
+private:
+  Stmt** getTrailingStmts() const {
+    return reinterpret_cast<Stmt**>(const_cast<Expr**>(getTrailingObjects()));
+  }
+};
+
+class CXXExpansionInitListSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum SubExpr { RANGE, INDEX, COUNT };
+  Expr *SubExprs[COUNT];
+
+public:
+  CXXExpansionInitListSelectExpr(EmptyShell Empty);
+  CXXExpansionInitListSelectExpr(const ASTContext &C,
+                                 CXXExpansionInitListExpr *Range, Expr *Idx);
+
+  CXXExpansionInitListExpr *getRangeExpr() {
+    return cast<CXXExpansionInitListExpr>(SubExprs[RANGE]);
+  }
+
+  const CXXExpansionInitListExpr *getRangeExpr() const {
+    return cast<CXXExpansionInitListExpr>(SubExprs[RANGE]);
+  }
+
+  void setRangeExpr(CXXExpansionInitListExpr* E) {
+    SubExprs[RANGE] = E;
+  }
+
+  Expr *getIndexExpr() { return SubExprs[INDEX]; }
+  const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
+  void setIndexExpr(Expr* E) { SubExprs[INDEX] = E; }
+
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getExprLoc(); }
+  SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(SubExprs),
+                       reinterpret_cast<Stmt **>(SubExprs + COUNT));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+            reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+            reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionInitListSelectExprClass;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

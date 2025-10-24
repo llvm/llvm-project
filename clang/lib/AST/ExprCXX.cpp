@@ -2020,3 +2020,45 @@ CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
   SubExprs[SubExpr::RHS] = RHS;
   setDependence(computeDependence(this));
 }
+
+CXXExpansionInitListExpr::CXXExpansionInitListExpr(EmptyShell ES,
+                                                   unsigned NumExprs)
+    : Expr(CXXExpansionInitListExprClass, ES), NumExprs(NumExprs) {}
+
+CXXExpansionInitListExpr::CXXExpansionInitListExpr(ArrayRef<Expr *> Exprs,
+                                                   SourceLocation LBraceLoc,
+                                                   SourceLocation RBraceLoc)
+    : Expr(CXXExpansionInitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
+      NumExprs(static_cast<unsigned>(Exprs.size())), LBraceLoc(LBraceLoc),
+      RBraceLoc(RBraceLoc) {
+  llvm::uninitialized_copy(Exprs, getTrailingObjects());
+  setDependence(computeDependence(this));
+}
+
+CXXExpansionInitListExpr *
+CXXExpansionInitListExpr::Create(const ASTContext &C, ArrayRef<Expr *> Exprs,
+                                 SourceLocation LBraceLoc,
+                                 SourceLocation RBraceLoc) {
+  void* Mem = C.Allocate(totalSizeToAlloc<Expr *>(Exprs.size()));
+  return new (Mem) CXXExpansionInitListExpr(Exprs, LBraceLoc, RBraceLoc);
+}
+
+CXXExpansionInitListExpr *
+CXXExpansionInitListExpr::CreateEmpty(const ASTContext &C, EmptyShell Empty,
+                                      unsigned NumExprs) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(NumExprs));
+  return new (Mem) CXXExpansionInitListExpr(Empty, NumExprs);
+}
+
+CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(EmptyShell Empty)
+    : Expr(CXXExpansionInitListSelectExprClass, Empty) {
+}
+
+CXXExpansionInitListSelectExpr::CXXExpansionInitListSelectExpr(
+    const ASTContext &C, CXXExpansionInitListExpr *Range, Expr *Idx)
+    : Expr(CXXExpansionInitListSelectExprClass, C.DependentTy, VK_PRValue,
+           OK_Ordinary) {
+  setDependence(ExprDependence::TypeValueInstantiation);
+  SubExprs[RANGE] = Range;
+  SubExprs[INDEX] = Idx;
+}

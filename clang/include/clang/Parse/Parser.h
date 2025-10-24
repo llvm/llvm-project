@@ -1700,11 +1700,13 @@ private:
   }
 
   /// Information on a C++0x for-range-initializer found while parsing a
-  /// declaration which turns out to be a for-range-declaration.
+  /// declaration which turns out to be a for-range-declaration. Also used
+  /// for C++26's expansion statements.
   struct ForRangeInit {
     SourceLocation ColonLoc;
     ExprResult RangeExpr;
     SmallVector<MaterializeTemporaryExpr *, 8> LifetimeExtendTemps;
+    bool ExpansionStmt = false;
     bool ParsedForRangeDecl() { return !ColonLoc.isInvalid(); }
   };
   struct ForRangeInfo : ForRangeInit {
@@ -5250,6 +5252,15 @@ private:
   ///
   ExprResult ParseBraceInitializer();
 
+  /// ParseExpansionInitList - Called when the initializer of an expansion
+  /// statement starts with an open brace.
+  ///
+  /// \verbatim
+  ///       expansion-init-list: [C++26 [stmt.expand]]
+  ///          '{' expression-list[opt] '}'
+  /// \endverbatim
+  ExprResult ParseExpansionInitList();
+
   struct DesignatorCompletionInfo {
     SmallVectorImpl<Expr *> &InitExprs;
     QualType PreferredBaseType;
@@ -7436,9 +7447,8 @@ public:
   ///       for-statement: [C99 6.8.5.3]
   ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
   ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
-  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt] ')'
-  /// [C++]       statement
-  /// [C++0x] 'for'
+  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt]
+  /// ')' [C++]       statement [C++0x] 'for'
   ///             'co_await'[opt]    [Coroutines]
   ///             '(' for-range-declaration ':' for-range-initializer ')'
   ///             statement
@@ -7457,7 +7467,11 @@ public:
   /// [C++0x]   braced-init-list            [TODO]
   /// \endverbatim
   StmtResult ParseForStatement(SourceLocation *TrailingElseLoc,
-                               LabelDecl *PrecedingLabel);
+                               LabelDecl *PrecedingLabel,
+                               ExpansionStmtDecl *ExpansionStmtDeclaration = nullptr);
+
+  void ParseForRangeInitializerAfterColon(ForRangeInit &FRI,
+                                          ParsingDeclSpec *VarDeclSpec);
 
   /// ParseGotoStatement
   /// \verbatim
@@ -7503,6 +7517,22 @@ public:
   StmtResult ParseReturnStatement();
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
+
+  /// ParseExpansionStatement - Parse a C++26 expansion
+  /// statement ('template for').
+  ///
+  /// \verbatim
+  ///     expansion-statement:
+  ///       'template' 'for' '(' init-statement[opt]
+  ///           for-range-declaration ':' expansion-initializer ')'
+  ///           compound-statement
+  ///
+  ///     expansion-initializer:
+  ///       expression
+  ///       expansion-init-list
+  /// \endverbatim
+  StmtResult ParseExpansionStatement(SourceLocation *TrailingElseLoc,
+                                     LabelDecl *PrecedingLabel);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
@@ -7677,7 +7707,7 @@ private:
   /// [GNU] asm-clobbers:
   ///         asm-string-literal
   ///         asm-clobbers ',' asm-string-literal
-  /// \endverbatim 
+  /// \endverbatim
   ///
   StmtResult ParseAsmStatement(bool &msAsm);
 

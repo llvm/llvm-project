@@ -959,6 +959,12 @@ public:
     }
   }
 
+  void VisitExpansionStmtDecl(const ExpansionStmtDecl* Node) {
+    Visit(Node->getExpansionPattern());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getInstantiations());
+  }
+
   void VisitCallExpr(const CallExpr *Node) {
     for (const auto *Child :
          make_filter_range(Node->children(), [this](const Stmt *Child) {

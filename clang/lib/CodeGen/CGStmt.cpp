@@ -204,6 +204,11 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::CXXForRangeStmtClass:
     EmitCXXForRangeStmt(cast<CXXForRangeStmt>(*S), Attrs);
     break;
+  case Stmt::CXXEnumeratingExpansionStmtClass:
+    llvm_unreachable("unexpanded expansion statements should not be emitted");
+  case Stmt::CXXExpansionInstantiationStmtClass:
+    EmitCXXExpansionInstantiationStmt(cast<CXXExpansionInstantiationStmt>(*S));
+    break;
   case Stmt::SEHTryStmtClass:
     EmitSEHTryStmt(cast<SEHTryStmt>(*S));
     break;
@@ -1556,6 +1561,34 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     // We want the for closing brace to be step-able on to match existing
     // behaviour.
     addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
+}
+
+void CodeGenFunction::EmitCXXExpansionInstantiationStmt(
+    const CXXExpansionInstantiationStmt &S) {
+  LexicalScope Scope(*this, S.getSourceRange());
+
+  for (const Stmt* DS : S.getSharedStmts())
+    EmitStmt(DS);
+
+  if (S.getInstantiations().empty() || !HaveInsertPoint())
+    return;
+
+  JumpDest ExpandExit = getJumpDestInCurrentScope("expand.end");
+  JumpDest ContinueDest;
+  for (auto [N, Inst] : enumerate(S.getInstantiations())) {
+    if (!HaveInsertPoint())
+      return;
+
+    if (N == S.getInstantiations().size() - 1)
+      ContinueDest = ExpandExit;
+     else
+      ContinueDest = getJumpDestInCurrentScope("expand.next");
+
+    BreakContinueStack.push_back(BreakContinue(S, ExpandExit, ContinueDest));
+    EmitStmt(Inst);
+    BreakContinueStack.pop_back();
+    EmitBlock(ContinueDest.getBlock(), true);
   }
 }
 

@@ -58,6 +58,11 @@ def CXXForRangeStmt : StmtNode<Stmt>;
 def CoroutineBodyStmt : StmtNode<Stmt>;
 def CoreturnStmt : StmtNode<Stmt>;
 
+// C++ expansion statements (P1306)
+def CXXExpansionStmt : StmtNode<Stmt, 1>;
+def CXXEnumeratingExpansionStmt : StmtNode<CXXExpansionStmt>;
+def CXXExpansionInstantiationStmt : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmt!
+
 // Expressions
 def Expr : StmtNode<ValueStmt, 1>;
 def PredefinedExpr : StmtNode<Expr>;
@@ -176,6 +181,12 @@ def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 // C++20 Concepts expressions
 def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
+
+// C++26 Expansion statement support expressions
+def CXXExpansionInitListExpr : StmtNode<Expr>;
+def CXXExpansionInitListSelectExpr : StmtNode<Expr>;
+//def CXXDestructurableExpansionSelectExpr : StmtNode<Expr>;
+//def CXXIterableExpansionSelectExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
 def ObjCStringLiteral : StmtNode<Expr>;

@@ -2070,6 +2070,39 @@ Decl *TemplateDeclInstantiator::VisitStaticAssertDecl(StaticAssertDecl *D) {
       InstantiatedMessageExpr.get(), D->getRParenLoc(), D->isFailed());
 }
 
+Decl *TemplateDeclInstantiator::VisitExpansionStmtDecl(ExpansionStmtDecl *OldESD) {
+  Decl *Index = VisitNonTypeTemplateParmDecl(OldESD->getIndexTemplateParm());
+  ExpansionStmtDecl *NewESD = SemaRef.BuildExpansionStmtDecl(
+      Owner, OldESD->getBeginLoc(), cast<NonTypeTemplateParmDecl>(Index));
+  SemaRef.CurrentInstantiationScope->InstantiatedLocal(OldESD, NewESD);
+
+  // Enter the scope of this instantiation. We don't use
+  // PushDeclContext because we don't have a scope.
+  Sema::ContextRAII Context(SemaRef, NewESD, /*NewThis=*/false);
+
+  // If this was already expanded, only instantiate the expansion and
+  // don't touch the unexpanded expansion statement.
+  if (CXXExpansionInstantiationStmt *OldInst = OldESD->getInstantiations()) {
+    StmtResult NewInst = SemaRef.SubstStmt(OldInst, TemplateArgs);
+    if (NewInst.isInvalid())
+      return nullptr;
+
+    NewESD->setInstantiations(NewInst.getAs<CXXExpansionInstantiationStmt>());
+    NewESD->setExpansionPattern(OldESD->getExpansionPattern());
+    return NewESD;
+  }
+
+  StmtResult Expansion =
+      SemaRef.SubstStmt(OldESD->getExpansionPattern(), TemplateArgs);
+  if (Expansion.isInvalid())
+    return nullptr;
+
+  // The code that handles CXXExpansionStmt takes care of calling
+  // setInstantiation() on the ESD if there was an expansion.
+  NewESD->setExpansionPattern(cast<CXXExpansionStmt>(Expansion.get()));
+  return NewESD;
+}
+
 Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
   EnumDecl *PrevDecl = nullptr;
   if (EnumDecl *PatternPrev = getPreviousDeclForInstantiation(D)) {
@@ -7154,6 +7187,14 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     }
 
     D = Result;
+  } else if (CurrentInstantiationScope && ParentDC->isExpansionStmt()) {
+    // If this is the expansion variable of an expansion statement, then it will
+    // have been instantiated as part of expanding the statement; this doesn't
+    // involve instantiating the parent decl context (only the body and
+    // expansion variable are instantiated; not the entire expansion statement).
+    assert(isa<VarDecl>(D));
+    return cast<NamedDecl>(
+        cast<Decl*>(*CurrentInstantiationScope->findInstantiationOf(D)));
   }
 
   return D;

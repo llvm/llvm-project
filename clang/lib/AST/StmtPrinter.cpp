@@ -447,6 +447,37 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintControlledStmt(Node->getBody());
 }
 
+void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
+    CXXEnumeratingExpansionStmt *Node) {
+  Indent() << "template for (";
+  if (Node->getInit())
+    PrintInitStmt(Node->getInit(), 14);
+  PrintingPolicy SubPolicy(Policy);
+  SubPolicy.SuppressInitializers = true;
+  Node->getExpansionVariable()->print(OS, SubPolicy, IndentLevel);
+  OS << ":";
+  PrintExpr(Node->getExpansionVariable()->getInit());
+  OS << ")";
+  PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXExpansionInstantiationStmt(
+    CXXExpansionInstantiationStmt *) {
+  llvm_unreachable("should never be printed");
+}
+
+void StmtPrinter::VisitCXXExpansionInitListExpr(
+    CXXExpansionInitListExpr *Node) {
+  OS << "{ ";
+  llvm::interleaveComma(Node->getExprs(), OS, [&](Expr* E) { PrintExpr(E); });
+  OS << " }";
+}
+
+void StmtPrinter::VisitCXXExpansionInitListSelectExpr(
+    CXXExpansionInitListSelectExpr *Node) {
+  PrintExpr(Node->getRangeExpr());
+}
+
 void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {
   Indent();
   if (Node->isIfExists())

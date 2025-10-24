@@ -42,7 +42,7 @@ using namespace clang;
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl>(DC) || isa<ObjCMethodDecl>(DC) || isa<BlockDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, ExpansionStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -1851,6 +1851,8 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
     GD = GlobalDecl(CD, Ctor_Complete);
   else if (auto *DD = dyn_cast<CXXDestructorDecl>(DC))
     GD = GlobalDecl(DD, Dtor_Complete);
+  else if (DC->isExpansionStmt())
+    GD = getParentOfLocalEntity(DC->getEnclosingNonExpansionStatementContext());
   else
     GD = GlobalDecl(cast<FunctionDecl>(DC));
   return GD;
@@ -2189,6 +2191,9 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
     return;
 
   if (NoFunction && isLocalContainerContext(DC))
+    return;
+
+  if (DC->isExpansionStmt())
     return;
 
   const NamedDecl *ND = cast<NamedDecl>(DC);
@@ -4940,6 +4945,8 @@ recurse:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::PackIndexingExprClass:
+  case Expr::CXXExpansionInitListSelectExprClass:
+  case Expr::CXXExpansionInitListExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

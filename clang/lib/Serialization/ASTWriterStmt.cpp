@@ -1704,6 +1704,53 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Code = serialization::STMT_CXX_FOR_RANGE;
 }
 
+void ASTStmtWriter::VisitCXXExpansionStmt(CXXExpansionStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getForLoc());
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  Record.AddStmt(S->getInit());
+  Record.AddStmt(S->getExpansionVarStmt());
+  Record.AddStmt(S->getBody());
+}
+
+void ASTStmtWriter::VisitCXXExpansionInstantiationStmt(
+    CXXExpansionInstantiationStmt *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getSharedStmts().size());
+  Record.AddSourceLocation(S->getBeginLoc());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXEnumeratingExpansionStmt(
+    CXXEnumeratingExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  Code = serialization::STMT_CXX_ENUMERATING_EXPANSION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumExprs());
+  Record.AddSourceLocation(E->getLBraceLoc());
+  Record.AddSourceLocation(E->getRBraceLoc());
+  for (Expr* SubExpr : E->getExprs())
+    Record.AddStmt(SubExpr);
+  Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST;
+}
+
+void ASTStmtWriter::VisitCXXExpansionInitListSelectExpr(
+    CXXExpansionInitListSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_INIT_LIST_SELECT;
+}
+
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getKeywordLoc());

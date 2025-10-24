@@ -19,6 +19,8 @@
 #include "clang/AST/Stmt.h"
 #include "llvm/Support/Compiler.h"
 
+#include <clang/AST/ExprCXX.h>
+
 namespace clang {
 
 class VarDecl;
@@ -521,6 +523,183 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CoreturnStmtClass;
+  }
+};
+
+/// CXXExpansionStmt - Base class for an unexpanded C++ expansion statement.
+class CXXExpansionStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  enum SubStmt {
+    INIT,
+    VAR,
+    BODY,
+    COUNT
+  };
+
+  ExpansionStmtDecl* ParentDecl;
+  Stmt* SubStmts[COUNT];
+  SourceLocation ForLoc;
+  SourceLocation LParenLoc;
+  SourceLocation ColonLoc;
+  SourceLocation RParenLoc;
+
+protected:
+  CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
+  CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
+                   DeclStmt *ExpansionVar, SourceLocation ForLoc,
+                   SourceLocation LParenLoc, SourceLocation ColonLoc,
+                   SourceLocation RParenLoc);
+
+public:
+  SourceLocation getForLoc() const { return ForLoc; }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getColonLoc() const { return ColonLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+
+  SourceLocation getBeginLoc() const;
+  SourceLocation getEndLoc() const {
+    return getBody() ? getBody()->getEndLoc() : RParenLoc;
+  }
+
+  bool hasDependentSize() const;
+  size_t getNumInstantiations() const;
+
+  ExpansionStmtDecl* getDecl() { return ParentDecl; }
+  const ExpansionStmtDecl* getDecl() const { return ParentDecl; }
+
+  Stmt *getInit() { return SubStmts[INIT]; }
+  const Stmt *getInit() const { return SubStmts[INIT]; }
+  void setInit(Stmt* S) { SubStmts[INIT] = S; }
+
+  VarDecl *getExpansionVariable();
+  const VarDecl *getExpansionVariable() const {
+    return const_cast<CXXExpansionStmt *>(this)->getExpansionVariable();
+  }
+
+  DeclStmt *getExpansionVarStmt() { return cast<DeclStmt>(SubStmts[VAR]); }
+  const DeclStmt *getExpansionVarStmt() const {
+    return cast<DeclStmt>(SubStmts[VAR]);
+  }
+
+  void setExpansionVarStmt(Stmt* S) { SubStmts[VAR] = S; }
+
+  Stmt *getBody() { return SubStmts[BODY]; }
+  const Stmt *getBody() const { return SubStmts[BODY]; }
+  void setBody(Stmt* S) { SubStmts[BODY] = S; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() >= firstCXXExpansionStmtConstant &&
+           T->getStmtClass() <= lastCXXExpansionStmtConstant;
+  }
+
+  child_range children() {
+    return child_range(SubStmts, SubStmts + COUNT);
+  }
+
+  const_child_range children() const {
+    return const_child_range(SubStmts, SubStmts + COUNT);
+  }
+};
+
+/// Represents an unexpanded enumerating expansion statement.
+///
+/// The expansion initializer of this is always a CXXExpansionInitListExpr.
+class CXXEnumeratingExpansionStmt : public CXXExpansionStmt {
+  friend class ASTStmtReader;
+
+public:
+  CXXEnumeratingExpansionStmt(EmptyShell Empty);
+  CXXEnumeratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
+                              DeclStmt *ExpansionVar, SourceLocation ForLoc,
+                              SourceLocation LParenLoc, SourceLocation ColonLoc,
+                              SourceLocation RParenLoc);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXEnumeratingExpansionStmtClass;
+  }
+};
+
+/// Represents the code generated for an instantiated expansion statement.
+///
+/// This holds 'shared statements' and 'instantiations'; these encode the
+/// general underlying pattern that all expansion statements desugar to:
+///
+/// \verbatim
+/// {
+///   <shared statements>
+///   {
+///     <1st instantiation>
+///   }
+///   ...
+///   {
+///     <n-th instantiation>
+///   }
+/// }
+/// \endverbatim
+class CXXExpansionInstantiationStmt final
+    : public Stmt,
+      llvm::TrailingObjects<CXXExpansionInstantiationStmt, Stmt *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  SourceLocation Loc;
+
+  // Instantiations are stored first, then shared statements.
+  const unsigned NumInstantiations : 20;
+  const unsigned NumSharedStmts : 3;
+
+  CXXExpansionInstantiationStmt(EmptyShell Empty, unsigned NumInstantiations,
+                                unsigned NumSharedStmts);
+  CXXExpansionInstantiationStmt(SourceLocation Loc,
+                                ArrayRef<Stmt *> Instantiations,
+                                ArrayRef<Stmt *> SharedStmts);
+
+public:
+  static CXXExpansionInstantiationStmt *
+  Create(ASTContext &C, SourceLocation Loc, ArrayRef<Stmt *> Instantiations,
+         ArrayRef<Stmt *> SharedStmts);
+
+  static CXXExpansionInstantiationStmt *CreateEmpty(ASTContext &C,
+                                                    EmptyShell Empty,
+                                                    unsigned NumInstantiations,
+                                                    unsigned NumSharedStmts);
+
+  ArrayRef<Stmt*> getAllSubStmts() const {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  MutableArrayRef<Stmt*> getAllSubStmts() {
+    return getTrailingObjects(getNumSubStmts());
+  }
+
+  unsigned getNumSubStmts() const {
+    return NumInstantiations + NumSharedStmts;
+  }
+
+  ArrayRef<Stmt*> getInstantiations() const {
+    return getTrailingObjects(NumInstantiations);
+  }
+
+  ArrayRef<Stmt*> getSharedStmts() const {
+    return getAllSubStmts().drop_front(NumInstantiations);
+  }
+
+  SourceLocation getBeginLoc() const { return Loc; }
+  SourceLocation getEndLoc() const { return Loc; }
+
+  child_range children() {
+    Stmt **S = getTrailingObjects();
+    return child_range(S, S + getNumSubStmts());
+  }
+
+  const_child_range children() const {
+    Stmt *const *S = getTrailingObjects();
+    return const_child_range(S, S + getNumSubStmts());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionInstantiationStmtClass;
   }
 };
 

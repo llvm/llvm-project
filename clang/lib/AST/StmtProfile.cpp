@@ -364,6 +364,20 @@ void StmtProfiler::VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitCXXExpansionStmt(const CXXExpansionStmt *S) {
+  VisitStmt(S);
+}
+
+void StmtProfiler::VisitCXXEnumeratingExpansionStmt(
+    const CXXEnumeratingExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+}
+
+void StmtProfiler::VisitCXXExpansionInstantiationStmt(
+    const CXXExpansionInstantiationStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitMSDependentExistsStmt(const MSDependentExistsStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isIfExists());
@@ -2391,6 +2405,16 @@ void StmtProfiler::VisitSourceLocExpr(const SourceLocExpr *E) {
 }
 
 void StmtProfiler::VisitEmbedExpr(const EmbedExpr *E) { VisitExpr(E); }
+
+void StmtProfiler::VisitCXXExpansionInitListExpr(
+    const CXXExpansionInitListExpr *E) {
+  VisitExpr(E);
+}
+
+void StmtProfiler::VisitCXXExpansionInitListSelectExpr(
+    const CXXExpansionInitListSelectExpr *E) {
+  VisitExpr(E);
+}
 
 void StmtProfiler::VisitRecoveryExpr(const RecoveryExpr *E) { VisitExpr(E); }
 

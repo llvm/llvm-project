@@ -959,3 +959,9 @@ ExprDependence clang::computeDependence(OpenACCAsteriskSizeExpr *E) {
   // way.
   return ExprDependence::None;
 }
+
+ExprDependence clang::computeDependence(CXXExpansionInitListExpr* ILE) {
+  auto D = ExprDependence::None;
+  for (Expr* E : ILE->getExprs()) D |= E->getDependence();
+  return D;
+}

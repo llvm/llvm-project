@@ -125,3 +125,99 @@ CoroutineBodyStmt::CoroutineBodyStmt(CoroutineBodyStmt::CtorArgs const &Args)
       Args.ReturnStmtOnAllocFailure;
   llvm::copy(Args.ParamMoves, const_cast<Stmt **>(getParamMoves().data()));
 }
+
+CXXExpansionStmt::CXXExpansionStmt(StmtClass SC, EmptyShell Empty)
+    : Stmt(SC, Empty) {}
+
+CXXExpansionStmt::CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD,
+                                   Stmt *Init, DeclStmt *ExpansionVar,
+                                   SourceLocation ForLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation ColonLoc,
+                                   SourceLocation RParenLoc)
+    : Stmt(SC), ParentDecl(ESD), ForLoc(ForLoc), LParenLoc(LParenLoc),
+      ColonLoc(ColonLoc), RParenLoc(RParenLoc) {
+  SubStmts[INIT] = Init;
+  SubStmts[VAR] = ExpansionVar;
+  SubStmts[BODY] = nullptr;
+}
+
+CXXEnumeratingExpansionStmt::CXXEnumeratingExpansionStmt(EmptyShell Empty)
+    : CXXExpansionStmt(CXXEnumeratingExpansionStmtClass, Empty) {}
+
+CXXEnumeratingExpansionStmt::CXXEnumeratingExpansionStmt(
+    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar,
+    SourceLocation ForLoc, SourceLocation LParenLoc, SourceLocation ColonLoc,
+    SourceLocation RParenLoc)
+    : CXXExpansionStmt(CXXEnumeratingExpansionStmtClass, ESD, Init,
+                       ExpansionVar, ForLoc, LParenLoc, ColonLoc, RParenLoc) {}
+
+SourceLocation CXXExpansionStmt::getBeginLoc() const {
+  return ParentDecl->getLocation();
+}
+
+// FIXME: Copy-pasted from CXXForRangeStmt. Can we convert this into a helper
+// function and put it somewhere else maybe?
+VarDecl *CXXExpansionStmt::getExpansionVariable() {
+  Decl *LV = cast<DeclStmt>(getExpansionVarStmt())->getSingleDecl();
+  assert(LV && "No expansion variable in CXXExpansionStmt");
+  return cast<VarDecl>(LV);
+}
+
+bool CXXExpansionStmt::hasDependentSize() const {
+  if (isa<CXXEnumeratingExpansionStmt>(this))
+    return getExpansionVariable()->getInit()->containsUnexpandedParameterPack();
+
+  llvm_unreachable("Invalid expansion statement class");
+}
+
+size_t CXXExpansionStmt::getNumInstantiations() const {
+  if (isa<CXXEnumeratingExpansionStmt>(this))
+    return cast<CXXExpansionInitListSelectExpr>(
+               getExpansionVariable()->getInit())
+        ->getRangeExpr()
+        ->getExprs()
+        .size();
+
+  llvm_unreachable("Invalid expansion statement class");
+}
+
+CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
+    EmptyShell Empty, unsigned NumInstantiations, unsigned NumSharedStmts)
+    : Stmt(CXXExpansionInstantiationStmtClass, Empty),
+      NumInstantiations(NumInstantiations), NumSharedStmts(NumSharedStmts) {
+  assert(NumSharedStmts <= 4 && "might have to allocate more bits for this");
+}
+
+CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(
+    SourceLocation Loc, ArrayRef<Stmt *> Instantiations,
+    ArrayRef<Stmt *> SharedStmts)
+    : Stmt(CXXExpansionInstantiationStmtClass), Loc(Loc),
+      NumInstantiations(unsigned(Instantiations.size())),
+      NumSharedStmts(unsigned(SharedStmts.size())) {
+  assert(NumSharedStmts <= 4 && "might have to allocate more bits for this");
+  llvm::uninitialized_copy(Instantiations, getTrailingObjects());
+  llvm::uninitialized_copy(SharedStmts, getTrailingObjects() + NumInstantiations);
+}
+
+CXXExpansionInstantiationStmt *
+CXXExpansionInstantiationStmt::Create(ASTContext &C, SourceLocation Loc,
+                                      ArrayRef<Stmt *> Instantiations,
+                                      ArrayRef<Stmt *> SharedStmts) {
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Stmt *>(Instantiations.size() + SharedStmts.size()),
+      alignof(CXXExpansionInstantiationStmt));
+  return new (Mem)
+      CXXExpansionInstantiationStmt(Loc, Instantiations, SharedStmts);
+}
+
+CXXExpansionInstantiationStmt *
+CXXExpansionInstantiationStmt::CreateEmpty(ASTContext &C, EmptyShell Empty,
+                                           unsigned NumInstantiations,
+                                           unsigned NumSharedStmts) {
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<Stmt *>(NumInstantiations + NumSharedStmts),
+                 alignof(CXXExpansionInstantiationStmt));
+  return new (Mem)
+      CXXExpansionInstantiationStmt(Empty, NumInstantiations, NumSharedStmts);
+}

@@ -2195,6 +2195,10 @@ public:
     return getDeclKind() == Decl::RequiresExprBody;
   }
 
+  bool isExpansionStmt() const {
+    return getDeclKind() == Decl::ExpansionStmt;
+  }
+
   bool isNamespace() const { return getDeclKind() == Decl::Namespace; }
 
   bool isStdNamespace() const;
@@ -2290,6 +2294,15 @@ public:
   RecordDecl *getOuterLexicalRecordContext();
   const RecordDecl *getOuterLexicalRecordContext() const {
     return const_cast<DeclContext *>(this)->getOuterLexicalRecordContext();
+  }
+
+  /// Retrieve the innermost enclosing context that doesn't belong to an
+  /// expansion statement. Returns 'this' if this context is not an expansion
+  /// statement.
+  DeclContext *getEnclosingNonExpansionStatementContext();
+  const DeclContext *getEnclosingNonExpansionStatementContext() const {
+    return const_cast<DeclContext *>(this)
+        ->getEnclosingNonExpansionStatementContext();
   }
 
   /// Test if this context is part of the enclosing namespace set of
