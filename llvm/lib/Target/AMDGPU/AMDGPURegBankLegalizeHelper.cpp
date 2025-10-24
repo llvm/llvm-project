@@ -500,6 +500,16 @@ void RegBankLegalizeHelper::lowerUnpackMinMax(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
+void RegBankLegalizeHelper::lowerUnpackAExt(MachineInstr &MI) {
+  auto [Op1Lo, Op1Hi] = unpackAExt(MI.getOperand(1).getReg());
+  auto [Op2Lo, Op2Hi] = unpackAExt(MI.getOperand(2).getReg());
+  auto ResLo = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Lo, Op2Lo});
+  auto ResHi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Hi, Op2Hi});
+  B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
+                          {ResLo.getReg(0), ResHi.getReg(0)});
+  MI.eraseFromParent();
+}
+
 static bool isSignedBFE(MachineInstr &MI) {
   if (GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI))
     return (GI->is(Intrinsic::amdgcn_sbfe));
@@ -804,6 +814,8 @@ void RegBankLegalizeHelper::lower(MachineInstr &MI,
     }
     break;
   }
+  case UnpackAExt:
+    return lowerUnpackAExt(MI);
   case WidenMMOToS32:
     return widenMMOToS32(cast<GAnyLoad>(MI));
   }
@@ -1120,7 +1132,8 @@ void RegBankLegalizeHelper::applyMappingDst(
       assert(RB == SgprRB);
       Register NewDst = MRI.createVirtualRegister(SgprRB_S32);
       Op.setReg(NewDst);
-      B.buildTrunc(Reg, NewDst);
+      if (!MRI.use_empty(Reg))
+        B.buildTrunc(Reg, NewDst);
       break;
     }
     case InvalidMapping: {
