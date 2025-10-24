@@ -46,8 +46,8 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
   }
 
   // Set the suffix indices of each leaf.
+  // Now the suffix indices of each leaf have been set during construction.
   assert(Root && "Root node can't be nullptr!");
-  setSuffixIndices();
 
   // Collect all leaf nodes of the suffix tree. And for each internal node,
   // record the range of leaf nodes that are descendants of it.
@@ -60,6 +60,9 @@ SuffixTreeNode *SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent,
   assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
   auto *N = new (LeafNodeAllocator.Allocate())
       SuffixTreeLeafNode(StartIdx, &LeafEndIdx);
+  // Since the suffix indices are already determined,
+  // they can be set directly.
+  N->setSuffixIdx(StartIdx - Parent.getConcatLen());
   Parent.Children[Edge] = N;
   return N;
 }
@@ -73,8 +76,12 @@ SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
          "Non-root internal nodes must have parents!");
   auto *N = new (InternalNodeAllocator.Allocate())
       SuffixTreeInternalNode(StartIdx, EndIdx, Root);
-  if (Parent)
+  if (Parent) {
+    // Since the concatLens are already determined,
+    // they can be set directly.
+    N->setConcatLen(Parent->getConcatLen() + numElementsInSubstring(N));
     Parent->Children[Edge] = N;
+  }
   return N;
 }
 
