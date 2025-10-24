@@ -109,9 +109,7 @@ C++ Specific Potentially Breaking Changes
 
 ABI Changes in This Version
 ---------------------------
-
-- Let C++ empty record fall through to the standard argument-handling path instead of
-  always pass a single ``i8`` according to aarch64 AAPCS rules.
+- Fix AArch64 argument passing for C++ empty classes with large explicitly specified alignment.
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
