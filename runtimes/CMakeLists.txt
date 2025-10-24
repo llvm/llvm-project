@@ -388,59 +388,63 @@ cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
 
 
 # Enable building Fortran modules
-# * Set up the Fortran compiler
-# * Determine files location in the Clang/Flang resource dir
-# * Install module files
+#  * Set up the Fortran compiler
+#  * Determine files location in the Clang/Flang resource dir
+#  * Install module files
 macro (flang_module_fortran_enable)
+  # Assume flang modules are enabled until a test fails
+  set(RUNTIMES_FLANG_MODULES_ENABLED ON)
+
   include(CheckLanguage)
   check_language(Fortran)
-  if(NOT CMAKE_Fortran_COMPILER)
+  
+  if (CMAKE_Fortran_COMPILER)
+    enable_language(Fortran)
+  else ()
     message(STATUS "Not compiling Flang modules: Fortran not enabled")
-    return ()
+    set(RUNTIMES_FLANG_MODULES_ENABLED OFF)
   endif ()
-  enable_language(Fortran)
 
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+  if (RUNTIMES_FLANG_MODULES_ENABLED AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
     if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-      message(STATUS "Compiling Flang modules")
-      set(RUNTIMES_FLANG_MODULES_ENABLED ON)
+      # We expect the "flang-rt-mod" target to be available, but we cannot test 
+      # for it directly because it might be created only later.
+      message(STATUS "${LLVM_SUBPROJECT_TITLE}: Building Fortran modules for Flang bootstrapping itself")
     else ()
-      # TODO: Introspection of whether intrinsic modules are already available, so the openmp modules can be built without flang-rt in LLVM_ENABLE_RUNTIMES
-      message(STATUS "Not compiling Flang modules: flang-rt not available")
+      # TODO: Introspection of whether intrinsic modules are already available, 
+      # so the OpenMP modules can be built without flang-rt in LLVM_ENABLE_RUNTIMES.
+      message(STATUS "${LLVM_SUBPROJECT_TITLE}: Not compiling Flang modules: Flang-RT not available")
+      set(RUNTIMES_FLANG_MODULES_ENABLED OFF)
     endif ()
   else ()
-    message(STATUS "Compiling modules for non-Flang compiler (${CMAKE_Fortran_COMPILER_ID})")
-    set(RUNTIMES_FLANG_MODULES_ENABLED ON)
+    message(STATUS "${LLVM_SUBPROJECT_TITLE}: Non-bootstrapping Fortran modules build (${CMAKE_Fortran_COMPILER_ID} located at ${CMAKE_Fortran_COMPILER})")
   endif ()
 
-  if (NOT RUNTIMES_FLANG_MODULES_ENABLED)
-    return ()
-  endif ()
+  if (RUNTIMES_FLANG_MODULES_ENABLED)
+    if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+      get_toolchain_module_subdir(toolchain_mod_subdir)
+      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
+      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
+    else ()
+      # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
+      extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+      extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
+    endif ()
+    cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
+    cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
 
-
-  if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-    get_toolchain_module_subdir(toolchain_mod_subdir)
-    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
-    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "${toolchain_mod_subdir}")
-  else ()
-    # For non-Flang compilers, avoid the risk of Flang accidentally picking them up.
-    extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-    extend_path(RUNTIMES_INSTALL_RESOURCE_MOD_PATH "${RUNTIMES_INSTALL_RESOURCE_PATH}" "finclude-${CMAKE_Fortran_COMPILER_ID}")
-  endif ()
-  cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_MOD_DIR)
-  cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_MOD_PATH)
-
-  # Avoid module files to be installed multiple times if this macro is called multiple times
-  get_property(is_installed GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED)
-  if (NOT is_installed)
-    # No way to find out which mod files built by target individually, so install the entire output directory
-    # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
-    set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
-    cmake_path(NORMAL_PATH destination)
-    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
-      DESTINATION "${destination}"
-    )
-    set_property(GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED TRUE)
+    # Avoid module files to be installed multiple times if this macro is called multiple times
+    get_property(is_installed GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED)
+    if (NOT is_installed)
+      # No way to find out which mod files built by target individually, so install the entire output directory
+      # https://stackoverflow.com/questions/52712416/cmake-fortran-module-directory-to-be-used-with-add-library
+      set(destination "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+      cmake_path(NORMAL_PATH destination)
+      install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+        DESTINATION "${destination}"
+      )
+      set_property(GLOBAL PROPERTY RUNTIMES_MODS_INSTALLED TRUE)
+    endif ()
   endif ()
 endmacro ()
 

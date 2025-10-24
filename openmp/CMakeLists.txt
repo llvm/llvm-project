@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "OpenMP")
-
+message("Adding OpenMP...")
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
 # Add path for custom modules
@@ -91,7 +91,7 @@ else()
   set(CMAKE_CXX_STANDARD_REQUIRED NO)
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
-
+message("Stage 2")
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
@@ -103,19 +103,21 @@ if (CMAKE_Fortran_COMPILER)
 endif ()
 set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
   "Fortran compiler to use for testing OpenMP runtime libraries.")
-
+message("Stage 0")
 # Set up testing infrastructure.
 include(OpenMPTesting)
-
+message("Stage 3")
 set(OPENMP_TEST_FLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler.")
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
-
+message("Stage 4")
 if (LLVM_RUNTIMES_BUILD)
+ message("adrfg")
   flang_module_fortran_enable()
+   message("sdfggh")
 endif ()
-
+message("Stage 1")
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
 # Since the device plugins are only supported on Linux anyway,

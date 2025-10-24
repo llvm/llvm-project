@@ -183,7 +183,10 @@ else:
 
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 openmp_flags_substitution = "-fopenmp"
-if not config.have_openmp_rtl:
+if 'flangrt-modules' not in config.available_features:
+    # OpenMP modules depend on Flang-RT modules
+    pass
+elif not config.have_openmp_rtl:
     lit_config.warning(f"OpenMP runtime library not available: OpenMP tests disabled")
 elif not config.openmp_module_dir:
     lit_config.warning(f"OpenMP modules not available: OpenMP tests disabled")

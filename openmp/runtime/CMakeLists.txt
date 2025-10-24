@@ -7,7 +7,7 @@
 #//
 #//===----------------------------------------------------------------------===//
 #
-
+message("Added runtime...")
 if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   message(FATAL_ERROR "Direct configuration not supported, please use parent directory!")
 endif()

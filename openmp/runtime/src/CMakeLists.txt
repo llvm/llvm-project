@@ -449,6 +449,8 @@ endif()
 
 # Build the modules files if a Fortran compiler is available
 # only LLVM_ENABLE_RUNTIMES=openmp is supported, LLVM_ENABLE_PROJECTS=openmp has been deprecated.
+message("LLVM_RUNTIMES_BUILD: ${LLVM_RUNTIMES_BUILD}")
+message("RUNTIMES_FLANG_MODULES_ENABLED: ${RUNTIMES_FLANG_MODULES_ENABLED}")
 if(LLVM_RUNTIMES_BUILD AND RUNTIMES_FLANG_MODULES_ENABLED)
   # TODO: Consider including in LIBOMP_SOURCE_FILES instead
   add_library(libomp-mod OBJECT
