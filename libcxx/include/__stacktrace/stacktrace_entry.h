@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_STACKTRACE_ENTRY
-#define _LIBCPP_STACKTRACE_ENTRY
+#ifndef _LIBCPP_STACKTRACE_ENTRY_H
+#define _LIBCPP_STACKTRACE_ENTRY_H
 
 #include <__config>
 
@@ -208,4 +208,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP_STACKTRACE_ENTRY
+#endif // _LIBCPP_STACKTRACE_ENTRY_H
