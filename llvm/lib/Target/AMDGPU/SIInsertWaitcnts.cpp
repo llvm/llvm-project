@@ -646,6 +646,8 @@ public:
 
   void applyWaitcnt(const AMDGPU::Waitcnt &Wait);
   void applyWaitcnt(InstCounterType T, unsigned Count);
+  bool hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait);
+  bool canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait);
   void applyXcnt(const AMDGPU::Waitcnt &Wait);
   void updateByEvent(WaitEventType E, MachineInstr &MI);
 
@@ -1287,20 +1289,25 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
   }
 }
 
-void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
+bool WaitcntBrackets::hasRedundantXCntWithKmCnt(const AMDGPU::Waitcnt &Wait) {
   // Wait on XCNT is redundant if we are already waiting for a load to complete.
   // SMEM can return out of order, so only omit XCNT wait if we are waiting till
   // zero.
-  if (Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
-    return applyWaitcnt(X_CNT, 0);
+  return Wait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP);
+}
 
+bool WaitcntBrackets::canOptimizeXCntWithLoadCnt(const AMDGPU::Waitcnt &Wait) {
   // If we have pending store we cannot optimize XCnt because we do not wait for
   // stores. VMEM loads retun in order, so if we only have loads XCnt is
   // decremented to the same number as LOADCnt.
-  if (Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-      !hasPendingEvent(STORE_CNT))
-    return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
+  return Wait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) && !hasPendingEvent(STORE_CNT);
+}
 
+void WaitcntBrackets::applyXcnt(const AMDGPU::Waitcnt &Wait) {
+  if (hasRedundantXCntWithKmCnt(Wait))
+    return applyWaitcnt(X_CNT, 0);
+  if (canOptimizeXCntWithLoadCnt(Wait))
+    return applyWaitcnt(X_CNT, std::min(Wait.XCnt, Wait.LoadCnt));
   applyWaitcnt(X_CNT, Wait.XCnt);
 }
 
@@ -1728,6 +1735,12 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
     if (!WaitInstrs[CT])
       continue;
+
+    if ((CT == KM_CNT && ScoreBrackets.hasRedundantXCntWithKmCnt(Wait)) ||
+        (CT == LOAD_CNT && ScoreBrackets.canOptimizeXCntWithLoadCnt(Wait)))
+      // Xcnt may need to be updated depending on a pre-existing KM/LOAD_CNT
+      // due to taking the backedge of a block.
+      ScoreBrackets.applyXcnt(Wait);
 
     unsigned NewCnt = getWait(Wait, CT);
     if (NewCnt != ~0u) {
