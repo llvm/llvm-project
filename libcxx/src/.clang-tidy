@@ -1,4 +1,18 @@
 InheritParentConfig: true
 
 Checks: >
-  -readability-identifier-naming
+  -clang-analyzer-*,
+
+  -llvm-include-order,
+
+  -modernize-loop-convert,
+  -modernize-use-equals-delete,
+  -modernize-use-nullptr,
+  -modernize-use-override,
+
+  -readability-identifier-naming,
+  -readability-function-cognitive-complexity,
+  -readability-function-size,
+  -readability-simplify-boolean-expr,
+
+# TODO: Consider enabling clang-analyzer. Without the checks clang-tidy runs 18x faster on my system.

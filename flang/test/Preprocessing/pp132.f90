@@ -1,8 +1,10 @@
-! RUN: %flang -E -fopenmp -fopenacc %s 2>&1 | FileCheck --strict-whitespace %s
+! RUN: %flang -E %s 2>&1 | FileCheck --strict-whitespace %s
 ! CHECK:       {{^}}!$OMP   parallel default(shared) private(super_very_long_name_for_the_va&
 ! CHECK-NEXT:  {{^}}!$OMP&riable)
+! CHECK:       {{^}}!$omp   end parallel
 ! CHECK:       {{^}}!$acc   data copyin(super_very_long_name_for_the_variable, another_super&
 ! CHECK-NEXT:  {{^}}!$acc&_wordy_variable_to_test)
+! CHECK:       {{^}}!$acc   end data
 ! CHECK:       {{^}}!$OMP          something something
 ! Test correct continuations in compiler directives and left-alignment of sentinels
 subroutine foo

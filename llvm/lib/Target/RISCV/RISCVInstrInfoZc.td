@@ -35,10 +35,10 @@ def uimm8ge32 : RISCVOp {
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
-def RlistAsmOperand : AsmOperandClass {
-  let Name = "Rlist";
-  let ParserMethod = "parseReglist";
-  let DiagnosticType = "InvalidRlist";
+def RegListAsmOperand : AsmOperandClass {
+  let Name = "RegList";
+  let ParserMethod = "parseRegList";
+  let DiagnosticType = "InvalidRegList";
   let DiagnosticString = "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}";
 }
 
@@ -46,21 +46,21 @@ def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
 def NegStackAdjAsmOperand : AsmOperandClass {
   let Name = "NegStackAdj";
   let ParserMethod = "parseZcmpNegStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let PredicateMethod = "isSpimm";
-  let RenderMethod = "addSpimmOperands";
+  let PredicateMethod = "isStackAdj";
+  let RenderMethod = "addStackAdjOperands";
 }
 
-def rlist : Operand<OtherVT> {
-   let ParserMatchClass = RlistAsmOperand;
-   let PrintMethod = "printRlist";
+def reglist : RISCVOp<OtherVT> {
+   let ParserMatchClass = RegListAsmOperand;
+   let PrintMethod = "printRegList";
    let DecoderMethod = "decodeZcmpRlist";
    let EncoderMethod = "getRlistOpValue";
    let MCOperandPredicate = [{
@@ -68,15 +68,16 @@ def rlist : Operand<OtherVT> {
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
     // 0~3 Reserved for EABI
-    return isUInt<4>(Imm) && Imm >= 4;
+    return isUInt<4>(Imm) && Imm >= RISCVZC::RA;
   }];
+
+  let OperandType = "OPERAND_RLIST";
 }
 
 def stackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = StackAdjAsmOperand;
   let PrintMethod = "printStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -88,8 +89,7 @@ def stackadj : RISCVOp<OtherVT> {
 def negstackadj : RISCVOp<OtherVT> {
   let ParserMatchClass = NegStackAdjAsmOperand;
   let PrintMethod = "printNegStackAdj";
-  let DecoderMethod = "decodeZcmpSpimm";
-  let OperandType = "OPERAND_SPIMM";
+  let OperandType = "OPERAND_STACKADJ";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -153,7 +153,7 @@ class RVZcArith_r<bits<5> funct5, string OpcodeStr> :
 
 class RVInstZcCPPP<bits<5> funct5, string opcodestr,
                    DAGOperand immtype = stackadj>
-    : RVInst16<(outs), (ins rlist:$rlist, immtype:$stackadj),
+    : RVInst16<(outs), (ins reglist:$rlist, immtype:$stackadj),
                opcodestr, "$rlist, $stackadj", [], InstFormatOther> {
   bits<4> rlist;
   bits<16> stackadj;
@@ -291,31 +291,31 @@ def : CompressPat<(MUL GPRC:$rs1, GPRC:$rs2, GPRC:$rs1),
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(SEXT_B GPRC:$rs1, GPRC:$rs1),
-                  (C_SEXT_B GPRC:$rs1, GPRC:$rs1)>;
+                  (C_SEXT_B GPRC:$rs1)>;
 def : CompressPat<(SEXT_H GPRC:$rs1, GPRC:$rs1),
-                  (C_SEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_SEXT_H GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZbb]
 
 let Predicates = [HasStdExtZcb, HasStdExtZbb] in{
 def : CompressPat<(ZEXT_H_RV32 GPRC:$rs1, GPRC:$rs1),
-                  (C_ZEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_H GPRC:$rs1)>;
 def : CompressPat<(ZEXT_H_RV64 GPRC:$rs1, GPRC:$rs1),
-                  (C_ZEXT_H GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_H GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZbb]
 
 let Predicates = [HasStdExtZcb] in{
 def : CompressPat<(ANDI GPRC:$rs1, GPRC:$rs1, 255),
-                  (C_ZEXT_B GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_B GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb]
 
 let Predicates = [HasStdExtZcb, HasStdExtZba, IsRV64] in{
 def : CompressPat<(ADD_UW GPRC:$rs1, GPRC:$rs1, X0),
-                  (C_ZEXT_W GPRC:$rs1, GPRC:$rs1)>;
+                  (C_ZEXT_W GPRC:$rs1)>;
 } // Predicates = [HasStdExtZcb, HasStdExtZba, IsRV64]
 
 let Predicates = [HasStdExtZcb] in{
 def : CompressPat<(XORI GPRC:$rs1, GPRC:$rs1, -1),
-                  (C_NOT GPRC:$rs1, GPRC:$rs1)>;
+                  (C_NOT GPRC:$rs1)>;
 }
 
 let Predicates = [HasStdExtZcb] in{

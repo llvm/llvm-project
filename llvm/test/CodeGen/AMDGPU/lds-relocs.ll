@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -verify-machineinstrs -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -show-mc-encoding < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -amdgpu-enable-lower-module-lds=0 -filetype=obj < %s | llvm-readobj -r --syms - | FileCheck -check-prefixes=ELF %s
 
 @lds.external = external unnamed_addr addrspace(3) global [0 x i32]

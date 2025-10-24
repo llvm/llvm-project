@@ -21,13 +21,15 @@ end:
 ; ERROR:     error:
 ; DEFAULT:   error:
 ; EXPENSIVE: error:
-define i32 @error(ptr %dst) {
-  indirectbr ptr %dst, [label %bb1, label %bb2]
-bb1:
-  ret i32 0
-bb2:
-  ret i32 1
+define dso_local void @tbaa(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
 }
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!4, i64 4, !"int"}
+!4 = !{!5, i64 1, !"omnipotent char"}
+!5 = !{!"Simple C++ TBAA"}
 
 ; // -----
 

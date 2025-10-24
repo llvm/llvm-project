@@ -57,6 +57,22 @@ llvm.func @fold_extractvalue() -> i32 {
 
 // -----
 
+// CHECK-LABEL: fold_extractvalue(
+//  CHECK-SAME:     %[[arg1:.*]]: i32, %[[arg2:.*]]: i32, %[[arg3:.*]]: i32)
+//  CHECK-NEXT:   llvm.return %[[arg1]] : i32
+llvm.func @fold_extractvalue(%arg1: i32, %arg2: i32, %arg3: i32) -> i32{
+  %3 = llvm.mlir.undef : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %5 = llvm.mlir.undef : !llvm.struct<(i32, i32, i32)>
+  %6 = llvm.insertvalue %arg1, %5[0] : !llvm.struct<(i32, i32, i32)>
+  %7 = llvm.insertvalue %arg1, %6[1] : !llvm.struct<(i32, i32, i32)>
+  %8 = llvm.insertvalue %arg1, %7[2] : !llvm.struct<(i32, i32, i32)>
+  %11 = llvm.insertvalue %8, %3[0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  %13 = llvm.extractvalue %11[0, 0] : !llvm.struct<(struct<(i32, i32, i32)>, struct<(i32, i32)>)>
+  llvm.return %13 : i32
+}
+
+// -----
+
 // CHECK-LABEL: no_fold_extractvalue
 llvm.func @no_fold_extractvalue(%arr: !llvm.array<4 x f32>) -> f32 {
   %f0 = arith.constant 0.0 : f32
@@ -215,6 +231,17 @@ llvm.func @fold_gep_canon(%x : !llvm.ptr) -> !llvm.ptr {
   %c2 = arith.constant 2 : i32
   %c = llvm.getelementptr %x[%c2] : (!llvm.ptr, i32) -> !llvm.ptr, i8
   llvm.return %c : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: fold_shufflevector
+// CHECK-SAME: %[[ARG1:[[:alnum:]]+]]: vector<1xf32>, %[[ARG2:[[:alnum:]]+]]: vector<1xf32>
+llvm.func @fold_shufflevector(%v1 : vector<1xf32>, %v2 : vector<1xf32>) -> vector<1xf32> {
+  // CHECK-NOT: llvm.shufflevector
+  %c = llvm.shufflevector %v1, %v2 [0] : vector<1xf32>
+  // CHECK: llvm.return %[[ARG1]]
+  llvm.return %c : vector<1xf32>
 }
 
 // -----

@@ -9,11 +9,11 @@ struct Base {
 struct SimpleCases : public Base {
 public:
   virtual ~SimpleCases();
-  // CHECK-FIXES: {{^}}  virtual ~SimpleCases();
+  // CHECK-FIXES: virtual ~SimpleCases();
 
   void a();
-  // CHECK-FIXES: {{^}}  void a();
+  // CHECK-FIXES: void a();
 
   virtual void b();
-  // CHECK-FIXES: {{^}}  virtual void b();
+  // CHECK-FIXES: virtual void b();
 };

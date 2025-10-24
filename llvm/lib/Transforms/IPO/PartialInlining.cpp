@@ -109,7 +109,7 @@ static cl::opt<float> MinRegionSizeRatio(
              "outline candidate and original function"));
 // Used to tune the minimum number of execution counts needed in the predecessor
 // block to the cold edge. ie. confidence interval.
-static cl::opt<unsigned>
+cl::opt<unsigned>
     MinBlockCounterExecution("min-block-execution", cl::init(100), cl::Hidden,
                              cl::desc("Minimum block executions to consider "
                                       "its BranchProbabilityInfo valid"));
@@ -916,9 +916,6 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   };
 
   for (User *User : Users) {
-    // Don't bother with BlockAddress used by CallBr for asm goto.
-    if (isa<BlockAddress>(User))
-      continue;
     CallBase *CB = getSupportedCallBase(User);
     Function *Caller = CB->getCaller();
     if (CurrentCaller != Caller) {
@@ -1320,7 +1317,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     RelativeToEntryFreq = BranchProbability(0, 1);
 
   BlockFrequency WeightedRcost =
-      BlockFrequency(*NonWeightedRcost.getValue()) * RelativeToEntryFreq;
+      BlockFrequency(NonWeightedRcost.getValue()) * RelativeToEntryFreq;
 
   // The call sequence(s) to the outlined function(s) are larger than the sum of
   // the original outlined region size(s), it does not increase the chances of
@@ -1359,10 +1356,6 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
 
   bool AnyInline = false;
   for (User *User : Users) {
-    // Don't bother with BlockAddress used by CallBr for asm goto.
-    if (isa<BlockAddress>(User))
-      continue;
-
     CallBase *CB = getSupportedCallBase(User);
 
     if (isLimitReached())

@@ -1,0 +1,2 @@
+# Check that we return a decent error message when someone uses %T
+# RUN: echo %T > %t

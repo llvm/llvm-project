@@ -331,8 +331,7 @@ define void @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %p) nounwi
 ; CHECK-LABEL: extract_fixed_v4i64_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %retval = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %vec, i64 4)
   store <4 x i64> %retval, ptr %p

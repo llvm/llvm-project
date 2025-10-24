@@ -367,7 +367,7 @@ extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 void foo() {}
 
-#pragma omp declare target
+#pragma omp begin declare target
 void bar() {}
 #pragma omp end declare target
 

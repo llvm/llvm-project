@@ -25,6 +25,8 @@
 
 namespace Fortran::runtime::io {
 
+RT_OFFLOAD_API_GROUP_BEGIN
+
 // I, B, O, Z, and G output editing for INTEGER.
 // The DataEdit reference is const here (and elsewhere in this header) so that
 // one edit descriptor with a repeat factor may safely serve to edit
@@ -136,6 +138,8 @@ extern template class RealOutputEditing<8>;
 extern template class RealOutputEditing<10>;
 // TODO: double/double
 extern template class RealOutputEditing<16>;
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_EDIT_OUTPUT_H_

@@ -114,6 +114,11 @@ public:
   void buildLoadInputValue(Register DstReg, MachineIRBuilder &B,
                            const ArgDescriptor *Arg,
                            const TargetRegisterClass *ArgRC, LLT ArgTy) const;
+  bool legalizeWorkGroupId(
+      MachineInstr &MI, MachineIRBuilder &B,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 
@@ -218,6 +223,9 @@ public:
 
   bool legalizeStackSave(MachineInstr &MI, MachineIRBuilder &B) const;
   bool legalizeWaveID(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeConstHwRegRead(MachineInstr &MI, MachineIRBuilder &B,
+                              AMDGPU::Hwreg::Id HwReg, unsigned LowBit,
+                              unsigned Width) const;
 
   bool legalizeGetFPEnv(MachineInstr &MI, MachineRegisterInfo &MRI,
                         MachineIRBuilder &B) const;

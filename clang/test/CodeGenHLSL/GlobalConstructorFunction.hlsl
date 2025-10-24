@@ -27,6 +27,7 @@ void main(unsigned GI : SV_GroupIndex) {}
 // Verify function constructors are emitted
 // NOINLINE-NEXT:   call void @_Z13call_me_firstv()
 // NOINLINE-NEXT:   call void @_Z12then_call_mev()
+// NOINLINE-NEXT:   call void @_GLOBAL__sub_I_GlobalConstructorFunction.hlsl()
 // NOINLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
 // NOINLINE-NEXT:   call void @_Z4mainj(i32 %0)
 // NOINLINE-NEXT:   call void @_Z12call_me_lastv(
@@ -36,6 +37,9 @@ void main(unsigned GI : SV_GroupIndex) {}
 // INLINE-NEXT:   alloca
 // INLINE-NEXT:   store i32 12
 // INLINE-NEXT:   store i32 13
+// INLINE-NEXT:   %[[HANDLE:.*]] = call target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 4, 0))
+// INLINE-NEXT-SAME: @"llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_tdx.Layout_s___cblayout_$Globalss_4_0tt"(i32 0, i32 0, i32 1, i32 0, i1 false)
+// INLINE-NEXT:   store target("dx.CBuffer", target("dx.Layout", %"__cblayout_$Globals", 4, 0)) %[[HANDLE]], ptr @"$Globals.cb", align 4
 // INLINE-NEXT:   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
 // INLINE-NEXT:   store i32 %
 // INLINE-NEXT:   store i32 0

@@ -37,11 +37,11 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc exit data delete((float)ArrayParam[2])
 
-  // expected-error@+2{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+  // expected-error@+2{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
   // expected-error@+1{{OpenACC 'delete' clause is not valid on 'data' directive}}
 #pragma acc data delete(LocalInt)
   ;
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{OpenACC 'delete' clause is not valid on 'enter data' directive}}
 #pragma acc enter data delete(LocalInt)
   // expected-error@+2{{OpenACC 'host_data' construct must have at least one 'use_device' clause}}

@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=GCN,VI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9,GFX9_1250 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GCN,GFX1250,GFX9_1250 %s
 
 ; GCN-LABEL: {{^}}v_test_imin3_slt_i32:
 ; GCN: v_min3_i32
@@ -116,7 +117,7 @@ define amdgpu_kernel void @v_test_umin3_2_uses(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_min_i16
 ; VI: v_min_i16
 
-; GFX9: v_min3_i16
+; GFX9_1250: v_min3_i16
 define amdgpu_kernel void @v_test_imin3_slt_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -140,7 +141,7 @@ define amdgpu_kernel void @v_test_imin3_slt_i16(ptr addrspace(1) %out, ptr addrs
 ; VI: v_min_u16
 ; VI: v_min_u16
 
-; GFX9: v_min3_u16
+; GFX9_1250: v_min3_u16
 define amdgpu_kernel void @v_test_umin3_ult_i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i16, ptr addrspace(1) %aptr, i32 %tid
@@ -164,7 +165,7 @@ define amdgpu_kernel void @v_test_umin3_ult_i16(ptr addrspace(1) %out, ptr addrs
 ; VI: v_min_i16
 ; VI: v_min_i16
 
-; GFX9: v_min3_i16
+; GFX9_1250: v_min3_i16
 define amdgpu_kernel void @v_test_imin3_slt_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i8, ptr addrspace(1) %aptr, i32 %tid
@@ -188,7 +189,7 @@ define amdgpu_kernel void @v_test_imin3_slt_i8(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_min_u16
 ; VI: v_min_u16
 
-; GFX9: v_min3_u16
+; GFX9_1250: v_min3_u16
 define amdgpu_kernel void @v_test_umin3_ult_i8(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i8, ptr addrspace(1) %aptr, i32 %tid
@@ -212,7 +213,7 @@ define amdgpu_kernel void @v_test_umin3_ult_i8(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_min_i16
 ; VI: v_min_i16
 
-; GFX9: v_min3_i16
+; GFX9_1250: v_min3_i16
 define amdgpu_kernel void @v_test_imin3_slt_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i7, ptr addrspace(1) %aptr, i32 %tid
@@ -236,7 +237,7 @@ define amdgpu_kernel void @v_test_imin3_slt_i7(ptr addrspace(1) %out, ptr addrsp
 ; VI: v_min_u16
 ; VI: v_min_u16
 
-; GFX9: v_min3_u16
+; GFX9_1250: v_min3_u16
 define amdgpu_kernel void @v_test_umin3_ult_i7(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr i7, ptr addrspace(1) %aptr, i32 %tid
@@ -327,6 +328,50 @@ define amdgpu_kernel void @v_test_umin3_ult_i64(ptr addrspace(1) %out, ptr addrs
   %icmp1 = icmp ult i64 %i0, %c
   %i1 = select i1 %icmp1, i64 %i0, i64 %c
   store i64 %i1, ptr addrspace(1) %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_imin3_slt_v2i16:
+; SI-COUNT-2:   v_min3_i32
+; VI-COUNT-2:   v_min_i16
+; GFX9-COUNT-2: v_pk_min_i16
+; GFX1250:      v_pk_min3_i16
+define amdgpu_kernel void @v_test_imin3_slt_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i32, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr i32, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr i32, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x i16>, ptr addrspace(1) %gep0
+  %b = load <2 x i16>, ptr addrspace(1) %gep1
+  %c = load <2 x i16>, ptr addrspace(1) %gep2
+  %icmp0 = icmp slt <2 x i16> %a, %b
+  %i0 = select <2 x i1> %icmp0, <2 x i16> %a, <2 x i16> %b
+  %icmp1 = icmp slt <2 x i16> %i0, %c
+  %i1 = select <2 x i1> %icmp1, <2 x i16> %i0, <2 x i16> %c
+  store <2 x i16> %i1, ptr addrspace(1) %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_imin3_ult_v2i16:
+; SI-COUNT-2:   v_min3_u32
+; VI-COUNT-2:   v_min_u16
+; GFX9-COUNT-2: v_pk_min_u16
+; GFX1250:      v_pk_min3_u16
+define amdgpu_kernel void @v_test_imin3_ult_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr, ptr addrspace(1) %cptr) #0 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr i32, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr i32, ptr addrspace(1) %bptr, i32 %tid
+  %gep2 = getelementptr i32, ptr addrspace(1) %cptr, i32 %tid
+  %outgep = getelementptr <2 x i16>, ptr addrspace(1) %out, i32 %tid
+  %a = load <2 x i16>, ptr addrspace(1) %gep0
+  %b = load <2 x i16>, ptr addrspace(1) %gep1
+  %c = load <2 x i16>, ptr addrspace(1) %gep2
+  %icmp0 = icmp ult <2 x i16> %a, %b
+  %i0 = select <2 x i1> %icmp0, <2 x i16> %a, <2 x i16> %b
+  %icmp1 = icmp ult <2 x i16> %i0, %c
+  %i1 = select <2 x i1> %icmp1, <2 x i16> %i0, <2 x i16> %c
+  store <2 x i16> %i1, ptr addrspace(1) %outgep
   ret void
 }
 

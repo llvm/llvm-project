@@ -125,7 +125,7 @@ define i64 @shl5_add101024_c(i64 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 5
 ; RV64I-NEXT:    lui a1, 25
-; RV64I-NEXT:    addiw a1, a1, -1376
+; RV64I-NEXT:    addi a1, a1, -1376
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %tmp0 = shl i64 %x, 5
@@ -193,7 +193,7 @@ define i64 @shl5_add47968_c(i64 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
-; RV64I-NEXT:    addiw a1, a1, -1184
+; RV64I-NEXT:    addi a1, a1, -1184
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %tmp0 = shl i64 %x, 5
@@ -261,7 +261,7 @@ define i64 @shl5_add47969_c(i64 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 5
 ; RV64I-NEXT:    lui a1, 12
-; RV64I-NEXT:    addiw a1, a1, -1183
+; RV64I-NEXT:    addi a1, a1, -1183
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %tmp0 = shl i64 %x, 5
@@ -330,7 +330,7 @@ define i64 @shl5_sub47968_c(i64 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
-; RV64I-NEXT:    addiw a1, a1, 1184
+; RV64I-NEXT:    addi a1, a1, 1184
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %tmp0 = shl i64 %x, 5
@@ -399,7 +399,7 @@ define i64 @shl5_sub47969_c(i64 %x) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 5
 ; RV64I-NEXT:    lui a1, 1048564
-; RV64I-NEXT:    addiw a1, a1, 1183
+; RV64I-NEXT:    addi a1, a1, 1183
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret
   %tmp0 = shl i64 %x, 5

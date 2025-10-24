@@ -75,7 +75,7 @@ struct ContainsNonTrivial {
 - (void)passNonTrivial:(NonTrivial)a;
 @end
 
-// CHECK: define{{.*}} void @_Z19testParamStrongWeak10StrongWeak(ptr noundef %{{.*}})
+// CHECK: define{{.*}} void @_Z19testParamStrongWeak10StrongWeak(ptr dead_on_return noundef %{{.*}})
 // CHECK: call noundef ptr @_ZN10StrongWeakD1Ev(
 // CHECK-NEXT: ret void
 
@@ -88,7 +88,7 @@ void testParamStrongWeak(StrongWeak a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN10StrongWeakC1ERKS_(ptr {{[^,]*}} %[[AGG_TMP]], ptr noundef nonnull align 8 dereferenceable(16) %[[V0]])
-// CHECK: call void @_Z19testParamStrongWeak10StrongWeak(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @_Z19testParamStrongWeak10StrongWeak(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
 
@@ -107,13 +107,13 @@ StrongWeak testReturnStrongWeak(StrongWeak *a) {
   return *a;
 }
 
-// CHECK: define{{.*}} void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z27testParamContainsStrongWeak18ContainsStrongWeak(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: call noundef ptr @_ZN18ContainsStrongWeakD1Ev(ptr {{[^,]*}} %[[A]])
 
 void testParamContainsStrongWeak(ContainsStrongWeak a) {
 }
 
-// CHECK: define{{.*}} void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z26testParamDerivedStrongWeak17DerivedStrongWeak(ptr dead_on_return noundef %[[A:.*]])
 // CHECK: call noundef ptr @_ZN17DerivedStrongWeakD1Ev(ptr {{[^,]*}} %[[A]])
 
 void testParamDerivedStrongWeak(DerivedStrongWeak a) {
@@ -163,7 +163,7 @@ Strong testReturnStrong(Strong *a) {
   return *a;
 }
 
-// CHECK: define{{.*}} void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(ptr noundef %{{.*}})
+// CHECK: define{{.*}} void @_Z21testParamWeakTemplate1SIU6__weakP11objc_objectE(ptr dead_on_return noundef %{{.*}})
 // CHECK: call noundef ptr @_ZN1SIU6__weakP11objc_objectED1Ev(
 // CHECK-NEXT: ret void
 
@@ -237,7 +237,7 @@ void test0(C *c) {
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_STRONGWEAK]], align 8
 // CHECK: br i1
 
-// CHECK: call void @objc_msgSend({{.*}}, ptr noundef %[[AGG_TMP]])
+// CHECK: call void @objc_msgSend({{.*}}, ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK: br
 
 // CHECK: %[[CALL1:.*]] = call noundef ptr @_ZN10StrongWeakD1Ev(ptr noundef nonnull align 8 dereferenceable(16) %[[AGG_TMP]])

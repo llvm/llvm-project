@@ -44,25 +44,20 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
+    "TEST_WITH_Z3_MOCK=0",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
     "CLANG_ENABLE_CIR=0",
-    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
+    "CLANG_ENABLE_OBJC_REWRITER=0",
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
-
-    # This is only used if LLVM_USE_SANITIZER includes lsan and the host
-    # OS is macOS. Since the GN build currently never uses LLVM_USE_SANITIZER,
-    # this is never read.  If it's ever needed,
-    # utils/gn/build/toolchain/BUILD.gn should get the compiler from a variable
-    # that's also read here -- but that should happen after multi-toolchain
-    # builds exist, to make sure it's a toolchain var.
-    "CMAKE_CXX_COMPILER=c++",
-    "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
     "LLVM_EXTERNAL_LIT=",
@@ -73,7 +68,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
-    "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
   ]
 
@@ -191,6 +185,7 @@ group("test") {
     "//llvm/tools/llvm-nm:symlinks",
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-objdump:symlinks",
+    "//llvm/tools/llvm-offload-binary",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",

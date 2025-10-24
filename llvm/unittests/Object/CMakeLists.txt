@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(ObjectTests
   ArchiveTest.cpp
+  BuildIDTest.cpp
   COFFObjectFileTest.cpp
   DXContainerTest.cpp
   ELFObjectFileTest.cpp
@@ -16,6 +17,7 @@ add_llvm_unittest(ObjectTests
   MinidumpTest.cpp
   ObjectFileTest.cpp
   OffloadingTest.cpp
+  OffloadingBundleTest.cpp
   SymbolSizeTest.cpp
   SymbolicFileTest.cpp
   XCOFFObjectFileTest.cpp

@@ -533,7 +533,7 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
 
 // JITLink debug support plugins put information about JITed code in this GDB
 // JIT Interface global from OrcTargetProcess.
-extern "C" struct jit_descriptor __jit_debug_descriptor;
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;

@@ -310,7 +310,7 @@ define amdgpu_ps void @test_export_in_callee(float %v) #0 {
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GCN-NEXT:    s_endpgm
   %x = fadd float %v, 1.0
-  call void @test_export_gfx(float %x)
+  call amdgpu_gfx void @test_export_gfx(float %x)
   ret void
 }
 
@@ -330,7 +330,7 @@ define amdgpu_ps void @test_export_in_callee_prio(float %v) #0 {
 ; GCN-NEXT:    s_endpgm
   %x = fadd float %v, 1.0
   call void @llvm.amdgcn.s.setprio(i16 0)
-  call void @test_export_gfx(float %x)
+  call amdgpu_gfx void @test_export_gfx(float %x)
   ret void
 }
 

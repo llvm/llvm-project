@@ -123,8 +123,7 @@ void ASTStructExtractor::ExtractFromTopLevelDecl(Decl *D) {
   FunctionDecl *function_decl = dyn_cast<FunctionDecl>(D);
 
   if (m_ast_context && function_decl &&
-      !m_function.m_wrapper_function_name.compare(
-          function_decl->getNameAsString())) {
+      m_function.m_wrapper_function_name == function_decl->getNameAsString()) {
     ExtractFromFunctionDecl(function_decl);
   }
 }

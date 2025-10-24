@@ -61,3 +61,27 @@ void use() {
 void another_func();
   // expected-warning@+1{{encoding prefix 'U' on an unevaluated string literal has no effect}}
 #pragma acc routine(another_func) seq bind(U"32 bits")
+
+void AtomicIf() {
+  int i, j;
+  // expected-error@+1{{expected '('}}
+#pragma acc atomic read if
+  i = j;
+#pragma acc atomic read if (true)
+  i = j;
+#pragma acc atomic write if (false)
+  i = j + 1;
+
+#pragma acc atomic update if (i)
+  ++i;
+#pragma acc atomic if (j)
+  ++i;
+
+#pragma acc atomic capture if (true)
+  i = j++;
+#pragma acc atomic capture if (i)
+  {
+    ++j;
+    i = j;
+  }
+}

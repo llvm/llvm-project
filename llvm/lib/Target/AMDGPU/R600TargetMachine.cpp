@@ -19,6 +19,7 @@
 #include "R600MachineFunctionInfo.h"
 #include "R600MachineScheduler.h"
 #include "R600TargetTransformInfo.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -45,6 +46,21 @@ static ScheduleDAGInstrs *createR600MachineScheduler(MachineSchedContext *C) {
 static MachineSchedRegistry R600SchedRegistry("r600",
                                               "Run R600's custom scheduler",
                                               createR600MachineScheduler);
+
+//===----------------------------------------------------------------------===//
+// R600 CodeGen Pass Builder interface.
+//===----------------------------------------------------------------------===//
+
+class R600CodeGenPassBuilder
+    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+public:
+  R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
+                         PassInstrumentationCallbacks *PIC);
+
+  void addPreISel(AddIRPass &addPass) const;
+  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
+  Error addInstSelector(AddMachinePass &) const;
+};
 
 //===----------------------------------------------------------------------===//
 // R600 Target Machine (R600 -> Cayman)
@@ -87,7 +103,7 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 R600TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(R600TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<R600TTIImpl>(this, F));
 }
 
 ScheduleDAGInstrs *
@@ -138,7 +154,6 @@ void R600PassConfig::addPreSched2() {
 void R600PassConfig::addPreEmitPass() {
   addPass(createR600MachineCFGStructurizerPass());
   addPass(createR600ExpandSpecialInstrsPass());
-  addPass(&FinalizeMachineBundlesID);
   addPass(createR600Packetizer());
   addPass(createR600ControlFlowFinalizer());
 }

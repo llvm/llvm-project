@@ -71,7 +71,7 @@ HeapProfileRecords:
     CallSites:       []
 ...
 ;--- memprof-dump-matched-call-site.ll
-; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched
+; CHECK: MemProf notcold context with id 3894143216621363392 has total profiled size 4 is matched with 1 frames
 ; CHECK: MemProf callsite match for inline call stack 4745611964195289084 10616861955219347331
 ; CHECK: MemProf callsite match for inline call stack 5401059281181789382
 

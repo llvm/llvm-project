@@ -16,19 +16,16 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
-#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <type_traits>
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_FOLDTENSORSUBSETOPS
+#define GEN_PASS_DEF_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -36,7 +33,7 @@ namespace tensor {
 using namespace mlir;
 
 static Value getTensorOperand(vector::TransferReadOp op) {
-  return op.getSource();
+  return op.getBase();
 }
 
 static Value getTensorOperand(tensor::InsertSliceOp op) {
@@ -115,9 +112,9 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
-  Operation *newOp = rewriter.create<vector::TransferReadOp>(
-      readOp.getLoc(), readOp.getVectorType(), extractSliceOp.getSource(),
-      sourceIndices,
+  Operation *newOp = vector::TransferReadOp::create(
+      rewriter, readOp.getLoc(), readOp.getVectorType(),
+      extractSliceOp.getSource(), sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
           readOp.getPermutationMap(), extractSliceOp.getSourceType().getRank(),
           extractSliceOp.getDroppedDims())),
@@ -218,12 +215,11 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
                                         sourceInsertSliceOp.getMixedSizes(),
                                         droppedDims, resolvedSizes);
 
-    // If we are inside an InParallel region, temporarily set the insertion
-    // point outside: only tensor.parallel_insert_slice ops are allowed in
-    // there.
-    if (std::is_same_v<OpTy, tensor::ParallelInsertSliceOp>) {
-      rewriter.setInsertionPoint(
-          insertSliceOp->template getParentOfType<scf::InParallelOp>());
+    // If we are inside a ParallelCombining region, temporarily set the
+    // insertion point outside: only ops of ParallelCombiningOpInterface are
+    // allowed in there.
+    if (isa<mlir::ParallelCombiningOpInterface>(insertSliceOp.getOperation())) {
+      rewriter.setInsertionPoint(insertSliceOp->getParentOp());
     }
 
     // Resolve offsets according to source offsets and strides.
@@ -268,7 +264,8 @@ void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
 namespace {
 
 struct FoldTensorSubsetOpsPass final
-    : public tensor::impl::FoldTensorSubsetOpsBase<FoldTensorSubsetOpsPass> {
+    : public tensor::impl::FoldTensorSubsetOpsPassBase<
+          FoldTensorSubsetOpsPass> {
   void runOnOperation() override;
 };
 
@@ -278,8 +275,4 @@ void FoldTensorSubsetOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
-
-std::unique_ptr<Pass> tensor::createFoldTensorSubsetOpsPass() {
-  return std::make_unique<FoldTensorSubsetOpsPass>();
 }

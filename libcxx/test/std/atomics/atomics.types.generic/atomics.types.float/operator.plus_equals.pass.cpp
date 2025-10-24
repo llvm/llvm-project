@@ -8,10 +8,6 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
 
-// Older versions of clang have a bug with atomic builtins affecting double and long double.
-// Fixed by 5fdd0948.
-// XFAIL: target=powerpc-ibm-{{.*}} && clang-18
-
 // floating-point-type operator+=(floating-point-type) volatile noexcept;
 // floating-point-type operator+=(floating-point-type) noexcept;
 
@@ -99,7 +95,7 @@ void test() {
 int main(int, char**) {
   test<float>();
   test<double>();
-  // TODO https://github.com/llvm/llvm-project/issues/47978
+  // TODO https://llvm.org/PR48634
   // test<long double>();
 
   return 0;

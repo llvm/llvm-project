@@ -6,6 +6,7 @@ add_mlir_library(MLIRTransforms
   ControlFlowSink.cpp
   CSE.cpp
   GenerateRuntimeVerification.cpp
+  BubbleDownMemorySpaceCasts.cpp
   InlinerPass.cpp
   LocationSnapshot.cpp
   LoopInvariantCodeMotion.cpp
@@ -31,11 +32,11 @@ add_mlir_library(MLIRTransforms
   MLIRAnalysis
   MLIRFunctionInterfaces
   MLIRLoopLikeInterface
+  MLIRMemOpInterfaces
   MLIRMemorySlotInterfaces
   MLIRPass
   MLIRRuntimeVerifiableOpInterface
   MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTransformUtils
-  MLIRUBDialect
   )

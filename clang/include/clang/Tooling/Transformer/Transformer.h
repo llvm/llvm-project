@@ -42,11 +42,6 @@ private:
   virtual void
   onMatchImpl(const ast_matchers::MatchFinder::MatchResult &Result) = 0;
 };
-
-// FIXME: Use std::type_identity or backport when available.
-template <class T> struct type_identity {
-  using type = T;
-};
 } // namespace detail
 
 template <typename T> struct TransformerResult {
@@ -95,8 +90,8 @@ public:
   template <typename MetadataT>
   explicit Transformer(
       transformer::RewriteRuleWith<MetadataT> Rule,
-      std::function<void(llvm::Expected<TransformerResult<
-                             typename detail::type_identity<MetadataT>::type>>)>
+      std::function<void(
+          llvm::Expected<TransformerResult<llvm::type_identity_t<MetadataT>>>)>
           Consumer);
 
   /// N.B. Passes `this` pointer to `MatchFinder`.  So, this object should not
@@ -200,8 +195,8 @@ private:
 template <typename MetadataT>
 Transformer::Transformer(
     transformer::RewriteRuleWith<MetadataT> Rule,
-    std::function<void(llvm::Expected<TransformerResult<
-                           typename detail::type_identity<MetadataT>::type>>)>
+    std::function<void(
+        llvm::Expected<TransformerResult<llvm::type_identity_t<MetadataT>>>)>
         Consumer)
     : Impl(std::make_unique<detail::WithMetadataImpl<MetadataT>>(
           std::move(Rule), std::move(Consumer))) {}

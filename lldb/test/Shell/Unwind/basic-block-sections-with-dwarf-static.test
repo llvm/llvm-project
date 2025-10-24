@@ -17,23 +17,34 @@
 image show-unwind --cached true -n foo
 # CHECK: UNWIND PLANS for {{.*}}`foo
 #
-# CHECK:      Assembly language inspection UnwindPlan:
-# CHECK-NEXT: This UnwindPlan originally sourced from assembly insn profiling
-# CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
-# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+# CHECK:      eh_frame UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from eh_frame CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# TODO: This address range isn't correct right now. We're just checking that
-# it's a different range from the one in the next query.
-# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-0x0000000000000046)
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 6-11)[{{.*}}.text + 12-27)[{{.*}}.text + 43-57)[{{.*}}.text + 58-69)
+# CHECK-NEXT: row[0]:  -37: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[1]:  -33: CFA=rsp +8 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[2]:  -31: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[3]:  -27: CFA=rsp+48 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[4]:  -18: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[5]:    0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-NEXT: row[6]:    1: CFA=rsp+16 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[7]:   12: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[8]:   15: CFA=rsp+16 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-NEXT: row[9]:   19: CFA=rsp+32 => rbx=[CFA-16] rip=[CFA-8]
+# CHECK-EMPTY:
 
 image show-unwind --cached true -n bar
 # CHECK: UNWIND PLANS for {{.*}}`bar
 
-# CHECK:      Assembly language inspection UnwindPlan:
-# CHECK-NEXT: This UnwindPlan originally sourced from assembly insn profiling
-# CHECK-NEXT: This UnwindPlan is sourced from the compiler: no.
-# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: yes.
+# CHECK:      eh_frame UnwindPlan:
+# CHECK-NEXT: This UnwindPlan originally sourced from eh_frame CFI
+# CHECK-NEXT: This UnwindPlan is sourced from the compiler: yes.
+# CHECK-NEXT: This UnwindPlan is valid at all instruction locations: no.
 # CHECK-NEXT: This UnwindPlan is for a trap handler function: no.
-# TODO: This address range isn't correct right now. We're just checking that
-# it's a different range from the one in the previous query.
-# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 35-0x0000000000000033)
+# CHECK-NEXT: Address range of this UnwindPlan: [{{.*}}.text + 27-43)
+# CHECK-NEXT: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-NEXT: row[1]:    4: CFA=rsp+96 => rip=[CFA-8]
+# CHECK-NEXT: row[2]:   15: CFA=rsp +8 => rip=[CFA-8]
+# CHECK-EMPTY:

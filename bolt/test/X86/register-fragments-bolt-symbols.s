@@ -29,6 +29,7 @@
 
 # RUN: link_fdata %s %t.bolt %t.preagg PREAGG
 # PREAGG: B X:0 #chain.cold.0# 1 0
+# PREAGG: B X:0 #dummy# 1 0
 # RUN: perf2bolt %t.bolt -p %t.preagg --pa -o %t.bat.fdata -w %t.bat.yaml -v=1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-REGISTER
 # RUN: FileCheck --input-file %t.bat.fdata --check-prefix=CHECK-FDATA %s
@@ -44,7 +45,13 @@
 # CHECK-SYMS: l  F .text.cold     [[#]] chain.cold.0
 # CHECK-SYMS: l  F .text          [[#]] chain
 # CHECK-SYMS: l df *ABS*          [[#]] bolt-pseudo.o
+# CHECK-SYMS: l  F .text.cold     [[#]] dummy.cold.0
+# CHECK-SYMS: l  F .text.cold.1   [[#]] dummy.cold.1
+# CHECK-SYMS: l  F .text.cold.2   [[#]] dummy.cold.2
 
+# CHECK-REGISTER: BOLT-INFO: marking dummy.cold.0/1(*2) as a fragment of dummy
+# CHECK-REGISTER: BOLT-INFO: marking dummy.cold.1/1(*2) as a fragment of dummy
+# CHECK-REGISTER: BOLT-INFO: marking dummy.cold.2/1(*2) as a fragment of dummy
 # CHECK-REGISTER: BOLT-INFO: marking chain.cold.0/1(*2) as a fragment of chain/2(*2)
 
 # CHECK-FDATA: 0 [unknown] 0 1 chain/chain.s/2 10 0 1

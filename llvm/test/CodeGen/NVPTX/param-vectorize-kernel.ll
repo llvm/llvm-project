@@ -65,9 +65,9 @@ define dso_local void @foo_St4x1(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x1_param_0[4],
   ; CHECK:               .param .b64 foo_St4x1_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x1_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x1_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x1_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x1_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -79,11 +79,11 @@ define dso_local void @foo_St4x2(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x2_param_0[8],
   ; CHECK:               .param .b64 foo_St4x2_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x2_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x2_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x2_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x2_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x2_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x2_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -99,13 +99,13 @@ define dso_local void @foo_St4x3(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x3_param_0[12],
   ; CHECK:               .param .b64 foo_St4x3_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x3_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x3_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x3_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x3_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x3_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x3_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x3_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x3_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -125,15 +125,15 @@ define dso_local void @foo_St4x4(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x4_param_0[16],
   ; CHECK:               .param .b64 foo_St4x4_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x4_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x4_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x4_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x4_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
-  ; CHECK:       ld.param.u32 [[R5:%r[0-9]+]], [foo_St4x4_param_0+12];
-  ; CHECK:       st.u32  [[[R1]]+12], [[R5]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x4_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x4_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x4_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x4_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b32 [[R5:%r[0-9]+]], [foo_St4x4_param_0+12];
+  ; CHECK:       st.b32  [[[R1]]+12], [[R5]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -157,17 +157,17 @@ define dso_local void @foo_St4x5(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x5_param_0[20],
   ; CHECK:               .param .b64 foo_St4x5_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x5_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x5_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x5_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x5_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
-  ; CHECK:       ld.param.u32 [[R5:%r[0-9]+]], [foo_St4x5_param_0+12];
-  ; CHECK:       st.u32  [[[R1]]+12], [[R5]];
-  ; CHECK:       ld.param.u32 [[R6:%r[0-9]+]], [foo_St4x5_param_0+16];
-  ; CHECK:       st.u32  [[[R1]]+16], [[R6]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x5_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x5_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x5_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x5_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b32 [[R5:%r[0-9]+]], [foo_St4x5_param_0+12];
+  ; CHECK:       st.b32  [[[R1]]+12], [[R5]];
+  ; CHECK:       ld.param.b32 [[R6:%r[0-9]+]], [foo_St4x5_param_0+16];
+  ; CHECK:       st.b32  [[[R1]]+16], [[R6]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -195,19 +195,19 @@ define dso_local void @foo_St4x6(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x6_param_0[24],
   ; CHECK:               .param .b64 foo_St4x6_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x6_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x6_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x6_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x6_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
-  ; CHECK:       ld.param.u32 [[R5:%r[0-9]+]], [foo_St4x6_param_0+12];
-  ; CHECK:       st.u32  [[[R1]]+12], [[R5]];
-  ; CHECK:       ld.param.u32 [[R6:%r[0-9]+]], [foo_St4x6_param_0+16];
-  ; CHECK:       st.u32  [[[R1]]+16], [[R6]];
-  ; CHECK:       ld.param.u32 [[R7:%r[0-9]+]], [foo_St4x6_param_0+20];
-  ; CHECK:       st.u32  [[[R1]]+20], [[R7]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x6_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x6_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x6_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x6_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b32 [[R5:%r[0-9]+]], [foo_St4x6_param_0+12];
+  ; CHECK:       st.b32  [[[R1]]+12], [[R5]];
+  ; CHECK:       ld.param.b32 [[R6:%r[0-9]+]], [foo_St4x6_param_0+16];
+  ; CHECK:       st.b32  [[[R1]]+16], [[R6]];
+  ; CHECK:       ld.param.b32 [[R7:%r[0-9]+]], [foo_St4x6_param_0+20];
+  ; CHECK:       st.b32  [[[R1]]+20], [[R7]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -239,21 +239,21 @@ define dso_local void @foo_St4x7(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x7_param_0[28],
   ; CHECK:               .param .b64 foo_St4x7_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x7_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x7_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x7_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x7_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
-  ; CHECK:       ld.param.u32 [[R5:%r[0-9]+]], [foo_St4x7_param_0+12];
-  ; CHECK:       st.u32  [[[R1]]+12], [[R5]];
-  ; CHECK:       ld.param.u32 [[R6:%r[0-9]+]], [foo_St4x7_param_0+16];
-  ; CHECK:       st.u32  [[[R1]]+16], [[R6]];
-  ; CHECK:       ld.param.u32 [[R7:%r[0-9]+]], [foo_St4x7_param_0+20];
-  ; CHECK:       st.u32  [[[R1]]+20], [[R7]];
-  ; CHECK:       ld.param.u32 [[R8:%r[0-9]+]], [foo_St4x7_param_0+24];
-  ; CHECK:       st.u32  [[[R1]]+24], [[R8]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x7_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x7_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x7_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x7_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b32 [[R5:%r[0-9]+]], [foo_St4x7_param_0+12];
+  ; CHECK:       st.b32  [[[R1]]+12], [[R5]];
+  ; CHECK:       ld.param.b32 [[R6:%r[0-9]+]], [foo_St4x7_param_0+16];
+  ; CHECK:       st.b32  [[[R1]]+16], [[R6]];
+  ; CHECK:       ld.param.b32 [[R7:%r[0-9]+]], [foo_St4x7_param_0+20];
+  ; CHECK:       st.b32  [[[R1]]+20], [[R7]];
+  ; CHECK:       ld.param.b32 [[R8:%r[0-9]+]], [foo_St4x7_param_0+24];
+  ; CHECK:       st.b32  [[[R1]]+24], [[R8]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -289,23 +289,23 @@ define dso_local void @foo_St4x8(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 4 .b8 foo_St4x8_param_0[32],
   ; CHECK:               .param .b64 foo_St4x8_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St4x8_param_1];
-  ; CHECK:       ld.param.u32 [[R2:%r[0-9]+]], [foo_St4x8_param_0];
-  ; CHECK:       st.u32  [[[R1]]], [[R2]];
-  ; CHECK:       ld.param.u32 [[R3:%r[0-9]+]], [foo_St4x8_param_0+4];
-  ; CHECK:       st.u32  [[[R1]]+4], [[R3]];
-  ; CHECK:       ld.param.u32 [[R4:%r[0-9]+]], [foo_St4x8_param_0+8];
-  ; CHECK:       st.u32  [[[R1]]+8], [[R4]];
-  ; CHECK:       ld.param.u32 [[R5:%r[0-9]+]], [foo_St4x8_param_0+12];
-  ; CHECK:       st.u32  [[[R1]]+12], [[R5]];
-  ; CHECK:       ld.param.u32 [[R6:%r[0-9]+]], [foo_St4x8_param_0+16];
-  ; CHECK:       st.u32  [[[R1]]+16], [[R6]];
-  ; CHECK:       ld.param.u32 [[R7:%r[0-9]+]], [foo_St4x8_param_0+20];
-  ; CHECK:       st.u32  [[[R1]]+20], [[R7]];
-  ; CHECK:       ld.param.u32 [[R8:%r[0-9]+]], [foo_St4x8_param_0+24];
-  ; CHECK:       st.u32  [[[R1]]+24], [[R8]];
-  ; CHECK:       ld.param.u32 [[R9:%r[0-9]+]], [foo_St4x8_param_0+28];
-  ; CHECK:       st.u32  [[[R1]]+28], [[R9]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St4x8_param_1];
+  ; CHECK:       ld.param.b32 [[R2:%r[0-9]+]], [foo_St4x8_param_0];
+  ; CHECK:       st.b32  [[[R1]]], [[R2]];
+  ; CHECK:       ld.param.b32 [[R3:%r[0-9]+]], [foo_St4x8_param_0+4];
+  ; CHECK:       st.b32  [[[R1]]+4], [[R3]];
+  ; CHECK:       ld.param.b32 [[R4:%r[0-9]+]], [foo_St4x8_param_0+8];
+  ; CHECK:       st.b32  [[[R1]]+8], [[R4]];
+  ; CHECK:       ld.param.b32 [[R5:%r[0-9]+]], [foo_St4x8_param_0+12];
+  ; CHECK:       st.b32  [[[R1]]+12], [[R5]];
+  ; CHECK:       ld.param.b32 [[R6:%r[0-9]+]], [foo_St4x8_param_0+16];
+  ; CHECK:       st.b32  [[[R1]]+16], [[R6]];
+  ; CHECK:       ld.param.b32 [[R7:%r[0-9]+]], [foo_St4x8_param_0+20];
+  ; CHECK:       st.b32  [[[R1]]+20], [[R7]];
+  ; CHECK:       ld.param.b32 [[R8:%r[0-9]+]], [foo_St4x8_param_0+24];
+  ; CHECK:       st.b32  [[[R1]]+24], [[R8]];
+  ; CHECK:       ld.param.b32 [[R9:%r[0-9]+]], [foo_St4x8_param_0+28];
+  ; CHECK:       st.b32  [[[R1]]+28], [[R9]];
   ; CHECK:       ret;
   %1 = load i32, ptr %in, align 4
   store i32 %1, ptr %ret, align 4
@@ -345,9 +345,9 @@ define dso_local void @foo_St8x1(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 8 .b8 foo_St8x1_param_0[8],
   ; CHECK:               .param .b64 foo_St8x1_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St8x1_param_1];
-  ; CHECK:       ld.param.u64 [[RD1:%rd[0-9]+]], [foo_St8x1_param_0];
-  ; CHECK:       st.u64 [[[R1]]], [[RD1]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St8x1_param_1];
+  ; CHECK:       ld.param.b64 [[RD1:%rd[0-9]+]], [foo_St8x1_param_0];
+  ; CHECK:       st.b64 [[[R1]]], [[RD1]];
   ; CHECK:       ret;
   %1 = load i64, ptr %in, align 8
   store i64 %1, ptr %ret, align 8
@@ -359,11 +359,11 @@ define dso_local void @foo_St8x2(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 8 .b8 foo_St8x2_param_0[16],
   ; CHECK:               .param .b64 foo_St8x2_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St8x2_param_1];
-  ; CHECK:       ld.param.u64 [[RD1:%rd[0-9]+]], [foo_St8x2_param_0];
-  ; CHECK:       st.u64 [[[R1]]], [[RD1]];
-  ; CHECK:       ld.param.u64 [[RD2:%rd[0-9]+]], [foo_St8x2_param_0+8];
-  ; CHECK:       st.u64 [[[R1]]+8], [[RD2]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St8x2_param_1];
+  ; CHECK:       ld.param.b64 [[RD1:%rd[0-9]+]], [foo_St8x2_param_0];
+  ; CHECK:       st.b64 [[[R1]]], [[RD1]];
+  ; CHECK:       ld.param.b64 [[RD2:%rd[0-9]+]], [foo_St8x2_param_0+8];
+  ; CHECK:       st.b64 [[[R1]]+8], [[RD2]];
   ; CHECK:       ret;
   %1 = load i64, ptr %in, align 8
   store i64 %1, ptr %ret, align 8
@@ -379,13 +379,13 @@ define dso_local void @foo_St8x3(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 8 .b8 foo_St8x3_param_0[24],
   ; CHECK:               .param .b64 foo_St8x3_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St8x3_param_1];
-  ; CHECK:       ld.param.u64 [[RD1:%rd[0-9]+]], [foo_St8x3_param_0];
-  ; CHECK:       st.u64 [[[R1]]], [[RD1]];
-  ; CHECK:       ld.param.u64 [[RD2:%rd[0-9]+]], [foo_St8x3_param_0+8];
-  ; CHECK:       st.u64 [[[R1]]+8], [[RD2]];
-  ; CHECK:       ld.param.u64 [[RD3:%rd[0-9]+]], [foo_St8x3_param_0+16];
-  ; CHECK:       st.u64 [[[R1]]+16], [[RD3]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St8x3_param_1];
+  ; CHECK:       ld.param.b64 [[RD1:%rd[0-9]+]], [foo_St8x3_param_0];
+  ; CHECK:       st.b64 [[[R1]]], [[RD1]];
+  ; CHECK:       ld.param.b64 [[RD2:%rd[0-9]+]], [foo_St8x3_param_0+8];
+  ; CHECK:       st.b64 [[[R1]]+8], [[RD2]];
+  ; CHECK:       ld.param.b64 [[RD3:%rd[0-9]+]], [foo_St8x3_param_0+16];
+  ; CHECK:       st.b64 [[[R1]]+16], [[RD3]];
   ; CHECK:       ret;
   %1 = load i64, ptr %in, align 8
   store i64 %1, ptr %ret, align 8
@@ -405,15 +405,15 @@ define dso_local void @foo_St8x4(ptr nocapture noundef readonly byval(%struct.St
   ; CHECK:               .param .align 8 .b8 foo_St8x4_param_0[32],
   ; CHECK:               .param .b64 foo_St8x4_param_1
   ; CHECK:       )
-  ; CHECK:       ld.param.u64 [[R1:%rd[0-9]+]], [foo_St8x4_param_1];
-  ; CHECK:       ld.param.u64 [[RD1:%rd[0-9]+]], [foo_St8x4_param_0];
-  ; CHECK:       st.u64 [[[R1]]], [[RD1]];
-  ; CHECK:       ld.param.u64 [[RD2:%rd[0-9]+]], [foo_St8x4_param_0+8];
-  ; CHECK:       st.u64 [[[R1]]+8], [[RD2]];
-  ; CHECK:       ld.param.u64 [[RD3:%rd[0-9]+]], [foo_St8x4_param_0+16];
-  ; CHECK:       st.u64 [[[R1]]+16], [[RD3]];
-  ; CHECK:       ld.param.u64 [[RD4:%rd[0-9]+]], [foo_St8x4_param_0+24];
-  ; CHECK:       st.u64 [[[R1]]+24], [[RD4]];
+  ; CHECK:       ld.param.b64 [[R1:%rd[0-9]+]], [foo_St8x4_param_1];
+  ; CHECK:       ld.param.b64 [[RD1:%rd[0-9]+]], [foo_St8x4_param_0];
+  ; CHECK:       st.b64 [[[R1]]], [[RD1]];
+  ; CHECK:       ld.param.b64 [[RD2:%rd[0-9]+]], [foo_St8x4_param_0+8];
+  ; CHECK:       st.b64 [[[R1]]+8], [[RD2]];
+  ; CHECK:       ld.param.b64 [[RD3:%rd[0-9]+]], [foo_St8x4_param_0+16];
+  ; CHECK:       st.b64 [[[R1]]+16], [[RD3]];
+  ; CHECK:       ld.param.b64 [[RD4:%rd[0-9]+]], [foo_St8x4_param_0+24];
+  ; CHECK:       st.b64 [[[R1]]+24], [[RD4]];
   ; CHECK:       ret;
   %1 = load i64, ptr %in, align 8
   store i64 %1, ptr %ret, align 8

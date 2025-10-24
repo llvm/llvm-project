@@ -2,14 +2,12 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
-define { half, i32 } @test_frexp_f16_i32(half %a) {
+define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; CHECK-LABEL: test_frexp_f16_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -27,14 +25,12 @@ define { half, i32 } @test_frexp_f16_i32(half %a) {
   ret { half, i32 } %result
 }
 
-define half @test_frexp_f16_i32_only_use_fract(half %a) {
+define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; CHECK-LABEL: test_frexp_f16_i32_only_use_fract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -52,14 +48,12 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) {
   ret half %result.0
 }
 
-define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
+define i32 @test_frexp_f16_i32_only_use_exp(half %a) nounwind {
 ; CHECK-LABEL: test_frexp_f16_i32_only_use_exp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    addi r4, r1, 44
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -78,16 +72,10 @@ define i32 @test_frexp_f16_i32_only_use_exp(half %a) {
   ret i32 %result.0
 }
 
-define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
+define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) nounwind {
 ; CHECK-LABEL: test_frexp_v2f16_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r29, -40
-; CHECK-NEXT:    .cfi_offset r30, -32
-; CHECK-NEXT:    .cfi_offset f30, -16
-; CHECK-NEXT:    .cfi_offset f31, -8
 ; CHECK-NEXT:    std r29, -40(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
@@ -131,14 +119,10 @@ define { <2 x half>, <2 x i32> } @test_frexp_v2f16_v2i32(<2 x half> %a) {
   ret { <2 x half>, <2 x i32> } %result
 }
 
-define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
+define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) nounwind {
 ; CHECK-LABEL: test_frexp_v2f16_v2i32_only_use_fract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset f30, -16
-; CHECK-NEXT:    .cfi_offset f31, -8
 ; CHECK-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
@@ -174,15 +158,10 @@ define <2 x half> @test_frexp_v2f16_v2i32_only_use_fract(<2 x half> %a) {
   ret <2 x half> %result.0
 }
 
-define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
+define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) nounwind {
 ; CHECK-LABEL: test_frexp_v2f16_v2i32_only_use_exp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset r29, -32
-; CHECK-NEXT:    .cfi_offset r30, -24
-; CHECK-NEXT:    .cfi_offset f31, -8
 ; CHECK-NEXT:    std r29, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
@@ -222,15 +201,13 @@ define <2 x i32> @test_frexp_v2f16_v2i32_only_use_exp(<2 x half> %a) {
   ret <2 x i32> %result.1
 }
 
-define { float, i32 } @test_frexp_f32_i32(float %a) {
+define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
 ; CHECK-LABEL: test_frexp_f32_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lwz r3, 44(r1)
@@ -242,15 +219,13 @@ define { float, i32 } @test_frexp_f32_i32(float %a) {
   ret { float, i32 } %result
 }
 
-define float @test_frexp_f32_i32_only_use_fract(float %a) {
+define float @test_frexp_f32_i32_only_use_fract(float %a) nounwind {
 ; CHECK-LABEL: test_frexp_f32_i32_only_use_fract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -262,15 +237,13 @@ define float @test_frexp_f32_i32_only_use_fract(float %a) {
   ret float %result.0
 }
 
-define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
+define i32 @test_frexp_f32_i32_only_use_exp(float %a) nounwind {
 ; CHECK-LABEL: test_frexp_f32_i32_only_use_exp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lwz r3, 44(r1)
@@ -284,32 +257,30 @@ define i32 @test_frexp_f32_i32_only_use_exp(float %a) {
 }
 
 ; FIXME
-; define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) {
+; define { <2 x float>, <2 x i32> } @test_frexp_v2f32_v2i32(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   ret { <2 x float>, <2 x i32> } %result
 ; }
 
-; define <2 x float> @test_frexp_v2f32_v2i32_only_use_fract(<2 x float> %a) {
+; define <2 x float> @test_frexp_v2f32_v2i32_only_use_fract(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   %result.0 = extractvalue { <2 x float>, <2 x i32> } %result, 0
 ;   ret <2 x float> %result.0
 ; }
 
-; define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) {
+; define <2 x i32> @test_frexp_v2f32_v2i32_only_use_exp(<2 x float> %a) nounwind {
 ;   %result = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %a)
 ;   %result.1 = extractvalue { <2 x float>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
 
-define { double, i32 } @test_frexp_f64_i32(double %a) {
+define { double, i32 } @test_frexp_f64_i32(double %a) nounwind {
 ; CHECK-LABEL: test_frexp_f64_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lwz r3, 44(r1)
@@ -321,15 +292,13 @@ define { double, i32 } @test_frexp_f64_i32(double %a) {
   ret { double, i32 } %result
 }
 
-define double @test_frexp_f64_i32_only_use_fract(double %a) {
+define double @test_frexp_f64_i32_only_use_fract(double %a) nounwind {
 ; CHECK-LABEL: test_frexp_f64_i32_only_use_fract:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 48
@@ -341,15 +310,13 @@ define double @test_frexp_f64_i32_only_use_fract(double %a) {
   ret double %result.0
 }
 
-define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
+define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ; CHECK-LABEL: test_frexp_f64_i32_only_use_exp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi r4, r1, 44
+; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    bl frexp
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    lwz r3, 44(r1)
@@ -363,36 +330,36 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 }
 
 ; FIXME: Widen vector result
-; define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) {
+; define { <2 x double>, <2 x i32> } @test_frexp_v2f64_v2i32(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   ret { <2 x double>, <2 x i32> } %result
 ; }
 
-; define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) {
+; define <2 x double> @test_frexp_v2f64_v2i32_only_use_fract(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   %result.0 = extractvalue { <2 x double>, <2 x i32> } %result, 0
 ;   ret <2 x double> %result.0
 ; }
 
-; define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) {
+; define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind {
 ;   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
 ;   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
 ;   ret <2 x i32> %result.1
 ; }
 
 ; FIXME: f128 ExpandFloatResult
-; define { ppc_fp128, i32 } @test_frexp_f128_i32(ppc_fp128 %a) {
+; define { ppc_fp128, i32 } @test_frexp_f128_i32(ppc_fp128 %a) nounwind {
 ;   %result = call { ppc_fp128, i32 } @llvm.frexp.f128.i32(ppc_fp128 %a)
 ;   ret { ppc_fp128, i32 } %result
 ; }
 
-; define ppc_fp128 @test_frexp_f128_i32_only_use_fract(ppc_fp128 %a) {
+; define ppc_fp128 @test_frexp_f128_i32_only_use_fract(ppc_fp128 %a) nounwind {
 ;   %result = call { ppc_fp128, i32 } @llvm.frexp.f128.i32(ppc_fp128 %a)
 ;   %result.0 = extractvalue { ppc_fp128, i32 } %result, 0
 ;   ret ppc_fp128 %result.0
 ; }
 
-; define i32 @test_frexp_f128_i32_only_use_exp(ppc_fp128 %a) {
+; define i32 @test_frexp_f128_i32_only_use_exp(ppc_fp128 %a) nounwind {
 ;   %result = call { ppc_fp128, i32 } @llvm.frexp.f128.i32(ppc_fp128 %a)
 ;   %result.0 = extractvalue { ppc_fp128, i32 } %result, 1
 ;   ret i32 %result.0

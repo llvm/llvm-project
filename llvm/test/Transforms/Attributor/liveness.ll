@@ -2589,7 +2589,7 @@ define void @bad_gep() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; TUNIT-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
 ; TUNIT-NEXT:    br label [[EXIT:%.*]]
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    unreachable
@@ -2598,7 +2598,7 @@ define void @bad_gep() {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       exit:
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -2607,7 +2607,7 @@ define void @bad_gep() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; CGSCC-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    br label [[EXIT:%.*]]
 ; CGSCC:       while.body:
 ; CGSCC-NEXT:    unreachable
@@ -2616,13 +2616,13 @@ define void @bad_gep() {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       exit:
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
   %n = alloca i8
   %m = alloca i8
-  call void @llvm.lifetime.start.p0(i64 1, ptr %n)
+  call void @llvm.lifetime.start.p0(ptr %n)
   br label %exit
 
 while.body:
@@ -2640,7 +2640,7 @@ if.end:
   br i1 %cmp, label %exit, label %while.body
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 1, ptr %n)
+  call void @llvm.lifetime.end.p0(ptr %n)
   ret void
 }
 
@@ -2679,8 +2679,8 @@ b2:
 declare i1 @bad_gep_helper1(ptr, ptr, ptr)
 declare void @bad_gep_helper2(i8)
 
-declare void @llvm.lifetime.start.p0(i64 %0, ptr %1)
-declare void @llvm.lifetime.end.p0(i64 %0, ptr %1)
+declare void @llvm.lifetime.start.p0(ptr %1)
+declare void @llvm.lifetime.end.p0(ptr %1)
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind }
 ; TUNIT: attributes #[[ATTR1:[0-9]+]] = { memory(none) }

@@ -26,18 +26,16 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 16
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD1]] = load <16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i8> [[VECTOR_RECUR]], <16 x i8> [[WIDE_LOAD]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> [[WIDE_LOAD1]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <16 x i8> [[WIDE_LOAD]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <16 x i8> [[WIDE_LOAD1]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[TMP11]], i32 16
-; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP13]], align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP9]], ptr [[TMP11]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP10]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -121,9 +119,8 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[VECTOR_RECUR4:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT3]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 16
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD5]] = load <16 x i8>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <16 x i8> [[VECTOR_RECUR]], <16 x i8> [[WIDE_LOAD]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
 ; CHECK-NEXT:    [[TMP8]] = shufflevector <16 x i8> [[WIDE_LOAD]], <16 x i8> [[WIDE_LOAD5]], <16 x i32> <i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
@@ -138,9 +135,8 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <16 x i8> [[TMP15]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = add <16 x i8> [[TMP16]], [[WIDE_LOAD5]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i8, ptr [[TMP19]], i32 16
-; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr [[TMP21]], align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP17]], ptr [[TMP19]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP18]], ptr [[TMP22]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

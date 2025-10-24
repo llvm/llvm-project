@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BitTracker.h"
+#include "Hexagon.h"
 #include "HexagonBitTracker.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
@@ -16,7 +17,6 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -493,22 +493,13 @@ namespace {
 
 } // end anonymous namespace
 
-namespace llvm {
-
-  void initializeHexagonGenInsertPass(PassRegistry&);
-  FunctionPass *createHexagonGenInsert();
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
     static char ID;
 
-    HexagonGenInsert() : MachineFunctionPass(ID) {
-      initializeHexagonGenInsertPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonGenInsert() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
       return "Hexagon generate \"insert\" instructions";
@@ -929,6 +920,10 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
   // successors have been processed.
   RegisterSet BlockDefs, InsDefs;
   for (MachineInstr &MI : *B) {
+    // Stop if the map size is too large.
+    if (IFMap.size() >= MaxIFMSize)
+      break;
+
     InsDefs.clear();
     getInstrDefs(&MI, InsDefs);
     // Leave those alone. They are more transparent than "insert".
@@ -951,8 +946,8 @@ void HexagonGenInsert::collectInBlock(MachineBasicBlock *B,
 
         findRecordInsertForms(VR, AVs);
         // Stop if the map size is too large.
-        if (IFMap.size() > MaxIFMSize)
-          return;
+        if (IFMap.size() >= MaxIFMSize)
+          break;
       }
     }
 
@@ -1281,7 +1276,7 @@ void HexagonGenInsert::selectCandidates() {
 
   for (unsigned R = AllRMs.find_first(); R; R = AllRMs.find_next(R)) {
     using use_iterator = MachineRegisterInfo::use_nodbg_iterator;
-    using InstrSet = SmallSet<const MachineInstr *, 16>;
+    using InstrSet = SmallPtrSet<const MachineInstr *, 16>;
 
     InstrSet UIs;
     // Count as the number of instructions in which R is used, not the

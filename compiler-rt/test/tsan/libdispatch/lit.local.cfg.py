@@ -14,5 +14,5 @@ if "libdispatch" in root.available_features:
 else:
     config.unsupported = True
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     config.environment["TSAN_OPTIONS"] += ":ignore_noninstrumented_modules=1"
