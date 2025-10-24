@@ -1466,11 +1466,12 @@ def FeatureClusters : SubtargetFeature< "clusters",
   "Has clusters of workgroups support"
 >;
 
-def FeatureWaitsBeforeSystemScopeStores
-    : SubtargetFeature<"waits-before-system-scope-stores",
-                       "RequiresWaitsBeforeSystemScopeStores", "true",
-                       "Target requires waits for loads and atomics before "
-                       "system scope stores">;
+def FeatureWaitsBeforeSystemScopeStores : SubtargetFeature<
+  "waits-before-system-scope-stores",
+  "RequiresWaitsBeforeSystemScopeStores",
+  "true",
+  "Target requires waits for loads and atomics before system scope stores"
+>;
 
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
