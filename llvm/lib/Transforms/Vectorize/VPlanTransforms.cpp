@@ -82,7 +82,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
           // It is always safe to copy over the NoWrap and FastMath flags. In
           // particular, when folding tail by masking, the masked-off lanes are
-          // never executed, so it is safe.
+          // never used, so it is safe.
           VPIRFlags Flags = vputils::getFlagsFromIndDesc(*II);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
               Phi, Start, Step, &Plan.getVF(), *II, Flags,

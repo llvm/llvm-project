@@ -7551,7 +7551,7 @@ createWidenInductionRecipes(PHINode *Phi, Instruction *PhiOrTrunc,
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
   // particular, when folding tail by masking, the masked-off lanes are never
-  // executed, so it is safe.
+  // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
   VPValue *Step =
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
