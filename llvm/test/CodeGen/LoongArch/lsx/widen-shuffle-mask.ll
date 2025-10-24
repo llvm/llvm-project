@@ -29,7 +29,8 @@ define <16 x i8> @widen_shuffle_mask_v16i8_to_v4i32(<16 x i8> %a, <16 x i8> %b) 
 define <16 x i8> @widen_shuffle_mask_v16i8_to_v2i64(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v16i8_to_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermi.w $vr0, $vr1, 228
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 228
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
     ret <16 x i8> %r
@@ -50,7 +51,8 @@ define <8 x i16> @widen_shuffle_mask_v8i16_to_v4i32(<8 x i16> %a, <8 x i16> %b) 
 define <8 x i16> @widen_shuffle_mask_v8i16_to_v2i64(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v8i16_to_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermi.w $vr0, $vr1, 228
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 228
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 14, i32 15>
     ret <8 x i16> %r
@@ -59,7 +61,8 @@ define <8 x i16> @widen_shuffle_mask_v8i16_to_v2i64(<8 x i16> %a, <8 x i16> %b) 
 define <4 x i32> @widen_shuffle_mask_v4i32_to_v2i64(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: widen_shuffle_mask_v4i32_to_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermi.w $vr0, $vr1, 228
+; CHECK-NEXT:    vpermi.w $vr1, $vr0, 228
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
     %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
     ret <4 x i32> %r

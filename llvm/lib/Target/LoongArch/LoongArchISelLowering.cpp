@@ -2079,7 +2079,7 @@ static SDValue lowerVECTOR_SHUFFLE_VPERMI(const SDLoc &DL, ArrayRef<int> Mask,
   if (!buildVPERMIInfo(Mask, V1, V2, SrcVec, MaskImm))
     return SDValue();
 
-  return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[0], SrcVec[1],
+  return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[1], SrcVec[0],
                      DAG.getConstant(MaskImm, DL, Subtarget.getGRLenVT()));
 }
 
@@ -2256,7 +2256,7 @@ lowerVECTOR_SHUFFLE_XVPERMI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if (!buildVPERMIInfo(Mask, V1, V2, SrcVec, MaskImm))
       return SDValue();
 
-    return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[0], SrcVec[1],
+    return DAG.getNode(LoongArchISD::VPERMI, DL, VT, SrcVec[1], SrcVec[0],
                        DAG.getConstant(MaskImm, DL, GRLenVT));
   }
 
