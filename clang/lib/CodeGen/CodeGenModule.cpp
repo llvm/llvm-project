@@ -4043,6 +4043,58 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
   return D->isImplicit();
 }
 
+static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
+                                    const ValueDecl *Global) {
+  const LangOptions &LangOpts = CGM.getLangOpts();
+  if (!(LangOpts.OpenMPIsTargetDevice || LangOpts.CUDA))
+    return false;
+
+  const auto *AA = Global->getAttr<AliasAttr>();
+  GlobalDecl AliaseeGD;
+
+  // Check if the aliasee exists.
+  if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD)) {
+    if (LangOpts.CUDA)
+      // In CUDA/HIP, if the aliasee is not found, skip the alias emission.
+      // This is not a hard error as this branch is executed for both the host
+      // and device, with no respect to where the aliasee is defined.
+      return true;
+
+    // For OpenMP, lookupRepresentativeDecl should always find the aliasee, this
+    // is an error
+    CGM.getDiags().Report(AA->getLocation(), diag::err_alias_to_undefined)
+        << false << true;
+    return false;
+  }
+
+  const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
+  if (LangOpts.OpenMPIsTargetDevice) {
+    if (!AliaseeDecl ||
+        !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(AliaseeDecl))
+      // On OpenMP device, skip alias emission if the aliasee is not marked
+      // with declare target.
+      return true;
+    return false;
+  }
+
+  // CUDA / HIP
+  const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
+  const bool AliaseeHasDeviceAttr =
+      AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
+
+  if (LangOpts.CUDAIsDevice) {
+    if (!HasDeviceAttr || !AliaseeHasDeviceAttr)
+      // On device, skip alias emission if either the alias or the aliasee
+      // is not marked with __device__.
+      return true;
+    return false;
+  }
+
+  // CUDA / HIP Host
+  // we know that the aliasee exists from above, so we know to emit
+  return false;
+}
+
 bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
   assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -4066,37 +4118,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   // If this is an alias definition (which otherwise looks like a declaration)
   // emit it now.
   if (Global->hasAttr<AliasAttr>()) {
-    if (LangOpts.OpenMPIsTargetDevice || LangOpts.CUDA) {
-      const auto *AA = Global->getAttr<AliasAttr>();
-      assert(AA && "Not an alias?");
-      GlobalDecl AliaseeGD;
-      if (!lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD)) {
-        if (LangOpts.CUDA)
-          // Failed to find aliasee on device side, skip emitting
-          return;
-      } else {
-        const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());
-        if (LangOpts.OpenMPIsTargetDevice) {
-          if (!AliaseeDecl ||
-              !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(
-                  AliaseeDecl))
-            // Not a target declaration, skip emitting
-            return;
-        } else {
-          // HIP/CUDA
-          const bool HasDeviceAttr = Global->hasAttr<CUDADeviceAttr>();
-          const bool AliaseeHasDeviceAttr =
-              AliaseeDecl && AliaseeDecl->hasAttr<CUDADeviceAttr>();
-          if (LangOpts.CUDAIsDevice) {
-            if (!HasDeviceAttr || !AliaseeHasDeviceAttr)
-              return;
-          } else if (HasDeviceAttr && AliaseeHasDeviceAttr) {
-            // Alias is only on device side, skip emitting on host side
-            return;
-          }
-        }
-      }
-    }
+    if (shouldSkipAliasEmission(*this, Global))
+      return;
     return EmitAliasDefinition(GD);
   }
 

@@ -13,18 +13,6 @@
 //
 int __One(void) { return 1; }
 int One(void) __attribute__ ((weak, alias("__One")));
-
-
-// CHECK-LABEL: define dso_local i32 @main(
-// CHECK-SAME: ) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// CHECK-NEXT:    ret i32 0
-//
-int main(){
-    return 0;
-}
 //.
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.

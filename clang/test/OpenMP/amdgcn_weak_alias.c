@@ -60,19 +60,6 @@ int Two(void) __attribute__ ((weak, alias("__Two")));
 int __Three(void) { return 3; }
 #pragma omp end declare target
 int Three(void) __attribute__ ((weak, alias("__Three")));
-
-
-// HOST-LABEL: define dso_local i32 @main(
-// HOST-SAME: ) #[[ATTR0]] {
-// HOST-NEXT:  [[ENTRY:.*:]]
-// HOST-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// HOST-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// HOST-NEXT:    ret i32 0
-//
-int main(){
-    return 0;
-}
-
 //.
 // HOST: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.

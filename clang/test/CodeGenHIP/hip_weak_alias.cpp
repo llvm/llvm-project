@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -x hip -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-linux-gnu -emit-llvm %s -fcuda-is-device -o - | FileCheck %s --check-prefix=DEVICE
 
 #define __device__ __attribute__((device))
+#define __host__ __attribute__((host))
 
 extern "C" {
 
@@ -12,10 +13,17 @@ extern "C" {
 // HOST: @__hip_cuid_ = global i8 0
 // HOST: @llvm.compiler.used = appending global [1 x ptr] [ptr @__hip_cuid_], section "llvm.metadata"
 // HOST: @HostFunc = weak alias i32 (), ptr @__HostFunc
+// HOST: @Two = weak alias i32 (), ptr @__Two
+// HOST: @Four = weak alias i32 (), ptr @__Four
 //.
 // DEVICE: @__hip_cuid_ = addrspace(1) global i8 0
 // DEVICE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
 // DEVICE: @One = weak alias i32 (), ptr @__One
+// DEVICE: @Two = weak alias i32 (), ptr @__Two
+// DEVICE: @Three = weak alias i32 (), ptr @__Three
+// DEVICE: @Five = weak alias i32 (), ptr @__Five
+// DEVICE: @_Z3Sixv = weak alias i32 (), ptr @_Z5__Sixv
+// DEVICE: @_Z3Sixf = weak alias float (float), ptr @_Z5__Sixf
 //.
 // HOST-LABEL: define dso_local i32 @__HostFunc(
 // HOST-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -23,7 +31,7 @@ extern "C" {
 // HOST-NEXT:    ret i32 42
 //
 int __HostFunc(void) { return 42; }
-int HostFunc(void) __attribute__ ((weak, alias("__HostFunc")));
+int HostFunc(void) __attribute__((weak, alias("__HostFunc")));
 
 // DEVICE-LABEL: define dso_local i32 @__One(
 // DEVICE-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -33,23 +41,77 @@ int HostFunc(void) __attribute__ ((weak, alias("__HostFunc")));
 // DEVICE-NEXT:    ret i32 2
 //
 __device__ int __One(void) { return 2; }
-__device__ int One(void) __attribute__ ((weak, alias("__One")));
+__device__ int One(void) __attribute__((weak, alias("__One")));
 
-}
-
-// HOST-LABEL: define dso_local noundef i32 @main(
-// HOST-SAME: ) #[[ATTR1:[0-9]+]] {
+// HOST-LABEL: define dso_local i32 @__Two(
+// HOST-SAME: ) #[[ATTR0]] {
 // HOST-NEXT:  [[ENTRY:.*:]]
-// HOST-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// HOST-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// HOST-NEXT:    ret i32 0
+// HOST-NEXT:    ret i32 2
 //
-int main() {
-    return 0;
+// DEVICE-LABEL: define dso_local i32 @__Two(
+// DEVICE-SAME: ) #[[ATTR0]] {
+// DEVICE-NEXT:  [[ENTRY:.*:]]
+// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// DEVICE-NEXT:    ret i32 2
+//
+__host__ __device__ int __Two(void) { return 2; }
+__host__ __device__ int Two(void) __attribute__((weak, alias("__Two")));
+
+// DEVICE-LABEL: define linkonce_odr i32 @__Three(
+// DEVICE-SAME: ) #[[ATTR0]] comdat {
+// DEVICE-NEXT:  [[ENTRY:.*:]]
+// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// DEVICE-NEXT:    ret i32 2
+//
+__device__ constexpr int __Three(void) { return 2; }
+__device__ int Three(void) __attribute__((weak, alias("__Three")));
+
+// HOST-LABEL: define linkonce_odr i32 @__Four(
+// HOST-SAME: ) #[[ATTR0]] comdat {
+// HOST-NEXT:  [[ENTRY:.*:]]
+// HOST-NEXT:    ret i32 2
+//
+constexpr int __Four(void) { return 2; }
+int Four(void) __attribute__((weak, alias("__Four")));
+
+// DEVICE-LABEL: define linkonce_odr i32 @__Five(
+// DEVICE-SAME: ) #[[ATTR0]] comdat {
+// DEVICE-NEXT:  [[ENTRY:.*:]]
+// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// DEVICE-NEXT:    ret i32 2
+//
+__device__ constexpr int __Five(void) { return 2; }
+__device__ int Five(void) __attribute__((weak, alias("__Five")));
 }
+
+// DEVICE-LABEL: define dso_local noundef i32 @_Z5__Sixv(
+// DEVICE-SAME: ) #[[ATTR0]] {
+// DEVICE-NEXT:  [[ENTRY:.*:]]
+// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
+// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// DEVICE-NEXT:    ret i32 2
+//
+__device__ int __Six(void) { return 2; }
+// DEVICE-LABEL: define dso_local noundef float @_Z5__Sixf(
+// DEVICE-SAME: float noundef [[F:%.*]]) #[[ATTR0]] {
+// DEVICE-NEXT:  [[ENTRY:.*:]]
+// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
+// DEVICE-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
+// DEVICE-NEXT:    [[F_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F_ADDR]] to ptr
+// DEVICE-NEXT:    store float [[F]], ptr [[F_ADDR_ASCAST]], align 4
+// DEVICE-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR_ASCAST]], align 4
+// DEVICE-NEXT:    [[MUL:%.*]] = fmul contract float 2.000000e+00, [[TMP0]]
+// DEVICE-NEXT:    ret float [[MUL]]
+//
+__device__ float __Six(float f) { return 2.0f * f; }
+__device__ int Six(void) __attribute__((weak, alias("_Z5__Sixv")));
+__device__ float Six(float f) __attribute__((weak, alias("_Z5__Sixf")));
 //.
 // HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// HOST: attributes #[[ATTR1]] = { mustprogress noinline norecurse nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
 // DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
