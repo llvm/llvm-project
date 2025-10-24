@@ -15,6 +15,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
+#include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
@@ -109,24 +110,6 @@ static TerminatorTy verifyAndGetTerminator(Operation *op, Region &region,
   if (terminatorOperation)
     diag.attachNote(terminatorOperation->getLoc()) << "terminator here";
   return nullptr;
-}
-
-/// Helper function to compute the difference between two values. This is used
-/// by the loop implementations to compute the trip count.
-static std::optional<llvm::APSInt> computeUbMinusLb(Value lb, Value ub,
-                                                    bool isSigned) {
-  llvm::APSInt diff;
-  auto addOp = ub.getDefiningOp<arith::AddIOp>();
-  if (!addOp)
-    return std::nullopt;
-  if ((isSigned && !addOp.hasNoSignedWrap()) ||
-      (!isSigned && !addOp.hasNoUnsignedWrap()))
-    return std::nullopt;
-
-  if (addOp.getLhs() != lb ||
-      !matchPattern(addOp.getRhs(), m_ConstantInt(&diff)))
-    return std::nullopt;
-  return diff;
 }
 
 //===----------------------------------------------------------------------===//
