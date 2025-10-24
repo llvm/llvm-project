@@ -4052,6 +4052,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenIntrinsicSC:
       case VPDef::VPWidenSC:
       case VPDef::VPWidenSelectSC:
+      case VPDef::VPWidenSelectVectorSC:
       case VPDef::VPBlendSC:
       case VPDef::VPFirstOrderRecurrencePHISC:
       case VPDef::VPHistogramSC:
@@ -4545,6 +4546,12 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
   const bool HasReductions =
       any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPReductionPHIRecipe>);
+
+  // FIXME: implement interleaving for FindLast transform correctly.
+  for (auto &[_, RdxDesc] : Legal->getReductionVars())
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind()))
+      return 1;
 
   // If we did not calculate the cost for VF (because the user selected the VF)
   // then we calculate the cost of VF here.
@@ -8458,6 +8465,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                 *Plan, Builder))
     return nullptr;
 
+  // Create whole-vector selects for find-last recurrences.
+  VPlanTransforms::runPass(VPlanTransforms::convertFindLastRecurrences, *Plan,
+                           RecipeBuilder, Legal);
+
   if (useActiveLaneMask(Style)) {
     // TODO: Move checks to VPlanTransforms::addActiveLaneMask once
     // TailFoldingStyle is visible there.
@@ -8552,6 +8563,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
 
     RecurKind Kind = PhiR->getRecurrenceKind();
     assert(
+        !RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
         "AnyOf and FindIV reductions are not allowed for in-loop reductions");
@@ -8760,6 +8772,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
+    } else if (RecurrenceDescriptor::isFindLastRecurrenceKind(
+                   RdxDesc.getRecurrenceKind())) {
+      FinalReductionResult = Builder.createNaryOp(
+          VPInstruction::ExtractLastActive, {NewExitingVPV}, ExitDL);
     } else {
       VPIRFlags Flags =
           RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
@@ -8855,7 +8871,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     RecurKind RK = RdxDesc.getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))) {
+         !RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) &&
+         !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
           getRecurrenceIdentity(RK, PhiTy, RdxDesc.getFastMathFlags()));
@@ -9978,6 +9995,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Override IC if user provided an interleave count.
   IC = UserIC > 0 ? UserIC : IC;
+
+  // FIXME: Enable interleaving for last_active reductions.
+  if (any_of(LVL.getReductionVars(), [&](auto &Reduction) -> bool {
+        const RecurrenceDescriptor &RdxDesc = Reduction.second;
+        return RecurrenceDescriptor::isFindLastRecurrenceKind(
+            RdxDesc.getRecurrenceKind());
+      })) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving without vectorization due "
+                      << "to conditional scalar assignments.\n");
+    IntDiagMsg = {
+        "ConditionalAssignmentPreventsScalarInterleaving",
+        "Unable to interleave without vectorization due to conditional "
+        "assignments"};
+    InterleaveLoop = false;
+    IC = 1;
+  }
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();

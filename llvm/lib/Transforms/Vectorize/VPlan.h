@@ -544,6 +544,7 @@ public:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
     case VPRecipeBase::VPWidenSelectSC:
+    case VPRecipeBase::VPWidenSelectVectorSC:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
@@ -1067,6 +1068,8 @@ public:
     /// Returns the value for vscale.
     VScale,
     OpsEnd = VScale,
+    /// Extracts the last active lane based on a predicate vector operand.
+    ExtractLastActive,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1756,6 +1759,47 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
   VPValue *getCond() const {
     return getOperand(0);
   }
+
+  bool isInvariantCond() const {
+    return getCond()->isDefinedOutsideLoopRegions();
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getCond() && isInvariantCond();
+  }
+};
+
+/// A recipe for selecting whole vector values.
+struct VPWidenSelectVectorRecipe : public VPRecipeWithIRFlags {
+  VPWidenSelectVectorRecipe(ArrayRef<VPValue *> Operands)
+      : VPRecipeWithIRFlags(VPDef::VPWidenSelectVectorSC, Operands) {}
+
+  ~VPWidenSelectVectorRecipe() override = default;
+
+  VPWidenSelectVectorRecipe *clone() override {
+    SmallVector<VPValue *, 3> Operands(operands());
+    return new VPWidenSelectVectorRecipe(Operands);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPWidenSelectVectorSC)
+
+  /// Produce a widened version of the select instruction.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenSelectVectorRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  VPValue *getCond() const { return getOperand(0); }
 
   bool isInvariantCond() const {
     return getCond()->isDefinedOutsideLoopRegions();
