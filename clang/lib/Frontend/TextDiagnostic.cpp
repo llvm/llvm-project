@@ -17,7 +17,6 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
 
@@ -662,7 +661,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
-  uint64_t StartOfLocationInfo = OS.tell();
+  uint64_t StartOfLocationInfo = OS.getColumn();
 
   // Emit the location of this particular diagnostic.
   if (Loc.isValid())
@@ -675,7 +674,7 @@ void TextDiagnostic::emitDiagnosticMessage(
     printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
-                         Message, OS.tell() - StartOfLocationInfo,
+                         Message, OS.getColumn() - StartOfLocationInfo,
                          DiagOpts.MessageLength, DiagOpts.ShowColors);
 }
 
@@ -688,11 +687,21 @@ TextDiagnostic::printDiagnosticLevel(raw_ostream &OS,
     switch (Level) {
     case DiagnosticsEngine::Ignored:
       llvm_unreachable("Invalid diagnostic type");
-    case DiagnosticsEngine::Note:    OS.changeColor(noteColor, true); break;
-    case DiagnosticsEngine::Remark:  OS.changeColor(remarkColor, true); break;
-    case DiagnosticsEngine::Warning: OS.changeColor(warningColor, true); break;
-    case DiagnosticsEngine::Error:   OS.changeColor(errorColor, true); break;
-    case DiagnosticsEngine::Fatal:   OS.changeColor(fatalColor, true); break;
+    case DiagnosticsEngine::Note:
+      OS.changeColor(noteColor, true);
+      break;
+    case DiagnosticsEngine::Remark:
+      OS.changeColor(remarkColor, true);
+      break;
+    case DiagnosticsEngine::Warning:
+      OS.changeColor(warningColor, true);
+      break;
+    case DiagnosticsEngine::Error:
+      OS.changeColor(errorColor, true);
+      break;
+    case DiagnosticsEngine::Fatal:
+      OS.changeColor(fatalColor, true);
+      break;
     }
   }
 
@@ -1485,7 +1494,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
       if (CharStyle != Styles.end()) {
         if (!CurrentColor ||
             (CurrentColor && *CurrentColor != CharStyle->Color)) {
-          OS.changeColor(CharStyle->Color, false);
+          OS.changeColor(CharStyle->Color);
           CurrentColor = CharStyle->Color;
         }
       } else if (CurrentColor) {
