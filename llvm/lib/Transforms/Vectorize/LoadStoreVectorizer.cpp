@@ -680,15 +680,16 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
           : TTI.isLegalMaskedStore(OptimisticVectorType, OptimisticAlign, AS,
                                    TTI::MaskKind::ConstantMask);
 
-  unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
-
-  // Compute the alignment of the leader of the chain (which every stored offset
-  // is based on) using the current first element of the chain. This is
-  // conservative, we may be able to derive better alignment by iterating over
-  // the chain and finding the leader.
+  // Derive the alignment of the leader of the chain (which every
+  // OffsetFromLeader is based on) using the current first element of the chain.
+  // We could derive a better alignment by iterating over the entire chain but
+  // this should be sufficient. We use this value to derive the alignment of any
+  // extra elements we create while gap filling.
   Align LeaderOfChainAlign =
       commonAlignment(getLoadStoreAlignment(C[0].Inst),
                       C[0].OffsetFromLeader.abs().getLimitedValue());
+
+  unsigned ASPtrBits = DL.getIndexSizeInBits(AS);
 
   std::vector<Chain> Ret;
   Ret.push_back({C.front()});
