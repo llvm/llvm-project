@@ -17163,6 +17163,15 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
       }
     }
 
+    SmallVector<int, 4> Indxs;
+    if (Context.BuiltinInfo.isNonNull(BuiltinID, Indxs) &&
+        !FD->hasAttr<NonNullAttr>()) {
+      llvm::SmallVector<ParamIdx, 4> ParamIndxs;
+      for (int I : Indxs)
+        ParamIndxs.push_back(ParamIdx(I + 1, FD));
+      FD->addAttr(NonNullAttr::CreateImplicit(Context, ParamIndxs.data(),
+                                              ParamIndxs.size()));
+    }
     if (Context.BuiltinInfo.isReturnsTwice(BuiltinID) &&
         !FD->hasAttr<ReturnsTwiceAttr>())
       FD->addAttr(ReturnsTwiceAttr::CreateImplicit(Context,
