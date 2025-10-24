@@ -75,8 +75,8 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 }
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
-                                     const AArch64TargetLowering &TLI) {
-  RTLIB::LibcallImpl Impl = TLI.getSupportedLibcallImpl(FuncName);
+                                     const RTLIB::RuntimeLibcallsInfo &RTLCI) {
+  RTLIB::LibcallImpl Impl = RTLCI.getSupportedLibcallImpl(FuncName);
   if (Impl == RTLIB::Unsupported)
     return;
   unsigned KnownAttrs = SMEAttrs::Normal;
@@ -124,11 +124,12 @@ bool SMECallAttrs::requiresSMChange() const {
   return true;
 }
 
-SMECallAttrs::SMECallAttrs(const CallBase &CB, const AArch64TargetLowering *TLI)
+SMECallAttrs::SMECallAttrs(const CallBase &CB,
+                           const RTLIB::RuntimeLibcallsInfo *RTLCI)
     : CallerFn(*CB.getFunction()), CalledFn(SMEAttrs::Normal),
       Callsite(CB.getAttributes()), IsIndirect(CB.isIndirectCall()) {
   if (auto *CalledFunction = CB.getCalledFunction())
-    CalledFn = SMEAttrs(*CalledFunction, TLI);
+    CalledFn = SMEAttrs(*CalledFunction, RTLCI);
 
   // An `invoke` of an agnostic ZA function may not return normally (it may
   // resume in an exception block). In this case, it acts like a private ZA

@@ -3576,6 +3576,10 @@ public:
     return nullptr;
   }
 
+  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallsInfo() const {
+    return Libcalls;
+  }
+
   void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
     Libcalls.setLibcallImpl(Call, Impl);
   }

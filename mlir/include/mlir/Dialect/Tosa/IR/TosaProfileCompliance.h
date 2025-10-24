@@ -79,7 +79,8 @@ private:
 
   LogicalResult populatationDispatch(Operation *op);
 
-  LogicalResult populateProfileInfo(ValueRange operands, Value output);
+  // Add input operands and output results to the profile type info list
+  LogicalResult populateProfileInfo(ValueRange operands, ValueRange results);
 
   // Base
   template <typename T>

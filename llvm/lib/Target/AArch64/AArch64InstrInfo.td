@@ -4022,22 +4022,6 @@ defm LDRSW  : LoadUI<0b10, 0, 0b10, GPR64, uimm12s4, "ldrsw",
 def : Pat<(i64 (zextloadi32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))),
       (SUBREG_TO_REG (i64 0), (LDRWui GPR64sp:$Rn, uimm12s4:$offset), sub_32)>;
 
-// load zero-extended i32, bitcast to f64
-def : Pat<(f64 (bitconvert (i64 (zextloadi32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
-          (SUBREG_TO_REG (i64 0), (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
-// load zero-extended i16, bitcast to f64
-def : Pat<(f64 (bitconvert (i64 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
-          (SUBREG_TO_REG (i64 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-// load zero-extended i8, bitcast to f64
-def : Pat<(f64 (bitconvert (i64 (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
-          (SUBREG_TO_REG (i64 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-// load zero-extended i16, bitcast to f32
-def : Pat<(f32 (bitconvert (i32 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
-          (SUBREG_TO_REG (i32 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
-// load zero-extended i8, bitcast to f32
-def : Pat<(f32 (bitconvert (i32 (zextloadi8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
-          (SUBREG_TO_REG (i32 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
-
 // Pre-fetch.
 def PRFMui : PrefetchUI<0b11, 0, 0b10, "prfm",
                         [(AArch64Prefetch timm:$Rt,
@@ -4388,6 +4372,64 @@ def : Pat <(v1i64 (scalar_to_vector (i64
 def : Pat <(v1i64 (scalar_to_vector (i64
                (load (ro64.Xpat GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend))))),
            (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend)>;
+
+// Patterns for bitconvert or scalar_to_vector of load operations.
+// Enables direct SIMD register loads for small integer types (i8/i16) that are
+// naturally zero-extended to i32/i64.
+multiclass ExtLoad8_16AllModes<ValueType OutTy, ValueType InnerTy,
+                                SDPatternOperator OuterOp,
+                                PatFrags LoadOp8, PatFrags LoadOp16> {
+  // 8-bit loads.
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp8 (am_unscaled8 GPR64sp:$Rn, simm9:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDURBi GPR64sp:$Rn, simm9:$offset), bsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp8 (ro8.Wpat GPR64sp:$Rn, GPR32:$Rm, ro8.Wext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRBroW GPR64sp:$Rn, GPR32:$Rm, ro8.Wext:$extend), bsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp8 (ro8.Xpat GPR64sp:$Rn, GPR64:$Rm, ro8.Xext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRBroX GPR64sp:$Rn, GPR64:$Rm, ro8.Xext:$extend), bsub)>;
+
+  // 16-bit loads.
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp16 (am_unscaled16 GPR64sp:$Rn, simm9:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDURHi GPR64sp:$Rn, simm9:$offset), hsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp16 (ro16.Wpat GPR64sp:$Rn, GPR32:$Rm, ro16.Wext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRHroW GPR64sp:$Rn, GPR32:$Rm, ro16.Wext:$extend), hsub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp16 (ro16.Xpat GPR64sp:$Rn, GPR64:$Rm, ro16.Xext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRHroX GPR64sp:$Rn, GPR64:$Rm, ro16.Xext:$extend), hsub)>;
+}
+
+// Extended multiclass that includes 32-bit loads in addition to 8-bit and 16-bit.
+multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
+                                   SDPatternOperator OuterOp,
+                                   PatFrags LoadOp8, PatFrags LoadOp16, PatFrags LoadOp32> {
+  defm : ExtLoad8_16AllModes<OutTy, InnerTy, OuterOp, LoadOp8, LoadOp16>;
+
+  // 32-bit loads.
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp32 (am_unscaled32 GPR64sp:$Rn, simm9:$offset))))),
+            (SUBREG_TO_REG (i64 0), (LDURSi GPR64sp:$Rn, simm9:$offset), ssub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp32 (ro32.Wpat GPR64sp:$Rn, GPR32:$Rm, ro32.Wext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRSroW GPR64sp:$Rn, GPR32:$Rm, ro32.Wext:$extend), ssub)>;
+  def : Pat<(OutTy (OuterOp (InnerTy (LoadOp32 (ro32.Xpat GPR64sp:$Rn, GPR64:$Rm, ro32.Xext:$extend))))),
+            (SUBREG_TO_REG (i64 0), (LDRSroX GPR64sp:$Rn, GPR64:$Rm, ro32.Xext:$extend), ssub)>;
+}
+
+// Instantiate bitconvert patterns for floating-point types.
+defm : ExtLoad8_16AllModes<f32, i32, bitconvert, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert, zextloadi8, zextloadi16, zextloadi32>;
+
+// Instantiate scalar_to_vector patterns for all vector types.
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, extloadi8, extloadi16>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, extloadi8, extloadi16>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector, extloadi8, extloadi16>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector, zextloadi8, zextloadi16, zextloadi32>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector, extloadi8, extloadi16, extloadi32>;
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
