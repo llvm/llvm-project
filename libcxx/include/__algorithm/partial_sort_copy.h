@@ -52,16 +52,17 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_InputIterator, _Random
   _RandomAccessIterator __r = __result_first;
   auto&& __projected_comp   = std::__make_projected(__comp, __proj2);
 
-  if (__r != __result_last) {
+  if (__result_first != __result_last) {
     for (; __first != __last && __r != __result_last; ++__first, (void)++__r)
       *__r = *__first;
     std::__make_heap<_AlgPolicy>(__result_first, __r, __projected_comp);
     typename iterator_traits<_RandomAccessIterator>::difference_type __len = __r - __result_first;
-    for (; __first != __last; ++__first)
+    for (; __first != __last; ++__first) {
       if (std::__invoke(__comp, std::__invoke(__proj1, *__first), std::__invoke(__proj2, *__result_first))) {
         *__result_first = *__first;
         std::__sift_down<_AlgPolicy, false>(__result_first, __projected_comp, __len, 0);
       }
+    }
     std::__sort_heap<_AlgPolicy>(__result_first, __r, __projected_comp);
   }
 
