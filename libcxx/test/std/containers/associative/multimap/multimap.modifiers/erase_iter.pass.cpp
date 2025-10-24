@@ -10,7 +10,7 @@
 
 // class multimap
 
-// iterator erase(const_iterator position);
+// iterator erase(const_iterator position); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,12 +20,14 @@
 
 struct TemplateConstructor {
   template <typename T>
-  TemplateConstructor(const T&) {}
+  TEST_CONSTEXPR_CXX26 TemplateConstructor(const T&) {}
 };
 
+TEST_CONSTEXPR_CXX26
 bool operator<(const TemplateConstructor&, const TemplateConstructor&) { return false; }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef std::multimap<int, double> M;
     typedef std::pair<int, double> P;
@@ -295,5 +297,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

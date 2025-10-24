@@ -10,7 +10,7 @@
 
 // class multimap
 
-// size_type erase(const key_type& k);
+// size_type erase(const key_type& k); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -18,7 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef std::multimap<int, double> M;
     typedef std::pair<int, double> P;
@@ -148,5 +149,13 @@ int main(int, char**) {
   }
 #endif
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

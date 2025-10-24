@@ -12,7 +12,7 @@
 
 // class multimap
 
-// multimap& operator=(initializer_list<value_type> il);
+// multimap& operator=(initializer_list<value_type> il); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -20,7 +20,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test() {
   {
     typedef std::multimap<int, double> C;
     typedef C::value_type V;
@@ -58,5 +59,13 @@ int main(int, char**) {
     assert(*++i == V(3, 2));
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

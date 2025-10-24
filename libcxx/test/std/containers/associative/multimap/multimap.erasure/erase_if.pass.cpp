@@ -11,7 +11,7 @@
 
 // template <class Key, class T, class Compare, class Allocator, class Predicate>
 //   typename multimap<Key, T, Compare, Allocator>::size_type
-//   erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);
+//   erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <map>
 
@@ -21,7 +21,7 @@
 
 using Init = std::initializer_list<int>;
 template <typename M>
-M make(Init vals) {
+TEST_CONSTEXPR_CXX26 M make(Init vals) {
   M ret;
   for (int v : vals)
     ret.emplace(static_cast<typename M::key_type>(v), static_cast<typename M::mapped_type>(v + 10));
@@ -29,7 +29,7 @@ M make(Init vals) {
 }
 
 template <typename M, typename Pred>
-void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
@@ -37,7 +37,7 @@ void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) 
 }
 
 template <typename S>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   auto is1   = [](auto v) { return v.first == 1; };
   auto is2   = [](auto v) { return v.first == 2; };
   auto is3   = [](auto v) { return v.first == 3; };
@@ -74,7 +74,8 @@ void test() {
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26
+bool test_erase() {
   test<std::multimap<int, int>>();
   test<std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>>();
   test<std::multimap<int, int, std::less<int>, test_allocator<std::pair<const int, int>>>>();
@@ -82,5 +83,13 @@ int main(int, char**) {
   test<std::multimap<long, short>>();
   test<std::multimap<short, double>>();
 
+  return true;
+}
+int main(int, char**) {
+  assert(test_erase());
+
+#if TEST_STD_VER >= 26
+  static_assert(test_erase());
+#endif
   return 0;
 }
