@@ -293,7 +293,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
-    dxil::ElementType DXILTargetTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {
