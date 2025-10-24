@@ -137,12 +137,12 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
       /*thenBuilder=*/[&](mlir::OpBuilder &b, mlir::Location loc) {
         builder.CIRBaseBuilderTy::createStore(
             loc, emitScalarExpr(s.getAllocate()), storeAddr);
-        builder.create<cir::YieldOp>(loc);
+        cir::YieldOp::create(builder, loc);
       });
   curCoro.data->coroBegin =
       emitCoroBeginBuiltinCall(
           openCurlyLoc,
-          builder.create<cir::LoadOp>(openCurlyLoc, allocaTy, storeAddr))
+          cir::LoadOp::create(builder, openCurlyLoc, allocaTy, storeAddr))
           .getResult();
 
   // Handle allocation failure if 'ReturnStmtOnAllocFailure' was provided.
