@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // UNSUPPORTED: no-exceptions
 
 // The fix for issue 57964 requires an updated dylib due to explicit
 // instantiations. That means Apple backdeployment targets remain broken.
-// XFAIL: using-built-library-before-llvm-19
+// TODO: Remove && !darwin once availability markup for LLVM 19 on macOS has been added
+// XFAIL: using-built-library-before-llvm-19 && !darwin
 
 // <ios>
 
