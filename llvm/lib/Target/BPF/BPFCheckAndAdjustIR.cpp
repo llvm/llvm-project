@@ -26,6 +26,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -478,9 +479,95 @@ static void aspaceWrapOperand(DenseMap<Value *, Value *> &Cache, Instruction *I,
   }
 }
 
+static Value *wrapPtrIfASNotZero(DenseMap<Value *, Value *> &Cache,
+                                 CallInst *CI, Value *P) {
+  if (auto *PTy = dyn_cast<PointerType>(P->getType())) {
+    if (PTy->getAddressSpace() == 0)
+      return P;
+  }
+  return aspaceWrapValue(Cache, CI->getFunction(), P);
+}
+
+static Instruction *aspaceMemSet(Intrinsic::ID ID,
+                                 DenseMap<Value *, Value *> &Cache,
+                                 CallInst *CI) {
+  auto *MI = cast<MemIntrinsic>(CI);
+  IRBuilder<> B(CI);
+
+  Value *OldDst = CI->getArgOperand(0);
+  Value *NewDst = wrapPtrIfASNotZero(Cache, CI, OldDst);
+  if (OldDst == NewDst)
+    return nullptr;
+
+  // memset(new_dst, val, len, align, isvolatile, md)
+  Value *Val = CI->getArgOperand(1);
+  Value *Len = CI->getArgOperand(2);
+
+  auto *MS = cast<MemSetInst>(CI);
+  MaybeAlign Align = MS->getDestAlign();
+  bool IsVolatile = MS->isVolatile();
+
+  if (ID == Intrinsic::memset)
+    return B.CreateMemSet(NewDst, Val, Len, Align, IsVolatile,
+                          MI->getAAMetadata());
+  else
+    return B.CreateMemSetInline(NewDst, Align, Val, Len, IsVolatile,
+                                MI->getAAMetadata());
+}
+
+static Instruction *aspaceMemCpy(Intrinsic::ID ID,
+                                 DenseMap<Value *, Value *> &Cache,
+                                 CallInst *CI) {
+  auto *MI = cast<MemIntrinsic>(CI);
+  IRBuilder<> B(CI);
+
+  Value *OldDst = CI->getArgOperand(0);
+  Value *OldSrc = CI->getArgOperand(1);
+  Value *NewDst = wrapPtrIfASNotZero(Cache, CI, OldDst);
+  Value *NewSrc = wrapPtrIfASNotZero(Cache, CI, OldSrc);
+  if (OldDst == NewDst && OldSrc == NewSrc)
+    return nullptr;
+
+  // memcpy(new_dst, dst_align, new_src, src_align, len, isvolatile, md)
+  Value *Len = CI->getArgOperand(2);
+
+  auto *MT = cast<MemTransferInst>(CI);
+  MaybeAlign DstAlign = MT->getDestAlign();
+  MaybeAlign SrcAlign = MT->getSourceAlign();
+  bool IsVolatile = MT->isVolatile();
+
+  return B.CreateMemTransferInst(ID, NewDst, DstAlign, NewSrc, SrcAlign, Len,
+                                 IsVolatile, MI->getAAMetadata());
+}
+
+static Instruction *aspaceMemMove(DenseMap<Value *, Value *> &Cache,
+                                  CallInst *CI) {
+  auto *MI = cast<MemIntrinsic>(CI);
+  IRBuilder<> B(CI);
+
+  Value *OldDst = CI->getArgOperand(0);
+  Value *OldSrc = CI->getArgOperand(1);
+  Value *NewDst = wrapPtrIfASNotZero(Cache, CI, OldDst);
+  Value *NewSrc = wrapPtrIfASNotZero(Cache, CI, OldSrc);
+  if (OldDst == NewDst && OldSrc == NewSrc)
+    return nullptr;
+
+  // memmove(new_dst, dst_align, new_src, src_align, len, isvolatile, md)
+  Value *Len = CI->getArgOperand(2);
+
+  auto *MT = cast<MemTransferInst>(CI);
+  MaybeAlign DstAlign = MT->getDestAlign();
+  MaybeAlign SrcAlign = MT->getSourceAlign();
+  bool IsVolatile = MT->isVolatile();
+
+  return B.CreateMemMove(NewDst, DstAlign, NewSrc, SrcAlign, Len, IsVolatile,
+                         MI->getAAMetadata());
+}
+
 // Support for BPF address spaces:
 // - for each function in the module M, update pointer operand of
 //   each memory access instruction (load/store/cmpxchg/atomicrmw)
+//   or intrinsic call insns (memset/memcpy/memmove)
 //   by casting it from non-zero address space to zero address space, e.g:
 //
 //   (load (ptr addrspace (N) %p) ...)
@@ -493,21 +580,60 @@ bool BPFCheckAndAdjustIR::insertASpaceCasts(Module &M) {
   for (Function &F : M) {
     DenseMap<Value *, Value *> CastsCache;
     for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
+      for (Instruction &I : llvm::make_early_inc_range(BB)) {
         unsigned PtrOpNum;
 
-        if (auto *LD = dyn_cast<LoadInst>(&I))
+        if (auto *LD = dyn_cast<LoadInst>(&I)) {
           PtrOpNum = LD->getPointerOperandIndex();
-        else if (auto *ST = dyn_cast<StoreInst>(&I))
+          aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+          continue;
+        }
+        if (auto *ST = dyn_cast<StoreInst>(&I)) {
           PtrOpNum = ST->getPointerOperandIndex();
-        else if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I))
+          aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+          continue;
+        }
+        if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I)) {
           PtrOpNum = CmpXchg->getPointerOperandIndex();
-        else if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
+          aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+          continue;
+        }
+        if (auto *RMW = dyn_cast<AtomicRMWInst>(&I)) {
           PtrOpNum = RMW->getPointerOperandIndex();
-        else
+          aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+          continue;
+        }
+
+        auto *CI = dyn_cast<CallInst>(&I);
+        if (!CI)
           continue;
 
-        aspaceWrapOperand(CastsCache, &I, PtrOpNum);
+        Function *Callee = CI->getCalledFunction();
+        if (!Callee || !Callee->isIntrinsic())
+          continue;
+
+        // Check memset/memcpy/memmove
+        Intrinsic::ID ID = Callee->getIntrinsicID();
+        bool IsSet = ID == Intrinsic::memset || ID == Intrinsic::memset_inline;
+        bool IsCpy = ID == Intrinsic::memcpy || ID == Intrinsic::memcpy_inline;
+        bool IsMove = ID == Intrinsic::memmove;
+        if (!IsSet && !IsCpy && !IsMove)
+          continue;
+
+        Instruction *New;
+        if (IsSet)
+          New = aspaceMemSet(ID, CastsCache, CI);
+        else if (IsCpy)
+          New = aspaceMemCpy(ID, CastsCache, CI);
+        else
+          New = aspaceMemMove(CastsCache, CI);
+
+        if (!New)
+          continue;
+
+        I.replaceAllUsesWith(New);
+        New->takeName(&I);
+        I.eraseFromParent();
       }
     }
     Changed |= !CastsCache.empty();

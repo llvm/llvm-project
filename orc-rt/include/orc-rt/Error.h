@@ -288,6 +288,10 @@ private:
   Error *Err;
 };
 
+/// Tag to force construction of an Expected value in the success state. See
+/// Expected constructor for details.
+struct ForceExpectedSuccessValue {};
+
 template <typename T> class ORC_RT_NODISCARD Expected {
 
   template <class OtherT> friend class Expected;
@@ -308,6 +312,13 @@ public:
   Expected(Error Err) : HasError(true), Unchecked(true) {
     assert(Err && "Cannot create Expected<T> from Error success value");
     new (getErrorStorage()) error_type(Err.takePayload());
+  }
+
+  template <typename OtherT>
+  Expected(OtherT &&Val, ForceExpectedSuccessValue _,
+           std::enable_if_t<std::is_convertible_v<OtherT, T>> * = nullptr)
+      : HasError(false), Unchecked(true) {
+    new (getStorage()) storage_type(std::forward<OtherT>(Val));
   }
 
   /// Create an Expected from a T value.

@@ -100,6 +100,19 @@ bool Block::hasPointer(const Pointer *P) const {
 }
 #endif
 
+void Block::movePointersTo(Block *B) {
+  assert(B != this);
+
+  while (Pointers) {
+    Pointer *P = Pointers;
+
+    this->removePointer(P);
+    P->BS.Pointee = B;
+    B->addPointer(P);
+  }
+  assert(!this->hasPointers());
+}
+
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
     : Root(Root), B(~0u, Blk->Desc, Blk->isExtern(), Blk->IsStatic,
                     Blk->isWeak(), Blk->isDummy(), /*IsDead=*/true) {
