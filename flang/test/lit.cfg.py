@@ -148,19 +148,19 @@ if not flang_exe:
 def get_resource_module_intrinsic_dir():
     # Determine the intrinsic module search path that is added by the driver. If
     # skipping the driver using -fc1, we need to append the path manually.
-    flang_intrinsics_dir = subprocess.check_output(
-        [flang_exe, "-print-file-name=__fortran_builtins.mod"], text=True
-    ).strip()
-    if not flang_intrinsics_dir:
-        return None
-    flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
-    return flang_intrinsics_dir
+    for modfile in ["__fortran_builtins.mod", "omp_lib.mod"]:
+      flang_intrinsics_dir = subprocess.check_output([flang_exe, f"-print-file-name={modfile}"], text=True).strip()
+      flang_intrinsics_dir = os.path.dirname(flang_intrinsics_dir)
+      if flang_intrinsics_dir:
+          return flang_intrinsics_dir
+    return None
 
 
 intrinsics_search_args = []
 if flang_intrinsics_dir := get_resource_module_intrinsic_dir():
     intrinsics_search_args += [f"-fintrinsic-modules-path={flang_intrinsics_dir}"]
     lit_config.note(f"using default module intrinsics: {flang_intrinsics_dir}")
+
 
 extra_intrinsics_search_args = []
 if config.flang_intrinsic_modules_dir:

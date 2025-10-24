@@ -465,12 +465,14 @@ if(LLVM_RUNTIMES_BUILD AND RUNTIMES_FLANG_MODULES_ENABLED)
   endif()
 
   flang_module_target(libomp-mod PUBLIC)
-  add_dependencies(libomp-mod flang-rt-mod)
-
+  if (FORTRAN_MODULE_DEPS)
+    add_dependencies(libomp-mod ${FORTRAN_MODULE_DEPS})
+  endif ()
+  
   set (destination ${LIBOMP_HEADERS_INSTALL_PATH})
   if (NOT ${LIBOMP_MODULES_INSTALL_PATH} STREQUAL "")
     set (destination ${LIBOMP_MODULES_INSTALL_PATH})
-  endif()
+  endif ()
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/omp_lib.h
     DESTINATION ${destination}
