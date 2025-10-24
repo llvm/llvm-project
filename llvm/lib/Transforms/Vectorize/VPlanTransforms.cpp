@@ -48,7 +48,7 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
-    const TargetLibraryInfo &TLI, bool FoldTailByMasking) {
+    const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
@@ -80,10 +80,10 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           VPValue *Start = Plan.getOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(Plan, II->getStep());
-          // When folding tail by masking, we may execute more lanes than the
-          // original scalar loop, and should hence not set NoWrap flags.
-          VPIRFlags Flags =
-              vputils::getNoWrapFlagsFromIndDesc(*II, FoldTailByMasking);
+          // It is always safe to copy over the NoWrap flags. In particular,
+          // when folding tail by masking, the masked-off lanes are never
+          // executed, so it is safe.
+          VPIRFlags Flags = vputils::getNoWrapFlagsFromIndDesc(*II);
           NewRecipe = new VPWidenIntOrFpInductionRecipe(
               Phi, Start, Step, &Plan.getVF(), *II, Flags,
               Ingredient.getDebugLoc());
