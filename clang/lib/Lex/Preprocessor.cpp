@@ -237,9 +237,12 @@ void Preprocessor::FinalizeForModelFile() {
 void Preprocessor::DumpToken(const Token &Tok, bool DumpFlags) const {
   llvm::errs() << llvm::formatv("{0,-16} ", tok::getTokenName(Tok.getKind()));
 
+  std::string Spelling;
   if (!Tok.isAnnotation()) {
-    llvm::errs() << llvm::formatv("{0,-32} ", "'" + getSpelling(Tok) + "'");
+    Spelling = "'" + getSpelling(Tok) + "'";
   }
+
+  llvm::errs() << llvm::formatv("{0,-32} ", Spelling);
 
   if (!DumpFlags) return;
 
