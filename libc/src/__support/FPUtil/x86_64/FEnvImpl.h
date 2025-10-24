@@ -142,7 +142,9 @@ LIBC_INLINE static int get_env(fenv_t *env) {
       // we merge sse data to x87 state.
       internal::mxcsr_to_x87_state(static_cast<uint16_t>(mxcsr), x87_state);
       // Copy the state data;
-      cpp::bit_copy(x87_state, *env);
+      const char *x87_state_ptr = reinterpret_cast<const char *>(&x87_state);
+      char *fenv_ptr = reinterpret_cast<char *>(env);
+      cpp::inline_copy<sizeof(x87_state)>(x87_state_ptr, fenv_ptr);
     } else {
       // We expect to have at least extra 32-bit for mxcsr register in the
       // fenv_t.
