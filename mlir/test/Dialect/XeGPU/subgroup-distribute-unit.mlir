@@ -463,6 +463,47 @@ gpu.module @xevm_module{
 }
 
 // -----
+// CHECK-LABEL: gpu.func @scatter_ops_chunksize_perm_layout({{.*}}) {
+// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<16xi1>
+// CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
+// CHECK-SAME:    -> (vector<1x8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>) {
+// CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]] :
+// CHECK-SAME:      vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+// CHECK-NEXT:  }
+// CHECK-NEXT:  %[[T1:.*]] = xegpu.load %[[W]]#1[%[[W]]#2], %[[W]]#3 <{chunk_size = 8 : i64}>
+// CHECK-SAME:    : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+// CHECK-NEXT:  xegpu.store %[[T1]], %[[W]]#1[%[[W]]#2], %[[W]]#3 <{chunk_size = 8 : i64}>
+// CHECK-SAME:    : vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+gpu.module @xevm_module{
+  gpu.func @scatter_ops_chunksize_perm_layout(%laneid: index, %src: memref<256xf16>) {
+    gpu.warp_execute_on_lane_0(%laneid)[16] {
+      %1 = arith.constant
+        {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+        dense<1>: vector<16xi1>
+      %offset = arith.constant
+        {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+        dense<12> : vector<16xindex>
+      %3 = xegpu.load %src[%offset], %1 <{chunk_size=8}>
+        {
+          layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+          layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+          layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>
+        }
+        : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+      xegpu.store %3, %src[%offset], %1 <{chunk_size=8}>
+        {
+          layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 2]>,
+          layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+          layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+        }
+        : vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    }
+    gpu.return
+  }
+}
+
+// -----
 // CHECK-LABEL: gpu.func @scatter_ops({{.*}}) {
 // CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<16xindex>
 // CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<16xi1>
@@ -493,6 +534,46 @@ gpu.module @xevm_module{
       xegpu.store %3, %src[%offset], %1
       {
         layout_operand_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      }
+      : vector<16xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+    }
+    gpu.return
+  }
+}
+
+// -----
+// CHECK-LABEL: gpu.func @scatter_ops_perm_layout({{.*}}) {
+// CHECK:       %[[OFFSETS:.*]] = arith.constant {{.*}} dense<12> : vector<16xindex>
+// CHECK:       %[[MASKS:.*]] = arith.constant {{.*}} dense<true> : vector<16xi1>
+// CHECK:       %[[W:.*]]:4 = gpu.warp_execute_on_lane_0(%{{.*}})[16]
+// CHECK-SAME:    -> (vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>) {
+// CHECK:         gpu.yield %{{.*}}, %{{.*}}, %[[OFFSETS]], %[[MASKS]]
+// CHECK-SAME:    : vector<16xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+// CHECK-NEXT:  }
+// CHECK-NEXT:  %[[T1:.*]] = xegpu.load %[[W]]#1[%[[W]]#2], %[[W]]#3
+// CHECK-SAME:    : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<1xf16>
+// CHECK-NEXT:  xegpu.store %[[T1]], %[[W]]#1[%[[W]]#2], %[[W]]#3
+// CHECK-SAME:    : vector<1xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+gpu.module @xevm_module{
+  gpu.func @scatter_ops_perm_layout(%src: memref<256xf16>, %laneid: index) {
+    gpu.warp_execute_on_lane_0(%laneid)[16] {
+      %1 = arith.constant
+        {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+        dense<1> : vector<16xi1>
+      %offset = arith.constant
+        {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+        dense<12> : vector<16xindex>
+      %3 = xegpu.load %src[%offset], %1
+      {
+        layout_operand_1 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
+        layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+      } : memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+      xegpu.store %3, %src[%offset], %1
+      {
+        layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
         layout_operand_2 = #xegpu.layout<lane_layout = [16], lane_data = [1]>,
         layout_operand_3 = #xegpu.layout<lane_layout = [16], lane_data = [1]>
       }
