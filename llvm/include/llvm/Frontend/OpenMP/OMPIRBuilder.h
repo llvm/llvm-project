@@ -580,6 +580,11 @@ public:
 
     /// Flag to indicate if the directive is cancellable.
     bool IsCancellable;
+
+    /// The basic block to which control should be transferred to
+    /// implement the FiniCB. Memoized to avoid generating finalization
+    /// multiple times.
+    llvm::BasicBlock *FiniBB = nullptr;
   };
 
   /// Push a finalization callback on the finalization stack.
@@ -2181,8 +2186,7 @@ public:
   ///
   /// \return an error, if any were triggered during execution.
   LLVM_ABI Error emitCancelationCheckImpl(Value *CancelFlag,
-                                          omp::Directive CanceledDirective,
-                                          FinalizeCallbackTy ExitCB = {});
+                                          omp::Directive CanceledDirective);
 
   /// Generate a target region entry call.
   ///
