@@ -690,14 +690,16 @@ TEST_F(LibraryResolverIT, PathResolverFollowsSymlinks) {
   // Create a symlink temp -> BaseDir (only if filesystem allows it)
   std::string linkName = BaseDir + withext("/link_to_C");
   std::string target = lib("C");
-  ::symlink(target.c_str(), linkName.c_str());
+
+  if (::symlink(target.c_str(), linkName.c_str()) != 0)
+    GTEST_SKIP() << "Failed to create symlink: " << strerror(errno);
 
   auto resolved = PResolver->resolve(linkName, EC);
   ASSERT_TRUE(resolved.has_value());
   EXPECT_FALSE(EC);
   EXPECT_EQ(*resolved, target);
 
-  ::unlink(linkName.c_str()); // cleanup
+  (void)::unlink(linkName.c_str());
 }
 
 TEST_F(LibraryResolverIT, PathResolverCachesResults) {
