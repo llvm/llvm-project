@@ -104,13 +104,12 @@ void SpecialCaseList::GlobMatcher::match(
   if (!PrefixToGlob.empty()) {
     for (const auto &[_, V] : PrefixToGlob.find_prefixes(Query)) {
       for (const auto *G : V) {
-        // Each value of the map is a vector of globs sorted as from best to
-        // worst.
         if (G->Pattern.match(Query)) {
           Cb(G->Name, G->LineNo);
-          // As soon as we find a match in the vector we can break for the vector,
-          // but we still need to continue for other values in the map, as they
-          // may contain a better match.
+          // As soon as we find a match in the vector, we can break for this
+          // vector, since the globs are already sorted by priority within the
+          // prefix group. However, we continue searching other prefix groups in
+          // the map, as they may contain a better match overall.
           break;
         }
       }
