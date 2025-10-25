@@ -366,7 +366,7 @@ public:
   /// has been already called. If any of the matchers are moved out, the group
   /// becomes safe to destroy, but not safe to re-use for anything else.
   iterator_range<std::vector<Matcher *>::iterator> matchers() {
-    return make_range(Matchers.begin(), Matchers.end());
+    return Matchers;
   }
   size_t size() const { return Matchers.size(); }
   bool empty() const { return Matchers.empty(); }
@@ -705,9 +705,7 @@ public:
     return make_range(PhysRegOperands.begin(), PhysRegOperands.end());
   }
 
-  iterator_range<MatchersTy::iterator> insnmatchers() {
-    return make_range(Matchers.begin(), Matchers.end());
-  }
+  iterator_range<MatchersTy::iterator> insnmatchers() { return Matchers; }
   bool insnmatchers_empty() const { return Matchers.empty(); }
   void insnmatchers_pop_front();
 };
