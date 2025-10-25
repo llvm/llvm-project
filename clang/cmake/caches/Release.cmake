@@ -30,15 +30,21 @@ endfunction()
 #
 # cmake -D LLVM_RELEASE_ENABLE_PGO=ON -C Release.cmake
 
+set(LLVM_RELEASE_LIBXML2_PREFIX OFF CACHE STRING "")ENABLE_PROJECTS ${DEFAULT_PROJECTS} CACHE STRING "")
+
 if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
   set (DEFAULT_PROJECTS "clang;lld;lldb;clang-tools-extra")
   set_instrument_and_final_stage_var(LLVM_TARGETS_TO_BUILD "AArch64;ARM;X86;BPF;WebAssembly;RISCV;NVPTX" STRING)
   set_instrument_and_final_stage_var(Python3_FIND_REGISTRY "NEVER" STRING)
   set_instrument_and_final_stage_var(LLDB_RELOCATABLE_PYTHON "1" STRING)
   set_instrument_and_final_stage_var(LLDB_EMBED_PYTHON_HOME "OFF" BOOL)
-  set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "FORCE_ON" STRING)
-  # This is required in order to statically link LIBXML2
-  set_instrument_and_final_stage_var(LIBXML2_DEFINITIONS "-DLIBXML_STATIC" STRING)
+  if (LLVM_RELEASE_LIBXML2_PREFIX)
+    # Enable libxml2 with static linking.  This is necessary for llvm-mt.
+    set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "FORCE_ON" STRING)
+    set_instrument_and_final_stage_var(LIBXML2_LIBRARIES "${LLVM_RELEASE_LIBXML2_PREFIX}/lib/libxml2s.lib" STRING)
+    set_instrument_and_final_stage_var(LLVM_ENABLE_LIBXML2 "${LLVM_RELEASE_LIBXML2_PREFIX}/include/libxml2" STRING)
+    set_instrument_and_final_stage_var(LIBXML2_DEFINITIONS "-DLIBXML_STATIC" STRING)
+  endif()
   set_instrument_and_final_stage_var(LLDB_ENABLE_LIBXML2 "OFF" BOOL)
   set_instrument_and_final_stage_var(CLANG_ENABLE_LIBXML2 "OFF" BOOL)
   set_instrument_and_final_stage_var(LLVM_ENABLE_RPMALLOC "ON" BOOL)

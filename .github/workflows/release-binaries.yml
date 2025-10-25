@@ -158,18 +158,8 @@ jobs:
           # at Microsoft.Tools.WindowsInstallerXml.Cab.WixCreateCab.Complete(IntPtr newCabNamesCallBackAddress)
           # at Microsoft.Tools.WindowsInstallerXml.CabinetBuilder.CreateCabinet(CabinetWorkItem cabinetWorkItem)
           #libxml2_prefix="/c/vcpkg/packages/libxml2_x64-windows-static/"
-          libxml2_prefix="/s/libxml-install/"
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
-          #target_cmake_flags="$target_cmake_flags -DCMAKE_PREFIX_PATH=$libxml2_prefix"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_CMAKE_PREFIX_PATH=$libxml2_prefix"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_CMAKE_PREFIX_PATH=$libxml2_prefix"
-          # This is required to enable static linking
-          target_cmake_flags="$target_cmake_flags -DLIBXML2_LIBRARIES=$libxml2_prefix/lib/libxml2s.lib"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_LIBRARIES=$libxml2_prefix/lib/libxml2s.lib"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_LIBRARIES=$libxml2_prefix/lib/libxml2s.lib"
-          target_cmake_flags="$target_cmake_flags -DLIBXML2_INCLUDE_DIR=$libxml2_prefix/include/libxml2"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml2_prefix/include/libxml2"
-          target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_LIBXML2_INCLUDE_DIR=$libxml2_prefix/include/libxml2"
+          target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_LIBXML2_PREFIX=/s/libxml-install/"
         fi
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
@@ -315,11 +305,15 @@ jobs:
       run: |
         ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
 
-    - name: Dump logs
+    - name: Save logs
       if: failure() && runner.os == 'Windows'
-      run: |
-        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
-#        cat S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/WIX/wix.log
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: ${{ runner.os }}-${{ runner.arch }}-nsis-log
+        # Due to path differences on Windows when running in bash vs running on node,
+        # we need to search for files in the current workspace.
+        path: |
+          S:/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/_CPack_Packages/win64/NSIS/NSISOutput.log
 
   upload-release-binaries:
     name: "Upload Release Binaries"
