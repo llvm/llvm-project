@@ -19,7 +19,6 @@
 
 #include "OmptDeviceTracing.h"
 #include "OpenMP/OMPT/Callback.h"
-#include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "omp-tools.h"
 

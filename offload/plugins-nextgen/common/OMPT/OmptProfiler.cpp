@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "OmptProfiler.h"
+#include "OpenMP/OMPT/Interface.h"
 #include "PluginInterface.h"
 #include "Shared/Debug.h"
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleInit(
-    llvm::omp::target::plugin::GenericDeviceTy *Device,
-    llvm::omp::target::plugin::GenericPluginTy *Plugin) {
+using namespace llvm::omp::target;
+
+void ompt::OmptProfilerTy::handleInit(plugin::GenericDeviceTy *Device,
+                                      plugin::GenericPluginTy *Plugin) {
   auto DeviceId = Device->getDeviceId();
   auto DevicePtr = reinterpret_cast<ompt_device_t *>(Device);
   ompt::setDeviceId(DevicePtr, Plugin->getUserId(DeviceId));
@@ -32,9 +34,8 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleInit(
   }
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleDeinit(
-    llvm::omp::target::plugin::GenericDeviceTy *Device,
-    llvm::omp::target::plugin::GenericPluginTy *Plugin) {
+void ompt::OmptProfilerTy::handleDeinit(
+    plugin::GenericDeviceTy *Device, target::plugin::GenericPluginTy *Plugin) {
   auto DeviceId = Device->getDeviceId();
 
   if (ompt::Initialized) {
@@ -45,50 +46,55 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleDeinit(
   ompt::removeDeviceId(reinterpret_cast<ompt_device_t *>(Device));
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleLoadBinary(
-    llvm::omp::target::plugin::GenericDeviceTy *Device,
-    llvm::omp::target::plugin::GenericPluginTy *Plugin,
-    const StringRef InputTgtImage) {
+void ompt::OmptProfilerTy::handleLoadBinary(plugin::GenericDeviceTy *Device,
+                                            plugin::GenericPluginTy *Plugin,
+                                            const StringRef InputTgtImage) {
+
+  if (!ompt::Initialized)
+    return;
+
   auto DeviceId = Device->getDeviceId();
-
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin->getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
+  size_t Bytes = InputTgtImage.size();
+  performOmptCallback(
+      device_load, Plugin->getUserId(DeviceId),
+      /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
+      /*ImgSize=*/Bytes,
+      /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
+      /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleDataAlloc(
-    uint64_t StartNanos, uint64_t EndNanos, void *HostPtr, uint64_t Size,
-    void *Data) {
+void ompt::OmptProfilerTy::handleDataAlloc(uint64_t StartNanos,
+                                           uint64_t EndNanos, void *HostPtr,
+                                           uint64_t Size, void *Data) {
   ompt::setOmptTimestamp(StartNanos, EndNanos);
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleDataDelete(
-    uint64_t StartNanos, uint64_t EndNanos, void *TgtPtr, void *Data) {
+void ompt::OmptProfilerTy::handleDataDelete(uint64_t StartNanos,
+                                            uint64_t EndNanos, void *TgtPtr,
+                                            void *Data) {
   ompt::setOmptTimestamp(StartNanos, EndNanos);
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handlePreKernelLaunch(
-    llvm::omp::target::plugin::GenericDeviceTy *Device, uint32_t NumBlocks[3],
+void ompt::OmptProfilerTy::handlePreKernelLaunch(
+    plugin::GenericDeviceTy *Device, uint32_t NumBlocks[3],
     __tgt_async_info *AI) {
-  OMPT_IF_TRACING_ENABLED(
-      if (llvm::omp::target::ompt::isTracedDevice(getDeviceId(Device))) {
-        if (AI->ProfilerData != nullptr) {
-          auto ProfilerSpecificData = reinterpret_cast<ompt::OmptEventInfoTy *>(AI->ProfilerData);
-          // Set number of granted teams for OMPT
-          setOmptGrantedNumTeams(NumBlocks[0]);
-          ProfilerSpecificData->NumTeams = NumBlocks[0];
-        }
-      });
+  if (!ompt::isTracedDevice(getDeviceId(Device)))
+    return;
+
+  if (AI->ProfilerData == nullptr)
+    return;
+
+  auto ProfilerSpecificData =
+      reinterpret_cast<ompt::OmptEventInfoTy *>(AI->ProfilerData);
+  assert(ProfilerSpecificData && "Invalid ProfilerSpecificData");
+  // Set number of granted teams for OMPT
+  setOmptGrantedNumTeams(NumBlocks[0]);
+  ProfilerSpecificData->NumTeams = NumBlocks[0];
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
-    uint64_t StartNanos, uint64_t EndNanos, void *Data) {
+void ompt::OmptProfilerTy::handleKernelCompletion(uint64_t StartNanos,
+                                                  uint64_t EndNanos,
+                                                  void *Data) {
 
   if (!isProfilingEnabled())
     return;
@@ -98,7 +104,7 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
   if (!Data)
     return;
 
-  DP("OMPT-Async: Time kernel for asynchronous execution (Plugin): Start %lu "
+  DP("OMPT-Async: Time kernel for asynchronous execution: Start %lu "
      "End %lu\n",
      StartNanos, EndNanos);
 
@@ -106,16 +112,16 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleKernelCompletion(
   assert(OmptEventInfo && "Invalid OmptEventInfo");
   assert(OmptEventInfo->TraceRecord && "Invalid TraceRecord");
 
-  llvm::omp::target::ompt::RegionInterface.stopTargetSubmitTraceAsync(
-      OmptEventInfo->TraceRecord, OmptEventInfo->NumTeams, StartNanos,
-      EndNanos);
+  ompt::RegionInterface.stopTargetSubmitTraceAsync(OmptEventInfo->TraceRecord,
+                                                   OmptEventInfo->NumTeams,
+                                                   StartNanos, EndNanos);
 
   // Done processing, our responsibility to free the memory
   freeProfilerDataEntry(OmptEventInfo);
 }
 
-void llvm::omp::target::ompt::OmptProfilerTy::handleDataTransfer(
-    uint64_t StartNanos, uint64_t EndNanos, void *Data) {
+void ompt::OmptProfilerTy::handleDataTransfer(uint64_t StartNanos,
+                                              uint64_t EndNanos, void *Data) {
 
   if (!isProfilingEnabled())
     return;
@@ -125,23 +131,25 @@ void llvm::omp::target::ompt::OmptProfilerTy::handleDataTransfer(
   if (!Data)
     return;
 
+  DP("OMPT-Async: Time data for asynchronous execution: Start %lu "
+     "End %lu\n",
+     StartNanos, EndNanos);
+
   auto OmptEventInfo = reinterpret_cast<ompt::OmptEventInfoTy *>(Data);
   assert(OmptEventInfo && "Invalid OmptEventInfo");
   assert(OmptEventInfo->TraceRecord && "Invalid TraceRecord");
 
-  llvm::omp::target::ompt::RegionInterface.stopTargetDataMovementTraceAsync(
+  ompt::RegionInterface.stopTargetDataMovementTraceAsync(
       OmptEventInfo->TraceRecord, StartNanos, EndNanos);
 
   // Done processing, our responsibility to free the memory
   freeProfilerDataEntry(OmptEventInfo);
 }
 
-bool llvm::omp::target::ompt::OmptProfilerTy::isProfilingEnabled() {
-  return llvm::omp::target::ompt::TracingActive;
-}
+bool ompt::OmptProfilerTy::isProfilingEnabled() { return ompt::TracingActive; }
 
-void llvm::omp::target::ompt::OmptProfilerTy::setTimeConversionFactorsImpl(
-    double Slope, double Offset) {
+void ompt::OmptProfilerTy::setTimeConversionFactorsImpl(double Slope,
+                                                        double Offset) {
   DP("Using Time Slope: %f and Offset: %f \n", Slope, Offset);
   setOmptHostToDeviceRate(Slope, Offset);
 }
