@@ -6137,13 +6137,13 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (failed(checkImplementationStatus(opInst)))
     return failure();
-  
+
   bool isTargetDevice = ompBuilder->Config.isTargetDevice();
   auto deviceType = groupprivateOp.getDeviceType();
-  
+
   // skip allocation based on device_type
   bool shouldAllocate = true;
-  if (deviceType.has_value()) {    
+  if (deviceType.has_value()) {
     switch (*deviceType) {
     case mlir::omp::DeclareTargetDeviceType::host:
       // Only allocate on host
@@ -6187,10 +6187,8 @@ convertOmpGroupprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     // Call runtime to allocate shared memory for this group
     llvm::Value *groupPrivatePtr =
         builder.CreateCall(allocSharedFn, {builder.getInt64(typeSize)});
-    resultPtr =
-        builder.CreateBitCast(groupPrivatePtr, globalValue->getType());
-  }
-  else {
+    resultPtr = builder.CreateBitCast(groupPrivatePtr, globalValue->getType());
+  } else {
     // Use original global address when not allocating group-private storage
     resultPtr = moduleTranslation.lookupValue(symAddr);
     if (!resultPtr) {
