@@ -160,6 +160,14 @@ FunctionPass *createX86PartialReductionPass();
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
 FunctionPass *createX86WinEHUnwindV2Pass();
 
+/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
+/// or split the data to two <128 x i32>.
+FunctionPass *createX86LowerAMXTypePass();
+
+/// The pass transforms amx intrinsics to scalar operation if the function has
+/// optnone attribute or it is O0.
+FunctionPass *createX86LowerAMXIntrinsicsPass();
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);

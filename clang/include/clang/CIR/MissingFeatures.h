@@ -150,11 +150,9 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroAllocBuiltinCall() { return false; }
-  static bool coroBeginBuiltinCall() { return false; }
   static bool coroEndBuiltinCall() { return false; }
-  static bool coroSizeBuiltinCall() { return false; }
   static bool coroutineFrame() { return false; }
+  static bool emitBodyAndFallthrough() { return false; }
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -241,6 +239,7 @@ struct MissingFeatures {
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
+  static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
