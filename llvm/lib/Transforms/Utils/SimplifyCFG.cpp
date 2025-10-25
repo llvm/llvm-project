@@ -5228,32 +5228,53 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(BranchInst *BI,
         CompVal, DL.getIntPtrType(CompVal->getType()), "magicptr");
   }
 
-  // Create the new switch instruction now.
-  SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
-  if (HasProfile) {
-    // We know the weight of the default case. We don't know the weight of the
-    // other cases, but rather than completely lose profiling info, we split
-    // the remaining probability equally over them.
-    SmallVector<uint32_t> NewWeights(Values.size() + 1);
-    NewWeights[0] = BranchWeights[1]; // this is the default, and we swapped if
-                                      // TrueWhenEqual.
-    for (auto &V : drop_begin(NewWeights))
-      V = BranchWeights[0] / Values.size();
-    setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
-  }
+  // Check if we can represent the values can be represented as a contiguous
+  // range. If so, we use a range check + conditional branch instead of a
+  // switch.
+  if (Values.front()->getValue() - Values.back()->getValue() ==
+      Values.size() - 1) {
+    ConstantRange RangeToCheck = ConstantRange::getNonEmpty(
+        Values.back()->getValue(), Values.front()->getValue() + 1);
+    APInt Offset, RHS;
+    ICmpInst::Predicate Pred;
+    RangeToCheck.getEquivalentICmp(Pred, RHS, Offset);
+    Value *X = CompVal;
+    if (!Offset.isZero())
+      X = Builder.CreateAdd(X, ConstantInt::get(CompVal->getType(), Offset));
+    Value *Cond =
+        Builder.CreateICmp(Pred, X, ConstantInt::get(CompVal->getType(), RHS));
+    BranchInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
+    if (HasProfile)
+      setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    // We don't need to update PHI nodes since we don't add any new edges.
+  } else {
+    // Create the new switch instruction now.
+    SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
+    if (HasProfile) {
+      // We know the weight of the default case. We don't know the weight of the
+      // other cases, but rather than completely lose profiling info, we split
+      // the remaining probability equally over them.
+      SmallVector<uint32_t> NewWeights(Values.size() + 1);
+      NewWeights[0] = BranchWeights[1]; // this is the default, and we swapped
+                                        // if TrueWhenEqual.
+      for (auto &V : drop_begin(NewWeights))
+        V = BranchWeights[0] / Values.size();
+      setBranchWeights(*New, NewWeights, /*IsExpected=*/false);
+    }
 
-  // Add all of the 'cases' to the switch instruction.
-  for (ConstantInt *Val : Values)
-    New->addCase(Val, EdgeBB);
+    // Add all of the 'cases' to the switch instruction.
+    for (ConstantInt *Val : Values)
+      New->addCase(Val, EdgeBB);
 
-  // We added edges from PI to the EdgeBB.  As such, if there were any
-  // PHI nodes in EdgeBB, they need entries to be added corresponding to
-  // the number of edges added.
-  for (BasicBlock::iterator BBI = EdgeBB->begin(); isa<PHINode>(BBI); ++BBI) {
-    PHINode *PN = cast<PHINode>(BBI);
-    Value *InVal = PN->getIncomingValueForBlock(BB);
-    for (unsigned i = 0, e = Values.size() - 1; i != e; ++i)
-      PN->addIncoming(InVal, BB);
+    // We added edges from PI to the EdgeBB.  As such, if there were any
+    // PHI nodes in EdgeBB, they need entries to be added corresponding to
+    // the number of edges added.
+    for (BasicBlock::iterator BBI = EdgeBB->begin(); isa<PHINode>(BBI); ++BBI) {
+      PHINode *PN = cast<PHINode>(BBI);
+      Value *InVal = PN->getIncomingValueForBlock(BB);
+      for (unsigned i = 0, e = Values.size() - 1; i != e; ++i)
+        PN->addIncoming(InVal, BB);
+    }
   }
 
   // Erase the old branch instruction.
