@@ -192,6 +192,7 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
       "  - { Name: foo, Type: NoType, Size: 99, Warning: Does nothing }\n"
       "  - { Name: nor, Type: Func, Undefined: true }\n"
       "  - { Name: not, Type: Unknown, Size: 12345678901234 }\n"
+      "  - { Name: ver, Version: VER, Type: Func }\n"
       "...\n";
   IFSStub Stub;
   Stub.IfsVersion = VersionTuple(1, 0);
@@ -200,36 +201,43 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   Stub.Target.Endianness = IFSEndiannessType::Little;
   Stub.Target.ObjectFormat = "ELF";
 
-  IFSSymbol SymBar("bar");
+  IFSSymbol SymBar("bar", "");
   SymBar.Size = 128u;
   SymBar.Type = IFSSymbolType::Func;
   SymBar.Undefined = false;
   SymBar.Weak = true;
 
-  IFSSymbol SymFoo("foo");
+  IFSSymbol SymFoo("foo", "");
   SymFoo.Size = 99u;
   SymFoo.Type = IFSSymbolType::NoType;
   SymFoo.Undefined = false;
   SymFoo.Weak = false;
   SymFoo.Warning = "Does nothing";
 
-  IFSSymbol SymNor("nor");
+  IFSSymbol SymNor("nor", "");
   SymNor.Size = 1234u;
   SymNor.Type = IFSSymbolType::Func;
   SymNor.Undefined = true;
   SymNor.Weak = false;
 
-  IFSSymbol SymNot("not");
+  IFSSymbol SymNot("not", "");
   SymNot.Size = 12345678901234u;
   SymNot.Type = IFSSymbolType::Unknown;
   SymNot.Undefined = false;
   SymNot.Weak = false;
+
+  IFSSymbol SymVer("ver", "VER");
+  SymVer.Size = 128u;
+  SymVer.Type = IFSSymbolType::Func;
+  SymVer.Undefined = false;
+  SymVer.Weak = false;
 
   // Symbol order is preserved instead of being sorted.
   Stub.Symbols.push_back(SymBar);
   Stub.Symbols.push_back(SymFoo);
   Stub.Symbols.push_back(SymNor);
   Stub.Symbols.push_back(SymNot);
+  Stub.Symbols.push_back(SymVer);
 
   // Ensure move constructor works as expected.
   IFSStub Moved = std::move(Stub);
