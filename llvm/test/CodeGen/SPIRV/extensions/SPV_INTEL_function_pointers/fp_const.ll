@@ -8,17 +8,22 @@
 ; CHECK-DAG: %[[TyVoid:.*]] = OpTypeVoid
 ; CHECK-DAG: %[[TyInt64:.*]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[TyFun:.*]] = OpTypeFunction %[[TyInt64]] %[[TyInt64]]
-; CHECK-DAG: %[[TyPtrFunCodeSection:.*]] = OpTypePointer CodeSectionINTEL %[[TyFun]]
-; CHECK-DAG: %[[ConstFunFp:.*]] = OpConstantFunctionPointerINTEL %[[TyPtrFunCodeSection]] %[[DefFunFp:.*]]
 ; CHECK-DAG: %[[TyPtrFun:.*]] = OpTypePointer Function %[[TyFun]]
 ; CHECK-DAG: %[[TyPtrPtrFun:.*]] = OpTypePointer Function %[[TyPtrFun]]
+; CHECK-DAG: %[[TyInt8:.*]] = OpTypeInt 8 0
+; CHECK-DAG: %[[TyPtrInt8:.*]] = OpTypePointer Function %[[TyInt8]]
+; CHECK-DAG: %[[TyPtrPtrInt8:.*]] = OpTypePointer Function %[[TyPtrInt8]]
+; CHECK-DAG: %[[TyPtrFunCodeSection:.*]] = OpTypePointer CodeSectionINTEL %[[TyFun]]
+; CHECK-DAG: %[[ConstFunFp:.*]] = OpConstantFunctionPointerINTEL %[[TyPtrFunCodeSection]] %[[DefFunFp:.*]]
 ; CHECK: OpFunction
-; CHECK: %[[Var:.*]] = OpVariable %[[TyPtrPtrFun]] Function
-; CHECK: OpStore %[[Var]] %[[ConstFunFp]]
-; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFun]] %[[Var]]
+; CHECK: %[[Var:.*]] = OpVariable %[[TyPtrPtrInt8]] Function
+; CHECK: %[[VarStore:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[Var]]
+; CHECK: OpStore %[[VarStore]] %[[ConstFunFp]]
+; CHECK: %[[VarLoad:.*]] = OpBitcast %[[TyPtrPtrFun]] %[[Var]]
+; CHECK: %[[FP:.*]] = OpLoad %[[TyPtrFun]] %[[VarLoad]]
 ; CHECK: OpFunctionPointerCallINTEL %[[TyInt64]] %[[FP]] %[[#]]
 ; CHECK: OpFunctionEnd
- 
+
 ; CHECK: %[[DefFunFp]] = OpFunction %[[TyInt64]] None %[[TyFun]]
 
 target triple = "spir64-unknown-unknown"
