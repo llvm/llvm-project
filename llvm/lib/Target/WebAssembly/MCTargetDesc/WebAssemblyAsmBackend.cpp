@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyMCAsmInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -22,6 +23,8 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -40,6 +43,8 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &Fixup,
+                                    MCValue &Target, uint64_t &Value) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool) override;
 
@@ -95,6 +100,33 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     OS << char(WebAssembly::Nop);
 
   return true;
+}
+
+std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &,
+                                                         MCFixup &Fixup,
+                                                         MCValue &Target,
+                                                         uint64_t &Value) {
+  if (Fixup.getKind() == WebAssembly::fixup_uleb128_i32 &&
+      static_cast<WebAssembly::Specifier>(Target.getSpecifier()) ==
+          WebAssembly::S_None) {
+    if (const auto *SymExpr =
+            dyn_cast_or_null<MCSymbolRefExpr>(Fixup.getValue())) {
+      // only evaluate fixups for temporary symbols
+      // (in-function offsets for compilation hints metadata)
+      if (const MCSymbol &SymA = SymExpr->getSymbol();
+          SymA.isInSection() && SymA.getSection().isText() &&
+          SymA.isTemporary()) {
+        const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
+        uint8_t Buffer[5];
+        const unsigned EncodedSize = encodeULEB128(SymbolOffset, Buffer, 5);
+        Value = 0;
+        for (unsigned I = 0; I < EncodedSize; ++I)
+          Value |= static_cast<uint64_t>(Buffer[I]) << (I * 8);
+        return true;
+      }
+    }
+  }
+  return {};
 }
 
 void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,

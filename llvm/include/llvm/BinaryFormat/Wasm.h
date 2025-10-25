@@ -519,6 +519,26 @@ struct WasmSignature {
   WasmSignature() = default;
 };
 
+template <typename T> struct WasmCodeMetadataItemEntry {
+  uint32_t Offset;
+  uint32_t Size;
+  T Data;
+};
+
+template <typename T> struct WasmCodeMetadataFuncEntry {
+  uint32_t FuncIdx;
+  std::vector<WasmCodeMetadataItemEntry<T>> Hints;
+};
+
+enum class WasmCodeMetadataBranchHint : uint8_t {
+  UNLIKELY = 0x0,
+  LIKELY = 0x1,
+};
+
+using WasmFunctionBranchHints =
+    WasmCodeMetadataFuncEntry<WasmCodeMetadataBranchHint>;
+using WasmBranchHint = WasmCodeMetadataItemEntry<WasmCodeMetadataBranchHint>;
+
 // Useful comparison operators
 inline bool operator==(const WasmSignature &LHS, const WasmSignature &RHS) {
   return LHS.State == RHS.State && LHS.Returns == RHS.Returns &&
