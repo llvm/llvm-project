@@ -180,7 +180,6 @@ else:
     config.limit_to_features.add("module-independent")
 
 
-
 # Determine if OpenMP runtime was built (enable OpenMP tests via REQUIRES in test file)
 openmp_flags_substitution = "-fopenmp"
 if 'flangrt-modules' not in config.available_features:
@@ -195,7 +194,6 @@ else:
     # the omp_lib.{h,mod} files, depending on whether the OpenMP runtime was built as a
     # project or runtime. If not in the compiler resources module directory like the other intrinsic modules, we must add it to the path.
     config.available_features.add("openmp_runtime")
-    #openmp_flags_substitution += f" -fintrinsic-modules-path {config.openmp_module_dir}"
     extra_intrinsics_search_args += [
         f"-fintrinsic-modules-path={config.openmp_module_dir}"
     ]
