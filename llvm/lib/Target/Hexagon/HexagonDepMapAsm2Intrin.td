@@ -3827,3 +3827,14 @@ def: Pat<(int_hexagon_V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2),
          (V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsub_hf_f8_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsub_hf_f8 HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV79, UseHVX128B]>;
+
+// V81 HVX Instructions.
+
+def: Pat<(int_hexagon_V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_hf_mix_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_hf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX64B, UseHVXQFloat]>;
+def: Pat<(int_hexagon_V6_vsub_sf_mix_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsub_sf_mix HvxVR:$src1, HvxVR:$src2)>, Requires<[UseHVXV81, UseHVX128B, UseHVXQFloat]>;

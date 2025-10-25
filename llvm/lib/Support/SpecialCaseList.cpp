@@ -90,7 +90,7 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
     });
   }
 
-  for (auto &G : Globs) {
+  for (const auto &G : reverse(Globs)) {
     StringRef Prefix = G.Pattern.prefix();
     StringRef Suffix = G.Pattern.suffix();
 
@@ -106,9 +106,14 @@ void SpecialCaseList::GlobMatcher::match(
   if (!PrefixSuffixToGlob.empty()) {
     for (const auto &[_, SToGlob] : PrefixSuffixToGlob.find_prefixes(Query)) {
       for (const auto &[_, V] : SToGlob.find_prefixes(reverse(Query))) {
-        for (const auto *G : reverse(V)) {
+        for (const auto *G : V) {
+          // Each value of the map is vector of globs sorted as from best to
+          // worst.
           if (G->Pattern.match(Query)) {
             Cb(G->Name, G->LineNo);
+            // As soon as we find match in the vector we can break for the
+            // vector, but we still need to continue for other values in the
+            // map, as they may contain a better match.
             break;
           }
         }
@@ -117,7 +122,7 @@ void SpecialCaseList::GlobMatcher::match(
   }
 }
 
-SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
+   SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
     : RemoveDotSlash(RemoveDotSlash) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
