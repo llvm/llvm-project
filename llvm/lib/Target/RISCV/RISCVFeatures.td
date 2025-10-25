@@ -1906,7 +1906,10 @@ def FeatureForcedAtomics : SubtargetFeature<
 def HasAtomicLdSt
     : Predicate<"Subtarget->hasStdExtZalrsc() || Subtarget->hasForcedAtomics()">;
 
-// The RISC-V Unprivileged Architecture defines _constrained_ LR/SC loops:
+// The RISC-V Unprivileged Architecture - ISA Volume 1 (Version: 20250508)
+// [https://docs.riscv.org/reference/isa/_attachments/riscv-unprivileged.pdf]
+// in section 13.3. Eventual Success of Store-Conditional Instructions, defines
+// _constrained_ LR/SC loops:
 //   The dynamic code executed between the LR and SC instructions can only
 //   contain instructions from the base ''I'' instruction set, excluding loads,
 //   stores, backward jumps, taken backward branches, JALR, FENCE, and SYSTEM
@@ -1920,7 +1923,8 @@ def HasAtomicLdSt
 def FeaturePermissiveZalrsc
     : SubtargetFeature<
           "permissive-zalrsc", "HasPermissiveZalrsc", "true",
-          "Implementation permits non-base instructions between LR/SC pairs">;
+          "Implementation permits non-base instructions between LR/SC pairs",
+          [FeatureStdExtZalrsc]>;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
