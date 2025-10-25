@@ -105,12 +105,22 @@ mlir::xegpu::getDistributedVectorType(VectorType originalType,
 std::string xegpu::getLayoutName(const OpOperand &operand) {
   const StringRef prefix("layout_operand_");
   unsigned idx = const_cast<OpOperand &>(operand).getOperandNumber();
-  return llvm::formatv("{0}{1}", prefix, idx).str();
+  auto owner = operand.getOwner();
+  auto tempLayout = llvm::formatv("{0}{1}", prefix, idx).str();
+  if (isa<StoreScatterOp>(operand.getOwner()) && idx == 0 &&
+      !owner->hasAttr(tempLayout))
+    return "layout";
+  return tempLayout;
 }
 
 std::string xegpu::getLayoutName(const OpResult result) {
   const StringRef prefix = "layout_result_";
-  return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
+  auto owner = result.getOwner();
+  auto tempLayout =
+      llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
+  if (isa<LoadGatherOp>(owner) && !owner->hasAttr(tempLayout))
+    return "layout";
+  return tempLayout;
 }
 
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
@@ -144,6 +154,11 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     std::string layoutName = getLayoutName(result);
     if (defOp->hasAttr(layoutName))
       return defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+    // check for "permament" layout only after "temporary" layout name lookup
+    // for backward compatibility
+    if (auto loadGatherOp = dyn_cast<xegpu::LoadGatherOp>(defOp))
+      return loadGatherOp.getLayoutAttr();
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -171,6 +186,13 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   std::string layoutName = xegpu::getLayoutName(opr);
   if (op->hasAttr(layoutName))
     return op->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
+
+  // check for "permament" layout only after "temporary" layout name lookup
+  // for backward compatibility
+  if (auto storeScatterOp = dyn_cast<xegpu::StoreScatterOp>(op))
+    if (auto layout = storeScatterOp.getLayoutAttr())
+      return layout;
+
   return getDistributeLayoutAttr(opr.get());
 }
 
