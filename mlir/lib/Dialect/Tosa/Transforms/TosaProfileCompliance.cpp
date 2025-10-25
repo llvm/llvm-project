@@ -19,6 +19,7 @@ TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo i16T = {mlir::IntegerType::getTypeID(), 16};
   const TypeInfo i32T = {mlir::IntegerType::getTypeID(), 32};
   const TypeInfo i48T = {mlir::IntegerType::getTypeID(), 48};
+  const TypeInfo i64T = {mlir::IntegerType::getTypeID(), 64};
   const TypeInfo bf16T = {mlir::BFloat16Type::getTypeID(), 16};
   const TypeInfo fp16T = {mlir::Float16Type::getTypeID(), 16};
   const TypeInfo fp32T = {mlir::Float32Type::getTypeID(), 32};
@@ -50,10 +51,11 @@ TosaProfileCompliance::getProfileComplianceMap() {
 
 // Base populating function
 LogicalResult ProfileInfoDepot::populateProfileInfo(ValueRange operands,
-                                                    Value output) {
-  for (auto operand : operands)
+                                                    ValueRange results) {
+  for (const auto &operand : operands)
     addValue(operand);
-  addValue(output);
+  for (const auto &result : results)
+    addValue(result);
   return success();
 }
 
@@ -176,23 +178,6 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ResizeOp op) {
 }
 
 template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::FFT2dOp op) {
-  addValue(op.getInputReal());
-  addValue(op.getInputImag());
-  addValue(op.getOutputReal());
-  addValue(op.getOutputImag());
-  return success();
-}
-
-template <>
-LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
-  addValue(op.getInputReal());
-  addValue(op.getOutputReal());
-  addValue(op.getOutputImag());
-  return success();
-}
-
-template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
   addValue(op.getOnTrue());
   addValue(op.getOnFalse());
@@ -245,7 +230,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
 // This helper function populates the info for all operands.
 #define POPULATE_PROFILE_INFO_COMMON(tosaOp)                                   \
   if (isa<tosa::tosaOp##Op>(op)) {                                             \
-    return populateProfileInfo(op->getOperands(), op->getResult(0));           \
+    return populateProfileInfo(op->getOperands(), op->getResults());           \
   }
 
   // Skip irrelevant operands when they are independent and not tied to any
@@ -256,8 +241,6 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Conv3D)
   POPULATE_PROFILE_INFO_CUSTOM(DepthwiseConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Mul)
-  POPULATE_PROFILE_INFO_CUSTOM(FFT2d)
-  POPULATE_PROFILE_INFO_CUSTOM(RFFT2d)
   POPULATE_PROFILE_INFO_CUSTOM(Concat)
   POPULATE_PROFILE_INFO_CUSTOM(Pad)
   POPULATE_PROFILE_INFO_CUSTOM(Reshape)
@@ -276,7 +259,11 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
   POPULATE_PROFILE_INFO_COMMON(MatmulTBlockScaled)
+  POPULATE_PROFILE_INFO_COMMON(FFT2d)
+  POPULATE_PROFILE_INFO_COMMON(RFFT2d)
   POPULATE_PROFILE_INFO_COMMON(Cast)
+  POPULATE_PROFILE_INFO_COMMON(CastFromBlockScaled)
+  POPULATE_PROFILE_INFO_COMMON(CastToBlockScaled)
   POPULATE_PROFILE_INFO_COMMON(Const)
   POPULATE_PROFILE_INFO_COMMON(ArgMax)
   POPULATE_PROFILE_INFO_COMMON(Sub)

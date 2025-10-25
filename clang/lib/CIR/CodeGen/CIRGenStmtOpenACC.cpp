@@ -304,12 +304,21 @@ CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
   return mlir::success();
 }
 
+const VarDecl *getLValueDecl(const Expr *e) {
+  // We are going to assume that after stripping implicit casts, that the LValue
+  // is just a DRE around the var-decl.
+
+  e = e->IgnoreImpCasts();
+
+  const auto *dre = cast<DeclRefExpr>(e);
+  return cast<VarDecl>(dre->getDecl());
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  // For now, we are only support 'read'/'write', so diagnose. We can switch on
-  // the kind later once we start implementing the other 2 forms. While we
-  if (s.getAtomicKind() != OpenACCAtomicKind::Read &&
-      s.getAtomicKind() != OpenACCAtomicKind::Write) {
+  // For now, we are only support 'read'/'write'/'update', so diagnose. We can
+  // switch on the kind later once we implement the 'capture' form.
+  if (s.getAtomicKind() == OpenACCAtomicKind::Capture) {
     cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
     return mlir::failure();
   }
@@ -318,11 +327,10 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
   // expression it is associated with rather than emitting it inside of it.  So
   // it has custom emit logic.
   mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
   OpenACCAtomicConstruct::StmtInfo inf = s.getAssociatedStmtInfo();
 
   switch (s.getAtomicKind()) {
-  case OpenACCAtomicKind::None:
-  case OpenACCAtomicKind::Update:
   case OpenACCAtomicKind::Capture:
     llvm_unreachable("Unimplemented atomic construct type, should have "
                      "diagnosed/returned above");
@@ -352,6 +360,50 @@ CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
     emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
                        s.clauses());
     return mlir::success();
+  }
+  case OpenACCAtomicKind::None:
+  case OpenACCAtomicKind::Update: {
+    mlir::Value x = emitLValue(inf.X).getPointer();
+    auto op =
+        mlir::acc::AtomicUpdateOp::create(builder, start, x, /*ifCond=*/{});
+    emitOpenACCClauses(op, s.getDirectiveKind(), s.getDirectiveLoc(),
+                       s.clauses());
+    mlir::LogicalResult res = mlir::success();
+    {
+      mlir::OpBuilder::InsertionGuard guardCase(builder);
+      mlir::Type argTy = cast<cir::PointerType>(x.getType()).getPointee();
+      std::array<mlir::Type, 1> recipeType{argTy};
+      std::array<mlir::Location, 1> recipeLoc{start};
+      mlir::Block *recipeBlock = builder.createBlock(
+          &op.getRegion(), op.getRegion().end(), recipeType, recipeLoc);
+      builder.setInsertionPointToEnd(recipeBlock);
+
+      // Since we have an initial value that we know is a scalar type, we can
+      // just emit the entire statement here after sneaking-in our 'alloca' in
+      // the right place, then loading out of it. Flang does a lot less work
+      // (probably does its own emitting!), but we have more complicated AST
+      // nodes to worry about, so we can just count on opt to remove the extra
+      // alloca/load/store set.
+      auto alloca = cir::AllocaOp::create(
+          builder, start, x.getType(), argTy, "x_var",
+          cgm.getSize(getContext().getTypeAlignInChars(inf.X->getType())));
+
+      alloca.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+      builder.CIRBaseBuilderTy::createStore(start, recipeBlock->getArgument(0),
+                                            alloca);
+
+      const VarDecl *xval = getLValueDecl(inf.X);
+      CIRGenFunction::DeclMapRevertingRAII declMapRAII{*this, xval};
+      replaceAddrOfLocalVar(
+          xval, Address{alloca, argTy, getContext().getDeclAlign(xval)});
+
+      res = emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+
+      auto load = cir::LoadOp::create(builder, start, {alloca});
+      mlir::acc::YieldOp::create(builder, end, {load});
+    }
+
+    return res;
   }
   }
 

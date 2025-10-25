@@ -199,6 +199,16 @@ def Tosa_MXFPScaleTensor3D : AnyTypeOf<[
   TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
   TosaTensorRankOf<[Tosa_MXFPScaleNumber], [3]>
 ]>;
+def Tosa_MXFPDataTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
+def Tosa_MXFPScaleTensorAtLeast1D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaRankedTensorOf<[Tosa_MXFPScaleNumber], [AtLeastRankOne]>],
+  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
+>;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.

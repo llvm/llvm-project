@@ -565,8 +565,10 @@ static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
       dtor = rd->getDestructor();
 
       if (dtor->isVirtual()) {
-        cgf.cgm.errorNYI(de->getSourceRange(),
-                         "emitObjectDelete: virtual destructor");
+        assert(!cir::MissingFeatures::devirtualizeDestructor());
+        cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                    dtor);
+        return;
       }
     }
   }
