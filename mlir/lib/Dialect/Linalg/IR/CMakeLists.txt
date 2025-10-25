@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   LinalgOps.cpp
   LinalgDialect.cpp
   ValueBoundsOpInterfaceImpl.cpp
+  RegionBuilderHelper.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Linalg
