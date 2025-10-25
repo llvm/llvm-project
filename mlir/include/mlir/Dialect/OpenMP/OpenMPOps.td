@@ -2236,9 +2236,9 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
     each group having its own copy.
 
     This operation takes in the address of a symbol that represents the original
-    variable and returns the address of its groupprivate copy. All occurrences of
-    groupprivate variables in a parallel region should use the groupprivate copy
-    returned by this operation.
+    variable, optional DeviceTypeAttr and returns the address of its groupprivate copy.
+    All occurrences of groupprivate variables in a parallel region should
+    use the groupprivate copy returned by this operation.
 
     The `sym_addr` refers to the address of the symbol, which is a pointer to
     the original variable.

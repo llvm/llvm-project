@@ -3392,3 +3392,5 @@ func.func @omp_groupprivate_device_type() {
 
   return
 }
+
+llvm.mlir.global internal @_QFgpEx() : i32
