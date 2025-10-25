@@ -1941,6 +1941,9 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
     return true;
   }
 
+  if (!PtrA.isBlockPointer() || !PtrB.isBlockPointer())
+    return false;
+
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
