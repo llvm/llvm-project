@@ -18,7 +18,9 @@ entry:
 define noundef half @ddy_coarse_half(half noundef %a) {
 entry:
 ; CHECK: %[[#float_16_arg:]] = OpFunctionParameter %[[#float_16]]
-; CHECK: %[[#]] = OpDPdyCoarse %[[#float_16]] %[[#float_16_arg]]
+; CHECK: %[[#converted:]] = OpFConvert %[[#float_32:]] %[[#float_16_arg]]
+; CHECK: %[[#coarse:]] = OpDPdyCoarse %[[#float_32]] %[[#converted]]
+; CHECK: %[[#]] = OpFConvert %[[#float_16]] %[[#coarse]]
   %elt.ddy.coarse = call half @llvm.spv.ddy.coarse.f16(half %a)
   ret half %elt.ddy.coarse
 }
@@ -34,7 +36,9 @@ entry:
 define noundef <4 x half> @ddy_coarse_half_vector(<4 x half> noundef %a) {
 entry:
 ; CHECK: %[[#vec4_float_16_arg:]] = OpFunctionParameter %[[#vec4_float_16]]
-; CHECK: %[[#]] = OpDPdyCoarse %[[#vec4_float_16]] %[[#vec4_float_16_arg]]
+; CHECK: %[[#converted:]] = OpFConvert %[[#vec4_float_32:]] %[[#vec4_float_16_arg]]
+; CHECK: %[[#coarse:]] = OpDPdyCoarse %[[#vec4_float_32]] %[[#converted]]
+; CHECK: %[[#]] = OpFConvert %[[#vec4_float_16]] %[[#coarse]]
   %elt.ddy.coarse = call <4 x half> @llvm.spv.ddy.coarse.v4f16(<4 x half> %a)
   ret <4 x half> %elt.ddy.coarse
 }
