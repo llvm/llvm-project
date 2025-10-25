@@ -8302,7 +8302,7 @@ void Sema::redelayDiagnostics(DelayedDiagnosticPool &pool) {
   curPool->steal(pool);
 }
 
-void Sema::ActOnCleanupAttr(Expr *E, Decl *D, const Attr *A) {
+void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   // Obtains the FunctionDecl that was found when handling the attribute
   // earlier.
   CleanupAttr *Attr = D->getAttr<CleanupAttr>();
