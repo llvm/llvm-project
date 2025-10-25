@@ -3125,6 +3125,7 @@ DEF_TRAVERSE_STMT(RequiresExpr, {
 })
 
 DEF_TRAVERSE_STMT(CXXEnumeratingExpansionStmt, {})
+DEF_TRAVERSE_STMT(CXXIteratingExpansionStmt, {})
 DEF_TRAVERSE_STMT(CXXExpansionInstantiationStmt, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListExpr, {})
 DEF_TRAVERSE_STMT(CXXExpansionInitListSelectExpr, {})

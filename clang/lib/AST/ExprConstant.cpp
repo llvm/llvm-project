@@ -5664,6 +5664,12 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
       if (VD && !CheckLocalVariableDeclaration(Info, VD))
         return ESR_Failed;
+
+      if (const auto *ESD = dyn_cast<ExpansionStmtDecl>(D)) {
+        assert(ESD->getInstantiations() && "not expanded?");
+        return EvaluateStmt(Result, Info, ESD->getInstantiations(), Case);
+      }
+
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
@@ -5931,6 +5937,35 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
 
       if (!InnerScope.destroy())
         return ESR_Failed;
+    }
+
+    return Scope.destroy() ? ESR_Succeeded : ESR_Failed;
+  }
+
+  case Stmt::CXXExpansionInstantiationStmtClass: {
+    BlockScopeRAII Scope(Info);
+    const auto *Expansion = cast<CXXExpansionInstantiationStmt>(S);
+    for (const Stmt* Shared : Expansion->getSharedStmts()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, Shared);
+      if (ESR != ESR_Succeeded) {
+        if (ESR != ESR_Failed && !Scope.destroy())
+          return ESR_Failed;
+        return ESR;
+      }
+    }
+
+    // No need to push an extra scope for these since they're already
+    // CompoundStmts.
+    for (const Stmt* Instantiation : Expansion->getInstantiations()) {
+      EvalStmtResult ESR = EvaluateStmt(Result, Info, Instantiation);
+      if (ESR == ESR_Failed ||
+          ShouldPropagateBreakContinue(Info, Expansion, &Scope, ESR))
+        return ESR;
+      if (ESR != ESR_Continue) {
+        // Succeeded here actually means we encountered a 'break'.
+        assert(ESR == ESR_Succeeded);
+        break;
+      }
     }
 
     return Scope.destroy() ? ESR_Succeeded : ESR_Failed;

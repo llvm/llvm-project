@@ -2411,6 +2411,11 @@ void NoteForRangeBeginEndFunction(Sema &SemaRef, Expr *E,
 /// Build a variable declaration for a for-range statement.
 VarDecl *BuildForRangeVarDecl(Sema &SemaRef, SourceLocation Loc, QualType Type,
                               StringRef Name, bool ForExpansionStmt) {
+  // Making the variable constexpr doesn't automatically add 'const' to the
+  // type, so do that now.
+  if (ForExpansionStmt && !Type->isReferenceType())
+    Type = Type.withConst();
+
   DeclContext *DC = SemaRef.CurContext;
   IdentifierInfo *II = &SemaRef.PP.getIdentifierTable().get(Name);
   TypeSourceInfo *TInfo = SemaRef.Context.getTrivialTypeSourceInfo(Type, Loc);

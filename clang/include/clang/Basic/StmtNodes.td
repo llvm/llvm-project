@@ -61,6 +61,7 @@ def CoreturnStmt : StmtNode<Stmt>;
 // C++ expansion statements (P1306)
 def CXXExpansionStmt : StmtNode<Stmt, 1>;
 def CXXEnumeratingExpansionStmt : StmtNode<CXXExpansionStmt>;
+def CXXIteratingExpansionStmt : StmtNode<CXXExpansionStmt>;
 def CXXExpansionInstantiationStmt : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmt!
 
 // Expressions
@@ -186,7 +187,6 @@ def RequiresExpr : StmtNode<Expr>;
 def CXXExpansionInitListExpr : StmtNode<Expr>;
 def CXXExpansionInitListSelectExpr : StmtNode<Expr>;
 //def CXXDestructurableExpansionSelectExpr : StmtNode<Expr>;
-//def CXXIterableExpansionSelectExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
 def ObjCStringLiteral : StmtNode<Expr>;

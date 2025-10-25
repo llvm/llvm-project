@@ -160,6 +160,7 @@ namespace {
     }
 
     void VisitCXXNamedCastExpr(CXXNamedCastExpr *Node);
+    void VisitCXXExpansionStmt(CXXExpansionStmt* Node);
 
 #define ABSTRACT_STMT(CLASS)
 #define STMT(CLASS, PARENT) \
@@ -447,8 +448,7 @@ void StmtPrinter::VisitCXXForRangeStmt(CXXForRangeStmt *Node) {
   PrintControlledStmt(Node->getBody());
 }
 
-void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
-    CXXEnumeratingExpansionStmt *Node) {
+void StmtPrinter::VisitCXXExpansionStmt(CXXExpansionStmt *Node) {
   Indent() << "template for (";
   if (Node->getInit())
     PrintInitStmt(Node->getInit(), 14);
@@ -459,6 +459,16 @@ void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
   PrintExpr(Node->getExpansionVariable()->getInit());
   OS << ")";
   PrintControlledStmt(Node->getBody());
+}
+
+void StmtPrinter::VisitCXXEnumeratingExpansionStmt(
+    CXXEnumeratingExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node);
+}
+
+void StmtPrinter::VisitCXXIteratingExpansionStmt(
+    CXXIteratingExpansionStmt *Node) {
+  VisitCXXExpansionStmt(Node);
 }
 
 void StmtPrinter::VisitCXXExpansionInstantiationStmt(

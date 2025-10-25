@@ -171,21 +171,28 @@ bool CXXExpansionStmt::hasDependentSize() const {
         ->getRangeExpr()
         ->containsPackExpansion();
 
-  llvm_unreachable("Invalid expansion statement class");
-}
-
-size_t CXXExpansionStmt::getNumInstantiations() const {
-  assert(!hasDependentSize());
-
-  if (isa<CXXEnumeratingExpansionStmt>(this)) {
-    return cast<CXXExpansionInitListSelectExpr>(
-               getExpansionVariable()->getInit())
-        ->getRangeExpr()
-        ->getExprs()
-        .size();
+  if (auto *Iterating = dyn_cast<CXXIteratingExpansionStmt>(this)) {
+    const Expr* Begin = Iterating->getBeginVar()->getInit();
+    const Expr* End = Iterating->getBeginVar()->getInit();
+    return Begin->isTypeDependent() || Begin->isValueDependent() ||
+           End->isTypeDependent() || End->isValueDependent();
   }
 
   llvm_unreachable("Invalid expansion statement class");
+}
+
+CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(EmptyShell Empty)
+  : CXXExpansionStmt(CXXIteratingExpansionStmtClass, Empty) {}
+
+CXXIteratingExpansionStmt::CXXIteratingExpansionStmt(
+    ExpansionStmtDecl *ESD, Stmt *Init, DeclStmt *ExpansionVar, DeclStmt *Range,
+    DeclStmt *Begin, DeclStmt *End, SourceLocation ForLoc,
+    SourceLocation LParenLoc, SourceLocation ColonLoc, SourceLocation RParenLoc)
+    : CXXExpansionStmt(CXXIteratingExpansionStmtClass, ESD, Init, ExpansionVar,
+                       ForLoc, LParenLoc, ColonLoc, RParenLoc) {
+  SubStmts[BEGIN] = Begin;
+  SubStmts[END] = End;
+  SubStmts[RANGE] = Range;
 }
 
 CXXExpansionInstantiationStmt::CXXExpansionInstantiationStmt(

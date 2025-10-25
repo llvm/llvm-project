@@ -165,6 +165,14 @@ def err_ice_too_large : Error<
 def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def note_constexpr_assert_failed : Note<
   "assertion failed during evaluation of constant expression">;
+def err_expansion_size_expr_not_ice : Error<
+  "expansion size is not a constant expression">;
+def err_expansion_size_negative : Error<
+  "expansion size must not be negative (was %0)">;
+def err_expansion_too_big : Error<
+  "expansion size %0 exceeds maximum configured size %1">;
+def note_use_fexpansion_limit : Note<
+  "use -fexpansion-limit=N to adjust this limit">;
 
 // Semantic analysis of constant literals.
 def ext_predef_outside_function : Warning<

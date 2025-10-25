@@ -1663,7 +1663,6 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
   case Decl::Kind::TemplateTemplateParm:
   case Decl::Kind::TypeAliasTemplate:
   case Decl::Kind::VarTemplate:
-  case Decl::Kind::ExpansionStmt:
     return {cast<TemplateDecl>(D)->getTemplateParameters()->getParam(Index),
             {}};
   case Decl::Kind::ClassTemplateSpecialization: {
@@ -1718,6 +1717,10 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     return getReplacedTemplateParameter(
         cast<FunctionDecl>(D)->getTemplateSpecializationInfo()->getTemplate(),
         Index);
+  case Decl::Kind::ExpansionStmt:
+    return {
+        cast<ExpansionStmtDecl>(D)->getTemplateParameters()->getParam(Index),
+        {}};
   default:
     llvm_unreachable("Unhandled templated declaration kind");
   }

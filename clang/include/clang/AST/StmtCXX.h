@@ -530,6 +530,13 @@ public:
 class CXXExpansionStmt : public Stmt {
   friend class ASTStmtReader;
 
+  ExpansionStmtDecl* ParentDecl;
+  SourceLocation ForLoc;
+  SourceLocation LParenLoc;
+  SourceLocation ColonLoc;
+  SourceLocation RParenLoc;
+
+protected:
   enum SubStmt {
     INIT,
     VAR,
@@ -537,14 +544,9 @@ class CXXExpansionStmt : public Stmt {
     COUNT
   };
 
-  ExpansionStmtDecl* ParentDecl;
+  // This must be the last member of this class.
   Stmt* SubStmts[COUNT];
-  SourceLocation ForLoc;
-  SourceLocation LParenLoc;
-  SourceLocation ColonLoc;
-  SourceLocation RParenLoc;
 
-protected:
   CXXExpansionStmt(StmtClass SC, EmptyShell Empty);
   CXXExpansionStmt(StmtClass SC, ExpansionStmtDecl *ESD, Stmt *Init,
                    DeclStmt *ExpansionVar, SourceLocation ForLoc,
@@ -563,7 +565,6 @@ public:
   }
 
   bool hasDependentSize() const;
-  size_t getNumInstantiations() const;
 
   ExpansionStmtDecl* getDecl() { return ParentDecl; }
   const ExpansionStmtDecl* getDecl() const { return ParentDecl; }
@@ -617,6 +618,94 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXEnumeratingExpansionStmtClass;
+  }
+};
+
+/// Represents an unexpanded iterating expansion statement.
+///
+/// The expression used to compute the size of the expansion is not stored in
+/// this as it is only created at the moment of expansion.
+class CXXIteratingExpansionStmt : public CXXExpansionStmt {
+  friend class ASTStmtReader;
+
+  enum SubStmt {
+    RANGE,
+    BEGIN,
+    END,
+    COUNT
+  };
+
+  // This must be the first member of this class.
+  DeclStmt* SubStmts[COUNT];
+
+public:
+  CXXIteratingExpansionStmt(EmptyShell Empty);
+  CXXIteratingExpansionStmt(ExpansionStmtDecl *ESD, Stmt *Init,
+                            DeclStmt *ExpansionVar, DeclStmt *Range,
+                            DeclStmt *Begin, DeclStmt *End,
+                            SourceLocation ForLoc, SourceLocation LParenLoc,
+                            SourceLocation ColonLoc, SourceLocation RParenLoc);
+
+  const DeclStmt* getRangeVarStmt() const { return SubStmts[RANGE]; }
+  DeclStmt* getRangeVarStmt() { return SubStmts[RANGE]; }
+  void setRangeVarStmt(DeclStmt* S) { SubStmts[RANGE] = S; }
+
+  const VarDecl* getRangeVar() const {
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  VarDecl* getRangeVar() {
+    return cast<VarDecl>(getRangeVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt* getBeginVarStmt() const { return SubStmts[BEGIN]; }
+  DeclStmt* getBeginVarStmt() { return SubStmts[BEGIN]; }
+  void setBeginVarStmt(DeclStmt* S) { SubStmts[BEGIN] = S; }
+
+  const VarDecl* getBeginVar() const {
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  VarDecl* getBeginVar() {
+    return cast<VarDecl>(getBeginVarStmt()->getSingleDecl());
+  }
+
+  const DeclStmt* getEndVarStmt() const { return SubStmts[END]; }
+  DeclStmt* getEndVarStmt() { return SubStmts[END]; }
+  void setEndVarStmt(DeclStmt* S) { SubStmts[END] = S; }
+
+  const VarDecl* getEndVar() const {
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  VarDecl* getEndVar() {
+    return cast<VarDecl>(getEndVarStmt()->getSingleDecl());
+  }
+
+  child_range children() {
+    const_child_range CCR =
+        const_cast<const CXXIteratingExpansionStmt *>(this)->children();
+    return child_range(cast_away_const(CCR.begin()),
+                       cast_away_const(CCR.end()));
+  }
+
+  const_child_range children() const {
+    // Build a contiguous range consisting of the end of the base
+    // CXXExpansionStmt’s SubStmts and ours.
+    //
+    // This is rather terrible, but allocating all this state in the derived
+    // classes of CXXExpansionStmt instead or moving it into trailing data
+    // would be quite a bit more complicated.
+    //
+    // FIXME: There ought to be a better way of doing this.
+    Stmt *const *FirstParentSubStmt = CXXExpansionStmt::SubStmts;
+    unsigned Count = static_cast<unsigned>(CXXExpansionStmt::COUNT) +
+                     static_cast<unsigned>(CXXIteratingExpansionStmt::COUNT);
+    return const_child_range(FirstParentSubStmt, FirstParentSubStmt + Count);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXIteratingExpansionStmtClass;
   }
 };
 

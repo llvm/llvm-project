@@ -857,6 +857,35 @@ public:
 
   StmtResult TransformOMPInformationalDirective(OMPExecutableDirective *S);
 
+  struct TransformCXXExpansionStmtResult {
+    ExpansionStmtDecl* NewESD{};
+    Stmt* NewInit{};
+    DeclStmt* NewExpansionVarDecl{};
+    bool isValid() const { return NewESD != nullptr; }
+  };
+
+  TransformCXXExpansionStmtResult
+  TransformCXXExpansionStmtCommonParts(CXXExpansionStmt *S) {
+    Decl* ESD = getDerived().TransformDecl(S->getDecl()->getLocation(), S->getDecl());
+    if (!ESD || ESD->isInvalidDecl())
+      return {};
+
+    Stmt *Init = S->getInit();
+    if (Init) {
+      StmtResult SR = getDerived().TransformStmt(Init);
+      if (SR.isInvalid())
+        return {};
+      Init = SR.get();
+    }
+
+    StmtResult ExpansionVar = getDerived().TransformStmt(S->getExpansionVarStmt());
+    if (ExpansionVar.isInvalid())
+      return {};
+
+    return {cast<ExpansionStmtDecl>(ESD), Init, ExpansionVar.getAs<DeclStmt>()};
+  }
+
+
 // FIXME: We use LLVM_ATTRIBUTE_NOINLINE because inlining causes a ridiculous
 // amount of stack usage with clang.
 #define STMT(Node, Parent)                        \
@@ -9287,31 +9316,46 @@ TreeTransform<Derived>::TransformCXXForRangeStmt(CXXForRangeStmt *S) {
 template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformCXXEnumeratingExpansionStmt(
     CXXEnumeratingExpansionStmt *S) {
-  Decl* ESD = getDerived().TransformDecl(S->getDecl()->getLocation(), S->getDecl());
-  if (!ESD || ESD->isInvalidDecl())
-    return StmtError();
-
-  Stmt *Init = S->getInit();
-  if (Init) {
-    StmtResult SR = getDerived().TransformStmt(Init);
-    if (SR.isInvalid())
-      return StmtError();
-    Init = SR.get();
-  }
-
-  StmtResult ExpansionVar = getDerived().TransformStmt(S->getExpansionVarStmt());
-  if (ExpansionVar.isInvalid())
+  TransformCXXExpansionStmtResult Common = TransformCXXExpansionStmtCommonParts(S);
+  if (!Common.isValid())
     return StmtError();
 
   auto *Expansion = new (SemaRef.Context) CXXEnumeratingExpansionStmt(
-      cast<ExpansionStmtDecl>(ESD), Init, ExpansionVar.getAs<DeclStmt>(),
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl, S->getForLoc(),
+      S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
+
+  StmtResult Body = getDerived().TransformStmt(S->getBody());
+  if (Body.isInvalid())
+    return StmtError();
+
+  return SemaRef.FinishCXXExpansionStmt(Expansion, Body.get());
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformCXXIteratingExpansionStmt(
+    CXXIteratingExpansionStmt *S) {
+  TransformCXXExpansionStmtResult Common = TransformCXXExpansionStmtCommonParts(S);
+  if (!Common.isValid())
+    return StmtError();
+
+  StmtResult Range = getDerived().TransformStmt(S->getRangeVarStmt());
+  if (Range.isInvalid())
+    return StmtError();
+
+  StmtResult Begin = getDerived().TransformStmt(S->getBeginVarStmt());
+  StmtResult End = getDerived().TransformStmt(S->getEndVarStmt());
+  if (Begin.isInvalid() || End.isInvalid())
+    return StmtError();
+
+  auto *Expansion = new (SemaRef.Context) CXXIteratingExpansionStmt(
+      Common.NewESD, Common.NewInit, Common.NewExpansionVarDecl,
+      Range.getAs<DeclStmt>(), Begin.getAs<DeclStmt>(), End.getAs<DeclStmt>(),
       S->getForLoc(), S->getLParenLoc(), S->getColonLoc(), S->getRParenLoc());
 
   StmtResult Body = getDerived().TransformStmt(S->getBody());
   if (Body.isInvalid())
     return StmtError();
 
-  // Finish expanding the statement.
   return SemaRef.FinishCXXExpansionStmt(Expansion, Body.get());
 }
 

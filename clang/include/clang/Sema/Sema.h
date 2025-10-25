@@ -15693,6 +15693,7 @@ public:
   BuildCXXExpansionInitListSelectExpr(CXXExpansionInitListExpr *Range,
                                       Expr *Idx);
 
+  std::optional<uint64_t> ComputeExpansionSize(CXXExpansionStmt *Expansion);
   ///@}
 };
 

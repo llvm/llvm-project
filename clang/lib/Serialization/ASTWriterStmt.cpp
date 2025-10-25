@@ -1733,6 +1733,15 @@ void ASTStmtWriter::VisitCXXEnumeratingExpansionStmt(
   Code = serialization::STMT_CXX_ENUMERATING_EXPANSION;
 }
 
+void ASTStmtWriter::VisitCXXIteratingExpansionStmt(
+    CXXIteratingExpansionStmt *S) {
+  VisitCXXExpansionStmt(S);
+  Record.AddStmt(S->getRangeVarStmt());
+  Record.AddStmt(S->getBeginVarStmt());
+  Record.AddStmt(S->getEndVarStmt());
+  Code = serialization::STMT_CXX_ITERATING_EXPANSION;
+}
+
 void ASTStmtWriter::VisitCXXExpansionInitListExpr(CXXExpansionInitListExpr *E) {
   VisitExpr(E);
   Record.push_back(E->getNumExprs());

@@ -291,6 +291,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXEnumeratingExpansionStmtClass:
+  case Stmt::CXXIteratingExpansionStmtClass:
   case Stmt::CXXExpansionInstantiationStmtClass:
     K = CXCursor_UnexposedStmt;
     break;
