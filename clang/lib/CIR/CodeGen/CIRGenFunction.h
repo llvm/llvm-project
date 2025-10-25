@@ -1332,6 +1332,9 @@ public:
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
   cir::CallOp emitCoroEndBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
   cir::CallOp emitCoroIDBuiltinCall(mlir::Location loc, mlir::Value nullPtr);
+  cir::CallOp emitCoroAllocBuiltinCall(mlir::Location loc);
+  cir::CallOp emitCoroBeginBuiltinCall(mlir::Location loc,
+                                       mlir::Value coroframeAddr);
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);
 

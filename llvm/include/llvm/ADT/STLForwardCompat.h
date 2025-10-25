@@ -126,7 +126,7 @@ struct detector<std::void_t<Op<Args...>>, Op, Args...> {
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
-struct identity_cxx20 // NOLINT(readability-identifier-naming)
+struct identity // NOLINT(readability-identifier-naming)
 {
   using is_transparent = void;
 
