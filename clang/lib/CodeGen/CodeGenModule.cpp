@@ -4054,17 +4054,12 @@ static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
 
   // Check if the aliasee exists.
   if (!CGM.lookupRepresentativeDecl(AA->getAliasee(), AliaseeGD)) {
-    if (LangOpts.CUDA)
-      // In CUDA/HIP, if the aliasee is not found, skip the alias emission.
-      // This is not a hard error as this branch is executed for both the host
-      // and device, with no respect to where the aliasee is defined.
-      return true;
-
-    // For OpenMP, lookupRepresentativeDecl should always find the aliasee, this
-    // is an error
-    CGM.getDiags().Report(AA->getLocation(), diag::err_alias_to_undefined)
-        << false << true;
-    return false;
+    // If the aliasee is not found, skip the alias emission.
+    // This is not a hard error as this branch is executed for both the host
+    // and device, with no respect to where the aliasee is defined.
+    // For some OpenMP cases (functions) this will return true even if the
+    // aliasee is not on the device, which is handled by the case below
+    return true;
   }
 
   const auto *AliaseeDecl = dyn_cast<ValueDecl>(AliaseeGD.getDecl());

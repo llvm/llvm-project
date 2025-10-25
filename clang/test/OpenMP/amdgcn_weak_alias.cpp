@@ -6,10 +6,16 @@
 //.
 // HOST: @_Z3Onev = weak alias i32 (), ptr @_Z5__Onev
 // HOST: @_Z3Onef = weak alias float (float), ptr @_Z5__Onef
+// HOST: @_Z4One_v = alias i32 (), ptr @_Z5__Onev
+// HOST: @_Z4One_f = alias float (float), ptr @_Z5__Onef
 // HOST: @_Z3Twov = weak alias i32 (), ptr @_Z5__Twov
 // HOST: @_Z3Twof = weak alias float (float), ptr @_Z5__Twof
+// HOST: @_Z4Two_v = alias i32 (), ptr @_Z5__Twov
+// HOST: @_Z4Two_f = alias float (float), ptr @_Z5__Twof
 // HOST: @_Z5Threev = weak alias i32 (), ptr @_Z7__Threev
+// HOST: @_Z6Three_v = alias i32 (), ptr @_Z7__Threev
 // HOST: @_Z4Fourv = weak alias i32 (), ptr @_Z6__Fourv
+// HOST: @_Z5Four_v = alias i32 (), ptr @_Z6__Fourv
 //.
 // DEVICE: @__omp_rtl_debug_kind = weak_odr hidden addrspace(1) constant i32 0
 // DEVICE: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden addrspace(1) constant i32 0
@@ -18,7 +24,10 @@
 // DEVICE: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden addrspace(1) constant i32 0
 // DEVICE: @_Z3Twov = weak hidden alias i32 (), ptr @_Z5__Twov
 // DEVICE: @_Z3Twof = weak hidden alias float (float), ptr @_Z5__Twof
+// DEVICE: @_Z4Two_v = hidden alias i32 (), ptr @_Z5__Twov
+// DEVICE: @_Z4Two_f = hidden alias float (float), ptr @_Z5__Twof
 // DEVICE: @_Z5Threev = weak hidden alias i32 (), ptr @_Z7__Threev
+// DEVICE: @_Z6Three_v = hidden alias i32 (), ptr @_Z7__Threev
 //.
 // HOST-LABEL: define dso_local noundef i32 @_Z5__Onev(
 // HOST-SAME: ) #[[ATTR0:[0-9]+]] {
@@ -26,7 +35,6 @@
 // HOST-NEXT:    ret i32 1
 //
 int __One(void) { return 1; }
-
 // HOST-LABEL: define dso_local noundef float @_Z5__Onef(
 // HOST-SAME: float noundef [[F:%.*]]) #[[ATTR0]] {
 // HOST-NEXT:  [[ENTRY:.*:]]
@@ -39,6 +47,8 @@ int __One(void) { return 1; }
 float __One(float f) { return 1.0f * f; }
 int One(void) __attribute__((weak, alias("_Z5__Onev")));
 float One(float f) __attribute__((weak, alias("_Z5__Onef")));
+int One_(void) __attribute__((alias("_Z5__Onev")));
+float One_(float f) __attribute__((alias("_Z5__Onef")));
 
 #pragma omp declare target
 // HOST-LABEL: define dso_local noundef i32 @_Z5__Twov(
@@ -78,6 +88,8 @@ int __Two(void) { return 2; }
 float __Two(float f) { return 2.0f * f; }
 int Two(void) __attribute__((weak, alias("_Z5__Twov")));
 float Two(float f) __attribute__((weak, alias("_Z5__Twof")));
+int Two_(void) __attribute__((alias("_Z5__Twov")));
+float Two_(float f) __attribute__((alias("_Z5__Twof")));
 #pragma omp end declare target
 
 #pragma omp declare target
@@ -95,7 +107,9 @@ float Two(float f) __attribute__((weak, alias("_Z5__Twof")));
 //
 constexpr int __Three(void) { return 3; }
 int Three(void) __attribute__((weak, alias("_Z7__Threev")));
+int Three_(void) __attribute__((alias("_Z7__Threev")));
 #pragma omp end declare target
+
 // HOST-LABEL: define linkonce_odr noundef i32 @_Z6__Fourv(
 // HOST-SAME: ) #[[ATTR0]] comdat {
 // HOST-NEXT:  [[ENTRY:.*:]]
@@ -103,6 +117,7 @@ int Three(void) __attribute__((weak, alias("_Z7__Threev")));
 //
 constexpr int __Four(void) { return 4; }
 int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
+int Four_(void) __attribute__((alias("_Z6__Fourv")));
 //.
 // HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
