@@ -12,6 +12,8 @@ import requests
 
 import generate_test_report_lib
 
+# These are IP addresses of the two premerge advisor instances. They should
+# eventually be updated to domain names.
 PREMERGE_ADVISOR_URLS = [
     "http://34.82.126.63:5000/upload",
     "http://136.114.125.23:5000/upload",
