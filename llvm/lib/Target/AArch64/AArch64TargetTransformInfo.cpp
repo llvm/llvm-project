@@ -224,7 +224,8 @@ static cl::opt<bool> EnableScalableAutovecInStreamingMode(
 static bool isSMEABIRoutineCall(const CallInst &CI,
                                 const AArch64TargetLowering &TLI) {
   const auto *F = CI.getCalledFunction();
-  return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
+  return F &&
+         SMEAttrs(F->getName(), TLI.getRuntimeLibcallsInfo()).isSMEABIRoutine();
 }
 
 /// Returns true if the function has explicit operations that can only be
@@ -355,7 +356,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   // change only once and avoid inlining of G into F.
 
   SMEAttrs FAttrs(*F);
-  SMECallAttrs CallAttrs(Call, getTLI());
+  SMECallAttrs CallAttrs(Call, &getTLI()->getRuntimeLibcallsInfo());
 
   if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
