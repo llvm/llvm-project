@@ -219,6 +219,7 @@ LLVM_ABI void initializeStaticDataAnnotatorPass(PassRegistry &);
 LLVM_ABI void initializeMachinePipelinerPass(PassRegistry &);
 LLVM_ABI void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegionInfoPassPass(PassRegistry &);
+LLVM_ABI void initializeMachineRegisterClassInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void
 initializeMachineSanitizerBinaryMetadataLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMIR2VecVocabLegacyAnalysisPass(PassRegistry &);
@@ -345,6 +346,7 @@ LLVM_ABI void initializeWindowsSecureHotPatchingPass(PassRegistry &);
 LLVM_ABI void initializeWinEHPreparePass(PassRegistry &);
 LLVM_ABI void initializeWriteBitcodePassPass(PassRegistry &);
 LLVM_ABI void initializeXRayInstrumentationLegacyPass(PassRegistry &);
+>>>>>>> master
 
 } // end namespace llvm
 

@@ -117,6 +117,7 @@
 ; GCN-O0-NEXT:        Live Interval Analysis
 ; GCN-O0-NEXT:        Virtual Register Map
 ; GCN-O0-NEXT:        Live Register Matrix
+; GCN-O0-NEXT:        Machine Register Class Info Analysis
 ; GCN-O0-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI Lower WWM Copies
@@ -324,6 +325,7 @@
 ; GCN-O1-NEXT:        Machine Common Subexpression Elimination
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Cycle Info Analysis
+; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Machine code sinking
 ; GCN-O1-NEXT:        Peephole Optimizations
 ; GCN-O1-NEXT:        Remove dead machine instructions
@@ -348,6 +350,7 @@
 ; GCN-O1-NEXT:        Slot index numbering
 ; GCN-O1-NEXT:        Live Interval Analysis
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
+; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Register Coalescer
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-NEXT:        Rewrite Partial Register Uses
@@ -371,6 +374,7 @@
 ; GCN-O1-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-NEXT:        Virtual Register Map
 ; GCN-O1-NEXT:        Live Register Matrix
+; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-NEXT:        Live Stack Slot Analysis
 ; GCN-O1-NEXT:        Greedy Register Allocator
@@ -397,6 +401,7 @@
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
+; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Shrink Wrapping analysis
 ; GCN-O1-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
 ; GCN-O1-NEXT:        Machine Late Instructions Cleanup Pass
@@ -631,6 +636,7 @@
 ; GCN-O1-OPTS-NEXT:        Machine Common Subexpression Elimination
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
+; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Machine code sinking
 ; GCN-O1-OPTS-NEXT:        Peephole Optimizations
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
@@ -662,6 +668,7 @@
 ; GCN-O1-OPTS-NEXT:        Slot index numbering
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
+; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
@@ -686,6 +693,7 @@
 ; GCN-O1-OPTS-NEXT:        SI lower SGPR spill instructions
 ; GCN-O1-OPTS-NEXT:        Virtual Register Map
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
+; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O1-OPTS-NEXT:        Live Stack Slot Analysis
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
@@ -712,6 +720,7 @@
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
+; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Shrink Wrapping analysis
 ; GCN-O1-OPTS-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
 ; GCN-O1-OPTS-NEXT:        Machine Late Instructions Cleanup Pass
@@ -951,6 +960,7 @@
 ; GCN-O2-NEXT:        Machine Common Subexpression Elimination
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Cycle Info Analysis
+; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Machine code sinking
 ; GCN-O2-NEXT:        Peephole Optimizations
 ; GCN-O2-NEXT:        Remove dead machine instructions
@@ -982,6 +992,7 @@
 ; GCN-O2-NEXT:        Slot index numbering
 ; GCN-O2-NEXT:        Live Interval Analysis
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
+; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Register Coalescer
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O2-NEXT:        Rewrite Partial Register Uses
@@ -1007,6 +1018,7 @@
 ; GCN-O2-NEXT:        SI lower SGPR spill instructions
 ; GCN-O2-NEXT:        Virtual Register Map
 ; GCN-O2-NEXT:        Live Register Matrix
+; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O2-NEXT:        Live Stack Slot Analysis
 ; GCN-O2-NEXT:        Greedy Register Allocator
@@ -1033,6 +1045,7 @@
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
+; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Shrink Wrapping analysis
 ; GCN-O2-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
 ; GCN-O2-NEXT:        Machine Late Instructions Cleanup Pass
@@ -1285,6 +1298,7 @@
 ; GCN-O3-NEXT:        Machine Common Subexpression Elimination
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
+; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Machine code sinking
 ; GCN-O3-NEXT:        Peephole Optimizations
 ; GCN-O3-NEXT:        Remove dead machine instructions
@@ -1316,6 +1330,7 @@
 ; GCN-O3-NEXT:        Slot index numbering
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
+; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Register Coalescer
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
@@ -1341,6 +1356,7 @@
 ; GCN-O3-NEXT:        SI lower SGPR spill instructions
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
+; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        SI Pre-allocate WWM Registers
 ; GCN-O3-NEXT:        Live Stack Slot Analysis
 ; GCN-O3-NEXT:        Greedy Register Allocator
@@ -1367,6 +1383,7 @@
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
+; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Shrink Wrapping analysis
 ; GCN-O3-NEXT:        Prologue/Epilogue Insertion & Frame Finalization
 ; GCN-O3-NEXT:        Machine Late Instructions Cleanup Pass
