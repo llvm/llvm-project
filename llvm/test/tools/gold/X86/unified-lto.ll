@@ -25,10 +25,10 @@
 ; Constant propagation is not supported by thin LTO.
 ; With full LTO we fold argument into constant 43
 ; CHECK:       define dso_local noundef i32 @main()
-; CHECK-NEXT:    tail call void @foo()
+; CHECK-NEXT:    tail call fastcc void @foo()
 ; CHECK-NEXT:    ret i32 43
 
-; CHECK:       define internal void @foo()
+; CHECK:       define internal fastcc void @foo()
 ; CHECK-NEXT:    store i32 43, ptr @_g, align 4
 
 ; ThinLTO doesn't import foo, because the latter has noinline attribute

@@ -7223,3 +7223,19 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
 
   return false;
 }
+
+bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
+  bool HasEGPR = ST->hasEGPR();
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  for (User *U : F.users()) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getParent()->getParent();
+    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+      return false;
+  }
+
+  return true;
+}

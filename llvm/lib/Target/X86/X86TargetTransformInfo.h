@@ -319,9 +319,7 @@ public:
   unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
                              Type *ScalarValTy) const override;
 
-  bool useFastCCForInternalCall(Function &F) const override {
-    return !ST->is64Bit() || ST->hasEGPR();
-  }
+  bool useFastCCForInternalCall(Function &F) const override;
 
 private:
   bool supportsGather() const;

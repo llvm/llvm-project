@@ -12,7 +12,7 @@ define dso_local i32 @main() {
 ; CHECK-LABEL: define {{[^@]+}}@main() local_unnamed_addr {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    store ptr null, ptr @_ZL3g_i, align 8
-; CHECK-NEXT:    call void @_ZL13PutsSomethingv()
+; CHECK-NEXT:    call fastcc void @_ZL13PutsSomethingv()
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:

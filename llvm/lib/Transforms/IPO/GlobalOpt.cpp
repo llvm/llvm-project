@@ -1788,26 +1788,6 @@ static void changeCallSitesToColdCC(Function *F) {
         Call->setCallingConv(CallingConv::Cold);
 }
 
-// This function checks if the input function F and its all call sites'
-// containing function allow to use fastcc, returning false if any of them don't
-// allow it.
-static bool useFastCCForInternalCall(
-    Function &F, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-  if (!GetTTI(F).useFastCCForInternalCall(F))
-    return false;
-
-  for (User *U : F.users()) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB || CB->getCalledOperand() != &F)
-      continue;
-    Function *CallerFunc = CB->getParent()->getParent();
-    if (!GetTTI(*CallerFunc).useFastCCForInternalCall(F))
-      return false;
-  }
-
-  return true;
-}
-
 // This function iterates over all the call instructions in the input Function
 // and checks that all call sites are in cold blocks and are allowed to use the
 // coldcc calling convention.
@@ -2040,7 +2020,8 @@ OptimizeFunctions(Module &M,
       // If this function has a calling convention worth changing, is not a
       // varargs function, is only called directly, and is supported by the
       // target, promote it to use the Fast calling convention.
-      if (useFastCCForInternalCall(F, GetTTI)) {
+      TargetTransformInfo &TTI = GetTTI(F);
+      if (TTI.useFastCCForInternalCall(F)) {
         F.setCallingConv(CallingConv::Fast);
         ChangeCalleesToFastCall(&F);
         ++NumFastCallFns;
