@@ -610,14 +610,6 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
 
-/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
-/// or split the data to two <128 x i32>.
-LLVM_ABI FunctionPass *createX86LowerAMXTypePass();
-
-/// The pass transforms amx intrinsics to scalar operation if the function has
-/// optnone attribute or it is O0.
-LLVM_ABI FunctionPass *createX86LowerAMXIntrinsicsPass();
-
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing
 LLVM_ABI FunctionPass *createRegAllocScoringPass();
