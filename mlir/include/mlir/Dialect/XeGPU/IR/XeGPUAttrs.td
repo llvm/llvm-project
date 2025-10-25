@@ -167,6 +167,16 @@ def XeGPU_FenceScope: I32EnumAttr<"FenceScope",
   let cppNamespace = "::mlir::xegpu";
 }
 
+def XeGPU_WGLevel: I32EnumAttrCase<"WG", 0, "wg">;
+def XeGPU_SGLevel: I32EnumAttrCase<"SG", 1, "sg">;
+def XeGPU_WILevel: I32EnumAttrCase<"WI", 2, "wi">;
+def XeGPU_DistributionLevel: I32EnumAttr<"DistributionLevel",
+      "The enumeration for the scope of fence operation.",
+      [XeGPU_WGLevel, XeGPU_SGLevel, XeGPU_WILevel]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
 def XeGPU_FenceScopeAttr:
   EnumAttr<XeGPU_Dialect, XeGPU_FenceScope, "fence_scope"> {
     let summary = [{Describes the scope of fence.
@@ -223,18 +233,18 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout by dropping InstData",
                     "xegpu::DistributeLayoutAttr",
                     "dropInstData">,
-    InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
-                      indices based on the effective subgroup layout.}],
+    InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
+                      indices based on the effective `level` layout.}],
                     "FailureOr<SmallVector<Value>>",
-                    "delinearizeSubgroupId",
-                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for blocks
-                      assigned to a subgroup identified by linearId. The shape parameter
-                      represents the workgroup-level problem size. Each subgroup may access
+                    "delinearizeId",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "xegpu::DistributionLevel": $level)>,
+    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for dist units
+                      assigned to a `level` identified by linearId. The shape parameter
+                      represents the higher-level problem size. Each `level` may access
                       multiple blocks according to round-robin distribution rules.}],
                     "FailureOr<SmallVector<SmallVector<Value>>>",
-                    "getOffsets",
-                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>,
+                    "computeDistributedCoords",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape, "xegpu::DistributionLevel": $level)>,
     InterfaceMethod</*desc=*/[{Check if this layout can be achieved by applying a transpose
                      to some other layout according to given permutation of (0...n-1).}],
                     /*retTy=*/"bool",
@@ -476,17 +486,17 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
       return {};
     }
 
-    /// Delinearizes a linear subgroup ID into its multidimensional indices
-    /// based on the effective subgroup layout.
+    /// Delinearizes a linear ID into its multidimensional indices
+    /// based on the effective `level` layout.
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId, xegpu::DistributionLevel level);
 
-    /// Generates instructions to compute multidimensional offsets for blocks
-    /// assigned to a subgroup identified by linearId. The shape parameter
-    /// represents the workgroup-level problem size. Each subgroup may access
+    /// Generates instructions to compute multidimensional offsets for dist units
+    /// assigned to a `level` identified by linearId. The shape parameter
+    /// represents the higher-level problem size. Each `level` may access
     /// multiple blocks according to round-robin distribution rules.
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other) { return false; }
@@ -643,14 +653,15 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     /// Delinearizes a linear subgroup ID into its multidimensional indices
     /// based on the effective subgroup layout.
     FailureOr<SmallVector<Value>>
-    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+    delinearizeId(OpBuilder &builder, Location loc, Value linearId, xegpu::DistributionLevel level);
 
     /// Generates instructions to compute multidimensional offsets for blocks
     /// assigned to a subgroup identified by linearId. The shape parameter
     /// represents the workgroup-level problem size. Each subgroup may access
     /// multiple blocks according to round-robin distribution rules.
+
     FailureOr<SmallVector<SmallVector<Value>>>
-    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+    computeDistributedCoords(OpBuilder &builder, Location loc, Value linearId,ArrayRef<int64_t> shape, xegpu::DistributionLevel level);
 
     /// Check if this is slice of some other layout.
     bool isSliceOf(const xegpu::DistributeLayoutAttr &other);

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
+#include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
@@ -919,7 +920,7 @@ struct MatrixOpDistribution final : public gpu::WarpDistributionPattern {
     constexpr bool isLoad{std::is_same_v<MatrixOp, xegpu::LoadMatrixOp>};
     int operandIdx{-1};
 
-    VectorType payloadTy;
+    VectorType sgPayloadTy;
     VectorType warpResultTy;
     if constexpr (isLoad) {
       OpOperand *producedByLastLoad = getWarpResult(warpOp, [&](Operation *op) {
@@ -929,12 +930,12 @@ struct MatrixOpDistribution final : public gpu::WarpDistributionPattern {
         return rewriter.notifyMatchFailure(
             warpOp, "The last op is not xegpu::LoadMatrixOp");
       operandIdx = producedByLastLoad->getOperandNumber();
-      payloadTy = dyn_cast<VectorType>(matrixOp.getResult().getType());
+      sgPayloadTy = dyn_cast<VectorType>(matrixOp.getResult().getType());
       warpResultTy = cast<VectorType>(warpOp.getResult(operandIdx).getType());
     } else {
-      payloadTy = dyn_cast<VectorType>(matrixOp.getData().getType());
+      sgPayloadTy = dyn_cast<VectorType>(matrixOp.getData().getType());
     }
-    if (!payloadTy)
+    if (!sgPayloadTy)
       return rewriter.notifyMatchFailure(
           matrixOp, "the matrix op payload must be a vector type");
 
@@ -952,7 +953,7 @@ struct MatrixOpDistribution final : public gpu::WarpDistributionPattern {
           matrixOp, "the matrix operation lacks layout attribute");
 
     FailureOr<VectorType> distPayloadByWarpOpOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, payloadTy);
+        getDistVecTypeBasedOnLaneLayout(layout, sgPayloadTy);
     if (failed(distPayloadByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(
           matrixOp,
@@ -977,23 +978,36 @@ struct MatrixOpDistribution final : public gpu::WarpDistributionPattern {
     SmallVector<Value> newOperands = llvm::map_to_vector(
         newRetIndices, [&](size_t idx) { return newWarpOp.getResult(idx); });
 
-    rewriter.setInsertionPointAfter(newWarpOp);
-    unsigned operandIdxToModify = offsetsStartIdx + offsetsAsValues.size() - 1;
-    newOperands[operandIdxToModify] = arith::AddIOp::create(
-        rewriter, loc, rewriter.getIndexType(), newOperands[operandIdxToModify],
-        newWarpOp.getLaneid());
-
     SmallVector<int64_t> newConstOffsets{matrixOp.getConstOffsets()};
     std::fill(newConstOffsets.begin(), newConstOffsets.end(),
               ShapedType::kDynamic);
     DenseI64ArrayAttr newConstOffsetsAttr =
         rewriter.getDenseI64ArrayAttr(newConstOffsets);
-    ValueRange newOffsets = ValueRange(newOperands).drop_front(offsetsStartIdx);
+    ValueRange currentOffsets =
+        ValueRange(newOperands).drop_front(offsetsStartIdx);
+
+    rewriter.setInsertionPointAfter(newWarpOp);
+    SmallVector<Value> newOffsets = currentOffsets;
+    if (!matrixOp.getSubgroupBlockIoAttr()) {
+      auto maybeDescOffsets = layout.computeDistributedCoords(
+          rewriter, loc, newWarpOp.getLaneid(), sgPayloadTy.getShape(),
+          xegpu::DistributionLevel::WI);
+      if (failed(maybeDescOffsets))
+        return failure();
+      assert(maybeDescOffsets.value().size() == 1 &&
+             "Expected same number of offset sets as number of accessed "
+             "sub-tensors or sub-memory descriptors.");
+      SmallVector<OpFoldResult> ofrVec = xegpu::addWithRightAligned(
+          rewriter, loc, getAsOpFoldResult(maybeDescOffsets.value()[0]),
+          offsets);
+      newOffsets = llvm::to_vector(llvm::map_range(
+          ofrVec, [&](OpFoldResult ofr) -> Value { return cast<Value>(ofr); }));
+    }
 
     if constexpr (isLoad) {
       xegpu::LoadMatrixOp newOp = xegpu::LoadMatrixOp::create(
           rewriter, newWarpOp.getLoc(), *distPayloadByWarpOpOrFailure,
-          newOperands[0], newOffsets, newConstOffsetsAttr,
+          newOperands[0], ValueRange(newOffsets), newConstOffsetsAttr,
           matrixOp.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
       // Resolve the output type and replace all uses.
       rewriter.replaceAllUsesWith(
@@ -1002,8 +1016,8 @@ struct MatrixOpDistribution final : public gpu::WarpDistributionPattern {
     } else {
       xegpu::StoreMatrixOp::create(
           rewriter, loc, TypeRange{}, newOperands[0], newOperands[1],
-          newOffsets, newConstOffsetsAttr, matrixOp.getSubgroupBlockIoAttr(),
-          xegpu::DistributeLayoutAttr{});
+          ValueRange(newOffsets), newConstOffsetsAttr,
+          matrixOp.getSubgroupBlockIoAttr(), xegpu::DistributeLayoutAttr{});
       rewriter.eraseOp(matrixOp);
     }
     return success();
