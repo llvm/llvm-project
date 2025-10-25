@@ -124,7 +124,7 @@ void SimpleNativeMemoryMap::releaseMultiple(OnReleaseCompleteFn &&OnComplete,
 }
 
 void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
-                                       InitializeRequest FR) {
+                                       InitializeRequest IR) {
 
   void *Base = nullptr;
 
@@ -132,7 +132,7 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
   // std::vector<std::pair<void*, size_t>> InitializeSegments;
 
   // Check segment validity before proceeding.
-  for (auto &S : FR.Segments) {
+  for (auto &S : IR.Segments) {
 
     if (S.Content.size() > S.Size) {
       return OnComplete(make_error<StringError>(
@@ -173,7 +173,7 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
                                 "finalization requires at least "
                                 "one standard-lifetime segment"));
 
-  auto DeallocActions = runFinalizeActions(std::move(FR.AAPs));
+  auto DeallocActions = runFinalizeActions(std::move(IR.AAPs));
   if (!DeallocActions)
     return OnComplete(DeallocActions.takeError());
 

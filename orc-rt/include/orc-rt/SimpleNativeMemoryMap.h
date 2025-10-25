@@ -73,7 +73,7 @@ public:
   /// Writes content into the requested ranges, applies permissions, and
   /// performs allocation actions.
   using OnInitializeCompleteFn = move_only_function<void(Expected<void *>)>;
-  void initialize(OnInitializeCompleteFn &&OnComplete, InitializeRequest FR);
+  void initialize(OnInitializeCompleteFn &&OnComplete, InitializeRequest IR);
 
   /// Runs deallocation actions and resets memory permissions for the requested
   /// memory.

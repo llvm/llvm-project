@@ -472,6 +472,10 @@ void CheckHelper::Check(const Symbol &symbol) {
       messages_.Say(
           "A function result may not also be a named constant"_err_en_US);
     }
+    if (!IsProcedurePointer(symbol) && IsProcedure(symbol)) {
+      messages_.Say(
+          "A function result may not be a procedure unless it is a procedure pointer"_err_en_US);
+    }
   }
   if (IsAutomatic(symbol)) {
     if (const Symbol * common{FindCommonBlockContaining(symbol)}) {
@@ -1781,7 +1785,7 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
           if (!chars->IsCompatibleWith(*previousChars,
-                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
+                  /*ignoreImplicitVsExplicit=*/true, &whyNot)) {
             if (auto *msg{Warn(common::UsageWarning::ExternalInterfaceMismatch,
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
@@ -3622,6 +3626,7 @@ void CheckHelper::CheckDioDtvArg(const Symbol &proc, const Symbol &subp,
                 ioKind == common::DefinedIo::ReadUnformatted
             ? Attr::INTENT_INOUT
             : Attr::INTENT_IN);
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 
@@ -3687,6 +3692,7 @@ void CheckHelper::CheckDioAssumedLenCharacterArg(const Symbol &subp,
           "Dummy argument '%s' of a defined input/output procedure must be assumed-length CHARACTER of default kind"_err_en_US,
           arg->name());
     }
+    CheckDioDummyIsScalar(subp, *arg);
   }
 }
 

@@ -74,12 +74,12 @@ class SPSSerializationTraits<SPSSimpleNativeMemoryMapInitializeRequest,
                            SPSSequence<SPSAllocActionPair>>;
 
 public:
-  static size_t size(const TestSNMMInitializeRequest &FR) {
-    return SPSType::AsArgList::size(FR.Segments, FR.AAPs);
+  static size_t size(const TestSNMMInitializeRequest &IR) {
+    return SPSType::AsArgList::size(IR.Segments, IR.AAPs);
   }
   static bool serialize(SPSOutputBuffer &OB,
-                        const TestSNMMInitializeRequest &FR) {
-    return SPSType::AsArgList::serialize(OB, FR.Segments, FR.AAPs);
+                        const TestSNMMInitializeRequest &IR) {
+    return SPSType::AsArgList::serialize(OB, IR.Segments, IR.AAPs);
   }
 };
 
@@ -120,13 +120,13 @@ static void snmm_releaseMultiple(OnCompleteFn &&OnComplete,
 template <typename OnCompleteFn>
 static void snmm_initialize(OnCompleteFn &&OnComplete,
                             SimpleNativeMemoryMap *Instance,
-                            TestSNMMInitializeRequest FR) {
+                            TestSNMMInitializeRequest IR) {
   using SPSSig = SPSExpected<SPSExecutorAddr>(
       SPSExecutorAddr, SPSSimpleNativeMemoryMapInitializeRequest);
   SPSWrapperFunction<SPSSig>::call(
       DirectCaller(nullptr,
                    orc_rt_SimpleNativeMemoryMap_initialize_sps_wrapper),
-      std::forward<OnCompleteFn>(OnComplete), Instance, std::move(FR));
+      std::forward<OnCompleteFn>(OnComplete), Instance, std::move(IR));
 }
 
 template <typename OnCompleteFn>
@@ -194,7 +194,7 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
   std::future<Expected<Expected<void *>>> InitializeKey;
-  TestSNMMInitializeRequest FR;
+  TestSNMMInitializeRequest IR;
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue1 = 0; // Read from pre-filled content
@@ -208,11 +208,11 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   memcpy(Content.data(), &SentinelValue3, sizeof(uint64_t));
   memcpy(Content.data() + sizeof(uint64_t), &SentinelValue1, sizeof(uint64_t));
 
-  FR.Segments.push_back({MemProt::Read | MemProt::Write, InitializeBase,
+  IR.Segments.push_back({MemProt::Read | MemProt::Write, InitializeBase,
                          64 * 1024, std::move(Content)});
 
   // Read initial content into Sentinel 1.
-  FR.AAPs.push_back({
+  IR.AAPs.push_back({
       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue1),
           ExecutorAddr::fromPtr(InitializeBase)),
@@ -220,7 +220,7 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
   });
 
   // Write value in finalize action, then read back into Sentinel 2.
-  FR.AAPs.push_back(
+  IR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction,
            ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t),
@@ -230,14 +230,14 @@ TEST(SimpleNativeMemoryMap, FullPipelineForOneRWSegment) {
            ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t))});
 
   // Read first 64 bits of the zero-fill region.
-  FR.AAPs.push_back({
+  IR.AAPs.push_back({
       *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
           read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue3),
           ExecutorAddr::fromPtr(InitializeBase) + sizeof(uint64_t) * 2),
       {} // No dealloc action.
   });
 
-  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(IR));
   void *InitializeKeyAddr = cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue1, 42U);
@@ -268,22 +268,22 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeShutdown) {
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
   std::future<Expected<Expected<void *>>> InitializeKey;
-  TestSNMMInitializeRequest FR;
+  TestSNMMInitializeRequest IR;
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
-  FR.Segments.push_back(
+  IR.Segments.push_back(
       {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
 
-  FR.AAPs.push_back(
+  IR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
            ExecutorAddr::fromPtr(InitializeBase))});
-  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(IR));
   cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue, 0U);
@@ -305,22 +305,22 @@ TEST(SimpleNativeMemoryMap, ReserveInitializeDetachShutdown) {
   void *Addr = cantFail(cantFail(ReserveAddr.get()));
 
   std::future<Expected<Expected<void *>>> InitializeKey;
-  TestSNMMInitializeRequest FR;
+  TestSNMMInitializeRequest IR;
   char *InitializeBase = // Initialize addr at non-zero (64kb) offset from base.
       reinterpret_cast<char *>(Addr) + 64 * 1024;
   uint64_t SentinelValue = 0;
 
-  FR.Segments.push_back(
+  IR.Segments.push_back(
       {MemProt::Read | MemProt::Write, InitializeBase, 64 * 1024});
 
-  FR.AAPs.push_back(
+  IR.AAPs.push_back(
       {*MakeAllocAction<SPSExecutorAddr, uint64_t>::from(
            write_value_sps_allocaction, ExecutorAddr::fromPtr(InitializeBase),
            uint64_t(42)),
        *MakeAllocAction<SPSExecutorAddr, SPSExecutorAddr>::from(
            read_value_sps_allocaction, ExecutorAddr::fromPtr(&SentinelValue),
            ExecutorAddr::fromPtr(InitializeBase))});
-  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(FR));
+  snmm_initialize(waitFor(InitializeKey), SNMM.get(), std::move(IR));
   cantFail(cantFail(InitializeKey.get()));
 
   EXPECT_EQ(SentinelValue, 0U);

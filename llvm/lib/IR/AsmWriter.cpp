@@ -2374,16 +2374,21 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Out << "!DICompileUnit(";
   MDFieldPrinter Printer(Out, WriterCtx);
 
-  auto Lang = N->getSourceLanguage();
-  if (Lang.hasVersionedName())
+  DISourceLanguageName Lang = N->getSourceLanguage();
+
+  if (Lang.hasVersionedName()) {
     Printer.printDwarfEnum(
         "sourceLanguageName",
         static_cast<llvm::dwarf::SourceLanguageName>(Lang.getName()),
         dwarf::SourceLanguageNameString,
         /* ShouldSkipZero */ false);
-  else
+
+    Printer.printInt("sourceLanguageVersion", Lang.getVersion(),
+                     /*ShouldSkipZero=*/true);
+  } else {
     Printer.printDwarfEnum("language", Lang.getName(), dwarf::LanguageString,
                            /* ShouldSkipZero */ false);
+  }
 
   Printer.printMetadata("file", N->getRawFile(), /* ShouldSkipNull */ false);
   Printer.printString("producer", N->getProducer());
@@ -3191,7 +3196,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
   for (auto &GlobalList : *TheIndex) {
     auto GUID = GlobalList.first;
-    for (auto &Summary : GlobalList.second.SummaryList)
+    for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
@@ -4077,10 +4082,10 @@ void AssemblyWriter::printTypeIdentities() {
 
 /// printFunction - Print all aspects of a function.
 void AssemblyWriter::printFunction(const Function *F) {
-  if (AnnotationWriter) AnnotationWriter->emitFunctionAnnot(F, Out);
-
   if (F->isMaterializable())
     Out << "; Materializable\n";
+  else if (AnnotationWriter)
+    AnnotationWriter->emitFunctionAnnot(F, Out);
 
   const AttributeList &Attrs = F->getAttributes();
   if (Attrs.hasFnAttrs()) {

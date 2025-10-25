@@ -10,6 +10,8 @@ static_library("CAS") {
     "ObjectStore.cpp",
     "OnDiskCommon.cpp",
     "OnDiskDataAllocator.cpp",
+    "OnDiskGraphDB.cpp",
+    "OnDiskKeyValueDB.cpp",
     "OnDiskTrieRawHashMap.cpp",
   ]
 }

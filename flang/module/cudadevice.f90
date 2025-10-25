@@ -21,23 +21,32 @@ implicit none
     procedure :: syncthreads
   end interface
 
-  interface
-    attributes(device) integer function syncthreads_and(value)
-      integer, value :: value
+  interface syncthreads_and
+    attributes(device) integer function syncthreads_and_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_and_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_and
 
-  interface
-    attributes(device) integer function syncthreads_count(value)
-      integer, value :: value
+  interface syncthreads_count
+    attributes(device) integer function syncthreads_count_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_count_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_count
 
-  interface
-    attributes(device) integer function syncthreads_or(value)
-      integer, value :: value
+  interface syncthreads_or
+    attributes(device) integer function syncthreads_or_i4(value)
+      integer(4), value :: value
     end function
-  end interface
+    attributes(device) integer function syncthreads_or_l4(value)
+      logical(4), value :: value
+    end function
+  end interface syncthreads_or
 
   interface
     attributes(device) subroutine syncwarp(mask)
@@ -2031,6 +2040,15 @@ implicit none
       integer(4), device :: src(*)
       integer(4), shared :: dst(*)
       integer(4), value  :: nbytes
+    end subroutine
+  end interface
+
+  interface
+    attributes(device) subroutine tma_bulk_s2g(src, dst, nbytes)
+      !dir$ ignore_tkr src, dst
+      integer(4), shared  :: src(*)
+      integer(4), device  :: dst(*)
+      integer(4), value   :: nbytes
     end subroutine
   end interface
 

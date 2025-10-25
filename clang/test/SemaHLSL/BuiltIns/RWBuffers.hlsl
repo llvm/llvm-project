@@ -20,7 +20,7 @@ RWBuffer<double2> r4;
 // expected-error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
 // expected-note@*:* {{because 'RWBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(RWBuffer<int>)' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(hlsl::RWBuffer<int>)' evaluated to false}}
 RWBuffer<RWBuffer<int> > r5;
 
 struct s {
@@ -66,7 +66,7 @@ RWBuffer<half[4]> r10;
 typedef vector<int, 8> int8;
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'int8' (aka 'vector<int, 8>') does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(int8)' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<int, 8>)' evaluated to false}}
 RWBuffer<int8> r11;
 
 typedef int MyInt;
@@ -91,7 +91,7 @@ RWBuffer<numbers> r15;
 
 // expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'double3' (aka 'vector<double, 3>') does not satisfy '__is_typed_resource_element_compatible'}}
-// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(double3)' evaluated to false}}
+// expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(vector<double, 3>)' evaluated to false}}
 RWBuffer<double3> r16;
 
 
