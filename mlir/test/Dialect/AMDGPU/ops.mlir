@@ -559,9 +559,16 @@ func.func @sched_barrier() {
 }
 
 // CHECK-LABEL: func @mfma
-func.func @mfma(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
-  // CHECK: amdgpu.mfma
-  %0 = amdgpu.mfma %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, k = 1 : i32, m = 32 : i32, n = 32 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
+func.func @mfma(%arg0 : vector<4xf16>, %arg1 : vector<4xf32>) -> vector<4xf32> {
+  // CHECK: amdgpu.mfma 16x16x16
+  %0 = amdgpu.mfma 16x16x16 %arg0 * %arg0 + %arg1 { abid = 0 : i32, cbsz = 0 : i32 } blgp = none : vector<4xf16>, vector<4xf16>, vector<4xf32>
+  func.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: func @mfma_with_blocks
+func.func @mfma_with_blocks(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
+  // CHECK: amdgpu.mfma 32x32x1
+  %0 = amdgpu.mfma 32x32x1 %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, f32, vector<32xf32>
   func.return %0 : vector<32xf32>
 }
 
