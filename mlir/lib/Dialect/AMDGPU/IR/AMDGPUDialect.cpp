@@ -399,7 +399,7 @@ LogicalResult WMMAOp::verify() {
 
   if (!sourceAElemType.isFloat(8) && sourceAElemType != sourceBElemType) {
     return emitOpError(
-               "source element types much match (except for fp8/bf8) but have ")
+               "source element types must match (except for fp8/bf8) but have ")
            << sourceAType << " and " << sourceBType;
   }
 

@@ -181,7 +181,7 @@ func.func @wmma_source_length_mismatch(%arg0 : vector<8xf16>, %arg1 : vector<16x
 // -----
 
 func.func @wmma_mismatched_float_types(%arg0 : vector<8xf16>, %arg1 : vector<8xbf16>, %arg2 : vector<8xf32>) -> vector<8xf32> {
-  // expected-error@+1 {{'amdgpu.wmma' op source element types much match (except for fp8/bf8)}}
+  // expected-error@+1 {{'amdgpu.wmma' op source element types must match (except for fp8/bf8)}}
   %0 = amdgpu.wmma 16x16x16 %arg0 * %arg1 + %arg2 : vector<8xf16>, vector<8xbf16>, vector<8xf32>
   func.return %0 : vector<8xf32>
 }
@@ -189,7 +189,7 @@ func.func @wmma_mismatched_float_types(%arg0 : vector<8xf16>, %arg1 : vector<8xb
 // -----
 
 func.func @wmma_mismatched_int_types(%arg0 : vector<8xi8>, %arg1 : vector<8xi4>, %arg2 : vector<8xi32>) -> vector<8xi32> {
-  // expected-error@+1 {{'amdgpu.wmma' op source element types much match (except for fp8/bf8)}}
+  // expected-error@+1 {{'amdgpu.wmma' op source element types must match (except for fp8/bf8)}}
   %0 = amdgpu.wmma 16x16x16 %arg0 * %arg1 + %arg2 : vector<8xi8>, vector<8xi4>, vector<8xi32>
   func.return %0 : vector<8xi32>
 }
