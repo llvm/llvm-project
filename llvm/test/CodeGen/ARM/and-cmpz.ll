@@ -92,7 +92,7 @@ false:
 ; T1:      uxth    r0, r0
 ; T1-NEXT: lsrs    r0, r0, #9
 ; T1-NEXT: bne
-; T2:      uxth    r0, r0
+; T2:      and	r0, r0, #65024
 ; T2-NEXT: movs    r2, #0
 ; T2-NEXT: cmp.w   r2, r0, lsr #9
 define void @i16_cmpz(i16 %x, ptr %foo) {
