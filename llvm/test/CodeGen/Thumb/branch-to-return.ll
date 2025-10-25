@@ -26,7 +26,7 @@ define i32 @foo(ptr %x, i32 %n) {
 ; CHECK-NEXT:    ldr.w r0, [r12]
 ; CHECK-NEXT:  .LBB0_6: @ %for.body.preheader1
 ; CHECK-NEXT:    subs r3, r1, r3
-; CHECK-NEXT:    mvn r2, #12
+; CHECK-NEXT:    mvn r2, #15
 ; CHECK-NEXT:    and.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    add r1, r12
 ; CHECK-NEXT:  .LBB0_7: @ %for.body

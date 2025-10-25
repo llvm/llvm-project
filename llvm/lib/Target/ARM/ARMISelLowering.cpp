@@ -20138,6 +20138,17 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
 }
 
+static bool isLegalLogicalImmediate(unsigned Imm,
+                                    const ARMSubtarget *Subtarget) {
+  // Handle special cases first
+  if (!Subtarget->isThumb())
+    return ARM_AM::getSOImmVal(Imm) != -1;
+  if (Subtarget->isThumb2())
+    return ARM_AM::getT2SOImmVal(Imm) != -1;
+  // Thumb1 only has 8-bit unsigned immediate.
+  return Imm <= 255;
+}
+
 bool ARMTargetLowering::targetShrinkDemandedConstant(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
     TargetLoweringOpt &TLO) const {
@@ -20179,7 +20190,6 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   // loop in obscure cases.)
   if (ExpandedMask == ~0U)
     return TLO.CombineTo(Op, Op.getOperand(0));
-
   auto IsLegalMask = [ShrunkMask, ExpandedMask](unsigned Mask) -> bool {
     return (ShrunkMask & Mask) == ShrunkMask && (~ExpandedMask & Mask) == 0;
   };
@@ -20192,22 +20202,33 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
     return TLO.CombineTo(Op, NewOp);
   };
 
-  // Prefer uxtb mask.
+  // If thumb, check for uxth and uxtb masks.
+  if (Subtarget->isThumb1Only()) {
+    if (IsLegalMask(0xFF))
+      return UseMask(0xFF);
+
+    if (IsLegalMask(0xFF00))
+      return UseMask(0xFF00);
+  }
+
+  // Don't optimize if it is legal already.
+  if (isLegalLogicalImmediate(Mask, Subtarget))
+    return false;
+
+  // bic
+  if (isLegalLogicalImmediate(~Mask, Subtarget))
+    return false;
+
   if (IsLegalMask(0xFF))
     return UseMask(0xFF);
 
-  // Prefer uxth mask.
-  if (IsLegalMask(0xFFFF))
-    return UseMask(0xFFFF);
+  if (IsLegalMask(0xFF00))
+    return UseMask(0xFF00);
 
-  // [1, 255] is Thumb1 movs+ands, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if (ShrunkMask < 256)
+  if (isLegalLogicalImmediate(ShrunkMask, Subtarget))
     return UseMask(ShrunkMask);
 
-  // [-256, -2] is Thumb1 movs+bics, legal immediate for ARM/Thumb2.
-  // FIXME: Prefer a contiguous sequence of bits for other optimizations.
-  if ((int)ExpandedMask <= -2 && (int)ExpandedMask >= -256)
+  if (isLegalLogicalImmediate(~ExpandedMask, Subtarget))
     return UseMask(ExpandedMask);
 
   // Potential improvements:
@@ -20215,7 +20236,6 @@ bool ARMTargetLowering::targetShrinkDemandedConstant(
   // We could try to recognize lsls+lsrs or lsrs+lsls pairs here.
   // We could try to prefer Thumb1 immediates which can be lowered to a
   // two-instruction sequence.
-  // We could try to recognize more legal ARM/Thumb2 immediates here.
 
   return false;
 }
