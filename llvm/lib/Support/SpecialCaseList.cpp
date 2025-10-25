@@ -89,17 +89,69 @@ void SpecialCaseList::GlobMatcher::preprocess(bool BySize) {
       return A.Name.size() < B.Name.size();
     });
   }
+
+  for (const auto &G : Globs) {
+    StringRef Prefix = G.Pattern.prefix();
+    StringRef Suffix = G.Pattern.suffix();
+
+    if (Suffix.empty() && Prefix.empty()) {
+      // If both prefix and suffix are empty put into special tree to search by
+      // substring in a middle.
+      StringRef Substr = G.Pattern.longest_substr();
+      if (!Substr.empty()) {
+        // But only if substring is not empty. Searching this tree is more
+        // expensive.
+        auto &V = SubstrToGlob.emplace(Substr).first->second;
+        V.emplace_back(&G);
+        continue;
+      }
+    }
+
+    auto &PToGlob = SuffixPrefixToGlob.emplace(reverse(Suffix)).first->second;
+    auto &V = PToGlob.emplace(Prefix).first->second;
+    V.emplace_back(&G);
+  }
 }
 
 void SpecialCaseList::GlobMatcher::match(
     StringRef Query,
     llvm::function_ref<void(StringRef Rule, unsigned LineNo)> Cb) const {
-  for (const auto &G : reverse(Globs))
-    if (G.Pattern.match(Query))
-      return Cb(G.Name, G.LineNo);
+  if (!SuffixPrefixToGlob.empty()) {
+    for (const auto &[_, PToGlob] :
+         SuffixPrefixToGlob.find_prefixes(reverse(Query))) {
+      for (const auto &[_, V] : PToGlob.find_prefixes(Query)) {
+        for (const auto *G : V) {
+          // Each value of the map is a vector of globs sorted as from best to
+          // worst.
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            // As soon as we find a match in the vector we can break for the vector,
+            // vector, but we still need to continue for other values in the
+            // map, as they may contain a better match.
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (!SubstrToGlob.empty()) {
+    // As we don't know when substring exactly starts, we will try all
+    // possibilities. In most cases search will fail on first characters.
+    for (StringRef Q = Query; !Q.empty(); Q = Q.drop_front()) {
+      for (const auto &[_, V] : SubstrToGlob.find_prefixes(Q)) {
+        for (const auto *G : reverse(V)) {
+          if (G->Pattern.match(Query)) {
+            Cb(G->Name, G->LineNo);
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
-SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
+   SpecialCaseList::Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
     : RemoveDotSlash(RemoveDotSlash) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
