@@ -24,7 +24,9 @@
 #include "provenance.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/reference.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -3504,6 +3506,8 @@ struct OmpDirectiveName {
 
 // type-name list item
 struct OmpTypeName {
+  CharBlock source;
+  mutable const semantics::DeclTypeSpec *declTypeSpec{nullptr};
   UNION_CLASS_BOILERPLATE(OmpTypeName);
   std::variant<TypeSpec, DeclarationTypeSpec> u;
 };
@@ -3532,6 +3536,32 @@ struct OmpObjectList {
   WRAPPER_CLASS_BOILERPLATE(OmpObjectList, std::list<OmpObject>);
 };
 
+struct OmpStylizedDeclaration {
+  COPY_AND_ASSIGN_BOILERPLATE(OmpStylizedDeclaration);
+  using EmptyTrait = std::true_type;
+  common::Reference<const OmpTypeName> type;
+  EntityDecl var;
+};
+
+struct OmpStylizedInstance {
+  struct Instance {
+    UNION_CLASS_BOILERPLATE(Instance);
+    std::variant<AssignmentStmt, CallStmt, common::Indirection<Expr>>
+        u;
+  };
+  TUPLE_CLASS_BOILERPLATE(OmpStylizedInstance);
+  std::tuple<std::list<OmpStylizedDeclaration>, Instance> t;
+};
+
+class ParseState;
+
+struct OmpStylizedExpression {
+  CharBlock source;
+  const ParseState *state{nullptr};
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpStylizedExpression, std::list<OmpStylizedInstance>);
+};
+
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
 //
 // reduction-identifier ->
@@ -3549,9 +3579,22 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpCombinerExpression {
-  UNION_CLASS_BOILERPLATE(OmpCombinerExpression);
-  std::variant<AssignmentStmt, FunctionReference> u;
+struct OmpCombinerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpCombinerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
+};
+
+// Ref: [4.5:222:7-8], [5.0:305:28-29], [5.1:337:20-21], [5.2:127:6-8],
+//      [6.0:242:3-5]
+//
+// initializer-expression ->                        // since 4.5
+//    OMP_PRIV = expression |
+//    subroutine-name(argument-list)
+struct OmpInitializerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpInitializerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
 };
 
 inline namespace arguments {
@@ -4558,10 +4601,10 @@ struct OmpInitializerProc {
   TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
   std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
 };
+
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
-  UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, AssignmentStmt> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpInitializerClause, OmpInitializerExpression);
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
