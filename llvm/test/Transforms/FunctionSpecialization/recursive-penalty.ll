@@ -1,7 +1,8 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine,simplifycfg" -S \
 ; RUN:     -funcspec-min-function-size=23 -funcspec-max-iters=100 \
-; RUN:     -debug-only=function-specialization < %s 2>&1 | FileCheck %s
+; RUN:     -debug-only=function-specialization -funcspec-min-codesize-savings=1 \
+; RUN:     < %s 2>&1 | FileCheck %s
 
 ; Make sure the number of specializations created are not
 ; linear to the number of iterations (funcspec-max-iters).

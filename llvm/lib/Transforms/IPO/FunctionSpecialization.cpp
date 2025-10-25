@@ -995,7 +995,7 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
                    << (CodeSizeSavings * 100 / FuncSize) << "%)}\n");
 
         // Minimum codesize savings.
-        if (CodeSizeSavings < MinCodeSizeSavings * FuncSize / 100)
+        if (CodeSizeSavings <= MinCodeSizeSavings * FuncSize / 100)
           return false;
 
         // Lazily compute the Latency, to avoid unnecessarily computing BFI.
