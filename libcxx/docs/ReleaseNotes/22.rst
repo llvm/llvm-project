@@ -49,8 +49,8 @@ Implemented Papers
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
 - P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
-- P0881R7: A Proposal to add stacktrace library (`Github <https://github.com/llvm/llvm-project/issues/105131>`__)
-- P2301R1: Add a `pmr` alias for `std::stacktrace` (`Github <https://github.com/llvm/llvm-project/issues/105167>`__)
+- P0881R7: A Proposal to add stacktrace library (`Github <https://llvm.org/PR105131>`__)
+- P2301R1: Add a `pmr` alias for `std::stacktrace` (`Github <https://llvm.org/PR105167>`__)
 
 Improvements and New Features
 -----------------------------
