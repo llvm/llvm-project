@@ -10000,10 +10000,10 @@ static llvm::Value *emitDeviceID(
   return DeviceID;
 }
 
-static std::pair<llvm::Value *, bool>
+static std::pair<llvm::Value *, OMPDynGroupprivateFallbackType>
 emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
   llvm::Value *DynGP = CGF.Builder.getInt32(0);
-  bool DynGPFallback = false;
+  OMPDynGroupprivateFallbackType DynGPFallback;
 
   if (auto *DynGPClause = D.getSingleClause<OMPDynGroupprivateClause>()) {
     CodeGenFunction::RunCleanupsScope DynGPScope(CGF);
@@ -10011,10 +10011,22 @@ emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
         CGF.EmitScalarExpr(DynGPClause->getSize(), /*IgnoreResultAssign=*/true);
     DynGP = CGF.Builder.CreateIntCast(DynGPVal, CGF.Int32Ty,
                                       /*isSigned=*/false);
-    DynGPFallback = (DynGPClause->getFirstDynGroupprivateModifier() !=
-                         OMPC_DYN_GROUPPRIVATE_strict &&
-                     DynGPClause->getSecondDynGroupprivateModifier() !=
-                         OMPC_DYN_GROUPPRIVATE_strict);
+    auto FallbackModifier = DynGPClause->getDynGroupprivateFallbackModifier();
+    switch (FallbackModifier) {
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_abort:
+      DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
+      break;
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_null:
+      DynGPFallback = OMPDynGroupprivateFallbackType::Null;
+      break;
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_default_mem:
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown:
+      // This is the default for dyn_groupprivate.
+      DynGPFallback = OMPDynGroupprivateFallbackType::DefaultMem;
+      break;
+    default:
+      llvm_unreachable("Unknown fallback modifier for OpenMP dyn_groupprivate");
+    }
   } else if (auto *OMPXDynCGClause =
                  D.getSingleClause<OMPXDynCGroupMemClause>()) {
     CodeGenFunction::RunCleanupsScope DynCGMemScope(CGF);
@@ -10022,9 +10034,11 @@ emitDynCGroupMem(const OMPExecutableDirective &D, CodeGenFunction &CGF) {
                                                   /*IgnoreResultAssign=*/true);
     DynGP = CGF.Builder.CreateIntCast(DynCGMemVal, CGF.Int32Ty,
                                       /*isSigned=*/false);
+    DynGPFallback = OMPDynGroupprivateFallbackType::Abort;
   }
   return {DynGP, DynGPFallback};
 }
+
 static void genMapInfoForCaptures(
     MappableExprsHandler &MEHandler, CodeGenFunction &CGF,
     const CapturedStmt &CS, llvm::SmallVectorImpl<llvm::Value *> &CapturedVars,
