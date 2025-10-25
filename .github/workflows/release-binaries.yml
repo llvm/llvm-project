@@ -75,9 +75,10 @@ jobs:
       shell: bash
       env:
         VCPKG_BUILD_TYPE: release
+        VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
       run: |
-        vcpkg install libxml2:x64-windows-static
-        find /c/ -iname 'libxml*.lib'
+        vcpkg --verbose install libxml2:x64-windows-static
+        find /c/vcpkg -iname 'libxml*.lib'
 
     - name: Checkout LLVM
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
