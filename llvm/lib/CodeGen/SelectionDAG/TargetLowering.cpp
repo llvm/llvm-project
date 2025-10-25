@@ -1753,13 +1753,15 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
-    // If we're testing X < 0 or X >= 0 then we only need the sign mask of the
+    // If we're testing X < 0, X >= 0, X <= -1 (X is of integer type) or X > -1 (X is of integer type) then we only need the sign mask of the
     // previous result
-    // FIXME: We're limiting to integer types here, but this should also work
+    // FIXME: We're limiting to integer types for X < 0 or X >= 0 here, but this should also work
     // if we don't care about FP signed-zero. The use of SETLT with FP means
     // that we don't care about NaNs.
-    if ((CC == ISD::SETLT || CC == ISD::SETGE) &&
-        Op1.getValueType().isInteger() && isNullOrNullSplat(Op1)) {
+    if (((CC == ISD::SETLT || CC == ISD::SETGE) &&
+        Op1.getValueType().isInteger() && isNullOrNullSplat(Op1)) ||
+      ((CC == ISD::SETLE || CC == ISD::SETGT) &&
+        Op1.getValueType().isInteger() && isAllOnesOrAllOnesSplat(Op1))){
       KnownBits KnownOp0;
       bool Changed = false;
       if (SimplifyDemandedBits(
@@ -1773,7 +1775,8 @@ bool TargetLowering::SimplifyDemandedBits(
           Op0.getScalarValueSizeInBits() == BitWidth &&
           getBooleanContents(Op0.getValueType()) ==
               BooleanContent::ZeroOrNegativeOneBooleanContent) {
-        if (CC == ISD::SETGE) {
+        // If we remove a >= 0 or > -1 (for integers), we need to introduce a NOT Operation
+        if (CC == ISD::SETGE || CC == ISD::SETGT) {
           SDLoc DL(Op); 
           EVT VT = Op0.getValueType();
           SDValue NotOp0 = TLO.DAG.getNode(ISD::XOR, DL, VT, Op0, TLO.DAG.getAllOnesConstant(DL, VT));
