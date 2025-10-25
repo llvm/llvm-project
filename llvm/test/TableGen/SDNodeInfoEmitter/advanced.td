@@ -46,15 +46,22 @@ def my_node_3 : SDNode<
      SDNPOutGlue, SDNPInGlue, SDNPOptInGlue]
 >;
 
+def my_node_4 : SDNode<
+    "MyTargetISD::NODE_4",
+    SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisVT<1, f32>]>,
+    [SDNPOptChain]
+>;
+
 // CHECK:       namespace llvm::MyTargetISD {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum GenNodeType : unsigned {
 // CHECK-NEXT:    NODE_1 = ISD::BUILTIN_OP_END,
 // CHECK-NEXT:    NODE_2,
 // CHECK-NEXT:    NODE_3,
+// CHECK-NEXT:    NODE_4,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE_3 + 1;
+// CHECK-NEXT:  static constexpr unsigned GENERATED_OPCODE_END = NODE_4 + 1;
 // CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm::MyTargetISD
 
@@ -63,6 +70,7 @@ def my_node_3 : SDNode<
 // CHECK-NEXT:    "MyTargetISD::NODE_1\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_2\0"
 // CHECK-NEXT:    "MyTargetISD::NODE_3\0"
+// CHECK-NEXT:    "MyTargetISD::NODE_4\0"
 // CHECK-NEXT:    ;
 
 // CHECK:       static const SDTypeConstraint MyTargetSDTypeConstraints[] = {
@@ -81,14 +89,16 @@ def my_node_3 : SDNode<
 // CHECK-SAME:            {SDTCisInt, 2, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
 // CHECK-SAME:            {SDTCisPtrTy, 1, 0, MVT::INVALID_SIMPLE_VALUE_TYPE},
 // CHECK-SAME:            {SDTCisVT, 0, 0, MVT::i1},
+// CHECK-NEXT:    /* 15 */ {SDTCisVT, 1, 0, MVT::f32}, {SDTCisVT, 0, 0, MVT::f32},
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static const SDNodeDesc MyTargetSDNodeDescs[] = {
 // CHECK-NEXT:          {1, 1, 0|1<<SDNPHasChain, 0, 0, 1, 0, 2}, // NODE_1
 // CHECK-NEXT:          {3, 1, 0|1<<SDNPVariadic|1<<SDNPMemOperand, 0, 42, 21, 11, 4}, // NODE_2
 // CHECK-NEXT:          {2, -1, 0|1<<SDNPHasChain|1<<SDNPOutGlue|1<<SDNPInGlue|1<<SDNPOptInGlue, 0|1<<SDNFIsStrictFP, 24, 41, 2, 13}, // NODE_3
+// CHECK-NEXT:          {1, 1, 0|1<<SDNPOptChain, 0, 0, 61, 15, 2}, // NODE_4
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT: static const SDNodeInfo MyTargetGenSDNodeInfo(
-// CHECK-NEXT:     /*NumOpcodes=*/3, MyTargetSDNodeDescs,
+// CHECK-NEXT:     /*NumOpcodes=*/4, MyTargetSDNodeDescs,
 // CHECK-NEXT:     MyTargetSDNodeNames, MyTargetSDTypeConstraints);

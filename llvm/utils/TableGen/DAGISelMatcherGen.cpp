@@ -82,6 +82,10 @@ class MatcherGen {
   /// array of all of the recorded input nodes that have chains.
   SmallVector<unsigned, 2> MatchedChainNodes;
 
+  /// This maintains the position in the recorded nodes array for all recorded
+  /// input nodes that may have chains.
+  SmallVector<unsigned, 2> MatchedOptionalChainNodes;
+
   /// MatchedComplexPatterns - This maintains a list of all of the
   /// ComplexPatterns that we need to check. The second element of each pair
   /// is the recorded operand number of the input node.
@@ -370,18 +374,8 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
   // If this node has a chain, then the chain is operand #0 is the SDNode, and
   // the child numbers of the node are all offset by one.
   unsigned OpNo = 0;
-  if (N.NodeHasProperty(SDNPHasChain, CGP)) {
-    // Record the node and remember it in our chained nodes list.
-    AddMatcher(new RecordMatcher("'" + N.getOperator()->getName().str() +
-                                     "' chained node",
-                                 NextRecordedOperandNo));
-    // Remember all of the input chains our pattern will match.
-    MatchedChainNodes.push_back(NextRecordedOperandNo++);
 
-    // Don't look at the input chain when matching the tree pattern to the
-    // SDNode.
-    OpNo = 1;
-
+  const auto checkFoldableChain = [&]() {
     // If this node is not the root and the subtree underneath it produces a
     // chain, then the result of matching the node is also produce a chain.
     // Beyond that, this means that we're also folding (at least) the root node
@@ -420,12 +414,36 @@ void MatcherGen::EmitOperatorMatchCode(const TreePatternNode &N,
             Root.getOperator() == CGP.get_intrinsic_w_chain_sdnode() ||
             Root.getOperator() == CGP.get_intrinsic_wo_chain_sdnode() ||
             PInfo.getNumOperands() > 1 || PInfo.hasProperty(SDNPHasChain) ||
-            PInfo.hasProperty(SDNPInGlue) || PInfo.hasProperty(SDNPOptInGlue);
+            PInfo.hasProperty(SDNPInGlue) || PInfo.hasProperty(SDNPOptInGlue) ||
+            PInfo.hasProperty(SDNPOptChain);
       }
 
       if (NeedCheck)
         AddMatcher(new CheckFoldableChainNodeMatcher());
     }
+  };
+
+  if (N.NodeHasProperty(SDNPHasChain, CGP)) {
+    // Record the node and remember it in our chained nodes list.
+    AddMatcher(new RecordMatcher("'" + N.getOperator()->getName().str() +
+                                     "' chained node",
+                                 NextRecordedOperandNo));
+    // Remember all of the input chains our pattern will match.
+    MatchedChainNodes.push_back(NextRecordedOperandNo++);
+
+    // Don't look at the input chain when matching the tree pattern to the
+    // SDNode.
+    OpNo = 1;
+
+    checkFoldableChain();
+  }
+
+  if (N.NodeHasProperty(SDNPOptChain, CGP)) {
+    // Record the node and remember it in our possibly-chained nodes list.
+    AddMatcher(new RecordOptionalChainMatcher());
+    MatchedOptionalChainNodes.push_back(NextRecordedOperandNo++);
+
+    checkFoldableChain();
   }
 
   // If this node has an output glue and isn't the root, remember it.
@@ -692,7 +710,7 @@ void MatcherGen::EmitResultLeafAsOperand(const TreePatternNode &N,
       const Record *ImpDef = Def->getRecords().getDef("IMPLICIT_DEF");
       CodeGenInstruction &II = CGP.getTargetInfo().getInstruction(ImpDef);
       AddMatcher(new EmitNodeMatcher(II, ResultVT, {}, false, false, false,
-                                     false, -1, IDOperandNo));
+                                     false, false, -1, IDOperandNo));
       ResultOps.push_back(IDOperandNo);
       return;
     }
@@ -968,9 +986,12 @@ void MatcherGen::EmitResultInstructionAsOperand(
   assert((!ResultVTs.empty() || TreeHasOutGlue || NodeHasChain) &&
          "Node has no result");
 
+  bool NodeMayHaveChain =
+      Pattern.getSrcPattern().TreeHasProperty(SDNPOptChain, CGP);
   AddMatcher(new EmitNodeMatcher(II, ResultVTs, InstOps, NodeHasChain,
                                  TreeHasInGlue, TreeHasOutGlue, NodeHasMemRefs,
-                                 NumFixedArityOperands, NextRecordedOperandNo));
+                                 NodeMayHaveChain, NumFixedArityOperands,
+                                 NextRecordedOperandNo));
 
   // The non-chain and non-glue results of the newly emitted node get recorded.
   for (MVT::SimpleValueType ResultVT : ResultVTs) {
@@ -1023,7 +1044,7 @@ void MatcherGen::EmitResultCode() {
   // Patterns that match nodes with (potentially multiple) chain inputs have to
   // merge them together into a token factor.  This informs the generated code
   // what all the chained nodes are.
-  if (!MatchedChainNodes.empty())
+  if (!MatchedChainNodes.empty() || !MatchedOptionalChainNodes.empty())
     AddMatcher(new EmitMergeInputChainsMatcher(MatchedChainNodes));
 
   // Codegen the root of the result pattern, capturing the resulting values.

@@ -28,6 +28,7 @@ unsigned llvm::parseSDPatternOperatorProperties(const Record *R) {
                       .Case("SDNPSideEffect", SDNPSideEffect)
                       .Case("SDNPMemOperand", SDNPMemOperand)
                       .Case("SDNPVariadic", SDNPVariadic)
+                      .Case("SDNPOptChain", SDNPOptChain)
                       .Default(-1u);
     if (Offset != -1u)
       Properties |= 1 << Offset;
@@ -36,5 +37,13 @@ unsigned llvm::parseSDPatternOperatorProperties(const Record *R) {
                                        Property->getName() + "' on node '" +
                                        R->getName() + "'!");
   }
+
+  // Make some consistency checks.
+  if (Properties & (1 << SDNPHasChain) && Properties & (1 << SDNPOptChain))
+    PrintFatalError(R->getLoc(),
+                    "Properties 'SDNPHasChain' and 'SDNPOptChain' cannot be "
+                    "both specified on node '" +
+                        R->getName() + "'!");
+
   return Properties;
 }
