@@ -296,18 +296,18 @@ public:
     Value data;
     // Orig data shape is 3D for the array length case.
     if (origTensorDescType.getArrayLength() > 1) {
-      SmallVector<int64_t> arrayLenDataShape(origDataShape);
-      arrayLenDataShape.insert(arrayLenDataShape.begin(),
-                               origTensorDescType.getArrayLength());
-      auto arrayLenVecType =
-          VectorType::get(arrayLenDataShape, adaptorType.getElementType());
-      data = arith::ConstantOp::create(rewriter, loadNdOp->getLoc(),
-                                       arrayLenVecType,
-                                       rewriter.getZeroAttr(arrayLenVecType));
+      // SmallVector<int64_t> arrayLenDataShape(origDataShape);
+      // arrayLenDataShape.insert(arrayLenDataShape.begin(),
+      //                          origTensorDescType.getArrayLength());
+      // auto arrayLenVecType =
+      //     VectorType::get(arrayLenDataShape, adaptorType.getElementType());
+      // auto  = arith::ConstantOp::create(rewriter, loadNdOp->getLoc(),
+      //  arrayLenVecType,
+      //  rewriter.getZeroAttr(arrayLenVecType));
+      SmallVector<Value> arraySlices;
       for (int64_t i = 0; i < origTensorDescType.getArrayLength(); ++i) {
         Value slice = arith::ConstantOp::create(
-            rewriter, loadNdOp->getLoc(),
-            VectorType::get(origDataShape, adaptorType.getElementType()),
+            rewriter, loadNdOp->getLoc(), origVectorType,
             rewriter.getZeroAttr(origVectorType));
         // Increse the Y offset for each array slice.
         Value offsetY = convertToValue(rewriter, loadNdOp->getLoc(),
@@ -323,14 +323,20 @@ public:
             modifiedOffsets, hwSupportedShape,
             cast<TypedValue<xegpu::TensorDescType>>(adaptor.getTensorDesc()),
             loadNdOp);
-        // Insert slice to data.
-        data = vector::InsertOp::create(rewriter, loadNdOp->getLoc(), slice,
-                                        data, ArrayRef<int64_t>{i});
+        // // Insert slice to data.
+        // data = vector::InsertOp::create(rewriter, loadNdOp->getLoc(), slice,
+        //                                 data, ArrayRef<int64_t>{i});
+        // Bitcast back to original load shape without array length.
+        auto bitcastType = VectorType::get(origTensorDescType.getShape(),
+                                           origTensorDescType.getElementType());
+        slice = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
+                                          bitcastType, slice);
+        arraySlices.push_back(slice);
       }
-      // Cast back to the original type and replace all uses.
-      data = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
-                                       loadNdOp.getType(), data);
-      rewriter.replaceOp(loadNdOp, data);
+      // // Cast back to the original type and replace all uses.
+      // data = vector::BitCastOp::create(rewriter, loadNdOp->getLoc(),
+      //                                  loadNdOp.getType(), data);
+      rewriter.replaceOpWithMultiple(loadNdOp, {arraySlices});
       return success();
     }
     data = arith::ConstantOp::create(
@@ -352,12 +358,33 @@ public:
     return success();
   }
 };
+
+class VectorExtractOpPattern final
+    : public OpConversionPattern<vector::ExtractOp> {
+public:
+  using OpConversionPattern<vector::ExtractOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(vector::ExtractOp extractOp, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (adaptor.getSource().size() == 1)
+      return failure();
+    auto mixedPos = extractOp.getMixedPosition();
+    if (mixedPos.size() != 1)
+      return failure();
+    auto mayBeInt = getConstantIntValue(mixedPos[0]);
+    if (!mayBeInt)
+      return failure();
+    rewriter.replaceOp(extractOp, adaptor.getSource()[*mayBeInt]);
+    return success();
+  }
+};
+
 } // namespace
 
 void xegpu::populateXeGPUOptimizeTransposePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern>(
-      patterns.getContext());
+  patterns.add<XeGPUCreateNdDescOpPattern, XeGPULoadNdDescOpPattern,
+               VectorExtractOpPattern>(patterns.getContext());
 }
 
 namespace {
@@ -380,6 +407,10 @@ struct XeGPUOptimizeTransposePass final
     target.addDynamicallyLegalOp<xegpu::LoadNdOp>(
         [&](xegpu::LoadNdOp loadNdOp) {
           return !hasInvalidTranposeLayout(loadNdOp.getTensorDescType());
+        });
+    target.addDynamicallyLegalOp<vector::ExtractOp>(
+        [&](vector::ExtractOp extractOp) {
+          return extractOp.getSourceVectorType().getRank() != 3;
         });
     converter.addConversion([](Type type) { return type; });
 
