@@ -12,6 +12,7 @@ import shlex
 import shutil
 import tempfile
 import threading
+import resource
 import typing
 import traceback
 from typing import Optional, Tuple
@@ -605,7 +606,10 @@ def executeBuiltinUlimit(cmd, shenv):
     if len(cmd.args) != 3:
         raise InternalShellError(cmd, "'ulimit' requires two arguments")
     try:
-        new_limit = int(cmd.args[2])
+        if cmd.args[2] == "unlimited":
+            new_limit = resource.RLIM_INFINITY
+        else:
+            new_limit = int(cmd.args[2])
     except ValueError as err:
         raise InternalShellError(cmd, "Error: 'ulimit': %s" % str(err))
     if cmd.args[1] == "-v":
