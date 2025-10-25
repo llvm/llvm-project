@@ -664,6 +664,36 @@ llvm.func @rocdl.global.load.lds(%src : !llvm.ptr<1>, %dst: !llvm.ptr<3>) {
   llvm.return
 }
 
+llvm.func @rocdl.tensor.load.to.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                     %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK-LABEL @rocdl.tensor.load.to.lds
+  // CHECK: rocdl.tensor.load.to.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
+  rocdl.tensor.load.to.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
+  llvm.return
+}
+
+llvm.func @rocdl.tensor.store.from.lds(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>,
+                                        %dgroup2 : vector<4xi32>, %dgroup3 : vector<4xi32>) {
+  // CHECK-LABEL @rocdl.tensor.store.from.lds
+  // CHECK: rocdl.tensor.store.from.lds %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
+  rocdl.tensor.store.from.lds %dgroup0, %dgroup1, %dgroup2, %dgroup3, 0 : vector<4xi32>, vector<8xi32>, vector<4xi32>, vector<4xi32>
+  llvm.return
+}
+
+llvm.func @rocdl.tensor.load.to.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK-LABEL @rocdl.tensor.load.to.lds.d2
+  // CHECK: rocdl.tensor.load.to.lds.d2 %{{.*}}, %{{.*}}, 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.load.to.lds.d2 %dgroup0, %dgroup1, 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
+llvm.func @rocdl.tensor.store.from.lds.d2(%dgroup0 : vector<4xi32>, %dgroup1 : vector<8xi32>) {
+  // CHECK-LABEL @rocdl.tensor.store.from.lds.d2
+  // CHECK: rocdl.tensor.store.from.lds.d2 %{{.*}}, %{{.*}}, 0 : vector<4xi32>, vector<8xi32>
+  rocdl.tensor.store.from.lds.d2 %dgroup0, %dgroup1, 0 : vector<4xi32>, vector<8xi32>
+  llvm.return
+}
+
 llvm.func @rocdl.make.buffer.rsrc(%ptr : !llvm.ptr,
                                   %stride : i16,
                                   %numRecords : i64,

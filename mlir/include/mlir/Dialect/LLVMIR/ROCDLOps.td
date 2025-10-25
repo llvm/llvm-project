@@ -664,6 +664,50 @@ def ROCDL_GlobalLoadLDSOp :
 }
 
 //===---------------------------------------------------------------------===//
+// Tensor load/store intrinsics (available in GFX1250)
+//===---------------------------------------------------------------------===//
+
+// Base class for tensor load/store operations with 4 descriptor groups
+class ROCDL_TensorLDSIntrOp<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [4], ["cachePolicy"]> {
+  dag args = (ins LLVM_Type:$dgroup0, LLVM_Type:$dgroup1, LLVM_Type:$dgroup2,
+                  LLVM_Type:$dgroup3, I32Attr:$cachePolicy);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = [{
+    $dgroup0 `,` $dgroup1 `,` $dgroup2 `,` $dgroup3 `,` $cachePolicy
+    attr-dict `:` type($dgroup0) `,` type($dgroup1) `,` type($dgroup2) `,` type($dgroup3)
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getDgroup0(), getDgroup1(), getDgroup2(), getDgroup3()};
+    }
+  }];
+}
+
+// Base class for tensor load/store operations with 2 descriptor groups
+// (D2 variant)
+class ROCDL_TensorLDSIntrD2Op<string mnemonic> :
+  ROCDL_IntrOp<mnemonic, [], [], [], 0, 0, 1, 0, [2], ["cachePolicy"]> {
+  dag args = (ins LLVM_Type:$dgroup0, LLVM_Type:$dgroup1, I32Attr:$cachePolicy);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = [{
+    $dgroup0 `,` $dgroup1 `,` $cachePolicy
+    attr-dict `:` type($dgroup0) `,` type($dgroup1)
+  }];
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getDgroup0(), getDgroup1()};
+    }
+  }];
+}
+
+// Tensor load and store operations
+def ROCDL_TensorLoadToLDSOp : ROCDL_TensorLDSIntrOp<"tensor.load.to.lds">;
+def ROCDL_TensorStoreFromLDSOp : ROCDL_TensorLDSIntrOp<"tensor.store.from.lds">;
+def ROCDL_TensorLoadToLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.load.to.lds.d2">;
+def ROCDL_TensorStoreFromLDSD2Op : ROCDL_TensorLDSIntrD2Op<"tensor.store.from.lds.d2">;
+
+//===---------------------------------------------------------------------===//
 // Operations on raw buffer resources (stride of 0, bounds checks either off or in
 // raw buffer mode).
 //===---------------------------------------------------------------------===//
