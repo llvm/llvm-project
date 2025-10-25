@@ -625,32 +625,11 @@ if( MSVC )
   set(LLVM_WINSYSROOT "" CACHE STRING
     "If set, argument to clang-cl's /winsysroot")
 
-  if (LLVM_WINSYSROOT)
-    set(MSVC_DIA_SDK_DIR "${LLVM_WINSYSROOT}/DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  else()
-    set(MSVC_DIA_SDK_DIR "$ENV{VSINSTALLDIR}DIA SDK" CACHE PATH
-        "Path to the DIA SDK")
-  endif()
-
-  # See if the DIA SDK is available and usable.
-  # Due to a bug in MSVC 2013's installation software, it is possible
-  # for MSVC 2013 to write the DIA SDK into the Visual Studio 2012
-  # install directory.  If this happens, the installation is corrupt
-  # and there's nothing we can do.  It happens with enough frequency
-  # though that we should handle it.  We do so by simply checking that
-  # the DIA SDK folder exists.  Should this happen you will need to
-  # uninstall VS 2012 and then re-install VS 2013.
-  if (IS_DIRECTORY "${MSVC_DIA_SDK_DIR}")
-    set(HAVE_DIA_SDK 1)
-  else()
-    set(HAVE_DIA_SDK 0)
-  endif()
-
+  find_package(DIASDK)
   option(LLVM_ENABLE_DIA_SDK "Use MSVC DIA SDK for debugging if available."
-                             ${HAVE_DIA_SDK})
+                             ${DIASDK_FOUND})
 
-  if(LLVM_ENABLE_DIA_SDK AND NOT HAVE_DIA_SDK)
+  if(LLVM_ENABLE_DIA_SDK AND NOT DIASDK_FOUND)
     message(FATAL_ERROR "DIA SDK not found. If you have both VS 2012 and 2013 installed, you may need to uninstall the former and re-install the latter afterwards.")
   endif()
 else()
