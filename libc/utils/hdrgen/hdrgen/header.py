@@ -35,6 +35,13 @@ NONIDENTIFIER = re.compile("[^a-zA-Z0-9_]+")
 
 COMMON_HEADER = PurePosixPath("__llvm-libc-common.h")
 
+# These "attributes" are known macros defined in COMMON_HEADER.
+# Others are found in "llvm-libc-macros/{name}.h".
+COMMON_ATTRIBUTES = {
+    "_Noreturn",
+    "_Returns_twice",
+}
+
 # All the canonical identifiers are in lowercase for easy maintenance.
 # This maps them to the pretty descriptions to generate in header comments.
 LIBRARY_DESCRIPTIONS = {
@@ -50,9 +57,7 @@ LIBRARY_DESCRIPTIONS = {
 HEADER_TEMPLATE = """\
 //===-- {library} header <{header}> --===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+{license_lines}
 //
 //===---------------------------------------------------------------------===//
 
@@ -64,6 +69,12 @@ HEADER_TEMPLATE = """\
 #endif // {guard}
 """
 
+LLVM_LICENSE_TEXT = [
+    "Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.",
+    "See https://llvm.org/LICENSE.txt for license information.",
+    "SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception",
+]
+
 
 class HeaderFile:
     def __init__(self, name):
@@ -74,8 +85,10 @@ class HeaderFile:
         self.enumerations = []
         self.objects = []
         self.functions = []
+        self.extra_standards = {}
         self.standards = []
         self.merge_yaml_files = []
+        self.license_text = []
 
     def add_macro(self, macro):
         self.macros.append(macro)
@@ -98,12 +111,24 @@ class HeaderFile:
         self.enumerations = sorted(set(self.enumerations) | set(other.enumerations))
         self.objects = sorted(set(self.objects) | set(other.objects))
         self.functions = sorted(set(self.functions) | set(other.functions))
+        self.extra_standards |= other.extra_standards
+        if self.license_text:
+            assert not other.license_text, "only one `license_text` allowed"
+        else:
+            self.license_text = other.license_text
 
     def all_types(self):
         return reduce(
             lambda a, b: a | b,
             [f.signature_types() for f in self.functions],
             set(self.types),
+        )
+
+    def all_attributes(self):
+        return reduce(
+            lambda a, b: a | b,
+            [set(f.attributes) for f in self.functions],
+            set(),
         )
 
     def all_standards(self):
@@ -114,16 +139,24 @@ class HeaderFile:
         )
 
     def includes(self):
-        return {
-            PurePosixPath("llvm-libc-macros") / macro.header
-            for macro in self.macros
-            if macro.header is not None
-        } | {
-            COMPILER_HEADER_TYPES.get(
-                typ.type_name, PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h"
-            )
-            for typ in self.all_types()
-        }
+        return (
+            {
+                PurePosixPath("llvm-libc-macros") / macro.header
+                for macro in self.macros
+                if macro.header is not None
+            }
+            | {
+                COMPILER_HEADER_TYPES.get(
+                    typ.type_name,
+                    PurePosixPath("llvm-libc-types") / f"{typ.type_name}.h",
+                )
+                for typ in self.all_types()
+            }
+            | {
+                PurePosixPath("llvm-libc-macros") / f"{attr}.h"
+                for attr in self.all_attributes() - COMMON_ATTRIBUTES
+            }
+        )
 
     def header_guard(self):
         return "_LLVM_LIBC_" + "_".join(
@@ -131,23 +164,28 @@ class HeaderFile:
         )
 
     def library_description(self):
+        descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
         # If the header itself is in standard C, just call it that.
         if "stdc" in self.standards:
-            return LIBRARY_DESCRIPTIONS["stdc"]
+            return descriptions["stdc"]
         # If the header itself is in POSIX, just call it that.
         if "posix" in self.standards:
-            return LIBRARY_DESCRIPTIONS["posix"]
+            return descriptions["posix"]
         # Otherwise, consider the standards for each symbol as well.
         standards = self.all_standards()
         # Otherwise, it's described by all those that apply, but ignoring
         # "stdc" and "posix" since this is not a "stdc" or "posix" header.
         return " / ".join(
             sorted(
-                LIBRARY_DESCRIPTIONS[standard]
+                descriptions[standard]
                 for standard in standards
                 if standard not in {"stdc", "posix"}
             )
         )
+
+    def license_lines(self):
+        lines = self.license_text or LLVM_LICENSE_TEXT
+        return "\n".join([f"// {line}" for line in lines])
 
     def template(self, dir, files_read):
         if self.template_file is not None:
@@ -162,6 +200,7 @@ class HeaderFile:
             library=self.library_description(),
             header=self.name,
             guard=self.header_guard(),
+            license_lines=self.license_lines(),
         )
 
     def public_api(self):
