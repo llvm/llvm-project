@@ -9,10 +9,7 @@ set(LIBCXX_SOURCES
   error_category.cpp
   exception.cpp
   expected.cpp
-  filesystem/filesystem_clock.cpp
-  filesystem/filesystem_error.cpp
   filesystem/path_parser.h
-  filesystem/path.cpp
   functional.cpp
   hash.cpp
   include/apple_availability.h
@@ -117,6 +114,9 @@ endif()
 
 if (LIBCXX_ENABLE_FILESYSTEM)
   list(APPEND LIBCXX_SOURCES
+    filesystem/filesystem_clock.cpp
+    filesystem/filesystem_error.cpp
+    filesystem/path.cpp
     filesystem/directory_entry.cpp
     filesystem/directory_iterator.cpp
     filesystem/file_descriptor.h
