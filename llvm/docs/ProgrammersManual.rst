@@ -2161,6 +2161,16 @@ that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
 pointers).  Note that ``DenseSet`` has the same requirements for the value type that
 :ref:`DenseMap <dss_densemap>` has.
 
+.. _dss_radixtree:
+
+llvm/ADT/RadixTree.h
+^^^^^^^^^^^^^^^^^^^^
+
+``RadixTree`` is a trie-based data structure that stores range-like keys and
+their associated values. It is particularly efficient for storing keys that
+share common prefixes, as it can compress these prefixes to save memory. It
+supports efficient search of matching prefixes.
+
 .. _dss_sparseset:
 
 llvm/ADT/SparseSet.h
