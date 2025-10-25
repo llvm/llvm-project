@@ -4722,6 +4722,36 @@ struct FormatStyle {
   /// \version 17
   bool SpaceBeforeJsonColon;
 
+  /// Defines how clang-format should treat spaces around block comment
+  /// delimiters and specialized inline comments (such as parameter name
+  /// annotations). The default `Leave` mode preserves existing whitespace.
+  enum class CommentSpaceMode : int8_t {
+    /// Preserve existing whitespace, making no formatting changes.
+    Leave,
+    /// Ensure exactly one space is present.
+    Always,
+    /// Ensure no space is present.
+    Never,
+  };
+
+  /// Specifies spacing behavior for different block comment forms.
+  struct SpaceInCommentsOptions {
+    CommentSpaceMode AfterOpeningComment = CommentSpaceMode::Leave;
+    CommentSpaceMode BeforeClosingComment = CommentSpaceMode::Leave;
+    CommentSpaceMode AfterOpeningParamComment = CommentSpaceMode::Leave;
+    CommentSpaceMode BeforeClosingParamComment = CommentSpaceMode::Leave;
+
+    constexpr bool operator==(const SpaceInCommentsOptions &R) const {
+      return AfterOpeningComment == R.AfterOpeningComment &&
+             BeforeClosingComment == R.BeforeClosingComment &&
+             AfterOpeningParamComment == R.AfterOpeningParamComment &&
+             BeforeClosingParamComment == R.BeforeClosingParamComment;
+    }
+  };
+
+  /// Controls spacing inside block comments.
+  SpaceInCommentsOptions SpaceInComments;
+
   /// Different ways to put a space before opening parentheses.
   enum SpaceBeforeParensStyle : int8_t {
     /// This is **deprecated** and replaced by ``Custom`` below, with all
@@ -5650,6 +5680,7 @@ struct FormatStyle {
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
+           SpaceInComments == R.SpaceInComments &&
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
