@@ -51,6 +51,7 @@ jobs:
       - name: Build/Test
         working-directory: utils/bazel
         run: |
-          bazel test --config=ci @llvm-project//llvm/... \
+          bazel test --config=ci --sandbox_base="" \
+            @llvm-project//llvm/... \
             @llvm-project//clang/... \
             @llvm-project//mlir/...
