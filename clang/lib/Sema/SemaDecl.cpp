@@ -3355,12 +3355,12 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
   if (!foundAny) New->dropAttrs();
 }
 
-void Sema::CheckAttributesOnDeducedType(Expr *E, Decl *D) {
+void Sema::CheckAttributesOnDeducedType(Decl *D) {
   if (!D->hasAttrs())
     return;
 
   for (const Attr *A : D->getAttrs()) {
-    checkAttrIsTypeDependent(E, D, A);
+    checkAttrIsTypeDependent(D, A);
   }
 }
 
@@ -13818,7 +13818,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       return;
   }
 
-  this->CheckAttributesOnDeducedType(Init, RealDecl);
+  this->CheckAttributesOnDeducedType(RealDecl);
 
   // dllimport cannot be used on variable definitions.
   if (VDecl->hasAttr<DLLImportAttr>() && !VDecl->isStaticDataMember()) {
@@ -14311,6 +14311,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         DeduceVariableDeclarationType(Var, false, nullptr))
       return;
 
+    this->CheckAttributesOnDeducedType(RealDecl);
+
     // C++11 [class.static.data]p3: A static data member can be declared with
     // the constexpr specifier; if so, its declaration shall specify
     // a brace-or-equal-initializer.
@@ -14610,7 +14612,6 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInit(RecoveryExpr.get());
     }
 
-    this->CheckAttributesOnDeducedType(Init.get(), RealDecl);
     CheckCompleteVariableDeclaration(Var);
   }
 }

@@ -4458,7 +4458,7 @@ public:
 
   /// CheckAttributesOnDeducedType - Calls Sema functions for attributes that
   /// requires the type to be deduced.
-  void CheckAttributesOnDeducedType(Expr *E, Decl *D);
+  void CheckAttributesOnDeducedType(Decl *D);
 
   /// MergeTypedefNameDecl - We just parsed a typedef 'New' which has the
   /// same name and scope as a previous declaration 'Old'.  Figure out
@@ -15475,7 +15475,7 @@ public:
   std::optional<FunctionEffectMode>
   ActOnEffectExpression(Expr *CondExpr, StringRef AttributeName);
 
-  void ActOnCleanupAttr(Expr *E, Decl *D, const Attr *A);
+  void ActOnCleanupAttr(Decl *D, const Attr *A);
 
 private:
   /// The implementation of RequireCompleteType

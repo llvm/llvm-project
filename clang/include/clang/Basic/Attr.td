@@ -743,6 +743,14 @@ class Attr {
   bit StrictEnumParameters = 0;
   // Set to true for attributes which have Sema checks which requires the type
   // to be deduced.
+  // When `IsTypeDependent` is set to true, you should add an `ActOn*Attr`
+  // function to `Sema.h`. The signature of the function must be:
+  // `void ActOn*Attr(Decl *, const Attr *);` where the `Decl *` is the
+  // declaration the attribute will be attached to; its type will have already
+  // been deduced, and the `Attr *` is the attribute being applied to that
+  // declaration. This function should handle all type-sensitive semantics for
+  // the attribute. This function will be automatically called by
+  // `Sema::CheckAttributesOnDeducedType()`.
   bit IsTypeDependent = 0;
   // Lists language options, one of which is required to be true for the
   // attribute to be applicable. If empty, no language options are required.
