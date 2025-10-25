@@ -260,12 +260,12 @@ jobs:
         ninja -v -C libxml-build install
 
     - name: Install libxml2
-      if: false
       shell: bash
       env:
-        VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBUILD_SHARED_LIBS=OFF
+        VCPKG_BUILD_TYPE: release
       run: |
         vcpkg install libxml2:x64-windows-static
+        find / -iname 'libxml*.lib'
 
     - name: Configure
       id: build
