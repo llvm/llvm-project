@@ -324,9 +324,7 @@ public:
   bool insertEdge(Register Reg) { return Edges.insert(Reg).second; }
 
   using const_edge_iterator = DenseSet<Register>::const_iterator;
-  iterator_range<const_edge_iterator> edges() const {
-    return iterator_range<const_edge_iterator>(Edges.begin(), Edges.end());
-  }
+  iterator_range<const_edge_iterator> edges() const { return Edges; }
 
   void addInstruction(MachineInstr *I) {
     Instrs.push_back(I);

@@ -19,7 +19,6 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
-#include <limits>
 #include <list>
 #include <utility>
 #include <vector>

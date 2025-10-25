@@ -102,7 +102,7 @@ public:
 
   iterator_range<typename RegisterClassesTy::const_iterator>
   register_classes() const {
-    return llvm::make_range(RCs.begin(), RCs.end());
+    return RCs;
   }
 };
 
