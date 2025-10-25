@@ -59,6 +59,11 @@ def ExceptionModelIsNotNone : RuntimeLibcallPredicate<
   [{ExceptionModel != ExceptionHandling::None}]
 >;
 
+def ExceptionModelHasUnwindResume : RuntimeLibcallPredicate<
+  [{ExceptionModel != ExceptionHandling::None &&
+    ExceptionModel != ExceptionHandling::SjLj}]
+>;
+
 def ExceptionModelIsSjLj : RuntimeLibcallPredicate<
   [{ExceptionModel == ExceptionHandling::SjLj}]
 >;
@@ -1153,8 +1158,10 @@ def __ssp_canary_word : RuntimeLibcallImpl<STACK_CHECK_GUARD>;
 //===----------------------------------------------------------------------===//
 
 defvar ExceptionModelCalls = (add
-  LibcallImpls<(add DefaultExceptionHandlingLibcalls),
+  LibcallImpls<(add __cxa_end_cleanup),
                ExceptionModelIsNotNone>,
+  LibcallImpls<(add _Unwind_Resume),
+               ExceptionModelHasUnwindResume>,
   LibcallImpls<(add SjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
 );
@@ -1396,8 +1403,10 @@ defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
 }
 
 defvar ExceptionModelCallsArm64EC = (add
-  LibcallImpls<(add WinArm64ECDefaultExceptionHandlingLibcalls),
+  LibcallImpls<(add arm64ec___cxa_end_cleanup),
                ExceptionModelIsNotNone>,
+  LibcallImpls<(add arm64ec__Unwind_Resume),
+               ExceptionModelHasUnwindResume>,
   LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
                ExceptionModelIsSjLj>
 );
