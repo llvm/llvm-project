@@ -190,6 +190,8 @@ class TypeSourceInfo;
       llvm::SmallDenseMap<Decl *, int, 32> Aux;
     };
 
+    class FunctionReturnTypeDeclCycleDetector;
+
   private:
     std::shared_ptr<ASTImporterSharedState> SharedState = nullptr;
 
@@ -254,6 +256,13 @@ class TypeSourceInfo;
     /// Declaration (from, to) pairs that are known not to be equivalent
     /// (which we have already complained about).
     NonEquivalentDeclSet NonEquivalentDecls;
+    /// A FunctionDecl can have properties that have a reference to the
+    /// function itself and are imported before the function is created. This
+    /// can come for example from auto return type or when template parameters
+    /// are used in the return type or parameters. This member is used to detect
+    /// cyclic import of FunctionDecl objects to avoid infinite recursion.
+    std::unique_ptr<FunctionReturnTypeDeclCycleDetector>
+        FunctionReturnTypeCycleDetector;
 
     using FoundDeclsTy = SmallVector<NamedDecl *, 2>;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
