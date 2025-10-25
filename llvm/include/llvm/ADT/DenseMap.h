@@ -852,13 +852,16 @@ private:
                       alignof(BucketT));
   }
 
+  // Plan how to shrink the bucket table.  Return:
+  // - {false, 0} to reuse the existing bucket table
+  // - {true, N} to reallocate a bucket table with N entries
   std::pair<bool, unsigned> planShrinkAndClear() const {
     unsigned NewNumBuckets = 0;
     if (NumEntries)
       NewNumBuckets = std::max(64u, 1u << (Log2_32_Ceil(NumEntries) + 1));
     if (NewNumBuckets == NumBuckets)
-      return {false, 0};          // Reuse
-    return {true, NewNumBuckets}; // Reallocate
+      return {false, 0};          // Reuse.
+    return {true, NewNumBuckets}; // Reallocate.
   }
 };
 
@@ -1147,9 +1150,12 @@ private:
                       alignof(BucketT));
   }
 
+  // Plan how to shrink the bucket table.  Return:
+  // - {false, 0} to reuse the existing bucket table
+  // - {true, N} to reallocate a bucket table with N entries
   std::pair<bool, unsigned> planShrinkAndClear() const {
     unsigned NewNumBuckets = 0;
-    if (this->size()) {
+    if (!this->empty()) {
       NewNumBuckets = 1u << (Log2_32_Ceil(this->size()) + 1);
       if (NewNumBuckets > InlineBuckets)
         NewNumBuckets = std::max(64u, NewNumBuckets);
@@ -1157,8 +1163,8 @@ private:
     bool Reuse = Small ? NewNumBuckets <= InlineBuckets
                        : NewNumBuckets == getLargeRep()->NumBuckets;
     if (Reuse)
-      return {false, 0};          // Reuse
-    return {true, NewNumBuckets}; // Reallocate
+      return {false, 0};          // Reuse.
+    return {true, NewNumBuckets}; // Reallocate.
   }
 };
 
