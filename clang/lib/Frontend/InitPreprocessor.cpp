@@ -1542,6 +1542,9 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   llvm::raw_string_ostream Predefines(PredefineBuffer);
   MacroBuilder Builder(Predefines);
 
+  // Ensure that the initial value of __COUNTER__ is hooked up.
+  PP.setCounterValue(InitOpts.InitialCounterValue);
+
   // Emit line markers for various builtin sections of the file. The 3 here
   // marks <built-in> as being a system header, which suppresses warnings when
   // the same macro is defined multiple times.
