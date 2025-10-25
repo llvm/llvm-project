@@ -108,7 +108,7 @@ void SpecialCaseList::GlobMatcher::match(
         // worst.
         if (G->Pattern.match(Query)) {
           Cb(G->Name, G->LineNo);
-          // As soon as we find match in the vector we can break for the vector,
+          // As soon as we find a match in the vector we can break for the vector,
           // but we still need to continue for other values in the map, as they
           // may contain a better match.
           break;
