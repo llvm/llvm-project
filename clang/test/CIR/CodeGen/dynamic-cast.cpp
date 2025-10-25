@@ -101,3 +101,59 @@ Derived &ref_cast(Base &b) {
 // OGCG:   br i1 %[[IS_NULL]], label %[[BAD_CAST:.*]], label %[[DONE:.*]]
 // OGCG: [[BAD_CAST]]:
 // OGCG:   call void @__cxa_bad_cast()
+
+void *ptr_cast_to_complete(Base *ptr) {
+  return dynamic_cast<void *>(ptr);
+}
+
+// CIR-BEFORE: cir.func dso_local @_Z20ptr_cast_to_completeP4Base
+// CIR-BEFORE:   %{{.+}} = cir.dyn_cast ptr %{{.+}} : !cir.ptr<!rec_Base> -> !cir.ptr<!void>
+// CIR-BEFORE: }
+
+//      CIR-AFTER: cir.func dso_local @_Z20ptr_cast_to_completeP4Base
+//      CIR-AFTER:   %[[SRC:.*]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!rec_Base>>, !cir.ptr<!rec_Base>
+// CIR-AFTER-NEXT:   %[[SRC_IS_NOT_NULL:.*]] = cir.cast ptr_to_bool %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.bool
+// CIR-AFTER-NEXT:   %{{.+}} = cir.ternary(%[[SRC_IS_NOT_NULL]], true {
+// CIR-AFTER-NEXT:     %[[VPTR_PTR:.*]] = cir.vtable.get_vptr %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.ptr<!cir.vptr>
+// CIR-AFTER-NEXT:     %[[VPTR:.*]] = cir.load %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
+// CIR-AFTER-NEXT:     %[[ELEM_PTR:.*]] = cir.cast bitcast %[[VPTR]] : !cir.vptr -> !cir.ptr<!s64i>
+// CIR-AFTER-NEXT:     %[[MINUS_TWO:.*]] = cir.const #cir.int<-2> : !s64i
+// CIR-AFTER-NEXT:     %[[BASE_OFFSET_PTR:.*]] = cir.ptr_stride %[[ELEM_PTR]], %[[MINUS_TWO]] : (!cir.ptr<!s64i>, !s64i) -> !cir.ptr<!s64i>
+// CIR-AFTER-NEXT:     %[[BASE_OFFSET:.*]] = cir.load{{.*}} %[[BASE_OFFSET_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER-NEXT:     %[[SRC_BYTES_PTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_Base> -> !cir.ptr<!u8i>
+// CIR-AFTER-NEXT:     %[[DST_BYTES_PTR:.*]] = cir.ptr_stride %[[SRC_BYTES_PTR]], %[[BASE_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
+// CIR-AFTER-NEXT:     %[[CASTED_PTR:.*]] = cir.cast bitcast %[[DST_BYTES_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR-AFTER-NEXT:     cir.yield %[[CASTED_PTR]] : !cir.ptr<!void>
+// CIR-AFTER-NEXT:   }, false {
+// CIR-AFTER-NEXT:     %[[NULL_PTR:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR-AFTER-NEXT:     cir.yield %[[NULL_PTR]] : !cir.ptr<!void>
+// CIR-AFTER-NEXT:   }) : (!cir.bool) -> !cir.ptr<!void>
+//      CIR-AFTER: }
+
+// LLVM: define {{.*}} @_Z20ptr_cast_to_completeP4Base
+// LLVM:   %[[IS_NOT_NULL:.*]] = icmp ne ptr %[[PTR:.*]], null
+// LLVM:   br i1 %[[IS_NOT_NULL]], label %[[NOT_NULL:.*]], label %[[NULL:.*]]
+// LLVM: [[NOT_NULL]]:
+// LLVM:   %[[VPTR:.*]] = load ptr, ptr %[[PTR]]
+// LLVM:   %[[BASE_OFFSET_PTR:.*]] = getelementptr i64, ptr %7, i64 -2
+// LLVM:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_PTR]]
+// LLVM:   %[[RESULT:.*]] = getelementptr i8, ptr %[[PTR]], i64 %[[BASE_OFFSET]]
+// LLVM:   br label %[[DONE:.*]]
+// LLVM: [[NULL]]:
+// LLVM:   br label %[[DONE]]
+// LLVM: [[DONE]]:
+// LLVM:   %[[RET:.*]] = phi ptr [ null, %[[NULL]] ], [ %[[RESULT]], %[[NOT_NULL]] ]
+
+// OGCG: define {{.*}} @_Z20ptr_cast_to_completeP4Base
+// OGCG:   %[[IS_NULL:.*]] = icmp eq ptr %[[PTR:.*]], null
+// OGCG:   br i1 %[[IS_NULL]], label %[[NULL:.*]], label %[[NOT_NULL:.*]]
+// OGCG: [[NOT_NULL]]:
+// OGCG:   %[[VPTR:.*]] = load ptr, ptr %[[PTR]]
+// OGCG:   %[[BASE_OFFSET_PTR:.*]] = getelementptr inbounds i64, ptr %[[VPTR]], i64 -2
+// OGCG:   %[[BASE_OFFSET:.*]] = load i64, ptr %[[BASE_OFFSET_PTR]]
+// OGCG:   %[[RESULT:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i64 %[[BASE_OFFSET]]
+// OGCG:   br label %[[DONE:.*]]
+// OGCG: [[NULL]]:
+// OGCG:   br label %[[DONE]]
+// OGCG: [[DONE]]:
+// OGCG:   %[[RET:.*]] = phi ptr [ %[[RESULT]], %[[NOT_NULL]] ], [ null, %[[NULL]] ]

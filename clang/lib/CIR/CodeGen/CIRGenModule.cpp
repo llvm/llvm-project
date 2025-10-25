@@ -88,6 +88,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  AllocaInt8PtrTy = cir::PointerType::get(UInt8Ty, cirAllocaAddressSpace);
+
   PointerAlignInBytes =
       astContext
           .toCharUnitsFromBits(
@@ -100,7 +102,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
   const unsigned sizeTypeSize =
       astContext.getTypeSize(astContext.getSignedSizeType());
-  SizeAlignInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
+  SizeSizeInBytes = astContext.toCharUnitsFromBits(sizeTypeSize).getQuantity();
   // In CIRGenTypeCache, UIntPtrTy and SizeType are fields of the same union
   UIntPtrTy =
       cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/false);
@@ -449,15 +451,47 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   curCGF = nullptr;
 
   setNonAliasAttributes(gd, funcOp);
-  assert(!cir::MissingFeatures::opFuncAttributesForDefinition());
+  setCIRFunctionAttributesForDefinition(funcDecl, funcOp);
 
-  if (funcDecl->getAttr<ConstructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "constructor attribute");
-  if (funcDecl->getAttr<DestructorAttr>())
-    errorNYI(funcDecl->getSourceRange(), "destructor attribute");
+  auto getPriority = [this](const auto *attr) -> int {
+    Expr *e = attr->getPriority();
+    if (e)
+      return e->EvaluateKnownConstInt(this->getASTContext()).getExtValue();
+    return attr->DefaultPriority;
+  };
+
+  if (const ConstructorAttr *ca = funcDecl->getAttr<ConstructorAttr>())
+    addGlobalCtor(funcOp, getPriority(ca));
+  if (const DestructorAttr *da = funcDecl->getAttr<DestructorAttr>())
+    addGlobalDtor(funcOp, getPriority(da));
 
   if (funcDecl->getAttr<AnnotateAttr>())
     errorNYI(funcDecl->getSourceRange(), "deferredAnnotations");
+}
+
+/// Track functions to be called before main() runs.
+void CIRGenModule::addGlobalCtor(cir::FuncOp ctor,
+                                 std::optional<int> priority) {
+  assert(!cir::MissingFeatures::globalCtorLexOrder());
+  assert(!cir::MissingFeatures::globalCtorAssociatedData());
+
+  // Traditional LLVM codegen directly adds the function to the list of global
+  // ctors. In CIR we just add a global_ctor attribute to the function. The
+  // global list is created in LoweringPrepare.
+  //
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  ctor.setGlobalCtorPriority(priority);
+}
+
+/// Add a function to the list that will be called when the module is unloaded.
+void CIRGenModule::addGlobalDtor(cir::FuncOp dtor,
+                                 std::optional<int> priority) {
+  if (codeGenOpts.RegisterGlobalDtorsWithAtExit &&
+      (!getASTContext().getTargetInfo().getTriple().isOSAIX()))
+    errorNYI(dtor.getLoc(), "registerGlobalDtorsWithAtExit");
+
+  // FIXME(from traditional LLVM): Type coercion of void()* types.
+  dtor.setGlobalDtorPriority(priority);
 }
 
 void CIRGenModule::handleCXXStaticMemberVarInstantiation(VarDecl *vd) {
@@ -501,7 +535,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = builder.create<cir::GlobalOp>(loc, name, t, isConstant);
+    g = cir::GlobalOp::create(builder, loc, name, t, isConstant);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -705,8 +739,8 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
   mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
-  return builder.create<cir::GetGlobalOp>(getLoc(d->getSourceRange()), ptrTy,
-                                          g.getSymName());
+  return cir::GetGlobalOp::create(builder, getLoc(d->getSourceRange()), ptrTy,
+                                  g.getSymName());
 }
 
 cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
@@ -1883,6 +1917,102 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
     const Decl *decl = globalDecl.getDecl();
     func.setGlobalVisibilityAttr(getGlobalVisibilityAttrFromDecl(decl));
   }
+
+  // If we plan on emitting this inline builtin, we can't treat it as a builtin.
+  const auto *fd = cast<FunctionDecl>(globalDecl.getDecl());
+  if (fd->isInlineBuiltinDeclaration()) {
+    const FunctionDecl *fdBody;
+    bool hasBody = fd->hasBody(fdBody);
+    (void)hasBody;
+    assert(hasBody && "Inline builtin declarations should always have an "
+                      "available body!");
+    assert(!cir::MissingFeatures::attributeNoBuiltin());
+  }
+}
+
+void CIRGenModule::setCIRFunctionAttributesForDefinition(
+    const clang::FunctionDecl *decl, cir::FuncOp f) {
+  assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
+  assert(!cir::MissingFeatures::stackProtector());
+
+  std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
+  bool isNoInline =
+      existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;
+  bool isAlwaysInline = existingInlineKind &&
+                        *existingInlineKind == cir::InlineKind::AlwaysInline;
+
+  if (!decl) {
+    assert(!cir::MissingFeatures::hlsl());
+
+    if (!isAlwaysInline &&
+        codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+      // If inlining is disabled and we don't have a declaration to control
+      // inlining, mark the function as 'noinline' unless it is explicitly
+      // marked as 'alwaysinline'.
+      f.setInlineKindAttr(
+          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    }
+
+    return;
+  }
+
+  assert(!cir::MissingFeatures::opFuncArmStreamingAttr());
+  assert(!cir::MissingFeatures::opFuncArmNewAttr());
+  assert(!cir::MissingFeatures::opFuncOptNoneAttr());
+  assert(!cir::MissingFeatures::opFuncMinSizeAttr());
+  assert(!cir::MissingFeatures::opFuncNakedAttr());
+  assert(!cir::MissingFeatures::opFuncNoDuplicateAttr());
+  assert(!cir::MissingFeatures::hlsl());
+
+  // Handle inline attributes
+  if (decl->hasAttr<NoInlineAttr>() && !isAlwaysInline) {
+    // Add noinline if the function isn't always_inline.
+    f.setInlineKindAttr(
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+  } else if (decl->hasAttr<AlwaysInlineAttr>() && !isNoInline) {
+    // Don't override AlwaysInline with NoInline, or vice versa, since we can't
+    // specify both in IR.
+    f.setInlineKindAttr(
+        cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::AlwaysInline));
+  } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+    // If inlining is disabled, force everything that isn't always_inline
+    // to carry an explicit noinline attribute.
+    if (!isAlwaysInline) {
+      f.setInlineKindAttr(
+          cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+    }
+  } else {
+    // Otherwise, propagate the inline hint attribute and potentially use its
+    // absence to mark things as noinline.
+    // Search function and template pattern redeclarations for inline.
+    if (auto *fd = dyn_cast<FunctionDecl>(decl)) {
+      // TODO: Share this checkForInline implementation with classic codegen.
+      // This logic is likely to change over time, so sharing would help ensure
+      // consistency.
+      auto checkForInline = [](const FunctionDecl *decl) {
+        auto checkRedeclForInline = [](const FunctionDecl *redecl) {
+          return redecl->isInlineSpecified();
+        };
+        if (any_of(decl->redecls(), checkRedeclForInline))
+          return true;
+        const FunctionDecl *pattern = decl->getTemplateInstantiationPattern();
+        if (!pattern)
+          return false;
+        return any_of(pattern->redecls(), checkRedeclForInline);
+      };
+      if (checkForInline(fd)) {
+        f.setInlineKindAttr(cir::InlineAttr::get(&getMLIRContext(),
+                                                 cir::InlineKind::InlineHint));
+      } else if (codeGenOpts.getInlining() ==
+                     CodeGenOptions::OnlyHintInlining &&
+                 !fd->isInlined() && !isAlwaysInline) {
+        f.setInlineKindAttr(
+            cir::InlineAttr::get(&getMLIRContext(), cir::InlineKind::NoInline));
+      }
+    }
+  }
+
+  assert(!cir::MissingFeatures::opFuncColdHotAttr());
 }
 
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
@@ -2046,7 +2176,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     if (cgf)
       builder.setInsertionPoint(cgf->curFn);
 
-    func = builder.create<cir::FuncOp>(loc, name, funcType);
+    func = cir::FuncOp::create(builder, loc, name, funcType);
 
     assert(!cir::MissingFeatures::opFuncAstDeclAttr());
 

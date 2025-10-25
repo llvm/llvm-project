@@ -471,7 +471,6 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
-public:
   /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
   /// from existing profile metadata: if the Function has profiles, this will
   /// set the profile of this select to "unknown".
@@ -484,6 +483,7 @@ public:
     return Sel;
   }
 
+public:
   /// Create and insert the idiom we use to indicate a block is unreachable
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
@@ -664,7 +664,8 @@ public:
   /// This also works for Cast instructions, which obviously do not have a
   /// second operand.
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
-                                bool FoldWithMultiUse = false);
+                                bool FoldWithMultiUse = false,
+                                bool SimplifyBothArms = false);
 
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);

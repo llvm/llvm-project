@@ -77,7 +77,7 @@ public:
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
         break;
-      if (visitUnqualName(T->getOriginalDecl()->getName()))
+      if (visitUnqualName(T->getDecl()->getName()))
         return false;
       break;
     }

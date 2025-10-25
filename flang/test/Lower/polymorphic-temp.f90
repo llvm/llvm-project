@@ -223,4 +223,75 @@ contains
 ! CHECK: %[[A_REBOX:.*]] = fir.rebox %[[LOAD_A]] : (!fir.class<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>) -> !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>> 
 ! CHECK: %{{.*}} = arith.select %[[CMPI]], %[[A_REBOX]], %[[LOAD_B]] : !fir.box<!fir.heap<!fir.type<_QMpoly_tmpTp1{a:i32}>>>
 
+  subroutine check_unlimited_poly(a)
+    class(*), intent(in) :: a
+  end subroutine
+
+  subroutine test_merge_intrinsic3(a, b, i)
+    class(*), intent(in) :: a, b
+    integer, intent(in) :: i
+
+    call check_unlimited_poly(merge(a, b, i==1))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic3(
+! CHECK-SAME: %[[A:.*]]: !fir.class<none> {fir.bindc_name = "a"}, %[[B:.*]]: !fir.class<none> {fir.bindc_name = "b"}, %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK: %[[V_0:[0-9]+]] = fir.load %[[I]] : !fir.ref<i32>
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[V_1:[0-9]+]] = arith.cmpi eq, %[[V_0]], %[[C1]] : i32
+! CHECK: %[[V_2:[0-9]+]] = arith.select %[[V_1]], %[[A]], %[[B]] : !fir.class<none>
+! CHECK: fir.call @_QMpoly_tmpPcheck_unlimited_poly(%[[V_2]]) fastmath<contract> : (!fir.class<none>) -> ()
+
+  subroutine test_merge_intrinsic4(i)
+    integer, intent(in) :: i
+    class(*), allocatable :: a, b
+
+    call check_unlimited_poly(merge(a, b, i==1))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic4(
+! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Ea"}
+! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.heap<none>
+! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
+! CHECK: fir.store %[[V_2]] to %[[V_0]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.heap<none>> {bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic4Eb"}
+! CHECK: %[[V_4:[0-9]+]] = fir.zero_bits !fir.heap<none>
+! CHECK: %[[V_5:[0-9]+]] = fir.embox %[[V_4]] : (!fir.heap<none>) -> !fir.class<!fir.heap<none>>
+! CHECK: fir.store %[[V_5]] to %[[V_3]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[V_6:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[V_7:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[V_8:[0-9]+]] = fir.load %[[I]] : !fir.ref<i32>
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[V_9:[0-9]+]] = arith.cmpi eq, %[[V_8]], %[[C1]] : i32
+! CHECK: %[[V_10:[0-9]+]] = arith.select %[[V_9]], %[[V_6]], %[[V_7]] : !fir.class<!fir.heap<none>>
+! CHECK: %[[V_11:[0-9]+]] = fir.rebox %[[V_10]] : (!fir.class<!fir.heap<none>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpoly_tmpPcheck_unlimited_poly(%[[V_11]]) fastmath<contract> : (!fir.class<none>) -> ()
+
+  subroutine test_merge_intrinsic5(i)
+    integer, intent(in) :: i
+    class(*), pointer :: a, b
+
+    call check_unlimited_poly(merge(a, b, i==1))
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpoly_tmpPtest_merge_intrinsic5(
+! CHECK-SAME: %[[I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}) {
+! CHECK: %[[V_0:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "a", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Ea"}
+! CHECK: %[[V_1:[0-9]+]] = fir.zero_bits !fir.ptr<none>
+! CHECK: %[[V_2:[0-9]+]] = fir.embox %[[V_1]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
+! CHECK: fir.store %[[V_2]] to %[[V_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[V_3:[0-9]+]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = "b", uniq_name = "_QMpoly_tmpFtest_merge_intrinsic5Eb"}
+! CHECK: %[[V_4:[0-9]+]] = fir.zero_bits !fir.ptr<none>
+! CHECK: %[[V_5:[0-9]+]] = fir.embox %[[V_4]] : (!fir.ptr<none>) -> !fir.class<!fir.ptr<none>>
+! CHECK: fir.store %[[V_5]] to %[[V_3]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[V_6:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[V_7:[0-9]+]] = fir.load %[[V_3]] : !fir.ref<!fir.class<!fir.ptr<none>>>
+! CHECK: %[[V_8:[0-9]+]] = fir.load %[[I]] : !fir.ref<i32>
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[V_9:[0-9]+]] = arith.cmpi eq, %[[V_8]], %[[C1]] : i32
+! CHECK: %[[V_10:[0-9]+]] = arith.select %[[V_9]], %[[V_6]], %[[V_7]] : !fir.class<!fir.ptr<none>>
+! CHECK: %[[V_11:[0-9]+]] = fir.rebox %[[V_10]] : (!fir.class<!fir.ptr<none>>) -> !fir.class<none>
+! CHECK: fir.call @_QMpoly_tmpPcheck_unlimited_poly(%[[V_11]]) fastmath<contract> : (!fir.class<none>) -> ()
+
 end module

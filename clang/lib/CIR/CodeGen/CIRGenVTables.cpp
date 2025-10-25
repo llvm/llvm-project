@@ -120,12 +120,6 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   switch (component.getKind()) {
-  case VTableComponent::CK_CompleteDtorPointer:
-    cgm.errorNYI("getVTableComponent: CompleteDtorPointer");
-    return mlir::Attribute();
-  case VTableComponent::CK_DeletingDtorPointer:
-    cgm.errorNYI("getVTableComponent: DeletingDtorPointer");
-    return mlir::Attribute();
   case VTableComponent::CK_UnusedFunctionPointer:
     cgm.errorNYI("getVTableComponent: UnusedFunctionPointer");
     return mlir::Attribute();
@@ -148,7 +142,9 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
            "expected GlobalViewAttr or ConstPtrAttr");
     return rtti;
 
-  case VTableComponent::CK_FunctionPointer: {
+  case VTableComponent::CK_FunctionPointer:
+  case VTableComponent::CK_CompleteDtorPointer:
+  case VTableComponent::CK_DeletingDtorPointer: {
     GlobalDecl gd = component.getGlobalDecl();
 
     assert(!cir::MissingFeatures::cudaSupport());

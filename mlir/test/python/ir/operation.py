@@ -569,12 +569,30 @@ def testOperationAttributes():
     # CHECK: Attribute value b'text'
     print(f"Attribute value {sattr.value_bytes}")
 
+    # Python dict-style iteration
     # We don't know in which order the attributes are stored.
-    # CHECK-DAG: NamedAttribute(dependent="text")
-    # CHECK-DAG: NamedAttribute(other.attribute=3.000000e+00 : f64)
-    # CHECK-DAG: NamedAttribute(some.attribute=1 : i8)
-    for attr in op.attributes:
-        print(str(attr))
+    # CHECK-DAG: dependent
+    # CHECK-DAG: other.attribute
+    # CHECK-DAG: some.attribute
+    for name in op.attributes:
+        print(name)
+
+    # Basic dict-like introspection
+    # CHECK: True
+    print("some.attribute" in op.attributes)
+    # CHECK: False
+    print("missing" in op.attributes)
+    # CHECK: Keys: ['dependent', 'other.attribute', 'some.attribute']
+    print("Keys:", sorted(op.attributes.keys()))
+    # CHECK: Values count 3
+    print("Values count", len(op.attributes.values()))
+    # CHECK: Items count 3
+    print("Items count", len(op.attributes.items()))
+
+    # Dict() conversion test
+    d = {k: v.value for k, v in dict(op.attributes).items()}
+    # CHECK: Dict mapping {'dependent': 'text', 'other.attribute': 3.0, 'some.attribute': 1}
+    print("Dict mapping", d)
 
     # Check that exceptions are raised as expected.
     try:
