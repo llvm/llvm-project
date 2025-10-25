@@ -83,13 +83,13 @@ SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
   Args.emplace_back(Src, ArgTy);
   Args.emplace_back(Size, ArgTy);
 
-  const char *SpecialMemcpyName = TLI.getLibcallName(
+  const char *SpecialMemcpyName = DAG.getLibcalls().getLibcallName(
       RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES);
   const MachineFunction &MF = DAG.getMachineFunction();
   bool LongCalls = MF.getSubtarget<HexagonSubtarget>().useLongCalls();
   unsigned Flags = LongCalls ? HexagonII::HMOTF_ConstExtended : 0;
 
-  CallingConv::ID CC = TLI.getLibcallCallingConv(
+  CallingConv::ID CC = DAG.getLibcalls().getLibcallCallingConv(
       RTLIB::HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES);
 
   TargetLowering::CallLoweringInfo CLI(DAG);

@@ -494,6 +494,7 @@ void SelectionDAGISel::initializeAnalysisResults(
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   LibInfo = &FAM.getResult<TargetLibraryAnalysis>(Fn);
+
   GFI = Fn.hasGC() ? &FAM.getResult<GCFunctionAnalysis>(Fn) : nullptr;
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
   AC = &FAM.getResult<AssumptionAnalysis>(Fn);
@@ -511,7 +512,9 @@ void SelectionDAGISel::initializeAnalysisResults(
   MachineModuleInfo &MMI =
       MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
+  CurDAG->init(*MF, *ORE, MFAM, LibInfo,
+               &TLI->getLibcallLoweringInfo(), // FIXME: Take from analysis
+               UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -549,6 +552,7 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   TLI = MF->getSubtarget().getTargetLowering();
   RegInfo = &MF->getRegInfo();
   LibInfo = &MFP.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
+
   GFI = Fn.hasGC() ? &MFP.getAnalysis<GCModuleInfo>().getFunctionInfo(Fn)
                    : nullptr;
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
@@ -569,7 +573,9 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   MachineModuleInfo &MMI =
       MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, UA, PSI, BFI, MMI, FnVarLocs);
+  CurDAG->init(*MF, *ORE, &MFP, LibInfo,
+               &TLI->getLibcallLoweringInfo(), // FIXME: Take from analysis
+               UA, PSI, BFI, MMI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
