@@ -13,7 +13,8 @@
 
 namespace llvm {
 
-/// A pass that transforms DXIL Intrinsics that don't have DXIL opCodes
+/// A pass that transforms LLVM Metadata in the module to it's DXIL equivalent,
+/// then emits all recognized DXIL Metadata
 class DXILTranslateMetadata : public PassInfoMixin<DXILTranslateMetadata> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);

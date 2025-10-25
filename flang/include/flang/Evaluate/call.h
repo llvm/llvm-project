@@ -112,6 +112,7 @@ public:
   int Rank() const;
   bool operator==(const ActualArgument &) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  std::string AsFortran() const;
 
   std::optional<parser::CharBlock> keyword() const { return keyword_; }
   ActualArgument &set_keyword(parser::CharBlock x) {

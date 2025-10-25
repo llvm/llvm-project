@@ -92,19 +92,35 @@ function(link_bc)
     ${ARGN}
   )
 
-  set( LINK_INPUT_ARG ${ARG_INPUTS} )
+  if( ARG_INTERNALIZE )
+    set( inputs_with_flag ${ARG_INPUTS} )
+  else()
+    # Add the --override flag for non-generic bitcode files so that their
+    # symbols can override definitions in generic bitcode files.
+    set( inputs_with_flag )
+    foreach( file IN LISTS ARG_INPUTS )
+      string( FIND ${file} "/generic/" is_generic )
+      if( is_generic LESS 0 )
+        list( APPEND inputs_with_flag "--override" )
+      endif()
+      list( APPEND inputs_with_flag ${file} )
+    endforeach()
+  endif()
+
   if( WIN32 OR CYGWIN )
     # Create a response file in case the number of inputs exceeds command-line
     # character limits on certain platforms.
     file( TO_CMAKE_PATH ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.rsp RSP_FILE )
     # Turn it into a space-separate list of input files
-    list( JOIN ARG_INPUTS " " RSP_INPUT )
+    list( JOIN inputs_with_flag " " RSP_INPUT )
     file( GENERATE OUTPUT ${RSP_FILE} CONTENT ${RSP_INPUT} )
     # Ensure that if this file is removed, we re-run CMake
     set_property( DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
       ${RSP_FILE}
     )
     set( LINK_INPUT_ARG "@${RSP_FILE}" )
+  else()
+    set( LINK_INPUT_ARG ${inputs_with_flag} )
   endif()
 
   if( ARG_INTERNALIZE )
@@ -245,7 +261,7 @@ function(libclc_install)
 
   install(
     FILES ${files}
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+    DESTINATION ${LIBCLC_INSTALL_DIR}
   )
 endfunction()
 
@@ -337,7 +353,7 @@ function(add_libclc_builtin_set)
       TRIPLE ${ARG_TRIPLE}
       INPUT ${input_file}
       OUTPUT ${output_file}
-      EXTRA_OPTS -fno-builtin -nostdlib "${ARG_COMPILE_FLAGS}"
+      EXTRA_OPTS -nostdlib "${ARG_COMPILE_FLAGS}"
         "${file_specific_compile_options}"
         -I${CMAKE_CURRENT_SOURCE_DIR}/${file_dir}
       DEPENDENCIES ${input_file_dep}
@@ -376,7 +392,7 @@ function(add_libclc_builtin_set)
   list( PREPEND bytecode_files ${bytecode_ir_files} )
 
   if( NOT bytecode_files )
-    message(FATAL_ERROR "Cannot create an empty builtins library")
+    message(FATAL_ERROR "Cannot create an empty builtins library for ${ARG_ARCH_SUFFIX}")
   endif()
 
   set( builtins_link_lib_tgt builtins.link.${ARG_ARCH_SUFFIX} )
@@ -486,14 +502,14 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
-  # Add a test for whether or not the libraries contain unresolved calls which
-  # would usually indicate a build problem. Note that we don't perform this
-  # test for all libclc targets:
+  # Add a test for whether or not the libraries contain unresolved functions
+  # which would usually indicate a build problem. Note that we don't perform
+  # this test for all libclc targets:
   # * nvptx-- targets don't include workitem builtins
   # * clspv targets don't include all OpenCL builtins
   if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
-    add_test( NAME external-calls-${obj_suffix}
-      COMMAND ./check_external_calls.sh ${libclc_builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
+    add_test( NAME external-funcs-${obj_suffix}
+      COMMAND ./check_external_funcs.sh ${libclc_builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
   endif()
 

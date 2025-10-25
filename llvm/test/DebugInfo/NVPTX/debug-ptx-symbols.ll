@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mcpu=sm_60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mcpu=sm_60 | %ptxas-verify %}
+; RUN: %if ptxas-sm_60 %{ llc < %s -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
 

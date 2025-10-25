@@ -32,8 +32,8 @@ static const char *symbolLookupCallback(void *DisInfo, uint64_t ReferenceValue,
   return nullptr;
 }
 
-static const char *TripleName = "amdgcn--amdpal";
-static const char *CPUName = "gfx1030";
+static constexpr char TripleName[] = "amdgcn--amdpal";
+static constexpr char CPUName[] = "gfx1030";
 
 // Basic smoke test.
 TEST(AMDGPUDisassembler, Basic) {
@@ -71,24 +71,24 @@ TEST(AMDGPUDisassembler, MultiDisassembler) {
   LLVMInitializeAMDGPUDisassembler();
 
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  Triple TT(TripleName);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
   // Skip test if AMDGPU not built.
   if (!TheTarget)
     GTEST_SKIP();
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
-                                         MRI.get(), STI.get());
+      TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
+  auto Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
 
   int AsmPrinterVariant = MAI->getAssemblerDialect();
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *MAI, *MII, *MRI));
+  std::unique_ptr<MCInstPrinter> IP(
+      TheTarget->createMCInstPrinter(TT, AsmPrinterVariant, *MAI, *MII, *MRI));
 
   SmallVector<char, 64> InsnStr, AnnoStr;
   raw_svector_ostream OS(InsnStr);
@@ -140,21 +140,22 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   LLVMInitializeAMDGPUTargetMC();
   LLVMInitializeAMDGPUDisassembler();
 
+  Triple TT(TripleName);
+
   std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
   // Skip test if AMDGPU not built.
   if (!TheTarget)
     GTEST_SKIP();
 
-  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
+  std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
   std::unique_ptr<MCAsmInfo> MAI(
-      TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
+      TheTarget->createMCAsmInfo(*MRI, TT, MCTargetOptions()));
   std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, CPUName, ""));
-  auto Ctx = std::make_unique<MCContext>(Triple(TripleName), MAI.get(),
-                                         MRI.get(), STI.get());
+      TheTarget->createMCSubtargetInfo(TT, CPUName, ""));
+  auto Ctx = std::make_unique<MCContext>(TT, MAI.get(), MRI.get(), STI.get());
 
   // Define custom UC_VERSION before initializing disassembler.
   const uint8_t UC_VERSION_GFX10_DEFAULT = 0x04;
@@ -163,8 +164,8 @@ TEST(AMDGPUDisassembler, UCVersionOverride) {
   Sym->setVariableValue(MCConstantExpr::create(UC_VERSION_GFX10_NEW, *Ctx));
 
   int AsmPrinterVariant = MAI->getAssemblerDialect();
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TripleName), AsmPrinterVariant, *MAI, *MII, *MRI));
+  std::unique_ptr<MCInstPrinter> IP(
+      TheTarget->createMCInstPrinter(TT, AsmPrinterVariant, *MAI, *MII, *MRI));
 
   testing::internal::CaptureStderr();
   std::unique_ptr<MCDisassembler> DisAsm(

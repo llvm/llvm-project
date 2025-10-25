@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 #include "src/__support/uint128.h"

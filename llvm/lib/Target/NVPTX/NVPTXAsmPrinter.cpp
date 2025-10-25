@@ -432,7 +432,7 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // .maxclusterrank directive requires SM_90 or higher, make sure that we
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget *STI = &NTM.getSubtarget<NVPTXSubtarget>(F);
 
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
@@ -669,7 +669,7 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // rest of NVPTX isn't friendly to change subtargets per function and
   // so the default TargetMachine will have all of the options.
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto* STI = static_cast<const NVPTXSubtarget*>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget *STI = NTM.getSubtargetImpl();
   SmallString<128> Str1;
   raw_svector_ostream OS1(Str1);
 
@@ -680,8 +680,7 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
   if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
     report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
 
@@ -716,8 +715,7 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   assert(GVVisiting.size() == 0 && "Did not fully process a global variable");
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
   // Print out module-level global variables in proper order
   for (const GlobalVariable *GV : Globals)
@@ -1178,8 +1176,7 @@ void NVPTXAsmPrinter::emitDemotedVars(const Function *F, raw_ostream &O) {
   ArrayRef<const GlobalVariable *> GVars = It->second;
 
   const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const NVPTXSubtarget &STI =
-      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  const NVPTXSubtarget &STI = *NTM.getSubtargetImpl();
 
   for (const GlobalVariable *GV : GVars) {
     O << "\t// demoted variable\n\t";

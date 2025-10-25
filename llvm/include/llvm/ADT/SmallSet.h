@@ -36,7 +36,6 @@ class SmallSetIterator
 private:
   using SetIterTy = typename std::set<T, C>::const_iterator;
   using VecIterTy = typename SmallVector<T, N>::const_iterator;
-  using SelfTy = SmallSetIterator<T, N, C>;
 
   /// Iterators to the parts of the SmallSet containing the data. They are set
   /// depending on isSmall.
@@ -168,12 +167,14 @@ public:
 
   [[nodiscard]] bool empty() const { return Vector.empty() && Set.empty(); }
 
-  size_type size() const {
+  [[nodiscard]] size_type size() const {
     return isSmall() ? Vector.size() : Set.size();
   }
 
   /// count - Return 1 if the element is in the set, 0 otherwise.
-  size_type count(const T &V) const { return contains(V) ? 1 : 0; }
+  [[nodiscard]] size_type count(const T &V) const {
+    return contains(V) ? 1 : 0;
+  }
 
   /// insert - Insert an element into the set if it isn't already there.
   /// Returns a pair. The first value of it is an iterator to the inserted
@@ -211,20 +212,20 @@ public:
     Set.clear();
   }
 
-  const_iterator begin() const {
+  [[nodiscard]] const_iterator begin() const {
     if (isSmall())
       return {Vector.begin()};
     return {Set.begin()};
   }
 
-  const_iterator end() const {
+  [[nodiscard]] const_iterator end() const {
     if (isSmall())
       return {Vector.end()};
     return {Set.end()};
   }
 
   /// Check if the SmallSet contains the given element.
-  bool contains(const T &V) const {
+  [[nodiscard]] bool contains(const T &V) const {
     if (isSmall())
       return vfind(V) != Vector.end();
     return Set.find(V) != Set.end();
@@ -268,17 +269,8 @@ private:
 
 /// If this set is of pointer values, transparently switch over to using
 /// SmallPtrSet for performance.
-///
-/// We use this middleman class DeprecatedSmallSet so that the deprecation
-/// warning works.  Placing LLVM_DEPRECATED just before SmallSet below won't
-/// work.
-template <typename PointerType, unsigned N>
-class LLVM_DEPRECATED("Use SmallPtrSet instead", "SmallPtrSet")
-    DeprecatedSmallSet : public SmallPtrSet<PointerType, N> {};
-
 template <typename PointeeType, unsigned N>
-class SmallSet<PointeeType *, N> : public DeprecatedSmallSet<PointeeType *, N> {
-};
+class SmallSet<PointeeType *, N> : public SmallPtrSet<PointeeType *, N> {};
 
 /// Equality comparison for SmallSet.
 ///
@@ -289,7 +281,8 @@ class SmallSet<PointeeType *, N> : public DeprecatedSmallSet<PointeeType *, N> {
 /// For large-set mode amortized complexity is linear, worst case is O(N^2) (if
 /// every hash collides).
 template <typename T, unsigned LN, unsigned RN, typename C>
-bool operator==(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
+[[nodiscard]] bool operator==(const SmallSet<T, LN, C> &LHS,
+                              const SmallSet<T, RN, C> &RHS) {
   if (LHS.size() != RHS.size())
     return false;
 
@@ -301,7 +294,8 @@ bool operator==(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
 ///
 /// Equivalent to !(LHS == RHS). See operator== for performance notes.
 template <typename T, unsigned LN, unsigned RN, typename C>
-bool operator!=(const SmallSet<T, LN, C> &LHS, const SmallSet<T, RN, C> &RHS) {
+[[nodiscard]] bool operator!=(const SmallSet<T, LN, C> &LHS,
+                              const SmallSet<T, RN, C> &RHS) {
   return !(LHS == RHS);
 }
 

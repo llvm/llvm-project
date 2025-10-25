@@ -226,40 +226,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         << D.getOpts().getOptionName(LVIOpt);
   }
 
-  for (const Arg *A : Args.filtered(options::OPT_m_x86_AVX10_Features_Group)) {
-    StringRef Name = A->getOption().getName();
-    A->claim();
-
-    // Skip over "-m".
-    assert(Name.starts_with("m") && "Invalid feature name.");
-    Name = Name.substr(1);
-
-    bool IsNegative = Name.consume_front("no-");
-
-    StringRef Version, Width;
-    std::tie(Version, Width) = Name.substr(6).split('-');
-    assert(Name.starts_with("avx10.") && "Invalid AVX10 feature name.");
-    assert((Version == "1" || Version == "2") && "Invalid AVX10 feature name.");
-
-    if (Width == "") {
-      if (IsNegative)
-        Features.push_back(Args.MakeArgString("-" + Name + "-256"));
-      else
-        Features.push_back(Args.MakeArgString("+" + Name + "-512"));
-    } else {
-      if (Width == "512")
-        D.Diag(diag::warn_drv_deprecated_arg) << Name << 1 << Name.drop_back(4);
-      else if (Width == "256")
-        D.Diag(diag::warn_drv_deprecated_custom)
-            << Name
-            << "no alternative argument provided because "
-               "AVX10/256 is not supported and will be removed";
-      else
-        assert((Width == "256" || Width == "512") && "Invalid vector length.");
-      Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
-    }
-  }
-
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   for (const Arg *A : Args.filtered(options::OPT_m_x86_Features_Group,
@@ -283,13 +249,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (Not64Bit && Name == "uintr")
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
-
-    if (A->getOption().matches(options::OPT_mevex512) ||
-        A->getOption().matches(options::OPT_mno_evex512))
-      D.Diag(diag::warn_drv_deprecated_custom)
-          << Name
-          << "no alternative argument provided because "
-             "AVX10/256 is not supported and will be removed";
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {

@@ -51,7 +51,7 @@ TEST_F(ResourceBindingAnalysisTest, TestTrivialCase) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handle = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr null)
+  %handle = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr null)
   ret void
 }
   )";
@@ -71,8 +71,8 @@ TEST_F(ResourceBindingAnalysisTest, TestOverlap) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, i1 false, ptr null)
-  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, i1 false, ptr null)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 0, i32 -1, i32 100, ptr null)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 2, i32 4, i32 1, i32 0, ptr null)
   ret void
 }
   )";
@@ -94,8 +94,8 @@ TEST_F(ResourceBindingAnalysisTest, TestExactOverlap) {
 @B.str = private unnamed_addr constant [2 x i8] c"B\00", align 1
 define void @main() {
 entry:
-  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @A.str)
-  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false, ptr @B.str)
+  %handleA = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr  @A.str)
+  %handleB = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, ptr  @B.str)
   ret void
 }
   )";
@@ -115,8 +115,8 @@ TEST_F(ResourceBindingAnalysisTest, TestImplicitFlag) {
   StringRef Assembly = R"(
 define void @main() {
 entry:
-  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 100, i32 5, i32 1, i32 0, i1 false, ptr null)
-  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+  %handleA = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefrombinding(i32 100, i32 5, i32 1, i32 0, ptr null)
+  %handleB = call target("dx.TypedBuffer", float, 1, 0, 0) @llvm.dx.resource.handlefromimplicitbinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   ret void
 }
   )";

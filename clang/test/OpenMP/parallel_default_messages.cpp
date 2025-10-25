@@ -6,6 +6,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-version=30 -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge40 -fopenmp -DOMP51 -ferror-limit 100 -o - %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge40 -fopenmp-simd -DOMP51 -ferror-limit 100 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge40 -fopenmp-version=60 -fopenmp -DOMP60 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo();
 
@@ -47,6 +48,23 @@ int main(int argc, char **argv) {
   }
 #endif
 
+#ifdef OMP60
+#pragma omp parallel default(shared:) private(x,y) // expected-error {{wrong variable category specified with modifier shared in the default clause}}
+  {
+    ++x;
+    ++y;
+  }
+#pragma omp parallel default(shared: junk) private(x,y) // expected-error {{wrong variable category specified with modifier shared in the default clause}}
+  {
+    ++x;
+    ++y;
+  }
+#pragma omp parallel default(firstprivate: junk) private(x,y) // expected-error {{wrong variable category specified with modifier firstprivate in the default clause}}
+  {
+    ++x;
+    ++y;
+  }
+#endif
   return 0;
 }
 

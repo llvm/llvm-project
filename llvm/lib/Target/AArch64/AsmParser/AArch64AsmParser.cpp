@@ -159,6 +159,7 @@ private:
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
+  bool parseSyslAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyspAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond,
@@ -266,6 +267,7 @@ private:
   ParseStatus tryParseRPRFMOperand(OperandVector &Operands);
   ParseStatus tryParsePSBHint(OperandVector &Operands);
   ParseStatus tryParseBTIHint(OperandVector &Operands);
+  ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
   template <bool AddFPZeroAsLiteral>
@@ -370,6 +372,7 @@ private:
     k_PSBHint,
     k_PHint,
     k_BTIHint,
+    k_CMHPriorityHint,
   } Kind;
 
   SMLoc StartLoc, EndLoc;
@@ -499,6 +502,11 @@ private:
     unsigned Length;
     unsigned Val;
   };
+  struct CMHPriorityHintOp {
+    const char *Data;
+    unsigned Length;
+    unsigned Val;
+  };
 
   struct SVCROp {
     const char *Data;
@@ -525,6 +533,7 @@ private:
     struct PSBHintOp PSBHint;
     struct PHintOp PHint;
     struct BTIHintOp BTIHint;
+    struct CMHPriorityHintOp CMHPriorityHint;
     struct ShiftExtendOp ShiftExtend;
     struct SVCROp SVCR;
   };
@@ -594,6 +603,9 @@ public:
       break;
     case k_BTIHint:
       BTIHint = o.BTIHint;
+      break;
+    case k_CMHPriorityHint:
+      CMHPriorityHint = o.CMHPriorityHint;
       break;
     case k_ShiftExtend:
       ShiftExtend = o.ShiftExtend;
@@ -767,6 +779,16 @@ public:
   StringRef getBTIHintName() const {
     assert(Kind == k_BTIHint && "Invalid access!");
     return StringRef(BTIHint.Data, BTIHint.Length);
+  }
+
+  unsigned getCMHPriorityHint() const {
+    assert(Kind == k_CMHPriorityHint && "Invalid access!");
+    return CMHPriorityHint.Val;
+  }
+
+  StringRef getCMHPriorityHintName() const {
+    assert(Kind == k_CMHPriorityHint && "Invalid access!");
+    return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
   }
 
   StringRef getSVCR() const {
@@ -1511,6 +1533,7 @@ public:
   bool isPSBHint() const { return Kind == k_PSBHint; }
   bool isPHint() const { return Kind == k_PHint; }
   bool isBTIHint() const { return Kind == k_BTIHint; }
+  bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
     if (!isShiftExtend())
@@ -2196,6 +2219,11 @@ public:
     Inst.addOperand(MCOperand::createImm(getBTIHint()));
   }
 
+  void addCMHPriorityHintOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
+  }
+
   void addShifterOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     unsigned Imm =
@@ -2547,6 +2575,17 @@ public:
   }
 
   static std::unique_ptr<AArch64Operand>
+  CreateCMHPriorityHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_CMHPriorityHint, Ctx);
+    Op->CMHPriorityHint.Val = Val;
+    Op->CMHPriorityHint.Data = Str.data();
+    Op->CMHPriorityHint.Length = Str.size();
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<AArch64Operand>
   CreateMatrixRegister(unsigned RegNum, unsigned ElementWidth, MatrixKind Kind,
                        SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_MatrixRegister, Ctx);
@@ -2655,6 +2694,9 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case k_BTIHint:
     OS << getBTIHintName();
+    break;
+  case k_CMHPriorityHint:
+    OS << getCMHPriorityHintName();
     break;
   case k_MatrixRegister:
     OS << "<matrix " << getMatrixReg() << ">";
@@ -3279,6 +3321,24 @@ ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
+/// tryParseCMHPriorityHint - Try to parse a CMHPriority operand
+ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const AsmToken &Tok = getTok();
+  if (Tok.isNot(AsmToken::Identifier))
+    return TokError("invalid operand for instruction");
+
+  auto CMHPriority =
+      AArch64CMHPriorityHint::lookupCMHPriorityHintByName(Tok.getString());
+  if (!CMHPriority)
+    return TokError("invalid operand for instruction");
+
+  Operands.push_back(AArch64Operand::CreateCMHPriorityHint(
+      CMHPriority->Encoding, Tok.getString(), S, getContext()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
 /// tryParseAdrpLabel - Parse and validate a source label for the ADRP
 /// instruction.
 ParseStatus AArch64AsmParser::tryParseAdrpLabel(OperandVector &Operands) {
@@ -3824,6 +3884,18 @@ static const struct Extension {
     {"ssve-bitperm", {AArch64::FeatureSSVE_BitPerm}},
     {"sme-mop4", {AArch64::FeatureSME_MOP4}},
     {"sme-tmop", {AArch64::FeatureSME_TMOP}},
+    {"cmh", {AArch64::FeatureCMH}},
+    {"lscp", {AArch64::FeatureLSCP}},
+    {"tlbid", {AArch64::FeatureTLBID}},
+    {"mpamv2", {AArch64::FeatureMPAMv2}},
+    {"mtetc", {AArch64::FeatureMTETC}},
+    {"gcie", {AArch64::FeatureGCIE}},
+    {"sme2p3", {AArch64::FeatureSME2p3}},
+    {"sve2p3", {AArch64::FeatureSVE2p3}},
+    {"sve-b16mm", {AArch64::FeatureSVE_B16MM}},
+    {"f16mm", {AArch64::FeatureF16MM}},
+    {"f16f32dot", {AArch64::FeatureF16F32DOT}},
+    {"f16f32mm", {AArch64::FeatureF16F32MM}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -3861,6 +3933,8 @@ static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
     Str += "ARMv9.5a";
   else if (FBS[AArch64::HasV9_6aOps])
     Str += "ARMv9.6a";
+  else if (FBS[AArch64::HasV9_7aOps])
+    Str += "ARMv9.7a";
   else if (FBS[AArch64::HasV8_0rOps])
     Str += "ARMv8r";
   else {
@@ -3894,8 +3968,9 @@ void AArch64AsmParser::createSysAlias(uint16_t Encoding, OperandVector &Operands
       AArch64Operand::CreateImm(Expr, S, getLoc(), getContext()));
 }
 
-/// parseSysAlias - The IC, DC, AT, and TLBI instructions are simple aliases for
-/// the SYS instruction. Parse them specially so that we create a SYS MCInst.
+/// parseSysAlias - The IC, DC, AT, TLBI, MLBI and GIC{R} and GSB instructions
+/// are simple aliases for the SYS instruction. Parse them specially so that
+/// we create a SYS MCInst.
 bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
                                    OperandVector &Operands) {
   if (Name.contains('.'))
@@ -3908,6 +3983,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
   StringRef Op = Tok.getString();
   SMLoc S = Tok.getLoc();
   bool ExpectRegister = true;
+  bool OptionalRegister = false;
+  bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
 
   if (Mnemonic == "ic") {
     const AArch64IC::IC *IC = AArch64IC::lookupICByName(Op);
@@ -3950,13 +4027,50 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       return TokError(Str);
     }
     ExpectRegister = TLBI->NeedsReg;
+    bool hasTLBID = getSTI().hasFeature(AArch64::FeatureTLBID);
+    if (hasAll || hasTLBID) {
+      OptionalRegister = TLBI->OptionalReg;
+    }
     createSysAlias(TLBI->Encoding, Operands, S);
-  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" || Mnemonic == "cosp") {
+  } else if (Mnemonic == "mlbi") {
+    const AArch64MLBI::MLBI *MLBI = AArch64MLBI::lookupMLBIByName(Op);
+    if (!MLBI)
+      return TokError("invalid operand for MLBI instruction");
+    else if (!MLBI->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("MLBI " + std::string(MLBI->Name) + " requires: ");
+      setRequiredFeatureString(MLBI->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = MLBI->NeedsReg;
+    createSysAlias(MLBI->Encoding, Operands, S);
+  } else if (Mnemonic == "gic") {
+    const AArch64GIC::GIC *GIC = AArch64GIC::lookupGICByName(Op);
+    if (!GIC)
+      return TokError("invalid operand for GIC instruction");
+    else if (!GIC->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GIC " + std::string(GIC->Name) + " requires: ");
+      setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = true;
+    createSysAlias(GIC->Encoding, Operands, S);
+  } else if (Mnemonic == "gsb") {
+    const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByName(Op);
+    if (!GSB)
+      return TokError("invalid operand for GSB instruction");
+    else if (!GSB->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GSB " + std::string(GSB->Name) + " requires: ");
+      setRequiredFeatureString(GSB->getRequiredFeatures(), Str);
+      return TokError(Str);
+    }
+    ExpectRegister = false;
+    createSysAlias(GSB->Encoding, Operands, S);
+  } else if (Mnemonic == "cfp" || Mnemonic == "dvp" || Mnemonic == "cpp" ||
+             Mnemonic == "cosp") {
 
     if (Op.lower() != "rctx")
       return TokError("invalid operand for prediction restriction instruction");
 
-    bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
     bool hasPredres = hasAll || getSTI().hasFeature(AArch64::FeaturePredRes);
     bool hasSpecres2 = hasAll || getSTI().hasFeature(AArch64::FeatureSPECRES2);
 
@@ -3989,10 +4103,61 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     HasRegister = true;
   }
 
-  if (ExpectRegister && !HasRegister)
-    return TokError("specified " + Mnemonic + " op requires a register");
-  else if (!ExpectRegister && HasRegister)
-    return TokError("specified " + Mnemonic + " op does not use a register");
+  if (!OptionalRegister) {
+    if (ExpectRegister && !HasRegister)
+      return TokError("specified " + Mnemonic + " op requires a register");
+    else if (!ExpectRegister && HasRegister)
+      return TokError("specified " + Mnemonic + " op does not use a register");
+  }
+
+  if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
+    return true;
+
+  return false;
+}
+
+/// parseSyslAlias - The GICR instructions are simple aliases for
+/// the SYSL instruction. Parse them specially so that we create a
+/// SYS MCInst.
+bool AArch64AsmParser::parseSyslAlias(StringRef Name, SMLoc NameLoc,
+                                      OperandVector &Operands) {
+
+  Mnemonic = Name;
+  Operands.push_back(
+      AArch64Operand::CreateToken("sysl", NameLoc, getContext()));
+
+  // Now expect two operands (identifier + register)
+  SMLoc startLoc = getLoc();
+  const AsmToken &regTok = getTok();
+  StringRef reg = regTok.getString();
+  unsigned RegNum = matchRegisterNameAlias(reg.lower(), RegKind::Scalar);
+  if (!RegNum)
+    return TokError("expected register operand");
+
+  Operands.push_back(AArch64Operand::CreateReg(
+      RegNum, RegKind::Scalar, startLoc, getLoc(), getContext(), EqualsReg));
+
+  Lex(); // Eat token
+  if (parseToken(AsmToken::Comma))
+    return true;
+
+  // Check for identifier
+  const AsmToken &operandTok = getTok();
+  StringRef Op = operandTok.getString();
+  SMLoc S2 = operandTok.getLoc();
+  Lex(); // Eat token
+
+  if (Mnemonic == "gicr") {
+    const AArch64GICR::GICR *GICR = AArch64GICR::lookupGICRByName(Op);
+    if (!GICR)
+      return Error(S2, "invalid operand for GICR instruction");
+    else if (!GICR->haveFeatures(getSTI().getFeatureBits())) {
+      std::string Str("GICR " + std::string(GICR->Name) + " requires: ");
+      setRequiredFeatureString(GICR->getRequiredFeatures(), Str);
+      return Error(S2, Str);
+    }
+    createSysAlias(GICR->Encoding, Operands, S2);
+  }
 
   if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
     return true;
@@ -4020,23 +4185,23 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     if (HasnXSQualifier) {
       Op = Op.drop_back(3);
     }
-    const AArch64TLBI::TLBI *TLBIorig = AArch64TLBI::lookupTLBIByName(Op);
-    if (!TLBIorig)
+    const AArch64TLBIP::TLBIP *TLBIPorig = AArch64TLBIP::lookupTLBIPByName(Op);
+    if (!TLBIPorig)
       return TokError("invalid operand for TLBIP instruction");
-    const AArch64TLBI::TLBI TLBI(
-        TLBIorig->Name, TLBIorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
-        TLBIorig->NeedsReg,
+    const AArch64TLBIP::TLBIP TLBIP(
+        TLBIPorig->Name, TLBIPorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
+        TLBIPorig->NeedsReg, TLBIPorig->OptionalReg,
         HasnXSQualifier
-            ? TLBIorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
-            : TLBIorig->FeaturesRequired);
-    if (!TLBI.haveFeatures(getSTI().getFeatureBits())) {
+            ? TLBIPorig->FeaturesRequired | FeatureBitset({AArch64::FeatureXS})
+            : TLBIPorig->FeaturesRequired);
+    if (!TLBIP.haveFeatures(getSTI().getFeatureBits())) {
       std::string Name =
-          std::string(TLBI.Name) + (HasnXSQualifier ? "nXS" : "");
+          std::string(TLBIP.Name) + (HasnXSQualifier ? "nXS" : "");
       std::string Str("TLBIP " + Name + " requires: ");
-      setRequiredFeatureString(TLBI.getRequiredFeatures(), Str);
+      setRequiredFeatureString(TLBIP.getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    createSysAlias(TLBI.Encoding, Operands, S);
+    createSysAlias(TLBIP.Encoding, Operands, S);
   }
 
   Lex(); // Eat operand.
@@ -4719,6 +4884,13 @@ ParseStatus AArch64AsmParser::tryParseVectorList(OperandVector &Operands,
       FirstReg, Count, Stride, NumElements, ElementWidth, VectorKind, S,
       getLoc(), getContext()));
 
+  if (getTok().is(AsmToken::LBrac)) {
+    ParseStatus Res = tryParseVectorIndex(Operands);
+    if (Res.isFailure())
+      return ParseStatus::Failure;
+    return ParseStatus::Success;
+  }
+
   return ParseStatus::Success;
 }
 
@@ -5267,11 +5439,16 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   size_t Start = 0, Next = Name.find('.');
   StringRef Head = Name.slice(Start, Next);
 
-  // IC, DC, AT, TLBI and Prediction invalidation instructions are aliases for
-  // the SYS instruction.
+  // IC, DC, AT, TLBI, MLBI, GIC{R}, GSB and Prediction invalidation
+  // instructions are aliases for the SYS instruction.
   if (Head == "ic" || Head == "dc" || Head == "at" || Head == "tlbi" ||
-      Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp")
+      Head == "cfp" || Head == "dvp" || Head == "cpp" || Head == "cosp" ||
+      Head == "mlbi" || Head == "gic" || Head == "gsb")
     return parseSysAlias(Head, NameLoc, Operands);
+
+  // GICR instructions are aliases for the SYSL instruction.
+  if (Head == "gicr")
+    return parseSyslAlias(Head, NameLoc, Operands);
 
   // TLBIP instructions are aliases for the SYSP instruction.
   if (Head == "tlbip")
@@ -8217,6 +8394,8 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
       Spec = AArch64::S_GOTPCREL;
     else if (Identifier == "plt")
       Spec = AArch64::S_PLT;
+    else if (Identifier == "funcinit")
+      Spec = AArch64::S_FUNCINIT;
   }
   if (Spec == AArch64::S_None)
     return Error(Loc, "invalid relocation specifier");

@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = common global i32 0, align 4, !dbg !9
 
 ; Function Attrs: nounwind uwtable
-define void @test() #0 !dbg !4 {
+define void @test() !dbg !4 {
 entry:
   tail call void (...) @f() #2, !dbg !14
   %0 = load i32, ptr @A, align 4, !dbg !15
@@ -28,12 +28,10 @@ if.end:                                           ; preds = %entry, %if.then
   ret void, !dbg !18
 }
 
-declare void @f(...) #1
+declare void @f(...)
 
-declare void @g(...) #1
+declare void @g(...)
 
-attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { nounwind }
 
 !llvm.gcov = !{!19}

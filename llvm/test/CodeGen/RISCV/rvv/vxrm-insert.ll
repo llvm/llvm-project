@@ -27,12 +27,12 @@ define <vscale x 1 x i8> @test1(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
   %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %a,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -52,12 +52,12 @@ define <vscale x 1 x i8> @test2(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 2, iXLen %3)
   %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %a,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -122,13 +122,13 @@ define <vscale x 1 x i8> @test3(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; RV64-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
   %b = call <vscale x 1 x i8> @foo(<vscale x 1 x i8> %a)
   %c = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %b,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -151,13 +151,13 @@ define <vscale x 1 x i8> @test4(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
   %b = call <vscale x 1 x i8> asm "", "=^vr,0"(<vscale x 1 x i8> %a)
   %c = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %b,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -180,7 +180,7 @@ define <vscale x 1 x i8> @test5(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -188,7 +188,7 @@ entry:
 
 condblock:
   %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %a,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -220,7 +220,7 @@ entry:
 
 trueblock:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -228,7 +228,7 @@ trueblock:
 
 falseblock:
   %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -257,7 +257,7 @@ define <vscale x 1 x i8> @test7(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vsc
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -265,7 +265,7 @@ entry:
 
 trueblock:
   %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %a,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -273,7 +273,7 @@ trueblock:
 
 falseblock:
   %c = call <vscale x 1 x i8> @llvm.riscv.vasub.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %a,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -307,7 +307,7 @@ entry:
 
 trueblock:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -315,7 +315,7 @@ trueblock:
 
 falseblock:
   %b = call <vscale x 1 x i8> @llvm.riscv.vasub.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -324,7 +324,7 @@ falseblock:
 mergeblock:
   %c = phi <vscale x 1 x i8> [%a, %trueblock], [%b, %falseblock]
   %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %c,
     <vscale x 1 x i8> %2,
     iXLen 0, iXLen %3)
@@ -355,7 +355,7 @@ entry:
 
 trueblock:
   %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -363,7 +363,7 @@ trueblock:
 
 falseblock:
   %b = call <vscale x 1 x i8> @llvm.riscv.vasub.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     iXLen 0, iXLen %3)
@@ -372,7 +372,7 @@ falseblock:
 mergeblock:
   %c = phi <vscale x 1 x i8> [%a, %trueblock], [%b, %falseblock]
   %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %c,
     <vscale x 1 x i8> %2,
     iXLen 2, iXLen %3)
@@ -405,9 +405,9 @@ entry:
 for.body:
   %n.addr.011 = phi iXLen [ %n, %entry ], [ %sub, %for.body ]
   %vl = tail call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %n.addr.011, iXLen 0, iXLen 5)
-  %load1 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op1, iXLen %vl)
-  %load2 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op2, iXLen %vl)
-  %vadd = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %load1, <vscale x 1 x i8> %load2, iXLen 2, iXLen %vl)
+  %load1 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op1, iXLen %vl)
+  %load2 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op2, iXLen %vl)
+  %vadd = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %load1, <vscale x 1 x i8> %load2, iXLen 2, iXLen %vl)
   tail call void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8> %vadd, ptr %ptr_dest, iXLen %vl)
   %sub = sub iXLen %n.addr.011, %vl
   %tobool.not = icmp eq iXLen %sub, 0
@@ -445,9 +445,9 @@ define void @test11(ptr nocapture %ptr_dest, ptr nocapture readonly %ptr_op1, pt
 ; CHECK-NEXT:    ret
 entry:
   %vl = tail call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %n, iXLen 0, iXLen 5)
-  %load1a = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op1, iXLen %vl)
-  %load2a = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op2, iXLen %vl)
-  %vadda = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %load1a, <vscale x 1 x i8> %load2a, iXLen 2, iXLen %vl)
+  %load1a = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op1, iXLen %vl)
+  %load2a = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op2, iXLen %vl)
+  %vadda = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %load1a, <vscale x 1 x i8> %load2a, iXLen 2, iXLen %vl)
   tail call void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8> %vadda, ptr %ptr_dest, iXLen %vl)
   %suba = sub iXLen %n, %vl
   %tobool.not9 = icmp eq iXLen %suba, 0
@@ -456,9 +456,9 @@ entry:
 for.body:
   %n.addr.011 = phi iXLen [ %suba, %entry ], [ %sub, %for.body ]
   %vl2 = tail call iXLen @llvm.riscv.vsetvli.iXLen(iXLen %n.addr.011, iXLen 0, iXLen 5)
-  %load1 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op1, iXLen %vl2)
-  %load2 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> undef, ptr %ptr_op2, iXLen %vl2)
-  %vadd = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %load1, <vscale x 1 x i8> %load2, iXLen 2, iXLen %vl2)
+  %load1 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op1, iXLen %vl2)
+  %load2 = tail call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.iXLen(<vscale x 1 x i8> poison, ptr %ptr_op2, iXLen %vl2)
+  %vadd = tail call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %load1, <vscale x 1 x i8> %load2, iXLen 2, iXLen %vl2)
   tail call void @llvm.riscv.vse.nxv1i8.iXLen(<vscale x 1 x i8> %vadd, ptr %ptr_dest, iXLen %vl2)
   %sub = sub iXLen %n.addr.011, %vl2
   %tobool.not = icmp eq iXLen %sub, 0
@@ -489,16 +489,16 @@ define <vscale x 1 x i8> @test12(i1 %c1, <vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK-NEXT:    vaadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
+  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
   br i1 %c1, label %block1, label %block2
 
 block1:
-  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
+  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
   br label %block2
 
 block2:
   %c = phi <vscale x 1 x i8> [ %a, %entry ], [ %b, %block1]
-  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
+  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
   ret <vscale x 1 x i8> %d
 }
 
@@ -527,19 +527,19 @@ define <vscale x 1 x i8> @test13(i1 %c1, i1 %c2, i1 %c3, <vscale x 1 x i8> %0, <
 ; CHECK-NEXT:    vaadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
-  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
+  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
   br i1 %c1, label %block1, label %block2
 
 block1:
-  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
+  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
   br i1 %c2, label %block2, label %block3
 
 block2:
   %c = phi <vscale x 1 x i8> [ %a, %entry ], [ %b, %block1]
-  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
+  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
   ret <vscale x 1 x i8> %d
 
 block3:
-  %e = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %1, <vscale x 1 x i8> %b, iXLen 2, iXLen %vl)
+  %e = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> poison, <vscale x 1 x i8> %1, <vscale x 1 x i8> %b, iXLen 2, iXLen %vl)
   ret <vscale x 1 x i8> %e
 }

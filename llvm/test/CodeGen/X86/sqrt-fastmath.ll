@@ -1012,15 +1012,15 @@ define double @sqrt_simplify_before_recip_order(double %x, ptr %p) nounwind {
   ret double %sqrt_fast
 }
 
-attributes #0 = { "unsafe-fp-math"="true" "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
-attributes #1 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" }
+attributes #0 = { "reciprocal-estimates"="!sqrtf,!vec-sqrtf,!divf,!vec-divf" }
+attributes #1 = { "reciprocal-estimates"="sqrt,vec-sqrt" }
 attributes #2 = { nounwind readnone }
-attributes #3 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" }
-attributes #4 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }
-attributes #5 = { "unsafe-fp-math"="true" "reciprocal-estimates"="all:0" }
-attributes #6 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" }
+attributes #3 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" }
+attributes #4 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }
+attributes #5 = { "reciprocal-estimates"="all:0" }
+attributes #6 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" }
 
-; Attributes without "unsafe-fp-math"="true"
+; Attributes without
 ; TODO: Merge with previous attributes when this attribute can be deleted.
 attributes #7 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" } ; #3
 attributes #8 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" } ; #6

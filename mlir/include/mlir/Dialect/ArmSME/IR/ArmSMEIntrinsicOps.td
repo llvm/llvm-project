@@ -201,9 +201,6 @@ class ArmSME_IntrCountOp<string mnemonic>
                     /*traits*/[PredOpTrait<"`res` is i64", TypeIsPred<"res", I64>>],
                     /*numResults=*/1, /*overloadedResults=*/[]>;
 
-def LLVM_aarch64_sme_cntsb : ArmSME_IntrCountOp<"cntsb">;
-def LLVM_aarch64_sme_cntsh : ArmSME_IntrCountOp<"cntsh">;
-def LLVM_aarch64_sme_cntsw : ArmSME_IntrCountOp<"cntsw">;
 def LLVM_aarch64_sme_cntsd : ArmSME_IntrCountOp<"cntsd">;
 
 #endif // ARMSME_INTRINSIC_OPS

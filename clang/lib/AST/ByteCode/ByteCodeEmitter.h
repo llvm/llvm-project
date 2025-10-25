@@ -46,7 +46,8 @@ protected:
   /// Methods implemented by the compiler.
   virtual bool visitFunc(const FunctionDecl *E) = 0;
   virtual bool visitExpr(const Expr *E, bool DestroyToplevelScope) = 0;
-  virtual bool visitDeclAndReturn(const VarDecl *E, bool ConstantContext) = 0;
+  virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
+                                  bool ConstantContext) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
 
@@ -98,7 +99,7 @@ private:
 
   /// Emits an opcode.
   template <typename... Tys>
-  bool emitOp(Opcode Op, const Tys &...Args, const SourceInfo &L);
+  bool emitOp(Opcode Op, const Tys &...Args, SourceInfo L);
 
 protected:
 #define GET_LINK_PROTO

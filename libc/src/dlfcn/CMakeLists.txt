@@ -54,4 +54,5 @@ add_entrypoint_object(
     dladdr.h
   DEPENDS
     libc.include.dlfcn
+    libc.hdr.types.dl_info
 )

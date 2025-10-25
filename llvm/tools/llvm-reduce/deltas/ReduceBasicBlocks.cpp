@@ -49,7 +49,7 @@ static void replaceBranchTerminator(BasicBlock &BB,
   if (isa<CatchSwitchInst>(Term))
     return;
 
-  bool IsBranch = isa<BranchInst>(Term);
+  bool IsBranch = isa<BranchInst>(Term) || isa<CallBrInst>(Term);
   if (InvokeInst *Invoke = dyn_cast<InvokeInst>(Term)) {
     BasicBlock *UnwindDest = Invoke->getUnwindDest();
     BasicBlock::iterator LP = UnwindDest->getFirstNonPHIIt();

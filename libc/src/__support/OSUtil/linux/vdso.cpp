@@ -11,10 +11,9 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/futex_word.h"
-#include "src/sys/auxv/getauxval.h"
 #include <linux/auxvec.h>
 
 // TODO: This is a temporary workaround to avoid including elf.h
@@ -189,17 +188,13 @@ void Symbol::initialize_vdso_global_cache() {
   for (auto &i : global_cache)
     i = nullptr;
 
-  // get the address of the VDSO, protect errno since getauxval may change
-  // it
-  int errno_backup = libc_errno;
-  uintptr_t vdso_ehdr_addr = getauxval(AT_SYSINFO_EHDR);
+  cpp::optional<unsigned long> auxv_res = auxv::get(AT_SYSINFO_EHDR);
+  uintptr_t vdso_ehdr_addr = auxv_res ? static_cast<uintptr_t>(*auxv_res) : 0;
   // Get the memory address of the vDSO ELF header.
   auto vdso_ehdr = reinterpret_cast<ElfW(Ehdr) *>(vdso_ehdr_addr);
   // leave the table unpopulated if we don't have vDSO
-  if (vdso_ehdr == nullptr) {
-    libc_errno = errno_backup;
+  if (vdso_ehdr == nullptr)
     return;
-  }
 
   // locate the section header inside the elf using the section header
   // offset

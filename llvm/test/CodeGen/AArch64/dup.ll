@@ -32,8 +32,8 @@ entry:
 define <2 x i8> @loaddup_v2i8(ptr %p) {
 ; CHECK-LABEL: loaddup_v2i8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    dup v0.2s, w8
+; CHECK-NEXT:    ldr b0, [x0]
+; CHECK-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-NEXT:    ret
 entry:
   %a = load i8, ptr %p
@@ -189,8 +189,8 @@ entry:
 define <4 x i8> @loaddup_v4i8(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_v4i8:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldrb w8, [x0]
-; CHECK-SD-NEXT:    dup v0.4h, w8
+; CHECK-SD-NEXT:    ldr b0, [x0]
+; CHECK-SD-NEXT:    dup v0.4h, v0.h[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_v4i8:
@@ -444,8 +444,8 @@ entry:
 define <2 x i16> @loaddup_v2i16(ptr %p) {
 ; CHECK-SD-LABEL: loaddup_v2i16:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldrh w8, [x0]
-; CHECK-SD-NEXT:    dup v0.2s, w8
+; CHECK-SD-NEXT:    ldr h0, [x0]
+; CHECK-SD-NEXT:    dup v0.2s, v0.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: loaddup_v2i16:

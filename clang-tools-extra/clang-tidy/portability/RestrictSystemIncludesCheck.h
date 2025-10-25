@@ -1,4 +1,4 @@
-//===--- RestrictSystemIncludesCheck.h - clang-tidy --------------*- C++-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,7 +19,7 @@ namespace clang::tidy::portability {
 /// includes are specified, the check will exit without issuing any warnings.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability/restrict-system-includes.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/portability/restrict-system-includes.html
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
   RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,

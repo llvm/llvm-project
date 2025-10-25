@@ -1649,6 +1649,28 @@
 // MIPS-ARCH-OCTEONP:#define __OCTEON__ 1
 // MIPS-ARCH-OCTEONP:#define __mips_isa_rev 2
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu i6400 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-I6400 %s
+//
+// MIPS-ARCH-I6400:#define _MIPS_ARCH "i6400"
+// MIPS-ARCH-I6400:#define _MIPS_ARCH_I6400 1
+// MIPS-ARCH-I6400:#define _MIPS_ISA _MIPS_ISA_MIPS64
+// MIPS-ARCH-I6400:#define __mips_abs2008 1
+// MIPS-ARCH-I6400:#define __mips_isa_rev 6
+// MIPS-ARCH-I6400:#define __mips_nan2008 1
+
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=mips64-none-none \
+// RUN:            -target-cpu i6500 < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS-ARCH-I6500 %s
+//
+// MIPS-ARCH-I6500:#define _MIPS_ARCH "i6500"
+// MIPS-ARCH-I6500:#define _MIPS_ARCH_I6500 1
+// MIPS-ARCH-I6500:#define _MIPS_ISA _MIPS_ISA_MIPS64
+// MIPS-ARCH-I6500:#define __mips_abs2008 1
+// MIPS-ARCH-I6500:#define __mips_isa_rev 6
+// MIPS-ARCH-I6500:#define __mips_nan2008 1
+
 // Check MIPS float ABI macros
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding \

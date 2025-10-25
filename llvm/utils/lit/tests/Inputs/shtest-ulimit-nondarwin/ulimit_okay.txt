@@ -1,0 +1,4 @@
+# RUN: ulimit -v 1048576
+# RUN: %{python} %S/../shtest-ulimit/print_limits.py
+# Fail the test so that we can assert on the output.
+# RUN: not echo return

@@ -27,7 +27,7 @@ struct LLVM_ABI ConfigManager : public MultiFormatConfig {
 
   const CommonConfig &getCommonConfig() const override { return Common; }
 
-  Expected<const ELFConfig &> getELFConfig() const override { return ELF; }
+  Expected<const ELFConfig &> getELFConfig() const override;
 
   Expected<const COFFConfig &> getCOFFConfig() const override;
 

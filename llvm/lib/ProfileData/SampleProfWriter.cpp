@@ -41,6 +41,11 @@
 using namespace llvm;
 using namespace sampleprof;
 
+// To begin with, make this option off by default.
+static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
+    "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
+    cl::desc("Write vtable type profile in ext-binary sample profile writer"));
+
 namespace llvm {
 namespace support {
 namespace endian {
@@ -435,6 +440,9 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagIsPreInlined);
   if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
+  if (Type == SecProfSummary && ExtBinaryWriteVTableTypeProf)
+    addSectionFlag(SecProfSummary,
+                   SecProfSummaryFlags::SecFlagHasVTableTypeProf);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {
@@ -476,6 +484,12 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
   if (std::error_code EC = addNewSection(Type, LayoutIdx, SectionStart))
     return EC;
   return sampleprof_error::success;
+}
+
+SampleProfileWriterExtBinary::SampleProfileWriterExtBinary(
+    std::unique_ptr<raw_ostream> &OS)
+    : SampleProfileWriterExtBinaryBase(OS) {
+  WriteVTableProf = ExtBinaryWriteVTableTypeProf;
 }
 
 std::error_code SampleProfileWriterExtBinary::writeDefaultLayout(
@@ -587,6 +601,19 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
     LineCount++;
+
+    if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
+      OS.indent(Indent + 1);
+      Loc.print(OS);
+      OS << ": ";
+      OS << kVTableProfPrefix;
+      for (const auto [TypeName, Count] : *Map) {
+        OS << TypeName << ":" << Count << " ";
+      }
+      OS << "\n";
+      LineCount++;
+    }
   }
 
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
@@ -603,7 +630,21 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       if (std::error_code EC = writeSample(CalleeSamples))
         return EC;
     }
+
+    if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
+      OS.indent(Indent);
+      Loc.print(OS);
+      OS << ": ";
+      OS << kVTableProfPrefix;
+      for (const auto [TypeId, Count] : *Map) {
+        OS << TypeId << ":" << Count << " ";
+      }
+      OS << "\n";
+      LineCount++;
+    }
   }
+
   Indent -= 1;
 
   if (FunctionSamples::ProfileIsProbeBased) {
@@ -663,6 +704,17 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
       addName(CalleeSamples.getFunction());
       addNames(CalleeSamples);
     }
+
+  if (!WriteVTableProf)
+    return;
+  // Add all the vtable names to NameTable.
+  for (const auto &VTableAccessCountMap :
+       llvm::make_second_range(S.getCallsiteTypeCounts())) {
+    // Add type name to NameTable.
+    for (const auto Type : llvm::make_first_range(VTableAccessCountMap)) {
+      addName(Type);
+    }
+  }
 }
 
 void SampleProfileWriterExtBinaryBase::addContext(
@@ -801,6 +853,22 @@ std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
   return sampleprof_error::success;
 }
 
+std::error_code SampleProfileWriterBinary::writeCallsiteVTableProf(
+    const CallsiteTypeMap &CallsiteTypeMap, raw_ostream &OS) {
+  assert(WriteVTableProf &&
+         "writeCallsiteVTableProf should not be called if WriteVTableProf is "
+         "false");
+
+  encodeULEB128(CallsiteTypeMap.size(), OS);
+  for (const auto &[Loc, TypeMap] : CallsiteTypeMap) {
+    Loc.serialize(OS);
+    if (std::error_code EC = serializeTypeMap(TypeMap, getNameTable(), OS))
+      return EC;
+  }
+
+  return sampleprof_error::success;
+}
+
 std::error_code SampleProfileWriterBinary::writeSummary() {
   auto &OS = *OutputStream;
   encodeULEB128(Summary->getTotalCount(), OS);
@@ -838,13 +906,15 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S) {
   for (const auto &J : S.getCallsiteSamples())
     NumCallsites += J.second.size();
   encodeULEB128(NumCallsites, OS);
-  for (const auto &[Loc, CalleeFunctionSampleMap] : S.getCallsiteSamples())
-    for (const auto &FunctionSample :
-         llvm::make_second_range(CalleeFunctionSampleMap)) {
-      Loc.serialize(OS);
-      if (std::error_code EC = writeBody(FunctionSample))
+  for (const auto &J : S.getCallsiteSamples())
+    for (const auto &FS : J.second) {
+      J.first.serialize(OS);
+      if (std::error_code EC = writeBody(FS.second))
         return EC;
     }
+
+  if (WriteVTableProf)
+    return writeCallsiteVTableProf(S.getCallsiteTypeCounts(), OS);
 
   return sampleprof_error::success;
 }

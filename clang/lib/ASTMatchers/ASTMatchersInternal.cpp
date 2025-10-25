@@ -1109,8 +1109,6 @@ const AstTypeMatcher<TemplateTypeParmType> templateTypeParmType;
 const AstTypeMatcher<InjectedClassNameType> injectedClassNameType;
 const AstTypeMatcher<DecayedType> decayedType;
 const AstTypeMatcher<DependentNameType> dependentNameType;
-const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
 AST_TYPELOC_TRAVERSE_MATCHER_DEF(hasElementType,
                                  AST_POLYMORPHIC_SUPPORTED_TYPES(ArrayType,
                                                                  ComplexType));

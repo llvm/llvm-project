@@ -1,4 +1,4 @@
-//===---------- ExprSequence.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -49,10 +49,8 @@ static SmallVector<const Stmt *, 1> getParentStmts(const Stmt *S,
   return Result;
 }
 
-namespace {
-
-bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
-                         ASTContext *Context) {
+static bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
+                                ASTContext *Context) {
   if (Descendant == Ancestor)
     return true;
   return llvm::any_of(getParentStmts(Descendant, Context),
@@ -61,15 +59,15 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
                       });
 }
 
-bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
-                        ASTContext *Context) {
+static bool isDescendantOfArgs(const Stmt *Descendant, const CallExpr *Call,
+                               ASTContext *Context) {
   return llvm::any_of(Call->arguments(),
                       [Descendant, Context](const Expr *Arg) {
                         return isDescendantOrEqual(Descendant, Arg, Context);
                       });
 }
 
-llvm::SmallVector<const InitListExpr *>
+static llvm::SmallVector<const InitListExpr *>
 getAllInitListForms(const InitListExpr *InitList) {
   llvm::SmallVector<const InitListExpr *> Result = {InitList};
   if (const InitListExpr *AltForm = InitList->getSyntacticForm())
@@ -78,8 +76,6 @@ getAllInitListForms(const InitListExpr *InitList) {
     Result.push_back(AltForm);
   return Result;
 }
-
-} // namespace
 
 ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
                            ASTContext *TheContext)
@@ -258,7 +254,7 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
 }
 
 const Stmt *ExprSequence::resolveSyntheticStmt(const Stmt *S) const {
-  if (SyntheticStmtSourceMap.count(S))
+  if (SyntheticStmtSourceMap.contains(S))
     return SyntheticStmtSourceMap.lookup(S);
   return S;
 }
@@ -274,7 +270,7 @@ StmtToBlockMap::StmtToBlockMap(const CFG *TheCFG, ASTContext *TheContext)
 }
 
 const CFGBlock *StmtToBlockMap::blockContainingStmt(const Stmt *S) const {
-  while (!Map.count(S)) {
+  while (!Map.contains(S)) {
     SmallVector<const Stmt *, 1> Parents = getParentStmts(S, Context);
     if (Parents.empty())
       return nullptr;

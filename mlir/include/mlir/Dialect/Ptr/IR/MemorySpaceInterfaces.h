@@ -17,16 +17,18 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpDefinition.h"
 
+#include <functional>
+#include <optional>
+
 namespace mlir {
 class Operation;
+class DataLayout;
 namespace ptr {
-enum class AtomicBinOp : uint64_t;
-enum class AtomicOrdering : uint64_t;
+enum class AtomicBinOp : uint32_t;
+enum class AtomicOrdering : uint32_t;
 } // namespace ptr
 } // namespace mlir
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceAttrInterfaces.h.inc"
-
-#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h.inc"
 
 #endif // MLIR_DIALECT_PTR_IR_MEMORYSPACEINTERFACES_H

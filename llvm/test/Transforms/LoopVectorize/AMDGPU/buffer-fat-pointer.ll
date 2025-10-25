@@ -7,21 +7,21 @@
 define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(ptr addrspace(1) %.ptr, i64 %v) {
 ; CHECK-LABEL: define amdgpu_kernel void @_dynamic_pack_simple_dispatch_0_pack_i32(
 ; CHECK-SAME: ptr addrspace(1) [[DOTPTR:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[_LR_PH5:.*]]:
-; CHECK-NEXT:    [[DOTRSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[DOTPTR]], i16 0, i32 -2147483648, i32 159744)
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[DOTRSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[DOTPTR]], i16 0, i64 2147483648, i32 159744)
 ; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr addrspace(8) [[DOTRSRC]] to ptr addrspace(7)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, %[[_LR_PH5]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[TMP5:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr addrspace(7) [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP5]] = add i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP3]], [[V]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[__CRIT_EDGE_LOOPEXIT:.*]], label %[[LOOP]]
-; CHECK:       [[__CRIT_EDGE_LOOPEXIT]]:
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %.ptr, i16 0, i32 2147483648, i32 159744)
+  %rsrc = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) %.ptr, i16 0, i64 2147483648, i32 159744)
   %fat = addrspacecast ptr addrspace(8) %rsrc to ptr addrspace(7)
   br label %loop
 
@@ -36,4 +36,4 @@ exit:                             ; preds = %exit
   ret void
 }
 
-declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i32, i32)
+declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p1(ptr addrspace(1) readnone, i16, i64, i32)

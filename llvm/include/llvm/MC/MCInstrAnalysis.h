@@ -81,6 +81,10 @@ public:
     return Info->get(Inst.getOpcode()).isTerminator();
   }
 
+  virtual bool isBarrier(const MCInst &Inst) const {
+    return Info->get(Inst.getOpcode()).isBarrier();
+  }
+
   virtual bool mayAffectControlFlow(const MCInst &Inst,
                                     const MCRegisterInfo &MCRI) const {
     if (isBranch(Inst) || isCall(Inst) || isReturn(Inst) ||

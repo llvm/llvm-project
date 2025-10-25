@@ -150,7 +150,7 @@ lpad:
 
 define ptr @test13(i64 %A) {
 ; ALL-LABEL: @test13(
-; ALL-NEXT:    [[C:%.*]] = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 [[A:%.*]]
+; ALL-NEXT:    [[C:%.*]] = getelementptr i8, ptr @inbuf, i64 [[A:%.*]]
 ; ALL-NEXT:    ret ptr [[C]]
 ;
   %c = getelementptr [0 x i8], ptr @inbuf, i64 0, i64 %A

@@ -9,6 +9,8 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
@@ -73,6 +75,26 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
       break;
   }
   return llvm::make_range(Begin, End);
+}
+
+static void
+collectPrivatizingConstructs(llvm::SmallSet<Directive, 16> &Constructs,
+                             unsigned Version) {
+  llvm::SmallSet<Clause, 16> Privatizing;
+  for (auto C :
+       llvm::enum_seq_inclusive<Clause>(Clause::First_, Clause::Last_)) {
+    if (isPrivatizingClause(C))
+      Privatizing.insert(C);
+  }
+
+  for (auto D : llvm::enum_seq_inclusive<Directive>(Directive::First_,
+                                                    Directive::Last_)) {
+    bool AllowsPrivatizing = llvm::any_of(Privatizing, [&](Clause C) {
+      return isAllowedClauseForDirective(D, C, Version);
+    });
+    if (AllowsPrivatizing)
+      Constructs.insert(D);
+  }
 }
 
 namespace llvm::omp {
@@ -192,6 +214,18 @@ bool isCombinedConstruct(Directive D) {
 ArrayRef<unsigned> getOpenMPVersions() {
   static unsigned Versions[]{31, 40, 45, 50, 51, 52, 60, 61};
   return Versions;
+}
+
+bool isPrivatizingConstruct(Directive D, unsigned Version) {
+  static llvm::SmallSet<Directive, 16> Privatizing;
+  [[maybe_unused]] static bool Init =
+      (collectPrivatizingConstructs(Privatizing, Version), true);
+
+  // As of OpenMP 6.0, privatizing constructs (with the test being if they
+  // allow a privatizing clause) are: dispatch, distribute, do, for, loop,
+  // parallel, scope, sections, simd, single, target, target_data, task,
+  // taskgroup, taskloop, and teams.
+  return llvm::is_contained(Privatizing, D);
 }
 
 std::string prettifyFunctionName(StringRef FunctionName) {

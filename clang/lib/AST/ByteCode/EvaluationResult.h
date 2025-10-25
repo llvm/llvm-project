@@ -9,23 +9,22 @@
 #ifndef LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 #define LLVM_CLANG_AST_INTERP_EVALUATION_RESULT_H
 
-#include "FunctionPointer.h"
-#include "Pointer.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
-#include <optional>
-#include <variant>
 
 namespace clang {
 namespace interp {
 class EvalEmitter;
 class Context;
+class Pointer;
+class SourceInfo;
+class InterpState;
 
 /// Defines the result of an evaluation.
 ///
-/// The result might be in different forms--one of the pointer types,
-/// an APValue, or nothing.
+/// The Kind defined if the evaluation was invalid, valid (but empty, e.g. for
+/// void expressions) or if we have a valid evaluation result.
 ///
 /// We use this class to inspect and diagnose the result, as well as
 /// convert it to the requested form.
@@ -33,8 +32,6 @@ class EvaluationResult final {
 public:
   enum ResultKind {
     Empty,   // Initial state.
-    LValue,  // Result is an lvalue/pointer.
-    RValue,  // Result is an rvalue.
     Invalid, // Result is invalid.
     Valid,   // Result is valid and empty.
   };
@@ -42,29 +39,18 @@ public:
   using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 
 private:
+#ifndef NDEBUG
   const Context *Ctx = nullptr;
-  std::variant<std::monostate, Pointer, FunctionPointer, APValue> Value;
+#endif
+  APValue Value;
   ResultKind Kind = Empty;
-  DeclTy Source = nullptr; // Currently only needed for dump().
-
-  EvaluationResult(ResultKind Kind) : Kind(Kind) {
-    // Leave everything empty. Can be used as an
-    // error marker or for void return values.
-    assert(Kind == Valid || Kind == Invalid);
-  }
+  DeclTy Source = nullptr;
 
   void setSource(DeclTy D) { Source = D; }
 
-  void setValue(const APValue &V) {
-    // V could still be an LValue.
+  void takeValue(APValue &&V) {
     assert(empty());
     Value = std::move(V);
-    Kind = RValue;
-  }
-  void setFunctionPointer(const FunctionPointer &P) {
-    assert(empty());
-    Value = P;
-    Kind = LValue;
   }
   void setInvalid() {
     // We are NOT asserting empty() here, since setting it to invalid
@@ -77,22 +63,23 @@ private:
   }
 
 public:
+#ifndef NDEBUG
   EvaluationResult(const Context *Ctx) : Ctx(Ctx) {}
+#else
+  EvaluationResult(const Context *Ctx) {}
+#endif
 
   bool empty() const { return Kind == Empty; }
   bool isInvalid() const { return Kind == Invalid; }
-  bool isLValue() const { return Kind == LValue; }
-  bool isRValue() const { return Kind == RValue; }
-  bool isPointer() const { return std::holds_alternative<Pointer>(Value); }
 
-  /// Returns an APValue for the evaluation result. The returned
-  /// APValue might be an LValue or RValue.
-  APValue toAPValue() const;
+  /// Returns an APValue for the evaluation result.
+  APValue toAPValue() const {
+    assert(!empty());
+    assert(!isInvalid());
+    return Value;
+  }
 
-  /// If the result is an LValue, convert that to an RValue
-  /// and return it. This may fail, e.g. if the result is an
-  /// LValue and we can't read from it.
-  std::optional<APValue> toRValue() const;
+  APValue stealAPValue() { return std::move(Value); }
 
   /// Check that all subobjects of the given pointer have been initialized.
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
@@ -105,7 +92,7 @@ public:
     if (const auto *D =
             dyn_cast_if_present<ValueDecl>(Source.dyn_cast<const Decl *>()))
       return D->getType();
-    else if (const auto *E = Source.dyn_cast<const Expr *>())
+    if (const auto *E = Source.dyn_cast<const Expr *>())
       return E->getType();
     return QualType();
   }

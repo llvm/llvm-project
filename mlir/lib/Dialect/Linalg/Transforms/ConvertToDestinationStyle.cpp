@@ -75,7 +75,7 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
     // layout for best compatibility.
     Value toBuffer = bufferization::ToBufferOp::create(
         b, loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
-        tensorSource, /*readOnly=*/true);
+        tensorSource, /*read_only=*/true);
     memref::CopyOp::create(b, loc, toBuffer, memrefDest);
   } break;
   case linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy: {
@@ -84,7 +84,7 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
     // layout for best compatibility.
     Value toBuffer = bufferization::ToBufferOp::create(
         b, loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
-        tensorSource, /*readOnly=*/true);
+        tensorSource, /*read_only=*/true);
     linalg::CopyOp::create(b, loc, toBuffer, memrefDest);
   } break;
   };

@@ -25,18 +25,12 @@ let SchedRW = [WriteLEA] in {
                      [(set GR32:$dst, lea32addr:$src)]>,
                      OpSize32, Requires<[Not64BitMode]>;
 
-  let Predicates = [HasNDD], isCodeGenOnly = 1 in {
-    def LEA64_8r : I<0x8D, MRMSrcMem, (outs GR8:$dst), (ins lea64_8mem:$src),
-                     "lea{b}\t{$src|$dst}, {$dst|$src}",
-                     [(set GR8:$dst, lea64_iaddr:$src)]>,
-                   OpSize16,
-                   Requires<[In64BitMode]>;
+  let isCodeGenOnly = 1 in {
+    def LEA64_8r : I<0x8D, MRMSrcMem, (outs GR32:$dst), (ins lea64_8mem:$src),
+                     "lea{l}\t{$src|$dst}, {$dst|$src}", []>, OpSize32;
 
-    def LEA64_16r : I<0x8D, MRMSrcMem, (outs GR16:$dst), (ins lea64_16mem:$src),
-                      "lea{w}\t{$src|$dst}, {$dst|$src}",
-                      [(set GR16:$dst, lea64_iaddr:$src)]>,
-                    OpSize16,
-                    Requires<[In64BitMode]>;
+    def LEA64_16r : I<0x8D, MRMSrcMem, (outs GR32:$dst), (ins lea64_16mem:$src),
+                      "lea{l}\t{$src|$dst}, {$dst|$src}", []>, OpSize32;
   }
 
   def LEA64_32r : I<0x8D, MRMSrcMem, (outs GR32:$dst), (ins lea64_32mem:$src),
@@ -50,6 +44,11 @@ let SchedRW = [WriteLEA] in {
                       "lea{q}\t{$src|$dst}, {$dst|$src}",
                       [(set GR64:$dst, lea64addr:$src)]>;
 } // SchedRW
+
+let Predicates = [HasNDD] in {
+  def : Pat<(i8 lea64_iaddr:$src), (EXTRACT_SUBREG (LEA64_8r lea64_8mem:$src), sub_8bit)>;
+  def : Pat<(i16 lea64_iaddr:$src), (EXTRACT_SUBREG (LEA64_16r lea64_16mem:$src), sub_16bit)>;
+}
 
 // Pseudo instruction for lea that prevent optimizer from eliminating
 // the instruction.

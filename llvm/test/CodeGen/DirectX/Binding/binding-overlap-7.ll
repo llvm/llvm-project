@@ -21,15 +21,15 @@ entry:
 
   ; Buffer<double> A[2] : register(t2, space4);
   %h0 = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 2, i32 10, i1 false, ptr @A.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 2, i32 10, ptr @A.str)
 
   ; Buffer<double> B : register(t20, space5);
   %h1 = call target("dx.TypedBuffer", i64, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, i1 false, ptr @B.str)
+            @llvm.dx.resource.handlefrombinding(i32 5, i32 20, i32 1, i32 0, ptr @B.str)
 
   ; Buffer<double> C[] : register(t2, space4);
   %h2 = call target("dx.TypedBuffer", double, 0, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, i1 false, ptr @C.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @C.str)
 
   ret void
 }

@@ -1,4 +1,5 @@
 // RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx950" | FileCheck %s
+// RUN: mlir-opt --split-input-file %s -convert-arith-to-amdgpu="chipset=gfx1100" | FileCheck %s --check-prefix=CHECK-GFX1100
 
 // CHECK-LABEL: @conversion_f8_fallback
 // CHECK-DAG:     %[[CST:.+]] = arith.constant dense<0.000000e+00> : vector<2x2xf8E5M2>
@@ -162,6 +163,9 @@ func.func @conversion_broadcast(%in: vector<4xf32>, %scale: f8E8M0FNU) -> vector
 }
 
 // -----
+
+// CHECK-GFX1100-LABEL: @conversion_scalar
+// CHECK-GFX1100: arith.scaling_truncf
 
 // CHECK-LABEL: @conversion_scalar
 // CHECK:         %[[SCALE_F32:.+]] = arith.extf %arg1 : f8E8M0FNU to f32

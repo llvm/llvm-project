@@ -380,7 +380,7 @@ static bool appendRecordType(SmallStringEnc &Enc, const RecordType *RT,
 
   // We collect all encoded fields and order as necessary.
   bool IsRecursive = false;
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
+  const RecordDecl *RD = RT->getDecl()->getDefinition();
   if (RD && !RD->field_empty()) {
     // An incomplete TypeString stub is placed in the cache for this RecordType
     // so that recursive calls to this RecordType will use it whilst building a
@@ -429,7 +429,7 @@ static bool appendEnumType(SmallStringEnc &Enc, const EnumType *ET,
   Enc += "){";
 
   // We collect all encoded enumerations and order them alphanumerically.
-  if (const EnumDecl *ED = ET->getOriginalDecl()->getDefinition()) {
+  if (const EnumDecl *ED = ET->getDecl()->getDefinition()) {
     SmallVector<FieldEncoding, 16> FE;
     for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E;
          ++I) {
@@ -615,13 +615,10 @@ static bool appendType(SmallStringEnc &Enc, QualType QType,
   if (const PointerType *PT = QT->getAs<PointerType>())
     return appendPointerType(Enc, PT, CGM, TSC);
 
-  if (const EnumType *ET = QT->getAs<EnumType>())
+  if (const EnumType *ET = QT->getAsCanonical<EnumType>())
     return appendEnumType(Enc, ET, TSC, QT.getBaseTypeIdentifier());
 
-  if (const RecordType *RT = QT->getAsStructureType())
-    return appendRecordType(Enc, RT, CGM, TSC, QT.getBaseTypeIdentifier());
-
-  if (const RecordType *RT = QT->getAsUnionType())
+  if (const RecordType *RT = QT->getAsCanonical<RecordType>())
     return appendRecordType(Enc, RT, CGM, TSC, QT.getBaseTypeIdentifier());
 
   if (const FunctionType *FT = QT->getAs<FunctionType>())

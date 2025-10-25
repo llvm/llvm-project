@@ -841,14 +841,6 @@ public:
     return 1;
   }
 
-  virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
-                                            Align Alignment,
-                                            unsigned AddressSpace,
-                                            TTI::TargetCostKind CostKind,
-                                            const Instruction *I) const {
-    return 1;
-  }
-
   virtual InstructionCost
   getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                         unsigned AddressSpace,
@@ -971,8 +963,8 @@ public:
   }
 
   virtual InstructionCost
-  getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
-                         TTI::TargetCostKind CostKind) const {
+  getMulAccReductionCost(bool IsUnsigned, unsigned RedOpcode, Type *ResTy,
+                         VectorType *Ty, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 
@@ -1092,7 +1084,9 @@ public:
     return VF;
   }
 
-  virtual bool preferFixedOverScalableIfEqualCost() const { return false; }
+  virtual bool preferFixedOverScalableIfEqualCost(bool IsEpilogue) const {
+    return false;
+  }
 
   virtual bool preferInLoopReduction(RecurKind Kind, Type *Ty) const {
     return false;
@@ -1102,6 +1096,8 @@ public:
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization() const { return true; }
+
+  virtual bool shouldConsiderVectorizationRegPressure() const { return false; }
 
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const {
     return true;

@@ -50,7 +50,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
                                          MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
-  if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.page_size)
+  if (!linux_utils::is_valid_mmap(mmap_ret_val))
     syscall_impl<long>(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;

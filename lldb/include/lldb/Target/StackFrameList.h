@@ -46,6 +46,9 @@ public:
   /// Mark a stack frame as the currently selected frame and return its index.
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame);
 
+  /// Resets the selected frame index of this object.
+  void ClearSelectedFrameIndex();
+
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
   /// selected a frame, and (b) if this really is a user facing
@@ -172,6 +175,15 @@ protected:
   /// The currently selected frame. An optional is used to record whether anyone
   /// has set the selected frame on this stack yet. We only let recognizers
   /// change the frame if this is the first time GetSelectedFrame is called.
+  ///
+  /// Thread-safety:
+  /// This member is not protected by a mutex.
+  /// LLDB really only should have an opinion about the selected frame index
+  /// when a process stops, before control gets handed back to the user.
+  /// After that, it's up to them to change it whenever they feel like it.
+  /// If two parts of lldb decided they wanted to be in control of the selected
+  /// frame index on stop the right way to fix it would need to be some explicit
+  /// negotiation for who gets to control this.
   std::optional<uint32_t> m_selected_frame_idx;
 
   /// Protect access to m_selected_frame_idx. Always acquire after m_list_mutex

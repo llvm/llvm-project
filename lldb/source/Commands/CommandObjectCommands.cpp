@@ -418,7 +418,7 @@ protected:
       if ((pos != std::string::npos) && (pos > 0))
         raw_command_string = raw_command_string.substr(pos);
     } else {
-      result.AppendError("Error parsing command string.  No alias created.");
+      result.AppendError("error parsing command string.  No alias created");
       return;
     }
 
@@ -2888,7 +2888,7 @@ protected:
     size_t num_args = command.GetArgumentCount();
 
     if (num_args == 0) {
-      result.AppendError("No command was specified.");
+      result.AppendError("no command was specified");
       return;
     }
 

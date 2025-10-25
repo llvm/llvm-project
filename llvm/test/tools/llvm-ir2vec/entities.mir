@@ -1,0 +1,28 @@
+# REQUIRES: x86_64-linux
+# RUN: llvm-ir2vec entities --mode=mir %s -o 2>&1 %t1.log
+# RUN: diff %S/output/reference_x86_entities.txt %t1.log
+
+--- |
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  define dso_local noundef i32 @test_function(i32 noundef %a) {
+  entry:
+    ret i32 %a
+  }
+...
+---
+name:            test_function
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr32 }
+liveins:
+  - { reg: '$edi', virtual-reg: '%0' }
+body:             |
+  bb.0.entry:
+    liveins: $edi
+  
+    %0:gr32 = COPY $edi
+    $eax = COPY %0
+    RET 0, $eax

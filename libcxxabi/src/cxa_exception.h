@@ -47,10 +47,10 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     // In Wasm, a destructor returns its argument
     void *(_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
 #else
-    void (_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
+    void (_LIBCXXABI_DTOR_FUNC *__ptrauth_cxxabi_exception_destructor exceptionDestructor)(void *);
 #endif
-    std::unexpected_handler unexpectedHandler;
-    std::terminate_handler  terminateHandler;
+    std::unexpected_handler __ptrauth_cxxabi_unexpected_handler unexpectedHandler;
+    std::terminate_handler __ptrauth_cxxabi_terminate_handler terminateHandler;
 
     __cxa_exception *nextException;
 
@@ -61,10 +61,10 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     int propagationCount;
 #else
     int handlerSwitchValue;
-    const unsigned char *actionRecord;
-    const unsigned char *languageSpecificData;
-    void *catchTemp;
-    void *adjustedPtr;
+    const unsigned char *__ptrauth_cxxabi_action_record actionRecord;
+    const unsigned char *__ptrauth_cxxabi_lsd languageSpecificData;
+    void *__ptrauth_cxxabi_catch_temp catchTemp;
+    void *__ptrauth_cxxabi_adjusted_ptr adjustedPtr;
 #endif
 
 #if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
@@ -79,6 +79,8 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 // http://sourcery.mentor.com/archives/cxx-abi-dev/msg01924.html
 // The layout of this structure MUST match the layout of __cxa_exception, with
 // primaryException instead of referenceCount.
+// The pointer authentication schemas specified here must also match those of
+// the corresponding members in __cxa_exception.
 struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 #if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
     void* reserve; // padding.
@@ -86,9 +88,9 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
 #endif
 
     std::type_info *exceptionType;
-    void (_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
-    std::unexpected_handler unexpectedHandler;
-    std::terminate_handler terminateHandler;
+    void (_LIBCXXABI_DTOR_FUNC *__ptrauth_cxxabi_exception_destructor exceptionDestructor)(void *);
+    std::unexpected_handler __ptrauth_cxxabi_unexpected_handler unexpectedHandler;
+    std::terminate_handler __ptrauth_cxxabi_terminate_handler terminateHandler;
 
     __cxa_exception *nextException;
 
@@ -99,10 +101,10 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
     int propagationCount;
 #else
     int handlerSwitchValue;
-    const unsigned char *actionRecord;
-    const unsigned char *languageSpecificData;
-    void * catchTemp;
-    void *adjustedPtr;
+    const unsigned char *__ptrauth_cxxabi_action_record actionRecord;
+    const unsigned char *__ptrauth_cxxabi_lsd languageSpecificData;
+    void *__ptrauth_cxxabi_catch_temp catchTemp;
+    void *__ptrauth_cxxabi_adjusted_ptr adjustedPtr;
 #endif
 
 #if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)

@@ -101,8 +101,6 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
-  /// The allocation will not block on other streams.
-  TARGET_ALLOC_DEVICE_NON_BLOCKING,
 };
 
 inline KernelArgsTy CTorDTorKernelArgs = {
@@ -280,6 +278,7 @@ int omp_get_initial_device(void);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);
+int omp_target_is_accessible(const void *Ptr, size_t Size, int DeviceNum);
 int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                       size_t DstOffset, size_t SrcOffset, int DstDevice,
                       int SrcDevice);

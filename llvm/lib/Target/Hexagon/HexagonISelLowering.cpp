@@ -2145,7 +2145,9 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_V6_vgathermhq:
   case Intrinsic::hexagon_V6_vgathermhq_128B:
   case Intrinsic::hexagon_V6_vgathermhwq:
-  case Intrinsic::hexagon_V6_vgathermhwq_128B: {
+  case Intrinsic::hexagon_V6_vgathermhwq_128B:
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B: {
     const Module &M = *I.getParent()->getParent()->getParent();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Type *VecTy = I.getArgOperand(1)->getType();
@@ -3352,7 +3354,6 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
-
   // Handle INLINEASM first.
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);

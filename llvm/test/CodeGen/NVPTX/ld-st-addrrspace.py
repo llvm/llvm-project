@@ -4,7 +4,7 @@
 # RUN: %python %s > %t.ll
 # RUN: llc < %t.ll -mtriple=nvptx -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P32 %t.ll
 # RUN: llc < %t.ll -mtriple=nvptx64 -mcpu=sm_30 | FileCheck -check-prefixes=CHECK,CHECK_P64 %t.ll
-# RUN: %if ptxas && !ptxas-12.0 %{ llc < %t.ll -mtriple=nvptx -mcpu=sm_30 | %ptxas-verify %}
+# RUN: %if ptxas-ptr32 %{ llc < %t.ll -mtriple=nvptx -mcpu=sm_30 | %ptxas-verify %}
 # RUN: %if ptxas %{ llc < %t.ll -mtriple=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
 
 from __future__ import print_function

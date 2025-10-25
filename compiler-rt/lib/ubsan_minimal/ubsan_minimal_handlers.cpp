@@ -125,13 +125,15 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 } // namespace __sanitizer
 #endif
 
+#define INTERFACE extern "C" __attribute__((visibility("default")))
+
 #define HANDLER_RECOVER(name, kind)                                            \
-  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal) {        \
+  INTERFACE void __ubsan_handle_##name##_minimal() {                           \
     __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
-  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal_abort) {  \
+  INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, nullptr);                         \
     abort_with_message(kind, caller, nullptr);                                 \
@@ -142,14 +144,13 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   HANDLER_NORECOVER(name, kind)
 
 #define HANDLER_RECOVER_PTR(name, kind)                                        \
-  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal,          \
-                               const uintptr_t address) {                      \
+  INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
     __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
   }
 
 #define HANDLER_NORECOVER_PTR(name, kind)                                      \
-  SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_handle_##name##_minimal_abort,    \
-                               const uintptr_t address) {                      \
+  INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
+      const uintptr_t address) {                                               \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, &address);                        \
     abort_with_message(kind, caller, &address);                                \

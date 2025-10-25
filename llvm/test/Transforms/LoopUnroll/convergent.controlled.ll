@@ -302,7 +302,7 @@ define i32 @pragma_unroll_with_remainder(i32 %n) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[TMP2]], label [[EXIT_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[L3_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[L3:%.*]], !llvm.loop [[LOOP4]]
@@ -316,13 +316,13 @@ define i32 @pragma_unroll_with_remainder(i32 %n) {
 ; CHECK-NEXT:    [[INC_1]] = add nsw i32 [[X_0]], 2
 ; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA_LOOPEXIT:%.*]], label [[L3]], !llvm.loop [[LOOP8:![0-9]+]]
-; CHECK:       exit.unr-lcssa.loopexit:
-; CHECK-NEXT:    br label [[EXIT_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[EXIT_UNR_LCSSA:%.*]], label [[L3]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       exit.unr-lcssa:
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[L3_EPIL_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[L3_EPIL_PREHEADER]], label [[EXIT:%.*]]
 ; CHECK:       l3.epil.preheader:
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[L3_EPIL:%.*]]
 ; CHECK:       l3.epil:
 ; CHECK-NEXT:    [[TOK_LOOP_EPIL:%.*]] = call token @llvm.experimental.convergence.anchor()

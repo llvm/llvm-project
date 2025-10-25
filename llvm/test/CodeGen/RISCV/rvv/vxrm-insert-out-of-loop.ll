@@ -18,13 +18,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:  # %bb.1: # %for.cond1.preheader.lr.ph
 ; RV32-NEXT:    blez a6, .LBB0_17
 ; RV32-NEXT:  # %bb.2: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    addi t0, a7, -1
+; RV32-NEXT:    addi t3, a7, -1
 ; RV32-NEXT:    csrr t2, vlenb
-; RV32-NEXT:    mul t3, a1, t0
-; RV32-NEXT:    mul t4, a3, t0
-; RV32-NEXT:    mul t5, a5, t0
 ; RV32-NEXT:    slli t1, t2, 1
-; RV32-NEXT:    li t6, 32
+; RV32-NEXT:    li t4, 32
 ; RV32-NEXT:    mv t0, t1
 ; RV32-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    li t0, 32
@@ -34,27 +31,32 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s3, 0(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_offset s3, -16
 ; RV32-NEXT:    .cfi_remember_state
-; RV32-NEXT:    add t3, a0, t3
-; RV32-NEXT:    add t4, a2, t4
-; RV32-NEXT:    add s0, a4, t5
-; RV32-NEXT:    bltu t6, t1, .LBB0_6
+; RV32-NEXT:    mul t5, a1, t3
+; RV32-NEXT:    add s0, a0, a6
+; RV32-NEXT:    mul t6, a3, t3
+; RV32-NEXT:    add s2, a2, a6
+; RV32-NEXT:    mul s1, a5, t3
+; RV32-NEXT:    add s3, a4, a6
+; RV32-NEXT:    bltu t4, t1, .LBB0_6
 ; RV32-NEXT:  # %bb.5: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    li t1, 32
 ; RV32-NEXT:  .LBB0_6: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    add t3, t3, a6
-; RV32-NEXT:    add t5, t4, a6
-; RV32-NEXT:    add t4, s0, a6
+; RV32-NEXT:    add t3, s0, t5
+; RV32-NEXT:    add t6, s2, t6
+; RV32-NEXT:    add t4, s3, s1
 ; RV32-NEXT:    j .LBB0_8
 ; RV32-NEXT:  # %bb.7: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    mv t1, t0
 ; RV32-NEXT:  .LBB0_8: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    .cfi_restore_state
 ; RV32-NEXT:    li t0, 0
-; RV32-NEXT:    sltu t5, a0, t5
+; RV32-NEXT:    sltu t5, a0, t6
 ; RV32-NEXT:    sltu t6, a2, t3
 ; RV32-NEXT:    and t5, t5, t6
 ; RV32-NEXT:    sltu t4, a0, t4
@@ -140,9 +142,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s3, 0(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    .cfi_restore s0
 ; RV32-NEXT:    .cfi_restore s1
 ; RV32-NEXT:    .cfi_restore s2
+; RV32-NEXT:    .cfi_restore s3
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:  .LBB0_17: # %for.cond.cleanup
@@ -190,7 +194,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    or t6, s0, s1
 ; RV64P670-NEXT:    sltu s1, a0, t5
 ; RV64P670-NEXT:    sltu s0, a4, t4
-; RV64P670-NEXT:    mv t5, a0
+; RV64P670-NEXT:    add t4, a0, a6
 ; RV64P670-NEXT:    and s0, s0, s1
 ; RV64P670-NEXT:    or s1, a1, a5
 ; RV64P670-NEXT:    srli s1, s1, 63
@@ -200,11 +204,11 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    or s0, t6, s0
 ; RV64P670-NEXT:    sltu s1, a6, s1
 ; RV64P670-NEXT:    or s0, s0, s1
-; RV64P670-NEXT:    andi t4, s0, 1
+; RV64P670-NEXT:    andi t5, s0, 1
 ; RV64P670-NEXT:    j .LBB0_4
 ; RV64P670-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64P670-NEXT:    add t5, t5, a1
+; RV64P670-NEXT:    add a0, a0, a1
 ; RV64P670-NEXT:    add a2, a2, a3
 ; RV64P670-NEXT:    add a4, a4, a5
 ; RV64P670-NEXT:    addiw t1, t1, 1
@@ -214,7 +218,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    # =>This Loop Header: Depth=1
 ; RV64P670-NEXT:    # Child Loop BB0_7 Depth 2
 ; RV64P670-NEXT:    # Child Loop BB0_10 Depth 2
-; RV64P670-NEXT:    beqz t4, .LBB0_6
+; RV64P670-NEXT:    beqz t5, .LBB0_6
 ; RV64P670-NEXT:  # %bb.5: # in Loop: Header=BB0_4 Depth=1
 ; RV64P670-NEXT:    li t6, 0
 ; RV64P670-NEXT:    j .LBB0_9
@@ -223,7 +227,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:    slli s1, t2, 28
 ; RV64P670-NEXT:    mv s2, a2
 ; RV64P670-NEXT:    mv s3, a4
-; RV64P670-NEXT:    mv s4, t5
+; RV64P670-NEXT:    mv s4, a0
 ; RV64P670-NEXT:    sub s1, s1, t3
 ; RV64P670-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
 ; RV64P670-NEXT:    and t6, s1, a6
@@ -246,11 +250,10 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64P670-NEXT:  .LBB0_9: # %for.body4.us.preheader
 ; RV64P670-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; RV64P670-NEXT:    mul s2, a1, t0
-; RV64P670-NEXT:    add s0, a0, a6
-; RV64P670-NEXT:    add s1, t5, t6
+; RV64P670-NEXT:    add s1, a0, t6
 ; RV64P670-NEXT:    add s4, a4, t6
 ; RV64P670-NEXT:    add t6, t6, a2
-; RV64P670-NEXT:    add s2, s2, s0
+; RV64P670-NEXT:    add s2, s2, t4
 ; RV64P670-NEXT:  .LBB0_10: # %for.body4.us
 ; RV64P670-NEXT:    # Parent Loop BB0_4 Depth=1
 ; RV64P670-NEXT:    # => This Inner Loop Header: Depth=2
@@ -332,12 +335,12 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    or s0, t4, s0
 ; RV64X60-NEXT:    sltu s1, a6, s1
 ; RV64X60-NEXT:    or s0, s0, s1
-; RV64X60-NEXT:    andi t4, s0, 1
-; RV64X60-NEXT:    mv t5, a0
+; RV64X60-NEXT:    add t4, a0, a6
+; RV64X60-NEXT:    andi t5, s0, 1
 ; RV64X60-NEXT:    j .LBB0_4
 ; RV64X60-NEXT:  .LBB0_3: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
-; RV64X60-NEXT:    add t5, t5, a1
+; RV64X60-NEXT:    add a0, a0, a1
 ; RV64X60-NEXT:    add a2, a2, a3
 ; RV64X60-NEXT:    addiw t1, t1, 1
 ; RV64X60-NEXT:    add a4, a4, a5
@@ -347,7 +350,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    # =>This Loop Header: Depth=1
 ; RV64X60-NEXT:    # Child Loop BB0_7 Depth 2
 ; RV64X60-NEXT:    # Child Loop BB0_10 Depth 2
-; RV64X60-NEXT:    beqz t4, .LBB0_6
+; RV64X60-NEXT:    beqz t5, .LBB0_6
 ; RV64X60-NEXT:  # %bb.5: # in Loop: Header=BB0_4 Depth=1
 ; RV64X60-NEXT:    li t6, 0
 ; RV64X60-NEXT:    j .LBB0_9
@@ -358,7 +361,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    and t6, s1, a6
 ; RV64X60-NEXT:    mv s2, a2
 ; RV64X60-NEXT:    mv s3, a4
-; RV64X60-NEXT:    mv s4, t5
+; RV64X60-NEXT:    mv s4, a0
 ; RV64X60-NEXT:    mv s1, t6
 ; RV64X60-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
 ; RV64X60-NEXT:  .LBB0_7: # %vector.body
@@ -379,9 +382,8 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:  .LBB0_9: # %for.body4.us.preheader
 ; RV64X60-NEXT:    # in Loop: Header=BB0_4 Depth=1
 ; RV64X60-NEXT:    mul s2, a1, t0
-; RV64X60-NEXT:    add s1, a0, a6
-; RV64X60-NEXT:    add s0, t5, t6
-; RV64X60-NEXT:    add s2, s2, s1
+; RV64X60-NEXT:    add s0, a0, t6
+; RV64X60-NEXT:    add s2, s2, t4
 ; RV64X60-NEXT:    add s4, a4, t6
 ; RV64X60-NEXT:    add t6, t6, a2
 ; RV64X60-NEXT:  .LBB0_10: # %for.body4.us
@@ -466,16 +468,16 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    or s0, a1, a5
 ; RV64-NEXT:    srli s0, s0, 63
 ; RV64-NEXT:    or t5, t5, s0
+; RV64-NEXT:    sltu s0, a6, t4
 ; RV64-NEXT:    or t5, t6, t5
-; RV64-NEXT:    sltu t4, a6, t4
-; RV64-NEXT:    or t4, t4, t5
-; RV64-NEXT:    andi t4, t4, 1
-; RV64-NEXT:    mv t5, a0
+; RV64-NEXT:    add t4, a0, a6
+; RV64-NEXT:    or t5, s0, t5
+; RV64-NEXT:    andi t5, t5, 1
 ; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    j .LBB0_6
 ; RV64-NEXT:  .LBB0_5: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    add t5, t5, a1
+; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    add a2, a2, a3
 ; RV64-NEXT:    add a4, a4, a5
 ; RV64-NEXT:    addiw t3, t3, 1
@@ -485,7 +487,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    # =>This Loop Header: Depth=1
 ; RV64-NEXT:    # Child Loop BB0_9 Depth 2
 ; RV64-NEXT:    # Child Loop BB0_12 Depth 2
-; RV64-NEXT:    beqz t4, .LBB0_8
+; RV64-NEXT:    beqz t5, .LBB0_8
 ; RV64-NEXT:  # %bb.7: # in Loop: Header=BB0_6 Depth=1
 ; RV64-NEXT:    li t6, 0
 ; RV64-NEXT:    j .LBB0_11
@@ -496,7 +498,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    and t6, t6, a6
 ; RV64-NEXT:    mv s0, a2
 ; RV64-NEXT:    mv s1, a4
-; RV64-NEXT:    mv s2, t5
+; RV64-NEXT:    mv s2, a0
 ; RV64-NEXT:    mv s3, t6
 ; RV64-NEXT:    vsetvli s4, zero, e8, m2, ta, ma
 ; RV64-NEXT:  .LBB0_9: # %vector.body
@@ -516,25 +518,24 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    beq t6, a6, .LBB0_5
 ; RV64-NEXT:  .LBB0_11: # %for.body4.us.preheader
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; RV64-NEXT:    mul s1, a1, t2
-; RV64-NEXT:    add s2, a0, a6
-; RV64-NEXT:    add s0, t5, t6
-; RV64-NEXT:    add s1, s2, s1
-; RV64-NEXT:    add s2, a4, t6
+; RV64-NEXT:    mul s2, a1, t2
+; RV64-NEXT:    add s0, a0, t6
+; RV64-NEXT:    add s1, a4, t6
+; RV64-NEXT:    add s2, t4, s2
 ; RV64-NEXT:    add t6, a2, t6
 ; RV64-NEXT:  .LBB0_12: # %for.body4.us
 ; RV64-NEXT:    # Parent Loop BB0_6 Depth=1
 ; RV64-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV64-NEXT:    lbu s3, 0(t6)
-; RV64-NEXT:    lbu s4, 0(s2)
+; RV64-NEXT:    lbu s4, 0(s1)
 ; RV64-NEXT:    add s3, s3, s4
 ; RV64-NEXT:    addi s3, s3, 1
 ; RV64-NEXT:    srli s3, s3, 1
 ; RV64-NEXT:    sb s3, 0(s0)
 ; RV64-NEXT:    addi s0, s0, 1
-; RV64-NEXT:    addi s2, s2, 1
+; RV64-NEXT:    addi s1, s1, 1
 ; RV64-NEXT:    addi t6, t6, 1
-; RV64-NEXT:    bne s0, s1, .LBB0_12
+; RV64-NEXT:    bne s0, s2, .LBB0_12
 ; RV64-NEXT:    j .LBB0_5
 ; RV64-NEXT:  .LBB0_13:
 ; RV64-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload

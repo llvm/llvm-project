@@ -35,7 +35,7 @@ tests are contained inside the LLVM repository itself under ``llvm/unittests``
 and ``llvm/test`` respectively and are expected to always pass. They should be
 run before every commit.
 
-The whole programs tests are referred to as the "LLVM test suite" (or
+The whole-program tests are referred to as the "LLVM test suite" (or
 "test-suite") and are in the ``test-suite``
 `repository on GitHub <https://github.com/llvm/llvm-test-suite.git>`_.
 For historical reasons, these tests are also referred to as the "nightly
@@ -49,7 +49,7 @@ Unit tests are written using `Google Test <https://github.com/google/googletest/
 and `Google Mock <https://github.com/google/googletest/blob/master/docs/gmock_for_dummies.md>`_
 and are located in the ``llvm/unittests`` directory.
 In general, unit tests are reserved for targeting the support library and other
-generic data structure, we prefer relying on regression tests for testing
+generic data structure. We prefer relying on regression tests for testing
 transformations and analysis on the IR.
 
 Regression tests
@@ -69,7 +69,7 @@ piece of LLVM IR distilled from an actual application or benchmark.
 Testing Analysis
 ----------------
 
-An analysis is a pass that infer properties on some part of the IR and not
+An analysis is a pass to infer properties on some part of the IR without
 transforming it. They are tested in general using the same infrastructure as the
 regression tests, by creating a separate "Printer" pass to consume the analysis
 result and print it on the standard output in a textual format suitable for
@@ -90,7 +90,7 @@ flags, and then executed to capture the program output and timing
 information. The output of these programs is compared to a reference
 output to ensure that the program is being compiled correctly.
 
-In addition to compiling and executing programs, whole program tests
+In addition to compiling and executing programs, whole-program tests
 serve as a way of benchmarking LLVM performance, both in terms of the
 efficiency of the programs generated as well as the speed with which
 LLVM compiles, optimizes, and generates code.
@@ -104,7 +104,7 @@ Debugging Information tests
 ---------------------------
 
 The test suite contains tests to check the quality of debugging information.
-The tests are written in C based languages or in LLVM assembly language.
+The tests are written in C-based languages or in LLVM assembly language.
 
 These tests are compiled and run under a debugger. The debugger output
 is checked to validate the debugging information. See ``README.txt`` in the
@@ -139,7 +139,7 @@ To run all of the LLVM regression tests, use the ``check-llvm`` target:
     % make check-llvm
 
 In order to get reasonable testing performance, build LLVM and subprojects
-in release mode, i.e.
+in release mode, i.e.,
 
 .. code-block:: bash
 
@@ -159,7 +159,7 @@ variable to pass the required options to lit. For example, you can use:
 
     % make check LIT_OPTS="-v --vg --vg-leak"
 
-to enable testing with valgrind and with leak checking enabled.
+to enable testing with Valgrind and with leak checking enabled.
 
 To run individual tests or subsets of tests, you can use the ``llvm-lit``
 script which is built as part of LLVM. For example, to run the
@@ -202,13 +202,13 @@ The LLVM regression tests are driven by :program:`lit` and are located in the
 
 This directory contains a large array of small tests that exercise
 various features of LLVM and to ensure that regressions do not occur.
-The directory is broken into several sub-directories, each focused on a
+The directory is broken into several subdirectories, each focused on a
 particular area of LLVM.
 
 Writing new regression tests
 ----------------------------
 
-The regression test structure is very simple, but does require some
+The regression test structure is very simple but does require some
 information to be set. This information is gathered via ``cmake``
 and is written to a file, ``test/lit.site.cfg.py`` in the build directory.
 The ``llvm/test`` Makefile does this work for you.
@@ -299,7 +299,7 @@ top to indicate that assertions were automatically generated.
 If you want to update assertions in an existing test case, pass the `-u` option
 which first checks the ``NOTE:`` line exists and matches the script name.
 
-Sometimes a test absolutely depends on hand-written assertions and should not
+Sometimes, a test absolutely depends on hand-written assertions and should not
 have assertions automatically generated. In that case, add the text ``NOTE: Do
 not autogenerate`` to the first line, and the scripts will skip that test. It
 is a good idea to explain why generated assertions will not work for the test
@@ -428,7 +428,7 @@ For convenience, these are the contents:
   !llvm.ident = !{!0}
   !0 = metadata !{metadata !"Compiler V3"}
 
-For symmetry reasons, ``ident.ll`` is just a dummy file that doesn't
+For symmetry, ``ident.ll`` is just a dummy file that doesn't
 actually participate in the test besides holding the ``RUN:`` lines.
 
 .. note::
@@ -470,7 +470,7 @@ content.
 The script will prepare extra files with ``split-file``, invoke ``gen``, and
 then rewrite the part after ``gen`` with its stdout.
 
-For convenience, if the test needs one single assembly file, you can also wrap
+For convenience, if the test needs a single assembly file, you can also wrap
 ``gen`` and its required files with ``.ifdef`` and ``.endif``. Then you can
 skip ``split-file`` in ``RUN`` lines.
 
@@ -869,7 +869,7 @@ Additional substitutions can be defined as follows:
   substitutions for all tests in a test directory.  They do so by extending the
   substitution list, ``config.substitutions``.  Each item in the list is a tuple
   consisting of a pattern and its replacement, which lit applies as plain text
-  (even if it contains sequences that python's ``re.sub`` considers to be
+  (even if it contains sequences that Python's ``re.sub`` considers to be
   escape sequences).
 - To define substitutions within a single test file, lit supports the
   ``DEFINE:`` and ``REDEFINE:`` directives, described in detail below.  So that
@@ -976,7 +976,7 @@ directives:
   colons.  This syntax has a few advantages:
 
     - It is impossible for ``%{name}`` to contain sequences that are special in
-      python's ``re.sub`` patterns.  Otherwise, attempting to specify
+      Python's ``re.sub`` patterns.  Otherwise, attempting to specify
       ``%{name}`` as a substitution pattern in a lit configuration file could
       produce confusing expansions.
     - The braces help avoid the possibility that another substitution's pattern
@@ -1039,7 +1039,7 @@ To address such use cases, lit configuration files support
 to specify the maximum number of passes through the substitution list.  Thus, in
 the above example, setting the limit to 2 would cause lit to make a second pass
 that expands ``%{inner}`` in the ``RUN:`` line, and the output from the ``echo``
-command when then be:
+command would then be:
 
 .. code-block:: shell
 
@@ -1094,7 +1094,7 @@ a test fails.
 
 Finally, any line that contains "END." will cause the special
 interpretation of lines to terminate. This is generally done right after
-the last RUN: line. This has two side effects:
+the last ``RUN:`` line. This has two side effects:
 
 (a) it prevents special interpretation of lines that are part of the test
     program, not the instructions to the test case, and

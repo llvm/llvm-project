@@ -56,7 +56,7 @@ struct TypeidPointer {
   const Type *TypeInfoType;
 };
 
-enum class Storage { Block, Int, Fn, Typeid };
+enum class Storage { Int, Block, Fn, Typeid };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -75,7 +75,7 @@ enum class Storage { Block, Int, Fn, Typeid };
 /// data the pointer decribes can be found at
 /// Pointee->rawData() + Pointer.Offset.
 ///
-///
+/// \verbatim
 /// Pointee                      Offset
 /// │                              │
 /// │                              │
@@ -87,6 +87,7 @@ enum class Storage { Block, Int, Fn, Typeid };
 ///                      │
 ///                      │
 ///                     Base
+/// \endverbatim
 class Pointer {
 private:
   static constexpr unsigned PastEndMark = ~0u;
@@ -251,14 +252,17 @@ public:
 
   /// Checks if the pointer is null.
   bool isZero() const {
-    if (isBlockPointer())
+    switch (StorageKind) {
+    case Storage::Int:
+      return Int.Value == 0 && Offset == 0;
+    case Storage::Block:
       return BS.Pointee == nullptr;
-    if (isFunctionPointer())
+    case Storage::Fn:
       return Fn.isZero();
-    if (isTypeidPointer())
+    case Storage::Typeid:
       return false;
-    assert(isIntegralPointer());
-    return Int.Value == 0 && Offset == 0;
+    }
+    llvm_unreachable("Unknown clang::interp::Storage enum");
   }
   /// Checks if the pointer is live.
   bool isLive() const {
@@ -528,8 +532,6 @@ public:
     assert(isBlockPointer());
     return BS.Pointee->isWeak();
   }
-  /// Checks if an object was initialized.
-  bool isInitialized() const;
   /// Checks if the object is active.
   bool isActive() const {
     if (!isBlockPointer())
@@ -703,10 +705,17 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialized the given element of a primitive array.
+  void initializeElement(unsigned Index) const;
   /// Initialize all elements of a primitive array at once. This can be
   /// used in situations where we *know* we have initialized *all* elements
   /// of a primtive array.
   void initializeAllElements() const;
+  /// Checks if an object was initialized.
+  bool isInitialized() const;
+  /// Like isInitialized(), but for primitive arrays.
+  bool isElementInitialized(unsigned Index) const;
+  bool allElementsInitialized() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.

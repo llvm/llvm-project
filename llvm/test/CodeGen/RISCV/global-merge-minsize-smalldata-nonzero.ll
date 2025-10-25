@@ -30,8 +30,8 @@ define void @f1(i32 %a) nounwind {
 ; MINSIZE-LABEL: f1:
 ; MINSIZE:       # %bb.0:
 ; MINSIZE-NEXT:    lui a1, %hi(.L_MergedGlobals)
-; MINSIZE-NEXT:    sw a0, %lo(.L_MergedGlobals)(a1)
 ; MINSIZE-NEXT:    addi a1, a1, %lo(.L_MergedGlobals)
+; MINSIZE-NEXT:    sw a0, 0(a1)
 ; MINSIZE-NEXT:    sw a0, 4(a1)
 ; MINSIZE-NEXT:    sw a0, 8(a1)
 ; MINSIZE-NEXT:    sw a0, 12(a1)

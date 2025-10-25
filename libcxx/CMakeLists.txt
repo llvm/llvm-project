@@ -361,8 +361,7 @@ endif()
 if (NOT LIBCXX_ENABLE_RTTI AND LIBCXX_ENABLE_EXCEPTIONS)
   message(FATAL_ERROR "Libc++ cannot be built with exceptions enabled but RTTI"
                       " disabled, since that configuration is broken. See"
-                      " https://github.com/llvm/llvm-project/issues/66117"
-                      " for details.")
+                      " https://llvm.org/PR66117 for details.")
 endif()
 
 if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)

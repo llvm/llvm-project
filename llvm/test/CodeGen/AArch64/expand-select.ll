@@ -4,8 +4,8 @@
 define void @foo(i32 %In1, <2 x i128> %In2, <2 x i128> %In3, ptr %Out) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    and w8, w0, #0x1
-; CHECK-NEXT:    fmov s0, wzr
 ; CHECK-NEXT:    ldr x11, [sp]
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    ldp x8, x10, [sp, #8]
@@ -31,8 +31,8 @@ define void @foo(i32 %In1, <2 x i128> %In2, <2 x i128> %In3, ptr %Out) {
 define void @bar(i32 %In1, <2 x i96> %In2, <2 x i96> %In3, ptr %Out) {
 ; CHECK-LABEL: bar:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    and w8, w0, #0x1
-; CHECK-NEXT:    fmov s0, wzr
 ; CHECK-NEXT:    ldr x10, [sp, #16]
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    cmeq v0.4s, v1.4s, v0.4s

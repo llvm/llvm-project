@@ -25,6 +25,7 @@
 #include "size_class_allocator.h"
 #include "stack_depot.h"
 #include "string_utils.h"
+#include "tracing.h"
 #include "tsd.h"
 
 #include "scudo/interface.h"
@@ -100,7 +101,7 @@ public:
       Chunk::UnpackedHeader Header = {};
       Header.ClassId = QuarantineClassId & Chunk::ClassIdMask;
       Header.SizeOrUnusedBytes = sizeof(QuarantineBatch);
-      Header.State = Chunk::State::Allocated;
+      Header.State = Chunk::State::Quarantined;
       Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
@@ -119,7 +120,7 @@ public:
       Chunk::UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (UNLIKELY(Header.State != Chunk::State::Allocated))
+      if (UNLIKELY(Header.State != Chunk::State::Quarantined))
         reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
       DCHECK_EQ(Header.ClassId, QuarantineClassId);
       DCHECK_EQ(Header.Offset, 0);
@@ -671,10 +672,11 @@ public:
 
   void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
+    SCUDO_SCOPED_TRACE(GetReleaseToOSTraceName(ReleaseType));
     if (ReleaseType == ReleaseToOS::ForceAll)
       drainCaches();
     Primary.releaseToOS(ReleaseType);
-    Secondary.releaseToOS();
+    Secondary.releaseToOS(ReleaseType);
   }
 
   // Iterate over all chunks and call a callback for all busy chunks located

@@ -26,7 +26,7 @@ define void @deinterleave3_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -51,7 +51,7 @@ define void @deinterleave3_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 4, i32 7, i32 10, i32 13, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -70,7 +70,7 @@ define void @deinterleave4_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -89,7 +89,7 @@ define void @deinterleave4_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -111,7 +111,7 @@ define void @deinterleave5_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 5, i32 10, i32 15, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 5, i32 10, i32 15, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -134,7 +134,7 @@ define void @deinterleave5_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 6, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 6, i32 11, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -155,7 +155,7 @@ define void @deinterleave6_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 6, i32 12, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 6, i32 12, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -178,7 +178,7 @@ define void @deinterleave6_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 7, i32 13, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 7, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -199,7 +199,7 @@ define void @deinterleave7_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 7, i32 14, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 7, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -222,7 +222,7 @@ define void @deinterleave7_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 8, i32 14, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 8, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -243,7 +243,7 @@ define void @deinterleave8_0_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 8, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -264,7 +264,7 @@ define void @deinterleave8_8_i8(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 1, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -290,7 +290,7 @@ define void @deinterleave7_0_i64(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i64>, ptr %in
-  %shuffle.i5 = shufflevector <16 x i64> %0, <16 x i64> poison, <8 x i32> <i32 0, i32 7, i32 14, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i64> %0, <16 x i64> poison, <8 x i32> <i32 0, i32 7, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i64> %shuffle.i5, ptr %out
   ret void
 }
@@ -382,7 +382,7 @@ define void @deinterleave4_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -407,7 +407,7 @@ define void @deinterleave4_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -427,7 +427,7 @@ define void @deinterleave8_0_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 8, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 0, i32 8, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -445,7 +445,7 @@ define void @deinterleave8_8_i8_two_source(ptr %in0, ptr %in1, ptr %out) {
 entry:
   %0 = load <8 x i8>, ptr %in0, align 1
   %1 = load <8 x i8>, ptr %in1, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 9, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> %1, <8 x i32> <i32 1, i32 9, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }

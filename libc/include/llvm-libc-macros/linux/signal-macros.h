@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_SIGNAL_MACROS_H
 
+#include "__llvm-libc-common.h"
+
 #define SIGHUP 1
 #define SIGINT 2
 #define SIGQUIT 3
@@ -86,9 +88,10 @@
 #error "Signal stack sizes not defined for your platform."
 #endif
 
-#define SIG_DFL ((void (*)(int))0)
-#define SIG_IGN ((void (*)(int))1)
-#define SIG_ERR ((void (*)(int))(-1))
+#define SIG_ERR __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), -1)
+#define SIG_DFL __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 0)
+#define SIG_IGN __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 1)
+#define SIG_HOLD __LLVM_LIBC_CAST(reinterpret_cast, void (*)(int), 2)
 
 // SIGCHLD si_codes
 #define CLD_EXITED 1    // child has exited

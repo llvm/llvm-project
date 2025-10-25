@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/wchar_t.h"
-#include "src/__support/libc_errno.h"
 #include "src/wchar/wctomb.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"

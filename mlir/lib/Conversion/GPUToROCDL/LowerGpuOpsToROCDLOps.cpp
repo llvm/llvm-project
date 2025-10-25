@@ -36,7 +36,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -171,6 +170,36 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
+static bool isSupportedReadLaneType(Type type) {
+  // read(first)lane also supports some vector types, but limit it for scalars
+  // for now.
+  return type.isInteger(16) || type.isInteger(32) || type.isInteger(64) ||
+         isa<Float16Type, BFloat16Type, Float32Type, Float64Type,
+             LLVM::LLVMPointerType>(type);
+}
+
+struct GPUSubgroupBroadcastOpToROCDL
+    : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value src = adaptor.getSrc();
+    if (!isSupportedReadLaneType(src.getType()))
+      return rewriter.notifyMatchFailure(op, "unsupported readlane type");
+
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
+      rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
+                                                     adaptor.getLane());
+    } else { // first_active_lane
+      rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(),
+                                                          src);
+    }
+    return success();
+  }
+};
+
 struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
 
@@ -257,19 +286,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 // code.
 struct LowerGpuOpsToROCDLOpsPass final
     : public impl::ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
-  LowerGpuOpsToROCDLOpsPass() = default;
-  LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
-                            bool useBarePtrCallConv,
-                            gpu::amd::Runtime runtime) {
-    if (this->chipset.getNumOccurrences() == 0)
-      this->chipset = chipset;
-    if (this->indexBitwidth.getNumOccurrences() == 0)
-      this->indexBitwidth = indexBitwidth;
-    if (this->useBarePtrCallConv.getNumOccurrences() == 0)
-      this->useBarePtrCallConv = useBarePtrCallConv;
-    if (this->runtime.getNumOccurrences() == 0)
-      this->runtime = runtime;
-  }
+  using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     Base::getDependentDialects(registry);
@@ -357,7 +374,7 @@ struct LowerGpuOpsToROCDLOpsPass final
       if (!allowedDialectsSet.empty() && !allowed)
         continue;
 
-      auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+      auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
       if (!iface) {
         // Error out if dialect was explicily specified but doesn't implement
         // conversion interface.
@@ -463,17 +480,9 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL>(converter);
+  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
+               GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
-  populateMathToROCDLConversionPatterns(converter, patterns);
-}
-
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass(const std::string &chipset,
-                                      unsigned indexBitwidth,
-                                      bool useBarePtrCallConv,
-                                      gpu::amd::Runtime runtime) {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(
-      chipset, indexBitwidth, useBarePtrCallConv, runtime);
+  populateMathToROCDLConversionPatterns(converter, patterns, chipset);
 }

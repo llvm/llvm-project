@@ -15,14 +15,25 @@ union UnionNonTrivial {
     non_trivial_constructor b{};
 };
 
+struct Handle {
+    Handle(int) {}
+};
+
+union UnionNonTrivialEqualInit {
+    int NoState = 0;
+    Handle CustomState;
+};
+
 void f() {
     UnionInt u1;
     UnionNonTrivial u2;
+    UnionNonTrivialEqualInit u3;
 }
 
 // CHECK:      define dso_local void @_Z1fv()
 // CHECK:        call void @_ZN8UnionIntC1Ev
 // CHECK-NEXT:   call void @_ZN15UnionNonTrivialC1Ev
+// CHECK-NEXT:   call void @_ZN24UnionNonTrivialEqualInitC1Ev
 
 // CHECK:      define {{.*}}void @_ZN8UnionIntC1Ev
 // CHECK:        call void @_ZN8UnionIntC2Ev
@@ -30,8 +41,14 @@ void f() {
 // CHECK:      define {{.*}}void @_ZN15UnionNonTrivialC1Ev
 // CHECK:        call void @_ZN15UnionNonTrivialC2Ev
 
+// CHECK:      define {{.*}}void @_ZN24UnionNonTrivialEqualInitC1Ev
+// CHECK:        call void @_ZN24UnionNonTrivialEqualInitC2Ev
+
 // CHECK:      define {{.*}}void @_ZN8UnionIntC2Ev
 // CHECK:        store i32 1000
 
 // CHECK:      define {{.*}}void @_ZN15UnionNonTrivialC2Ev
 // CHECK:        call void @_ZN23non_trivial_constructorC1Ev
+
+// CHECK:      define {{.*}}void @_ZN24UnionNonTrivialEqualInitC2Ev
+// CHECK:        store i32 0

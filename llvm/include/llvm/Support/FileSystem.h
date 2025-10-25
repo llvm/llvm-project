@@ -268,18 +268,6 @@ public:
 
 /// Make \a path an absolute path.
 ///
-/// Makes \a path absolute using the \a current_directory if it is not already.
-/// An empty \a path will result in the \a current_directory.
-///
-/// /absolute/path   => /absolute/path
-/// relative/../path => <current-directory>/relative/../path
-///
-/// @param path A path that is modified to be an absolute path.
-LLVM_ABI void make_absolute(const Twine &current_directory,
-                            SmallVectorImpl<char> &path);
-
-/// Make \a path an absolute path.
-///
 /// Makes \a path absolute using the current directory if it is not already. An
 /// empty \a path will result in the current directory.
 ///
@@ -409,6 +397,11 @@ LLVM_ABI std::error_code copy_file(const Twine &From, int ToFD);
 /// @returns errc::success if \a path has been resized to \a size, otherwise a
 ///          platform-specific error_code.
 LLVM_ABI std::error_code resize_file(int FD, uint64_t Size);
+
+/// Resize path to size with sparse files explicitly enabled. It uses
+/// FSCTL_SET_SPARSE On Windows. This is the same as resize_file on
+/// non-Windows
+LLVM_ABI std::error_code resize_file_sparse(int FD, uint64_t Size);
 
 /// Resize \p FD to \p Size before mapping \a mapped_file_region::readwrite. On
 /// non-Windows, this calls \a resize_file(). On Windows, this is a no-op,

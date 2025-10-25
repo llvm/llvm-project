@@ -547,6 +547,7 @@ struct Allocator {
         ComputeUserRequestedAlignmentLog(alignment);
     if (alignment < min_alignment)
       alignment = min_alignment;
+    bool upgraded_from_zero = false;
     if (size == 0) {
       // We'd be happy to avoid allocating memory for zero-size requests, but
       // some programs/tests depend on this behavior and assume that malloc
@@ -555,6 +556,7 @@ struct Allocator {
       // consecutive "new" calls must be different even if the allocated size
       // is zero.
       size = 1;
+      upgraded_from_zero = true;
     }
     CHECK(IsPowerOfTwo(alignment));
     uptr rz_log = ComputeRZLog(size);
@@ -636,6 +638,10 @@ struct Allocator {
           (u8 *)MemToShadow(user_beg + size_rounded_down_to_granularity);
       *shadow = fl.poison_partial ? (size & (ASAN_SHADOW_GRANULARITY - 1)) : 0;
     }
+
+    if (upgraded_from_zero)
+      PoisonShadow(user_beg, ASAN_SHADOW_GRANULARITY,
+                   kAsanHeapLeftRedzoneMagic);
 
     AsanStats &thread_stats = GetCurrentThreadStats();
     thread_stats.mallocs++;

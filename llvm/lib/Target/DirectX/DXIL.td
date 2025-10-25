@@ -57,6 +57,7 @@ def ResBindTy : DXILOpParamType;
 def ResPropsTy : DXILOpParamType;
 def SplitDoubleTy : DXILOpParamType;
 def BinaryWithCarryTy : DXILOpParamType;
+def DimensionsTy : DXILOpParamType;
 
 class DXILOpClass;
 
@@ -424,6 +425,7 @@ def Saturate : DXILOp<7, unary> {
 
 def IsNaN : DXILOp<8, isSpecialFloat> {
   let Doc = "Determines if the specified value is NaN.";
+  let intrinsics = [IntrinSelect<int_dx_isnan>];
   let arguments = [OverloadTy];
   let result = Int1Ty;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy]>];
@@ -898,6 +900,13 @@ def CheckAccessFullyMapped : DXILOp<71, checkAccessFullyMapped> {
   let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [ReadOnly]>];
+}
+
+def GetDimensions : DXILOp<72, getDimensions> {
+  let Doc = "gets the dimensions of a buffer or texture";
+  let arguments = [HandleTy, Int32Ty];
+  let result = DimensionsTy;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
 def Barrier : DXILOp<80, barrier> {

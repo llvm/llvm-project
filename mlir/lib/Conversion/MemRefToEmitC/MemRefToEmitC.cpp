@@ -22,6 +22,7 @@
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/STLExtras.h"
 #include <cstdint>
 #include <numeric>
 
@@ -110,9 +111,7 @@ static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                      {TypeAttr::get(memrefType.getElementType())}));
 
   IndexType indexType = builder.getIndexType();
-  int64_t numElements = std::accumulate(memrefType.getShape().begin(),
-                                        memrefType.getShape().end(), int64_t{1},
-                                        std::multiplies<int64_t>());
+  int64_t numElements = llvm::product_of(memrefType.getShape());
   emitc::ConstantOp numElementsValue = emitc::ConstantOp::create(
       builder, loc, indexType, builder.getIndexAttr(numElements));
 

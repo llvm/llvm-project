@@ -14,7 +14,7 @@ define void @test_vlseg2ff_dead_value(ptr %base, i64 %vl, ptr %outvl) {
 ; CHECK-NEXT:    sd a0, 0(a2)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 %vl, i64 4)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 %vl, i64 4)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} %0, 1
   store i64 %1, ptr %outvl
   ret void
@@ -42,7 +42,7 @@ define <vscale x 16 x i16> @test_vlseg2ff_dead_vl(ptr %base, i64 %vl) {
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 %vl, i64 4)
+  %0 = tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 %vl, i64 4)
   %1 = extractvalue {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} %0, 0
   %2 = call <vscale x 16 x i16> @llvm.riscv.tuple.extract.nxv16i16.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) %1, i32 1)
   ret <vscale x 16 x i16> %2
@@ -68,7 +68,7 @@ define void @test_vlseg2ff_dead_all(ptr %base, i64 %vl) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ret
 entry:
-  tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) undef, ptr %base, i64 %vl, i64 4)
+  tail call {target("riscv.vector.tuple", <vscale x 32 x i8>, 2), i64} @llvm.riscv.vlseg2ff.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr %base, i64 %vl, i64 4)
   ret void
 }
 

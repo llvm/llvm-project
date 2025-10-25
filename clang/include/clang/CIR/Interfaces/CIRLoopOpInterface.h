@@ -13,12 +13,14 @@
 #ifndef CLANG_CIR_INTERFACES_CIRLOOPOPINTERFACE_H
 #define CLANG_CIR_INTERFACES_CIRLOOPOPINTERFACE_H
 
+#include "llvm/ADT/APInt.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 
+using llvm::APInt;
 namespace cir {
 namespace detail {
 

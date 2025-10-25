@@ -71,7 +71,7 @@ static bool readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
 
 static unsigned getReg(const MCDisassembler *D, unsigned RC, unsigned RegNo) {
   const MCRegisterInfo *RegInfo = D->getContext().getRegisterInfo();
-  return *(RegInfo->getRegClass(RC).begin() + RegNo);
+  return RegInfo->getRegClass(RC).getRegister(RegNo);
 }
 
 static DecodeStatus DecodeGRRegsRegisterClass(MCInst &Inst, unsigned RegNo,

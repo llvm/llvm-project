@@ -352,7 +352,7 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
   else if (Name.consume_front("setter:"))
     IsSetter = true;
 
-  if (Name.back() != ')') {
+  if (Name.empty() || Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
     return false;
   }

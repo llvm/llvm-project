@@ -53,7 +53,7 @@ inline _LIBCPP_HIDE_FROM_ABI __promote_t<_A1, _A2> hypot(_A1 __x, _A2 __y) _NOEX
 // Computes the three-dimensional hypotenuse: `std::hypot(x,y,z)`.
 // The naive implementation might over-/underflow which is why this implementation is more involved:
 //    If the square of an argument might run into issues, we scale the arguments appropriately.
-// See https://github.com/llvm/llvm-project/issues/92782 for a detailed discussion and summary.
+// See https://llvm.org/PR92782 for a detailed discussion and summary.
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hypot(_Real __x, _Real __y, _Real __z) {
   // Factors needed to determine if over-/underflow might happen

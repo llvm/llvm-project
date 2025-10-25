@@ -12,6 +12,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/macros/config.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -54,9 +55,9 @@ public:
     const cpp::byte *elem_i_block_end = elem_i + (elem_size - elem_size_rem);
 
     while (elem_i != elem_i_block_end) {
-      __builtin_memcpy(tmp_block, elem_i, BLOCK_SIZE);
-      __builtin_memcpy(elem_i, elem_j, BLOCK_SIZE);
-      __builtin_memcpy(elem_j, tmp_block, BLOCK_SIZE);
+      inline_memcpy(tmp_block, elem_i, BLOCK_SIZE);
+      inline_memcpy(elem_i, elem_j, BLOCK_SIZE);
+      inline_memcpy(elem_j, tmp_block, BLOCK_SIZE);
 
       elem_i += BLOCK_SIZE;
       elem_j += BLOCK_SIZE;
@@ -112,9 +113,9 @@ public:
     cpp::byte *elem_i = get_internal(i);
     cpp::byte *elem_j = get_internal(j);
 
-    __builtin_memcpy(tmp, elem_i, ELEM_SIZE);
+    inline_memcpy(tmp, elem_i, ELEM_SIZE);
     __builtin_memmove(elem_i, elem_j, ELEM_SIZE);
-    __builtin_memcpy(elem_j, tmp, ELEM_SIZE);
+    inline_memcpy(elem_j, tmp, ELEM_SIZE);
   }
 
   LIBC_INLINE size_t len() const { return array_len; }
